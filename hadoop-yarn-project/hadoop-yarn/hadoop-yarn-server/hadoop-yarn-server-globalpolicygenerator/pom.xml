@@ -140,6 +140,9 @@
           <excludes>
             <exclude>src/test/resources/schedulerInfo1.json</exclude>
             <exclude>src/test/resources/schedulerInfo2.json</exclude>
+            <exclude>src/test/resources/globalqueues/basic-queue.json</exclude>
+            <exclude>src/test/resources/globalqueues/tree-queue.json</exclude>
+            <exclude>src/test/resources/globalqueues/tree-queue-adaptable.json</exclude>
           </excludes>
         </configuration>
       </plugin>

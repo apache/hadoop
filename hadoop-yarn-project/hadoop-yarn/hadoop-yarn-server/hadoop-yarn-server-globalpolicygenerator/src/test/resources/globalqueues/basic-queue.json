@@ -1,0 +1,9 @@
+{
+  "queueName" : "%s",
+  "totCap" : %s,
+  "guarCap" : %s,
+  "maxCap" : %s,
+  "usedCap" : %s,
+  "demandCap" : %s,
+  "scope" : {"id" : "sc1"}
+}
