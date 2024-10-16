@@ -2468,6 +2468,29 @@ public class YarnConfiguration extends Configuration {
    */
   public static final int DEFAULT_NUM_MANIFESTS_TO_CACHE = 10;
 
+  /**
+   * Optional cache to enable for the image tag to manifest plugin.
+   */
+  public static final String NM_RUNC_MANIFEST_CACHE_ENABLED =
+      IMAGE_TAG_TO_MANIFEST_PLUGIN_PREFIX + "manifest-cache-enabled";
+
+  /**
+   * The manifest cache is enabled by default.
+   */
+  public static final boolean DEFAULT_NM_RUNC_MANIFEST_CACHE_ENABLED = true;
+
+  /**
+   * The HDFS image namespace location that stores the runc image property
+   * files.
+   */
+  public static final String NM_RUNC_IMAGE_META_NAMESPACE =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "image-meta-namespace";
+
+  /**
+   * The default HDFS image namespace that stores the image property files.
+   */
+  public static final String DEFAULT_NM_RUNC_IMAGE_META_NAMESPACE = "library";
+
   /** Prefix for hdfs manifest hash to local resources plugin used with the
    * RuncContainerRuntime.
    */
