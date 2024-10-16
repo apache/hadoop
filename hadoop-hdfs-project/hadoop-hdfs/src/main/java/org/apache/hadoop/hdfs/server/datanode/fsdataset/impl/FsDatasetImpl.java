@@ -1541,7 +1541,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               replica = append(b.getBlockPoolId(), replicaInfo,
                                newGS, b.getNumBytes());
             } else { //RBW
-              replicaInfo.bumpReplicaGS(newGS);
+              bumpReplicaGS(b.getBlockPoolId(), replicaInfo, newGS);
               replica = (ReplicaInPipeline) replicaInfo;
             }
           } catch (IOException e) {
@@ -1557,6 +1557,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
+  private void bumpReplicaGS(String bpid, ReplicaInfo replica, long newGS)
+      throws IOException {
+    replica.bumpReplicaGS(newGS,
+        dataStorage.getTrashDirectoryForReplica(bpid, replica));
+  }
+
   @Override // FsDatasetSpi
   public Replica recoverClose(ExtendedBlock b, long newGS,
       long expectedBlockLen) throws IOException {
@@ -1569,7 +1575,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           // check replica's state
           ReplicaInfo replicaInfo = recoverCheck(b, newGS, expectedBlockLen);
           // bump the replica's GS
-          replicaInfo.bumpReplicaGS(newGS);
+          bumpReplicaGS(b.getBlockPoolId(), replicaInfo, newGS);
           // finalize the replica if RBW
           if (replicaInfo.getState() == ReplicaState.RBW) {
             finalizeReplica(b.getBlockPoolId(), replicaInfo);
@@ -1762,7 +1768,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         }
 
         // bump the replica's generation stamp to newGS
-        rbw.getReplicaInfo().bumpReplicaGS(newGS);
+        bumpReplicaGS(b.getBlockPoolId(), rbw.getReplicaInfo(), newGS);
       } catch (IOException e) {
         IOUtils.cleanupWithLogger(null, ref);
         throw e;
@@ -3192,7 +3198,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     boolean copyOnTruncate = newBlockId > 0L && rur.getBlockId() != newBlockId;
     // bump rur's GS to be recovery id
     if(!copyOnTruncate) {
-      rur.bumpReplicaGS(recoveryId);
+      bumpReplicaGS(bpid, rur, recoveryId);
     }
 
     //update length

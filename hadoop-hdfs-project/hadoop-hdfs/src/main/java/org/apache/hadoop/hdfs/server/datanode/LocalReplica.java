@@ -373,11 +373,30 @@ abstract public class LocalReplica extends ReplicaInfo {
   }
 
   @Override
-  public void bumpReplicaGS(long newGS) throws IOException {
+  public void bumpReplicaGS(long newGS, String trashDir) throws IOException {
     long oldGS = getGenerationStamp();
     final File oldmeta = getMetaFile();
     setGenerationStamp(newGS);
     final File newmeta = getMetaFile();
+
+    if (trashDir != null) {
+      // In order to support rollback in rolling upgrade,
+      // copy the original block/meta files to trash.
+      final String blockName = getBlockName();
+      final File blockFileInTrash = new File(trashDir, blockName);
+
+      // If the block file already exists in trash,
+      // it is already copied.  Do not copy again.
+      if (!blockFileInTrash.exists()) {
+        getVolume().getFileIoProvider().mkdirsWithExistsCheck(
+            getVolume(), new File(trashDir));
+
+        final File metaFileInTrash = new File(trashDir,
+            DatanodeUtil.getMetaName(blockName, getGenerationStamp()));
+        copyBlockdata(blockFileInTrash.toURI());
+        copyMetadata(metaFileInTrash.toURI());
+      }
+    }
 
     // rename meta file to new GS
     if (LOG.isDebugEnabled()) {
