@@ -529,8 +529,8 @@ public class ViewFileSystem extends FileSystem {
     return res.targetFileSystem.getFileChecksum(res.remainingPath, length);
   }
 
-  private static FileStatus fixFileStatus(FileStatus orig,
-      Path qualified) throws IOException {
+  private static FileStatus fixFileStatus(FileStatus orig, Path qualifiedPath,
+      Path originalPath, boolean isInternalDir) throws IOException {
     // FileStatus#getPath is a fully qualified path relative to the root of
     // target file system.
     // We need to change it to viewfs URI - relative to root of mount table.
@@ -542,10 +542,10 @@ public class ViewFileSystem extends FileSystem {
     // Hence we need to interpose a new ViewFileSystemFileStatus that
     // works around.
     if ("file".equals(orig.getPath().toUri().getScheme())) {
-      orig = wrapLocalFileStatus(orig, qualified);
+      orig = wrapLocalFileStatus(orig, qualifiedPath);
     }
 
-    orig.setPath(qualified);
+    orig.setPath(qualifiedPath);
     return orig;
   }
 
@@ -570,7 +570,7 @@ public class ViewFileSystem extends FileSystem {
     InodeTree.ResolveResult<FileSystem> res =
       fsState.resolve(getUriPath(f), true);
     FileStatus status =  res.targetFileSystem.getFileStatus(res.remainingPath);
-    return fixFileStatus(status, this.makeQualified(f));
+    return fixFileStatus(status, this.makeQualified(f), f, res.isInternalDir());
   }
 
   @Override
@@ -615,14 +615,12 @@ public class ViewFileSystem extends FileSystem {
       fsState.resolve(getUriPath(f), true);
 
     FileStatus[] statusLst = res.targetFileSystem.listStatus(res.remainingPath);
-    if (!res.isInternalDir()) {
-      // We need to change the name in the FileStatus as described in
-      // {@link #getFileStatus }
-      int i = 0;
-      for (FileStatus status : statusLst) {
-          statusLst[i++] = fixFileStatus(status,
-              getChrootedPath(res, status, f));
-      }
+    // We need to change the name in the FileStatus as described in
+    // {@link #getFileStatus }
+    int i = 0;
+    for (FileStatus status : statusLst) {
+      statusLst[i++] = fixFileStatus(status,
+          getChrootedPath(res, status, f), f, res.isInternalDir());
     }
     return statusLst;
   }
@@ -635,10 +633,6 @@ public class ViewFileSystem extends FileSystem {
     final RemoteIterator<LocatedFileStatus> statusIter =
         res.targetFileSystem.listLocatedStatus(res.remainingPath);
 
-    if (res.isInternalDir()) {
-      return statusIter;
-    }
-
     return new RemoteIterator<LocatedFileStatus>() {
       @Override
       public boolean hasNext() throws IOException {
@@ -648,8 +642,8 @@ public class ViewFileSystem extends FileSystem {
       @Override
       public LocatedFileStatus next() throws IOException {
         final LocatedFileStatus status = statusIter.next();
-        return (LocatedFileStatus)fixFileStatus(status,
-            getChrootedPath(res, status, f));
+        return (LocatedFileStatus) fixFileStatus(status,
+              getChrootedPath(res, status, f), f, res.isInternalDir());
       }
     };
   }
@@ -657,6 +651,10 @@ public class ViewFileSystem extends FileSystem {
   private Path getChrootedPath(InodeTree.ResolveResult<FileSystem> res,
       FileStatus status, Path f) throws IOException {
     final String suffix;
+    // For internal directories return the qualified path of status
+    if (res.isInternalDir()) {
+      return this.makeQualified(status.getPath());
+    }
     if (res.targetFileSystem instanceof ChRootedFileSystem) {
       suffix = ((ChRootedFileSystem)res.targetFileSystem)
           .stripOutRoot(status.getPath());
