@@ -1099,6 +1099,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT = "dfs.block.misreplication.processing.limit";
   public static final int     DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT_DEFAULT = 10000;
 
+  public static final String  DFS_NAMENODE_REMOVE_BLOCKS_PER_INTERVAL_KEY = "dfs.namenode.remove.blocks.per.interval";
+  public static final int     DFS_NAMENODE_REMOVE_BLOCKS_PER_INTERVAL_DEFAULT = 500000;
+
   public static final String DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY =
       "dfs.datanode.outliers.report.interval";
   public static final String DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT =
