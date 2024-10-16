@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -74,7 +75,10 @@ public class ClusterMetrics {
     MutableGaugeInt rmDispatcherEventQueueSize;
   @Metric("# of scheduler dispatcher event queue size")
     MutableGaugeInt schedulerDispatcherEventQueueSize;
-
+  @Metric("Allocation Latencies for Guaranteed containers")
+    MutableQuantiles allocateLatencyGuarQuantiles;
+  @Metric("Allocation Latencies for Opportunistic containers")
+    MutableQuantiles allocateLatencyOppQuantiles;
   private boolean rmEventProcMonitorEnable = false;
 
   private static final MetricsInfo RECORD_INFO = info("ClusterMetrics",
@@ -115,11 +119,23 @@ public class ClusterMetrics {
         if(INSTANCE == null){
           INSTANCE = new ClusterMetrics();
           registerMetrics();
+          INSTANCE.initialize();
           isInitialized.set(true);
         }
       }
     }
     return INSTANCE;
+  }
+
+  private void initialize() {
+    allocateLatencyGuarQuantiles = registry.newQuantiles(
+        "AllocateLatencyGuaranteed",
+        "Latency to fulfill an Allocate(Guaranteed) requests", "ops",
+        "latency", 5);
+    allocateLatencyOppQuantiles = registry.newQuantiles(
+        "AllocateLatencyOpportunistic",
+        "Latency to fulfill an Allocate(Opportunistic) requests", "ops",
+        "latency", 5);
   }
 
   private static void registerMetrics() {
@@ -355,6 +371,14 @@ public class ClusterMetrics {
     numContainersAssigned.incrementAndGet();
   }
 
+  public void addAllocateGuarLatencyEntry(long processingTime) {
+    allocateLatencyGuarQuantiles.add(processingTime);
+  }
+
+  public void addAllocateOppLatencyEntry(long processingTime) {
+    allocateLatencyOppQuantiles.add(processingTime);
+  }
+
   private ScheduledThreadPoolExecutor getAssignCounterExecutor(){
     return assignCounterExecutor;
   }
@@ -373,5 +397,23 @@ public class ClusterMetrics {
 
   public void setSchedulerEventQueueSize(int schedulerEventQueueSize) {
     this.schedulerDispatcherEventQueueSize.set(schedulerEventQueueSize);
+  }
+
+  public MutableQuantiles getAllocateLatencyGuarQuantiles() {
+    return allocateLatencyGuarQuantiles;
+  }
+
+  public void setAllocateLatencyGuarQuantiles(
+      MutableQuantiles allocateLatencyGuarQuantiles) {
+    this.allocateLatencyGuarQuantiles = allocateLatencyGuarQuantiles;
+  }
+
+  public MutableQuantiles getAllocateLatencyOppQuantiles() {
+    return allocateLatencyOppQuantiles;
+  }
+
+  public void setAllocateLatencyOppQuantiles(
+      MutableQuantiles allocateLatencyOppQuantiles) {
+    this.allocateLatencyOppQuantiles = allocateLatencyOppQuantiles;
   }
 }
