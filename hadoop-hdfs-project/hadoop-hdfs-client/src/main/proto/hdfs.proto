@@ -189,6 +189,14 @@ message QuotaUsageProto {
   required uint64 spaceConsumed = 3;
   required uint64 spaceQuota = 4;
   optional StorageTypeQuotaInfosProto typeQuotaInfos = 5;
+  optional string path = 6;
+}
+
+/**
+ * Quota usage listing
+ */
+message QuotaListingProto {
+  repeated QuotaUsageProto quotaListing = 1;
 }
 
 /**

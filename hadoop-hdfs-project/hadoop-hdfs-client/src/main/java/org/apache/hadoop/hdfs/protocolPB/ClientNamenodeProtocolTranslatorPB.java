@@ -145,6 +145,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLoc
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLocatedFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetPreferredBlockSizeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetQuotaUsageRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetQuotaListingRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetQuotaListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetServerDefaultsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSlowDatanodeReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportRequestProto;
@@ -1601,6 +1603,24 @@ public class ClientNamenodeProtocolTranslatorPB implements
         GetQuotaUsageRequestProto.newBuilder().setPath(path).build();
     return PBHelperClient.convert(ipc(() -> rpcProxy.getQuotaUsage(null, req))
         .getUsage());
+  }
+
+  @Override
+  public QuotaUsage[] getQuotaListing(String QuotaRoot) throws IOException {
+    GetQuotaListingRequestProto req =
+        GetQuotaListingRequestProto.newBuilder()
+            .setQuotaRoot(QuotaRoot).build();
+    try {
+      GetQuotaListingResponseProto result = 
+          rpcProxy.getQuotaListing(null, req);
+
+      if (result.hasQuotaListing()) {
+        return PBHelperClient.convert(result.getQuotaListing());
+      }
+      return null;
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
   }
 
   @Deprecated
