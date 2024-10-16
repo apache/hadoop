@@ -32,7 +32,10 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.eclipse.jetty.util.log.Log;
+
+import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * <p>
@@ -49,7 +52,7 @@ import org.eclipse.jetty.util.log.Log;
  * Since this a junit 4 you can also do a single setup before 
  * the start of any tests.
  * E.g.
- *     @BeforeClass   public static void clusterSetupAtBegining()
+ *     @BeforeClass   public static void clusterSetupAtBeginning()
  *     @AfterClass    public static void ClusterShutdownAtEnd()
  * </p>
  */
@@ -79,9 +82,9 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
         return true;
       else
         return false;
-    }     
+    }
   };
-  
+
   protected static final byte[] data = getFileData(numBlocks,
       getDefaultBlockSize());
   
@@ -96,8 +99,9 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
   
   @Before
   public void setUp() throws Exception {
-    fSys = createFileSystem();
-    fSys.mkdirs(getTestRootPath(fSys, "test"));
+    requireNonNull(testRootDir, "testRootDir");
+    fSys = requireNonNull(createFileSystem(), "filesystem");
+    fSys.mkdirs(requireNonNull(getTestRootPath(fSys, "test")));
   }
   
   @After
@@ -106,23 +110,43 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
       fSys.delete(new Path(getAbsoluteTestRootPath(fSys), new Path("test")), true);
     }
   }
-  
-  
+
   protected Path getDefaultWorkingDirectory() throws IOException {
     return getTestRootPath(fSys,
         "/user/" + System.getProperty("user.name")).makeQualified(
         fSys.getUri(), fSys.getWorkingDirectory());
   }
 
+  /**
+   * Override point: is rename supported.
+   * @return true if rename is supported.
+   */
   protected boolean renameSupported() {
     return true;
   }
 
-  
-  protected IOException unwrapException(IOException e) {
-    return e;
+  /**
+   * Skip the test if rename is not supported.
+   */
+  protected void assumeRenameSupported() {
+    assumeTrue("Rename is not supported", renameSupported());
   }
-  
+
+  /**
+   * Override point: are posix-style permissions supported.
+   * @return true if permissions are supported.
+   */
+  protected boolean permissionsSupported() {
+    return true;
+  }
+
+  /**
+   * Skip the test if permissions are not supported.
+   */
+  protected void assumePermissionsSupported() {
+    assumeTrue("Permissions are not supported", permissionsSupported());
+  }
+
   @Test
   public void testFsStatus() throws Exception {
     FsStatus fsStatus = fSys.getStatus(null);
@@ -256,19 +280,19 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
   }
   
   @Test
-  public void testGetFileStatusThrowsExceptionForNonExistentFile() 
-    throws Exception {
+  public void testGetFileStatusThrowsExceptionForNonExistentFile()
+      throws Exception {
     try {
       fSys.getFileStatus(getTestRootPath(fSys, "test/hadoop/file"));
       Assert.fail("Should throw FileNotFoundException");
     } catch (FileNotFoundException e) {
       // expected
     }
-  } 
+  }
   
   @Test
   public void testListStatusThrowsExceptionForNonExistentFile()
-  throws Exception {
+      throws Exception {
     try {
       fSys.listStatus(getTestRootPath(fSys, "test/hadoop/file"));
       Assert.fail("Should throw FileNotFoundException");
@@ -280,6 +304,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
   @Test
   public void testListStatusThrowsExceptionForUnreadableDir()
   throws Exception {
+    assumePermissionsSupported();
     Path testRootDir = getTestRootPath(fSys, "test/hadoop/dir");
     Path obscuredDir = new Path(testRootDir, "foo");
     Path subDir = new Path(obscuredDir, "bar"); //so foo is non-empty
@@ -635,6 +660,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
   @Test
   public void testGlobStatusThrowsExceptionForUnreadableDir()
       throws Exception {
+    assumePermissionsSupported();
     Path testRootDir = getTestRootPath(fSys, "test/hadoop/dir");
     Path obscuredDir = new Path(testRootDir, "foo");
     Path subDir = new Path(obscuredDir, "bar"); //so foo is non-empty
@@ -683,9 +709,9 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     fSys.mkdirs(path.getParent());
 
    
-    FSDataOutputStream out = 
+    FSDataOutputStream out =
       fSys.create(path, false, 4096, (short) 1, getDefaultBlockSize() );
-    out.write(data, 0, len);
+      out.write(data, 0, len);
     out.close();
 
     Assert.assertTrue("Exists", exists(fSys, path));
@@ -693,7 +719,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
 
     FSDataInputStream in = fSys.open(path);
     byte[] buf = new byte[len];
-    in.readFully(0, buf);
+      in.readFully(0, buf);
     in.close();
 
     Assert.assertEquals(len, buf.length);
@@ -717,18 +743,18 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     
     Assert.assertTrue("Exists", exists(fSys, path));
     Assert.assertEquals("Length", data.length, fSys.getFileStatus(path).getLen());
-    
+
     try {
       createFile(path);
       Assert.fail("Should throw IOException.");
     } catch (IOException e) {
       // Expected
     }
-    
+
     FSDataOutputStream out = fSys.create(path, true, 4096);
-    out.write(data, 0, data.length);
+      out.write(data, 0, data.length);
     out.close();
-    
+
     Assert.assertTrue("Exists", exists(fSys, path));
     Assert.assertEquals("Length", data.length, fSys.getFileStatus(path).getLen());
     
@@ -774,7 +800,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     Assert.assertTrue("File still exists", exists(fSys, file));
     Assert.assertTrue("Dir still exists", exists(fSys, dir));
     Assert.assertTrue("Subdir still exists", exists(fSys, subdir));
-    
+
     Assert.assertTrue("Deleted", fSys.delete(dir, true));
     Assert.assertFalse("File doesn't exist", exists(fSys, file));
     Assert.assertFalse("Dir doesn't exist", exists(fSys, dir));
@@ -792,74 +818,46 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
   
   @Test
   public void testRenameNonExistentPath() throws Exception {
-    if (!renameSupported()) return;
+    assumeRenameSupported();
     Path src = getTestRootPath(fSys, "test/hadoop/nonExistent");
     Path dst = getTestRootPath(fSys, "test/new/newpath");
-    try {
-      rename(src, dst, false, false, false, Rename.NONE);
-      Assert.fail("Should throw FileNotFoundException");
-    } catch (IOException e) {
-      Log.getLog().info("XXX", e);
-      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
-    }
-
-    try {
-      rename(src, dst, false, false, false, Rename.OVERWRITE);
-      Assert.fail("Should throw FileNotFoundException");
-    } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
-    }
+    intercept(FileNotFoundException.class, () ->
+      rename(src, dst, false, false, false, Rename.NONE));
+    intercept(FileNotFoundException.class, () ->
+      rename(src, dst, false, false, false, Rename.OVERWRITE));
   }
 
   @Test
   public void testRenameFileToNonExistentDirectory() throws Exception {
-    if (!renameSupported()) return;
+    assumeRenameSupported();
     
     Path src = getTestRootPath(fSys, "test/hadoop/file");
     createFile(src);
     Path dst = getTestRootPath(fSys, "test/nonExistent/newfile");
-    
-    try {
-      rename(src, dst, false, true, false, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
-    } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
-    }
-
-    try {
-      rename(src, dst, false, true, false, Rename.OVERWRITE);
-      Assert.fail("Expected exception was not thrown");
-    } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
-    }
+    intercept(IOException.class, () ->
+      rename(src, dst, false, true, false, Rename.NONE));
+    intercept(IOException.class, () ->
+      rename(src, dst, false, true, false, Rename.OVERWRITE));
   }
 
   @Test
   public void testRenameFileToDestinationWithParentFile() throws Exception {
-    if (!renameSupported()) return;
+    assumeRenameSupported();
     
     Path src = getTestRootPath(fSys, "test/hadoop/file");
     createFile(src);
     Path dst = getTestRootPath(fSys, "test/parentFile/newfile");
     createFile(dst.getParent());
-    
-    try {
-      rename(src, dst, false, true, false, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
-    } catch (IOException e) {
-    }
-
-    try {
-      rename(src, dst, false, true, false, Rename.OVERWRITE);
-      Assert.fail("Expected exception was not thrown");
-    } catch (IOException e) {
-    }
+    intercept(IOException.class, () ->
+      rename(src, dst, false, true, false, Rename.NONE));
+    intercept(IOException.class, () ->
+      rename(src, dst, false, true, false, Rename.OVERWRITE));
   }
 
   @Test
   public void testRenameFileToExistingParent() throws Exception {
-    if (!renameSupported()) return;
-    
+    assumeRenameSupported();
+
     Path src = getTestRootPath(fSys, "test/hadoop/file");
     createFile(src);
     Path dst = getTestRootPath(fSys, "test/new/newfile");
@@ -869,116 +867,77 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
 
   @Test
   public void testRenameFileToItself() throws Exception {
-    if (!renameSupported()) return;
+    assumeRenameSupported();
+
     Path src = getTestRootPath(fSys, "test/hadoop/file");
     createFile(src);
-    try {
-      rename(src, src, false, true, false, Rename.NONE);
-      Assert.fail("Renamed file to itself");
-    } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
-    }
+    intercept(FileAlreadyExistsException.class, () ->
+      rename(src, src, false, true, false, Rename.NONE));
     // Also fails with overwrite
-    try {
-      rename(src, src, false, true, false, Rename.OVERWRITE);
-      Assert.fail("Renamed file to itself");
-    } catch (IOException e) {
-      // worked
-    }
+    intercept(IOException.class, () ->
+        rename(src, src, false, true, false, Rename.OVERWRITE));
   }
-  
+
   @Test
   public void testRenameFileAsExistingFile() throws Exception {
-    if (!renameSupported()) return;
-    
+    assumeRenameSupported();
+
     Path src = getTestRootPath(fSys, "test/hadoop/file");
     createFile(src);
     Path dst = getTestRootPath(fSys, "test/new/existingFile");
     createFile(dst);
     
     // Fails without overwrite option
-    try {
-      rename(src, dst, false, true, false, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
-    } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
-    }
-    
+    intercept(FileAlreadyExistsException.class, () ->
+      rename(src, dst, false, true, false, Rename.NONE));
+
     // Succeeds with overwrite option
     rename(src, dst, true, false, true, Rename.OVERWRITE);
   }
 
   @Test
   public void testRenameFileAsExistingDirectory() throws Exception {
-    if (!renameSupported()) return;
-    
+    assumeRenameSupported();
+
     Path src = getTestRootPath(fSys, "test/hadoop/file");
     createFile(src);
     Path dst = getTestRootPath(fSys, "test/new/existingDir");
     fSys.mkdirs(dst);
     
     // Fails without overwrite option
-    try {
-      rename(src, dst, false, false, true, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
-    } catch (IOException e) {
-    }
-    
+    intercept(IOException.class, () ->
+        rename(src, dst, false, false, true, Rename.NONE));
+
+
     // File cannot be renamed as directory
-    try {
-      rename(src, dst, false, false, true, Rename.OVERWRITE);
-      Assert.fail("Expected exception was not thrown");
-    } catch (IOException e) {
-    }
+    intercept(IOException.class, () ->
+        rename(src, dst, false, false, true, Rename.OVERWRITE));
   }
 
   @Test
   public void testRenameDirectoryToItself() throws Exception {
-    if (!renameSupported()) return;
+    assumeRenameSupported();
     Path src = getTestRootPath(fSys, "test/hadoop/dir");
     fSys.mkdirs(src);
-    try {
-      rename(src, src, false, true, false, Rename.NONE);
-      Assert.fail("Renamed directory to itself");
-    } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
-    }
+    intercept(FileAlreadyExistsException.class, () ->
+      rename(src, src, false, true, false, Rename.NONE));
     // Also fails with overwrite
-    try {
-      rename(src, src, false, true, false, Rename.OVERWRITE);
-      Assert.fail("Renamed directory to itself");
-    } catch (IOException e) {
-      // worked      
-    }
+    intercept(IOException.class, () ->
+        rename(src, src, false, true, false, Rename.OVERWRITE));
   }
 
   @Test
   public void testRenameDirectoryToNonExistentParent() throws Exception {
-    if (!renameSupported()) return;
-    
+    assumeRenameSupported();
+
     Path src = getTestRootPath(fSys, "test/hadoop/dir");
     fSys.mkdirs(src);
     Path dst = getTestRootPath(fSys, "test/nonExistent/newdir");
-    
-    try {
-      rename(src, dst, false, true, false, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
-    } catch (IOException e) {
-      IOException ioException = unwrapException(e);
-      if (!(ioException instanceof FileNotFoundException)) {
-        throw ioException;
-      }
-    }
+    intercept(FileNotFoundException.class, () ->
+        rename(src, dst, false, true, false, Rename.NONE));
 
-    try {
-      rename(src, dst, false, true, false, Rename.OVERWRITE);
-      Assert.fail("Expected exception was not thrown");
-    } catch (IOException e) {
-      IOException ioException = unwrapException(e);
-      if (!(ioException instanceof FileNotFoundException)) {
-        throw ioException;
-      }
-    }
+    intercept(FileNotFoundException.class, () ->
+        rename(src, dst, false, true, false, Rename.OVERWRITE));
   }
 
   @Test
@@ -990,7 +949,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
 
   private void doTestRenameDirectoryAsNonExistentDirectory(Rename... options) 
   throws Exception {
-    if (!renameSupported()) return;
+    assumeRenameSupported();
     
     Path src = getTestRootPath(fSys, "test/hadoop/dir");
     fSys.mkdirs(src);
@@ -1001,19 +960,19 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     fSys.mkdirs(dst.getParent());
     
     rename(src, dst, true, false, true, options);
-    Assert.assertFalse("Nested file1 exists", 
+    Assert.assertFalse("Nested file1 exists",
         exists(fSys, getTestRootPath(fSys, "test/hadoop/dir/file1")));
-    Assert.assertFalse("Nested file2 exists", 
+    Assert.assertFalse("Nested file2 exists",
         exists(fSys, getTestRootPath(fSys, "test/hadoop/dir/subdir/file2")));
     Assert.assertTrue("Renamed nested file1 exists",
         exists(fSys, getTestRootPath(fSys, "test/new/newdir/file1")));
-    Assert.assertTrue("Renamed nested exists", 
+    Assert.assertTrue("Renamed nested exists",
         exists(fSys, getTestRootPath(fSys, "test/new/newdir/subdir/file2")));
   }
 
   @Test
   public void testRenameDirectoryAsEmptyDirectory() throws Exception {
-    if (!renameSupported()) return;
+    assumeRenameSupported();
     
     Path src = getTestRootPath(fSys, "test/hadoop/dir");
     fSys.mkdirs(src);
@@ -1024,20 +983,15 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     fSys.mkdirs(dst);
 
     // Fails without overwrite option
-    try {
-      rename(src, dst, false, true, false, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
-    } catch (IOException e) {
-      // Expected (cannot over-write non-empty destination)
-      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
-    }
+    intercept(FileAlreadyExistsException.class, () ->
+      rename(src, dst, false, true, false, Rename.NONE));
     // Succeeds with the overwrite option
     rename(src, dst, true, false, true, Rename.OVERWRITE);
   }
 
   @Test
   public void testRenameDirectoryAsNonEmptyDirectory() throws Exception {
-    if (!renameSupported()) return;
+    assumeRenameSupported();
 
     Path src = getTestRootPath(fSys, "test/hadoop/dir");
     fSys.mkdirs(src);
@@ -1048,42 +1002,27 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     fSys.mkdirs(dst);
     createFile(getTestRootPath(fSys, "test/new/newdir/file1"));
     // Fails without overwrite option
-    try {
-      rename(src, dst, false, true, false, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
-    } catch (IOException e) {
-      // Expected (cannot over-write non-empty destination)
-      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
-    }
+    intercept(FileAlreadyExistsException.class, () ->
+      rename(src, dst, false, true, false, Rename.NONE));
     // Fails even with the overwrite option
-    try {
-      rename(src, dst, false, true, false, Rename.OVERWRITE);
-      Assert.fail("Expected exception was not thrown");
-    } catch (IOException ex) {
-      // Expected (cannot over-write non-empty destination)
-    }
+    intercept(IOException.class, () ->
+      rename(src, dst, false, true, false, Rename.OVERWRITE));
   }
 
   @Test
   public void testRenameDirectoryAsFile() throws Exception {
-    if (!renameSupported()) return;
+    assumeRenameSupported();
     
     Path src = getTestRootPath(fSys, "test/hadoop/dir");
     fSys.mkdirs(src);
     Path dst = getTestRootPath(fSys, "test/new/newfile");
     createFile(dst);
     // Fails without overwrite option
-    try {
-      rename(src, dst, false, true, true, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
-    } catch (IOException e) {
-    }
+    intercept(IOException.class, () ->
+      rename(src, dst, false, true, true, Rename.NONE));
     // Directory cannot be renamed as existing file
-    try {
-      rename(src, dst, false, true, true, Rename.OVERWRITE);
-      Assert.fail("Expected exception was not thrown");
-    } catch (IOException ex) {
-    }
+    intercept(IOException.class, () ->
+        rename(src, dst, false, true, true, Rename.OVERWRITE));
   }
 
   @Test
@@ -1117,7 +1056,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     FSDataInputStream in = fSys.open(src);
     InputStream is = in.getWrappedStream();
     in.close();
-    Assert.assertNotNull(is);  
+    Assert.assertNotNull(is);
   }
   
   @Test
@@ -1149,16 +1088,17 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     createFile(fSys, path);
   }
 
-  @SuppressWarnings("deprecation")
   private void rename(Path src, Path dst, boolean renameShouldSucceed,
       boolean srcExists, boolean dstExists, Rename... options)
       throws IOException {
     fSys.rename(src, dst, options);
-    if (!renameShouldSucceed)
+    if (!renameShouldSucceed) {
       Assert.fail("rename should have thrown exception");
+    }
     Assert.assertEquals("Source exists", srcExists, exists(fSys, src));
     Assert.assertEquals("Destination exists", dstExists, exists(fSys, dst));
   }
+
   private boolean containsTestRootPath(Path path, FileStatus[] filteredPaths)
     throws IOException {
       Path testRootPath = getTestRootPath(fSys, path.toString());

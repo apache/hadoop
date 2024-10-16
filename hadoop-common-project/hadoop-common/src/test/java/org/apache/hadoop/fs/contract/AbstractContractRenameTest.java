@@ -52,7 +52,7 @@ public abstract class AbstractContractRenameTest extends
 
   @Test
   public void testRenameNonexistentFile() throws Throwable {
-    describe("rename a file into a new file in the same directory");
+    describe("rename a file which does not exist");
     Path missing = path("testRenameNonexistentFileSrc");
     Path target = path("testRenameNonexistentFileDest");
     boolean renameReturnsFalseOnFailure =
@@ -175,7 +175,7 @@ public abstract class AbstractContractRenameTest extends
 
   @Test
   public void testRenameFileNonexistentDir() throws Throwable {
-    describe("rename a file into a new file in the same directory");
+    describe("rename a file into a nonexistent directory");
     Path renameSrc = path("testRenameSrc");
     Path renameTarget = path("subdir/testRenameTarget");
     byte[] data = dataset(256, 'a', 'z');
@@ -196,6 +196,7 @@ public abstract class AbstractContractRenameTest extends
        // allowed unless that rename flag is set
       assertFalse(renameCreatesDestDirs);
     }
+    assertPathDoesNotExist("Source still found", renameSrc);
   }
 
   @Test

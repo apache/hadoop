@@ -220,23 +220,61 @@ public final class Options {
   }
 
   /**
-   * Enum to support the varargs for rename() options
+   * Enum to support the varargs for rename() options.
+   * <p></p>
+   * The value of the rename can be used to marshall/unmarshall the option,
+   * and they <i>MUST NOT</i> be changed. The HDFS edit log
+   * uses these values -changing them would break everything.
+   * <p></p>
+   * If new options are added, consider (a) how HDFS would handle it
+   * and (b) does {@link ChecksumFileSystem#rename(Path, Path, Rename...)}
+   * need to pick up any of the options when renaming any CRC files?
    */
   public enum Rename {
-    NONE((byte) 0), // No options
-    OVERWRITE((byte) 1), // Overwrite the rename destination
+    /**
+     * No options.
+     */
+    NONE((byte) 0),
+
+    /**
+     * Overwrite any file/empty dir at the rename destination.
+     */
+    OVERWRITE((byte) 1),
+
+    /**
+     * Move the file to trash.
+     */
     TO_TRASH ((byte) 2); // Rename to trash
 
+    /**
+     * Internal code, used as wire value.
+     */
     private final byte code;
-    
-    private Rename(byte code) {
+
+    /**
+     * Constructor.
+     * @param code option code.
+     */
+    Rename(byte code) {
       this.code = code;
     }
 
+    /**
+     * Create a rename enum from the code, useful
+     * for unmarshalling.
+     * If an option code is not recognized, this will return
+     * null.
+     * @param code option code.
+     * @return the matching option or null.
+     */
     public static Rename valueOf(byte code) {
       return code < 0 || code >= values().length ? null : values()[code];
     }
 
+    /**
+     * Code of this option.
+     * @return the code to marshall.
+     */
     public byte value() {
       return code;
     }

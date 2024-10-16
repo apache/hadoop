@@ -885,7 +885,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Rename files/dirs
+   * Rename files/dirs.
    */
   @Override
   @SuppressWarnings("deprecation")
@@ -911,6 +911,51 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       }
 
       return value;
+    }
+  }
+
+  /**
+   * Rename files/dirs.
+   * <p></p>
+   * If the rename of the inner FS does not fail by raising
+   * an exception, any checksum file for the source is copied.
+   * If the source had no checksum, any checksum for the destination
+   * is deleted, so that there is no inconsistent checksum
+   * for the now-renamed file.
+   * <p></p>
+   * @param source source file/dir
+   * @param dest destination file/dir/path
+   * @param options options for the renaming of the source file.
+   *       These are not used for renaming the checksum, which always uses
+   *       {@link Options.Rename#OVERWRITE}.Are
+   * @throws IOException
+   */
+  @Override
+  public void rename(final Path source,
+      final Path dest,
+      final Options.Rename... options)
+      throws IOException {
+
+    // invoke rename on the wrapped FS.
+    // This will raise an exception on any failure.
+    fs.rename(source, dest, options);
+
+    // if the application gets this far, the rename
+    // succeeded. Therefore the checksum should
+    // be renamed too,
+    Path srcCheckFile = getChecksumFile(source);
+    Path dstCheckFile = getChecksumFile(dest);
+    if (fs.exists(srcCheckFile)) {
+      // try to rename checksum
+      // the OVERWRITE option is always used; there's no attempt
+      // to merge in any options supplied for merging the
+      // main file.
+      // If new options are added, this decision may need to
+      // be revisited.
+      fs.rename(srcCheckFile, dstCheckFile, Options.Rename.OVERWRITE);
+    } else {
+      // no src checksum, so remove dest checksum if present
+      fs.delete(dstCheckFile, true);
     }
   }
 
