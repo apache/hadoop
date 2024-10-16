@@ -539,6 +539,29 @@ public class TestDataNodeMetrics {
     }
   }
 
+  @Test(timeout=60000)
+  public void testClusterIdMetric() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).
+        numDataNodes(1).build();
+    try {
+      List<DataNode> datanodes = cluster.getDataNodes();
+      assertEquals(datanodes.size(), 1);
+      DataNode datanode = datanodes.get(0);
+      cluster.startDataNodes(conf, 1, true,
+              StartupOption.REGULAR, null);
+      List<BPOfferService> bpOfferServices = datanode.getAllBpOs();
+      assertEquals(bpOfferServices.size(), 1);
+      BPOfferService bpOfferService = bpOfferServices.get(0);
+      assertEquals(bpOfferService.getNamespaceInfo().getClusterID(),
+              datanode.getClusterId());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   @Test
   public void testDNShouldNotDeleteBlockONTooManyOpenFiles()
       throws Exception {
