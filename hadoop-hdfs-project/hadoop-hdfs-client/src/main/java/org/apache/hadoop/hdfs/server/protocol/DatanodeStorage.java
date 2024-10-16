@@ -24,7 +24,7 @@ import java.util.UUID;
 /**
  * Class captures information of a storage in Datanode.
  */
-public class DatanodeStorage {
+public class DatanodeStorage implements Comparable<DatanodeStorage> {
   /** The state of the storage. */
   public enum State {
     NORMAL,
@@ -124,5 +124,10 @@ public class DatanodeStorage {
   @Override
   public int hashCode() {
     return getStorageID().hashCode();
+  }
+
+  @Override
+  public int compareTo(DatanodeStorage that) {
+    return getStorageID().compareTo(that.getStorageID());
   }
 }

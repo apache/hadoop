@@ -26,7 +26,6 @@ import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -837,7 +836,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   @Override
   public synchronized Map<DatanodeStorage, BlockListAsLongs> getBlockReports(
       String bpid) {
-    Map<DatanodeStorage, BlockListAsLongs> blockReports = new HashMap<>();
+    Map<DatanodeStorage, BlockListAsLongs> blockReports =
+        new TreeMap<DatanodeStorage, BlockListAsLongs>();
     for (SimulatedStorage storage : storages) {
       blockReports.put(storage.getDnStorage(), getBlockReport(bpid, storage));
     }
