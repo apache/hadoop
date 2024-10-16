@@ -505,12 +505,15 @@ public class TestNameNodeReconfigure {
   @Test
   public void testSlowPeerTrackerEnabled() throws Exception {
     final NameNode nameNode = cluster.getNameNode();
-    final DatanodeManager datanodeManager = nameNode.namesystem.getBlockManager()
-        .getDatanodeManager();
+    final BlockManager blockManager = nameNode.namesystem.getBlockManager();
+    final DatanodeManager datanodeManager = blockManager.getDatanodeManager();
 
     assertFalse("SlowNode tracker is already enabled. It should be disabled by default",
         datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
     assertTrue(datanodeManager.isSlowPeerCollectorInitialized());
+    // By default, dataNodePeerStatsEnabled is false.
+    assertFalse(blockManager.getDataNodePeerStatsEnabled(BlockType.CONTIGUOUS));
+    assertFalse(blockManager.getDataNodePeerStatsEnabled(BlockType.STRIPED));
 
     try {
       nameNode.reconfigurePropertyImpl(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "non-boolean");
@@ -525,11 +528,14 @@ public class TestNameNodeReconfigure {
     assertTrue("SlowNode tracker is still disabled. Reconfiguration could not be successful",
         datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
     assertFalse(datanodeManager.isSlowPeerCollectorInitialized());
+    assertTrue(blockManager.getDataNodePeerStatsEnabled(BlockType.CONTIGUOUS));
+    assertTrue(blockManager.getDataNodePeerStatsEnabled(BlockType.STRIPED));
 
     nameNode.reconfigurePropertyImpl(DFS_DATANODE_PEER_STATS_ENABLED_KEY, null);
     assertFalse("SlowNode tracker is still enabled. Reconfiguration could not be successful",
         datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
-
+    assertFalse(blockManager.getDataNodePeerStatsEnabled(BlockType.CONTIGUOUS));
+    assertFalse(blockManager.getDataNodePeerStatsEnabled(BlockType.STRIPED));
   }
 
   @Test
