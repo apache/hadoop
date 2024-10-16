@@ -27,6 +27,9 @@ function open_hostip_list(x0, x1) {
     //More than 100% do not care,so not record in 95%-100% bar
     if (index > x0 && index <= x1) {
       ips.push(dn.infoAddr.split(":")[0]);
+      var idx = dn.infoAddr.lastIndexOf(":");
+      var dnIp = dn.infoAddr.substring(0, idx);
+      ips.push(dnIp);
     }
   }
   var ipsText = '';
