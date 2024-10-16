@@ -199,6 +199,10 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>com.github.pjfanning</groupId>
+      <artifactId>jsr311-compat</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.sun.jersey.contribs</groupId>
       <artifactId>jersey-guice</artifactId>
     </dependency>

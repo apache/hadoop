@@ -180,6 +180,10 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>com.github.pjfanning</groupId>
+      <artifactId>jsr311-compat</artifactId>
+    </dependency>
+    <dependency>
       <!--
       adding jettison as direct dependency (as jersey-json's jettison dependency is vulnerable with verison 1.1),
       so those who depends on hadoop-common externally will get the non-vulnerable jettison
