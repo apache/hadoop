@@ -487,11 +487,6 @@
       <artifactId>kfs</artifactId>
       <optional>true</optional>
     </dependency>
-    <dependency>
-      <groupId>com.jcraft</groupId>
-      <artifactId>jsch</artifactId>
-      <optional>true</optional>
-    </dependency>
     <!-- add back in transitive dependencies of hadoop-mapreduce-client-app removed in client -->
     <!-- Skipping javax.servlet:servlet-api because it's in client -->
     <dependency>
