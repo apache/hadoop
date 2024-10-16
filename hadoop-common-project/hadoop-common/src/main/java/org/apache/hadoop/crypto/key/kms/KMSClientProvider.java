@@ -178,7 +178,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
 
     @Override
     public boolean handleKind(Text kind) {
-      return kind.equals(TOKEN_KIND);
+      return kind.equals(KMSDelegationToken.TOKEN_KIND);
     }
 
     @Override
