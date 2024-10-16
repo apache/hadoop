@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -750,6 +751,131 @@ public class TestClientProtocolForPipelineRecovery {
         }
         LOG.info("shutdown {}", newNodes[i].getName());
         cluster.stopDataNode(newNodes[i].getName());
+      }
+
+      // Read should be successfull from only the newNode. There should not be
+      // any corruption reported.
+      DFSTestUtil.readFile(fs, fileName);
+    } finally {
+      DataNodeFaultInjector.set(old);
+      cluster.shutdown();
+    }
+  }
+
+
+  @Test
+  public void testPipelineRecoveryWithFailedTransferBlock() throws Exception {
+    final int chunkSize = 512;
+    final int oneWriteSize = 5000;
+    final int totalSize = 1024 * 1024;
+    final int errorInjectionPos = 512;
+    Configuration conf = new HdfsConfiguration();
+    // Need 5 datanodes to verify the replaceDatanode during pipeline recovery
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
+    DataNodeFaultInjector old = DataNodeFaultInjector.get();
+
+    try {
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path fileName = new Path("/f");
+      FSDataOutputStream o = fs.create(fileName);
+      int count = 0;
+      // Flush to get the pipeline created.
+      o.writeBytes("hello");
+      o.hflush();
+      DFSOutputStream dfsO = (DFSOutputStream) o.getWrappedStream();
+      final DatanodeInfo[] pipeline = dfsO.getStreamer().getNodes();
+      final String firstDn = pipeline[0].getXferAddr(false);
+      final String secondDn = pipeline[1].getXferAddr(false);
+      final AtomicBoolean pipelineFailed = new AtomicBoolean(false);
+      final AtomicBoolean transferFailed = new AtomicBoolean(false);
+
+      DataNodeFaultInjector.set(new DataNodeFaultInjector() {
+        @Override
+        public void failPipeline(ReplicaInPipeline replicaInfo,
+            String mirror) throws IOException {
+          if (!secondDn.equals(mirror)) {
+            // Only fail for first DN
+            return;
+          }
+          if (!pipelineFailed.get() &&
+              (replicaInfo.getBytesAcked() > errorInjectionPos) &&
+              (replicaInfo.getBytesAcked() % chunkSize != 0)) {
+            int count = 0;
+            while (count < 10) {
+              // Fail the pipeline (Throw exception) when:
+              //   1. bytsAcked is not at chunk boundary (checked in the if
+              //      statement above)
+              //   2. bytesOnDisk is bigger than bytesAcked and at least
+              //      reaches (or go beyond) the end of the chunk that
+              //      bytesAcked is in (checked in the if statement below).
+              // At this condition, transferBlock that happens during
+              // pipeline recovery would transfer extra bytes to make up to the
+              // end of the chunk. And this is when the block corruption
+              // described in HDFS-4660 would occur.
+              if ((replicaInfo.getBytesOnDisk() / chunkSize) -
+                  (replicaInfo.getBytesAcked() / chunkSize) >= 1) {
+                pipelineFailed.set(true);
+                throw new IOException(
+                    "Failing Pipeline " + replicaInfo.getBytesAcked() + " : "
+                        + replicaInfo.getBytesOnDisk());
+              }
+              try {
+                Thread.sleep(200);
+              } catch (InterruptedException ignored) {
+              }
+              count++;
+            }
+          }
+        }
+
+        @Override
+        public void failTransfer(DatanodeID sourceDNId) throws IOException {
+          if (sourceDNId.getXferAddr().equals(firstDn)) {
+            transferFailed.set(true);
+            throw new IOException(
+                "Failing Transfer from " + sourceDNId.getXferAddr());
+          }
+        }
+      });
+
+      Random r = new Random();
+      byte[] b = new byte[oneWriteSize];
+      while (count < totalSize) {
+        r.nextBytes(b);
+        o.write(b);
+        count += oneWriteSize;
+        o.hflush();
+      }
+
+      assertTrue("Expected a failure in the pipeline", pipelineFailed.get());
+      assertTrue("Expected a failure in the transfer block", transferFailed.get());
+      DatanodeInfo[] newNodes = dfsO.getStreamer().getNodes();
+      o.close();
+      // Trigger block report to NN
+      for (DataNode d: cluster.getDataNodes()) {
+        DataNodeTestUtils.triggerBlockReport(d);
+      }
+      // Read from the replaced datanode to verify the corruption. So shutdown
+      // all other nodes in the pipeline.
+      List<DatanodeInfo> pipelineList = Arrays.asList(pipeline);
+      DatanodeInfo newNode = null;
+      for (DatanodeInfo node : newNodes) {
+        if (!pipelineList.contains(node)) {
+          newNode = node;
+          break;
+        }
+      }
+      assert newNode != null;
+      LOG.info("Number of nodes in pipeline: {} newNode {}",
+          newNodes.length, newNode.getName());
+      // shutdown old 2 nodes
+      for (DatanodeInfo node : newNodes) {
+        if (node.getName().equals(newNode.getName())) {
+          continue;
+        }
+        LOG.info("shutdown {}", node.getName());
+        cluster.stopDataNode(node.getName());
       }
 
       // Read should be successfull from only the newNode. There should not be

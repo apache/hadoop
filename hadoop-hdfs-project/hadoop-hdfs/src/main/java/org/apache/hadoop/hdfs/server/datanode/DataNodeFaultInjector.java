@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -94,6 +95,8 @@ public class DataNodeFaultInjector {
   }
 
   public void noRegistration() throws IOException { }
+
+  public void failTransfer(DatanodeID sourceDNId) throws IOException { }
 
   public void failMirrorConnection() throws IOException { }
 
