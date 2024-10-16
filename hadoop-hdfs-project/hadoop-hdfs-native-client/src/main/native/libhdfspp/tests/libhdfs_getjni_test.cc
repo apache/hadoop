@@ -20,13 +20,26 @@
 #include <hdfs/hdfs.h>
 #include <jni.h>
 
+#ifdef WIN32
+#define DECLSPEC
+#else
+// Windows cribs when this is declared in the function definition,
+// However, Linux needs it.
+#define DECLSPEC _JNI_IMPORT_OR_EXPORT_
+#endif
+
 // hook the jvm runtime function. expect always failure
-_JNI_IMPORT_OR_EXPORT_ jint JNICALL JNI_GetDefaultJavaVMInitArgs(void*) {
+DECLSPEC jint JNICALL JNI_GetDefaultJavaVMInitArgs(void*) {
     return 1;
 }
 
 // hook the jvm runtime function. expect always failure
-_JNI_IMPORT_OR_EXPORT_ jint JNICALL JNI_CreateJavaVM(JavaVM**, void**, void*) {
+DECLSPEC jint JNICALL JNI_CreateJavaVM(JavaVM**, void**, void*) {
+    return 1;
+}
+
+// hook the jvm runtime function. expect always failure
+DECLSPEC jint JNICALL JNI_GetCreatedJavaVMs(JavaVM**, jsize, jsize*) {
     return 1;
 }
 
