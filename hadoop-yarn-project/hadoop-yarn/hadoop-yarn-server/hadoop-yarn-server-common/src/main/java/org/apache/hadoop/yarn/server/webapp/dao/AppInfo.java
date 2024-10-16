@@ -121,8 +121,8 @@ public class AppInfo {
             .getReservedResources().getMemorySize();
         Integer gpuIndex = ResourceUtils.getResourceTypeIndex()
             .get(ResourceInformation.GPU_URI);
-        allocatedGpus = -1;
-        reservedGpus = -1;
+        allocatedGpus = 0L;
+        reservedGpus = 0L;
         if (gpuIndex != null) {
           allocatedGpus = usageReport.getUsedResources()
               .getResourceValue(ResourceInformation.GPU_URI);
