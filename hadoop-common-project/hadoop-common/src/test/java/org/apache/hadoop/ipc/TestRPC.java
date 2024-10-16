@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.retry.RetryUtils;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 
+import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -1672,17 +1673,64 @@ public class TestRPC extends TestRpcBase {
     try {
       server = setupDecayRpcSchedulerandTestServer(ns + ".");
 
-      UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user");
+      UserGroupInformation ugi1 = UserGroupInformation.createRemoteUser("user");
       // normal users start with priority 0.
-      Assert.assertEquals(0, server.getPriorityLevel(ugi));
+      Assert.assertEquals(0, server.getPriorityLevel(ugi1));
       // calls for a protocol defined client will have priority of 0.
-      Assert.assertEquals(0, server.getPriorityLevel(newSchedulable(ugi)));
+      Assert.assertEquals(0, server.getPriorityLevel(newSchedulable(ugi1)));
 
       // protocol defined client will have top priority of -1.
-      ugi = UserGroupInformation.createRemoteUser("clientForProtocol");
-      Assert.assertEquals(-1, server.getPriorityLevel(ugi));
+      UserGroupInformation ugi2 = UserGroupInformation.createRemoteUser("clientForProtocol");
+      Assert.assertEquals(-1, server.getPriorityLevel(ugi2));
       // calls for a protocol defined client will have priority of 0.
-      Assert.assertEquals(0, server.getPriorityLevel(newSchedulable(ugi)));
+      Assert.assertEquals(0, server.getPriorityLevel(newSchedulable(ugi2)));
+
+      // user call
+      ugi1.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          TestRpcService proxy = getClient(addr, conf);
+          for (int i = 0; i < 10; i++) {
+            proxy.ping(null, newEmptyRequest());
+          }
+          return null;
+        }
+      });
+      // clientForProtocol call
+      ugi2.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          TestRpcService proxy = getClient(addr, conf);
+          for (int i = 0; i < 30; i++) {
+            proxy.ping(null, newEmptyRequest());
+          }
+          return null;
+        }
+      });
+
+      CallQueueManager callQueueManager =
+          (CallQueueManager) Whitebox.getInternalState(server, "callQueue");
+      DecayRpcScheduler scheduler =
+          (DecayRpcScheduler) Whitebox.getInternalState(callQueueManager, "scheduler");
+      Assert.assertNotNull(scheduler);
+
+      // test total costs.
+      assertEquals(10, scheduler.getTotalCallVolume());
+      assertEquals(10, scheduler.getTotalRawCallVolume());
+      assertEquals(30, scheduler.getTotalServiceUserCallVolume());
+      assertEquals(30, scheduler.getTotalServiceUserRawCallVolume());
+      assertEquals(1, scheduler.getPriorityLevel(newSchedulable(ugi1)));
+      assertEquals(0, scheduler.getPriorityLevel(newSchedulable(ugi2)));
+
+      // test total costs after decay.
+      scheduler.forceDecay();
+      assertEquals(5, scheduler.getTotalCallVolume());
+      assertEquals(10, scheduler.getTotalRawCallVolume());
+      assertEquals(15, scheduler.getTotalServiceUserCallVolume());
+      assertEquals(30, scheduler.getTotalServiceUserRawCallVolume());
+      assertEquals(1, scheduler.getPriorityLevel(newSchedulable(ugi1)));
+      assertEquals(0, scheduler.getPriorityLevel(newSchedulable(ugi2)));
+
     } finally {
       stop(server, null);
     }
