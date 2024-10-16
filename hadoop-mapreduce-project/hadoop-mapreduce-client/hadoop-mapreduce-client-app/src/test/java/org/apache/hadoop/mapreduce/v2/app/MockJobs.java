@@ -606,6 +606,11 @@ public class MockJobs extends MockApps {
       }
 
       @Override
+      public String getResourceManagerHost() {
+        return "mockresourcemanager";
+      }
+
+      @Override
       public Path getConfFile() {
         return configFile;
       }

@@ -73,6 +73,7 @@ public interface Job {
   boolean isUber();
   String getUserName();
   String getQueueName();
+  String getResourceManagerHost();
   
   /**
    * @return a path to where the config file for this job is located.
