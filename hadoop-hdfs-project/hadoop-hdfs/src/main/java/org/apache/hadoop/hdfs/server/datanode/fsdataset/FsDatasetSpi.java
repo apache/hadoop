@@ -708,4 +708,19 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @param time the last time in milliseconds when the directory scanner successfully ran.
    */
   default void setLastDirScannerFinishTime(long time) {}
+
+  /**
+   * Set to enable or disable the deletion of corrupt replicas from disk
+   * when client requests a missing block.
+   * @param deleteCorruptReplicaFromDisk
+   *        true will delete the actual on-disk block and meta file,
+   *        otherwise false will only remove block from volume map.
+   */
+  void setDeleteCorruptReplicaFromDisk(boolean deleteCorruptReplicaFromDisk);
+
+  /**
+   * Check whether the datanode delete replica from disk when a client requests a missing block.
+   * @return boolean.
+   */
+  boolean isDeleteCorruptReplicaFromDisk();
 }
