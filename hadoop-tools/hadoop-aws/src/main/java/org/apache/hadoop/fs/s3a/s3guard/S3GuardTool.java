@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
+import org.apache.hadoop.fs.s3a.audit.AuditTool;
 import org.apache.hadoop.fs.s3a.auth.RolePolicies;
 import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
@@ -999,6 +1000,9 @@ public abstract class S3GuardTool extends Configured implements Tool,
     }
     switch (subCommand) {
 
+    case AuditTool.AUDIT:
+      command = new AuditTool(conf);
+      break;
     case BucketInfo.NAME:
       command = new BucketInfo(conf);
       break;
