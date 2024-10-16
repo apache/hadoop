@@ -83,4 +83,9 @@ public class ContainerExitStatus {
    */
   public static final int KILLED_FOR_EXCESS_LOGS = -109;
 
+  /**
+   * Container was terminated since exceeds CPU limit.
+   */
+  public static final int KILLED_EXCEEDED_PCORE = -110;
+
 }

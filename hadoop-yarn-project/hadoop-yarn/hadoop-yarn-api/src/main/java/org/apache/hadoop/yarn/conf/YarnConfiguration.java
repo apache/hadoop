@@ -1711,6 +1711,21 @@ public class YarnConfiguration extends Configuration {
       + "elastic-memory-control.enabled";
   public static final boolean DEFAULT_NM_ELASTIC_MEMORY_CONTROL_ENABLED = false;
 
+  /** Specifies whether physical core check is enabled. */
+  public static final String NM_PCORE_CHECK_ENABLED = NM_PREFIX
+      + "pcore-check-enabled";
+  public static final boolean DEFAULT_NM_PCORE_CHECK_ENABLED = true;
+
+  /** Specifies the max pcore ratio before killed. */
+  public static final String NM_PCORE_LIMIT_RATIO = NM_PREFIX
+      + "pcore-limit-ratio";
+  public static final float DEFAULT_NM_PCORE_LIMIT_RATIO = 1.0f;
+
+  /** Specifies the times of exceed pcore ratio limit before killed. */
+  public static final String NM_PCORE_LIMIT_TIMES = NM_PREFIX
+      + "pcore-limit-times";
+  public static final int DEFAULT_NM_PCORE_LIMIT_TIMES = 3;
+
   /** Specifies the OOM handler code. */
   public static final String NM_ELASTIC_MEMORY_CONTROL_OOM_HANDLER = NM_PREFIX
       + "elastic-memory-control.oom-handler";

@@ -142,6 +142,11 @@ public class TestNMWebServicesApps extends JerseyTestBase {
         public boolean isPmemCheckEnabled() {
           return true;
         }
+
+        @Override
+        public boolean isPcoreCheckEnabled() {
+          return false;
+        }
       };
       nmWebApp = new NMWebApp(resourceView, aclsManager, dirsHandler);
       bind(JAXBContextResolver.class);
