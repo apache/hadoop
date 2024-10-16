@@ -549,14 +549,17 @@ public class TestDefaultContainerExecutor {
           @Override
           public ContainerLocalizer createContainerLocalizer(String user,
               String appId, String locId, String tokenFileName,
-              List<String> localDirs, FileContext localizerFc)
-              throws IOException {
+              List<String> localDirs, FileContext localizerFc,
+              String containerId) throws IOException {
 
             // Spy on the localizer and make it return valid heart-beat
             // responses even though there is no real NodeManager.
             ContainerLocalizer localizer =
                 super.createContainerLocalizer(user, appId, locId,
-                    tokenFileName, localDirs, localizerFc);
+                    tokenFileName, localDirs, localizerFc, appId);
+            // in the above line passing appId in place of container Id as
+            // container id is just for logging purposes and has not other
+            // use
             ContainerLocalizer spyLocalizer = spy(localizer);
             LocalizationProtocol nmProxy = mock(LocalizationProtocol.class);
             try {

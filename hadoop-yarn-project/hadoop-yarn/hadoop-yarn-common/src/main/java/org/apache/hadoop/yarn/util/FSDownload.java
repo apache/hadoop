@@ -74,6 +74,7 @@ public class FSDownload implements Callable<Path> {
   private static final Logger LOG =
       LoggerFactory.getLogger(FSDownload.class);
 
+  private String containerId;
   private FileContext files;
   private final UserGroupInformation userUgi;
   private Configuration conf;
@@ -94,12 +95,27 @@ public class FSDownload implements Callable<Path> {
 
   public FSDownload(FileContext files, UserGroupInformation ugi, Configuration conf,
       Path destDirPath, LocalResource resource) {
-    this(files, ugi, conf, destDirPath, resource, null);
+    this(files, ugi, conf, destDirPath, resource, null, "");
   }
+
+   public FSDownload(String containerId, FileContext files, UserGroupInformation ugi,
+                     Configuration conf,
+                     Path destDirPath, LocalResource resource) {
+     this(files, ugi, conf, destDirPath, resource, null, containerId);
+   }
+
+   public FSDownload(FileContext files,
+                     UserGroupInformation ugi, Configuration conf,
+                     Path destDirPath, LocalResource resource,
+                     LoadingCache<Path,Future<FileStatus>> statCache) {
+     this(files, ugi, conf, destDirPath, resource, statCache, "");
+   }
 
   public FSDownload(FileContext files, UserGroupInformation ugi, Configuration conf,
       Path destDirPath, LocalResource resource,
-      LoadingCache<Path,Future<FileStatus>> statCache) {
+      LoadingCache<Path,Future<FileStatus>> statCache,
+      String containerId) {
+    this.containerId = containerId;
     this.conf = conf;
     this.destDirPath = destDirPath;
     this.files = files;
@@ -416,8 +432,8 @@ public class FSDownload implements Callable<Path> {
       throw new IOException("Invalid resource", e);
     }
 
-    LOG.debug("Starting to download {} {} {}", sCopy,
-        resource.getType(), resource.getPattern());
+    LOG.info("Starting to download {} {} {} for containerId: {}", sCopy,
+        resource.getType(), resource.getPattern(), containerId);
 
     final Path destinationTmp = new Path(destDirPath + "_tmp");
     createDir(destinationTmp, cachePerms);
@@ -438,8 +454,8 @@ public class FSDownload implements Callable<Path> {
       changePermissions(dFinal.getFileSystem(conf), dFinal);
       files.rename(destinationTmp, destDirPath, Rename.OVERWRITE);
 
-      LOG.debug("File has been downloaded to {} from {}",
-          new Path(destDirPath, sCopy.getName()), sCopy);
+      LOG.info("File has been downloaded to {} from {} for containerId: {}",
+          new Path(destDirPath, sCopy.getName()), sCopy, containerId);
     } catch (Exception e) {
       try {
         files.delete(destDirPath, true);
@@ -486,7 +502,7 @@ public class FSDownload implements Callable<Path> {
       perm = isDir ? PRIVATE_DIR_PERMS : PRIVATE_FILE_PERMS;
     }
 
-    LOG.debug("Changing permissions for path {} to perm {}", path, perm);
+    LOG.info("Changing permissions for path {} to perm {}", path, perm);
 
     final FsPermission fPerm = perm;
     if (null == userUgi) {
