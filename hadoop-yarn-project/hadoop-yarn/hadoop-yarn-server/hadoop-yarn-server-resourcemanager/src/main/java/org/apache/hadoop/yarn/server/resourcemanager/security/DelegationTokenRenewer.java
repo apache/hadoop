@@ -165,6 +165,9 @@ public class DelegationTokenRenewer extends AbstractService {
     tokenRenewerThreadRetryMaxAttempts =
         conf.getInt(YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS,
             YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS);
+    delegationTokenRenewerPoolTrackerFlag =
+        conf.getBoolean(YarnConfiguration.RM_DT_RENEWER_POOL_TRACKER_ENABLED,
+            YarnConfiguration.DEFAULT_RM_DT_RENEWER_POOL_TRACKER_ENABLED);
     setLocalSecretManagerAndServiceAddr();
     renewerService = createNewThreadPoolService(conf);
     pendingEventQueue = new LinkedBlockingQueue<DelegationTokenRenewerEvent>();
