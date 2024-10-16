@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_MSYNC_RPC_ADDRESS_KEY;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -195,7 +197,7 @@ public class ObserverReadProxyProvider<T>
   public ObserverReadProxyProvider(
       Configuration conf, URI uri, Class<T> xface, HAProxyFactory<T> factory) {
     this(conf, uri, xface, factory,
-        new ConfiguredFailoverProxyProvider<>(conf, uri, xface, factory));
+        new ConfiguredFailoverProxyProvider<>(conf, uri, xface, factory, DFS_NAMENODE_MSYNC_RPC_ADDRESS_KEY));
   }
 
   @SuppressWarnings("unchecked")
