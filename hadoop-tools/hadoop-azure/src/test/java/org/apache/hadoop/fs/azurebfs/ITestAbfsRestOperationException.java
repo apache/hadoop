@@ -144,8 +144,7 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
   public void testWithDifferentCustomTokenFetchRetry(int numOfRetries) throws Exception {
     AzureBlobFileSystem fs = this.getFileSystem();
     Configuration config = getCustomAuthConfiguration(numOfRetries);
-    try (final AzureBlobFileSystem fs1 =
-        (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
+    try (AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
         config)) {
       RetryTestTokenProvider retryTestTokenProvider
               = RetryTestTokenProvider.getCurrentRetryTestProviderInstance(
