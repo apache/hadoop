@@ -2921,6 +2921,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Private public static final String MULTI_NODE_SORTING_POLICY_NAME =
       PREFIX + "multi-node-sorting.policy";
 
+  public static final String MULTI_NODE_SORTING_POLICY_CURRENT_NAME =
+      MULTI_NODE_SORTING_POLICY_NAME + ".current-name";
+
+  public static final String SORTING_INTERVAL_MS_SUFFIX =
+      "sorting-interval.ms";
+
   /**
    * resource usage based node sorting algorithm.
    */
@@ -2952,16 +2958,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       return null;
     }
 
-    String policyClassName = get(MULTI_NODE_SORTING_POLICY_NAME + DOT
-        + policyName.trim() + DOT + "class");
-
-    if (policyClassName == null || policyClassName.isEmpty()) {
-      throw new YarnRuntimeException(
-          policyName.trim() + " Class is not configured or not an instance of "
-              + MultiNodeLookupPolicy.class.getCanonicalName());
-    }
-
-    return normalizePolicyName(policyClassName.trim());
+    return policyName;
   }
 
   public boolean isLegacyQueueMode() {
@@ -3002,7 +2999,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         policyClassName = normalizePolicyName(policyClassName.trim());
         long policySortingInterval = getLong(
             MULTI_NODE_SORTING_POLICY_NAME + DOT + str.trim()
-                + DOT + "sorting-interval.ms",
+                + DOT + SORTING_INTERVAL_MS_SUFFIX,
             DEFAULT_MULTI_NODE_SORTING_INTERVAL);
         if (policySortingInterval < 0) {
           throw new YarnRuntimeException(
@@ -3010,8 +3007,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
                   + " multi-node policy is configured with invalid"
                   + " sorting-interval:" + policySortingInterval);
         }
-        set.add(
-            new MultiNodePolicySpec(policyClassName, policySortingInterval));
+        set.add(new MultiNodePolicySpec(str.trim(), policyClassName,
+            policySortingInterval));
       }
     }
 
