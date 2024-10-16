@@ -1116,6 +1116,7 @@ public class RouterRpcClient {
     final Method m = remoteMethod.getMethod();
     List<IOException> thrownExceptions = new ArrayList<>();
     Object firstResult = null;
+    Object firstLocation = null;
     // Invoke in priority order
     for (final RemoteLocationContext loc : locations) {
       String ns = loc.getNameserviceId();
@@ -1138,6 +1139,7 @@ public class RouterRpcClient {
         }
         if (firstResult == null) {
           firstResult = result;
+          firstLocation = loc;
         }
       } catch (IOException ioe) {
         // Localize the exception
@@ -1175,6 +1177,7 @@ public class RouterRpcClient {
     }
     // Return the first result, whether it is the value or not
     @SuppressWarnings("unchecked") T ret = (T) firstResult;
+    @SuppressWarnings("unchecked") R loc = (R) firstLocation;
     return new RemoteResult<>(locations.get(0), ret);
   }
 
