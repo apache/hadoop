@@ -63,11 +63,11 @@ import java.net.URL;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -208,7 +208,7 @@ public abstract class Command extends Configured implements Closeable {
    * @param node - Node
    */
   protected void setNodesToProcess(DiskBalancerDataNode node) {
-    List<DiskBalancerDataNode> nodelist = new LinkedList<>();
+    List<DiskBalancerDataNode> nodelist = new ArrayList<>();
     nodelist.add(node);
     setNodesToProcess(nodelist);
   }
