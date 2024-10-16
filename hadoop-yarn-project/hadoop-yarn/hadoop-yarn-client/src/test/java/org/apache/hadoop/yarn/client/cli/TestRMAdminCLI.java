@@ -216,14 +216,14 @@ public class TestRMAdminCLI {
   
   @Test
   public void testRefreshQueues() throws Exception {
-    String[] args = { "-refreshQueues" };
+    String[] args = {"-refreshQueues"};
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshQueues(any(RefreshQueuesRequest.class));
   }
 
   @Test
   public void testRefreshUserToGroupsMappings() throws Exception {
-    String[] args = { "-refreshUserToGroupsMappings" };
+    String[] args = {"-refreshUserToGroupsMappings"};
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshUserToGroupsMappings(
         any(RefreshUserToGroupsMappingsRequest.class));
@@ -231,7 +231,7 @@ public class TestRMAdminCLI {
 
   @Test
   public void testRefreshSuperUserGroupsConfiguration() throws Exception {
-    String[] args = { "-refreshSuperUserGroupsConfiguration" };
+    String[] args = {"-refreshSuperUserGroupsConfiguration"};
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshSuperUserGroupsConfiguration(
         any(RefreshSuperUserGroupsConfigurationRequest.class));
@@ -239,14 +239,14 @@ public class TestRMAdminCLI {
 
   @Test
   public void testRefreshAdminAcls() throws Exception {
-    String[] args = { "-refreshAdminAcls" };
+    String[] args = {"-refreshAdminAcls"};
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshAdminAcls(any(RefreshAdminAclsRequest.class));
   }
 
   @Test
   public void testRefreshClusterMaxPriority() throws Exception {
-    String[] args = { "-refreshClusterMaxPriority" };
+    String[] args = {"-refreshClusterMaxPriority"};
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshClusterMaxPriority(
         any(RefreshClusterMaxPriorityRequest.class));
@@ -254,7 +254,7 @@ public class TestRMAdminCLI {
 
   @Test
   public void testRefreshServiceAcl() throws Exception {
-    String[] args = { "-refreshServiceAcl" };
+    String[] args = {"-refreshServiceAcl"};
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshServiceAcls(any(RefreshServiceAclsRequest.class));
   }
@@ -264,8 +264,8 @@ public class TestRMAdminCLI {
     String nodeIdStr = "0.0.0.0:0";
     int memSize = 2048;
     int cores = 2;
-    String[] args = { "-updateNodeResource", nodeIdStr,
-        Integer.toString(memSize), Integer.toString(cores) };
+    String[] args = {"-updateNodeResource", nodeIdStr,
+        Integer.toString(memSize), Integer.toString(cores)};
     assertEquals(0, rmAdminCLI.run(args));
     ArgumentCaptor<UpdateNodeResourceRequest> argument =
         ArgumentCaptor.forClass(UpdateNodeResourceRequest.class);
@@ -468,7 +468,7 @@ public class TestRMAdminCLI {
 
   @Test
   public void testRefreshNodes() throws Exception {
-    String[] args = { "-refreshNodes" };
+    String[] args = {"-refreshNodes"};
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshNodes(any(RefreshNodesRequest.class));
   }
@@ -577,7 +577,7 @@ public class TestRMAdminCLI {
     PrintStream out = mock(PrintStream.class);
     System.setOut(out);
     try {
-      String[] args = { "-getGroups", "admin" };
+      String[] args = {"-getGroups", "admin"};
       assertEquals(0, rmAdminCLI.run(args));
       verify(admin).getGroupsForUser(eq("admin"));
       verify(out).println(argThat(
@@ -684,7 +684,7 @@ public class TestRMAdminCLI {
     System.setOut(new PrintStream(dataOut));
     System.setErr(new PrintStream(dataErr));
     try {
-      String[] args = { "-help" };
+      String[] args = {"-help"};
       assertEquals(0, rmAdminCLI.run(args));
       oldOutPrintStream.println(dataOut);
       assertTrue(dataOut
@@ -749,38 +749,38 @@ public class TestRMAdminCLI {
               "-help [cmd]: Displays help for the given command or all " +
               "commands if none"));
 
-      testError(new String[] { "-help", "-refreshQueues" },
+      testError(new String[] {"-help", "-refreshQueues"},
           "Usage: yarn rmadmin [-refreshQueues]", dataErr, 0);
-      testError(new String[] { "-help", "-refreshNodes" },
+      testError(new String[] {"-help", "-refreshNodes"},
           "Usage: yarn rmadmin [-refreshNodes [-g|graceful " +
           "[timeout in seconds] -client|server]]", dataErr, 0);
-      testError(new String[] { "-help", "-refreshNodesResources" },
+      testError(new String[] {"-help", "-refreshNodesResources"},
           "Usage: yarn rmadmin [-refreshNodesResources]", dataErr, 0);
-      testError(new String[] { "-help", "-refreshUserToGroupsMappings" },
+      testError(new String[] {"-help", "-refreshUserToGroupsMappings"},
           "Usage: yarn rmadmin [-refreshUserToGroupsMappings]", dataErr, 0);
       testError(
-          new String[] { "-help", "-refreshSuperUserGroupsConfiguration" },
+          new String[] {"-help", "-refreshSuperUserGroupsConfiguration"},
           "Usage: yarn rmadmin [-refreshSuperUserGroupsConfiguration]",
           dataErr, 0);
-      testError(new String[] { "-help", "-refreshAdminAcls" },
+      testError(new String[] {"-help", "-refreshAdminAcls"},
           "Usage: yarn rmadmin [-refreshAdminAcls]", dataErr, 0);
-      testError(new String[] { "-help", "-refreshServiceAcl" },
+      testError(new String[] {"-help", "-refreshServiceAcl"},
           "Usage: yarn rmadmin [-refreshServiceAcl]", dataErr, 0);
-      testError(new String[] { "-help", "-getGroups" },
+      testError(new String[] {"-help", "-getGroups"},
           "Usage: yarn rmadmin [-getGroups [username]]", dataErr, 0);
-      testError(new String[] { "-help", "-transitionToActive" },
+      testError(new String[] {"-help", "-transitionToActive"},
           "Usage: yarn rmadmin [-transitionToActive [--forceactive]" +
           " <serviceId>]", dataErr, 0);
-      testError(new String[] { "-help", "-transitionToStandby" },
+      testError(new String[] {"-help", "-transitionToStandby"},
           "Usage: yarn rmadmin [-transitionToStandby <serviceId>]", dataErr, 0);
-      testError(new String[] { "-help", "-getServiceState" },
+      testError(new String[] {"-help", "-getServiceState"},
           "Usage: yarn rmadmin [-getServiceState <serviceId>]", dataErr, 0);
-      testError(new String[] { "-help", "-checkHealth" },
+      testError(new String[] {"-help", "-checkHealth"},
           "Usage: yarn rmadmin [-checkHealth <serviceId>]", dataErr, 0);
 
-      testError(new String[] { "-help", "-badParameter" },
+      testError(new String[] {"-help", "-badParameter"},
           "Usage: yarn rmadmin", dataErr, 0);
-      testError(new String[] { "-badParameter" },
+      testError(new String[] {"-badParameter"},
           "badParameter: Unknown command", dataErr, -1);
 
       // Test -help when RM HA is enabled
@@ -850,8 +850,8 @@ public class TestRMAdminCLI {
     // change the sequence of "-directlyAccessNodeLabelStore" and labels,
     // should fail
     args =
-        new String[] { "-addToClusterNodeLabels",
-            "-directlyAccessNodeLabelStore", "x,y" };
+        new String[] {"-addToClusterNodeLabels",
+            "-directlyAccessNodeLabelStore", "x,y"};
     assertEquals(-1, rmAdminCLI.run(args));
     
     // local node labels manager will be close after running
@@ -861,7 +861,7 @@ public class TestRMAdminCLI {
   @Test
   public void testAccessRemoteNodeLabelManager() throws Exception {
     String[] args =
-        { "-addToClusterNodeLabels", "x,y" };
+        {"-addToClusterNodeLabels", "x,y"};
     assertEquals(0, rmAdminCLI.run(args));
     
     // localNodeLabelsManager shouldn't accessed
@@ -875,33 +875,33 @@ public class TestRMAdminCLI {
   public void testAddToClusterNodeLabels() throws Exception {
     // successfully add labels
     String[] args =
-        { "-addToClusterNodeLabels", "x", "-directlyAccessNodeLabelStore" };
+        {"-addToClusterNodeLabels", "x", "-directlyAccessNodeLabelStore"};
     assertEquals(0, rmAdminCLI.run(args));
     assertTrue(dummyNodeLabelsManager.getClusterNodeLabelNames().containsAll(
         ImmutableSet.of("x")));
     
     // no labels, should fail
-    args = new String[] { "-addToClusterNodeLabels" };
+    args = new String[] {"-addToClusterNodeLabels"};
     assertTrue(0 != rmAdminCLI.run(args));
     
     // no labels, should fail
     args =
-        new String[] { "-addToClusterNodeLabels",
-            "-directlyAccessNodeLabelStore" };
+        new String[] {"-addToClusterNodeLabels",
+            "-directlyAccessNodeLabelStore"};
     assertTrue(0 != rmAdminCLI.run(args));
 
     // no labels, should fail at client validation
-    args = new String[] { "-addToClusterNodeLabels", " " };
+    args = new String[] {"-addToClusterNodeLabels", " "};
     assertTrue(0 != rmAdminCLI.run(args));
 
     // no labels, should fail at client validation
-    args = new String[] { "-addToClusterNodeLabels", " , " };
+    args = new String[] {"-addToClusterNodeLabels", " , "};
     assertTrue(0 != rmAdminCLI.run(args));
 
     // successfully add labels
     args =
-        new String[] { "-addToClusterNodeLabels", ",x,,",
-            "-directlyAccessNodeLabelStore" };
+        new String[] {"-addToClusterNodeLabels", ",x,,",
+            "-directlyAccessNodeLabelStore"};
     assertEquals(0, rmAdminCLI.run(args));
     assertTrue(dummyNodeLabelsManager.getClusterNodeLabelNames().containsAll(
         ImmutableSet.of("x")));
@@ -911,25 +911,25 @@ public class TestRMAdminCLI {
   public void testAddToClusterNodeLabelsWithExclusivitySetting()
       throws Exception {
     // Parenthese not match
-    String[] args = new String[] { "-addToClusterNodeLabels", "x(" };
+    String[] args = new String[] {"-addToClusterNodeLabels", "x("};
     assertTrue(0 != rmAdminCLI.run(args));
 
-    args = new String[] { "-addToClusterNodeLabels", "x)" };
+    args = new String[] {"-addToClusterNodeLabels", "x)"};
     assertTrue(0 != rmAdminCLI.run(args));
 
     // Not expected key=value specifying inner parentese
-    args = new String[] { "-addToClusterNodeLabels", "x(key=value)" };
+    args = new String[] {"-addToClusterNodeLabels", "x(key=value)"};
     assertTrue(0 != rmAdminCLI.run(args));
 
     // Not key is expected, but value not
-    args = new String[] { "-addToClusterNodeLabels", "x(exclusive=)" };
+    args = new String[] {"-addToClusterNodeLabels", "x(exclusive=)"};
     assertTrue(0 != rmAdminCLI.run(args));
 
     // key=value both set
     args =
-        new String[] { "-addToClusterNodeLabels",
+        new String[] {"-addToClusterNodeLabels",
             "w,x(exclusive=true), y(exclusive=false),z()",
-            "-directlyAccessNodeLabelStore" };
+            "-directlyAccessNodeLabelStore"};
     assertTrue(0 == rmAdminCLI.run(args));
 
     assertTrue(dummyNodeLabelsManager.isExclusiveNodeLabel("w"));
@@ -939,9 +939,9 @@ public class TestRMAdminCLI {
 
     // key=value both set, and some spaces need to be handled
     args =
-        new String[] { "-addToClusterNodeLabels",
+        new String[] {"-addToClusterNodeLabels",
             "a (exclusive= true) , b( exclusive =false),c  ",
-            "-directlyAccessNodeLabelStore" };
+            "-directlyAccessNodeLabelStore"};
     assertTrue(0 == rmAdminCLI.run(args));
 
     assertTrue(dummyNodeLabelsManager.isExclusiveNodeLabel("a"));
@@ -954,27 +954,27 @@ public class TestRMAdminCLI {
     // Successfully remove labels
     dummyNodeLabelsManager.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
     String[] args =
-        { "-removeFromClusterNodeLabels", "x,,y",
-            "-directlyAccessNodeLabelStore" };
+        {"-removeFromClusterNodeLabels", "x,,y",
+            "-directlyAccessNodeLabelStore"};
     assertEquals(0, rmAdminCLI.run(args));
     assertTrue(dummyNodeLabelsManager.getClusterNodeLabelNames().isEmpty());
     
     // no labels, should fail
-    args = new String[] { "-removeFromClusterNodeLabels" };
+    args = new String[] {"-removeFromClusterNodeLabels"};
     assertTrue(0 != rmAdminCLI.run(args));
     
     // no labels, should fail
     args =
-        new String[] { "-removeFromClusterNodeLabels",
-            "-directlyAccessNodeLabelStore" };
+        new String[] {"-removeFromClusterNodeLabels",
+            "-directlyAccessNodeLabelStore"};
     assertTrue(0 != rmAdminCLI.run(args));
 
     // no labels, should fail at client validation
-    args = new String[] { "-removeFromClusterNodeLabels", " " };
+    args = new String[] {"-removeFromClusterNodeLabels", " "};
     assertTrue(0 != rmAdminCLI.run(args));
 
     // no labels, should fail at client validation
-    args = new String[] { "-removeFromClusterNodeLabels", ", " };
+    args = new String[] {"-removeFromClusterNodeLabels", ", "};
     assertTrue(0 != rmAdminCLI.run(args));
   }
   
@@ -984,9 +984,9 @@ public class TestRMAdminCLI {
     dummyNodeLabelsManager
         .addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y", "Y"));
     String[] args =
-        { "-replaceLabelsOnNode",
+        {"-replaceLabelsOnNode",
             "node1:8000,x node2:8000=y node3,x node4=Y",
-            "-directlyAccessNodeLabelStore" };
+            "-directlyAccessNodeLabelStore"};
     assertEquals(0, rmAdminCLI.run(args));
     assertTrue(dummyNodeLabelsManager.getNodeLabels().containsKey(
         NodeId.newInstance("node1", 8000)));
@@ -998,23 +998,23 @@ public class TestRMAdminCLI {
         NodeId.newInstance("node4", 0)));
 
     // no labels, should fail
-    args = new String[] { "-replaceLabelsOnNode" };
+    args = new String[] {"-replaceLabelsOnNode"};
     assertTrue(0 != rmAdminCLI.run(args));
 
     // no labels, should fail
-    args = new String[] { "-replaceLabelsOnNode", "-failOnUnknownNodes" };
+    args = new String[] {"-replaceLabelsOnNode", "-failOnUnknownNodes"};
     assertTrue(0 != rmAdminCLI.run(args));
 
     // no labels, should fail
     args =
-        new String[] { "-replaceLabelsOnNode", "-directlyAccessNodeLabelStore" };
+        new String[] {"-replaceLabelsOnNode", "-directlyAccessNodeLabelStore"};
     assertTrue(0 != rmAdminCLI.run(args));
 
     // no labels, should fail
-    args = new String[] { "-replaceLabelsOnNode", " " };
+    args = new String[] {"-replaceLabelsOnNode", " "};
     assertTrue(0 != rmAdminCLI.run(args));
 
-    args = new String[] { "-replaceLabelsOnNode", ", " };
+    args = new String[] {"-replaceLabelsOnNode", ", "};
     assertTrue(0 != rmAdminCLI.run(args));
   }
   
@@ -1023,8 +1023,8 @@ public class TestRMAdminCLI {
     // Successfully replace labels
     dummyNodeLabelsManager.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
     String[] args =
-        { "-replaceLabelsOnNode", "node1,x,y",
-            "-directlyAccessNodeLabelStore" };
+        {"-replaceLabelsOnNode", "node1,x,y",
+            "-directlyAccessNodeLabelStore"};
     assertTrue(0 != rmAdminCLI.run(args));
   }
 
@@ -1033,12 +1033,12 @@ public class TestRMAdminCLI {
     // Successfully replace labels
     dummyNodeLabelsManager
         .addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
-    String[] args = { "-replaceLabelsOnNode", "node1=x node2=y",
-        "-directlyAccessNodeLabelStore" };
+    String[] args = {"-replaceLabelsOnNode", "node1=x node2=y",
+        "-directlyAccessNodeLabelStore"};
     assertTrue(0 == rmAdminCLI.run(args));
 
-    args = new String[] { "-replaceLabelsOnNode", "node1= node2=",
-        "-directlyAccessNodeLabelStore" };
+    args = new String[] {"-replaceLabelsOnNode", "node1= node2=",
+        "-directlyAccessNodeLabelStore"};
     assertTrue("Labels should get replaced even '=' is used ",
         0 == rmAdminCLI.run(args));
   }
