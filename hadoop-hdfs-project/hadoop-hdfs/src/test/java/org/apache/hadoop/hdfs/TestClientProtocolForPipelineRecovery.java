@@ -934,7 +934,7 @@ public class TestClientProtocolForPipelineRecovery {
       int count = 0;
       Random r = new Random();
       byte[] b = new byte[oneWriteSize];
-      while (count < threshold) {
+      while (count < threshold + 1) {
         r.nextBytes(b);
         o.write(b);
         count++;
