@@ -405,6 +405,23 @@ public abstract class GenericTestUtils {
   }
 
   /**
+   * Execute check and wait for {@code executeAndWaitForMillis}.
+   *
+   * @param check the test to perform.
+   * @param executeAndWaitForMillis Waiting time after executing check.
+   * @throws InterruptedException if the method is interrupted while waiting.
+   */
+  public static <T> T executeAndWait(final Supplier<T> check,
+      long executeAndWaitForMillis) throws InterruptedException {
+    if (executeAndWaitForMillis < 0) {
+      executeAndWaitForMillis = 0;
+    }
+    T result = check.get();
+    Thread.sleep(executeAndWaitForMillis);
+    return result;
+  }
+
+  /**
    * Prints output to one {@link PrintStream} while copying to the other.
    * <p>
    * Closing the main {@link PrintStream} will NOT close the other.

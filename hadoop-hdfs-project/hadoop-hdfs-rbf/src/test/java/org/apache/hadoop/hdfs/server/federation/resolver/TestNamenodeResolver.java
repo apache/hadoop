@@ -26,6 +26,7 @@ import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStor
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.newStateStore;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.waitStateStore;
+import static org.apache.hadoop.test.GenericTestUtils.executeAndWait;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -282,13 +283,13 @@ public class TestNamenodeResolver {
     // 1) ns0:nn0 - Active
     // 2) ns0:nn1 - Standby (newest)
     // Verify the selected entry is the active entry
-    assertTrue(namenodeResolver.registerNamenode(
-        createNamenodeReport(
-            NAMESERVICES[0], NAMENODES[0], HAServiceState.ACTIVE)));
-    Thread.sleep(100);
-    assertTrue(namenodeResolver.registerNamenode(
-        createNamenodeReport(
-            NAMESERVICES[0], NAMENODES[1], HAServiceState.STANDBY)));
+    assertTrue(executeAndWait(
+        () -> registerNamenode(
+            NAMESERVICES[0], NAMENODES[0], HAServiceState.ACTIVE),
+        100));
+
+    assertTrue(registerNamenode(
+            NAMESERVICES[0], NAMENODES[1], HAServiceState.STANDBY));
 
     stateStore.refreshCaches(true);
 
@@ -300,16 +301,15 @@ public class TestNamenodeResolver {
     // 2) ns0:nn1 - Standby (newest)
     // Verify the selected entry is the standby entry as the active entry is
     // stale
-    assertTrue(namenodeResolver.registerNamenode(
-        createNamenodeReport(
-            NAMESERVICES[0], NAMENODES[0], HAServiceState.ACTIVE)));
-
     // Expire active registration
-    Thread.sleep(6000);
+    assertTrue(executeAndWait(
+        () -> registerNamenode(
+            NAMESERVICES[0], NAMENODES[0], HAServiceState.ACTIVE),
+        6000));
 
     // Refresh standby registration
-    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
-        NAMESERVICES[0], NAMENODES[1], HAServiceState.STANDBY)));
+    assertTrue(registerNamenode(
+        NAMESERVICES[0], NAMENODES[1], HAServiceState.STANDBY));
 
     // Verify that standby is selected (active is now expired)
     stateStore.refreshCaches(true);
@@ -319,11 +319,12 @@ public class TestNamenodeResolver {
     // 1) ns0:nn0 - Active
     // 2) ns0:nn1 - Unavailable (newest)
     // Verify the selected entry is the active entry
-    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
-        NAMESERVICES[0], NAMENODES[0], HAServiceState.ACTIVE)));
-    Thread.sleep(100);
-    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
-        NAMESERVICES[0], NAMENODES[1], null)));
+    assertTrue(executeAndWait(
+        () -> registerNamenode(
+            NAMESERVICES[0], NAMENODES[0], HAServiceState.ACTIVE),
+        100));
+    assertTrue(registerNamenode(
+        NAMESERVICES[0], NAMENODES[1], null));
     stateStore.refreshCaches(true);
     verifyFirstRegistration(NAMESERVICES[0], NAMENODES[0], 2,
         FederationNamenodeServiceState.ACTIVE);
@@ -331,11 +332,12 @@ public class TestNamenodeResolver {
     // 1) ns0:nn0 - Unavailable (newest)
     // 2) ns0:nn1 - Standby
     // Verify the selected entry is the standby entry
-    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
-        NAMESERVICES[0], NAMENODES[1], HAServiceState.STANDBY)));
-    Thread.sleep(1000);
-    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
-        NAMESERVICES[0], NAMENODES[0], null)));
+    assertTrue(executeAndWait(
+        () -> registerNamenode(
+            NAMESERVICES[0], NAMENODES[1], HAServiceState.STANDBY),
+        1000));
+    assertTrue(registerNamenode(
+        NAMESERVICES[0], NAMENODES[0], null));
 
     stateStore.refreshCaches(true);
     verifyFirstRegistration(NAMESERVICES[0], NAMENODES[1], 2,
@@ -345,34 +347,71 @@ public class TestNamenodeResolver {
     // 2) ns0:nn1 - Standby
     // 3) ns0:nn2 - Active (newest)
     // Verify the selected entry is the newest active entry
-    assertTrue(namenodeResolver.registerNamenode(
-        createNamenodeReport(NAMESERVICES[0], NAMENODES[0], null)));
-    Thread.sleep(100);
-    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
-        NAMESERVICES[0], NAMENODES[1], HAServiceState.STANDBY)));
-    Thread.sleep(100);
-    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
-        NAMESERVICES[0], NAMENODES[2], HAServiceState.ACTIVE)));
+    assertTrue(executeAndWait(
+        () -> registerNamenode(
+            NAMESERVICES[0], NAMENODES[0], null),
+        100));
+    assertTrue(executeAndWait(
+        () -> registerNamenode(
+            NAMESERVICES[0], NAMENODES[1], HAServiceState.STANDBY),
+        100));
+    assertTrue(registerNamenode(
+        NAMESERVICES[0], NAMENODES[2], HAServiceState.ACTIVE));
 
     stateStore.refreshCaches(true);
     verifyFirstRegistration(NAMESERVICES[0], NAMENODES[2], 3,
         FederationNamenodeServiceState.ACTIVE);
 
     // 1) ns0:nn0 - Standby (oldest)
-    // 2) ns0:nn1 - Standby (newest)
-    // 3) ns0:nn2 - Standby
-    // Verify the selected entry is the newest standby entry
-    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
-        NAMESERVICES[0], NAMENODES[0], HAServiceState.STANDBY)));
-    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
-        NAMESERVICES[0], NAMENODES[2], HAServiceState.STANDBY)));
-    Thread.sleep(1500);
-    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
-        NAMESERVICES[0], NAMENODES[1], HAServiceState.STANDBY)));
+    // 2) ns0:nn1 - Standby
+    // 3) ns0:nn2 - Standby (newest)
+    // Verify the selected entry is the oldest standby entry
+    assertTrue(executeAndWait(
+        () -> registerNamenode(
+            NAMESERVICES[0], NAMENODES[0], HAServiceState.STANDBY),
+        1500));
+    assertTrue(executeAndWait(
+        () -> registerNamenode(
+            NAMESERVICES[0], NAMENODES[2], HAServiceState.STANDBY),
+        1500));
+    assertTrue(registerNamenode(
+        NAMESERVICES[0], NAMENODES[1], HAServiceState.STANDBY));
+
+    stateStore.refreshCaches(true);
+    verifyFirstRegistration(NAMESERVICES[0], NAMENODES[0], 3,
+        FederationNamenodeServiceState.STANDBY);
+
+    // 1) ns0:nn0 - Observer (oldest)
+    // 2) ns0:nn1 - Observer (newest)
+    // Verify the selected entry is the newest Observer entry
+    assertTrue(executeAndWait(
+        () -> registerNamenode(
+            NAMESERVICES[0], NAMENODES[0], HAServiceState.OBSERVER),
+        1500));
+    assertTrue(registerNamenode(
+        NAMESERVICES[0], NAMENODES[1], HAServiceState.OBSERVER));
 
     stateStore.refreshCaches(true);
     verifyFirstRegistration(NAMESERVICES[0], NAMENODES[1], 3,
-        FederationNamenodeServiceState.STANDBY);
+        FederationNamenodeServiceState.OBSERVER);
+
+    // 1) ns0:nn0 - Unavailable (oldest)
+    // 2) ns0:nn1 - Unavailable
+    // 3) ns0:nn2 - Unavailable (newest)
+    // Verify the selected entry is the oldest Unavailable entry
+    assertTrue(executeAndWait(
+        () -> registerNamenode(
+            NAMESERVICES[0], NAMENODES[0], null),
+        1500));
+    assertTrue(executeAndWait(
+        () -> registerNamenode(
+            NAMESERVICES[0], NAMENODES[1], null),
+        1500));
+    assertTrue(registerNamenode(
+        NAMESERVICES[0], NAMENODES[2], null));
+    stateStore.refreshCaches(true);
+    verifyFirstRegistration(NAMESERVICES[0], NAMENODES[0], 3,
+        FederationNamenodeServiceState.UNAVAILABLE);
   }
 
   @Test
@@ -426,5 +465,15 @@ public class TestNamenodeResolver {
     int port = Integer.parseInt(rpcAddrArr[1]);
     String hostname = rpcAddrArr[0];
     return new InetSocketAddress(hostname, port);
+  }
+
+  private boolean registerNamenode(String nsId,
+      String nnId, HAServiceState haServiceState) {
+    try {
+      return namenodeResolver.registerNamenode(
+          createNamenodeReport(nsId, nnId, haServiceState));
+    } catch (IOException e) {
+      return false;
+    }
   }
 }
