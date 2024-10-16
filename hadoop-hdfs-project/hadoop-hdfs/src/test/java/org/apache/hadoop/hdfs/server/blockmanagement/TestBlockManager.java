@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.LinkedListMultimap;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Sets;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -48,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -100,6 +103,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -117,6 +121,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
@@ -704,9 +709,6 @@ public class TestBlockManager {
             cntNodes,
             liveNodes,
             new NumberReplicas(),
-            new ArrayList<Byte>(),
-            new ArrayList<Byte>(),
-            new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY)[0]);
 
     assertEquals("Does not choose a source node for a less-than-highest-priority"
@@ -717,9 +719,6 @@ public class TestBlockManager {
             cntNodes,
             liveNodes,
             new NumberReplicas(),
-            new ArrayList<Byte>(),
-            new ArrayList<Byte>(),
-            new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_VERY_LOW_REDUNDANCY).length);
 
     // Increase the replication count to test replication count > hard limit
@@ -733,26 +732,28 @@ public class TestBlockManager {
             cntNodes,
             liveNodes,
             new NumberReplicas(),
-            new ArrayList<Byte>(),
-            new ArrayList<Byte>(),
-            new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY).length);
   }
 
   @Test
-  public void testChooseSrcDatanodesWithDupEC() throws Exception {
+  public void testScheduleReconstructionWithDupEC() throws Exception {
+    NameNode.initMetrics(new HdfsConfiguration(), HdfsServerConstants.NamenodeRole.NAMENODE);
     bm.setMaxReplicationStreams(4, false);
 
-    long blockId = -9223372036854775776L; // real ec block id
-    Block aBlock = new Block(blockId, 0, 0);
     // ec policy
     ECSchema rsSchema = new ECSchema("rs", 3, 2);
     String policyName = "RS-3-2-128k";
     int cellSize = 128 * 1024;
     ErasureCodingPolicy ecPolicy =
         new ErasureCodingPolicy(policyName, rsSchema, cellSize, (byte) -1);
+
+    long blockId = -9223372036854775776L; // real ec block id
+    Block aBlock = new Block(blockId, ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(), 0);
     // striped blockInfo
     BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlock, ecPolicy);
+    aBlockInfoStriped.setBlockCollectionId(1);
+    INodeFile inodeFile = mock(INodeFile.class);
+    doReturn(inodeFile).when(fsn).getBlockCollection(1);
     // ec storageInfo
     DatanodeStorageInfo ds1 = DFSTestUtil.createDatanodeStorageInfo(
         "storage1", "1.1.1.1", "rack1", "host1");
@@ -777,42 +778,29 @@ public class TestBlockManager {
     }
 
     addEcBlockToBM(blockId, ecPolicy);
-    List<DatanodeDescriptor> cntNodes = new LinkedList<DatanodeDescriptor>();
-    List<DatanodeStorageInfo> liveNodes = new LinkedList<DatanodeStorageInfo>();
-    NumberReplicas numReplicas = new NumberReplicas();
-    List<Byte> liveBlockIndices = new ArrayList<>();
-    List<Byte> liveBusyBlockIndices = new ArrayList<>();
-    List<Byte> excludeReconstructedIndices = new ArrayList<>();
 
-    bm.chooseSourceDatanodes(
-            aBlockInfoStriped,
-            cntNodes,
-            liveNodes,
-            numReplicas, liveBlockIndices,
-            liveBusyBlockIndices,
-            excludeReconstructedIndices,
-            LowRedundancyBlocks.QUEUE_VERY_LOW_REDUNDANCY);
-
-    assertEquals("Choose the source node for reconstruction with one node reach"
-            + " the MAX maxReplicationStreams, the numReplicas still return the"
-            + " correct live replicas.", 4,
-            numReplicas.liveReplicas());
-
-    assertEquals("Choose the source node for reconstruction with one node reach"
-            + " the MAX maxReplicationStreams, the numReplicas should return"
-            + " the correct redundant Internal Blocks.", 1,
-            numReplicas.redundantInternalBlocks());
+    BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 0);
+    assertTrue(work instanceof ErasureCodingWork);
+    assertEquals(1, work.getAdditionalReplRequired());
+    assertEquals(4, ((ErasureCodingWork) work).getLiveBlockIndices().length);
+    assertTrue(containAllIndices(Sets.newHashSet((byte) 0, (byte) 1, (byte) 2, (byte) 3),
+        ((ErasureCodingWork) work).getLiveBlockIndices()));
+    work.getLiveReplicaStorages().contains(ds5);
   }
 
   @Test
   public void testChooseSrcDNWithDupECInDecommissioningNode() throws Exception {
+    NameNode.initMetrics(new HdfsConfiguration(), HdfsServerConstants.NamenodeRole.NAMENODE);
     long blockId = -9223372036854775776L; // real ec block id
-    Block aBlock = new Block(blockId, 0, 0);
     // RS-3-2 EC policy
     ErasureCodingPolicy ecPolicy =
         SystemErasureCodingPolicies.getPolicies().get(1);
+    Block aBlock = new Block(blockId, ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(), 0);
     // striped blockInfo
     BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlock, ecPolicy);
+    aBlockInfoStriped.setBlockCollectionId(1);
+    INodeFile inodeFile = mock(INodeFile.class);
+    doReturn(inodeFile).when(fsn).getBlockCollection(1);
     // ec storageInfo
     DatanodeStorageInfo ds1 = DFSTestUtil.createDatanodeStorageInfo(
         "storage1", "1.1.1.1", "rack1", "host1");
@@ -840,29 +828,8 @@ public class TestBlockManager {
     // decommission datanode where store block 0
     ds1.getDatanodeDescriptor().startDecommission();
 
-    List<DatanodeDescriptor> containingNodes =
-        new LinkedList<DatanodeDescriptor>();
-    List<DatanodeStorageInfo> nodesContainingLiveReplicas =
-        new LinkedList<DatanodeStorageInfo>();
-    NumberReplicas numReplicas = new NumberReplicas();
-    List<Byte> liveBlockIndices = new ArrayList<>();
-    List<Byte> liveBusyBlockIndices = new ArrayList<>();
-    List<Byte> excludeReconstructedIndices = new ArrayList<>();
-
-    bm.chooseSourceDatanodes(
-        aBlockInfoStriped,
-        containingNodes,
-        nodesContainingLiveReplicas,
-        numReplicas, liveBlockIndices,
-        liveBusyBlockIndices,
-        excludeReconstructedIndices,
-        LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY);
-    assertEquals("There are 5 live replicas in " +
-            "[ds2, ds3, ds4, ds5, ds6] datanodes ",
-        5, numReplicas.liveReplicas());
-    assertEquals("The ds1 datanode is in decommissioning, " +
-            "so there is no redundant replica",
-        0, numReplicas.redundantInternalBlocks());
+    // should not reschedule work
+    assertNull(bm.scheduleReconstruction(aBlockInfoStriped, 0));
   }
 
   @Test
@@ -1038,9 +1005,6 @@ public class TestBlockManager {
             cntNodes,
             liveNodes,
             new NumberReplicas(),
-            new LinkedList<Byte>(),
-            new ArrayList<Byte>(),
-            new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY)[0]);
 
 
@@ -1055,9 +1019,6 @@ public class TestBlockManager {
             cntNodes,
             liveNodes,
             new NumberReplicas(),
-            new LinkedList<Byte>(),
-            new ArrayList<Byte>(),
-            new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY).length);
   }
 
@@ -2328,5 +2289,325 @@ public class TestBlockManager {
     } finally {
       DataNodeFaultInjector.set(oldInjector);
     }
+  }
+
+  @Test
+  public void testScheduleReconstructionStriped() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    NameNode.initMetrics(conf, HdfsServerConstants.NamenodeRole.NAMENODE);
+    // RS-3-2 EC policy
+    ErasureCodingPolicy ecPolicy =
+        SystemErasureCodingPolicies.getPolicies().get(1);
+    long blockId = -9223372036854775776L; // real ec block id
+    int bcId = 1;
+    Block aBlock = new Block(blockId, ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(), 0);
+    BlockInfoStriped stripedBlock = new BlockInfoStriped(aBlock, ecPolicy);
+    INodeFile inodeFile = mock(INodeFile.class);
+    doReturn(inodeFile).when(fsn).getBlockCollection(bcId);
+    stripedBlock.setBlockCollectionId(bcId);
+    // DataNode
+    List<DatanodeStorageInfo> storageList = new ArrayList<>();
+    for (int i = 0; i < storages.length; i++) {
+      storageList.add(storages[i]);
+      // Add node to NetworkTopology
+      DatanodeDescriptor node = nodes.get(i);
+      node.setAlive(true);
+      bm.getDatanodeManager().addDatanode(node);
+    }
+
+    // Block Indices
+    List<Byte> blockIndices = new ArrayList<>();
+    for (int i = 0; i < ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits(); i++) {
+      blockIndices.add((byte) i);
+    }
+    ErasureCodingWork ecWork;
+    ErasureCodingReplicationWork replWork;
+
+    // Case 1: No blocks are missing.
+    // Case 1.1: If no block are lost, we will get no work
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, 5),
+        blockIndices.subList(0, 5));
+    assertNull(bm.scheduleReconstruction(stripedBlock, 0));
+
+    // Case 1.2: If no block is missing, but need rack, will get one
+    //   ErasureCodingReplicationWork with one additional replication required
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, rackA.size()),
+        blockIndices.subList(0, rackA.size()));
+    List<DatanodeStorageInfo> storageInfos = new ArrayList<>();
+    for (int i = rackA.size(); i < ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits(); i++) {
+      int index = storages.length + i;
+      DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo(
+          String.format("storage%d", index),
+          String.format("%d.%d.%d.%d", index, index, index, index),
+          storageList.get(0).getDatanodeDescriptor().getNetworkLocation(),
+          String.format("host%d", index));
+      storageInfos.add(storage);
+    }
+    addStorageForStripedBlock(stripedBlock, storageInfos, blockIndices.subList(3, 5));
+    replWork = (ErasureCodingReplicationWork) bm.scheduleReconstruction(stripedBlock, 0);
+    assertEquals(1, replWork.getAdditionalReplRequired());
+    assertEquals(1, replWork.getSrcNodes().length);
+    assertEquals(5, replWork.getContainingNodes().size());
+    assertEquals(5, replWork.getLiveReplicaStorages().size());
+
+    // Case 1.3: If no block is missing, but need rack, but all src is busy , will get no work
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, rackA.size()),
+        blockIndices.subList(0, rackA.size()));
+    storageInfos.clear();
+    for (int i = rackA.size(); i < ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits(); i++) {
+      int index = storages.length + i;
+      DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo(
+          String.format("storage%d", index),
+          String.format("%d.%d.%d.%d", index, index, index, index),
+          storageList.get(0).getDatanodeDescriptor().getNetworkLocation(),
+          String.format("host%d", index));
+      storageInfos.add(storage);
+    }
+    addStorageForStripedBlock(stripedBlock, storageInfos, blockIndices.subList(3, 5));
+    // make all sources are busy
+    Iterator<DatanodeStorageInfo> iterator = stripedBlock.getStorageInfos();
+    while(iterator.hasNext()) {
+      DatanodeDescriptor dn = iterator.next().getDatanodeDescriptor();
+      for (int i = 0; i < bm.getReplicationStreamsHardLimit(); i++) {
+        dn.incrementPendingReplicationWithoutTargets();
+      }
+    }
+    assertNull(bm.scheduleReconstruction(stripedBlock, 0));
+    // release
+    iterator = stripedBlock.getStorageInfos();
+    while(iterator.hasNext()) {
+      DatanodeDescriptor dn = iterator.next().getDatanodeDescriptor();
+      for (int i = 0; i < bm.getReplicationStreamsHardLimit(); i++) {
+        dn.decrementPendingReplicationWithoutTargets();
+      }
+    }
+
+    // Case 1.4:
+    // If no block is missing, but one node is decommissions, will get one
+    //   ReplicationWork, and the src node is just the decommissioning node.
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, 5),
+        blockIndices.subList(0, 5));
+    storageList.get(0).getDatanodeDescriptor().startDecommission();
+    replWork = (ErasureCodingReplicationWork) bm.scheduleReconstruction(stripedBlock, 0);
+    assertEquals(1, replWork.getAdditionalReplRequired());
+    assertEquals(1, replWork.getSrcNodes().length);
+    assertEquals(storageList.get(0).getDatanodeDescriptor(), replWork.getSrcNodes()[0]);
+    assertEquals(5, replWork.getContainingNodes().size());
+    assertTrue(replWork.getContainingNodes().containsAll(
+        storageList.subList(0, 5).stream().map(s -> s.getDatanodeDescriptor())
+            .collect(Collectors.toSet())));
+    assertEquals(4, replWork.getLiveReplicaStorages().size());
+    assertTrue(replWork.getLiveReplicaStorages().containsAll(storageList.subList(1, 5)));
+    updateDataNodeAdminState(storageList.get(0).getDatanodeDescriptor(), AdminStates.NORMAL);
+
+    // Case 1.5: If no block is missing, but five nodes are decommissions, will get five
+    // ReplicationWork.
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, 5),
+        blockIndices.subList(0, 5));
+    for (int i = 0; i < 5; i++) {
+      storageList.get(i).getDatanodeDescriptor().startDecommission();
+    }
+    replWork = (ErasureCodingReplicationWork) bm.scheduleReconstruction(stripedBlock, 0);
+    assertEquals(5, replWork.getAdditionalReplRequired());
+    assertEquals(5, replWork.getSrcNodes().length);
+    assertEquals(5, replWork.getSrcIndices().length);
+    assertEquals(5, replWork.getContainingNodes().size());
+    assertTrue(replWork.getContainingNodes().containsAll(
+        storageList.subList(0, 5).stream().map(s -> s.getDatanodeDescriptor())
+            .collect(Collectors.toSet())));
+    assertEquals(0, replWork.getLiveReplicaStorages().size());
+    for (int i = 0; i < 5; i++) {
+      assertEquals(storageList.get(i).getDatanodeDescriptor(), replWork.getSrcNodes()[i]);
+      assertEquals(blockIndices.get(i), replWork.getSrcIndices()[i]);
+    }
+    for (int i = 0; i < 5; i++) {
+      updateDataNodeAdminState(storageList.get(i).getDatanodeDescriptor(), AdminStates.NORMAL);
+    }
+
+    // Case 1.6: If no block is missing, but one nodes is decommissioning and busy, will
+    //   get no work
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, 5),
+        blockIndices.subList(0, 5));
+    storageList.get(0).getDatanodeDescriptor().startDecommission();
+    for (int i = 0; i < bm.getReplicationStreamsHardLimit(); i++) {
+      storageList.get(0).getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
+    }
+    assertNull(bm.scheduleReconstruction(stripedBlock, 0));
+    updateDataNodeAdminState(storageList.get(0).getDatanodeDescriptor(), AdminStates.NORMAL);
+    for (int i = 0; i < bm.getReplicationStreamsHardLimit(); i++) {
+      storageList.get(0).getDatanodeDescriptor().decrementPendingReplicationWithoutTargets();
+    }
+
+    // Case 1.7: If no block is missing, but three block are busy, and the other block
+    //   is decommissioning. we should get replication work.
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, 5),
+        blockIndices.subList(0, 5));
+    storageList.get(0).getDatanodeDescriptor().startDecommission();
+    for (int m = 1; m < 4; m++) {
+      for (int i = 0; i < bm.getReplicationStreamsHardLimit(); i++) {
+        storageList.get(m).getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
+      }
+    }
+    replWork = (ErasureCodingReplicationWork) bm.scheduleReconstruction(stripedBlock, 0);
+    assertEquals(1, replWork.getAdditionalReplRequired());
+    assertEquals(1, replWork.getSrcNodes().length);
+    assertEquals(storageList.get(0).getDatanodeDescriptor(), replWork.getSrcNodes()[0]);
+    assertEquals(1, replWork.getSrcIndices().length);
+    assertEquals(0, (byte) replWork.getSrcIndices()[0]);
+    updateDataNodeAdminState(storageList.get(0).getDatanodeDescriptor(), AdminStates.NORMAL);
+    for (int m = 1; m < 4; m++) {
+      for (int i = 0; i < bm.getReplicationStreamsHardLimit(); i++) {
+        storageList.get(m).getDatanodeDescriptor().decrementPendingReplicationWithoutTargets();
+      }
+    }
+
+    // Case 2: One block is missing
+    // Case 2.1: If one block is missing, we will get one ErasureCodingWork,
+    //   and require one replicas
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, 4),
+        blockIndices.subList(0, 4));
+    ecWork = (ErasureCodingWork) bm.scheduleReconstruction(stripedBlock, 0);
+    assertEquals(1, ecWork.getAdditionalReplRequired());
+    assertEquals(4, ecWork.getContainingNodes().size());
+    assertTrue(ecWork.getContainingNodes().containsAll(
+        storageList.subList(0, 4).stream().map(s -> s.getDatanodeDescriptor())
+            .collect(Collectors.toSet())));
+    assertEquals(4, ecWork.getLiveReplicaStorages().size());
+    assertTrue(ecWork.getLiveReplicaStorages().containsAll(storageList.subList(0, 4)));
+    assertEquals(4, ecWork.getLiveBlockIndices().length);
+    assertTrue(containAllIndices(blockIndices.subList(0, 4), ecWork.getLiveBlockIndices()));
+    assertEquals(0, ecWork.getExcludeReconstructedIndices().length);
+
+    // Case 2.2: If one block is missing, the other one is decommissioning, still get one
+    //   ErasureCodingWork but not ReplicationWork
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, 4),
+        blockIndices.subList(0, 4));
+    storageList.get(0).getDatanodeDescriptor().startDecommission();
+    ecWork = (ErasureCodingWork) bm.scheduleReconstruction(stripedBlock, 0);
+    assertEquals(1, ecWork.getAdditionalReplRequired());
+    assertEquals(4, ecWork.getContainingNodes().size());
+    assertTrue(ecWork.getContainingNodes().containsAll(
+        storageList.subList(0, 4).stream().map(s -> s.getDatanodeDescriptor())
+            .collect(Collectors.toSet())));
+    assertEquals(3, ecWork.getLiveReplicaStorages().size());
+    assertTrue(ecWork.getLiveReplicaStorages().containsAll(storageList.subList(1, 4)));
+    assertEquals(4, ecWork.getLiveBlockIndices().length);
+    assertTrue(containAllIndices(blockIndices.subList(0, 4), ecWork.getLiveBlockIndices()));
+    assertEquals(0, ecWork.getExcludeReconstructedIndices().length);
+    updateDataNodeAdminState(storageList.get(0).getDatanodeDescriptor(), AdminStates.NORMAL);
+
+    // Case 2.3: If one block is missing, the other one is decommissioning, the other one is
+    //   busy, still get one ErasureCodingWork but not ReplicationWork
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, 4),
+        blockIndices.subList(0, 4));
+    storageList.get(0).getDatanodeDescriptor().startDecommission();
+    for (int i = 0; i < bm.getReplicationStreamsHardLimit(); i++) {
+      storageList.get(1).getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
+    }
+    ecWork = (ErasureCodingWork) bm.scheduleReconstruction(stripedBlock, 0);
+    assertEquals(1, ecWork.getAdditionalReplRequired());
+    assertEquals(4, ecWork.getContainingNodes().size());
+    assertTrue(ecWork.getContainingNodes().containsAll(
+        storageList.subList(0, 4).stream().map(s -> s.getDatanodeDescriptor())
+            .collect(Collectors.toSet())));
+    assertEquals(3, ecWork.getLiveReplicaStorages().size());
+    assertTrue(ecWork.getLiveReplicaStorages().containsAll(storageList.subList(1, 4)));
+    assertEquals(3, ecWork.getLiveBlockIndices().length);
+    List<Byte> subBlockIndices = blockIndices.subList(2, 4);
+    subBlockIndices.add(blockIndices.get(0));
+    assertTrue(containAllIndices(subBlockIndices, ecWork.getLiveBlockIndices()));
+    assertEquals(1, ecWork.getExcludeReconstructedIndices().length);
+    assertEquals((byte) blockIndices.get(1), ecWork.getExcludeReconstructedIndices()[0]);
+    updateDataNodeAdminState(storageList.get(0).getDatanodeDescriptor(), AdminStates.NORMAL);
+    for (int i = 0; i < bm.getReplicationStreamsHardLimit(); i++) {
+      storageList.get(1).getDatanodeDescriptor().decrementPendingReplicationWithoutTargets();
+    }
+
+    // Case 2.4: If one block is missing, the other one is decommissioning, the other two is
+    //   busy, still get no work
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, 4),
+        blockIndices.subList(0, 4));
+    storageList.get(2).getDatanodeDescriptor().startDecommission();
+    for (int i = 0; i < bm.getReplicationStreamsHardLimit(); i++) {
+      storageList.get(0).getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
+      storageList.get(1).getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
+    }
+    assertNull(bm.scheduleReconstruction(stripedBlock, 0));
+    updateDataNodeAdminState(storageList.get(2).getDatanodeDescriptor(), AdminStates.NORMAL);
+    for (int i = 0; i < bm.getReplicationStreamsHardLimit(); i++) {
+      storageList.get(0).getDatanodeDescriptor().decrementPendingReplicationWithoutTargets();
+      storageList.get(1).getDatanodeDescriptor().decrementPendingReplicationWithoutTargets();
+    }
+
+    // Case 3: If two block are missing, we will get one work, and require two replicas
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, 3),
+        blockIndices.subList(0, 3));
+    ecWork = (ErasureCodingWork) bm.scheduleReconstruction(stripedBlock, 0);
+    assertEquals(2, ecWork.getAdditionalReplRequired());
+    assertEquals(3, ecWork.getContainingNodes().size());
+    assertTrue(ecWork.getContainingNodes().containsAll(
+        storageList.subList(0, 3).stream().map(s -> s.getDatanodeDescriptor())
+            .collect(Collectors.toSet())));
+    assertEquals(3, ecWork.getLiveReplicaStorages().size());
+    assertTrue(ecWork.getLiveReplicaStorages().containsAll(storageList.subList(0, 3)));
+    assertEquals(3, ecWork.getLiveBlockIndices().length);
+    assertTrue(containAllIndices(blockIndices.subList(0, 3), ecWork.getLiveBlockIndices()));
+    assertEquals(0, ecWork.getExcludeReconstructedIndices().length);
+
+    // Case 4: If we lost three block, we will get no work.
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, 2),
+        blockIndices.subList(0, 2));
+    assertNull(bm.scheduleReconstruction(stripedBlock, 0));
+
+    // Case 5: If we lost foure block, we will get no work.
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, 1),
+        blockIndices.subList(0, 1));
+    assertNull(bm.scheduleReconstruction(stripedBlock, 0));
+
+    // Case 6: All block are missing, we will get no work.
+    clearStorageForStripedBlock(stripedBlock);
+    assertNull(bm.scheduleReconstruction(stripedBlock, 0));
+  }
+
+  private static void clearStorageForStripedBlock(BlockInfoStriped striped) {
+    Iterator<DatanodeStorageInfo> iterator = striped.getStorageInfos();
+    while (iterator.hasNext()) {
+      striped.removeStorage(iterator.next());
+    }
+  }
+
+  private static void addStorageForStripedBlock(BlockInfoStriped striped,
+      List<DatanodeStorageInfo> storages, List<Byte> blockIndices) {
+    for (int i = 0; i < storages.size(); i++) {
+      striped.addStorage(storages.get(i),
+          new Block(blockIndices.get(i) + striped.getBlockId(), 0, 0));
+    }
+  }
+
+  private static boolean containAllIndices(Collection<Byte> collection, byte[] indices) {
+    for (byte index : indices) {
+      if (!collection.contains(index)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static void updateDataNodeAdminState(DatanodeDescriptor dn, AdminStates state) {
+    Whitebox.setInternalState(dn, "adminState", state);
   }
 }
