@@ -33,6 +33,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.crypto.SecretKey;
 
@@ -74,6 +76,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationAllo
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystemTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystemUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -99,9 +102,8 @@ public class RMStateStoreTestBase {
 
   static class TestDispatcher implements Dispatcher, EventHandler<Event> {
 
-    ApplicationAttemptId attemptId;
-
-    boolean notified = false;
+    private final Set<ApplicationAttemptId> handledAttempt = ConcurrentHashMap.newKeySet();
+    private final Set<ApplicationId> handledApps = ConcurrentHashMap.newKeySet();
 
     @SuppressWarnings("rawtypes")
     @Override
@@ -113,11 +115,16 @@ public class RMStateStoreTestBase {
     public void handle(Event event) {
       if (event instanceof RMAppAttemptEvent) {
         RMAppAttemptEvent rmAppAttemptEvent = (RMAppAttemptEvent) event;
-        assertEquals(attemptId, rmAppAttemptEvent.getApplicationAttemptId());
-      }
-      notified = true;
-      synchronized (this) {
-        notifyAll();
+        synchronized (handledAttempt) {
+          handledAttempt.add(rmAppAttemptEvent.getApplicationAttemptId());
+          handledAttempt.notifyAll();
+        }
+      } else if (event instanceof RMAppEvent) {
+        RMAppEvent rmAppEvent = (RMAppEvent) event;
+        synchronized (handledApps) {
+          handledApps.add(rmAppEvent.getApplicationId());
+          handledApps.notifyAll();
+        }
       }
     }
 
@@ -125,6 +132,38 @@ public class RMStateStoreTestBase {
     @Override
     public EventHandler<Event> getEventHandler() {
       return this;
+    }
+
+    void waitNotify(ApplicationAttemptId attemptId) {
+      long startTime = System.currentTimeMillis();
+      while(!handledAttempt.contains(attemptId)) {
+        synchronized (handledAttempt) {
+          try {
+            handledAttempt.wait(100);
+          } catch (InterruptedException e) {
+            LOG.trace("Interrupted", e);
+          }
+        }
+        if(System.currentTimeMillis() - startTime > 1000*60) {
+          fail("Timed out attempt store notification");
+        }
+      }
+    }
+
+    void waitNotify(ApplicationId applicationId) {
+      long startTime = System.currentTimeMillis();
+      while(!handledApps.contains(applicationId)) {
+        synchronized (handledApps) {
+          try {
+            handledApps.wait(100);
+          } catch (InterruptedException e) {
+            LOG.trace("Interrupted", e);
+          }
+        }
+        if(System.currentTimeMillis() - startTime > 1000*60) {
+          fail("Timed out attempt store notification");
+        }
+      }
     }
 
   }
@@ -146,23 +185,6 @@ public class RMStateStoreTestBase {
 
   public long getEpochRange() {
     return epochRange;
-  }
-
-  void waitNotify(TestDispatcher dispatcher) {
-    long startTime = System.currentTimeMillis();
-    while(!dispatcher.notified) {
-      synchronized (dispatcher) {
-        try {
-          dispatcher.wait(1000);
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-      }
-      if(System.currentTimeMillis() - startTime > 1000*60) {
-        fail("Timed out attempt store notification");
-      }
-    }
-    dispatcher.notified = false;
   }
 
   protected RMApp storeApp(RMStateStore store, ApplicationId appId,
@@ -204,17 +226,15 @@ public class RMStateStoreTestBase {
         .thenReturn(mockRmAppAttemptMetrics);
     when(mockRmAppAttemptMetrics.getAggregateAppResourceUsage())
         .thenReturn(new AggregateAppResourceUsage(new HashMap<>()));
-    dispatcher.attemptId = attemptId;
     store.storeNewApplicationAttempt(mockAttempt);
-    waitNotify(dispatcher);
+    dispatcher.waitNotify(attemptId);
     return mockAttempt;
   }
 
   protected void updateAttempt(RMStateStore store, TestDispatcher dispatcher,
       ApplicationAttemptStateData attemptState) {
-    dispatcher.attemptId = attemptState.getAttemptId();
     store.updateApplicationAttemptState(attemptState);
-    waitNotify(dispatcher);
+    dispatcher.waitNotify(attemptState.getAttemptId());
   }
 
   void testRMAppStateStore(RMStateStoreHelper stateStoreHelper)
@@ -642,6 +662,8 @@ public class RMStateStoreTestBase {
   public void testDeleteStore(RMStateStoreHelper stateStoreHelper)
       throws Exception {
     RMStateStore store = stateStoreHelper.getRMStateStore();
+    TestDispatcher dispatcher = new TestDispatcher();
+    store.setRMDispatcher(dispatcher);
     ArrayList<RMApp> appList = createAndStoreApps(stateStoreHelper, store, 5);
     store.deleteStore();
     // verify apps deleted
