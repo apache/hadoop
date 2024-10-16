@@ -574,7 +574,7 @@ public class FederationClientInterceptor
     try {
 
       // Step1. Select homeSubCluster for Application according to Policy.
-      subClusterId = policyFacade.getHomeSubcluster(appSubmissionContext, blackList);
+      subClusterId = policyFacade.getHomeSubcluster(appSubmissionContext, blackList, user.getShortUserName());
       LOG.info("submitApplication appId {} try #{} on SubCluster {}.",
           applicationId, retryCount, subClusterId);
 

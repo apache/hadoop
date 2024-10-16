@@ -613,8 +613,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     SubClusterId subClusterId = null;
 
     try {
+      String userName = getUser().getShortUserName();
       // Get subClusterId from policy.
-      subClusterId = policyFacade.getHomeSubcluster(context, blackList);
+      subClusterId = policyFacade.getHomeSubcluster(context, blackList, userName);
 
       // Print the log of submitting the submitApplication.
       LOG.info("submitApplication appId {} try #{} on SubCluster {}.",

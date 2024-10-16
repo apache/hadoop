@@ -4176,6 +4176,12 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_FEDERATION_AMRMPROXY_REGISTER_UAM_RETRY_INTERVAL =
       TimeUnit.MILLISECONDS.toMillis(100);
 
+  /** Whether to use the user name as the queue name (instead of "default") if
+   * the request does not specify a queue. */
+  public static final String USER_AS_DEFAULT_QUEUE =
+          FEDERATION_PREFIX + "user-as-default-queue.enabled";
+  public static final boolean DEFAULT_USER_AS_DEFAULT_QUEUE = false;
+
   public static final String DEFAULT_FEDERATION_POLICY_KEY = "*";
   public static final String FEDERATION_POLICY_MANAGER = FEDERATION_PREFIX
       + "policy-manager";
