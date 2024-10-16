@@ -3879,6 +3879,34 @@
     <value>1s</value>
   </property>
 
+  <property>
+    <description>
+      Federation can return different results for maxclustercapability in a
+      getNewApplication call, this field lets us decide  whether we want to
+      override to some consolidated values at router layer.
+    </description>
+    <name>yarn.federation.override.maximum.cluster.capability.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Maxclustercapability for memory to override at router layer for memory, in mb.
+      The default value is 8192.
+    </description>
+    <name>yarn.federation.override.maximum.cluster.capability.enabled</name>
+    <value>8192</value>
+  </property>
+
+  <property>
+    <description>
+      Maxclustercapability for cpu to override at router layer for cpu, in vcores.
+      The default value is 4.
+    </description>
+    <name>yarn.federation.state-store.clean-up-retry-sleep-time</name>
+    <value>4</value>
+  </property>
+
   <!-- Other Configuration -->
 
   <property>
