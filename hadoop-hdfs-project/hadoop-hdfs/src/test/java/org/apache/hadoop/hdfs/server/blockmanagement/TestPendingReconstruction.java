@@ -175,6 +175,7 @@ public class TestPendingReconstruction {
     //
     assertEquals("Size of pendingReconstructions ", 0, pendingReconstructions.size());
     assertEquals(15L, pendingReconstructions.getNumTimedOuts());
+    assertTrue(pendingReconstructions.hasTimeOutBlock(blk));
     Block[] timedOut = pendingReconstructions.getTimedOutBlocks();
     assertNotNull(timedOut);
     assertEquals(15, timedOut.length);

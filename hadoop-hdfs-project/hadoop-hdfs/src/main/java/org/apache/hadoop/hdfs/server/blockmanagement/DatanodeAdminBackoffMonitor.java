@@ -766,6 +766,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
     if (neededReconstruction && scheduleReconStruction) {
       if (!blockManager.neededReconstruction.contains(block) &&
           blockManager.pendingReconstruction.getNumReplicas(block) == 0 &&
+          !blockManager.pendingReconstruction.hasTimeOutBlock(block) &&
           blockManager.isPopulatingReplQueues()) {
         // Process these blocks only when active NN is out of safe mode.
         blockManager.neededReconstruction.add(block,

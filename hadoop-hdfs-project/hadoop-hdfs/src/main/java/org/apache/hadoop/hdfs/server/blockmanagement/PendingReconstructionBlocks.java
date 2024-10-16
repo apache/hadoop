@@ -25,9 +25,11 @@ import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -50,7 +52,7 @@ class PendingReconstructionBlocks {
   private static final Logger LOG = BlockManager.LOG;
 
   private final Map<BlockInfo, PendingBlockInfo> pendingReconstructions;
-  private final ArrayList<BlockInfo> timedOutItems;
+  private final Set<BlockInfo> timedOutItems;
   Daemon timerThread = null;
   private volatile boolean fsRunning = true;
   private long timedOutCount = 0L;
@@ -68,7 +70,7 @@ class PendingReconstructionBlocks {
       this.timeout = timeoutPeriod;
     }
     pendingReconstructions = new HashMap<>();
-    timedOutItems = new ArrayList<>();
+    timedOutItems = new HashSet<>();
   }
 
   void start() {
@@ -168,6 +170,16 @@ class PendingReconstructionBlocks {
       }
     }
     return 0;
+  }
+
+  /**
+   * Check if block in timedOutItems.
+   * @return true if the block is in timedOutItems.
+   */
+  boolean hasTimeOutBlock(BlockInfo block) {
+    synchronized (timedOutItems) {
+      return timedOutItems.contains(block);
+    }
   }
 
   /**
