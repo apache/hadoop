@@ -43,6 +43,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAAdmin;
 import org.apache.hadoop.ha.HAServiceTarget;
+import org.apache.hadoop.ha.ServiceFailedException;
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.HAServiceProtocolHelper;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
@@ -172,6 +175,14 @@ public class RMAdminCLI extends HAAdmin {
                   "Update resource on specific node."))
           .build();
 
+  private final static Map<String, UsageInfo> YARN_HA_USAGE =
+      ImmutableMap.<String, UsageInfo> builder()
+          .put("-failover", new UsageInfo(
+                  "<serviceId> <serviceId>",
+                  "Failover from the first service to the second.\n"))
+          .putAll(USAGE)
+          .build();
+
   public RMAdminCLI() {
     super();
   }
@@ -189,7 +200,7 @@ public class RMAdminCLI extends HAAdmin {
   }
 
   private static void appendHAUsage(final StringBuilder usageBuilder) {
-    for (Map.Entry<String,UsageInfo> cmdEntry : USAGE.entrySet()) {
+    for (Map.Entry<String, UsageInfo> cmdEntry : YARN_HA_USAGE.entrySet()) {
       if (cmdEntry.getKey().equals("-help")) {
         continue;
       }
@@ -206,7 +217,7 @@ public class RMAdminCLI extends HAAdmin {
   private static void buildHelpMsg(String cmd, StringBuilder builder) {
     UsageInfo usageInfo = ADMIN_USAGE.get(cmd);
     if (usageInfo == null) {
-      usageInfo = USAGE.get(cmd);
+      usageInfo = YARN_HA_USAGE.get(cmd);
       if (usageInfo == null) {
         return;
       }
@@ -225,7 +236,7 @@ public class RMAdminCLI extends HAAdmin {
     boolean isHACommand = false;
     UsageInfo usageInfo = ADMIN_USAGE.get(cmd);
     if (usageInfo == null) {
-      usageInfo = USAGE.get(cmd);
+      usageInfo = YARN_HA_USAGE.get(cmd);
       if (usageInfo == null) {
         return;
       }
@@ -246,12 +257,12 @@ public class RMAdminCLI extends HAAdmin {
   private static void buildUsageMsg(StringBuilder builder,
       boolean isHAEnabled) {
     builder.append("Usage: yarn rmadmin\n");
-    for (Map.Entry<String,UsageInfo> cmdEntry : ADMIN_USAGE.entrySet()) {
+    for (Map.Entry<String, UsageInfo> cmdEntry : ADMIN_USAGE.entrySet()) {
       UsageInfo usageInfo = cmdEntry.getValue();
       builder.append("   " + cmdEntry.getKey() + " " + usageInfo.args + "\n");
     }
     if (isHAEnabled) {
-      for (Map.Entry<String,UsageInfo> cmdEntry : USAGE.entrySet()) {
+      for (Map.Entry<String, UsageInfo> cmdEntry : YARN_HA_USAGE.entrySet()) {
         String cmdKey = cmdEntry.getKey();
         if (!cmdKey.equals("-help")) {
           UsageInfo usageInfo = cmdEntry.getValue();
@@ -304,7 +315,7 @@ public class RMAdminCLI extends HAAdmin {
       helpBuilder.append("\n");
     }
     if (isHAEnabled) {
-      for (String cmdKey : USAGE.keySet()) {
+      for (String cmdKey : YARN_HA_USAGE.keySet()) {
         if (!cmdKey.equals("-help")) {
           buildHelpMsg(cmdKey, helpBuilder);
           helpBuilder.append("\n");
@@ -324,7 +335,7 @@ public class RMAdminCLI extends HAAdmin {
    */
   private static void printUsage(String cmd, boolean isHAEnabled) {
     StringBuilder usageBuilder = new StringBuilder();
-    if (ADMIN_USAGE.containsKey(cmd) || USAGE.containsKey(cmd)) {
+    if (ADMIN_USAGE.containsKey(cmd) || YARN_HA_USAGE.containsKey(cmd)) {
       buildIndividualUsageMsg(cmd, usageBuilder);
     } else {
       buildUsageMsg(usageBuilder, isHAEnabled);
@@ -757,6 +768,28 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
 
+  private int failover(CommandLine cmd)
+      throws IOException, ServiceFailedException {
+    int numOpts = cmd.getOptions() == null ? 0 : cmd.getOptions().length;
+    final String[] args = cmd.getArgs();
+    if (numOpts > 1 || args.length != 2) {
+      errOut.println("failover: incorrect arguments");
+      printUsage(errOut, "-failover", YARN_HA_USAGE);
+      return -1;
+    }
+    HAServiceTarget fromNode = resolveTarget(args[0]);
+    HAServiceTarget toNode = resolveTarget(args[1]);
+    setRequestSource(HAServiceProtocol.RequestSource.REQUEST_BY_USER_FORCED);
+    HAServiceProtocol proto = fromNode.getProxy(
+            getConf(), 0);
+    HAServiceProtocolHelper.transitionToStandby(proto, createReqInfo());
+    HAServiceProtocol proto1 = toNode.getProxy(
+            getConf(), 0);
+    HAServiceProtocolHelper.transitionToActive(proto1, createReqInfo());
+    out.println("Failover from "+args[0]+" to "+args[1]+" successful");
+    return 0;
+  }
+
   @Override
   public int run(String[] args) throws Exception {
     YarnConfiguration yarnConf =
@@ -788,6 +821,18 @@ public class RMAdminCLI extends HAAdmin {
     if (USAGE.containsKey(cmd)) {
       if (isHAEnabled) {
         return super.run(args);
+      }
+      System.out.println("Cannot run " + cmd
+          + " when ResourceManager HA is not enabled");
+      return -1;
+    }else if("-failover".equals(cmd)) {
+      if (isHAEnabled) {
+        Options opts = new Options();
+        CommandLine cmdLine = parseOpts(cmd, opts, args, YARN_HA_USAGE);
+        if (cmdLine == null) {
+          return -1;
+        }
+        return failover(cmdLine);
       }
       System.out.println("Cannot run " + cmd
           + " when ResourceManager HA is not enabled");
