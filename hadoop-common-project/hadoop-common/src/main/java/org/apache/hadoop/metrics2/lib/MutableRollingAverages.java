@@ -155,6 +155,27 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
   }
 
   /**
+   * Supports configuring parameters related to sliding window,
+   * e.g. Use the specified parameters in the DataNodePeerMetrics class.
+   *
+   * @param metricValueName metric value name
+   * @param numWindows number of elements
+   * @param windowSizeMs roll over interval
+   */
+  public MutableRollingAverages(String metricValueName, int numWindows, long windowSizeMs) {
+    if (metricValueName == null) {
+      metricValueName = "";
+    }
+    avgInfoNameTemplate = "[%s]" + "RollingAvg" + StringUtils.capitalize(metricValueName);
+    avgInfoDescTemplate =
+        "Rolling average " + StringUtils.uncapitalize(metricValueName) + " for " + "%s";
+    this.numWindows = numWindows;
+    scheduledTask = SCHEDULER.scheduleAtFixedRate(new RatesRoller(this), windowSizeMs, windowSizeMs,
+        TimeUnit.MILLISECONDS);
+    recordValidityMs = numWindows * windowSizeMs;
+  }
+
+  /**
    * This method is for testing only to replace the scheduledTask.
    */
   @VisibleForTesting

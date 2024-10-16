@@ -731,6 +731,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.max.nodes.to.report";
   public static final int DFS_DATANODE_MAX_NODES_TO_REPORT_DEFAULT =
       5;
+  public static final String DFS_DATANODE_MUTABLE_ROLLING_AVERAGES_NUM_WINDOWS_KEY =
+      "dfs.datanode.mutable.rolling.averages.num.windows";
+  public static final Integer DFS_DATANODE_MUTABLE_ROLLING_AVERAGES_NUM_WINDOWS_DEFAULT = 36;
+  public static final String DFS_DATANODE_MUTABLE_ROLLING_AVERAGES_WINDOW_SIZE_MS_KEY =
+      "dfs.datanode.mutable.rolling.averages.window.size.ms";
+  public static final Long DFS_DATANODE_MUTABLE_ROLLING_AVERAGES_WINDOW_SIZE_MS_DEFAULT = 30_000L;
   public static final String DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY =
       "dfs.datanode.min.outlier.detection.disks";
   public static final long DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_DEFAULT =
