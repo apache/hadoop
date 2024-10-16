@@ -661,7 +661,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       try {
         wait(200);
       } catch (InterruptedException e) {
-        // Do Nothing
+        LOG.debug("Update wait interrupted in do outofBand log aggregation", e);
       }
     }
     LOG.info("Do OutOfBand log aggregation");
