@@ -842,8 +842,8 @@ public class UserGroupInformation {
    *  Is this user logged in from a ticket (but no keytab) managed by the UGI?
    * @return true if the credentials are from a ticket cache.
    */
-  private boolean isFromTicket() {
-    return hasKerberosCredentials() && isHadoopLogin() && getKeytab() == null;
+  public boolean isFromTicket() {
+    return hasKerberosCredentials() && isHadoopLogin() && getTGT() == null;
   }
 
   /**
