@@ -28,8 +28,10 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Can be used to throttle use of object stores where excess load
  * will trigger cluster-wide throttling, backoff etc. and so collapse
  * performance.
+ * <p>
  * The time waited is returned as a Duration type.
- * The google rate limiter implements this by allowing a caller to ask for
+ * <p>
+ * The google rate limiter implements rate limiting by allowing a caller to ask for
  * more capacity than is available. This will be granted
  * but the subsequent request will be blocked if the bucket of
  * capacity hasn't let refilled to the point where there is
@@ -44,8 +46,11 @@ public interface RateLimiting {
    * If there is not enough space, the permits will be acquired,
    * but the subsequent call will block until the capacity has been
    * refilled.
+   * <p>
+   * If the capacity is zero, no delay will take place.
    * @param requestedCapacity capacity to acquire.
-   * @return time spent waiting for output.
+   *         Must be greater than or equal to 0.
+   * @return time spent waiting to acquire the capacity..
    */
   Duration acquire(int requestedCapacity);
 
