@@ -271,6 +271,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.AtomicLongMap;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 import org.slf4j.Logger;
@@ -466,6 +467,7 @@ public class DataNode extends ReconfigurableBase
   private static final int NUM_CORES = Runtime.getRuntime()
       .availableProcessors();
   private final double congestionRatio;
+  private final boolean readBlockIdCountsEnabled;
   private DiskBalancer diskBalancer;
   private DataSetLockManager dataSetLockManager;
 
@@ -492,6 +494,8 @@ public class DataNode extends ReconfigurableBase
 
   private DataTransferThrottler ecReconstuctReadThrottler;
   private DataTransferThrottler ecReconstuctWriteThrottler;
+
+  private final AtomicLongMap<String> readBlockIdCounts;
 
   /**
    * Creates a dummy DataNode for testing purpose.
@@ -522,6 +526,10 @@ public class DataNode extends ReconfigurableBase
         DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT);
     this.congestionRatio = congestionRationTmp > 0 ?
         congestionRationTmp : DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT;
+    this.readBlockIdCountsEnabled =
+        conf.getBoolean(DFSConfigKeys.DFS_DATANODE_READ_BLOCKID_COUNTS_METRIC_ENABLED_KEY,
+            DFSConfigKeys.DFS_DATANODE_READ_BLOCKID_COUNTS_METRIC_ENABLED_DEFAULT);
+    readBlockIdCounts = readBlockIdCountsEnabled ? AtomicLongMap.create() : null;
   }
 
   /**
@@ -625,6 +633,10 @@ public class DataNode extends ReconfigurableBase
         DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT);
     this.congestionRatio = congestionRationTmp > 0 ?
         congestionRationTmp : DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT;
+    this.readBlockIdCountsEnabled =
+        conf.getBoolean(DFSConfigKeys.DFS_DATANODE_READ_BLOCKID_COUNTS_METRIC_ENABLED_KEY,
+            DFSConfigKeys.DFS_DATANODE_READ_BLOCKID_COUNTS_METRIC_ENABLED_DEFAULT);
+    this.readBlockIdCounts = readBlockIdCountsEnabled ? AtomicLongMap.create() : null;
   }
 
   @Override  // ReconfigurableBase
@@ -4387,5 +4399,23 @@ public class DataNode extends ReconfigurableBase
   @VisibleForTesting
   public BlockPoolManager getBlockPoolManager() {
     return blockPoolManager;
+  }
+
+  public void incrReadBlockIdCounts(String blockId) {
+    if (readBlockIdCountsEnabled) {
+      readBlockIdCounts.incrementAndGet(blockId);
+    }
+  }
+
+  public void decrReadBlockIdCounts(String blockId) {
+    if (readBlockIdCountsEnabled) {
+      readBlockIdCounts.decrementAndGet(blockId);
+      readBlockIdCounts.removeIfZero(blockId);
+    }
+  }
+
+  @Override // DataNodeMXBean
+  public Map<String, Long> getReadBlockIdCounts() {
+    return readBlockIdCountsEnabled ? readBlockIdCounts.asMap() : null;
   }
 }
