@@ -397,6 +397,20 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
           null, opContext);
     }
 
+    @Override
+    public void delete(OperationContext opContext, SelfRenewingLease lease, String eTag)
+            throws StorageException {
+      AccessCondition accessCondition1 = getLeaseCondition(lease);
+      if (accessCondition1 != null) {
+        accessCondition1.setIfMatch(eTag);
+      } else {
+        accessCondition1 = new AccessCondition();
+        accessCondition1.setIfMatch(eTag);
+      }
+      getBlob().delete(DeleteSnapshotsOption.NONE, accessCondition1,
+              null, opContext);
+    }
+
     /**
      * Return and access condition for this lease, or else null if
      * there's no lease.
@@ -507,14 +521,18 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
 
     @Override
     public void startCopyFromBlob(CloudBlobWrapper sourceBlob, BlobRequestOptions options,
-        OperationContext opContext, boolean overwriteDestination)
+                                  OperationContext opContext, boolean overwriteDestination, String destEtag)
             throws StorageException, URISyntaxException {
       AccessCondition dstAccessCondition =
-          overwriteDestination
-              ? null
-              : AccessCondition.generateIfNotExistsCondition();
+              overwriteDestination
+                      ? null
+                      : AccessCondition.generateIfNotExistsCondition();
+      if (overwriteDestination && destEtag != null) {
+        dstAccessCondition = new AccessCondition();
+        dstAccessCondition.setIfMatch(destEtag);
+      }
       getBlob().startCopy(sourceBlob.getBlob().getQualifiedUri(),
-          null, dstAccessCondition, options, opContext);
+              null, dstAccessCondition, options, opContext);
     }
 
     @Override
@@ -545,6 +563,13 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
         BlobRequestOptions options,
         OperationContext opContext) throws StorageException {
       return ((CloudBlockBlob) getBlob()).openOutputStream(null, options, opContext);
+    }
+
+    public OutputStream openOutputStream(
+            AccessCondition accessCondition,
+            BlobRequestOptions options,
+            OperationContext opContext) throws StorageException {
+      return ((CloudBlockBlob) getBlob()).openOutputStream(accessCondition, options, opContext);
     }
 
     public void upload(InputStream sourceStream, OperationContext opContext)
