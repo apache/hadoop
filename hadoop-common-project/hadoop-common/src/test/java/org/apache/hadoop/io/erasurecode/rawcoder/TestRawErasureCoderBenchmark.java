@@ -18,6 +18,7 @@
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -33,6 +34,14 @@ public class TestRawErasureCoderBenchmark {
         RawErasureCoderBenchmark.CODER.DUMMY_CODER, 2, 100, 1024);
     RawErasureCoderBenchmark.performBench("decode",
         RawErasureCoderBenchmark.CODER.DUMMY_CODER, 5, 150, 100);
+
+    try {
+      RawErasureCoderBenchmark.performBench("decode",
+          RawErasureCoderBenchmark.CODER.DUMMY_CODER, 5, -150, 100);
+      Assert.fail("should have thrown an IllegalArgumentException");
+    } catch (IllegalArgumentException e) {
+      // intentionally swallow exception
+    }
   }
 
   @Test
