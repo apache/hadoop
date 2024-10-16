@@ -649,6 +649,9 @@ class BPServiceActor implements Runnable {
     IOUtils.cleanupWithLogger(null, bpNamenode);
     IOUtils.cleanupWithLogger(null, lifelineSender);
     bpos.shutdownActor(this);
+    if (runningState == RunningState.FAILED) {
+      dn.shouldRun = false;
+    }
   }
 
   private void handleRollingUpgradeStatus(HeartbeatResponse resp) throws IOException {
@@ -923,7 +926,9 @@ class BPServiceActor implements Runnable {
           sleepAndLogInterrupts(5000, "offering service");
         }
       }
-      runningState = RunningState.EXITED;
+      if (runningState != RunningState.FAILED) {
+        runningState = RunningState.EXITED;
+      }
     } catch (Throwable ex) {
       LOG.warn("Unexpected exception in block pool " + this, ex);
       runningState = RunningState.FAILED;
