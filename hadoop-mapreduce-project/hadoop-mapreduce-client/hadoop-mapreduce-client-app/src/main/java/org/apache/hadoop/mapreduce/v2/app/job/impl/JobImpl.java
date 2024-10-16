@@ -1019,7 +1019,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       }
       //notify the eventhandler of state change
       if (oldState != getInternalState()) {
-        LOG.info(jobId + "Job Transitioned from " + oldState + " to "
+        LOG.info(jobId + " Job Transitioned from " + oldState + " to "
                  + getInternalState());
         rememberLastNonFinalState(oldState);
       }
