@@ -26,6 +26,8 @@ import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
+
 
 /**
  * Unit test for ReplicasMap class
@@ -110,7 +112,7 @@ public class TestReplicaMap {
   }
 
   @Test
-  public void testMergeAll() {
+  public void testMergeAll() throws IOException {
     ReplicaMap temReplicaMap = new ReplicaMap();
     Block tmpBlock = new Block(5678, 5678, 5678);
     temReplicaMap.add(bpid, new FinalizedReplica(tmpBlock, null, null));
