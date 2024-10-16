@@ -185,6 +185,12 @@ public final class CommitConstants {
 
   /**
    * Option for {@link #FS_S3A_COMMITTER_NAME}:
+   * optimized output committer: {@value}.
+   */
+  public static final String COMMITTER_NAME_OPTIMIZED = "optimized";
+
+  /**
+   * Option for {@link #FS_S3A_COMMITTER_NAME}:
    * directory output committer: {@value}.
    */
   public static final String COMMITTER_NAME_DIRECTORY = "directory";
