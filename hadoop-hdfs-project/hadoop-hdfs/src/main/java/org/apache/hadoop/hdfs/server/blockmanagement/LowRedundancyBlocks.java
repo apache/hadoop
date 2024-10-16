@@ -517,7 +517,22 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
   synchronized List<List<BlockInfo>> chooseLowRedundancyBlocks(
       int blocksToProcess, boolean resetIterators) {
     final List<List<BlockInfo>> blocksToReconstruct = new ArrayList<>(LEVEL);
+    chooseLowRedundancyBlocks(blocksToProcess, resetIterators, blocksToReconstruct);
+    return blocksToReconstruct;
+  }
 
+  /**
+   * @param blocksToProcess - number of blocks to fetch from low redundancy
+   *          blocks.
+   * @param resetIterators - After gathering the list of blocks reset the
+   *           position of all queue iterators to the head of the queue so
+   *           subsequent calls will begin at the head of the queue
+   * @param blocksToReconstruct - The found candidates blocks need to be reconstructed
+   * @return Return the number of found low-redundancy blocks(They are put in blocksToReconstruct)
+   */
+  synchronized int chooseLowRedundancyBlocks(
+          int blocksToProcess, boolean resetIterators, List<List<BlockInfo>> blocksToReconstruct) {
+    int foundBlocks = 0;
     int count = 0;
     int priority = 0;
     HashSet<BlockInfo> toRemove = new HashSet<>();
@@ -539,6 +554,7 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
           continue;
         }
         if (!inCorruptLevel) {
+          foundBlocks++;
           blocks.add(block);
         }
       }
@@ -555,7 +571,7 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
       }
     }
 
-    return blocksToReconstruct;
+    return foundBlocks;
   }
 
   /** Returns an iterator of all blocks in a given priority queue. */
