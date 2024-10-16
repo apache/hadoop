@@ -65,6 +65,25 @@ public class ReflectionUtils {
   private static final Map<Class<?>, Constructor<?>> CONSTRUCTOR_CACHE = 
     new ConcurrentHashMap<Class<?>, Constructor<?>>();
 
+  private static Class reentrantReadWriteLockSync = null;
+  private static Class reentrantLockSync = null;
+  private static Class abstractQueuedSynchronizerClass = null;
+
+  static {
+    try {
+      reentrantReadWriteLockSync =
+          Class.forName(
+              "java.util.concurrent.locks.ReentrantReadWriteLock$Sync");
+      reentrantLockSync =
+          Class.forName("java.util.concurrent.locks.ReentrantLock$Sync");
+      abstractQueuedSynchronizerClass =
+          Class.forName(
+              "java.util.concurrent.locks.AbstractQueuedSynchronizer");
+    } catch (ClassNotFoundException e) {
+      e.printStackTrace();
+    }
+  }
+
   /**
    * Check and set 'configuration' if necessary.
    * 
@@ -412,5 +431,161 @@ public class ReflectionUtils {
     }
     
     return methods;
+  }
+
+  public static Object getDeclaredFieldValue(Class cls, String fieldName,
+      Object obj) {
+    try {
+      Field field = cls.getDeclaredField(fieldName);
+      field.setAccessible(true);
+      return field.get(obj);
+    } catch (ReflectiveOperationException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static void dumpThread(PrintStream out, Thread thread) {
+    out.println("    thread: " + thread
+        + ", tid=" + thread.getId() + ", state=" + thread.getState());
+    out.println("    Stack:");
+    for (StackTraceElement frame : thread.getStackTrace()) {
+      out.println("      " + frame.toString());
+    }
+  }
+
+  public static Object callDeclaredMethod(Class cls, String methodName,
+      Object obj) {
+    try {
+      Method method = cls.getDeclaredMethod(methodName);
+      method.setAccessible(true);
+      return method.invoke(obj);
+    } catch (ReflectiveOperationException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static void dumpLockInfo(Object sync,
+      PrintStream out,
+      boolean dumpWaiter,
+      boolean dumpParkBlocker) {
+    out.println("  parkBlocker : " + sync);
+    Class cls;
+    if (reentrantLockSync != null && reentrantLockSync.isInstance(sync)) {
+      cls = reentrantLockSync;
+    } else if (reentrantReadWriteLockSync != null &&
+        reentrantReadWriteLockSync.isInstance(sync)) {
+      cls = reentrantReadWriteLockSync;
+    } else {
+      out.println("  i don't know the " + sync.getClass() + " : " + sync);
+      return;
+    }
+    Thread owner = (Thread) callDeclaredMethod(cls, "getOwner", sync);
+    if (owner != null) {
+      out.println("  owner:");
+      dumpThread(out, owner);
+    }
+
+    if (reentrantReadWriteLockSync != null &&
+        reentrantReadWriteLockSync.isInstance(sync)) {
+      Thread firstReader =
+          (Thread) getDeclaredFieldValue(cls, "firstReader", sync);
+      if (firstReader != null) {
+        out.println("  first reader:");
+        dumpThread(out, firstReader);
+      }
+    }
+
+    if (dumpWaiter) {
+      out.println("  waiter threads:");
+      Object head =
+          getDeclaredFieldValue(abstractQueuedSynchronizerClass, "head", sync);
+      if (head != null) {
+        Object next = getDeclaredFieldValue(head.getClass(), "next", head);
+
+        int index = 0;
+        while (next != null) {
+          Thread thread =
+              (Thread) getDeclaredFieldValue(next.getClass(), "thread", next);
+          out.println("  waiter " + index + ":");
+          next = getDeclaredFieldValue(head.getClass(), "next", next);
+          index++;
+          if (thread == null) {
+            continue;
+          }
+          dumpThread(out, thread);
+          Thread.State state = thread.getState();
+          Object parkBlocker =
+              getDeclaredFieldValue(Thread.class, "parkBlocker", thread);
+          if ((state == Thread.State.WAITING || state == Thread.State.BLOCKED)
+              && parkBlocker != null
+              && dumpParkBlocker) {
+            out.println("+++++++++++++lock info++++++++++++++++");
+            dumpLockInfo(parkBlocker, out, false, false);
+            out.println("-------------lock info----------------");
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Print all of the thread's information and stack traces.
+   *
+   * @param stream the stream to
+   * @param title a string title for the stack trace
+   * @param stackDepth the depth of thread call stack
+   */
+  public synchronized static void printThreadInfoExt(PrintStream stream,
+      String title,
+      int stackDepth) {
+    if (stackDepth <= 0) {
+      stackDepth = 20;
+    }
+    Thread[] threads =
+        (Thread[]) callDeclaredMethod(Thread.class, "getThreads", null);
+    boolean contention = threadBean.isThreadContentionMonitoringEnabled();
+    long[] threadIds = threadBean.getAllThreadIds();
+    stream.println("Process Thread Dump: " + title);
+    stream.println(threadIds.length + " active threads");
+    for (Thread thread : threads) {
+      long tid = thread.getId();
+      ThreadInfo info = threadBean.getThreadInfo(tid, stackDepth);
+      if (info == null) {
+        stream.println("  Inactive");
+        continue;
+      }
+      stream.println("Thread " +
+          getTaskName(info.getThreadId(),
+              info.getThreadName()) + ":");
+      Thread.State state = info.getThreadState();
+      stream.println("  State: " + state);
+      stream.println("  Blocked count: " + info.getBlockedCount());
+      stream.println("  Waited count: " + info.getWaitedCount());
+      if (contention) {
+        stream.println("  Blocked time: " + info.getBlockedTime());
+        stream.println("  Waited time: " + info.getWaitedTime());
+      }
+      Object parkBlocker = getDeclaredFieldValue(Thread.class,
+          "parkBlocker", thread);
+      if (state == Thread.State.WAITING) {
+        stream.println("  Waiting on " + info.getLockName());
+      } else if (state == Thread.State.BLOCKED) {
+        stream.println("  Blocked on " + info.getLockName());
+        stream.println("  Blocked by " +
+            getTaskName(info.getLockOwnerId(),
+                info.getLockOwnerName()));
+      }
+      stream.println("  Stack:");
+      for (StackTraceElement frame: info.getStackTrace()) {
+        stream.println("    " + frame.toString());
+      }
+      if ((state == Thread.State.WAITING || state == Thread.State.BLOCKED)
+          && parkBlocker != null) {
+        stream.println("+++++++++++++++++++++++++++++");
+        dumpLockInfo(parkBlocker, stream, false, false);
+        stream.println("-----------------------------");
+      }
+    }
+    stream.flush();
   }
 }
