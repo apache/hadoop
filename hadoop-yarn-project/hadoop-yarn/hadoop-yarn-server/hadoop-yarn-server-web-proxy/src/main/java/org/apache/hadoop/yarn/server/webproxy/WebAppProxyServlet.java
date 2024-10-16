@@ -401,6 +401,8 @@ public class WebAppProxyServlet extends HttpServlet {
       boolean isRedirect = false;
       String pathInfo = req.getPathInfo();
       final String remoteUser = req.getRemoteUser();
+      final String remoteUserWithIPAddress =
+          remoteUser + "/" + req.getRemoteAddr();
 
       String[] parts = null;
 
@@ -416,7 +418,7 @@ public class WebAppProxyServlet extends HttpServlet {
       }
 
       if ((parts == null) || (parts.length < 2)) {
-        LOG.warn("{} gave an invalid proxy path {}", remoteUser,  pathInfo);
+        LOG.warn("{} gave an invalid proxy path {}", remoteUserWithIPAddress,  pathInfo);
         notFound(resp, "Your path appears to be formatted incorrectly.");
         return;
       }
@@ -428,7 +430,7 @@ public class WebAppProxyServlet extends HttpServlet {
 
       if (id == null) {
         LOG.warn("{} attempting to access {} that is invalid",
-            remoteUser, appId);
+            remoteUserWithIPAddress, appId);
         notFound(resp, appId + " appears to be formatted incorrectly.");
         return;
       }
@@ -472,7 +474,7 @@ public class WebAppProxyServlet extends HttpServlet {
 
       if (applicationReport == null) {
         LOG.warn("{} attempting to access {} that was not found",
-            remoteUser, id);
+            remoteUserWithIPAddress, id);
 
         URI toFetch =
             ProxyUriUtils
@@ -505,7 +507,7 @@ public class WebAppProxyServlet extends HttpServlet {
       if (checkUser && !runningUser.equals(remoteUser)) {
         LOG.info("Asking {} if they want to connect to the "
             + "app master GUI of {} owned by {}",
-            remoteUser, appId, runningUser);
+            remoteUserWithIPAddress, appId, runningUser);
         warnUserPage(resp, ProxyUriUtils.getPathAndQuery(id, rest, 
             req.getQueryString(), true), runningUser, id);
 
@@ -518,7 +520,7 @@ public class WebAppProxyServlet extends HttpServlet {
 
       LOG.info("{} is accessing unchecked {}"
           + " which is the app master GUI of {} owned by {}",
-          remoteUser, toFetch, appId, runningUser);
+          remoteUserWithIPAddress, toFetch, appId, runningUser);
 
       switch (applicationReport.getYarnApplicationState()) {
         case KILLED:
