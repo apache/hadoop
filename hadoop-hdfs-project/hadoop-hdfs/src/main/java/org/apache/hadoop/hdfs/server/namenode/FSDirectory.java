@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.util.StringUtils;
 
@@ -1105,15 +1106,12 @@ public class FSDirectory implements Closeable {
   /**
    * Update the cached quota space for a block that is being completed.
    * Must only be called once, as the block is being completed.
-   * @param completeBlk - Completed block for which to update space
-   * @param inodes - INodes in path to file containing completeBlk; if null
-   *                 this will be resolved internally
+   * @param commitBlock - Committed block for which to update space
+   * @param iip - INodes in path to file containing committedBlock
    */
-  public void updateSpaceForCompleteBlock(BlockInfo completeBlk,
-      INodesInPath inodes) throws IOException {
+  public void updateSpaceForCommittedBlock(Block commitBlock,
+      INodesInPath iip) throws IOException {
     assert namesystem.hasWriteLock();
-    INodesInPath iip = inodes != null ? inodes :
-        INodesInPath.fromINode(namesystem.getBlockCollection(completeBlk));
     INodeFile fileINode = iip.getLastINode().asFile();
     // Adjust disk space consumption if required
     final long diff;
@@ -1130,13 +1128,13 @@ public class FSDirectory implements Closeable {
           fileINode.getPreferredBlockSize() * numBlocks;
 
       final BlockInfoStriped striped =
-          new BlockInfoStriped(completeBlk, ecPolicy);
+          new BlockInfoStriped(commitBlock, ecPolicy);
       final long actualBlockGroupSize = striped.spaceConsumed();
 
       diff = fullBlockGroupSize - actualBlockGroupSize;
       replicationFactor = (short) 1;
     } else {
-      diff = fileINode.getPreferredBlockSize() - completeBlk.getNumBytes();
+      diff = fileINode.getPreferredBlockSize() - commitBlock.getNumBytes();
       replicationFactor = fileINode.getFileReplication();
     }
     if (diff > 0) {

@@ -60,7 +60,7 @@ public class FileUnderConstructionFeature implements INode.Feature {
     BlockInfo lastBlock = f.getLastBlock();
     assert (lastBlock != null) : "The last block for path "
         + f.getFullPathName() + " is null when updating its length";
-    assert !lastBlock.isComplete()
+    assert !lastBlock.isCompleteOrCommitted()
         : "The last block for path " + f.getFullPathName()
             + " is not under-construction when updating its length";
     lastBlock.setNumBytes(lastBlockLength);

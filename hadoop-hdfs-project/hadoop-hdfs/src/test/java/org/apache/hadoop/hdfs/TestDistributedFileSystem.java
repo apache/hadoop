@@ -61,6 +61,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -97,6 +98,7 @@ import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
@@ -107,10 +109,14 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -2211,6 +2217,79 @@ public class TestDistributedFileSystem {
       dfs.enableErasureCodingPolicy("RS-10-4-1024k");
       result = dfs.getECTopologyResultForPolicies();
       assertFalse(result.isSupported());
+    }
+  }
+
+  @Test
+  public void testReadFileWithMultipleCommittedBlock() throws Exception {
+    HdfsConfiguration conf = getTestConfiguration();
+    // allow two committed blocks.
+    conf.setInt(DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY, 2);
+    int blockSize = 1024;
+    conf.setInt(HdfsClientConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3).build()) {
+      cluster.waitActive();
+      BlockManager blockManager = cluster.getNameNode(0).getNamesystem().getBlockManager();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path dir = new Path("/dir`");
+      dfs.mkdirs(dir);
+      String filePath = "/dir1/file1";
+
+      DataNodeTestUtils.pauseIBR(cluster.getDataNodes().get(0));
+      DataNodeTestUtils.pauseIBR(cluster.getDataNodes().get(1));
+      DataNodeTestUtils.pauseIBR(cluster.getDataNodes().get(2));
+
+      FSDataOutputStream str = dfs.create(new Path(filePath));
+
+      byte[] data = new byte[3 * blockSize];
+      ThreadLocalRandom.current().nextBytes(data);
+      str.write(data);
+
+      // there are three committed blocks in this file, so close will throw IOException.
+      LambdaTestUtils.intercept(IOException.class, "", str::close);
+
+      LocatedBlocks locatedBlocks = dfs.getClient().getLocatedBlocks(filePath, 0);
+
+      // This file is still in UnderConstruction.
+      Assert.assertTrue(locatedBlocks.isUnderConstruction());
+
+      // This file contains three committed blocks
+      Assert.assertEquals(3, locatedBlocks.getLocatedBlocks().size());
+      locatedBlocks.getLocatedBlocks().forEach(k -> {
+        Block block = k.getBlock().getLocalBlock();
+        BlockInfo storedBlock = blockManager.getStoredBlock(block);
+        Assert.assertEquals(HdfsServerConstants.BlockUCState.COMMITTED,
+            storedBlock.getBlockUCState());
+        Assert.assertEquals(blockSize, storedBlock.getNumBytes());
+      });
+
+      // The file length in the locatedBlocks should contain the bytes of the last committed block.
+      Assert.assertEquals(3 * blockSize, locatedBlocks.getFileLength());
+
+      // The last block in the locatedBlocks should be complete, so that InputStream doesn't
+      // get visibleLength for the last committed block since the fileLength already contains
+      // the bytes of the last committed block.
+      Assert.assertTrue(locatedBlocks.isLastBlockComplete());
+
+      try (DFSInputStream inputStream = dfs.getClient()
+          .open(filePath, 4096, true)) {
+        assertEquals(3 * blockSize, inputStream.getFileLength());
+        assertEquals(inputStream.getLocatedBlocks().getFileLength(), inputStream.getFileLength());
+      }
+
+      DataNodeTestUtils.resumeIBR(cluster.getDataNodes().get(0));
+      DataNodeTestUtils.resumeIBR(cluster.getDataNodes().get(1));
+      DataNodeTestUtils.resumeIBR(cluster.getDataNodes().get(2));
+
+      // Try to complete this file.
+      LambdaTestUtils.await(10000, 4000,
+          () -> dfs.recoverLease(new Path(filePath)));
+
+      LocatedBlocks locatedBlocks1 = dfs.getClient().getLocatedBlocks(filePath, 0);
+      // This file is complete right now.
+      Assert.assertFalse(locatedBlocks1.isUnderConstruction());
+      Assert.assertEquals(locatedBlocks.getFileLength(), locatedBlocks1.getFileLength());
     }
   }
 
