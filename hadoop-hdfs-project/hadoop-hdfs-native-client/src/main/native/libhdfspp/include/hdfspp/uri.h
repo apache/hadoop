@@ -22,6 +22,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cstdint>
 #include <stdexcept>
 
 namespace hdfs
