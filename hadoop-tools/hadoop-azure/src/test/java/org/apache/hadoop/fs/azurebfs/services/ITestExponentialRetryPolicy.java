@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
@@ -28,6 +29,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_AUTOTHROTTLING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT1_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
@@ -65,7 +67,9 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   private static final String TEST_PATH = "/testfile";
   private static final double MULTIPLYING_FACTOR = 1.5;
   private static final int ANALYSIS_PERIOD = 10000;
-
+  private static final String DUMMY_ACCOUNT_NAME = "dummy.dfs.core.windows.net";
+  private static final String DUMMY_ACCOUNT_NAME_1 = "dummy1.dfs.core.windows.net";
+  private static final String DUMMY_ACCOUNT_KEY = "dummyKey";
 
   public ITestExponentialRetryPolicy() throws Exception {
     super();
@@ -98,10 +102,14 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     configuration.setBoolean(FS_AZURE_ENABLE_AUTOTHROTTLING, false);
+    configuration.set(FS_AZURE_ACCOUNT_KEY + DOT + DUMMY_ACCOUNT_NAME,
+        DUMMY_ACCOUNT_KEY);
+    configuration.set(FS_AZURE_ACCOUNT_KEY + DOT + DUMMY_ACCOUNT_NAME_1,
+        DUMMY_ACCOUNT_KEY);
 
     // On disabling throttling AbfsNoOpThrottlingIntercept object is returned
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
-        "dummy.dfs.core.windows.net");
+        DUMMY_ACCOUNT_NAME);
     AbfsThrottlingIntercept intercept;
     AbfsClient abfsClient = ITestAbfsClient.createTestClientFromCurrentContext(fs.getAbfsStore().getClient(), abfsConfiguration);
     intercept = abfsClient.getIntercept();
@@ -113,7 +121,7 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     configuration.setBoolean(FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED, true);
     // On enabling throttling AbfsClientThrottlingIntercept object is returned
     AbfsConfiguration abfsConfiguration1 = new AbfsConfiguration(configuration,
-        "dummy1.dfs.core.windows.net");
+        DUMMY_ACCOUNT_NAME_1);
     AbfsClient abfsClient1 = ITestAbfsClient.createTestClientFromCurrentContext(fs.getAbfsStore().getClient(), abfsConfiguration1);
     intercept = abfsClient1.getIntercept();
     Assertions.assertThat(intercept)
