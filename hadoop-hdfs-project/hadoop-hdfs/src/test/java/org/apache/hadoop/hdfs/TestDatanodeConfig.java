@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -165,4 +166,14 @@ public class TestDatanodeConfig {
           prevLimit);
     }
   }
+
+  @Test(timeout = 10000)
+  public void testValue() throws Exception {
+    Configuration conf = cluster.getConfiguration(0);
+    int throttle = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
+        DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_DEFAULT);
+    Assert.assertEquals(-1, throttle);
+  }
+
 }
