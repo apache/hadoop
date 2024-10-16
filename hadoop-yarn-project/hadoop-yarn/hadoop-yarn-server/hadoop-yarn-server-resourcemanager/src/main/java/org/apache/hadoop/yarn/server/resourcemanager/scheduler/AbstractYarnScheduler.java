@@ -757,10 +757,9 @@ public abstract class AbstractYarnScheduler
       RMContainer rmContainer, ContainerStatus containerStatus,
       RMContainerEventType event) {
     N schedulerNode = getSchedulerNode(rmContainer.getNodeId());
-    if (schedulerNode != null &&
-        schedulerNode.getReservedContainer() != null) {
+    if (schedulerNode != null) {
       RMContainer resContainer = schedulerNode.getReservedContainer();
-      if (resContainer.getReservedSchedulerKey() != null) {
+      if (resContainer != null && resContainer.getReservedSchedulerKey() != null) {
         ContainerId containerToUpdate = resContainer
             .getReservedSchedulerKey().getContainerToUpdate();
         if (containerToUpdate != null &&
