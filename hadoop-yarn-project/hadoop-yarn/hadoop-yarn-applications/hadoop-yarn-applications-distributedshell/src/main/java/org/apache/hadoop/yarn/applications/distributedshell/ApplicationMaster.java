@@ -323,7 +323,7 @@ public class ApplicationMaster {
       ContainerRetryPolicy.NEVER_RETRY;
   private Set<Integer> containerRetryErrorCodes = null;
   private int containerMaxRetries = 0;
-  private int containrRetryInterval = 0;
+  private int containerRetryInterval = 0;
   private long containerFailuresValidityInterval = -1;
 
   private List<String> localizableFiles = new ArrayList<>();
@@ -722,7 +722,7 @@ public class ApplicationMaster {
     }
     containerMaxRetries = Integer.parseInt(
         cliParser.getOptionValue("container_max_retries", "0"));
-    containrRetryInterval = Integer.parseInt(cliParser.getOptionValue(
+    containerRetryInterval = Integer.parseInt(cliParser.getOptionValue(
         "container_retry_interval", "0"));
     containerFailuresValidityInterval = Long.parseLong(
         cliParser.getOptionValue("container_failures_validity_interval", "-1"));
@@ -1555,7 +1555,7 @@ public class ApplicationMaster {
       ContainerRetryContext containerRetryContext =
           ContainerRetryContext.newInstance(
               containerRetryPolicy, containerRetryErrorCodes,
-              containerMaxRetries, containrRetryInterval,
+              containerMaxRetries, containerRetryInterval,
               containerFailuresValidityInterval);
       ContainerLaunchContext ctx = ContainerLaunchContext.newInstance(
         localResources, myShellEnv, commands, null, allTokens.duplicate(),
