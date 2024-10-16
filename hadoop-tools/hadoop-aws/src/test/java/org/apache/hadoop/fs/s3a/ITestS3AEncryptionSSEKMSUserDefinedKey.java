@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_KMS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
@@ -40,7 +41,8 @@ public class ITestS3AEncryptionSSEKMSUserDefinedKey
     Configuration c = new Configuration();
     String kmsKey = S3AUtils.getS3EncryptionKey(getTestBucketName(c), c);
     // skip the test if SSE-KMS or KMS key not set.
-    if (StringUtils.isBlank(kmsKey)) {
+    if (StringUtils.isBlank(kmsKey) || !SSE_KMS.getMethod()
+        .equals(c.get(S3_ENCRYPTION_ALGORITHM))) {
       skip(S3_ENCRYPTION_KEY + " is not set for " +
           SSE_KMS.getMethod());
     }

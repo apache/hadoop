@@ -119,6 +119,7 @@ public class TestClientManager extends AbstractHadoopTestBase {
   private ClientManager manager(final StubS3ClientFactory factory) {
     return new ClientManagerImpl(
         factory,
+        null,
         new S3ClientFactory.S3ClientCreationParameters()
             .withPathUri(uri),
         StubDurationTrackerFactory.STUB_DURATION_TRACKER_FACTORY);

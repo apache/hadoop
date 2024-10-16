@@ -529,7 +529,7 @@ public final class S3AUtils {
    * @param owner owner of the file
    * @param eTag S3 object eTag or null if unavailable
    * @param versionId S3 object versionId or null if unavailable
-   * @param isCSEEnabled is client side encryption enabled?
+   * @param size s3 object size
    * @return a status entry
    */
   public static S3AFileStatus createFileStatus(Path keyPath,
@@ -538,12 +538,7 @@ public final class S3AUtils {
       String owner,
       String eTag,
       String versionId,
-      boolean isCSEEnabled) {
-    long size = s3Object.size();
-    // check if cse is enabled; strip out constant padding length.
-    if (isCSEEnabled && size >= CSE_PADDING_LENGTH) {
-      size -= CSE_PADDING_LENGTH;
-    }
+      long size) {
     return createFileStatus(keyPath,
         objectRepresentsDirectory(s3Object.key()),
         size, Date.from(s3Object.lastModified()), blockSize, owner, eTag, versionId);
