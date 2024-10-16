@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.util.subject;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import javax.security.auth.Subject;
 
 /**
@@ -29,7 +26,6 @@ import javax.security.auth.Subject;
  * This class helps use the newer API if available, without raising the language level.
  */
 public class SubjectAdapter {
-    private static Logger log = LoggerFactory.getLogger(SubjectAdapter.class);
     private static final HiddenSubjectAdapter instance;
     static {
         int version = 0;
@@ -47,14 +43,5 @@ public class SubjectAdapter {
 
     public static Subject getSubject() {
         return instance.getSubject();
-    }
-
-    /**
-     * This main method is included so that this is trivially tested using multiple JDKs outside the scope test sources
-     * @param args ignored
-     */
-    public static void main(String[] args) {
-        final Subject theSubject = getSubject();
-        log.info("Current subject is {}", theSubject);
     }
 }

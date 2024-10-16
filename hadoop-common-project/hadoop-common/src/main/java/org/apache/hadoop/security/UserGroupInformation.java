@@ -88,8 +88,8 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-
 import org.apache.hadoop.util.subject.SubjectAdapter;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
