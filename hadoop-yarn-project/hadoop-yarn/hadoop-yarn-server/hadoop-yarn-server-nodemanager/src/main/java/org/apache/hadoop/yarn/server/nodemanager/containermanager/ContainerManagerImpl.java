@@ -968,9 +968,13 @@ public class ContainerManagerImpl extends CompositeService implements
       .currentTimeMillis()) {
       // Ensure the token is not expired.
       unauthorized = true;
-      messageBuilder.append("\nThis token is expired. current time is ")
-        .append(System.currentTimeMillis()).append(" found ")
-        .append(containerTokenIdentifier.getExpiryTimeStamp());
+      messageBuilder.append("\nThe container token of id ")
+              .append(containerIDStr)
+              .append(" is expired. Current system time is ")
+              .append(System.currentTimeMillis()).append(" ,token expiry time is ")
+              .append(containerTokenIdentifier.getExpiryTimeStamp())
+              .append(". And app id is ")
+              .append(nmTokenIdentifier.getApplicationAttemptId().getApplicationId());
       messageBuilder.append("\nNote: System times on machines may be out of sync.")
         .append(" Check system time and time zones.");
     }
