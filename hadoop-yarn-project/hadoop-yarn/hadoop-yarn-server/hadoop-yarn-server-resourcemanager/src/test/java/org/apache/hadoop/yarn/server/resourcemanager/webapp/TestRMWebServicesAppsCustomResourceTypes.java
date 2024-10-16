@@ -18,12 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
@@ -42,24 +36,33 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.JsonCustomRes
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.XmlCustomResourceTypeTestCase;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Before;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
 import org.junit.Test;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp
-        .TestRMWebServicesCustomResourceTypesCommons.verifyAppInfoJson;
+    .TestRMWebServicesCustomResourceTypesCommons.verifyAppInfoJson;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp
-        .TestRMWebServicesCustomResourceTypesCommons.verifyAppsXML;
+    .TestRMWebServicesCustomResourceTypesCommons.verifyAppsXML;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * This test verifies that custom resource types are correctly serialized to XML
@@ -70,12 +73,20 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
   private static MockRM rm;
   private static final int CONTAINER_MB = 1024;
 
-  private static class WebServletModule extends ServletModule {
+  @Override
+  protected Application configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.register(new JerseyBinder());
+    config.register(RMWebServices.class);
+    config.register(GenericExceptionHandler.class);
+    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
+    return config;
+  }
+
+  private static class JerseyBinder extends AbstractBinder {
     @Override
-    protected void configureServlets() {
-      bind(JAXBContextResolver.class);
-      bind(RMWebServices.class);
-      bind(GenericExceptionHandler.class);
+    protected void configure() {
       Configuration conf = new Configuration();
       conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
           YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -83,35 +94,27 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
           ResourceScheduler.class);
       initResourceTypes(conf);
       rm = new MockRM(conf);
-      bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
-    }
 
-    private void initResourceTypes(Configuration conf) {
-      conf.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
-          CustomResourceTypesConfigurationProvider.class.getName());
-      ResourceUtils.resetResourceTypes(conf);
+      final HttpServletRequest request = mock(HttpServletRequest.class);
+      when(request.getScheme()).thenReturn("http");
+      final HttpServletResponse response = mock(HttpServletResponse.class);
+      bind(rm).to(ResourceManager.class).named("rm");
+      bind(conf).to(Configuration.class).named("conf");
+      bind(request).to(HttpServletRequest.class);
+      bind(response).to(HttpServletResponse.class);
     }
   }
 
-  @Before
+  private static void initResourceTypes(Configuration conf) {
+    conf.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        CustomResourceTypesConfigurationProvider.class.getName());
+    ResourceUtils.resetResourceTypes(conf);
+  }
+
+
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    createInjectorForWebServletModule();
-  }
-
-  private void createInjectorForWebServletModule() {
-    GuiceServletConfig
-        .setInjector(Guice.createInjector(new WebServletModule()));
-  }
-
-  public TestRMWebServicesAppsCustomResourceTypes() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-            .contextListenerClass(GuiceServletConfig.class)
-            .filterClass(com.google.inject.servlet.GuiceFilter.class)
-            .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   @Test
@@ -128,10 +131,10 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
     am1.allocate("*", 2048, 1, new ArrayList<>());
     amNodeManager.nodeHeartbeat(true);
 
-    WebResource r = resource();
-    WebResource path = r.path("ws").path("v1").path("cluster").path("apps");
-    ClientResponse response =
-        path.accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+    WebTarget r = target();
+    WebTarget path = r.path("ws").path("v1").path("cluster").path("apps");
+    Response response =
+        path.request(MediaType.APPLICATION_XML).get(Response.class);
 
     XmlCustomResourceTypeTestCase testCase =
             new XmlCustomResourceTypeTestCase(path,
@@ -164,10 +167,10 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
     am1.allocate("*", 2048, 1, new ArrayList<>());
     amNodeManager.nodeHeartbeat(true);
 
-    WebResource r = resource();
-    WebResource path = r.path("ws").path("v1").path("cluster").path("apps");
-    ClientResponse response =
-        path.accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    WebTarget r = target();
+    WebTarget path = r.path("ws").path("v1").path("cluster").path("apps");
+    Response response =
+        path.request(MediaType.APPLICATION_JSON).get(Response.class);
 
     JsonCustomResourceTypeTestcase testCase =
         new JsonCustomResourceTypeTestcase(path,
@@ -177,7 +180,9 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
         assertEquals("incorrect number of apps elements", 1, json.length());
         JSONObject apps = json.getJSONObject("apps");
         assertEquals("incorrect number of app elements", 1, apps.length());
-        JSONArray array = apps.getJSONArray("app");
+        JSONObject app = apps.getJSONObject("app");
+        JSONArray array = new JSONArray();
+        array.put(app);
         assertEquals("incorrect count of app", 1, array.length());
 
         verifyAppInfoJson(array.getJSONObject(0), app1, rm);

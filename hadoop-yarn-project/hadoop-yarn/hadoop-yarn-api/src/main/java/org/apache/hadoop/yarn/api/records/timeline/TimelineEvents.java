@@ -39,8 +39,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 @Evolving
 public class TimelineEvents {
 
-  private List<EventsOfOneEntity> allEvents =
-      new ArrayList<EventsOfOneEntity>();
+  private List<EventsOfOneEntity> allEvents = new ArrayList<>();
 
   public TimelineEvents() {
 
@@ -98,7 +97,7 @@ public class TimelineEvents {
 
     private String entityId;
     private String entityType;
-    private List<TimelineEvent> events = new ArrayList<TimelineEvent>();
+    private List<TimelineEvent> events = new ArrayList<>();
 
     public EventsOfOneEntity() {
 

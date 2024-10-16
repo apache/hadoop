@@ -21,15 +21,21 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Sets;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -46,22 +52,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
 /**
  * Tests partition resource usage per application.
@@ -77,22 +79,28 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
   private static CapacitySchedulerConfiguration csConf;
   private static YarnConfiguration conf;
 
-  private static class WebServletModule extends ServletModule {
+  @Override
+  protected Application configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.register(new JerseyBinder());
+    config.register(RMWebServices.class);
+    config.register(GenericExceptionHandler.class);
+    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
+    return config;
+  }
 
+  private static class JerseyBinder extends AbstractBinder {
     private static final String LABEL_X = "X";
-
     @Override
-    protected void configureServlets() {
-      bind(JAXBContextResolver.class);
-      bind(RMWebServices.class);
-      bind(GenericExceptionHandler.class);
+    protected void configure() {
       csConf = new CapacitySchedulerConfiguration();
       setupQueueConfiguration(csConf);
       conf = new YarnConfiguration(csConf);
       conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-          ResourceScheduler.class);
+              ResourceScheduler.class);
       rm = new MockRM(conf);
-      Set<NodeLabel> labels = new HashSet<NodeLabel>();
+      Set<NodeLabel> labels = new HashSet<>();
       labels.add(NodeLabel.newInstance(LABEL_X));
       try {
         nodeLabelManager = rm.getRMContext().getNodeLabelManager();
@@ -100,17 +108,16 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
       } catch (Exception e) {
         Assert.fail();
       }
-      bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
+      final HttpServletRequest request = mock(HttpServletRequest.class);
+      final HttpServletResponse response = mock(HttpServletResponse.class);
+      bind(rm).to(ResourceManager.class).named("rm");
+      bind(conf).to(Configuration.class).named("conf");
+      bind(request).to(HttpServletRequest.class);
+      bind(response).to(HttpServletResponse.class);
     }
-  };
+  }
 
   public TestRMWebServiceAppsNodelabel() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-            .contextListenerClass(GuiceServletConfig.class)
-            .filterClass(com.google.inject.servlet.GuiceFilter.class)
-            .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   private static void setupQueueConfiguration(
@@ -136,25 +143,23 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
   }
 
   @Override
-  @Before
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig
-        .setInjector(Guice.createInjector(new WebServletModule()));
   }
 
   @Test
-  public void testAppsFinished() throws JSONException, Exception {
+  public void testAppsFinished() throws Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     amNodeManager.nodeHeartbeat(true);
     RMApp killedApp = MockRMAppSubmitter.submitWithMemory(AM_CONTAINER_MB, rm);
     rm.killApp(killedApp.getApplicationId());
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = target();
+    Response response =
         r.path("ws").path("v1").path("cluster").path("apps")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    JSONObject json = response.getEntity(JSONObject.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
+    String entity = response.readEntity(String.class);
+    JSONObject json = new JSONObject(entity);
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
     try {
@@ -168,7 +173,7 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
   }
 
   @Test
-  public void testAppsRunning() throws JSONException, Exception {
+  public void testAppsRunning() throws Exception {
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 2048);
     MockNM nm2 = rm.registerNode("h2:1235", 2048);
@@ -189,21 +194,20 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     nm1.nodeHeartbeat(true);
 
     // AM request for resource in partition X
-    am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "X");
+    am1.allocate("*", 1024, 1, new ArrayList<>(), "X");
     nm2.nodeHeartbeat(true);
 
-    WebResource r = resource();
+    WebTarget r = target();
 
-    ClientResponse response =
-        r.path("ws").path("v1").path("cluster").path("apps")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    JSONObject json = response.getEntity(JSONObject.class);
+    Response response = r.path("ws").path("v1").path("cluster").path("apps")
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
+    String entity = response.readEntity(String.class);
+    JSONObject json = new JSONObject(entity);
 
     // Verify apps resource
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
-    JSONObject jsonObject =
-        apps.getJSONArray("app").getJSONObject(0).getJSONObject("resourceInfo");
+    JSONObject jsonObject = apps.getJSONObject("app").getJSONObject("resourceInfo");
     JSONArray jsonArray = jsonObject.getJSONArray("resourceUsagesByPartition");
     assertEquals("Partition expected is 2", 2, jsonArray.length());
 
@@ -211,9 +215,9 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     JSONObject defaultPartition = jsonArray.getJSONObject(0);
     verifyResource(defaultPartition, "", getResource(1024, 1),
         getResource(1024, 1), getResource(0, 0));
-    // verify resource used for parition x
-    JSONObject paritionX = jsonArray.getJSONObject(1);
-    verifyResource(paritionX, "X", getResource(0, 0), getResource(1024, 1),
+    // verify resource used for partition x
+    JSONObject partitionX = jsonArray.getJSONObject(1);
+    verifyResource(partitionX, "X", getResource(0, 0), getResource(1024, 1),
         getResource(0, 0));
     rm.stop();
   }
@@ -240,7 +244,6 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
 
   @SuppressWarnings("unchecked")
   private <E> Set<E> toSet(E... elements) {
-    Set<E> set = Sets.newHashSet(elements);
-    return set;
+    return Sets.newHashSet(elements);
   }
 }

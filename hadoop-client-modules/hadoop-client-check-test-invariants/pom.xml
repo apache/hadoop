@@ -101,6 +101,7 @@
                     <!-- Leave snappy that includes native methods which cannot be relocated. -->
                     <exclude>org.xerial.snappy:*</exclude>
                     <exclude>org.ehcache:*</exclude>
+                    <exclude>org.glassfish.jersey:*</exclude>
                   </excludes>
                 </banTransitiveDependencies>
                 <banDuplicateClasses>

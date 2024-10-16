@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.router.webapp;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONMarshaller;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -39,7 +35,10 @@ import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
+import org.glassfish.jersey.jettison.JettisonMarshaller;
 
+import javax.ws.rs.client.Client;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.ArrayList;
@@ -99,7 +98,7 @@ public abstract class RouterBlock extends HtmlBlock {
         .genericForward(webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
         conf, client);
-    client.destroy();
+    client.close();
     return metrics;
   }
 
@@ -112,7 +111,6 @@ public abstract class RouterBlock extends HtmlBlock {
     List<SubClusterInfo> subClusters = new ArrayList<>();
     try {
       Map<SubClusterId, SubClusterInfo> subClustersInfo = facade.getSubClusters(true);
-
       // Sort the SubClusters.
       subClusters.addAll(subClustersInfo.values());
       Comparator<? super SubClusterInfo> cmp = Comparator.comparing(o -> o.getSubClusterId());
@@ -186,7 +184,7 @@ public abstract class RouterBlock extends HtmlBlock {
             .genericForward(webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
             RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
             conf, client);
-        client.destroy();
+        client.close();
         return metrics;
       }
     } catch (Exception e) {
@@ -331,9 +329,8 @@ public abstract class RouterBlock extends HtmlBlock {
       }
 
       // Step3. Get Local-Cluster Capability
-      JSONJAXBContext jc = new JSONJAXBContext(
-          JSONConfiguration.mapped().rootUnwrapping(false).build(), ClusterMetricsInfo.class);
-      JSONMarshaller marshaller = jc.createJSONMarshaller();
+      JettisonJaxbContext jc = new JettisonJaxbContext(ClusterMetricsInfo.class);
+      JettisonMarshaller marshaller = jc.createJsonMarshaller();
       StringWriter writer = new StringWriter();
       marshaller.marshallToJSON(clusterMetricsInfos, writer);
       String capability = writer.toString();
@@ -349,7 +346,7 @@ public abstract class RouterBlock extends HtmlBlock {
       LOG.error("An error occurred while parsing the local YARN cluster.", e);
     } finally {
       if (client != null) {
-        client.destroy();
+        client.close();
       }
     }
     return null;

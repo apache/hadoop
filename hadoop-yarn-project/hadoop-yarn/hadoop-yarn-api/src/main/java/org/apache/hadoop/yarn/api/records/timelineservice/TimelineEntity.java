@@ -29,6 +29,8 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
@@ -53,6 +55,7 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 @XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
+@JsonIgnoreProperties({"children", "parent", "valid"})
 public class TimelineEntity implements Comparable<TimelineEntity> {
   protected final static String SYSTEM_INFO_KEY_PREFIX = "SYSTEM_INFO_";
   public final static long DEFAULT_ENTITY_PREFIX = 0L;
@@ -192,6 +195,7 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   }
 
   @XmlElement(name = "id")
+  @JsonIgnore
   public String getId() {
     if (real == null) {
       return identifier.id;
@@ -227,6 +231,7 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   // required by JAXB
   @InterfaceAudience.Private
   @XmlElement(name = "info")
+  @JsonIgnore
   public HashMap<String, Object> getInfoJAXB() {
     if (real == null) {
       return info;
@@ -523,6 +528,7 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
     }
   }
 
+  @JsonIgnore
   public boolean isValid() {
     return (getId() != null && getType() != null);
   }

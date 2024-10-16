@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.server.webapp;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.UniformInterfaceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -90,7 +88,7 @@ public class LogServlet extends Configured {
 
   @VisibleForTesting
   public String getNMWebAddressFromRM(String nodeId)
-      throws ClientHandlerException, UniformInterfaceException, JSONException {
+      throws JSONException {
     return LogWebServiceUtils.getNMWebAddressFromRM(getConf(), nodeId);
   }
 

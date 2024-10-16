@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
@@ -30,10 +29,19 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
+import java.time.Duration;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+
+import org.glassfish.jersey.client.ClientConfig;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
@@ -58,15 +66,6 @@ import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Preconditions;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
-import com.sun.jersey.api.client.filter.ClientFilter;
-import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 
 /**
  * Utility Connector class which is used by timeline clients to securely get
@@ -88,9 +87,8 @@ public class TimelineConnector extends AbstractService {
   private DelegationTokenAuthenticatedURL.Token token;
   private UserGroupInformation authUgi;
   private String doAsUser;
-  @VisibleForTesting
-  TimelineClientConnectionRetry connectionRetry;
   private boolean requireConnectionRetry;
+  private RetryPolicy<Object> retryPolicy;
 
   public TimelineConnector(boolean requireConnectionRetry,
       UserGroupInformation authUgi, String doAsUser,
@@ -105,8 +103,8 @@ public class TimelineConnector extends AbstractService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     super.serviceInit(conf);
-    ClientConfig cc = new DefaultClientConfig();
-    cc.getClasses().add(YarnJacksonJaxbJsonProvider.class);
+    ClientConfig cc = new ClientConfig();
+    cc.register(YarnJacksonJaxbJsonProvider.class);
 
     if (YarnConfiguration.useHttps(conf)) {
       // If https is chosen, configures SSL client.
@@ -127,17 +125,13 @@ public class TimelineConnector extends AbstractService {
     }
     authenticator.setConnectionConfigurator(connConfigurator);
 
-    connectionRetry = new TimelineClientConnectionRetry(conf);
-    client =
-        new Client(
-            new URLConnectionClientHandler(new TimelineURLConnectionFactory(
-                authUgi, authenticator, connConfigurator, token, doAsUser)),
-            cc);
-    if (requireConnectionRetry) {
-      TimelineJerseyRetryFilter retryFilter =
-          new TimelineJerseyRetryFilter(connectionRetry);
-      client.addFilter(retryFilter);
-    }
+    retryPolicy = createRetryPolicy(conf);
+
+    cc.connectorProvider(new HttpUrlConnectorProvider().connectionFactory(
+        new TimelineURLConnectionFactory(
+            authUgi, authenticator, connConfigurator, token, doAsUser)));
+
+    client = ClientBuilder.newClient(cc);
   }
 
   private ConnectionConfigurator defaultTimeoutConnConfigurator = conn -> {
@@ -204,7 +198,7 @@ public class TimelineConnector extends AbstractService {
 
   protected void serviceStop() {
     if (this.client != null) {
-      this.client.destroy();
+      this.client.close();
     }
     if (this.sslFactory != null) {
       this.sslFactory.destroy();
@@ -221,8 +215,7 @@ public class TimelineConnector extends AbstractService {
     // Set up the retry operation
     TimelineClientRetryOp tokenRetryOp =
         createRetryOpForOperateDelegationToken(action);
-
-    return connectionRetry.retryOn(tokenRetryOp);
+    return Failsafe.with(retryPolicy).get(tokenRetryOp::run);
   }
 
   @Private
@@ -241,20 +234,17 @@ public class TimelineConnector extends AbstractService {
   public static abstract class TimelineClientRetryOp {
     // The operation that should be retried
     public abstract Object run() throws IOException;
-
-    // The method to indicate if we should retry given the incoming exception
-    public abstract boolean shouldRetryOn(Exception e);
   }
 
   private static class TimelineURLConnectionFactory
-      implements HttpURLConnectionFactory {
+      implements HttpUrlConnectorProvider.ConnectionFactory {
     private DelegationTokenAuthenticator authenticator;
     private UserGroupInformation authUgi;
     private ConnectionConfigurator connConfigurator;
     private Token token;
     private String doAsUser;
 
-    public TimelineURLConnectionFactory(UserGroupInformation authUgi,
+    TimelineURLConnectionFactory(UserGroupInformation authUgi,
         DelegationTokenAuthenticator authenticator,
         ConnectionConfigurator connConfigurator,
         DelegationTokenAuthenticatedURL.Token token, String doAsUser) {
@@ -266,8 +256,7 @@ public class TimelineConnector extends AbstractService {
     }
 
     @Override
-    public HttpURLConnection getHttpURLConnection(final URL url)
-        throws IOException {
+    public HttpURLConnection getConnection(URL url) throws IOException {
       authUgi.checkTGTAndReloginFromKeytab();
       try {
         return new DelegationTokenAuthenticatedURL(authenticator,
@@ -278,143 +267,43 @@ public class TimelineConnector extends AbstractService {
         throw new IOException(ae);
       }
     }
-
   }
 
-  // Class to handle retry
-  // Outside this class, only visible to tests
-  @Private
-  @VisibleForTesting
-  static class TimelineClientConnectionRetry {
-
-    // maxRetries < 0 means keep trying
-    @Private
-    @VisibleForTesting
-    public int maxRetries;
-
-    @Private
-    @VisibleForTesting
-    public long retryInterval;
-
-    // Indicates if retries happened last time. Only tests should read it.
-    // In unit tests, retryOn() calls should _not_ be concurrent.
-    private boolean retried = false;
-
-    @Private
-    @VisibleForTesting
-    boolean getRetired() {
-      return retried;
-    }
-
-    // Constructor with default retry settings
-    public TimelineClientConnectionRetry(Configuration conf) {
-      Preconditions.checkArgument(
-          conf.getInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
-              YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES)
-              >= -1,
-          "%s property value should be greater than or equal to -1",
-          YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
-      Preconditions.checkArgument(
-          conf.getLong(
-              YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
-              YarnConfiguration.
+  private RetryPolicy<Object> createRetryPolicy(Configuration conf) {
+    Preconditions.checkArgument(
+        conf.getInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES)
+            >= -1,
+        "%s property value should be greater than or equal to -1",
+        YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
+    Preconditions.checkArgument(
+        conf.getLong(
+            YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+            YarnConfiguration.
                 DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS) > 0,
           "%s property value should be greater than zero",
           YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS);
-      maxRetries =
-          conf.getInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
-              YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
-      retryInterval = conf.getLong(
-          YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
-          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS);
+    int maxRetries = 0;
+    if (requireConnectionRetry) {
+      // maxRetries < 0 means keep trying
+      maxRetries = conf.getInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
     }
-
-    public Object retryOn(TimelineClientRetryOp op)
-        throws RuntimeException, IOException {
-      int leftRetries = maxRetries;
-      retried = false;
-
-      // keep trying
-      while (true) {
-        try {
-          // try perform the op, if fail, keep retrying
-          return op.run();
-        } catch (IOException | RuntimeException e) {
-          // break if there's no retries left
-          if (leftRetries == 0) {
-            break;
-          }
-          if (op.shouldRetryOn(e)) {
-            logException(e, leftRetries);
-          } else {
-            throw e;
-          }
-        }
-        if (leftRetries > 0) {
-          leftRetries--;
-        }
-        retried = true;
-        try {
-          // sleep for the given time interval
-          Thread.sleep(retryInterval);
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-          throw new InterruptedIOException("Client retry sleep interrupted!");
-        }
-      }
-      throw new RuntimeException("Failed to connect to timeline server. "
-          + "Connection retries limit exceeded. "
-          + "The posted timeline event may be missing");
-    };
-
-    private void logException(Exception e, int leftRetries) {
-      if (leftRetries > 0) {
-        LOG.info(
-            "Exception caught by TimelineClientConnectionRetry," + " will try "
-                + leftRetries + " more time(s).\nMessage: " + e.getMessage());
-      } else {
-        // note that maxRetries may be -1 at the very beginning
-        LOG.info("ConnectionException caught by TimelineClientConnectionRetry,"
-            + " will keep retrying.\nMessage: " + e.getMessage());
-      }
-    }
+    long retryInterval = conf.getLong(
+        YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS);
+    return new RetryPolicy<>()
+        .handle(IOException.class, RuntimeException.class)
+        .handleIf(e -> e instanceof ProcessingException
+          && (e.getCause() instanceof ConnectException
+          || e.getCause() instanceof SocketTimeoutException
+          || e.getCause() instanceof SocketException))
+        .withDelay(Duration.ofMillis(retryInterval))
+        .withMaxRetries(maxRetries);
   }
 
-  private static class TimelineJerseyRetryFilter extends ClientFilter {
-    private TimelineClientConnectionRetry connectionRetry;
-
-    public TimelineJerseyRetryFilter(
-        TimelineClientConnectionRetry connectionRetry) {
-      this.connectionRetry = connectionRetry;
-    }
-
-    @Override
-    public ClientResponse handle(final ClientRequest cr)
-        throws ClientHandlerException {
-      // Set up the retry operation
-      TimelineClientRetryOp jerseyRetryOp = new TimelineClientRetryOp() {
-        @Override
-        public Object run() {
-          // Try pass the request, if fail, keep retrying
-          return getNext().handle(cr);
-        }
-
-        @Override
-        public boolean shouldRetryOn(Exception e) {
-          // Only retry on connection exceptions
-          return (e instanceof ClientHandlerException)
-              && (e.getCause() instanceof ConnectException
-                  || e.getCause() instanceof SocketTimeoutException
-                  || e.getCause() instanceof SocketException);
-        }
-      };
-      try {
-        return (ClientResponse) connectionRetry.retryOn(jerseyRetryOp);
-      } catch (IOException e) {
-        throw new ClientHandlerException(
-            "Jersey retry failed!\nMessage: " + e.getMessage());
-      }
-    }
+  RetryPolicy<Object> getRetryPolicy() {
+    return retryPolicy;
   }
 
   @Private
@@ -442,14 +331,6 @@ public class TimelineConnector extends AbstractService {
       } catch (InterruptedException e) {
         throw new IOException(e);
       }
-    }
-
-    @Override
-    public boolean shouldRetryOn(Exception e) {
-      // retry on connection exceptions
-      // and SocketTimeoutException
-      return (e instanceof ConnectException
-          || e instanceof SocketTimeoutException);
     }
   }
 

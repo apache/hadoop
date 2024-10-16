@@ -22,11 +22,11 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryClientService;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
-import org.apache.hadoop.yarn.server.timeline.webapp.TimelineWebServices;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
-import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
+
+import javax.servlet.Filter;
 
 public class AHSWebApp extends WebApp implements YarnWebParams {
 
@@ -49,9 +49,6 @@ public class AHSWebApp extends WebApp implements YarnWebParams {
 
   @Override
   public void setup() {
-    bind(YarnJacksonJaxbJsonProvider.class);
-    bind(AHSWebServices.class);
-    bind(TimelineWebServices.class);
     bind(GenericExceptionHandler.class);
     bind(ApplicationBaseProtocol.class).toInstance(historyClientService);
     bind(TimelineDataManager.class).toInstance(timelineDataManager);
@@ -66,5 +63,10 @@ public class AHSWebApp extends WebApp implements YarnWebParams {
       pajoin("/logs", NM_NODENAME, CONTAINER_ID, ENTITY_STRING, APP_OWNER,
         CONTAINER_LOG_TYPE), AHSController.class, "logs");
     route("/errors-and-warnings", AHSController.class, "errorsAndWarnings");
+  }
+
+  @Override
+  protected Class<? extends Filter> getWebAppFilterClass() {
+    return null;
   }
 }

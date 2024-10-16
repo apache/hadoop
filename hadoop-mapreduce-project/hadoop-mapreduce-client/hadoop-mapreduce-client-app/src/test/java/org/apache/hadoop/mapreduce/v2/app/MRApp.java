@@ -455,15 +455,10 @@ public class MRApp extends MRAppMaster {
             getCommitter(), isNewApiCommitter(),
             currentUser.getUserName(), getContext(),
             forcedState, diagnostic);
-    ((AppContext) getContext()).getAllJobs().put(newJob.getID(), newJob);
+    getContext().getAllJobs().put(newJob.getID(), newJob);
 
     getDispatcher().register(JobFinishEvent.Type.class,
-        new EventHandler<JobFinishEvent>() {
-          @Override
-          public void handle(JobFinishEvent event) {
-            stop();
-          }
-        });
+        (EventHandler<JobFinishEvent>) event -> stop());
 
     return newJob;
   }

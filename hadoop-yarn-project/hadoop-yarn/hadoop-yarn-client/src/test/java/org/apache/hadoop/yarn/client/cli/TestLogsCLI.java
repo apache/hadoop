@@ -38,15 +38,13 @@ import static org.mockito.Mockito.verify;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.ClientResponse.Status;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -60,6 +58,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Response;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -90,7 +91,6 @@ import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileCo
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregationIndexedFileController;
 import org.apache.hadoop.yarn.webapp.util.WebServiceClient;
-import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.After;
 import org.junit.Assert;
@@ -204,10 +204,9 @@ public class TestLogsCLI {
             + "APPLICATION_ATTEMPT_MASTER_CONTAINER\":\"container_e01_154227157"
             + "0060_0002_01_000001\"},\"configs\":{},\"isrelatedto\":{},\"relat"
             + "esto\":{}}]";
-    JSONArray obj = new JSONArray(appInfoEntity);
 
-    ClientResponse response = mock(ClientResponse.class);
-    doReturn(obj).when(response).getEntity(JSONArray.class);
+    Response response = mock(Response.class);
+    doReturn(appInfoEntity).when(response).readEntity(String.class);
 
     doReturn(response).when(cli)
         .getClientResponseFromTimelineReader(any(Configuration.class),
@@ -861,12 +860,10 @@ public class TestLogsCLI {
           containerId1.toString(), "-client_max_retries", "5"});
       Assert.fail("Exception expected! "
           + "NodeManager should be off to run this test. ");
-    } catch (RuntimeException ce) {
+    } catch (IOException ce) {
       Assert.assertTrue(
           "Handler exception for reason other than retry: " + ce.getMessage(),
           ce.getMessage().contains("Connection retries limit exceeded"));
-      Assert.assertTrue("Retry filter didn't perform any retries! ", cli
-           .connectionRetry.getRetired());
     }
   }
 
@@ -939,9 +936,9 @@ public class TestLogsCLI {
       logsSet.add(fileName);
       doReturn(logsSet).when(cli).getMatchedContainerLogFiles(
           any(ContainerLogsRequest.class), anyBoolean(), anyBoolean());
-      ClientResponse mockReponse = mock(ClientResponse.class);
-      doReturn(Status.OK).when(mockReponse).getStatusInfo();
-      doReturn(fis).when(mockReponse).getEntityInputStream();
+      Response mockReponse = mock(Response.class);
+      doReturn(Response.Status.OK).when(mockReponse).getStatusInfo();
+      doReturn(fis).when(mockReponse).readEntity(InputStream.class);
       doReturn(mockReponse).when(cli).getResponseFromNMWebService(
           any(Configuration.class),
           any(Client.class),

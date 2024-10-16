@@ -31,6 +31,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.hadoop.io.IOUtils;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecord;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecords;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
@@ -93,35 +96,38 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 
 @Singleton
 @Path("/ws/v1/node")
 public class NMWebServices {
   private static final Logger LOG =
        LoggerFactory.getLogger(NMWebServices.class);
+
   private Context nmContext;
+
   private ResourceView rview;
+
   private WebApp webapp;
-  private static RecordFactory recordFactory = RecordFactoryProvider
-      .getRecordFactory(null);
-  private final String redirectWSUrl;
-  private final LogAggregationFileControllerFactory factory;
+
+  private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+
+  private String redirectWSUrl;
+  private LogAggregationFileControllerFactory factory;
   private boolean filterAppsByUser = false;
 
-  private @javax.ws.rs.core.Context 
-    HttpServletRequest request;
+  @javax.ws.rs.core.Context
+  private HttpServletRequest request;
   
-  private @javax.ws.rs.core.Context 
-    HttpServletResponse response;
+  @javax.ws.rs.core.Context
+  private HttpServletResponse response;
 
   @javax.ws.rs.core.Context
-    UriInfo uriInfo;
+  private UriInfo uriInfo;
 
   @Inject
-  public NMWebServices(final Context nm, final ResourceView view,
-      final WebApp webapp) {
+  public NMWebServices(final @javax.inject.Named("nm") Context nm,
+      final @javax.inject.Named("view") ResourceView view,
+      final @javax.inject.Named("webapp") WebApp webapp) {
     this.nmContext = nm;
     this.rview = view;
     this.webapp = webapp;
@@ -146,16 +152,16 @@ public class NMWebServices {
   }
 
   @GET
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + ";" + JettyUtils.UTF_8 })
   public NodeInfo get() {
     return getNodeInfo();
   }
 
   @GET
   @Path("/info")
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + ";" + JettyUtils.UTF_8 })
   public NodeInfo getNodeInfo() {
     init();
     return new NodeInfo(this.nmContext, this.rview);
@@ -254,7 +260,7 @@ public class NMWebServices {
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public ContainerInfo getNodeContainer(@javax.ws.rs.core.Context
       HttpServletRequest hsr, @PathParam("containerid") String id) {
-    ContainerId containerId = null;
+    ContainerId containerId;
     init();
     try {
       containerId = ContainerId.fromString(id);
@@ -291,7 +297,7 @@ public class NMWebServices {
       @javax.ws.rs.core.Context HttpServletRequest hsr,
       @javax.ws.rs.core.Context HttpServletResponse res,
       @PathParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr) {
-    ContainerId containerId = null;
+    ContainerId containerId;
     init();
     try {
       containerId = ContainerId.fromString(containerIdStr);
@@ -305,7 +311,7 @@ public class NMWebServices {
           this.nmContext, containerId,
           hsr.getRemoteUser(), ContainerLogAggregationType.LOCAL));
       // check whether we have aggregated logs in RemoteFS. If exists, show the
-      // the log meta for the aggregated logs as well.
+      //  log meta for the aggregated logs as well.
       ApplicationId appId = containerId.getApplicationAttemptId()
           .getApplicationId();
       Application app = this.nmContext.getApplications().get(appId);
@@ -332,7 +338,7 @@ public class NMWebServices {
       }
       GenericEntity<List<ContainerLogsInfo>> meta = new GenericEntity<List<
           ContainerLogsInfo>>(containersLogsInfo){};
-      ResponseBuilder resp = Response.ok(meta);
+      ResponseBuilder resp = Response.ok().entity(meta);
       // Sending the X-Content-Type-Options response header with the value
       // nosniff will prevent Internet Explorer from MIME-sniffing a response
       // away from the declared content-type.
@@ -435,7 +441,7 @@ public class NMWebServices {
           containerId);
     }
     final boolean isRunning = tempIsRunning;
-    File logFile = null;
+    File logFile;
     try {
       logFile = ContainerLogsUtils.getContainerLogFile(
           containerId, filename, request.getRemoteUser(), nmContext);
@@ -537,10 +543,9 @@ public class NMWebServices {
   @GET
   @Path("/resources/{resourcename}")
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-                MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
-  public Object getNMResourceInfo(
-      @PathParam("resourcename")
-          String resourceName) throws YarnException {
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public NMResourceInfo getNMResourceInfo(@PathParam("resourcename")
+      String resourceName) throws YarnException {
     init();
     ResourcePluginManager rpm = this.nmContext.getResourcePluginManager();
     if (rpm != null && rpm.getNameToPlugins() != null) {
@@ -647,8 +652,11 @@ public class NMWebServices {
     String requestParams = WebAppUtils.removeQueryParams(httpRequest,
         YarnWebServiceParams.NM_ID);
     if (requestParams != null && !requestParams.isEmpty()) {
-      redirectPath.append("?" + requestParams + "&"
-          + YarnWebServiceParams.REDIRECTED_FROM_NODE + "=true");
+      redirectPath.append("?")
+          .append(requestParams)
+          .append("&")
+          .append(YarnWebServiceParams.REDIRECTED_FROM_NODE)
+          .append("=true");
     } else {
       redirectPath.append("?" + YarnWebServiceParams.REDIRECTED_FROM_NODE
           + "=true");

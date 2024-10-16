@@ -31,11 +31,15 @@ import java.io.OutputStream;
 import java.io.StringReader;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import com.google.inject.util.Providers;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -51,27 +55,21 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
-
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
 /**
  * Test the history server Rest API for getting the job conf. This
@@ -84,17 +82,28 @@ public class TestHsWebServicesJobConf extends JerseyTestBase {
   private static Configuration conf = new Configuration();
   private static HistoryContext appContext;
   private static HsWebApp webApp;
+  private static ApplicationClientProtocol acp = mock(ApplicationClientProtocol.class);
 
   private static File testConfDir = new File("target",
       TestHsWebServicesJobConf.class.getSimpleName() + "confDir");
 
-  private static class WebServletModule extends ServletModule {
+  @Override
+  protected Application configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.register(new JerseyBinder());
+    config.register(HsWebServices.class);
+    config.register(GenericExceptionHandler.class);
+    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    return config;
+  }
 
+  private class JerseyBinder extends AbstractBinder {
     @Override
-    protected void configureServlets() {
+    protected void configure() {
+      testConfDir.mkdir();
 
       Path confPath = new Path(testConfDir.toString(),
-          MRJobConfig.JOB_CONF_FILE);
+              MRJobConfig.JOB_CONF_FILE);
       Configuration config = new Configuration();
 
       FileSystem localFs;
@@ -121,31 +130,21 @@ public class TestHsWebServicesJobConf extends JerseyTestBase {
       webApp = mock(HsWebApp.class);
       when(webApp.name()).thenReturn("hsmockwebapp");
 
-      bind(JAXBContextResolver.class);
-      bind(HsWebServices.class);
-      bind(GenericExceptionHandler.class);
-      bind(WebApp.class).toInstance(webApp);
-      bind(AppContext.class).toInstance(appContext);
-      bind(HistoryContext.class).toInstance(appContext);
-      bind(Configuration.class).toInstance(conf);
-      bind(ApplicationClientProtocol.class).toProvider(Providers.of(null));
-
-      serve("/*").with(GuiceContainer.class);
+      bind(webApp).to(WebApp.class).named("hsWebApp");
+      bind(appContext).to(AppContext.class);
+      bind(appContext).to(HistoryContext.class).named("ctx");
+      bind(conf).to(Configuration.class).named("conf");
+      bind(acp).to(ApplicationClientProtocol.class).named("appClient");
+      final HttpServletResponse response = mock(HttpServletResponse.class);
+      bind(response).to(HttpServletResponse.class);
+      final HttpServletRequest request = mock(HttpServletRequest.class);
+      bind(request).to(HttpServletRequest.class);
     }
-  };
-
-  static {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
   }
 
-  @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    testConfDir.mkdir();
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
   }
 
   @AfterClass
@@ -154,27 +153,23 @@ public class TestHsWebServicesJobConf extends JerseyTestBase {
   }
 
   public TestHsWebServicesJobConf() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.mapreduce.v2.hs.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   @Test
-  public void testJobConf() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobConf() throws Exception {
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1").path("history")
+      Response response = r.path("ws").path("v1").path("history")
           .path("mapreduce")
           .path("jobs").path(jobId).path("conf")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String entity = response.readEntity(String.class);
+      JSONObject json = new JSONObject(entity);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("conf");
       verifyHsJobConf(info, jobsMap.get(id));
@@ -182,18 +177,18 @@ public class TestHsWebServicesJobConf extends JerseyTestBase {
   }
 
   @Test
-  public void testJobConfSlash() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobConfSlash() throws Exception {
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
-
-      ClientResponse response = r.path("ws").path("v1").path("history").path("mapreduce")
+      Response response = r.path("ws").path("v1").path("history").path("mapreduce")
           .path("jobs").path(jobId).path("conf/")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String entity = response.readEntity(String.class);
+      JSONObject json = new JSONObject(entity);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("conf");
       verifyHsJobConf(info, jobsMap.get(id));
@@ -201,17 +196,18 @@ public class TestHsWebServicesJobConf extends JerseyTestBase {
   }
 
   @Test
-  public void testJobConfDefault() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobConfDefault() throws Exception {
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1").path("history").path("mapreduce")
-          .path("jobs").path(jobId).path("conf").get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      Response response = r.path("ws").path("v1").path("history").path("mapreduce")
+          .path("jobs").path(jobId).path("conf").request().get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String entity = response.readEntity(String.class);
+      JSONObject json = new JSONObject(entity);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("conf");
       verifyHsJobConf(info, jobsMap.get(id));
@@ -219,18 +215,18 @@ public class TestHsWebServicesJobConf extends JerseyTestBase {
   }
 
   @Test
-  public void testJobConfXML() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobConfXML() throws Exception {
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1").path("history").path("mapreduce")
+      Response response = r.path("ws").path("v1").path("history").path("mapreduce")
           .path("jobs").path(jobId).path("conf")
-          .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      String xml = response.getEntity(String.class);
+          .request(MediaType.APPLICATION_XML).get(Response.class);
+      assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String xml = response.readEntity(String.class);
       DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
       DocumentBuilder db = dbf.newDocumentBuilder();
       InputSource is = new InputSource();

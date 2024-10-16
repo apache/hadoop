@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.api.records.timeline;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
@@ -37,6 +39,7 @@ import java.util.List;
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
 @Evolving
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TimelinePutResponse {
 
   private List<TimelinePutError> errors = new ArrayList<TimelinePutError>();
@@ -93,6 +96,7 @@ public class TimelinePutResponse {
   @XmlAccessorType(XmlAccessType.NONE)
   @Public
   @Evolving
+  @JsonIgnoreProperties(ignoreUnknown = true)
   public static class TimelinePutError {
 
     /**
@@ -135,8 +139,11 @@ public class TimelinePutResponse {
      */
     public static final int EXPIRED_ENTITY = 7;
 
+    @JsonProperty("entityId")
     private String entityId;
+    @JsonProperty("entityType")
     private String entityType;
+    @JsonProperty("errorCode")
     private int errorCode;
 
     /**

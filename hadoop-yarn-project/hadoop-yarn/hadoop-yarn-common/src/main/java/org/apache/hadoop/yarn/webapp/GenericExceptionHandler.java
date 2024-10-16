@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.webapp;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import javax.inject.Singleton;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
@@ -30,25 +31,23 @@ import javax.xml.bind.UnmarshalException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
-
-import com.google.inject.Singleton;
 
 /**
  * Handle webservices jersey exceptions and create json or xml response
  * with the ExceptionData.
  */
-@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
+@LimitedPrivate({"YARN", "MapReduce"})
 @Singleton
 @Provider
 public class GenericExceptionHandler implements ExceptionMapper<Exception> {
-  public static final Logger LOG = LoggerFactory
-      .getLogger(GenericExceptionHandler.class);
 
-  private @Context
-  HttpServletResponse response;
+  public static final Logger LOG = LoggerFactory.getLogger(GenericExceptionHandler.class);
+
+  @Context
+  private HttpServletResponse response;
 
   @Override
   public Response toResponse(Exception e) {
@@ -58,8 +57,8 @@ public class GenericExceptionHandler implements ExceptionMapper<Exception> {
     // Don't catch this as filter forward on 404
     // (ServletContainer.FEATURE_FILTER_FORWARD_ON_404)
     // won't work and the web UI won't work!
-    if (e instanceof com.sun.jersey.api.NotFoundException) {
-      return ((com.sun.jersey.api.NotFoundException) e).getResponse();
+    if (e instanceof javax.ws.rs.NotFoundException) {
+      return ((javax.ws.rs.NotFoundException) e).getResponse();
     }
     // clear content type
     response.setContentType(null);
@@ -98,10 +97,13 @@ public class GenericExceptionHandler implements ExceptionMapper<Exception> {
     }
 
     // let jaxb handle marshalling data out in the same format requested
+    String errorMessage = e.getMessage();
+    Throwable cause = e.getCause();
+    if (cause != null) {
+      errorMessage = cause.getMessage();
+    }
     RemoteExceptionData exception = new RemoteExceptionData(e.getClass().getSimpleName(),
-       e.getMessage(), e.getClass().getName());
-
-    return Response.status(s).entity(exception)
-        .build();
+        errorMessage, e.getClass().getName());
+    return Response.status(s).entity(exception).build();
   }
 }

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
@@ -35,12 +33,11 @@ import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
+import javax.ws.rs.core.Response;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -293,16 +290,18 @@ public final class ActivitiesTestUtils {
     }
   }
 
-  public static JSONObject requestWebResource(WebResource webResource,
+  public static JSONObject requestWebResource(WebTarget webTarget,
       MultivaluedMap<String, String> params) {
     if (params != null) {
-      webResource = webResource.queryParams(params);
+      for (Map.Entry<String, List<String>> entry : params.entrySet()) {
+        webTarget = webTarget.queryParam(entry.getKey(), entry.getValue());
+      }
     }
-    ClientResponse response = webResource.accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
+    Response response = webTarget.request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    return response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    return response.readEntity(JSONObject.class);
   }
 
   /**

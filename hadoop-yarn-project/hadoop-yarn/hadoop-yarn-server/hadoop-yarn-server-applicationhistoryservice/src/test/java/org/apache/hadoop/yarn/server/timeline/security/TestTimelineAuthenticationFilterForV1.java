@@ -360,7 +360,9 @@ public class TestTimelineAuthenticationFilterForV1 {
     } catch (Exception e) {
       LOG.info("Exception while retrieving delegation token", e);
       assertTrue(e.getCause() instanceof AuthorizationException ||
-          e.getCause() instanceof AuthenticationException);
+          e.getCause() instanceof AuthenticationException ||
+          e.getCause().getMessage().contains("AuthorizationException") ||
+          e.getCause().getMessage().contains("AuthenticationException"));
     }
   }
 }

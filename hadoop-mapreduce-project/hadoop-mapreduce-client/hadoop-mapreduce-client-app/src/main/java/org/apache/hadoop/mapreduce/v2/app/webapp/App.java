@@ -18,21 +18,18 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import com.google.inject.Inject;
-import com.google.inject.servlet.RequestScoped;
-
+import javax.inject.Inject;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 
-@RequestScoped
 public class App {
   final AppContext context;
   private Job job;
   private Task task;
 
   @Inject
-  App(AppContext ctx) {
+  public App(AppContext ctx) {
     context = ctx;
   }
 
