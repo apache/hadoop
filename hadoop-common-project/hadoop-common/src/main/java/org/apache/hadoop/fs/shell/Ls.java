@@ -57,13 +57,15 @@ class Ls extends FsCommand {
   private static final String OPTION_ATIME = "u";
   private static final String OPTION_SIZE = "S";
   private static final String OPTION_ECPOLICY = "e";
+  private static final String OPTION_PRINTINODEID = "i";
 
   public static final String NAME = "ls";
   public static final String USAGE = "[-" + OPTION_PATHONLY + "] [-" +
       OPTION_DIRECTORY + "] [-" + OPTION_HUMAN + "] [-" +
       OPTION_HIDENONPRINTABLE + "] [-" + OPTION_RECURSIVE + "] [-" +
       OPTION_MTIME + "] [-" + OPTION_SIZE + "] [-" + OPTION_REVERSE + "] [-" +
-      OPTION_ATIME + "] [-" + OPTION_ECPOLICY +"] [<path> ...]";
+      OPTION_ATIME + "] [-" + OPTION_ECPOLICY +"] [-" +
+      OPTION_PRINTINODEID + "] [<path> ...]";
 
   public static final String DESCRIPTION =
       "List the contents that match the specified file pattern. If " +
@@ -96,7 +98,9 @@ class Ls extends FsCommand {
           "  Use time of last access instead of modification for\n" +
           "      display and sorting.\n"+
           "  -" + OPTION_ECPOLICY +
-          "  Display the erasure coding policy of files and directories.\n";
+          "  Display the erasure coding policy of files and directories.\n" +
+          "  -" + OPTION_PRINTINODEID +
+          "  Print the inode id for files and directories.\n";
 
   protected final SimpleDateFormat dateFormat =
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -110,6 +114,7 @@ class Ls extends FsCommand {
   private boolean orderSize;
   private boolean useAtime;
   private boolean displayECPolicy;
+  private boolean printInodeId;
   private Comparator<PathData> orderComparator;
 
   protected boolean humanReadable = false;
@@ -135,7 +140,8 @@ class Ls extends FsCommand {
     CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE,
         OPTION_PATHONLY, OPTION_DIRECTORY, OPTION_HUMAN,
         OPTION_HIDENONPRINTABLE, OPTION_RECURSIVE, OPTION_REVERSE,
-        OPTION_MTIME, OPTION_SIZE, OPTION_ATIME, OPTION_ECPOLICY);
+        OPTION_MTIME, OPTION_SIZE, OPTION_ATIME, OPTION_ECPOLICY,
+        OPTION_PRINTINODEID);
     cf.parse(args);
     pathOnly = cf.getOpt(OPTION_PATHONLY);
     dirRecurse = !cf.getOpt(OPTION_DIRECTORY);
@@ -147,6 +153,7 @@ class Ls extends FsCommand {
     orderSize = !orderTime && cf.getOpt(OPTION_SIZE);
     useAtime = cf.getOpt(OPTION_ATIME);
     displayECPolicy = cf.getOpt(OPTION_ECPOLICY);
+    printInodeId = cf.getOpt(OPTION_PRINTINODEID);
     if (args.isEmpty()) args.add(Path.CUR_DIR);
 
     initialiseOrderComparator();
@@ -289,9 +296,21 @@ class Ls extends FsCommand {
       return;
     }
     FileStatus stat = item.stat;
+    // Using String as fileId type since we are parsing it from a String
+    String fileIdStr = null;
+    if (printInodeId) {
+      final String fileIdKey = "fileId";
+      fileIdStr = CommandUtils.getValueFromFileStatusString(
+          item.stat.toString(), fileIdKey);
+      if (fileIdStr == null) {
+        // fileId field not found, set it to "0"
+        fileIdStr = "0";
+      }
+    }
     if (displayECPolicy) {
       ContentSummary contentSummary = item.fs.getContentSummary(item.path);
       String line = String.format(lineFormat,
+          printInodeId ? fileIdStr + " " : "",
           (stat.isDirectory() ? "d" : "-"),
           stat.getPermission() + (stat.hasAcl() ? "+" : " "),
           (stat.isFile() ? stat.getReplication() : "-"),
@@ -306,6 +325,7 @@ class Ls extends FsCommand {
       out.println(line);
     } else {
       String line = String.format(lineFormat,
+          printInodeId ? fileIdStr + " " : "",
           (stat.isDirectory() ? "d" : "-"),
           stat.getPermission() + (stat.hasAcl() ? "+" : " "),
           (stat.isFile() ? stat.getReplication() : "-"),
@@ -334,7 +354,7 @@ class Ls extends FsCommand {
     }
 
     StringBuilder fmt = new StringBuilder();
-    fmt.append("%s%s") // permission string
+    fmt.append("%s%s%s") // inode id and permission string
         .append("%"  + maxRepl  + "s ")
         .append((maxOwner > 0) ? "%-" + maxOwner + "s " : "%s")
         .append((maxGroup > 0) ? "%-" + maxGroup + "s " : "%s");
