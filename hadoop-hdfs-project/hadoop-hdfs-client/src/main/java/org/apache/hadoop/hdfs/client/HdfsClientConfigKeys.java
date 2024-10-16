@@ -243,11 +243,8 @@ public interface HdfsClientConfigKeys {
       "dfs.encrypt.data.transfer.cipher.key.bitlength";
   int    DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_DEFAULT = 128;
 
-  public static final String
-          DFS_DATA_TRANSFER_MAX_PACKET_SIZE =
-          "dfs.data.transfer.max.packet.size";
-  public static final int DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT =
-          16 * 1024 * 1024;
+  String DFS_DATA_TRANSFER_MAX_PACKET_SIZE = "dfs.data.transfer.max.packet.size";
+  int    DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT = 16 * 1024 * 1024;
 
   String DFS_TRUSTEDCHANNEL_RESOLVER_CLASS =
       "dfs.trustedchannel.resolver.class";
