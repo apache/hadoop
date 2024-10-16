@@ -672,6 +672,98 @@ public class TestBalancerLongRunningTasks {
     assertEquals(900, maxUsage);
   }
 
+  @Test(timeout = 60000)
+  public void testBalancerWithLimitOverUtilizedNum() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    // Init the config (block size to 100)
+    initConf(conf);
+    conf.setInt(DFS_HEARTBEAT_INTERVAL_KEY, 30000);
+
+    final long totalCapacity = 1000L;
+    final int diffBetweenNodes = 50;
+
+    // Set up the nodes with two groups:
+    // 5 over-utilized nodes with 80%, 85%, 90%, 95%, 100% usage
+    // 2 under-utilized nodes with 0%, 5% usage
+    // With sortTopNodes and limitOverUtilizedNum option, 100% used ones will be chosen
+    final int numOfOverUtilizedDn = 5;
+    final int numOfUnderUtilizedDn = 2;
+    final int totalNumOfDn = numOfOverUtilizedDn + numOfUnderUtilizedDn;
+    final long[] capacityArray = new long[totalNumOfDn];
+    Arrays.fill(capacityArray, totalCapacity);
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(totalNumOfDn)
+        .simulatedCapacities(capacityArray)
+        .build()) {
+      cluster.setDataNodesDead();
+      List<DataNode> dataNodes = cluster.getDataNodes();
+      // Create top used nodes
+      for (int i = 0; i < numOfOverUtilizedDn; i++) {
+        // Bring one node alive
+        DataNodeTestUtils.triggerHeartbeat(dataNodes.get(i));
+        DataNodeTestUtils.triggerBlockReport(dataNodes.get(i));
+        // Create nodes with: 80%, 85%, 90%, 95%, 100%
+        int nodeCapacity = (int) totalCapacity - diffBetweenNodes * (numOfOverUtilizedDn - i - 1);
+        TestBalancer.createFile(cluster, new Path("test_big" + i), nodeCapacity, (short) 1, 0);
+        cluster.setDataNodesDead();
+      }
+
+      // Create under utilized nodes
+      for (int i = numOfUnderUtilizedDn - 1; i >= 0; i--) {
+        int index = i + numOfOverUtilizedDn;
+        // Bring one node alive
+        DataNodeTestUtils.triggerHeartbeat(dataNodes.get(index));
+        DataNodeTestUtils.triggerBlockReport(dataNodes.get(index));
+        // Create nodes with: 5%, 0%
+        int nodeCapacity = diffBetweenNodes * i;
+        TestBalancer.createFile(cluster, new Path("test_small" + i), nodeCapacity, (short) 1, 0);
+        cluster.setDataNodesDead();
+      }
+
+      // Bring all nodes alive
+      cluster.triggerHeartbeats();
+      cluster.triggerBlockReports();
+      cluster.waitFirstBRCompleted(0, 6000);
+
+      final BalancerParameters balancerParameters = Balancer.Cli.parse(new String[] {
+          "-policy", BalancingPolicy.Node.INSTANCE.getName(),
+          "-threshold", "1",
+          "-sortTopNodes",
+          "-limitOverUtilizedNum", "1"
+      });
+
+      client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0)
+              .getUri(), ClientProtocol.class)
+              .getProxy();
+
+      // Set max-size-to-move to small number
+      // so only top two nodes will be chosen in one iteration
+      conf.setLong(DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY, 99L);
+      final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
+      List<NameNodeConnector> connectors =
+          NameNodeConnector.newNameNodeConnectors(namenodes, Balancer.class.getSimpleName(),
+              Balancer.BALANCER_ID_PATH, conf, BalancerParameters.DEFAULT.getMaxIdleIteration());
+      final Balancer balancer = new Balancer(connectors.get(0), balancerParameters, conf);
+      Balancer.Result balancerResult = balancer.runOneIteration();
+
+      cluster.triggerDeletionReports();
+      cluster.triggerBlockReports();
+      cluster.triggerHeartbeats();
+
+      DatanodeInfo[] datanodeReport =
+          client.getDatanodeReport(HdfsConstants.DatanodeReportType.ALL);
+      long maxUsage = 0;
+      for (int i = 0; i < totalNumOfDn; i++) {
+        maxUsage = Math.max(maxUsage, datanodeReport[i].getDfsUsed());
+      }
+      // The maxUsage value is 950, only 100% of the nodes will be balanced
+      assertEquals(950, maxUsage);
+      assertTrue("BalancerResult is not as expected. " + balancerResult,
+          (balancerResult.getBytesAlreadyMoved() == 100 && balancerResult.getBlocksMoved() == 1));
+    }
+  }
+
   @Test(timeout = 100000)
   public void testMaxIterationTime() throws Exception {
     final Configuration conf = new HdfsConfiguration();
