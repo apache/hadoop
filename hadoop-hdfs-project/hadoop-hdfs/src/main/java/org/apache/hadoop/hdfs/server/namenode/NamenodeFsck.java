@@ -487,7 +487,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       LOG.warn(errMsg, e);
       out.println("FSCK ended at " + new Date() + " in "
           + (Time.monotonicNow() - startTime + " milliseconds"));
-      out.println(e.getMessage());
+      e.printStackTrace(out);
       out.print("\n\n" + errMsg);
     } finally {
       out.close();
@@ -1050,6 +1050,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     } catch (Exception e) {
       LOG.error("copyBlocksToLostFound: error processing " + fullName, e);
       internalError = true;
+      throw new IOException(e);
     } finally {
       if (fos != null) fos.close();
       dfs.close();
@@ -1184,11 +1185,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     return chosenNode;
   }
 
-  private void lostFoundInit(DFSClient dfs) {
+  private void lostFoundInit(DFSClient dfs) throws IOException {
     lfInited = true;
+    String lfName = "/lost+found";
     try {
-      String lfName = "/lost+found";
-
       final HdfsFileStatus lfStatus = dfs.getFileInfo(lfName);
       if (lfStatus == null) { // not exists
         lfInitedOk = dfs.mkdirs(lfName, null, true);
@@ -1201,7 +1201,9 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         lfInitedOk = true;
       }
     }  catch (Exception e) {
-      e.printStackTrace();
+      if (!lfInitedOk) {
+        throw new IOException("failed to initialize " + lfName, e);
+      }
       lfInitedOk = false;
     }
     if (lostFound == null) {
