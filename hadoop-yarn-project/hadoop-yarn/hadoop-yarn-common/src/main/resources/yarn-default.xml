@@ -2336,6 +2336,13 @@
   </property>
 
   <property>
+    <description>The optional runC container transformer plugin class to
+      be used.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.container-transformer-plugin</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>The HDFS location under which the oci image manifests, layers,
       and configs directories exist.</description>
     <name>yarn.nodemanager.runtime.linux.runc.image-toplevel-dir</name>
