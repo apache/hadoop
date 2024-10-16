@@ -264,24 +264,23 @@ public class TestHeartbeatHandling {
 
   @Test
   public void testHeartbeatStopWatch() throws Exception {
-   Namesystem ns = Mockito.mock(Namesystem.class);
-   BlockManager bm = Mockito.mock(BlockManager.class);
-   Configuration conf = new Configuration();
-   long recheck = 2000;
-   conf.setLong(
-       DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, recheck);
-   HeartbeatManager monitor = new HeartbeatManager(ns, bm, conf);
-   monitor.restartHeartbeatStopWatch();
-   assertFalse(monitor.shouldAbortHeartbeatCheck(0));
-   // sleep shorter than recheck and verify shouldn't abort
-   Thread.sleep(100);
-   assertFalse(monitor.shouldAbortHeartbeatCheck(0));
-   // sleep longer than recheck and verify should abort unless ignore delay
-   Thread.sleep(recheck);
-   assertTrue(monitor.shouldAbortHeartbeatCheck(0));
-   assertFalse(monitor.shouldAbortHeartbeatCheck(-recheck*3));
-   // ensure it resets properly
-   monitor.restartHeartbeatStopWatch();
-   assertFalse(monitor.shouldAbortHeartbeatCheck(0));
+    Namesystem ns = Mockito.mock(Namesystem.class);
+    Configuration conf = new Configuration();
+    long recheck = 2000;
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, recheck);
+    BlockManager bm = new BlockManager(ns, false, conf);
+    HeartbeatManager monitor = new HeartbeatManager(ns, bm, conf);
+    monitor.restartHeartbeatStopWatch();
+    assertFalse(monitor.shouldAbortHeartbeatCheck(0));
+    // sleep shorter than recheck and verify shouldn't abort
+    Thread.sleep(100);
+    assertFalse(monitor.shouldAbortHeartbeatCheck(0));
+    // sleep longer than recheck and verify should abort unless ignore delay
+    Thread.sleep(recheck);
+    assertTrue(monitor.shouldAbortHeartbeatCheck(0));
+    assertFalse(monitor.shouldAbortHeartbeatCheck(-recheck * 3));
+    // ensure it resets properly
+    monitor.restartHeartbeatStopWatch();
+    assertFalse(monitor.shouldAbortHeartbeatCheck(0));
   }
 }
