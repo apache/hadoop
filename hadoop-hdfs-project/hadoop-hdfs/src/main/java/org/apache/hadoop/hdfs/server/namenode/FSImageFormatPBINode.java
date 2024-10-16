@@ -34,6 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -628,32 +630,71 @@ public final class FSImageFormatPBINode {
   public final static class Saver {
     private long numImageErrors;
 
-    private static long buildPermissionStatus(INodeAttributes n) {
-      return n.getPermissionLong();
+    private static long buildPermissionStatus(INodeAttributes n,
+        boolean enableSaveSplitIdStringTable,
+        final SaverContext.DeduplicationMap<String> stringMap) {
+      if(enableSaveSplitIdStringTable){
+        return n.getPermissionLong();
+      } else {
+        long permission = n.getPermissionLong();
+        permission = PermissionStatusFormat.USER.BITS
+            .combine(stringMap.getId(n.getUserName()), permission);
+        permission = PermissionStatusFormat.GROUP.BITS
+            .combine(stringMap.getId(n.getGroupName()), permission);
+        return permission;
+      }
     }
 
-    private static AclFeatureProto.Builder buildAclEntries(AclFeature f) {
+    private static AclFeatureProto.Builder buildAclEntries(AclFeature f,
+        boolean enableSaveSplitIdStringTable,
+        final SaverContext.DeduplicationMap<String> stringMap) {
       AclFeatureProto.Builder b = AclFeatureProto.newBuilder();
-      for (int pos = 0, e; pos < f.getEntriesSize(); pos++) {
-        e = f.getEntryAt(pos);
-        b.addEntries(e);
+      if(enableSaveSplitIdStringTable){
+        for (int pos = 0, e; pos < f.getEntriesSize(); pos++) {
+          e = f.getEntryAt(pos);
+          b.addEntries(e);
+        }
+      } else {
+        for (int pos = 0, e; pos < f.getEntriesSize(); pos++) {
+          e = f.getEntryAt(pos);
+          String name = AclEntryStatusFormat.getName(e);
+          if(name != null){
+            e = (int) AclEntryStatusFormat.NAME.getBitFormat().combine(stringMap.getId(name), e);
+          }
+          b.addEntries(e);
+        }
       }
       return b;
     }
 
-    private static XAttrFeatureProto.Builder buildXAttrs(XAttrFeature f) {
+    private static XAttrFeatureProto.Builder buildXAttrs(XAttrFeature f,
+        boolean enableSaveSplitIdStringTable,
+        final SaverContext.DeduplicationMap<String> stringMap) {
       XAttrFeatureProto.Builder b = XAttrFeatureProto.newBuilder();
-      for (XAttr a : f.getXAttrs()) {
-        XAttrCompactProto.Builder xAttrCompactBuilder = XAttrCompactProto.
-            newBuilder();
-        int v = XAttrFormat.toInt(a);
-        xAttrCompactBuilder.setName(v);
-        if (a.getValue() != null) {
-          xAttrCompactBuilder.setValue(PBHelperClient.getByteString(a.getValue()));
+      if(enableSaveSplitIdStringTable){
+        for (XAttr a : f.getXAttrs()) {
+          XAttrCompactProto.Builder xAttrCompactBuilder = XAttrCompactProto
+              .newBuilder();
+          int v = XAttrFormat.toInt(a);
+          xAttrCompactBuilder.setName(v);
+          if (a.getValue() != null) {
+            xAttrCompactBuilder.setValue(PBHelperClient.getByteString(a.getValue()));
+          }
+          b.addXAttrs(xAttrCompactBuilder.build());
         }
-        b.addXAttrs(xAttrCompactBuilder.build());
+      } else {
+        for (XAttr a : f.getXAttrs()) {
+          XAttrCompactProto.Builder xAttrCompactBuilder = XAttrCompactProto
+              .newBuilder();
+          int v = XAttrFormat.toInt(a);
+          v = (int) XAttrFormat.NAME.getBitFormat().combine(stringMap.getId(a.getName()), v);
+          xAttrCompactBuilder.setName(v);
+          if (a.getValue() != null) {
+            xAttrCompactBuilder.setValue(PBHelperClient.getByteString(a.getValue()));
+          }
+          b.addXAttrs(xAttrCompactBuilder.build());
+        }
       }
-      
       return b;
     }
 
@@ -674,11 +715,12 @@ public final class FSImageFormatPBINode {
     }
 
     public static INodeSection.INodeFile.Builder buildINodeFile(
-        INodeFileAttributes file, final SaverContext state) {
+        INodeFileAttributes file, boolean enableSaveSplitIdStringTable, final SaverContext state) {
       INodeSection.INodeFile.Builder b = INodeSection.INodeFile.newBuilder()
           .setAccessTime(file.getAccessTime())
           .setModificationTime(file.getModificationTime())
-          .setPermission(buildPermissionStatus(file))
+          .setPermission(buildPermissionStatus(file,
+              enableSaveSplitIdStringTable, state.getContiguousIdStringMap()))
           .setPreferredBlockSize(file.getPreferredBlockSize())
           .setStoragePolicyID(file.getLocalStoragePolicyID())
           .setBlockType(PBHelperClient.convert(file.getBlockType()));
@@ -691,23 +733,27 @@ public final class FSImageFormatPBINode {
 
       AclFeature f = file.getAclFeature();
       if (f != null) {
-        b.setAcl(buildAclEntries(f));
+        b.setAcl(buildAclEntries(f,
+            enableSaveSplitIdStringTable, state.getContiguousIdStringMap()));
       }
       XAttrFeature xAttrFeature = file.getXAttrFeature();
       if (xAttrFeature != null) {
-        b.setXAttrs(buildXAttrs(xAttrFeature));
+        b.setXAttrs(buildXAttrs(xAttrFeature,
+            enableSaveSplitIdStringTable, state.getContiguousIdStringMap()));
       }
       return b;
     }
 
     public static INodeSection.INodeDirectory.Builder buildINodeDirectory(
-        INodeDirectoryAttributes dir, final SaverContext state) {
+        INodeDirectoryAttributes dir, boolean enableSaveSplitIdStringTable,
+        final SaverContext state) {
       QuotaCounts quota = dir.getQuotaCounts();
       INodeSection.INodeDirectory.Builder b = INodeSection.INodeDirectory
           .newBuilder().setModificationTime(dir.getModificationTime())
           .setNsQuota(quota.getNameSpace())
           .setDsQuota(quota.getStorageSpace())
-          .setPermission(buildPermissionStatus(dir));
+          .setPermission(buildPermissionStatus(dir,
+              enableSaveSplitIdStringTable, state.getContiguousIdStringMap()));
 
       if (quota.getTypeSpaces().anyGreaterOrEqual(0)) {
         b.setTypeQuotas(buildQuotaByStorageTypeEntries(quota));
@@ -715,26 +761,35 @@ public final class FSImageFormatPBINode {
 
       AclFeature f = dir.getAclFeature();
       if (f != null) {
-        b.setAcl(buildAclEntries(f));
+        b.setAcl(buildAclEntries(f,
+            enableSaveSplitIdStringTable, state.getContiguousIdStringMap()));
       }
       XAttrFeature xAttrFeature = dir.getXAttrFeature();
       if (xAttrFeature != null) {
-        b.setXAttrs(buildXAttrs(xAttrFeature));
+        b.setXAttrs(buildXAttrs(xAttrFeature,
+            enableSaveSplitIdStringTable, state.getContiguousIdStringMap()));
       }
       return b;
     }
 
+    private final Configuration conf;
     private final FSNamesystem fsn;
     private final FileSummary.Builder summary;
     private final SaveNamespaceContext context;
     private final FSImageFormatProtobuf.Saver parent;
 
-    Saver(FSImageFormatProtobuf.Saver parent, FileSummary.Builder summary) {
+    private final boolean enableSaveSplitIdStringTable;
+
+    Saver(Configuration conf, FSImageFormatProtobuf.Saver parent, FileSummary.Builder summary) {
+      this.conf = conf;
       this.parent = parent;
       this.summary = summary;
       this.context = parent.getContext();
       this.fsn = context.getSourceNamesystem();
       this.numImageErrors = 0;
+      this.enableSaveSplitIdStringTable = conf.getBoolean(
+          DFSConfigKeys.DFS_IMAGE_SAVE_STRING_TABLE_STRUCTURE_KEY,
+          DFSConfigKeys.DFS_IMAGE_SAVE_STRING_TABLE_STRUCTURE_DEFAULT);
     }
 
     void serializeINodeDirectorySection(OutputStream out) throws IOException {
@@ -863,7 +918,7 @@ public final class FSImageFormatPBINode {
 
     private void save(OutputStream out, INodeDirectory n) throws IOException {
       INodeSection.INodeDirectory.Builder b = buildINodeDirectory(n,
-          parent.getSaverContext());
+          enableSaveSplitIdStringTable, parent.getSaverContext());
       INodeSection.INode r = buildINodeCommon(n)
           .setType(INodeSection.INode.Type.DIRECTORY).setDirectory(b).build();
       r.writeDelimitedTo(out);
@@ -871,7 +926,7 @@ public final class FSImageFormatPBINode {
 
     private void save(OutputStream out, INodeFile n) throws IOException {
       INodeSection.INodeFile.Builder b = buildINodeFile(n,
-          parent.getSaverContext());
+          enableSaveSplitIdStringTable, parent.getSaverContext());
       BlockInfo[] blocks = n.getBlocks();
 
       if (blocks != null) {
@@ -895,9 +950,11 @@ public final class FSImageFormatPBINode {
     }
 
     private void save(OutputStream out, INodeSymlink n) throws IOException {
+      FSImageFormatProtobuf.SaverContext state = parent.getSaverContext();
       INodeSection.INodeSymlink.Builder b = INodeSection.INodeSymlink
           .newBuilder()
-          .setPermission(buildPermissionStatus(n))
+          .setPermission(buildPermissionStatus(n,
+              enableSaveSplitIdStringTable, state.getContiguousIdStringMap()))
           .setTarget(ByteString.copyFrom(n.getSymlink()))
           .setModificationTime(n.getModificationTime())
           .setAccessTime(n.getAccessTime());

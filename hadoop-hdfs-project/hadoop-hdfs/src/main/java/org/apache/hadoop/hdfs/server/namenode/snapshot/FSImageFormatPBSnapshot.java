@@ -432,7 +432,8 @@ public class FSImageFormatPBSnapshot {
     /**
      * save all the snapshottable directories and snapshots to fsimage
      */
-    public void serializeSnapshotSection(OutputStream out) throws IOException {
+    public void serializeSnapshotSection(OutputStream out, boolean enableSaveSplitIdStringTable)
+        throws IOException {
       SnapshotManager sm = fsn.getSnapshotManager();
       SnapshotSection.Builder b = SnapshotSection.newBuilder()
           .setSnapshotCounter(sm.getSnapshotCounter())
@@ -450,8 +451,8 @@ public class FSImageFormatPBSnapshot {
           Root sroot = s.getRoot();
           SnapshotSection.Snapshot.Builder sb = SnapshotSection.Snapshot
               .newBuilder().setSnapshotId(s.getId());
-          INodeSection.INodeDirectory.Builder db = buildINodeDirectory(sroot,
-              parent.getSaverContext());
+          INodeSection.INodeDirectory.Builder db = buildINodeDirectory(
+              sroot, enableSaveSplitIdStringTable, parent.getSaverContext());
           INodeSection.INode r = INodeSection.INode.newBuilder()
               .setId(sroot.getId())
               .setType(INodeSection.INode.Type.DIRECTORY)
@@ -511,7 +512,7 @@ public class FSImageFormatPBSnapshot {
     /**
      * save all the snapshot diff to fsimage
      */
-    public void serializeSnapshotDiffSection(OutputStream out)
+    public void serializeSnapshotDiffSection(OutputStream out, boolean enableSaveSplitIdStringTable)
         throws IOException {
       INodeMap inodesMap = fsn.getFSDirectory().getINodeMap();
       final List<INodeReference> refList = parent.getSaverContext()
@@ -521,9 +522,9 @@ public class FSImageFormatPBSnapshot {
       while (iter.hasNext()) {
         INodeWithAdditionalFields inode = iter.next();
         if (inode.isFile()) {
-          serializeFileDiffList(inode.asFile(), out);
+          serializeFileDiffList(inode.asFile(), out, enableSaveSplitIdStringTable);
         } else if (inode.isDirectory()) {
-          serializeDirDiffList(inode.asDirectory(), refList, out);
+          serializeDirDiffList(inode.asDirectory(), refList, out, enableSaveSplitIdStringTable);
         }
         ++i;
         if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
@@ -539,8 +540,8 @@ public class FSImageFormatPBSnapshot {
           FSImageFormatProtobuf.SectionName.SNAPSHOT_DIFF_SUB);
     }
 
-    private void serializeFileDiffList(INodeFile file, OutputStream out)
-        throws IOException {
+    private void serializeFileDiffList(INodeFile file, OutputStream out,
+        boolean enableSaveSplitIdStringTable) throws IOException {
       FileWithSnapshotFeature sf = file.getFileWithSnapshotFeature();
       if (sf != null) {
         DiffList<FileDiff> diffList = sf.getDiffs().asList();
@@ -561,7 +562,8 @@ public class FSImageFormatPBSnapshot {
           INodeFileAttributes copy = diff.snapshotINode;
           if (copy != null) {
             fb.setName(ByteString.copyFrom(copy.getLocalNameBytes()))
-                .setSnapshotCopy(buildINodeFile(copy, parent.getSaverContext()));
+                .setSnapshotCopy(buildINodeFile(copy,
+                enableSaveSplitIdStringTable, parent.getSaverContext()));
           }
           fb.build().writeDelimitedTo(out);
         }
@@ -579,7 +581,7 @@ public class FSImageFormatPBSnapshot {
     }
 
     private void serializeDirDiffList(INodeDirectory dir,
-        final List<INodeReference> refList, OutputStream out)
+        final List<INodeReference> refList, OutputStream out, boolean enableSaveSplitIdStringTable)
         throws IOException {
       DirectoryWithSnapshotFeature sf = dir.getDirectoryWithSnapshotFeature();
       if (sf != null) {
@@ -598,7 +600,8 @@ public class FSImageFormatPBSnapshot {
           if (!diff.isSnapshotRoot() && copy != null) {
             db.setName(ByteString.copyFrom(copy.getLocalNameBytes()))
                 .setSnapshotCopy(
-                    buildINodeDirectory(copy, parent.getSaverContext()));
+                    buildINodeDirectory(copy,
+                    enableSaveSplitIdStringTable, parent.getSaverContext()));
           }
           // process created list and deleted list
           List<INode> created = diff.getChildrenDiff().getCreatedUnmodifiable();
