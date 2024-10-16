@@ -1821,7 +1821,7 @@ function hadoop_start_daemon
 
   # this is for the non-daemon pid creation
   #shellcheck disable=SC2086
-  echo $$ > "${pidfile}" 2>/dev/null
+  echo $BASHPID > "${pidfile}" 2>/dev/null
   if [[ $? -gt 0 ]]; then
     hadoop_error "ERROR:  Cannot write ${command} pid ${pidfile}."
   fi
