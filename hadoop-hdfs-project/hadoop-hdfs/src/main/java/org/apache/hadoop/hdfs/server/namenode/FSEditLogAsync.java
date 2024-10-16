@@ -24,6 +24,8 @@ import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,6 +52,14 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
   // requires concurrent access from caller threads and syncing thread.
   private final BlockingQueue<Edit> editPendingQ;
 
+  // Thread pool for executing logSyncNotify
+  // It should not be shut down when the FSEditLogAsync is closed, because
+  // 1) when the state transitions from active to standby and then transitions back,
+  // it is still using the same FSEditLogAsync object, so the same executor should
+  // keep working; 2) in all possible scenarios, FSEditLogAsync is a singleton
+  // in the NameNode process, so it is fine to let this executor run forever.
+  private final ExecutorService logSyncNotifyExecutor;
+
   // only accessed by syncing thread so no synchronization required.
   // queue is unbounded because it's effectively limited by the size
   // of the edit log buffer - ie. a sync will eventually be forced.
@@ -67,6 +77,12 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
             DFS_NAMENODE_EDITS_ASYNC_LOGGING_PENDING_QUEUE_SIZE_DEFAULT);
 
     editPendingQ = new ArrayBlockingQueue<>(editPendingQSize);
+
+    int logSyncNotifyExecutorSize = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGSYNCNOTIFY_EXECUTOR_SIZE,
+        DFSConfigKeys.
+            DFS_NAMENODE_EDITS_ASYNC_LOGSYNCNOTIFY_EXECUTOR_SIZE_DEFAULT);
+    logSyncNotifyExecutor = Executors.newFixedThreadPool(logSyncNotifyExecutorSize);
   }
 
   private boolean isSyncThreadAlive() {
@@ -268,7 +284,9 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
             syncEx = ex;
           }
           while ((edit = syncWaitQ.poll()) != null) {
-            edit.logSyncNotify(syncEx);
+            final Edit notifyEdit = edit;
+            final RuntimeException ex = syncEx;
+            logSyncNotifyExecutor.submit(() -> notifyEdit.logSyncNotify(ex));
           }
         }
       }
