@@ -279,6 +279,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED, 
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
+    .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED,
+        RMAppEventType.APP_LOG_AGG_STATUS_UPDATE,
+        new AppLogAggregationStatusTransition())
       // Handle AppAttemptLaunch to update the launchTime and publish to ATS
       .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED,
         RMAppEventType.ATTEMPT_LAUNCHED,
@@ -298,6 +301,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.RUNNING, RMAppState.RUNNING, 
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
+    .addTransition(RMAppState.RUNNING, RMAppState.RUNNING,
+        RMAppEventType.APP_LOG_AGG_STATUS_UPDATE,
+        new AppLogAggregationStatusTransition())
     .addTransition(RMAppState.RUNNING,
         EnumSet.of(RMAppState.ACCEPTED, RMAppState.FINAL_SAVING),
         RMAppEventType.ATTEMPT_FAILED,
@@ -316,6 +322,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.FINAL_SAVING, RMAppState.FINAL_SAVING, 
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
+    .addTransition(RMAppState.FINAL_SAVING, RMAppState.FINAL_SAVING,
+        RMAppEventType.APP_LOG_AGG_STATUS_UPDATE,
+        new AppLogAggregationStatusTransition())
     // ignorable transitions
     .addTransition(RMAppState.FINAL_SAVING, RMAppState.FINAL_SAVING,
         EnumSet.of(RMAppEventType.NODE_UPDATE, RMAppEventType.KILL,
@@ -327,6 +336,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.FINISHING, RMAppState.FINISHING, 
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
+    .addTransition(RMAppState.FINISHING, RMAppState.FINISHING,
+        RMAppEventType.APP_LOG_AGG_STATUS_UPDATE,
+        new AppLogAggregationStatusTransition())
     // ignorable transitions
     .addTransition(RMAppState.FINISHING, RMAppState.FINISHING,
       EnumSet.of(RMAppEventType.NODE_UPDATE,
@@ -338,6 +350,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.KILLING, RMAppState.KILLING, 
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
+    .addTransition(RMAppState.KILLING, RMAppState.KILLING,
+        RMAppEventType.APP_LOG_AGG_STATUS_UPDATE,
+        new AppLogAggregationStatusTransition())
     .addTransition(RMAppState.KILLING, RMAppState.FINAL_SAVING,
         RMAppEventType.ATTEMPT_KILLED,
         new FinalSavingTransition(
@@ -368,6 +383,9 @@ public class RMAppImpl implements RMApp, Recoverable {
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
     .addTransition(RMAppState.FINISHED, RMAppState.FINISHED,
+        RMAppEventType.APP_LOG_AGG_STATUS_UPDATE,
+        new AppLogAggregationStatusTransition())
+    .addTransition(RMAppState.FINISHED, RMAppState.FINISHED,
         EnumSet.of(
             RMAppEventType.NODE_UPDATE,
             RMAppEventType.ATTEMPT_UNREGISTERED,
@@ -380,6 +398,9 @@ public class RMAppImpl implements RMApp, Recoverable {
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
     .addTransition(RMAppState.FAILED, RMAppState.FAILED,
+        RMAppEventType.APP_LOG_AGG_STATUS_UPDATE,
+        new AppLogAggregationStatusTransition())
+    .addTransition(RMAppState.FAILED, RMAppState.FAILED,
         EnumSet.of(RMAppEventType.KILL, RMAppEventType.NODE_UPDATE))
 
      // Transitions from KILLED state
@@ -387,6 +408,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.KILLED, RMAppState.KILLED, 
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
+    .addTransition(RMAppState.KILLED, RMAppState.KILLED,
+        RMAppEventType.APP_LOG_AGG_STATUS_UPDATE,
+        new AppLogAggregationStatusTransition())
     .addTransition(
         RMAppState.KILLED,
         RMAppState.KILLED,
@@ -1095,6 +1119,16 @@ public class RMAppImpl implements RMApp, Recoverable {
         LOG.debug("Not considering node for log aggregation yet. nodeId: {}, appId: {}",
             nodeAddedEvent.getNodeId(), app.getApplicationId());
       }
+    }
+  }
+
+  private static final class AppLogAggregationStatusTransition extends
+      RMAppTransition {
+
+    @Override
+    public void transition(RMAppImpl app, RMAppEvent event) {
+      RMAppLogAggregationStatusEvent logEvent = (RMAppLogAggregationStatusEvent) event;
+      app.aggregateLogReport(logEvent.getNodeId(), logEvent.getReport());
     }
   }
 

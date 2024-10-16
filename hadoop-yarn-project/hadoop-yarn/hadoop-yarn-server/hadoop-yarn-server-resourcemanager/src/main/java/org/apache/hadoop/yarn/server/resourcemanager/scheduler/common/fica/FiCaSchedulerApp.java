@@ -1105,11 +1105,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
    */
   @Override
   public ApplicationResourceUsageReport getResourceUsageReport() {
-    writeLock.lock();
+    readLock.lock();
     try {
-      // Use write lock here because
-      // SchedulerApplicationAttempt#getResourceUsageReport updated fields
-      // TODO: improve this
       ApplicationResourceUsageReport report = super.getResourceUsageReport();
       Resource cluster = rmContext.getScheduler().getClusterResource();
       Resource totalPartitionRes =
@@ -1129,7 +1126,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       }
       return report;
     } finally {
-      writeLock.unlock();
+      readLock.unlock();
     }
   }
 
