@@ -104,7 +104,7 @@ public class TestMetricsAnnotations {
     verify(rb).addGauge(info("G4", "G4"), 4.0);
     verify(rb).addCounter(info("C1", "C1"), 1);
     verify(rb).addCounter(info("C2", "C2"), 2L);
-    verify(rb).tag(info("T1", "T1"), "t1");
+    verify(rb).tag(info("T1", "T1"), "t1", false);
   }
 
   static class BadMetrics2 {
