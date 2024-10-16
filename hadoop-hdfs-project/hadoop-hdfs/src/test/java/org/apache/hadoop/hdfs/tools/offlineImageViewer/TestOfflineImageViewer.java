@@ -1297,6 +1297,104 @@ public class TestOfflineImageViewer {
               imageWSDS.getAbsolutePath() + ".out");
   }
 
+  /**
+   * Tests the Transformed Writer processor.
+   *
+   * 1. Translate fsimage -> transformedImage
+   * 2. Translate fsimage -> reverseImage.xml
+   * 3. Translate transformedImage -> reverseImage2.xml
+   * 4. Verify that reverseImage.xml and reverse2Image.xml match
+   *
+   * @throws Throwable
+   */
+  @Test
+  public void testTransformedWriter() throws Throwable {
+    GenericTestUtils.setLogLevel(OfflineImageReconstructor.LOG,
+        Level.TRACE);
+
+    File transformedImage = new File(tempDir, "transformedImage");
+    File reverseImageXml =  new File(tempDir, "reverseImage.xml");
+    File reverseImage2Xml =  new File(tempDir, "reverseImage2.xml");
+
+    LOG.info("Creating transformedImage=" + transformedImage.getAbsolutePath()
+        + ", reverseImage.xml=" + reverseImageXml.getAbsolutePath()
+        + ", reverseImage2.xml=" + reverseImage2Xml.getAbsolutePath());
+    if (OfflineImageViewerPB.run(new String[] {"-p", "TRANSFORMED",
+        "-i", originalFsimage.getAbsolutePath(),
+        "-o", transformedImage.getAbsolutePath() }) != 0) {
+      throw new IOException("oiv returned failure transforming fsimage file.");
+    }
+
+    if (OfflineImageViewerPB.run(new String[] {"-p", "XML",
+        "-i", originalFsimage.getAbsolutePath(),
+        "-o", reverseImageXml.getAbsolutePath() }) != 0) {
+      throw new IOException("oiv returned failure creating first XML file.");
+    }
+
+    if (OfflineImageViewerPB.run(new String[] {"-p", "XML",
+        "-i", transformedImage.getAbsolutePath(),
+        "-o", reverseImage2Xml.getAbsolutePath() }) != 0) {
+      throw new IOException("oiv returned failure creating second " +
+              "XML file.");
+    }
+    // The XML file we wrote based on the transformed fsimage should
+    // be the same as the one we dumped from the original fsimage.
+    Assert.assertEquals("",
+        GenericTestUtils.getFilesDiff(reverseImageXml, reverseImage2Xml));
+  }
+
+  /**
+   * Tests that the Transformed Writer processor doesn't accept
+   * unreasonable target layoutVersion.
+   */
+  @Test
+  public void testTransformedWriterWrongLayoutVersion() throws Throwable {
+    int curVersion = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
+    int minVersion = NameNodeLayoutVersion.MINIMUM_COMPATIBLE_LAYOUT_VERSION;
+
+    try {
+      OfflineImageConverter.run(new Configuration(), originalFsimage.getAbsolutePath(),
+          originalFsimage.getAbsolutePath() + ".out", curVersion - 1);
+      Assert.fail("Expected OfflineImageConverter to fail with " +
+          "version mismatch.");
+    } catch (Throwable t) {
+      GenericTestUtils.assertExceptionContains("Layout version mismatch.", t);
+    }
+
+    try {
+      OfflineImageConverter.run(new Configuration(), originalFsimage.getAbsolutePath(),
+          originalFsimage.getAbsolutePath() + ".out", minVersion + 1);
+      Assert.fail("Expected OfflineImageConverter to fail with " +
+          "version mismatch.");
+    } catch (Throwable t) {
+      GenericTestUtils.assertExceptionContains("Layout version mismatch.", t);
+    }
+  }
+
+  /**
+   * Tests that the Transformed Writer processor can accept
+   * reasonable target layoutVersion.
+   */
+  @Test
+  public void testTransformedWriterReasonableLayoutVersion() throws Throwable {
+    int curVersion = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
+    int minVersion = NameNodeLayoutVersion.MINIMUM_COMPATIBLE_LAYOUT_VERSION;
+
+    try {
+      OfflineImageConverter.run(new Configuration(), originalFsimage.getAbsolutePath(),
+          originalFsimage.getAbsolutePath() + ".out", curVersion);
+    } catch (Throwable t) {
+      Assert.fail("Expected OfflineImageConverter to succeed with current version.");
+    }
+
+    try {
+      OfflineImageConverter.run(new Configuration(), originalFsimage.getAbsolutePath(),
+          originalFsimage.getAbsolutePath() + ".out", minVersion);
+    } catch (Throwable t) {
+      Assert.fail("Expected OfflineImageConverter to succeed with minimum compatible version.");
+    }
+  }
+
   @Test
   public void testFileDistributionCalculatorForException() throws Exception {
     File fsimageFile = null;
