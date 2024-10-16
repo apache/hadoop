@@ -1050,6 +1050,15 @@ extern  "C" {
     LIBHDFS_EXTERNAL
     tOffset hdfsGetUsed(hdfsFS fs);
 
+
+    /**
+     * hdfsGetRemaining - Return the remaining capacity of the filesystem.
+     * @param fs The configured filesystem handle.
+     * @return Returns the remaining-capacity; -1 on error.
+     */
+    LIBHDFS_EXTERNAL
+    tOffset hdfsGetRemaining(hdfsFS fs);
+
     /** 
      * Change the user and/or group of a file or directory.
      *
