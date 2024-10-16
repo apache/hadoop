@@ -18,6 +18,7 @@
 package org.apache.hadoop.security;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -43,10 +44,10 @@ public class NetgroupCache {
    * Get netgroups for a given user
    *
    * @param user get groups for this user
-   * @param groups put groups into this List
+   * @param groups put groups into this collection
    */
   public static void getNetgroups(final String user,
-      List<String> groups) {
+      Collection<String> groups) {
     Set<String> userGroups = userToNetgroupsMap.get(user);
     //ConcurrentHashMap does not allow null values; 
     //So null value check can be used to check if the key exists
