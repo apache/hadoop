@@ -65,6 +65,18 @@ public class STSClientFactory {
       LoggerFactory.getLogger(STSClientFactory.class);
 
   /**
+   * The format of the STS Endpoint
+   */
+  public static final String STS_ENDPOINT_URI_PATTERN = "^sts\\..*\\.amazonaws\\.com[.cn]*$";
+
+  /**
+   * Error thrown is the STS endpoint is not of the correct pattern.
+   */
+  public static final String E_INVALID_STS_ENDPOINT_ERROR_MSG =
+          "Invalid STS Endpoint %s. The STS endpoint should match "
+                  + STS_ENDPOINT_URI_PATTERN;
+
+  /**
    * Create the builder ready for any final configuration options.
    * Picks up connection settings from the Hadoop configuration, including
    * proxy secrets.
@@ -125,6 +137,14 @@ public class STSClientFactory {
   public static StsClientBuilder builder(final AwsCredentialsProvider credentials,
       final Configuration conf, final String stsEndpoint, final String stsRegion,
       final String bucket) throws IOException {
+    // If an STS endpoint is provided and if it is not STS_STANDARD (sts.amazonaws.com)
+    // it should match STS_ENDPOINT_URI_PATTERN.
+    if (!isEmpty(stsEndpoint) &&
+        !STS_STANDARD.equals(stsEndpoint) &&
+        !stsEndpoint.matches(STS_ENDPOINT_URI_PATTERN)) {
+      throw new IllegalArgumentException(String.format(E_INVALID_STS_ENDPOINT_ERROR_MSG,stsEndpoint));
+    }
+
     final StsClientBuilder stsClientBuilder = StsClient.builder();
 
     Preconditions.checkArgument(credentials != null, "No credentials");
