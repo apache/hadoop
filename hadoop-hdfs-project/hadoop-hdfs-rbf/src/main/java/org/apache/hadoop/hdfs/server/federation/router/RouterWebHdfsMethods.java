@@ -71,6 +71,7 @@ import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.hdfs.web.resources.PermissionParam;
 import org.apache.hadoop.hdfs.web.resources.PostOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
+import org.apache.hadoop.hdfs.web.resources.RedirectByIPAddressParam;
 import org.apache.hadoop.hdfs.web.resources.RenameOptionSetParam;
 import org.apache.hadoop.hdfs.web.resources.RenewerParam;
 import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
@@ -221,7 +222,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final ECPolicyParam ecpolicy,
       final NameSpaceQuotaParam namespaceQuota,
       final StorageSpaceQuotaParam storagespaceQuota,
-      final StorageTypeParam storageType
+      final StorageTypeParam storageType,
+      final RedirectByIPAddressParam redirectByIPAddress
   ) throws IOException, URISyntaxException {
 
     switch(op.getValue()) {
@@ -230,9 +232,9 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final Router router = getRouter();
       final URI uri = redirectURI(router, ugi, delegation, username,
           doAsUser, fullpath, op.getValue(), -1L,
-          exclDatanodes.getValue(), permission, unmaskedPermission,
-          overwrite, bufferSize, replication, blockSize, createParent,
-          createFlagParam);
+          exclDatanodes.getValue(), redirectByIPAddress.getValue(), permission,
+          unmaskedPermission, overwrite, bufferSize, replication, blockSize,
+          createParent, createFlagParam);
       if (!noredirectParam.getValue()) {
         return Response.temporaryRedirect(uri)
             .type(MediaType.APPLICATION_OCTET_STREAM).build();
@@ -273,7 +275,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
           accessTime, renameOptions, createParent, delegationTokenArgument,
           aclPermission, xattrName, xattrValue, xattrSetFlag, snapshotName,
           oldSnapshotName, exclDatanodes, createFlagParam, noredirectParam,
-          policyName, ecpolicy, namespaceQuota, storagespaceQuota, storageType);
+          policyName, ecpolicy, namespaceQuota, storagespaceQuota, storageType,
+          redirectByIPAddress);
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
@@ -292,7 +295,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final BufferSizeParam bufferSize,
       final ExcludeDatanodesParam excludeDatanodes,
       final NewLengthParam newLength,
-      final NoRedirectParam noRedirectParam
+      final NoRedirectParam noRedirectParam,
+      final RedirectByIPAddressParam redirectByIPAddress
   ) throws IOException, URISyntaxException {
     switch(op.getValue()) {
     case APPEND:
@@ -300,7 +304,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final Router router = getRouter();
       final URI uri = redirectURI(router, ugi, delegation, username,
           doAsUser, fullpath, op.getValue(), -1L,
-          excludeDatanodes.getValue(), bufferSize);
+          excludeDatanodes.getValue(), redirectByIPAddress.getValue(),
+          bufferSize);
       if (!noRedirectParam.getValue()) {
         return Response.temporaryRedirect(uri)
             .type(MediaType.APPLICATION_OCTET_STREAM).build();
@@ -315,7 +320,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
     {
       return super.post(ugi, delegation, username, doAsUser, fullpath, op,
           concatSrcs, bufferSize, excludeDatanodes, newLength,
-          noRedirectParam);
+          noRedirectParam, redirectByIPAddress);
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
@@ -346,7 +351,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final TokenServiceParam tokenService,
       final NoRedirectParam noredirectParam,
       final StartAfterParam startAfter,
-      final AllUsersParam allUsers
+      final AllUsersParam allUsers,
+      final RedirectByIPAddressParam redirectByIPAddress
   ) throws IOException, URISyntaxException {
     try {
       final Router router = getRouter();
@@ -356,7 +362,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       {
         final URI uri = redirectURI(router, ugi, delegation, username,
             doAsUser, fullpath, op.getValue(), offset.getValue(),
-            excludeDatanodes.getValue(), offset, length, bufferSize);
+            excludeDatanodes.getValue(), redirectByIPAddress.getValue(),
+            offset, length, bufferSize);
         if (!noredirectParam.getValue()) {
           return Response.temporaryRedirect(uri)
               .type(MediaType.APPLICATION_OCTET_STREAM).build();
@@ -368,7 +375,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       case GETFILECHECKSUM:
       {
         final URI uri = redirectURI(router, ugi, delegation, username,
-            doAsUser, fullpath, op.getValue(), -1L, null);
+            doAsUser, fullpath, op.getValue(), -1L, null,
+            redirectByIPAddress.getValue());
         if (!noredirectParam.getValue()) {
           return Response.temporaryRedirect(uri)
               .type(MediaType.APPLICATION_OCTET_STREAM).build();
@@ -395,7 +403,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
             offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
             excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
             snapshotDiffStartPath, snapshotDiffIndex,
-            tokenKind, tokenService, noredirectParam, startAfter, allUsers);
+            tokenKind, tokenService, noredirectParam, startAfter, allUsers,
+            redirectByIPAddress);
       }
       default:
         throw new UnsupportedOperationException(op + " is not supported");
@@ -425,7 +434,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final DelegationParam delegation, final UserParam username,
       final DoAsParam doAsUser, final String path, final HttpOpParam.Op op,
       final long openOffset, final String excludeDatanodes,
-      final Param<?, ?>... parameters) throws URISyntaxException, IOException {
+      final boolean redirectByIPAddress, final Param<?, ?>... parameters
+  ) throws URISyntaxException, IOException {
     if (!DFSUtil.isValidName(path)) {
       throw new InvalidPathException(path);
     }
@@ -458,8 +468,9 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
 
     int port = "http".equals(getScheme()) ? dn.getInfoPort() :
         dn.getInfoSecurePort();
-    final URI uri = new URI(getScheme(), null, dn.getHostName(), port, uripath,
-        redirectQuery, null);
+    final URI uri = new URI(getScheme(), null, redirectByIPAddress ?
+            dn.getIpAddr(): dn.getHostName(), port, uripath, redirectQuery,
+            null);
 
     if (LOG.isTraceEnabled()) {
       LOG.trace("redirectURI={}", uri);
