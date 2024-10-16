@@ -1741,6 +1741,20 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       DFS_DATANODE_LOCKMANAGER_TRACE =
       "dfs.datanode.lockmanager.trace";
 
+  public static final String
+      DFS_DATANODE_LOCK_HELD_INFO_ENABLE =
+      "dfs.datanode.print.lockheldinfo.enable";
+
+  public static final Boolean
+      DFS_DATANODE_LOCK_HELD_INFO_ENABLE_DEFAULT = true;
+
+  public static final String
+      DFS_DATANODE_LOCK_HELD_TIME_THRESHOLD =
+      "dfs.datanode.print.lockheldinfo.time.threshold";
+
+  public static final int
+      DFS_DATANODE_LOCK_HELD_TIME_THRESHOLD_DEFAULT = 500;
+
   public static final boolean
       DFS_DATANODE_LOCKMANAGER_TRACE_DEFAULT = false;
 
