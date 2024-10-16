@@ -3822,10 +3822,11 @@
 
   <property>
     <description>
-      Store class name for federation state store
+      Store class name for federation state store,
+      Default is ZookeeperFederationStateStore.
     </description>
     <name>yarn.federation.state-store.class</name>
-    <value>org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore</value>
+    <value>org.apache.hadoop.yarn.server.federation.store.impl.ZookeeperFederationStateStore</value>
   </property>
 
   <property>
