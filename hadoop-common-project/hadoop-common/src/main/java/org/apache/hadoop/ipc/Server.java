@@ -2897,15 +2897,15 @@ public abstract class Server {
       Span span = null;
       if (header.hasTraceInfo()) {
         RPCTraceInfoProto traceInfoProto = header.getTraceInfo();
-        if (traceInfoProto.hasSpanContext()) {
+        if (traceInfoProto.getOpenSpanContextMap() != null) {
           if (tracer == null) {
             setTracer(Tracer.curThreadTracer());
           }
           if (tracer != null) {
             // If the incoming RPC included tracing info, always continue the
             // trace
-            SpanContext spanCtx = TraceUtils.byteStringToSpanContext(
-                traceInfoProto.getSpanContext());
+            SpanContext spanCtx = TraceUtils.mapToSpanContext(
+                traceInfoProto.getOpenSpanContextMap());
             if (spanCtx != null) {
               span = tracer.newSpan(
                   RpcClientUtil.toTraceName(rpcRequest.toString()), spanCtx);
