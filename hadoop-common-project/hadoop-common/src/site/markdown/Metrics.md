@@ -257,6 +257,13 @@ Each metrics record contains tags such as ProcessName, SessionId, and Hostname a
 | `EditLogTailIntervalAvgTime` | Average time of intervals between edit log tailings by standby NameNode in milliseconds |
 | `EditLogTailInterval`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of time between edit log tailings by standby NameNode in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
 | `PendingEditsCount` | Current number of pending edits |
+| `AvoidNotInServiceNodeCount` | Total number of avoid not in service node |
+| `AvoidStaleNodeCount` | Total number of avoid stale node |
+| `AvoidXceiverOverLoadNodeCount` | Total number of avoid xceiver over load node |
+| `AvoidVolumeOverLoadNodeCount` | Total number of avoid volume over load node |
+| `AvoidPerRackOverStorageLimitNodeCount` | Total number of avoid per rack over storage limit node |
+| `AvoidSlowNodeCount` | Total number of avoid slow node |
+| `TotalAvoidDataNodeCount`| Total number of avoid datanode |
 
 FSNamesystem
 ------------
