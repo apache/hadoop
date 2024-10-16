@@ -68,7 +68,10 @@ public class TestCapacitySchedulerMultiNodes {
   private CapacitySchedulerConfiguration conf;
   private static final String POLICY_CLASS_NAME =
       "org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.ResourceUsageMultiNodeLookupPolicy";
-
+  private static final String POLICY_CLASS_NAME_WITH_SHUFFLE =
+      "org.apache.hadoop.yarn.server.resourcemanager." +
+          "scheduler.placement." +
+          "ResourceUsageWithPartialShuffleMultiNodeLookupPolicy";
   @Before
   public void setUp() {
     CapacitySchedulerConfiguration config =
@@ -110,6 +113,40 @@ public class TestCapacitySchedulerMultiNodes {
     Set<SchedulerNode> nodes = sorter.getMultiNodeLookupPolicy()
         .getNodesPerPartition("");
     Assert.assertEquals(4, nodes.size());
+    rm.stop();
+  }
+
+  @Test
+  public void testResourceUsageWithPartialShuffleMultiNodeLookupPolicy()
+      throws Exception {
+    String policyName =
+        CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
+            + ".resource-based" + ".class";
+    conf.set(policyName, POLICY_CLASS_NAME_WITH_SHUFFLE);
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    for (int i = 0; i < 1000; ++i) {
+      rm.registerNode("127.0.0.1:" + i, 10 * GB);
+    }
+    ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+    waitforNMRegistered(scheduler, 1000, 5);
+    MultiNodeSortingManager<SchedulerNode> mns = rm.getRMContext()
+        .getMultiNodeSortingManager();
+    MultiNodeSorter<SchedulerNode> sorter = mns
+        .getMultiNodePolicy(POLICY_CLASS_NAME_WITH_SHUFFLE);
+    sorter.reSortClusterNodes();
+    Set<SchedulerNode> nodes = sorter.getMultiNodeLookupPolicy()
+        .getNodesPerPartition("");
+    Assert.assertEquals(1000, nodes.size());
+
+    Iterator<SchedulerNode> list = sorter.getMultiNodeLookupPolicy().
+        getPreferredNodeIterator(null, "");
+    int count = 0;
+    while (list.hasNext()) {
+      list.next();
+      ++count;
+    }
+    Assert.assertEquals(1000, count);
     rm.stop();
   }
 
