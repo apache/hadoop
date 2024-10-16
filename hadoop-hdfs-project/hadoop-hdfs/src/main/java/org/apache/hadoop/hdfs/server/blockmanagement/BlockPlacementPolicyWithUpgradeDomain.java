@@ -74,6 +74,9 @@ public class BlockPlacementPolicyWithUpgradeDomain extends
         Set<String> upgradeDomains = getUpgradeDomains(results);
         if (upgradeDomains.contains(node.getUpgradeDomain())) {
           isGoodTarget = false;
+          logNodeIsNotChosen(node, NodeNotChosenReason.NODE_NOT_CONFORM_TO_UD,
+              "(The node's upgrade domain: " + node.getUpgradeDomain() +
+                  " is already chosen)");
         }
       }
     }
