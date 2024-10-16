@@ -50,6 +50,8 @@ final class BalancerParameters {
 
   private final boolean sortTopNodes;
 
+  private final int limitTopNodesNum;
+
   static final BalancerParameters DEFAULT = new BalancerParameters();
 
   private BalancerParameters() {
@@ -67,6 +69,7 @@ final class BalancerParameters {
     this.runDuringUpgrade = builder.runDuringUpgrade;
     this.runAsService = builder.runAsService;
     this.sortTopNodes = builder.sortTopNodes;
+    this.limitTopNodesNum = builder.limitTopNodesNum;
     this.hotBlockTimeInterval = builder.hotBlockTimeInterval;
   }
 
@@ -110,6 +113,10 @@ final class BalancerParameters {
     return this.sortTopNodes;
   }
 
+  int getLimitTopNodesNum() {
+    return this.limitTopNodesNum;
+  }
+
   long getHotBlockTimeInterval() {
     return this.hotBlockTimeInterval;
   }
@@ -120,12 +127,12 @@ final class BalancerParameters {
         + " max idle iteration = %s," + " #excluded nodes = %s,"
         + " #included nodes = %s," + " #source nodes = %s,"
         + " #blockpools = %s," + " run during upgrade = %s,"
-        + " sort top nodes = %s,"
+        + " sort top nodes = %s," + " limit top nodes num = %s"
         + " hot block time interval = %s]",
         Balancer.class.getSimpleName(), getClass().getSimpleName(), policy,
         threshold, maxIdleIteration, excludedNodes.size(),
         includedNodes.size(), sourceNodes.size(), blockpools.size(),
-        runDuringUpgrade, sortTopNodes, hotBlockTimeInterval);
+        runDuringUpgrade, sortTopNodes, limitTopNodesNum, hotBlockTimeInterval);
   }
 
   static class Builder {
@@ -141,6 +148,7 @@ final class BalancerParameters {
     private boolean runDuringUpgrade = false;
     private boolean runAsService = false;
     private boolean sortTopNodes = false;
+    private int limitTopNodesNum = Integer.MAX_VALUE;
     private long hotBlockTimeInterval = 0;
 
     Builder() {
@@ -198,6 +206,11 @@ final class BalancerParameters {
 
     Builder setSortTopNodes(boolean shouldSortTopNodes) {
       this.sortTopNodes = shouldSortTopNodes;
+      return this;
+    }
+
+    Builder setLimitTopNodesNum(int limitTopNodesNum) {
+      this.limitTopNodesNum = limitTopNodesNum;
       return this;
     }
 
