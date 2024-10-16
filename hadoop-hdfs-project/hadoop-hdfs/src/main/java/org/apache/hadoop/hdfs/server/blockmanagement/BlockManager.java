@@ -3003,6 +3003,9 @@ public class BlockManager implements BlockStatsMXBean {
     DatanodeDescriptor node;
     try {
       node = datanodeManager.getDatanode(nodeID);
+      if (node == null) {
+        throw new UnregisteredNodeException(nodeID, null);
+      }
       if (context != null) {
         if (context.getTotalRpcs() == context.getCurRpc() + 1) {
           long leaseId = this.getBlockReportLeaseManager().removeLease(node);
