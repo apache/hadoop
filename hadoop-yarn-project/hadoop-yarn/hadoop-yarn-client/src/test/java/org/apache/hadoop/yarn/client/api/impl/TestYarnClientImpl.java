@@ -59,6 +59,8 @@ import org.mockito.stubbing.Answer;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -377,6 +379,65 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
       client.init(conf);
       client.start();
       Assert.assertEquals("rm/localhost@EXAMPLE.COM", client.timelineDTRenewer);
+    } finally {
+      client.stop();
+    }
+  }
+
+  @Test
+  public void testNMEnvWhitelistExportEnabled() {
+    Configuration conf = getConf();
+    conf.set(YarnConfiguration.NM_ENV_WHITELIST_EXPORT_ENABLED, "true");
+    conf.set(YarnConfiguration.NM_ENV_WHITELIST, "TEST_KEY_1");
+
+    // Set property for TEST_KEY_1
+    System.setProperty("TEST_KEY_1", "TEST_VALUE_1");
+    System.setProperty("TEST_KEY_2", "TEST_VALUE_2");
+
+    // Prepare a Mock YarnClientImpl
+    YarnClientImpl client = spy(new YarnClientImpl() {
+
+      @Override
+      protected void serviceStart() {
+        rmClient = mock(ApplicationClientProtocol.class);
+      }
+
+      @Override
+      protected void serviceStop() {
+      }
+
+      @Override
+      public ApplicationReport getApplicationReport(ApplicationId appId) {
+        ApplicationReport report = mock(ApplicationReport.class);
+        when(report.getYarnApplicationState())
+            .thenReturn(YarnApplicationState.RUNNING);
+        return report;
+      }
+    });
+    conf.set(
+        YarnConfiguration.RM_ADDRESS, "localhost:8188");
+
+    // Prepare a ApplicationSubmissionContext and submit the app
+    ApplicationSubmissionContext context =
+        mock(ApplicationSubmissionContext.class);
+    ApplicationId applicationId = ApplicationId.newInstance(0, 1);
+    when(context.getApplicationId()).thenReturn(applicationId);
+
+    Map<String, String> env = new HashMap<>();
+    ContainerLaunchContext clc = ContainerLaunchContext.newInstance(
+        null, env, null, null, null, null);
+    when(context.getAMContainerSpec()).thenReturn(clc);
+
+    try {
+      client.init(conf);
+      client.start();
+      client.submitApplication(context);
+      Assert.assertEquals("TEST_VALUE_1",
+          context.getAMContainerSpec().getEnvironment().get("TEST_KEY_1"));
+      Assert.assertNotEquals("TEST_VALUE_2",
+          context.getAMContainerSpec().getEnvironment().get("TEST_KEY_2"));
+    } catch (YarnException | IOException e) {
+      e.printStackTrace();
     } finally {
       client.stop();
     }
