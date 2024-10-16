@@ -19,11 +19,15 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.security.token.SecretManager;
@@ -91,7 +95,8 @@ public class LogAggregationService extends AbstractService implements
   private final Set<ApplicationId> invalidTokenApps;
 
   @VisibleForTesting
-  ExecutorService threadPool;
+  ThreadPoolExecutor threadPool;
+  StoreUnexecutedPolicy unexecutedPolicy;
   
   public LogAggregationService(Dispatcher dispatcher, Context context,
       DeletionService deletionService, LocalDirsHandlerService dirsHandler) {
@@ -150,10 +155,12 @@ public class LogAggregationService extends AbstractService implements
 
   protected void serviceInit(Configuration conf) throws Exception {
     int threadPoolSize = getAggregatorThreadPoolSize(conf);
-    this.threadPool = HadoopExecutors.newFixedThreadPool(threadPoolSize,
+    this.threadPool = (ThreadPoolExecutor) HadoopExecutors.newFixedThreadPool(threadPoolSize,
         new ThreadFactoryBuilder()
             .setNameFormat("LogAggregationService #%d")
             .build());
+    this.unexecutedPolicy = new StoreUnexecutedPolicy();
+    this.threadPool.setRejectedExecutionHandler(unexecutedPolicy);
 
     rollingMonitorInterval = calculateRollingMonitorInterval(conf);
     LOG.info("rollingMonitorInterval is set as {}. The logs will be " +
@@ -207,6 +214,9 @@ public class LogAggregationService extends AbstractService implements
         LOG.warn("Aggregation stop interrupted!");
         break;
       }
+    }
+    for (Runnable aggregator : unexecutedPolicy.getUnexecutedTasks()) {
+      aggregator.run();
     }
     for (ApplicationId appId : appLogAggregators.keySet()) {
       LOG.warn("Some logs may not have been aggregated for " + appId);
@@ -294,8 +304,12 @@ public class LogAggregationService extends AbstractService implements
         try {
           appLogAggregator.run();
         } finally {
-          appLogAggregators.remove(appId);
-          closeFileSystems(userUgi);
+          if (appLogAggregator.isDone()) {
+            appLogAggregators.remove(appId);
+            closeFileSystems(userUgi);
+          } else {
+            threadPool.execute(this);
+          }
         }
       }
     };
@@ -466,5 +480,21 @@ public class LogAggregationService extends AbstractService implements
     LogAggregationFileController logAggregationFileController = factory
         .getFileControllerForWrite();
     return logAggregationFileController;
+  }
+
+  public static class StoreUnexecutedPolicy implements RejectedExecutionHandler {
+
+    List<Runnable> unexecutedTasks = new ArrayList<>();
+
+    @Override
+    public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+      if (executor.isShutdown()) {
+        unexecutedTasks.add(r);
+      }
+    }
+
+    public List<Runnable> getUnexecutedTasks() {
+      return unexecutedTasks;
+    }
   }
 }
