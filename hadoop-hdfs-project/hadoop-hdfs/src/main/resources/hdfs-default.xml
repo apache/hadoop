@@ -335,6 +335,14 @@
   </property>
 
   <property>
+    <name>dfs.namenode.redundancy.considerLoad.minload</name>
+    <value>16</value>
+    <description>The minimum load which a node's load must exceed
+      before being rejected for writes, only if considerLoad is true.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.namenode.redundancy.considerLoadByVolume</name>
     <value>false</value>
     <description>Decide if chooseTarget considers the target's volume load or

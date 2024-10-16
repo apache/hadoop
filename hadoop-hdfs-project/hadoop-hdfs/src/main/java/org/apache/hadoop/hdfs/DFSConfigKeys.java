@@ -293,6 +293,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean
       DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYVOLUME_DEFAULT
       = false;
+  public static final String DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_MINLOAD_KEY =
+      "dfs.namenode.redundancy.considerLoad.minload";
+  public static final int DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_MINLOAD_DEFAULT = 16;
   public static final String DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY;
   public static final int DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT = 3;
