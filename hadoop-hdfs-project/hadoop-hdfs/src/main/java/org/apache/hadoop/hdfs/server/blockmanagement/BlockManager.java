@@ -3842,10 +3842,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     // handle low redundancy/extra redundancy
     short fileRedundancy = getExpectedRedundancyNum(storedBlock);
-    if (!isNeededReconstruction(storedBlock, num, pendingNum)) {
-      neededReconstruction.remove(storedBlock, numCurrentReplica,
-          num.readOnlyReplicas(), num.outOfServiceReplicas(), fileRedundancy);
-    } else {
+    if (isNeededReconstruction(storedBlock, num, pendingNum)) {
       updateNeededReconstructions(storedBlock, curReplicaDelta, 0);
     }
     if (shouldProcessExtraRedundancy(num, fileRedundancy)) {
