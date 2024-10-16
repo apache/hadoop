@@ -136,6 +136,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.ec.reconstruct.write.bandwidthPerSec";
   public static final long DFS_DATANODE_EC_RECONSTRUCT_WRITE_BANDWIDTHPERSEC_DEFAULT =
       0; // A value of zero indicates no limit
+  public static final String DFS_DATANODE_COPY_BLOCK_CROSS_NAMESPACE_SOCKET_TIMEOUT_MS_KEY =
+      "dfs.datanode.copy.block.cross.namespace.socket-timeout.ms";
+  public static final int DFS_DATANODE_COPY_BLOCK_CROSS_NAMESPACE_SOCKET_TIMEOUT_MS_DEFAULT =
+      5 * 60 * 1000;
+
   @Deprecated
   public static final String  DFS_DATANODE_READAHEAD_BYTES_KEY =
       HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_KEY;
@@ -490,6 +495,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.processcommands.threshold";
   public static final long DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_DEFAULT =
       TimeUnit.SECONDS.toMillis(2);
+
+  public static final String DFS_DATANODE_FAST_COPY_CHECK_TARGET_BLOCK_ACCESS_ENABLE =
+      "dfs.datanode.fast.copy.check.target.block.access.enable";
+  public static final boolean DFS_DATANODE_FAST_COPY_CHECK_TARGET_BLOCK_ACCESS_ENABLE_DEFAULT = false;
 
   public static final String DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_KEY = "dfs.namenode.datanode.registration.ip-hostname-check";
   public static final boolean DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_DEFAULT = true;

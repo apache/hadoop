@@ -173,9 +173,14 @@ public class DataNodeFaultInjector {
    */
   public void delayGetMetaDataInputStream() {}
 
-  /**
+   /**
    * Used in {@link DirectoryScanner#reconcile()} to wait until a storage is removed,
    * leaving a stale copy of {@link DirectoryScanner#diffs}.
    */
   public void waitUntilStorageRemoved() {}
+
+   /**
+   * Userd for datanode transfer thow exception case.
+   */
+  public void transferThrowException() throws IOException {}
 }

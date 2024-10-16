@@ -5004,6 +5004,14 @@
 </property>
 
 <property>
+  <name>dfs.datanode.copy.block.cross.namespace.socket-timeout.ms</name>
+  <value>300000</value>
+  <description>
+    Default timeout value in milliseconds for datanode copying block cross namespace.
+  </description>
+</property>
+
+<property>
   <name>dfs.ha.fencing.methods</name>
   <value></value>
   <description>
@@ -6445,6 +6453,38 @@
       the sleep interval periodically to compute the gc time proportion. The
       shorter the interval the preciser the GcTimePercentage. The sleep interval
       must be shorter than the window size.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.fast.copy.file.wait.time.ms</name>
+    <value>600000</value>
+    <description>
+      Default timeout value in milliseconds for fastcopy when copy a file.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.fast.copy.block.wait.time.ms</name>
+    <value>300000</value>
+    <description>
+      Default timeout value in milliseconds for fastcopy when copy a block in a file.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.fast.copy.block.executor.poolsize</name>
+    <value>2</value>
+    <description>
+      The thread num of fastcopy block executor.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.fast.copy.check.target.block.access.enable</name>
+    <value>false</value>
+    <description>
+      Whether to check target block acess. If true, fastcopy will not work with different nameservices that are not federation cluster.
     </description>
   </property>
 
