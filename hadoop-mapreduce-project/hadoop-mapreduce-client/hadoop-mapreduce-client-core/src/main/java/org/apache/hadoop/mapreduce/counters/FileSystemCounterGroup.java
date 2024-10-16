@@ -311,8 +311,11 @@ public abstract class FileSystemCounterGroup<C extends Counter>
       String scheme = WritableUtils.readString(in); // scheme
       int numCounters = WritableUtils.readVInt(in); // #counter
       for (int j = 0; j < numCounters; ++j) {
-        findCounter(scheme, enums[WritableUtils.readVInt(in)])  // key
+        int countTypeIndex = WritableUtils.readVInt(in);
+        if (countTypeIndex < enums.length) {
+          findCounter(scheme, enums[countTypeIndex])  // key
             .setValue(WritableUtils.readVLong(in)); // value
+        }
       }
     }
   }
