@@ -37,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -511,5 +512,29 @@ public class IOUtils {
       // finished reading, do nothing
     }
     return baos.toByteArray();
+  }
+
+  /**
+   * Read an object from the given input stream.
+   *
+   * @param in input stream to read from.
+   * @param clazz the class of the object.
+   * @return the object read from the stream.
+   *
+   * @param <T> The class type.
+   */
+  public static <T> T readObject(InputStream in, Class<T> clazz) {
+    final Object obj;
+    try (ObjectInputStream oin = new ObjectInputStream(in)) {
+      obj = oin.readObject();
+    } catch (IOException | ClassNotFoundException e) {
+      throw new IllegalStateException("Failed to readObject for class " + clazz, e);
+    }
+    try {
+      return clazz.cast(obj);
+    } catch (ClassCastException e) {
+      throw new IllegalStateException("Failed to cast to " + clazz + ", object="
+          + (obj instanceof Throwable? StringUtils.stringifyException((Throwable) obj): obj), e);
+    }
   }
 }
