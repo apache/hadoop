@@ -14,6 +14,7 @@
 package org.apache.hadoop.security.authentication.server;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -111,6 +112,12 @@ public class ProxyUserAuthenticationFilter extends AuthenticationFilter {
     while (names.hasMoreElements()) {
       String name = (String) names.nextElement();
       if (name.startsWith(PROXYUSER_PREFIX + ".")) {
+        String value = filterConfig.getInitParameter(name);
+        conf.set(name, value);
+      }
+
+      //add impersonation provider class config
+      if (name.equals(CommonConfigurationKeysPublic.HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS)) {
         String value = filterConfig.getInitParameter(name);
         conf.set(name, value);
       }
