@@ -60,7 +60,7 @@ public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements Task
     viaProto = true;
   }
   
-  public TaskReportProto getProto() {
+  public synchronized TaskReportProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
