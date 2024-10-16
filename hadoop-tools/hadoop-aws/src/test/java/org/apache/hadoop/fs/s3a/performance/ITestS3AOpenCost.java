@@ -93,10 +93,6 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
    */
   private boolean prefetching;
 
-  public ITestS3AOpenCost() {
-    super(true);
-  }
-
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();

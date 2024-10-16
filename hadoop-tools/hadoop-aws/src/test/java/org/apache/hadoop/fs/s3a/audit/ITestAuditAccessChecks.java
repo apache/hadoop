@@ -59,10 +59,6 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
 
   private AccessCheckingAuditor auditor;
 
-  public ITestAuditAccessChecks() {
-    super(true);
-  }
-
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
