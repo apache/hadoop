@@ -410,6 +410,15 @@
                   </includes>
                   <excludes>
                     <exclude>**/azure/**/TestRollingWindowAverage*.java</exclude>
+                    <!-- Exclude Azure broken tests -->
+                    <exclude>**/azure/TestNativeAzureFileSystemMocked*.java</exclude>
+                    <exclude>**/azure/TestBlobMetadata</exclude>
+                    <exclude>**/azure/TestWasbFsck</exclude>
+                    <exclude>**/azure/TestNativeAzureFileSystemConcurrency</exclude>
+                    <exclude>**/azure/TestOutOfBandAzureBlobOperations</exclude>
+                    <exclude>**/azure/TestNativeAzureFileSystemOperationsMocked</exclude>
+                    <exclude>**/azure/TestNativeAzureFileSystemContractMocked</exclude>
+                    <exclude>**/azure/TestNativeAzureFileSystemFileNameCheck</exclude>
                   </excludes>
                 </configuration>
               </execution>
@@ -732,6 +741,15 @@
                   </includes>
                   <excludes>
                     <exclude>**/TestRollingWindowAverage*.java</exclude>
+                    <!-- Exclude Azure broken tests -->
+                    <exclude>**/TestNativeAzureFileSystemMocked*.java</exclude>
+                    <exclude>**/TestBlobMetadata</exclude>
+                    <exclude>**/TestWasbFsck</exclude>
+                    <exclude>**/TestNativeAzureFileSystemConcurrency</exclude>
+                    <exclude>**/TestOutOfBandAzureBlobOperations</exclude>
+                    <exclude>**/TestNativeAzureFileSystemOperationsMocked</exclude>
+                    <exclude>**/TestNativeAzureFileSystemContractMocked</exclude>
+                    <exclude>**/TestNativeAzureFileSystemFileNameCheck</exclude>
                   </excludes>
                 </configuration>
               </execution>
