@@ -39,7 +39,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.fs.ByteBufferPositionedReadable;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -65,10 +65,13 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.VectoredReadUtils.vectorizeByteBufferPositionedReadableRead;
+import static org.apache.hadoop.fs.VectoredReadUtils.vectorizeByteBufferPositionedReadableReadFully;
 import static org.apache.hadoop.fs.VectoredReadUtils.isOrderedDisjoint;
 import static org.apache.hadoop.fs.VectoredReadUtils.mergeSortedRanges;
 import static org.apache.hadoop.fs.VectoredReadUtils.validateAndSortRanges;
 import static org.apache.hadoop.fs.s3a.Invoker.onceTrackingDuration;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
@@ -92,7 +95,7 @@ import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
-        CanUnbuffer, StreamCapabilities, IOStatisticsSource {
+        CanUnbuffer, StreamCapabilities, IOStatisticsSource, ByteBufferPositionedReadable {
 
   public static final String E_NEGATIVE_READAHEAD_VALUE
       = "Negative readahead value";
@@ -217,11 +220,11 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
                         InputStreamCallbacks client,
                         S3AInputStreamStatistics streamStatistics,
                         ExecutorService boundedThreadPool) {
-    Preconditions.checkArgument(isNotEmpty(s3Attributes.getBucket()),
+    checkArgument(isNotEmpty(s3Attributes.getBucket()),
         "No Bucket");
-    Preconditions.checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
+    checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
     long l = s3Attributes.getLen();
-    Preconditions.checkArgument(l >= 0, "Negative content length");
+    checkArgument(l >= 0, "Negative content length");
     this.context = ctx;
     this.bucket = s3Attributes.getBucket();
     this.key = s3Attributes.getKey();
@@ -881,6 +884,24 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   /**
+   * Convert to a vector read.
+   * {@inheritDoc}
+   */
+  @Override
+  public int read(long position, ByteBuffer buf) throws IOException {
+    return vectorizeByteBufferPositionedReadableRead(this, contentLength, position, buf);
+  }
+
+  /**
+   * Convert to a vector read.
+   * {@inheritDoc}
+   */
+  @Override
+  public void readFully(long position, ByteBuffer buf) throws IOException {
+    vectorizeByteBufferPositionedReadableReadFully(this, position, buf);
+  }
+
+  /**
    * {@inheritDoc}.
    */
   @Override
@@ -1325,7 +1346,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     if (readahead == null) {
       return Constants.DEFAULT_READAHEAD_RANGE;
     } else {
-      Preconditions.checkArgument(readahead >= 0, E_NEGATIVE_READAHEAD_VALUE);
+      checkArgument(readahead >= 0, E_NEGATIVE_READAHEAD_VALUE);
       return readahead;
     }
   }
@@ -1357,6 +1378,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     switch (toLowerCase(capability)) {
     case StreamCapabilities.IOSTATISTICS:
     case StreamCapabilities.IOSTATISTICS_CONTEXT:
+    case StreamCapabilities.PREADBYTEBUFFER:
     case StreamCapabilities.READAHEAD:
     case StreamCapabilities.UNBUFFER:
     case StreamCapabilities.VECTOREDIO:
