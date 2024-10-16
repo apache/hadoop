@@ -128,6 +128,9 @@ public class TestRouter {
     // Safemode only
     testRouterStartup(new RouterConfigBuilder(conf).rpc().safemode().build());
 
+    // Msync only
+    testRouterStartup(new RouterConfigBuilder(conf).rpc().autoMsync().build());
+
     // Metrics only
     testRouterStartup(new RouterConfigBuilder(conf).metrics().build());
 

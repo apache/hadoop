@@ -499,6 +499,22 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.auto.msync.enable</name>
+    <value>false</value>
+    <description>
+      If true, router auto msync to nameservices for update stateid.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.auto.msync.interval</name>
+    <value>5000</value>
+    <description>
+       The interval in milliseconds for router auto msync to nameservices.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.store.router.expiration</name>
     <value>5m</value>
     <description>
