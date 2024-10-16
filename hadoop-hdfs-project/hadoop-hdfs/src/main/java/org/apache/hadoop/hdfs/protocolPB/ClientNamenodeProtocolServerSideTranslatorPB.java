@@ -175,6 +175,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.HAServ
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.HAServiceStateResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshTopologyRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshTopologyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpgradeStatusRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpgradeStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesRequestProto;
@@ -377,6 +379,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
 
   private static final RefreshNodesResponseProto VOID_REFRESHNODES_RESPONSE =
   RefreshNodesResponseProto.newBuilder().build();
+
+  private static final RefreshTopologyResponseProto VOID_REFRESHTOPOLOGY_RESPONSE =
+      RefreshTopologyResponseProto.newBuilder().build();
 
   private static final FinalizeUpgradeResponseProto VOID_FINALIZEUPGRADE_RESPONSE = 
   FinalizeUpgradeResponseProto.newBuilder().build();
@@ -974,6 +979,16 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
 
+  }
+
+  @Override
+  public RefreshTopologyResponseProto refreshTopology(RpcController controller, RefreshTopologyRequestProto request) throws ServiceException {
+    try {
+      server.refreshTopology();
+      return VOID_REFRESHTOPOLOGY_RESPONSE;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   @Override

@@ -988,6 +988,14 @@ public interface ClientProtocol {
   void refreshNodes() throws IOException;
 
   /**
+   * Tells the namenode to refresh the network topology info
+   *
+   * @throws IOException
+   */
+  @Idempotent
+  void refreshTopology() throws IOException;
+
+  /**
    * Finalize previous upgrade.
    * Remove file system state saved during the upgrade.
    * The upgrade will become irreversible.
