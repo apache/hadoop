@@ -2322,6 +2322,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private void invalidate(String bpid, Block[] invalidBlks, boolean async)
       throws IOException {
     final List<String> errors = new ArrayList<String>();
+    final List<String> warns = new ArrayList<String>();
+    final List<String> infos = new ArrayList<String>();
     for (int i = 0; i < invalidBlks.length; i++) {
       final ReplicaInfo info;
       final FsVolumeImpl v;
@@ -2333,7 +2335,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           if (infoByBlockId == null) {
             // It is okay if the block is not found -- it
             // may be deleted earlier.
-            LOG.info("Failed to delete replica " + invalidBlks[i]
+            infos.add("Failed to delete replica " + invalidBlks[i]
                 + ": ReplicaInfo not found.");
           } else {
             errors.add("Failed to delete replica " + invalidBlks[i]
@@ -2357,8 +2359,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             continue;
           }
         } catch(IllegalArgumentException e) {
-          LOG.warn("Parent directory check failed; replica {} is " +
-              "not backed by a local file", info);
+          warns.add(String.format("Parent directory check failed; replica {} is " +
+              "not backed by a local file", info));
         }
       }
 
@@ -2377,8 +2379,19 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               dataStorage.getTrashDirectoryForReplica(bpid, info));
         }
       } catch (ClosedChannelException e) {
-        LOG.warn("Volume {} is closed, ignore the deletion task for " +
-            "block: {}", v, invalidBlks[i]);
+        warns.add(String.format("Volume {} is closed, ignore the deletion task for " +
+            "block: {}", v, invalidBlks[i]));
+      }
+    }
+
+    if (!infos.isEmpty()) {
+      for(int i = 0; i < infos.size(); i++) {
+        LOG.info(infos.get(i));
+      }
+    }
+    if (!warns.isEmpty()) {
+      for(int i = 0; i < warns.size(); i++) {
+        LOG.warn(warns.get(i));
       }
     }
     if (!errors.isEmpty()) {
@@ -2456,6 +2469,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * @return
    */
   boolean removeReplicaFromMem(final ExtendedBlock block, final FsVolumeImpl volume) {
+    final List<String> errors = new ArrayList<String>();
+    final List<String> infos = new ArrayList<String>();
     final String bpid = block.getBlockPoolId();
     final Block localBlock = block.getLocalBlock();
     final long blockId = localBlock.getBlockId();
@@ -2466,40 +2481,38 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         if (infoByBlockId == null) {
           // It is okay if the block is not found -- it
           // may be deleted earlier.
-          LOG.info("Failed to delete replica {}: ReplicaInfo not found " +
-              "in removeReplicaFromMem.", localBlock);
+          infos.add(String.format("Failed to delete replica {}: ReplicaInfo not found " +
+              "in removeReplicaFromMem.", localBlock));
         } else {
-          LOG.error("Failed to delete replica {}: GenerationStamp not matched, " +
+          errors.add(String.format("Failed to delete replica {}: GenerationStamp not matched, " +
               "existing replica is {} in removeReplicaFromMem.",
-              localBlock, Block.toString(infoByBlockId));
+              localBlock, Block.toString(infoByBlockId)));
         }
-        return false;
       }
 
       FsVolumeImpl v = (FsVolumeImpl) info.getVolume();
       if (v == null) {
-        LOG.error("Failed to delete replica {}. No volume for this replica {} " +
-            "in removeReplicaFromMem.", localBlock, info);
-        return false;
+        errors.add(String.format("Failed to delete replica {}. No volume for this replica {} " +
+            "in removeReplicaFromMem.", localBlock, info));
       }
 
       try {
         File blockFile = new File(info.getBlockURI());
         if (blockFile.getParentFile() == null) {
-          LOG.error("Failed to delete replica {}. Parent not found for block file: {} " +
-              "in removeReplicaFromMem.", localBlock, blockFile);
-          return false;
+          errors.add(String.format("Failed to delete replica {}. " +
+              "Parent not found for block file: {} " +
+              "in removeReplicaFromMem.", localBlock, blockFile));
         }
       } catch(IllegalArgumentException e) {
-        LOG.warn("Parent directory check failed; replica {} is " +
-            "not backed by a local file in removeReplicaFromMem.", info);
+        errors.add(String.format("Parent directory check failed; replica {} is " +
+            "not backed by a local file in removeReplicaFromMem.", info));
       }
 
       if (!volume.getStorageID().equals(v.getStorageID())) {
-        LOG.error("Failed to delete replica {}. Appear different volumes, oldVolume: {} " +
+        errors.add(String.format("Failed to delete replica {}. " +
+            "Appear different volumes, oldVolume: {} " +
             "and newVolume: {} for this replica in removeReplicaFromMem.",
-            localBlock, volume, v);
-        return false;
+            localBlock, volume, v));
       }
 
       ReplicaInfo removing = volumeMap.remove(bpid, localBlock);
@@ -2530,6 +2543,15 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     // If the block is cached, start uncaching it.
     cacheManager.uncacheBlock(bpid, blockId);
+
+    if (!infos.isEmpty()) {
+      LOG.info(infos.get(0));
+      return false;
+    }
+    if (!errors.isEmpty()) {
+      LOG.error(errors.get(0));
+      return false;
+    }
     return true;
   }
 
