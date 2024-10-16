@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -575,5 +576,78 @@ public class TestReconstructStripedBlocks {
       cluster.shutdown();
     }
   }
+  @Test
+  public void testDeleteOverReplicatedStripedBlock() throws Exception {
+    final HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
+            false);
+    StorageType[][] st = new StorageType[groupSize + 2][1];
+    for (int i = 0; i < st.length-1; i++){
+      st[i] = new StorageType[]{StorageType.SSD};
+    }
+    st[st.length -1] = new StorageType[]{StorageType.DISK};
 
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 2)
+            .storagesPerDatanode(1)
+            .storageTypes(st)
+            .build();
+    cluster.waitActive();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(
+            StripedFileTestUtil.getDefaultECPolicy().getName());
+    try {
+      fs.mkdirs(dirPath);
+      fs.setErasureCodingPolicy(dirPath,
+              StripedFileTestUtil.getDefaultECPolicy().getName());
+      fs.setStoragePolicy(dirPath, HdfsConstants.ALLSSD_STORAGE_POLICY_NAME);
+      DFSTestUtil.createFile(fs, filePath,
+              cellSize * dataBlocks * 2, (short) 1, 0L);
+      // Stop a dn
+      LocatedBlocks blks = fs.getClient().getLocatedBlocks(filePath.toString(), 0);
+      LocatedStripedBlock block = (LocatedStripedBlock) blks.getLastLocatedBlock();
+      DatanodeInfo dnToStop = block.getLocations()[0];
+
+      MiniDFSCluster.DataNodeProperties dnProp =
+              cluster.stopDataNode(dnToStop.getXferAddr());
+      cluster.setDataNodeDead(dnToStop);
+
+      // Wait for reconstruction to happen
+      DFSTestUtil.waitForReplication(fs, filePath, groupSize, 15 * 1000);
+
+      DatanodeInfo dnToStop2 = block.getLocations()[1];
+      cluster.stopDataNode(dnToStop2.getXferAddr());
+      cluster.setDataNodeDead(dnToStop2);
+      DFSTestUtil.waitForReplication(fs, filePath, groupSize, 15 * 1000);
+
+      // Bring the dn back: 10 internal blocks now
+      cluster.restartDataNode(dnProp);
+      DFSTestUtil.verifyClientStats(conf, cluster);
+
+      // Currently namenode is able to track the missing block. And restart NN
+      for (DataNode dn : cluster.getDataNodes()) {
+        DataNodeTestUtils.triggerBlockReport(dn);
+      }
+      BlockManager bm = cluster.getNamesystem().getBlockManager();
+      Thread.sleep(3000);
+      GenericTestUtils.waitFor(() ->
+          bm.getPendingDeletionBlocksCount() == 0, 10, 2000);
+      for (DataNode dn : cluster.getDataNodes()) {
+        DataNodeTestUtils.triggerHeartbeat(dn);
+      }
+      boolean isDeletedRedundantBlock = true;
+      blks = fs.getClient().getLocatedBlocks(filePath.toString(), 0);
+      block = (LocatedStripedBlock) blks.getLastLocatedBlock();
+      BitSet bitSet = new BitSet(groupSize);
+      for (byte index : block.getBlockIndices()) {
+        if(bitSet.get(index)){
+          isDeletedRedundantBlock = false;
+        }
+        bitSet.set(index);
+      }
+      assertTrue(isDeletedRedundantBlock);
+    } finally {
+      cluster.shutdown();
+    }
+  }
 }
