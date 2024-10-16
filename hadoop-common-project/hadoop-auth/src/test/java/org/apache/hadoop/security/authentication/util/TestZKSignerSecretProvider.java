@@ -120,7 +120,7 @@ public class TestZKSignerSecretProvider {
       super(seed);
     }
     @Override
-    protected synchronized void rollSecret() {
+    protected void rollSecret() {
       // this is a no-op: simply used for Mockito to verify that rollSecret()
       // is periodically called at the expected frequency
     }
