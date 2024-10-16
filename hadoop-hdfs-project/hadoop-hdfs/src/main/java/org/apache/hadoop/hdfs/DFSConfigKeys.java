@@ -1481,6 +1481,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
           "dfs.journalnode.edit-cache-size.fraction";
   public static final float DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_DEFAULT = 0.5f;
 
+  public static final String  DFS_JOURNALNODE_MAINTENANCE_NODES_KEY =
+      "dfs.journalnode.maintenance.nodes";
+  public static final String[]  DFS_JOURNALNODE_MAINTENANCE_NODES_DEFAULT = {};
+
   // Journal-node related configs for the client side.
   public static final String  DFS_QJOURNAL_QUEUE_SIZE_LIMIT_KEY = "dfs.qjournal.queued-edits.limit.mb";
   public static final int     DFS_QJOURNAL_QUEUE_SIZE_LIMIT_DEFAULT = 10;
