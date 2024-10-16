@@ -91,7 +91,22 @@ public class DataNodeTestUtils {
       bpos.triggerHeartbeatForTests();
     }
   }
-  
+
+  /**
+   * Trigger the heartbeat and return only when all BP thread queue are successfully processed
+   * i.e. any bad block has been successfully reported to the active namenode.
+   * @param dn datanode
+   * @throws InterruptedException if interrupted while waiting for the queue to be processed.
+   * @throws IOException if the retries are exhausted and the BP thread queue could not be
+   * successfully processed.
+   */
+  public static void triggerHeartbeatAndWaitQueueProcessedForTests(DataNode dn)
+      throws InterruptedException, IOException {
+    for (BPOfferService bpos : dn.getAllBpOs()) {
+      bpos.triggerHeartbeatAndWaitQueueProcessedForTests();
+    }
+  }
+
   public static void triggerBlockReport(DataNode dn) throws IOException {
     for (BPOfferService bpos : dn.getAllBpOs()) {
       bpos.triggerBlockReportForTests();
