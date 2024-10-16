@@ -633,7 +633,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
           (DatanodeDescriptor) localOrFavoredNode;
       // otherwise try local machine first
       if (excludedNodes.add(localOrFavoredNode) // was not in the excluded list
-          && isGoodDatanode(localDatanode, maxNodesPerRack, false,
+          && isGoodDatanode(localDatanode, maxNodesPerRack, considerLoad,
               results, avoidStaleNodes)) {
         for (Iterator<Map.Entry<StorageType, Integer>> iter = storageTypes
             .entrySet().iterator(); iter.hasNext(); ) {
