@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SecureIOUtils;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.PureJavaCrc32;
 
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
@@ -48,8 +49,10 @@ public class SpillRecord {
   private final LongBuffer entries;
 
   public SpillRecord(int numPartitions) {
-    buf = ByteBuffer.allocate(
-        numPartitions * MapTask.MAP_OUTPUT_INDEX_RECORD_LENGTH);
+    int bufSize = numPartitions * MapTask.MAP_OUTPUT_INDEX_RECORD_LENGTH;
+    Preconditions.checkArgument(bufSize > 0,
+            "Spill record buffer size should be positive.");
+    buf = ByteBuffer.allocate(bufSize);
     entries = buf.asLongBuffer();
   }
 
