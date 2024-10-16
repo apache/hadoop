@@ -266,6 +266,10 @@ public class MemoryPlacementConstraintManager
             .distinct()
             .collect(Collectors.toList());
 
+    if (allConstraints != null && allConstraints.size() == 1) {
+      return allConstraints.get(0).build();
+    }
+
     // Compose an AND constraint
     // When merge request(RC), app(AC) and global constraint(GC),
     // we do a merge on them with CC=AND(GC, AC, RC) and returns a
