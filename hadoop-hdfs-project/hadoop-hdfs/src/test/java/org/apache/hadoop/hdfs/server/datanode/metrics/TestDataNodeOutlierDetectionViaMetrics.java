@@ -140,7 +140,7 @@ public class TestDataNodeOutlierDetectionViaMetrics {
       final String nodeName = "FastNode-" + nodeIndex;
       LOG.info("Generating stats for node {}", nodeName);
       for (int i = 0;
-           i < 2 * peerMetrics.getMinOutlierDetectionSamples();
+           i < 2 * Math.max(peerMetrics.getMinOutlierDetectionSamples(), 1);
            ++i) {
         peerMetrics.addSendPacketDownstream(
             nodeName, random.nextInt(FAST_NODE_MAX_LATENCY_MS));
@@ -157,7 +157,7 @@ public class TestDataNodeOutlierDetectionViaMetrics {
 
     // And the one slow node.
     for (int i = 0;
-         i < 2 * peerMetrics.getMinOutlierDetectionSamples();
+         i < 2 * Math.max(peerMetrics.getMinOutlierDetectionSamples(), 1);
          ++i) {
       peerMetrics.addSendPacketDownstream(
           slowNodeName, SLOW_NODE_LATENCY_MS);
