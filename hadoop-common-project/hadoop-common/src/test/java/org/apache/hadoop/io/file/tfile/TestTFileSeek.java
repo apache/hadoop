@@ -29,10 +29,9 @@ import org.junit.Test;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
@@ -272,7 +271,7 @@ public class TestTFileSeek {
 
       try {
         Options opts = buildOptions();
-        CommandLineParser parser = new GnuParser();
+        CommandLineParser parser = new DefaultParser();
         CommandLine line = parser.parse(opts, args, true);
         processOptions(line, opts);
         validateOptions();
@@ -290,81 +289,56 @@ public class TestTFileSeek {
 
     private Options buildOptions() {
       Option compress =
-          OptionBuilder.withLongOpt("compress").withArgName("[none|lzo|gz]")
-              .hasArg().withDescription("compression scheme").create('c');
+          Option.builder("c").longOpt("compress").argName("[none|lzo|gz]")
+          .hasArg().desc("compression scheme").build();
 
       Option fileSize =
-          OptionBuilder.withLongOpt("file-size").withArgName("size-in-MB")
-              .hasArg().withDescription("target size of the file (in MB).")
-              .create('s');
+          Option.builder("s").longOpt("file-size").argName("size-in-MB")
+          .hasArg().desc("target size of the file (in MB).").build();
 
       Option fsInputBufferSz =
-          OptionBuilder.withLongOpt("fs-input-buffer").withArgName("size")
-              .hasArg().withDescription(
-                  "size of the file system input buffer (in bytes).").create(
-                  'i');
+          Option.builder("i").longOpt("fs-input-buffer").argName("size")
+          .hasArg().desc("size of the file system input buffer (in bytes).").build();
 
       Option fsOutputBufferSize =
-          OptionBuilder.withLongOpt("fs-output-buffer").withArgName("size")
-              .hasArg().withDescription(
-                  "size of the file system output buffer (in bytes).").create(
-                  'o');
+          Option.builder("o").longOpt("fs-output-buffer").argName("size")
+          .hasArg().desc("size of the file system output buffer (in bytes).").build();
 
       Option keyLen =
-          OptionBuilder
-              .withLongOpt("key-length")
-              .withArgName("min,max")
-              .hasArg()
-              .withDescription(
-                  "the length range of the key (in bytes)")
-              .create('k');
+          Option.builder("k").longOpt("key-length").argName("min,max")
+          .hasArg().desc("the length range of the key (in bytes)").build();
 
       Option valueLen =
-          OptionBuilder
-              .withLongOpt("value-length")
-              .withArgName("min,max")
-              .hasArg()
-              .withDescription(
-                  "the length range of the value (in bytes)")
-              .create('v');
+          Option.builder("v").longOpt("value-length").argName("min,max")
+          .hasArg().desc("the length range of the value (in bytes)").build();
 
       Option blockSz =
-          OptionBuilder.withLongOpt("block").withArgName("size-in-KB").hasArg()
-              .withDescription("minimum block size (in KB)").create('b');
+          Option.builder("b").longOpt("block").argName("size-in-KB").hasArg()
+          .desc("minimum block size (in KB)").build();
 
       Option seed =
-          OptionBuilder.withLongOpt("seed").withArgName("long-int").hasArg()
-              .withDescription("specify the seed").create('S');
+          Option.builder("S").longOpt("seed").argName("long-int").hasArg()
+          .desc("specify the seed").build();
 
       Option operation =
-          OptionBuilder.withLongOpt("operation").withArgName("r|w|rw").hasArg()
-              .withDescription(
-                  "action: seek-only, create-only, seek-after-create").create(
-                  'x');
+          Option.builder("x").longOpt("operation").argName("r|w|rw").hasArg()
+          .desc("action: seek-only, create-only, seek-after-create").build();
 
       Option rootDir =
-          OptionBuilder.withLongOpt("root-dir").withArgName("path").hasArg()
-              .withDescription(
-                  "specify root directory where files will be created.")
-              .create('r');
+          Option.builder("r").longOpt("root-dir").argName("path").hasArg()
+          .desc("specify root directory where files will be created.").build();
 
       Option file =
-          OptionBuilder.withLongOpt("file").withArgName("name").hasArg()
-              .withDescription("specify the file name to be created or read.")
-              .create('f');
+          Option.builder("f").longOpt("file").argName("name").hasArg()
+          .desc("specify the file name to be created or read.").build();
 
       Option seekCount =
-          OptionBuilder
-              .withLongOpt("seek")
-              .withArgName("count")
-              .hasArg()
-              .withDescription(
-                  "specify how many seek operations we perform (requires -x r or -x rw.")
-              .create('n');
+          Option.builder("n").longOpt("seek").argName("count").hasArg()
+          .desc("specify how many seek operations we perform (requires -x r or -x rw.").build();
 
       Option help =
-          OptionBuilder.withLongOpt("help").hasArg(false).withDescription(
-              "show this screen").create("h");
+          Option.builder("h").longOpt("help").hasArg(false)
+          .desc("show this screen").build();
 
       return new Options().addOption(compress).addOption(fileSize).addOption(
           fsInputBufferSz).addOption(fsOutputBufferSize).addOption(keyLen)

@@ -31,7 +31,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.fs.FileSystem;
@@ -105,18 +105,17 @@ public class MiniHadoopClusterManager {
         .addOption("jhsport", true,
             "JobHistoryServer port (default 0--we choose)")
         .addOption(
-            OptionBuilder.hasArgs().withArgName("property=value")
-                .withDescription("Options to pass into configuration object")
-                .create("D"))
+            Option.builder("D").hasArgs().argName("property=value")
+                .desc("Options to pass into configuration object")
+                .build())
         .addOption(
-            OptionBuilder.hasArg().withArgName("path").withDescription(
-                "Save configuration to this XML file.").create("writeConfig"))
+                Option.builder("writeConfig").hasArg().argName("path").desc(
+                "Save configuration to this XML file.").build())
         .addOption(
-            OptionBuilder.hasArg().withArgName("path").withDescription(
-                "Write basic information to this JSON file.").create(
-                "writeDetails"))
+                Option.builder("writeDetails").argName("path").desc(
+                "Write basic information to this JSON file.").build())
         .addOption(
-            OptionBuilder.withDescription("Prints option help.").create("help"));
+                Option.builder("help").desc("Prints option help.").build());
     return options;
   }
 
