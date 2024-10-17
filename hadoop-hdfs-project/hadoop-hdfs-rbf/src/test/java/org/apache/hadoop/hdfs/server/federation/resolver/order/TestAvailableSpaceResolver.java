@@ -229,4 +229,15 @@ public class TestAvailableSpaceResolver {
     }
     subclusters.clear();
   }
+
+  @Test
+  public void testChooseFirstNamespace() throws Exception {
+    MultipleDestinationMountTableResolver mountTableResolver =
+            mockAvailableSpaceResolver(1.0f);
+    PathLocation loc = mountTableResolver.getDestinationForPath("/space");
+    Method method = MultipleDestinationMountTableResolver.class.getDeclaredMethod("chooseFirstNamespace", String.class,PathLocation.class)
+    method.setAccessible(true);
+    String cluster = (String)method.invoke(mountTableResolver, "/space", loc);
+    assertEquals("subcluster9", cluster);
+  }
 }
