@@ -208,6 +208,8 @@ public class Balancer {
       + "\n\t[-sortTopNodes]"
       + "\tSort datanodes based on the utilization so "
       + "that highly utilized datanodes get scheduled first."
+      + "\n\t[-limitTopNodes <maxNodesNum>]"
+      + "\tUse the '-sortTopNodes' parameter to limit the number of top nodes"
       + "\n\t[-hotBlockTimeInterval]\tprefer to move cold blocks.";
 
   @VisibleForTesting
@@ -227,6 +229,7 @@ public class Balancer {
   private final long maxSizeToMove;
   private final long defaultBlockSize;
   private final boolean sortTopNodes;
+  private final int limitTopNodesNum;
   private final BalancerMetrics metrics;
 
   // all data node lists
@@ -352,6 +355,7 @@ public class Balancer {
     this.sourceNodes = p.getSourceNodes();
     this.runDuringUpgrade = p.getRunDuringUpgrade();
     this.sortTopNodes = p.getSortTopNodes();
+    this.limitTopNodesNum = p.getLimitTopNodesNum();
 
     this.maxSizeToMove = getLongBytes(conf,
         DFSConfigKeys.DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY,
@@ -452,6 +456,7 @@ public class Balancer {
       }
     }
 
+    int overUtilizedDiffNum = Math.max(overUtilized.size() - limitTopNodesNum, 0);
     if (sortTopNodes) {
       sortOverUtilized(overUtilizedPercentage);
     }
@@ -461,8 +466,8 @@ public class Balancer {
     metrics.setNumOfUnderUtilizedNodes(underUtilized.size());
     
     Preconditions.checkState(dispatcher.getStorageGroupMap().size()
-        == overUtilized.size() + underUtilized.size() + aboveAvgUtilized.size()
-           + belowAvgUtilized.size(),
+            == overUtilizedDiffNum + overUtilized.size() + underUtilized.size()
+            + aboveAvgUtilized.size() + belowAvgUtilized.size(),
         "Mismatched number of storage groups");
     
     // return number of bytes to be moved in order to make the cluster balanced
@@ -470,18 +475,22 @@ public class Balancer {
   }
 
   private void sortOverUtilized(Map<Source, Double> overUtilizedPercentage) {
-    Preconditions.checkState(overUtilized instanceof List,
-        "Collection overUtilized is not a List.");
+    Preconditions.checkState(overUtilized instanceof LinkedList,
+        "Collection overUtilized is not a LinkedList.");
 
     LOG.info("Sorting over-utilized nodes by capacity" +
         " to bring down top used datanode capacity faster");
 
-    List<Source> list = (List<Source>) overUtilized;
+    LinkedList<Source> list = (LinkedList<Source>) overUtilized;
     list.sort(
         (Source source1, Source source2) ->
             (Double.compare(overUtilizedPercentage.get(source2),
                 overUtilizedPercentage.get(source1)))
     );
+    int size = overUtilized.size();
+    for (int i = 0; i < size - limitTopNodesNum; i++) {
+      list.removeLast();
+    }
   }
 
   private static long computeMaxSize2Move(final long capacity, final long remaining,
@@ -1071,6 +1080,12 @@ public class Balancer {
               b.setSortTopNodes(true);
               LOG.info("Balancer will sort nodes by" +
                   " capacity usage percentage to prioritize top used nodes");
+            } else if ("-limitTopNodesNum".equalsIgnoreCase(args[i])) {
+              Preconditions.checkArgument(++i < args.length,
+                  "limitTopNodesNum value is missing: args = " + Arrays.toString(args));
+              int limitNum = Integer.parseInt(args[i]);
+              LOG.info("Using a limitTopNodesNum of {}", limitNum);
+              b.setLimitTopNodesNum(limitNum);
             } else {
               throw new IllegalArgumentException("args = "
                   + Arrays.toString(args));
