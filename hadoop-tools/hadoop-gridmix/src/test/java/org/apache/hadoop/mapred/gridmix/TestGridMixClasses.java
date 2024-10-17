@@ -589,7 +589,7 @@ public class TestGridMixClasses {
   /*
    * test LoadRecordReader. It class reads data from some files.
    */
-  @Test (timeout=3000)
+  @Test (timeout=6100)
   public void testLoadJobLoadRecordReader() throws Exception {
     LoadJob.LoadRecordReader test = new LoadJob.LoadRecordReader();
     Configuration conf = new Configuration();

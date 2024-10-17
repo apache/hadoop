@@ -15,13 +15,13 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
