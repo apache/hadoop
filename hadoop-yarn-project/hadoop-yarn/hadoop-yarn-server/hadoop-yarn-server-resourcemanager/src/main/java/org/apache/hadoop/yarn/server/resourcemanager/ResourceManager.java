@@ -152,7 +152,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The ResourceManager is the main class that is a set of components.
@@ -233,6 +236,8 @@ public class ResourceManager extends CompositeService
   private Configuration conf;
 
   private UserGroupInformation rmLoginUGI;
+
+  private ExecutorService toActiveStandbyExecutor;
 
   public ResourceManager() {
     super("ResourceManager");
@@ -367,6 +372,10 @@ public class ResourceManager extends CompositeService
     rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
 
     registerMXBean();
+
+    if (this.rmContext.isHAEnabled()) {
+      toActiveStandbyExecutor = Executors.newSingleThreadExecutor();
+    }
 
     super.serviceInit(this.conf);
   }
@@ -683,7 +692,6 @@ public class ResourceManager extends CompositeService
     private ContainerAllocationExpirer containerAllocationExpirer;
     private ResourceManager rm;
     private boolean fromActive = false;
-    private StandByTransitionRunnable standByTransitionRunnable;
     private RMNMInfo rmnmInfo;
 
     RMActiveServices(ResourceManager rm) {
@@ -693,7 +701,6 @@ public class ResourceManager extends CompositeService
 
     @Override
     protected void serviceInit(Configuration configuration) throws Exception {
-      standByTransitionRunnable = new StandByTransitionRunnable();
 
       rmSecretManagerService = createRMSecretManagerService();
       addService(rmSecretManagerService);
@@ -845,9 +852,8 @@ public class ResourceManager extends CompositeService
 
       masterService = createApplicationMasterService();
       createAndRegisterOpportunisticDispatcher(masterService);
-      addService(masterService) ;
+      addService(masterService);
       rmContext.setApplicationMasterService(masterService);
-
 
       applicationACLsManager = new ApplicationACLsManager(conf);
 
@@ -1118,38 +1124,46 @@ public class ResourceManager extends CompositeService
     }
   }
 
-    /**
+  /**
    * Transition to standby state in a new thread. The transition operation is
    * asynchronous to avoid deadlock caused by cyclic dependency.
    */
-  private void handleTransitionToStandByInNewThread() {
-    Thread standByTransitionThread =
-        new Thread(activeServices.standByTransitionRunnable);
-    standByTransitionThread.setName("StandByTransitionThread");
-    standByTransitionThread.start();
+  void handleTransitionToStandByInNewThread() {
+    try {
+      Future<TransitionToActiveStandbyRunner.TransitionToActiveStandbyResult> future =
+          toActiveStandbyExecutor.submit(
+              new RMFatalToStandbyRunner(ResourceManager.getClusterTimeStamp()));
+      if (null == future) {
+        throw new Exception("The submission of the RMFatalToStandbyRunner task failed.");
+      }
+    } catch (Exception ex) {
+      LOG.error(FATAL, "Failed to transition RM to Standby mode.", ex);
+      ExitUtil.terminate(1, ex);
+    }
+
   }
 
-  /**
-   * The class to transition RM to standby state. The same
-   * {@link StandByTransitionRunnable} object could be used in multiple threads,
-   * but runs only once. That's because RM can go back to active state after
-   * transition to standby state, the same runnable in the old context can't
-   * transition RM to standby state again. A new runnable is created every time
-   * RM transitions to active state.
-   */
-  private class StandByTransitionRunnable implements Runnable {
-    // The atomic variable to make sure multiple threads with the same runnable
-    // run only once.
-    private final AtomicBoolean hasAlreadyRun = new AtomicBoolean(false);
+  private class RMFatalToStandbyRunner extends TransitionToActiveStandbyRunner {
+
+    RMFatalToStandbyRunner(long clusterTimeStamp) {
+      super(clusterTimeStamp);
+    }
 
     @Override
-    public void run() {
-      // Run this only once, even if multiple threads end up triggering
-      // this simultaneously.
-      if (hasAlreadyRun.getAndSet(true)) {
+    public void doTransaction() {
+      /**
+       * When multiple RMFatalEvents occur simultaneously, it will generate multiple
+       * RMFatalToStandbyRunner tasks, resulting in duplicate executions.
+       * The task epoch which belongs is determined by clusterTimeStamp. If task clusterTimeStamp is
+       * less than RM clusterTimeStamp, the ToStandBy task should not be executed.
+       */
+      if (ResourceManager.getClusterTimeStamp() > this.getClusterTimeStamp()) {
+        LOG.warn("The RMFatalToStandbyRunner task was less than the current epoch "
+                + "and the task not be executed, Current epoch ClusterTimeStamp = "
+                + ResourceManager.getClusterTimeStamp() + ", task epoch ClusterTimeStamp = "
+                + this.getClusterTimeStamp());
         return;
       }
-
       if (rmContext.isHAEnabled()) {
         try {
           // Transition to standby and reinit active services
@@ -1535,6 +1549,9 @@ public class ResourceManager extends CompositeService
     if (zkManager != null) {
       zkManager.close();
     }
+    if (rmContext.isHAEnabled()) {
+      this.stopToActiveStandbyExecutor();
+    }
     transitionToStandby(false);
     rmContext.setHAServiceState(HAServiceState.STOPPING);
     rmStatusInfoBean.unregister();
@@ -1649,6 +1666,10 @@ public class ResourceManager extends CompositeService
   @Private
   WebApp getWebapp() {
     return this.webApp;
+  }
+
+  public ExecutorService getToActiveStandbyExecutor(){
+    return this.toActiveStandbyExecutor;
   }
 
   @Override
@@ -1856,5 +1877,18 @@ public class ResourceManager extends CompositeService
   @Override
   public boolean isSecurityEnabled() {
     return UserGroupInformation.isSecurityEnabled();
+  }
+
+  public void stopToActiveStandbyExecutor() throws InterruptedException {
+    this.toActiveStandbyExecutor.shutdown();
+    //Wait for 1 second. If it is not completed, force interrupt.
+    if (this.toActiveStandbyExecutor.awaitTermination(1, TimeUnit.SECONDS)) {
+      this.toActiveStandbyExecutor.shutdownNow();
+    }
+  }
+
+  @VisibleForTesting
+  public RMFatalToStandbyRunner crateRMFatalToStandbyRunner() {
+    return new RMFatalToStandbyRunner(getClusterTimeStamp());
   }
 }
