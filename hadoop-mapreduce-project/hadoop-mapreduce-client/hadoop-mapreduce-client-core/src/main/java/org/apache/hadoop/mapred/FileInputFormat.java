@@ -470,7 +470,7 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
    */ 
   public static void setInputPaths(JobConf conf, Path... inputPaths) {
     Path path = new Path(conf.getWorkingDirectory(), inputPaths[0]);
-    StringBuffer str = new StringBuffer(StringUtils.escapeString(path.toString()));
+    StringBuilder str = new StringBuilder(StringUtils.escapeString(path.toString()));
     for(int i = 1; i < inputPaths.length;i++) {
       str.append(StringUtils.COMMA_STR);
       path = new Path(conf.getWorkingDirectory(), inputPaths[i]);

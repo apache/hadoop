@@ -725,4 +725,5 @@
   <Match>
     <Package name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema" />
   </Match>
+
 </FindBugsFilter>

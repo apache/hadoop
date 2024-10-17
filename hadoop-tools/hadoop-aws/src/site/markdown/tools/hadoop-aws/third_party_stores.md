@@ -213,7 +213,26 @@ as they keep trying to reconnect to ports which are never going to be available.
     <name>fs.s3a.bucket.nonexistent-bucket-example.connection.establish.timeout</name>
     <value>500</value>
   </property>
+
+  <property>
+    <name>fs.s3a.bucket.nonexistent-bucket-example.retry.http.5xx.errors</name>
+    <value>false</value>
+  </property>
 ```
+
+Setting the option `fs.s3a.retry.http.5xx.errors` to `false` stops the S3A client from treating
+500 and other HTTP 5xx status codes other than 501 and 503 as errors to retry on.
+With AWS S3 they are eventually recovered from.
+On a third-party store they may be cause by other problems, such as:
+
+* General service misconfiguration
+* Running out of disk storage
+* Storage Permissions
+
+Disabling the S3A client's retrying of these errors ensures that failures happen faster;
+the AWS SDK itself still makes a limited attempt to retry.
+
+
 ## Cloudstore's Storediag
 
 There's an external utility, [cloudstore](https://github.com/steveloughran/cloudstore) whose [storediag](https://github.com/steveloughran/cloudstore#command-storediag) exists to debug the connection settings to hadoop cloud storage.

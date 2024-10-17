@@ -28,10 +28,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.aliyun.oss.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.aliyun.oss.statistics.impl.OutputStreamStatistics;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -62,6 +63,7 @@ import static org.apache.hadoop.fs.aliyun.oss.AliyunOSSUtils.intOption;
 import static org.apache.hadoop.fs.aliyun.oss.AliyunOSSUtils.longOption;
 import static org.apache.hadoop.fs.aliyun.oss.AliyunOSSUtils.objectRepresentsDirectory;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
  * Implementation of {@link FileSystem} for <a href="https://oss.aliyun.com">
@@ -781,5 +783,20 @@ public class AliyunOSSFileSystem extends FileSystem {
   @VisibleForTesting
   BlockOutputStreamStatistics getBlockOutputStreamStatistics() {
     return blockOutputStreamStatistics;
+  }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    final Path p = makeQualified(path);
+    String cap = validatePathCapabilityArgs(p, capability);
+    switch (cap) {
+    // block locations are generated locally
+    case CommonPathCapabilities.VIRTUAL_BLOCK_LOCATIONS:
+      return true;
+
+    default:
+      return super.hasPathCapability(p, cap);
+    }
   }
 }

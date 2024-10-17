@@ -122,7 +122,7 @@ public class AbfsClient implements Closeable {
   private AccessTokenProvider tokenProvider;
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
-  private Timer timer = null;
+  private final Timer timer;
   private final String abfsMetricUrl;
   private boolean isMetricCollectionEnabled = false;
   private final MetricFormat metricFormat;
@@ -231,9 +231,9 @@ public class AbfsClient implements Closeable {
         throw new IOException("Exception while initializing metric credentials " + e);
       }
     }
+    this.timer = new Timer(
+        "abfs-timer-client", true);
     if (isMetricCollectionEnabled) {
-      this.timer = new Timer(
-              "abfs-timer-client", true);
       timer.schedule(new TimerTaskImpl(),
           metricIdlePeriod,
           metricIdlePeriod);

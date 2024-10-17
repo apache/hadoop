@@ -185,7 +185,7 @@ public abstract class FileOutputFormat<K, V> implements OutputFormat<K, V> {
    *  is {@link FileOutputCommitter}. If <code>OutputCommitter</code> is not 
    *  a <code>FileOutputCommitter</code>, the task's temporary output
    *  directory is same as {@link #getOutputPath(JobConf)} i.e.
-   *  <tt>${mapreduce.output.fileoutputformat.outputdir}$</tt></p>
+   *  <code>${mapreduce.output.fileoutputformat.outputdir}$</code></p>
    *  
    * <p>Some applications need to create/write-to side-files, which differ from
    * the actual job-outputs.
@@ -194,27 +194,27 @@ public abstract class FileOutputFormat<K, V> implements OutputFormat<K, V> {
    * (running simultaneously e.g. speculative tasks) trying to open/write-to the
    * same file (path) on HDFS. Hence the application-writer will have to pick 
    * unique names per task-attempt (e.g. using the attemptid, say 
-   * <tt>attempt_200709221812_0001_m_000000_0</tt>), not just per TIP.</p> 
+   * <code>attempt_200709221812_0001_m_000000_0</code>), not just per TIP.</p>
    * 
    * <p>To get around this the Map-Reduce framework helps the application-writer 
    * out by maintaining a special 
-   * <tt>${mapreduce.output.fileoutputformat.outputdir}/_temporary/_${taskid}</tt> 
+   * <code>${mapreduce.output.fileoutputformat.outputdir}/_temporary/_${taskid}</code>
    * sub-directory for each task-attempt on HDFS where the output of the 
    * task-attempt goes. On successful completion of the task-attempt the files 
-   * in the <tt>${mapreduce.output.fileoutputformat.outputdir}/_temporary/_${taskid}</tt> (only) 
-   * are <i>promoted</i> to <tt>${mapreduce.output.fileoutputformat.outputdir}</tt>. Of course, the 
+   * in the <code>${mapreduce.output.fileoutputformat.outputdir}/_temporary/_${taskid}</code> (only)
+   * are <i>promoted</i> to <code>${mapreduce.output.fileoutputformat.outputdir}</code>. Of course, the
    * framework discards the sub-directory of unsuccessful task-attempts. This 
    * is completely transparent to the application.</p>
    * 
    * <p>The application-writer can take advantage of this by creating any 
-   * side-files required in <tt>${mapreduce.task.output.dir}</tt> during execution 
+   * side-files required in <code>${mapreduce.task.output.dir}</code> during execution
    * of his reduce-task i.e. via {@link #getWorkOutputPath(JobConf)}, and the 
    * framework will move them out similarly - thus she doesn't have to pick 
    * unique paths per task-attempt.</p>
    * 
-   * <p><i>Note</i>: the value of <tt>${mapreduce.task.output.dir}</tt> during 
+   * <p><i>Note</i>: the value of <code>${mapreduce.task.output.dir}</code> during
    * execution of a particular task-attempt is actually 
-   * <tt>${mapreduce.output.fileoutputformat.outputdir}/_temporary/_{$taskid}</tt>, and this value is 
+   * <code>${mapreduce.output.fileoutputformat.outputdir}/_temporary/_{$taskid}</code>, and this value is
    * set by the map-reduce framework. So, just create any side-files in the 
    * path  returned by {@link #getWorkOutputPath(JobConf)} from map/reduce 
    * task to take advantage of this feature.</p>

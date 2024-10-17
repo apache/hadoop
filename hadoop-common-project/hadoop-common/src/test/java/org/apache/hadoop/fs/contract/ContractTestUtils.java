@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.functional.RemoteIterators;
@@ -651,6 +652,22 @@ public class ContractTestUtils extends Assert {
                                  Path path,
                                  boolean overwrite,
                                  byte[] data) throws IOException {
+    file(fs, path, overwrite, data);
+  }
+
+  /**
+   * Create a file, returning IOStatistics.
+   * @param fs filesystem
+   * @param path path to write
+   * @param overwrite overwrite flag
+   * @param data source dataset. Can be null
+   * @return any IOStatistics from the stream
+   * @throws IOException on any problem
+   */
+  public static IOStatistics file(FileSystem fs,
+      Path path,
+      boolean overwrite,
+      byte[] data) throws IOException {
     FSDataOutputStream stream = fs.create(path, overwrite);
     try {
       if (data != null && data.length > 0) {
@@ -660,6 +677,7 @@ public class ContractTestUtils extends Assert {
     } finally {
       IOUtils.closeStream(stream);
     }
+    return stream.getIOStatistics();
   }
 
   /**
@@ -1904,10 +1922,10 @@ public class ContractTestUtils extends Assert {
      */
     private String dump() {
       StringBuilder sb = new StringBuilder(toString());
-      sb.append("\nFiles:");
+      sb.append("\nDirectories:");
       directories.forEach(p ->
           sb.append("\n  \"").append(p.toString()));
-      sb.append("\nDirectories:");
+      sb.append("\nFiles:");
       files.forEach(p ->
           sb.append("\n  \"").append(p.toString()));
       return sb.toString();

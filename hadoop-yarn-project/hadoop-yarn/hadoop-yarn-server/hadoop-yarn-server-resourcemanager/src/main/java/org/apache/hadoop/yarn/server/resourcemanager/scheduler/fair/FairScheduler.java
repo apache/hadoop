@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationCons
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
@@ -942,6 +943,11 @@ public class FairScheduler extends
                   + " application=" + application.getApplicationId());
         }
         application.showRequests();
+
+        // update the current container ask by considering the already allocated containers
+        // from previous allocation request as well as populate the updatedNewlyAllocatedContainers
+        // list according the to the current ask.
+        autoCorrectContainerAllocation(ask, application);
 
         // Update application requests
         application.updateResourceRequests(ask);
@@ -2037,7 +2043,8 @@ public class FairScheduler extends
   }
 
   @Override
-  public long checkAndGetApplicationLifetime(String queueName, long lifetime) {
+  public long checkAndGetApplicationLifetime(String queueName, long lifetime,
+                                             RMAppImpl app) {
     // Lifetime is the application lifetime by default.
     return lifetime;
   }

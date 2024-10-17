@@ -667,4 +667,23 @@ public class TestDFSNetworkTopology {
         null, excluded, StorageType.DISK);
     assertNull("No node should have been selected.", n);
   }
+
+  @Test
+  public void testChooseRandomWithStorageTypeWithExcludeNodes() {
+    DFSNetworkTopology dfsCluster =
+        DFSNetworkTopology.getInstance(new Configuration());
+    final String[] racks = {"/default/rack1", "/default/rack2"};
+    final String[] hosts = {"host1", "host2"};
+    final StorageType[] types = {StorageType.DISK, StorageType.DISK};
+    final DatanodeStorageInfo[] storages =
+        DFSTestUtil.createDatanodeStorageInfos(2, racks, hosts, types);
+    DatanodeDescriptor[] dns = DFSTestUtil.toDatanodeDescriptor(storages);
+    dfsCluster.add(dns[0]);
+    dfsCluster.add(dns[1]);
+    HashSet<Node> excluded = new HashSet<>();
+    excluded.add(dns[1]);
+    Node n = dfsCluster.chooseRandomWithStorageType("/default/rack1",
+        null, excluded, StorageType.DISK);
+    assertNotNull("/default/rack1/host1 should be selected.", n);
+  }
 }

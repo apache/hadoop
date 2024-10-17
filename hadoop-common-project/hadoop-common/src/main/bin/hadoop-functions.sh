@@ -1569,6 +1569,28 @@ function hadoop_finalize_hadoop_opts
   hadoop_add_param HADOOP_OPTS hadoop.security.logger "-Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER}"
 }
 
+## @description  Finish configuring JPMS that enforced for JDK 17 and higher
+## @description  prior to executing Java
+## @description  keep this list sync with hadoop-project/pom.xml extraJavaTestArgs
+## @audience     private
+## @stability    evolving
+## @replaceable  yes
+function hadoop_finalize_jpms_opts
+{
+    hadoop_add_param HADOOP_OPTS IgnoreUnrecognizedVMOptions "-XX:+IgnoreUnrecognizedVMOptions"
+    hadoop_add_param HADOOP_OPTS open.java.io "--add-opens=java.base/java.io=ALL-UNNAMED"
+    hadoop_add_param HADOOP_OPTS open.java.lang "--add-opens=java.base/java.lang=ALL-UNNAMED"
+    hadoop_add_param HADOOP_OPTS open.java.lang.reflect "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED"
+    hadoop_add_param HADOOP_OPTS open.java.math "--add-opens=java.base/java.math=ALL-UNNAMED"
+    hadoop_add_param HADOOP_OPTS open.java.net "--add-opens=java.base/java.net=ALL-UNNAMED"
+    hadoop_add_param HADOOP_OPTS open.java.text "--add-opens=java.base/java.text=ALL-UNNAMED"
+    hadoop_add_param HADOOP_OPTS open.java.util "--add-opens=java.base/java.util=ALL-UNNAMED"
+    hadoop_add_param HADOOP_OPTS open.java.util.concurrent "--add-opens=java.base/java.util.concurrent=ALL-UNNAMED"
+    hadoop_add_param HADOOP_OPTS open.java.util.zip "--add-opens=java.base/java.util.zip=ALL-UNNAMED"
+    hadoop_add_param HADOOP_OPTS open.sun.security.util "--add-opens=java.base/sun.security.util=ALL-UNNAMED"
+    hadoop_add_param HADOOP_OPTS open.sun.security.x509 "--add-opens=java.base/sun.security.x509=ALL-UNNAMED"
+}
+
 ## @description  Finish Java classpath prior to execution
 ## @audience     private
 ## @stability    evolving
@@ -1597,6 +1619,7 @@ function hadoop_finalize
   hadoop_finalize_libpaths
   hadoop_finalize_hadoop_heap
   hadoop_finalize_hadoop_opts
+  hadoop_finalize_jpms_opts
 
   hadoop_translate_cygwin_path HADOOP_HOME
   hadoop_translate_cygwin_path HADOOP_CONF_DIR

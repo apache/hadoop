@@ -28,6 +28,7 @@ import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_UPLOADS_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.PART_UPLOAD_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 
@@ -78,12 +79,13 @@ public class ITestS3AHugeFilesNoMultipart extends AbstractSTestS3AHugeFiles {
         MIN_MULTIPART_THRESHOLD,
         MULTIPART_UPLOADS_ENABLED,
         MULTIPART_SIZE,
+        PART_UPLOAD_TIMEOUT,
         REQUEST_TIMEOUT);
     conf.setInt(IO_CHUNK_BUFFER_SIZE, 655360);
     conf.setInt(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
     conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
     conf.setBoolean(MULTIPART_UPLOADS_ENABLED, false);
-    conf.set(REQUEST_TIMEOUT, SINGLE_PUT_REQUEST_TIMEOUT);
+    conf.set(PART_UPLOAD_TIMEOUT, SINGLE_PUT_REQUEST_TIMEOUT);
     return conf;
   }
 
