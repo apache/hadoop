@@ -275,6 +275,18 @@ public class MembershipStatsPBImpl extends MembershipStats
   }
 
   @Override
+  public void setNumberOfBadlyDistributedBlocks(long blocks) {
+    this.translator.getBuilder()
+        .setBadlyDistributedBlocks(blocks);
+  }
+
+  @Override
+  public long getNumberOfBadlyDistributedBlocks() {
+    return this.translator.getProtoOrBuilder()
+        .getBadlyDistributedBlocks();
+  }
+
+  @Override
   public void setHighestPriorityLowRedundancyReplicatedBlocks(long blocks) {
     this.translator.getBuilder()
         .setHighestPriorityLowRedundancyReplicatedBlocks(blocks);
