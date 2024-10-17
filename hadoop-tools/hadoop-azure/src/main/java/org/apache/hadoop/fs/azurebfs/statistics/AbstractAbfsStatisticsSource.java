@@ -36,11 +36,11 @@ public abstract class AbstractAbfsStatisticsSource implements IOStatisticsSource
         this.ioStatistics = ioStatistics;
     }
 
-    public void incCounter(String name) {
-        incCounter(name, 1);
+    public void incCounterValue(String name) {
+        incCounterValue(name, 1);
     }
 
-    public void incCounter(String name, long value) {
+    public void incCounterValue(String name, long value) {
         ioStatistics.incrementCounter(name, value);
     }
 
@@ -52,12 +52,28 @@ public abstract class AbstractAbfsStatisticsSource implements IOStatisticsSource
         ioStatistics.setCounter(name, value);
     }
 
+    public void updateCounterValue(String name, long value) {
+        ioStatistics.setCounter(name, lookupCounterValue(name) + value);
+    }
+
+    public void incGaugeValue(String name) {
+        incCounterValue(name, 1);
+    }
+
+    public void incGaugeValue(String name, long value) {
+        ioStatistics.incrementGauge(name, value);
+    }
+
     public Long lookupGaugeValue(String name) {
         return ioStatistics.gauges().getOrDefault(name, 0L);
     }
 
-    public void updateGauge(String name, long value) {
+    public void updateGaugeValue(String name, long value) {
         ioStatistics.setGauge(name, lookupGaugeValue(name) + value);
+    }
+
+    public void setGaugeValue(String name, long value) {
+        ioStatistics.setGauge(name, value);
     }
 
     @Override

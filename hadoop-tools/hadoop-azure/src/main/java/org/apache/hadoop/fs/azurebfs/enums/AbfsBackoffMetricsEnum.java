@@ -20,41 +20,49 @@ package org.apache.hadoop.fs.azurebfs.enums;
 
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.BASE;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.RETRY;
+import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_COUNTER;
+import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_GAUGE;
 
 public enum AbfsBackoffMetricsEnum {
-    NUMBER_OF_IOPS_THROTTLED_REQUESTS("numberOfIOPSThrottledRequests", BASE, "Number of IOPS throttled requests"),
-    NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS("numberOfBandwidthThrottledRequests", BASE, "Number of bandwidth throttled requests"),
-    NUMBER_OF_OTHER_THROTTLED_REQUESTS("numberOfOtherThrottledRequests", BASE, "Number of other throttled requests"),
-    NUMBER_OF_NETWORK_FAILED_REQUESTS("numberOfNetworkFailedRequests", BASE, "Number of network failed requests"),
-    MAX_RETRY_COUNT("maxRetryCount", BASE, "Max retry count"),
-    TOTAL_NUMBER_OF_REQUESTS("totalNumberOfRequests", BASE, "Total number of requests"),
-    NUMBER_OF_REQUESTS_SUCCEEDED_WITHOUT_RETRYING("numberOfRequestsSucceededWithoutRetrying", BASE, "Number of requests succeeded without retrying"),
-    NUMBER_OF_REQUESTS_FAILED("numberOfRequestsFailed", BASE, "Number of requests failed"),
-    NUMBER_OF_REQUESTS_SUCCEEDED("numberOfRequestsSucceeded", RETRY,"Number of requests succeeded"),
-    MIN_BACK_OFF("minBackOff", RETRY, "Minimum backoff"),
-    MAX_BACK_OFF("maxBackOff", RETRY, "Maximum backoff"),
-    TOTAL_BACK_OFF("totalBackoff", RETRY, "Total backoff"),
-    TOTAL_REQUESTS("totalRequests", RETRY, "Total requests");
+    NUMBER_OF_IOPS_THROTTLED_REQUESTS("numberOfIOPSThrottledRequests", "Number of IOPS throttled requests", BASE, TYPE_COUNTER),
+    NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS("numberOfBandwidthThrottledRequests", "Number of bandwidth throttled requests", BASE, TYPE_COUNTER),
+    NUMBER_OF_OTHER_THROTTLED_REQUESTS("numberOfOtherThrottledRequests", "Number of other throttled requests", BASE, TYPE_COUNTER),
+    NUMBER_OF_NETWORK_FAILED_REQUESTS("numberOfNetworkFailedRequests", "Number of network failed requests", BASE, TYPE_COUNTER),
+    MAX_RETRY_COUNT("maxRetryCount", "Max retry count", BASE, TYPE_COUNTER),
+    TOTAL_NUMBER_OF_REQUESTS("totalNumberOfRequests", "Total number of requests", BASE, TYPE_COUNTER),
+    NUMBER_OF_REQUESTS_SUCCEEDED_WITHOUT_RETRYING("numberOfRequestsSucceededWithoutRetrying", "Number of requests succeeded without retrying", BASE, TYPE_COUNTER),
+    NUMBER_OF_REQUESTS_FAILED("numberOfRequestsFailed", "Number of requests failed", BASE, TYPE_COUNTER),
+    NUMBER_OF_REQUESTS_SUCCEEDED("numberOfRequestsSucceeded", "Number of requests succeeded", RETRY, TYPE_COUNTER),
+    MIN_BACK_OFF("minBackOff", "Minimum backoff", RETRY, TYPE_GAUGE),
+    MAX_BACK_OFF("maxBackOff", "Maximum backoff", RETRY, TYPE_GAUGE),
+    TOTAL_BACK_OFF("totalBackoff", "Total backoff", RETRY, TYPE_GAUGE),
+    TOTAL_REQUESTS("totalRequests", "Total requests", RETRY, TYPE_COUNTER);
 
     private final String name;
-    private final String type;
     private final String description;
+    private final String type;
+    private final StatisticTypeEnum statisticType;
 
-    AbfsBackoffMetricsEnum(String name, String type, String description) {
+    AbfsBackoffMetricsEnum(String name, String description, String type, StatisticTypeEnum statisticType) {
         this.name = name;
-        this.type = type;
         this.description = description;
+        this.type = type;
+        this.statisticType = statisticType;
     }
 
     public String getName() {
         return name;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
     public String getType() {
         return type;
     }
 
-    public String getDescription() {
-        return description;
+    public StatisticTypeEnum getStatisticType() {
+        return statisticType;
     }
 }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Arrays;
@@ -25,15 +26,14 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 import org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum;
+import org.apache.hadoop.fs.azurebfs.enums.FileType;
+import org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum;
 import org.apache.hadoop.fs.azurebfs.statistics.AbstractAbfsStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.FILE;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.COLON;
-import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.COUNTER;
-import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.GAUGE;
-import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.PARQUET;
-import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.NON_PARQUET;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.TOTAL_FILES;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.FILE_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.SIZE_READ_BY_FIRST_READ;
@@ -42,18 +42,23 @@ import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.READ
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.READ_COUNT;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.FIRST_OFFSET_DIFF;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.SECOND_OFFSET_DIFF;
+import static org.apache.hadoop.fs.azurebfs.enums.FileType.PARQUET;
+import static org.apache.hadoop.fs.azurebfs.enums.FileType.NON_PARQUET;
+import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_COUNTER;
+import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_GAUGE;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
     private static final String FOOTER_LENGTH = "20";
+    private static final List<FileType> FILE_TYPE_LIST = Arrays.asList(PARQUET, NON_PARQUET);
 
-    private static class CheckFileType {
+    private static final class CheckFileType {
         private final AtomicBoolean collectMetrics;
         private final AtomicBoolean collectMetricsForNextRead;
         private final AtomicBoolean collectLenMetrics;
         private final AtomicLong readCount;
         private final AtomicLong offsetOfFirstRead;
-        private Boolean isParquet = null;
+        private FileType fileType = null;
         private String sizeReadByFirstRead;
         private String offsetDiffBetweenFirstAndSecondRead;
 
@@ -65,12 +70,12 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
             offsetOfFirstRead = new AtomicLong(0);
         }
 
-        private boolean isParquet() {
-            if (isParquet != null) return isParquet;
-            isParquet = collectMetrics.get() && readCount.get() >= 2 &&
-                    haveEqualValues(sizeReadByFirstRead) &&
-                    haveEqualValues(offsetDiffBetweenFirstAndSecondRead);
-            return isParquet;
+        private void updateFileType() {
+            if (fileType == null) {
+                fileType = collectMetrics.get() && readCount.get() >= 2 &&
+                        haveEqualValues(sizeReadByFirstRead) &&
+                        haveEqualValues(offsetDiffBetweenFirstAndSecondRead) ? PARQUET : NON_PARQUET;
+            }
         }
 
         private boolean haveEqualValues(String value) {
@@ -133,46 +138,49 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         private String getOffsetDiffBetweenFirstAndSecondRead() {
             return offsetDiffBetweenFirstAndSecondRead;
         }
+
+        private FileType getFileType() {
+            return fileType;
+        }
     }
 
     private final Map<String, CheckFileType> checkFileMap = new HashMap<>();
 
     public AbfsReadFooterMetrics() {
         IOStatisticsStore ioStatisticsStore = iostatisticsStore()
-                .withCounters(getMetricNames(COUNTER))
-                .withGauges(getMetricNames(GAUGE))
+                .withCounters(getMetricNames(TYPE_COUNTER))
+                .withGauges(getMetricNames(TYPE_GAUGE))
                 .build();
         setIOStatistics(ioStatisticsStore);
     }
 
-    private String[] getMetricNames(String type) {
+    private String[] getMetricNames(StatisticTypeEnum type) {
         return Arrays.stream(AbfsReadFooterMetricsEnum.values())
-                .filter(metric -> metric.getType().equals(type))
-                .flatMap(metric -> Stream.of(PARQUET + COLON + metric.getName(), NON_PARQUET + COLON + metric.getName()))
+                .filter(readFooterMetricsEnum -> readFooterMetricsEnum.getStatisticType().equals(type))
+                .flatMap(readFooterMetricsEnum ->
+                        FILE.equals(readFooterMetricsEnum.getType()) ?
+                                FILE_TYPE_LIST.stream().map(fileType -> fileType + COLON + readFooterMetricsEnum.getName()) :
+                                Stream.of(readFooterMetricsEnum.getName()))
                 .toArray(String[]::new);
     }
 
-    private long getMetricValue(String fileType, AbfsReadFooterMetricsEnum metric) {
-        switch (metric.getType()) {
-            case COUNTER:
+    private long getMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metric) {
+        switch (metric.getStatisticType()) {
+            case TYPE_COUNTER:
                 return lookupCounterValue(fileType + COLON + metric.getName());
-            case GAUGE:
+            case TYPE_GAUGE:
                 return lookupGaugeValue(fileType + COLON + metric.getName());
             default:
                 return 0;
         }
     }
 
-    public void updateMetric(String fileType, AbfsReadFooterMetricsEnum metric, long value) {
-        updateGauge(fileType + COLON + metric.getName(), value);
+    public void updateMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metric, long value) {
+        updateGaugeValue(fileType + COLON + metric.getName(), value);
     }
 
-    public void incrementMetricValue(String fileType, AbfsReadFooterMetricsEnum metricName) {
-        incCounter(fileType + COLON + metricName.getName());
-    }
-
-    public void incrementMetricValue(String fileType, AbfsReadFooterMetricsEnum metricName, long value) {
-        incCounter(fileType + COLON + metricName.getName(), value);
+    public void incrementMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metricName) {
+        incCounterValue(fileType + COLON + metricName.getName());
     }
 
     public Long getTotalFiles() {
@@ -220,14 +228,15 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
             long offsetDiff = Math.abs(nextReadPos - checkFileType.getOffsetOfFirstRead());
             checkFileType.setOffsetDiffBetweenFirstAndSecondRead(len + "_" + offsetDiff);
             checkFileType.setCollectLenMetrics(true);
+            checkFileType.updateFileType();
             updateMetricsData(checkFileType, len, contentLength);
         }
     }
 
     private void handleFurtherRead(CheckFileType checkFileType, int len) {
-        if (checkFileType.getCollectLenMetrics()) {
-            String fileType = checkFileType.isParquet() ? PARQUET : NON_PARQUET;
-            updateMetric(fileType, READ_LEN_REQUESTED, len);
+        if (checkFileType.getCollectLenMetrics() && checkFileType.getFileType() != null) {
+            FileType fileType = checkFileType.getFileType();
+            updateMetricValue(fileType, READ_LEN_REQUESTED, len);
             incrementMetricValue(fileType, READ_COUNT);
         }
     }
@@ -236,42 +245,41 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         long sizeReadByFirstRead = Long.parseLong(checkFileType.getSizeReadByFirstRead().split("_")[0]);
         long firstOffsetDiff = Long.parseLong(checkFileType.getSizeReadByFirstRead().split("_")[1]);
         long secondOffsetDiff = Long.parseLong(checkFileType.getOffsetDiffBetweenFirstAndSecondRead().split("_")[1]);
-        String fileType = checkFileType.isParquet() ? PARQUET : NON_PARQUET;
+        FileType fileType = checkFileType.getFileType();
 
-        incrementMetricValue(fileType, READ_COUNT, 2);
-        updateMetric(fileType, READ_LEN_REQUESTED, len + sizeReadByFirstRead);
-        updateMetric(fileType, FILE_LENGTH, contentLength);
-        updateMetric(fileType, SIZE_READ_BY_FIRST_READ, sizeReadByFirstRead);
-        updateMetric(fileType, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, len);
-        updateMetric(fileType, FIRST_OFFSET_DIFF, firstOffsetDiff);
-        updateMetric(fileType, SECOND_OFFSET_DIFF, secondOffsetDiff);
+        updateMetricValue(fileType, READ_LEN_REQUESTED, len + sizeReadByFirstRead);
+        updateMetricValue(fileType, FILE_LENGTH, contentLength);
+        updateMetricValue(fileType, SIZE_READ_BY_FIRST_READ, sizeReadByFirstRead);
+        updateMetricValue(fileType, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, len);
+        updateMetricValue(fileType, FIRST_OFFSET_DIFF, firstOffsetDiff);
+        updateMetricValue(fileType, SECOND_OFFSET_DIFF, secondOffsetDiff);
         incrementMetricValue(fileType, TOTAL_FILES);
     }
 
-    public String getReadFooterMetrics(String fileType) {
+    public String getReadFooterMetrics(FileType fileType) {
         StringBuilder readFooterMetric = new StringBuilder();
         appendMetrics(readFooterMetric, fileType);
         return readFooterMetric.toString();
     }
 
-    private void appendMetrics(StringBuilder metricBuilder, String fileType) {
+    private void appendMetrics(StringBuilder metricBuilder, FileType fileType) {
         long totalFiles = getMetricValue(fileType, TOTAL_FILES);
         if (totalFiles <= 0) return;
 
         long readCount = getMetricValue(fileType, READ_COUNT);
-        String sizeReadByFirstRead = String.format("%.3f",getMetricValue(fileType, SIZE_READ_BY_FIRST_READ) / (double) totalFiles);
-        String offsetDiffBetweenFirstAndSecondRead = String.format("%.3f",getMetricValue(fileType, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ) / (double) totalFiles);
+        String sizeReadByFirstRead = String.format("%.3f", getMetricValue(fileType, SIZE_READ_BY_FIRST_READ) / (double) totalFiles);
+        String offsetDiffBetweenFirstAndSecondRead = String.format("%.3f", getMetricValue(fileType, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ) / (double) totalFiles);
 
         if (NON_PARQUET.equals(fileType)) {
-            sizeReadByFirstRead += "_" + String.format("%.3f",getMetricValue(fileType, FIRST_OFFSET_DIFF) / (double) totalFiles);
-            offsetDiffBetweenFirstAndSecondRead += "_" + String.format("%.3f",getMetricValue(fileType, SECOND_OFFSET_DIFF) / (double) totalFiles);
+            sizeReadByFirstRead += "_" + String.format("%.3f", getMetricValue(fileType, FIRST_OFFSET_DIFF) / (double) totalFiles);
+            offsetDiffBetweenFirstAndSecondRead += "_" + String.format("%.3f", getMetricValue(fileType, SECOND_OFFSET_DIFF) / (double) totalFiles);
         }
 
         metricBuilder.append("$").append(fileType)
                 .append(":$FR=").append(sizeReadByFirstRead)
                 .append("$SR=").append(offsetDiffBetweenFirstAndSecondRead)
                 .append("$FL=").append(String.format("%.3f", getMetricValue(fileType, FILE_LENGTH) / (double) totalFiles))
-                .append("$RL=").append(String.format("%.3f", getMetricValue(fileType, READ_LEN_REQUESTED) / (double) (readCount - 2 * totalFiles)));
+                .append("$RL=").append(String.format("%.3f", getMetricValue(fileType, READ_LEN_REQUESTED) / (double) readCount));
     }
 
     @Override

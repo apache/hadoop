@@ -26,8 +26,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.M
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
-import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.NON_PARQUET;
-import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.PARQUET;
+import static org.apache.hadoop.fs.azurebfs.enums.FileType.NON_PARQUET;
+import static org.apache.hadoop.fs.azurebfs.enums.FileType.PARQUET;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.FILE_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.READ_COUNT;
@@ -185,11 +185,11 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
    */
   private AbfsReadFooterMetrics getNonParquetMetrics() {
     AbfsReadFooterMetrics nonParquetMetrics = new AbfsReadFooterMetrics();
-    nonParquetMetrics.incrementMetricValue(NON_PARQUET, READ_COUNT, 10);;
-    nonParquetMetrics.updateMetric(NON_PARQUET, FILE_LENGTH, 32768);
-    nonParquetMetrics.updateMetric(NON_PARQUET, READ_LEN_REQUESTED, 16384);
-    nonParquetMetrics.updateMetric(NON_PARQUET, SIZE_READ_BY_FIRST_READ, 16384);
-    nonParquetMetrics.updateMetric(NON_PARQUET, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, 1);
+    nonParquetMetrics.incrementMetricValue(NON_PARQUET, READ_COUNT);
+    nonParquetMetrics.updateMetricValue(NON_PARQUET, FILE_LENGTH, 32768);
+    nonParquetMetrics.updateMetricValue(NON_PARQUET, READ_LEN_REQUESTED, 16384);
+    nonParquetMetrics.updateMetricValue(NON_PARQUET, SIZE_READ_BY_FIRST_READ, 16384);
+    nonParquetMetrics.updateMetricValue(NON_PARQUET, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, 1);
     nonParquetMetrics.incrementMetricValue(NON_PARQUET, TOTAL_FILES);
     return nonParquetMetrics;
   }
@@ -199,11 +199,11 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
    */
   private AbfsReadFooterMetrics getParquetMetrics() {
     AbfsReadFooterMetrics parquetMetrics = new AbfsReadFooterMetrics();
-    parquetMetrics.incrementMetricValue(PARQUET, READ_COUNT, 10);;
-    parquetMetrics.updateMetric(PARQUET, FILE_LENGTH, 8388608);
-    parquetMetrics.updateMetric(PARQUET, READ_LEN_REQUESTED, 8388608);
-    parquetMetrics.updateMetric(PARQUET, SIZE_READ_BY_FIRST_READ, 1024);
-    parquetMetrics.updateMetric(PARQUET, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, 4096);
+    parquetMetrics.incrementMetricValue(PARQUET, READ_COUNT);;
+    parquetMetrics.updateMetricValue(PARQUET, FILE_LENGTH, 8388608);
+    parquetMetrics.updateMetricValue(PARQUET, READ_LEN_REQUESTED, 8388608);
+    parquetMetrics.updateMetricValue(PARQUET, SIZE_READ_BY_FIRST_READ, 1024);
+    parquetMetrics.updateMetricValue(PARQUET, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, 4096);
     parquetMetrics.incrementMetricValue(PARQUET, TOTAL_FILES);
     return parquetMetrics;
   }
