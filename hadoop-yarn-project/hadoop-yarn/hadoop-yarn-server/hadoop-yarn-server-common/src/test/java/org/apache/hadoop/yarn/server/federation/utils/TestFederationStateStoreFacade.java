@@ -27,6 +27,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.federation.cache.FederationCache;
+import org.apache.hadoop.yarn.server.federation.cache.FederationCache.ApplicationHomeSubClusterCacheResponse;
+import org.apache.hadoop.yarn.server.federation.cache.FederationCache.CacheRequest;
+import org.apache.hadoop.yarn.server.federation.cache.FederationJCache;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
@@ -40,6 +44,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import javax.cache.Cache;
 
 /**
  * Unit tests for FederationStateStoreFacade.
@@ -64,12 +70,14 @@ public class TestFederationStateStoreFacade {
   private FederationStateStoreTestUtil stateStoreTestUtil;
   private FederationStateStoreFacade facade =
       FederationStateStoreFacade.getInstance();
+  private Boolean isCachingEnabled;
 
   public TestFederationStateStoreFacade(Boolean isCachingEnabled) {
     conf = new Configuration();
     if (!(isCachingEnabled.booleanValue())) {
       conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
     }
+    this.isCachingEnabled = isCachingEnabled;
   }
 
   @Before
@@ -206,4 +214,31 @@ public class TestFederationStateStoreFacade {
     Assert.assertEquals(subClusterId1, result);
   }
 
+  @Test
+  public void testGetApplicationHomeSubClusterCache() throws Exception {
+    ApplicationId appId = ApplicationId.newInstance(clusterTs, numApps + 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("Home1");
+
+    ApplicationHomeSubCluster appHomeSubCluster =
+        ApplicationHomeSubCluster.newInstance(appId, subClusterId1);
+    SubClusterId subClusterIdAdd = facade.addApplicationHomeSubCluster(appHomeSubCluster);
+
+    SubClusterId subClusterIdByFacade = facade.getApplicationHomeSubCluster(appId);
+    Assert.assertEquals(subClusterIdByFacade, subClusterIdAdd);
+    Assert.assertEquals(subClusterId1, subClusterIdAdd);
+
+    if (isCachingEnabled.booleanValue()) {
+      FederationCache fedCache = facade.getFederationCache();
+      assert fedCache instanceof FederationJCache;
+      FederationJCache jCache = (FederationJCache) fedCache;
+      String cacheKey = jCache.getAppHomeSubClusterCacheKey(appId);
+      Cache<String, CacheRequest<String, ?>> cache = jCache.getCache();
+      CacheRequest<String, ?> cacheRequest = cache.get(cacheKey);
+      ApplicationHomeSubClusterCacheResponse response =
+          ApplicationHomeSubClusterCacheResponse.class.cast(cacheRequest.getValue());
+      SubClusterId subClusterIdByCache = response.getItem();
+      Assert.assertEquals(subClusterIdByFacade, subClusterIdByCache);
+      Assert.assertEquals(subClusterId1, subClusterIdByCache);
+    }
+  }
 }
