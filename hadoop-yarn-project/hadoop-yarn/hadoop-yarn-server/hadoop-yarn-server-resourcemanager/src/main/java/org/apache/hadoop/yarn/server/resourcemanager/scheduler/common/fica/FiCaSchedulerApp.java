@@ -187,17 +187,17 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       return;
     }
 
-    String policyClassName = null;
+    String policyName = null;
     if (scheduler instanceof CapacityScheduler) {
-      policyClassName = getCSLeafQueue().getMultiNodeSortingPolicyClassName();
+      policyName = getCSLeafQueue().getMultiNodeSortingPolicyName();
     }
 
     if (!appSchedulingInfo.getApplicationSchedulingEnvs().containsKey(
-        ApplicationSchedulingConfig.ENV_MULTI_NODE_SORTING_POLICY_CLASS)
-        && policyClassName != null) {
+        ApplicationSchedulingConfig.ENV_MULTI_NODE_SORTING_POLICY_NAME)
+        && policyName != null) {
       appSchedulingInfo.getApplicationSchedulingEnvs().put(
-          ApplicationSchedulingConfig.ENV_MULTI_NODE_SORTING_POLICY_CLASS,
-          policyClassName);
+          ApplicationSchedulingConfig.ENV_MULTI_NODE_SORTING_POLICY_NAME,
+          policyName);
     }
   }
 

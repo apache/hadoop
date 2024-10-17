@@ -2915,11 +2915,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
   }
 
+  public static final String MULTI_NODE_SORTING_POLICY_SUFFIX =
+      "multi-node-sorting.policy";
+
   @Private public static final String MULTI_NODE_SORTING_POLICIES =
       PREFIX + "multi-node-sorting.policy.names";
 
   @Private public static final String MULTI_NODE_SORTING_POLICY_NAME =
-      PREFIX + "multi-node-sorting.policy";
+      PREFIX + MULTI_NODE_SORTING_POLICY_SUFFIX;
 
   public static final String MULTI_NODE_SORTING_POLICY_CURRENT_NAME =
       MULTI_NODE_SORTING_POLICY_NAME + ".current-name";
@@ -2946,16 +2949,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       QueuePath queue) {
 
     String policyName = get(
-        getQueuePrefix(queue) + "multi-node-sorting.policy");
+        getQueuePrefix(queue) + MULTI_NODE_SORTING_POLICY_SUFFIX);
 
     if (policyName == null) {
       policyName = get(MULTI_NODE_SORTING_POLICY_NAME);
-    }
-
-    // If node sorting policy is not configured in queue and in cluster level,
-    // it is been assumed that this queue is not enabled with multi-node lookup.
-    if (policyName == null || policyName.isEmpty()) {
-      return null;
     }
 
     return policyName;

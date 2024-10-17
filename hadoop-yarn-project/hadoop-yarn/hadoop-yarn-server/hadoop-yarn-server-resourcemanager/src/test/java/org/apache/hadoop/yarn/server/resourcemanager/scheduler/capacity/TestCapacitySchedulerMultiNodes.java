@@ -19,8 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.waitforNMRegistered;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.getQueuePrefix;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -30,7 +32,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 
@@ -41,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.policy.MultiComparatorPolicy;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -573,15 +576,26 @@ public class TestCapacitySchedulerMultiNodes {
   public void testMultiComparatorPolicy() throws Exception {
     /*
      * init conf
-     * - configure 2 policies with EnhancedMultiNodeLookupPolicy class
-     *      default policy: use default comparator(ALLOCATED_RESOURCE,NODE_ID)
+     * - configure 2 policies with MultiComparatorPolicy class
+     *      default: use default comparator
+     *               (DOMINANT_RESOURCE_RATIO:ASC,NODE_ID:ASC)
+     *      test: use custom comparator (ALLOCATED_RESOURCE:ASC,NODE_ID:ASC)
      * - enable synchronous refresh (set sorting-interval-ms to be 0)
-
+     * - configure queue "test" to use test policy.
      */
-    String defaultPolicyName = "default",
-        allocatedResourcePolicyName = "allocated-resource-based",
+    String defaultQueueName = "default", defaultPolicyName = "default",
+        testQueueName = "test", testPolicyName = "test",
         enhancedPolicyClass = MultiComparatorPolicy.class.getName();
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    // init queues
+    conf.setQueues(ROOT, new String[]{defaultQueueName, testQueueName});
+    QueuePath defaultQueuePath =
+        QueuePath.createFromQueues(ROOT.getFullPath(), defaultQueueName);
+    QueuePath testQueuePath =
+        QueuePath.createFromQueues(ROOT.getFullPath(), testQueueName);
+    conf.setCapacity(defaultQueuePath, 50.0f);
+    conf.setCapacity(testQueuePath, 50.0f);
+    conf.setMaximumApplicationMasterResourcePercent(1.0f);
     conf.set(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
         DominantResourceCalculator.class.getName());
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -589,23 +603,26 @@ public class TestCapacitySchedulerMultiNodes {
     conf.setBoolean(CapacitySchedulerConfiguration.MULTI_NODE_PLACEMENT_ENABLED,
         true);
     conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICIES,
-        defaultPolicyName + "," + allocatedResourcePolicyName);
+        defaultPolicyName + "," + testPolicyName);
     conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
         + defaultPolicyName + ".class", enhancedPolicyClass);
     conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
         + defaultPolicyName + DOT
         + CapacitySchedulerConfiguration.SORTING_INTERVAL_MS_SUFFIX, "0");
     conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
-        + allocatedResourcePolicyName + DOT
+        + testPolicyName + DOT
         + CapacitySchedulerConfiguration.SORTING_INTERVAL_MS_SUFFIX, "0");
     conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
-        + allocatedResourcePolicyName + ".class", enhancedPolicyClass);
+        + testPolicyName + ".class", enhancedPolicyClass);
     conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
-            + allocatedResourcePolicyName + DOT
+            + testPolicyName + DOT
             + MultiComparatorPolicy.COMPARATORS_CONF_KEY,
         "ALLOCATED_RESOURCE:ASC,NODE_ID");
     conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME,
         defaultPolicyName);
+    conf.set(getQueuePrefix(testQueuePath)
+            + CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_SUFFIX,
+        testPolicyName);
     conf.set(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, "600000");
     // mock RM and 4 NMs
     // nm1, nm2, nm3 have 10 GB memory and 10 vcores each
@@ -622,14 +639,14 @@ public class TestCapacitySchedulerMultiNodes {
         .getMultiNodeSortingManager();
 
     // allocate for nodes
-    Function<Resource, Void> launchAndRegisterAM = (resource) -> {
+    BiFunction<String, Resource, Void> launchAndRegisterAM = (queue, resource) -> {
       try {
         MockRMAppSubmissionData data1 =
             MockRMAppSubmissionData.Builder.createWithResource(
                 resource, rm)
             .withAppName("app-1")
             .withAcls(null)
-            .withQueue("default")
+            .withQueue(queue)
             .withUnmanagedAM(false)
             .build();
         RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
@@ -644,10 +661,10 @@ public class TestCapacitySchedulerMultiNodes {
       nm2AllocatedResource = Resource.newInstance(2*GB, 2),
       nm3AllocatedResource = Resource.newInstance(3*GB, 3),
       nm4AllocatedResource = Resource.newInstance(4*GB, 4);
-    launchAndRegisterAM.apply(nm1AllocatedResource);
-    launchAndRegisterAM.apply(nm2AllocatedResource);
-    launchAndRegisterAM.apply(nm3AllocatedResource);
-    launchAndRegisterAM.apply(nm4AllocatedResource);
+    launchAndRegisterAM.apply(defaultQueueName, nm1AllocatedResource);
+    launchAndRegisterAM.apply(defaultQueueName, nm2AllocatedResource);
+    launchAndRegisterAM.apply(defaultQueueName, nm3AllocatedResource);
+    launchAndRegisterAM.apply(defaultQueueName, nm4AllocatedResource);
     // verify that four containers will be allocated sequentially to
     // nm1, nm2, nm3, nm4 according to the default policy.
     Assert.assertEquals(
@@ -663,7 +680,7 @@ public class TestCapacitySchedulerMultiNodes {
         rm.getResourceScheduler().getSchedulerNode(nm4.getNodeId())
             .getAllocatedResource(), Resource.newInstance(4 * GB, 4));
 
-    // for default policy, node4 with least dominant-resource-ratio
+    // for default policy, nm4 with least dominant-resource-ratio
     // should be chosen at first.
     MultiNodeSorter<SchedulerNode> sorter = mns
         .getMultiNodePolicy(defaultPolicyName);
@@ -673,14 +690,24 @@ public class TestCapacitySchedulerMultiNodes {
     Assert.assertEquals(4, nodes.size());
     Assert.assertEquals(nm4.getNodeId(), nodes.iterator().next().getNodeID());
 
-    // for allocatedResource policy, node1 with least allocated-resource
+    // for test policy, nm1 with least allocated-resource
     // should be chosen at first
     sorter = mns
-        .getMultiNodePolicy(allocatedResourcePolicyName);
+        .getMultiNodePolicy(testPolicyName);
     sorter.reSortClusterNodes();
     nodes = sorter.getMultiNodeLookupPolicy().getNodesPerPartition("");
     Assert.assertEquals(4, nodes.size());
     Assert.assertEquals(nm1.getNodeId(), nodes.iterator().next().getNodeID());
+
+    // schedule for app in test queue with policy=test,
+    // verify that nm1 will be chosen
+    Resource nm1AddResource = Resource.newInstance(6 * GB, 4);
+    launchAndRegisterAM.apply(testQueuePath.getLeafName(), nm1AddResource);
+    Resource expectedAllocatedResourceForNM1 =
+        Resources.add(nm1AllocatedResource, nm1AddResource);
+    Assert.assertEquals(
+        rm.getResourceScheduler().getSchedulerNode(nm1.getNodeId())
+            .getAllocatedResource(), expectedAllocatedResourceForNM1);
 
     rm.stop();
   }
