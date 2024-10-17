@@ -119,21 +119,9 @@ public class AvailableSpaceResolver
   protected String chooseFirstNamespace(String path, PathLocation loc) {
     Map<String, SubclusterAvailableSpace> subclusterInfo =
         getSubclusterMapping();
-    List<SubclusterAvailableSpace> subclusterList = new LinkedList<>(
-        subclusterInfo.values());
-
-    if (loc != null && loc.getDestinations() != null) {
-        Set<String> locSet = new HashSet<String>();
-        for (RemoteLocation dest : loc.getDestinations()) {
-            locSet.add(dest.getNameserviceId());
-        }
-        List<SubclusterAvailableSpace> filteredSubclusterList = new LinkedList<>();
-        for (SubclusterAvailableSpace cluster : subclusterList) {
-            if (locSet.contains(cluster.getNameserviceId())) {
-                filteredSubclusterList.add(cluster);
-            }
-        }
-        subclusterList = filteredSubclusterList;
+    List<SubclusterAvailableSpace> subclusterList = new LinkedList<>();
+    for (RemoteLocation dest : loc.getDestinations()) {
+      subclusterList.add(subclusterInfo.get(dest.getNameserviceId()));
     }
     Collections.sort(subclusterList, comparator);
 
