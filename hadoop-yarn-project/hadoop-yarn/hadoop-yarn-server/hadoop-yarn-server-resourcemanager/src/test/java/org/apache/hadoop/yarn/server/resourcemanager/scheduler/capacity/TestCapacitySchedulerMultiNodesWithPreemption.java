@@ -58,6 +58,7 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestCapacitySchedulerMultiNodesWithPreemption.class);
   private CapacitySchedulerConfiguration conf;
+  private static final String POLICY_NAME = "resource-based";
   private static final String POLICY_CLASS_NAME =
       "org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement."
       + "ResourceUsageMultiNodeLookupPolicy";
@@ -72,13 +73,11 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
     conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICIES,
-        "resource-based");
+        POLICY_NAME);
     conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME,
-        "resource-based");
-    String policyName =
-        CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
-        + ".resource-based" + ".class";
-    conf.set(policyName, POLICY_CLASS_NAME);
+        POLICY_NAME);
+    conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
+        + "." + POLICY_NAME + ".class", POLICY_CLASS_NAME);
     conf.setBoolean(CapacitySchedulerConfiguration.MULTI_NODE_PLACEMENT_ENABLED,
         true);
     // Set this to avoid the AM pending issue
@@ -129,7 +128,7 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
     MultiNodeSortingManager<SchedulerNode> mns = rm.getRMContext()
         .getMultiNodeSortingManager();
     MultiNodeSorter<SchedulerNode> sorter = mns
-        .getMultiNodePolicy(POLICY_CLASS_NAME);
+        .getMultiNodePolicy(POLICY_NAME);
     sorter.reSortClusterNodes();
 
     // Step 1: Launch an App in Default Queue which utilizes the entire cluster

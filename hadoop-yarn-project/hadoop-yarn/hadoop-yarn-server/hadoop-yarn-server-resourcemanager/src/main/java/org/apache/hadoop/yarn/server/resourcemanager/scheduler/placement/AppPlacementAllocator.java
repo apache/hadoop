@@ -227,7 +227,7 @@ public abstract class AppPlacementAllocator<N extends SchedulerNode> {
     this.schedulerRequestKey = schedulerRequestKey;
     multiNodeSortPolicyName = appSchedulingInfo
         .getApplicationSchedulingEnvs().get(
-        ApplicationSchedulingConfig.ENV_MULTI_NODE_SORTING_POLICY_CLASS);
+        ApplicationSchedulingConfig.ENV_MULTI_NODE_SORTING_POLICY_NAME);
     multiNodeSortingManager = (MultiNodeSortingManager<N>) rmContext
         .getMultiNodeSortingManager();
     if (LOG.isDebugEnabled()) {

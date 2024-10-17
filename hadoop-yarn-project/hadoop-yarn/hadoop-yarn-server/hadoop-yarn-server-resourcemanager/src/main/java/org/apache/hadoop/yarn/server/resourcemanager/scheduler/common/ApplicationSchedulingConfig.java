@@ -34,6 +34,6 @@ public class ApplicationSchedulingConfig {
       DEFAULT_APPLICATION_PLACEMENT_TYPE_CLASS = LocalityAppPlacementAllocator.class;
 
   @InterfaceAudience.Private
-  public static final String ENV_MULTI_NODE_SORTING_POLICY_CLASS =
-      "MULTI_NODE_SORTING_POLICY_CLASS";
+  public static final String ENV_MULTI_NODE_SORTING_POLICY_NAME =
+      "MULTI_NODE_SORTING_POLICY_NAME";
 }
