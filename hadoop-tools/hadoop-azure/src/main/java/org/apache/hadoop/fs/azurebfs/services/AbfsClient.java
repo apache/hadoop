@@ -89,6 +89,7 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
  */
 public class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
+  public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
@@ -834,6 +835,15 @@ public class AbfsClient implements Closeable {
       }
     }
 
+    // Check if the retry is with "Expect: 100-continue" header being present in the previous request.
+    if (reqParams.isRetryDueToExpect()) {
+      String userAgentRetry = userAgent;
+      // Remove the specific marker related to "Expect: 100-continue" from the User-Agent string.
+      userAgentRetry = userAgentRetry.replace(HUNDRED_CONTINUE_USER_AGENT, EMPTY_STRING);
+      requestHeaders.removeIf(header -> header.getName().equalsIgnoreCase(USER_AGENT));
+      requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgentRetry));
+    }
+
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
@@ -863,6 +873,7 @@ public class AbfsClient implements Closeable {
       if (checkUserError(responseStatusCode) && reqParams.isExpectHeaderEnabled()) {
         LOG.debug("User error, retrying without 100 continue enabled for the given path {}", path);
         reqParams.setExpectHeaderEnabled(false);
+        reqParams.setRetryDueToExpect(true);
         return this.append(path, buffer, reqParams, cachedSasToken,
             contextEncryptionAdapter, tracingContext);
       }
@@ -1481,6 +1492,12 @@ public class AbfsClient implements Closeable {
     appendIfNotEmpty(sb, sslProviderName, true);
     appendIfNotEmpty(sb,
         ExtensionHelper.getUserAgentSuffix(tokenProvider, EMPTY_STRING), true);
+
+    if (abfsConfiguration.isExpectHeaderEnabled()) {
+      sb.append(SINGLE_WHITE_SPACE);
+      sb.append(HUNDRED_CONTINUE);
+      sb.append(SEMICOLON);
+    }
 
     sb.append(SINGLE_WHITE_SPACE);
     sb.append(abfsConfiguration.getClusterName());
