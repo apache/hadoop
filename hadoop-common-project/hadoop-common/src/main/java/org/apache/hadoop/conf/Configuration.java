@@ -84,7 +84,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.apache.commons.collections.map.UnmodifiableMap;
+import org.apache.commons.collections4.map.UnmodifiableMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -511,9 +511,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         }
       }
       this.deprecatedKeyMap =
-        UnmodifiableMap.decorate(newDeprecatedKeyMap);
+        UnmodifiableMap.unmodifiableMap(newDeprecatedKeyMap);
       this.reverseDeprecatedKeyMap =
-        UnmodifiableMap.decorate(newReverseDeprecatedKeyMap);
+        UnmodifiableMap.unmodifiableMap(newReverseDeprecatedKeyMap);
     }
 
     Map<String, DeprecatedKeyInfo> getDeprecatedKeyMap() {
