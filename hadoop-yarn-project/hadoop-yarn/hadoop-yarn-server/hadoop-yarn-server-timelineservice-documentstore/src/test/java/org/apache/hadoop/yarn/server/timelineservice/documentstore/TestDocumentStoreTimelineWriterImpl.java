@@ -27,13 +27,16 @@ import org.apache.hadoop.yarn.server.timelineservice.documentstore.lib.DocumentS
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.TimelineDocument;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.writer.DocumentStoreWriter;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.writer.DummyDocumentStoreWriter;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;

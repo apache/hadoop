@@ -30,6 +30,7 @@ import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 

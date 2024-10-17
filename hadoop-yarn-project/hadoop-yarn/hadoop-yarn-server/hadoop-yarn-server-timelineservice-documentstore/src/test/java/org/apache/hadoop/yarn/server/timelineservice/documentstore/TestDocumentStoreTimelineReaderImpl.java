@@ -37,15 +37,16 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefi
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.TimelineDocument;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.entity.TimelineEntityDocument;
+
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.when;
+
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
@@ -54,6 +55,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
 /**
  * Test case for {@link DocumentStoreTimelineReaderImpl}.

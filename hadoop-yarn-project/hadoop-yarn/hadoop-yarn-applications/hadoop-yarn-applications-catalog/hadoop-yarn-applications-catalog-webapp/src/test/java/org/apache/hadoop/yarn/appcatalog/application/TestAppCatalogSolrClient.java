@@ -22,17 +22,20 @@ import org.apache.hadoop.yarn.appcatalog.model.AppEntry;
 import org.apache.hadoop.yarn.appcatalog.model.AppStoreEntry;
 import org.apache.hadoop.yarn.appcatalog.model.Application;
 import org.apache.solr.client.solrj.SolrClient;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.mockito.Mockito;
+
+import java.util.List;
+
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.support.membermodification.MemberMatcher.method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
 
 /**
  * Unit test for AppCatalogSolrClient.
