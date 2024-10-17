@@ -987,7 +987,18 @@ public abstract class FileSystem extends Configured
   public abstract FSDataInputStream open(Path f, int bufferSize)
     throws IOException;
 
-  /**
+ /**
+   * Opens an FSDataInputStream at the indicated FileStatus.
+   * @param f the FileStatus to open
+   * @throws IOException IO failure
+   * @return input stream.
+   */
+  public FSDataInputStream open(FileStatus f) throws IOException {
+    return open(f.getPath(), getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+        IO_FILE_BUFFER_SIZE_DEFAULT));
+  }
+
+ /**
    * Opens an FSDataInputStream at the indicated Path.
    * @param f the file to open
    * @throws IOException IO failure

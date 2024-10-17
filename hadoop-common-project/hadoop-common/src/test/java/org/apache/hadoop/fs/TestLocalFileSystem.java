@@ -642,6 +642,33 @@ public class TestLocalFileSystem {
       in.close();
     }
   }
+  @Test
+  public void testFSOpenFileOneFileStatus() throws Exception {
+    Path path = new Path(TEST_ROOT_DIR, "testOpenFileStatus");
+
+    try {
+      FSDataOutputStreamBuilder builder =
+              fileSys.createFile(path).recursive();
+      FSDataOutputStream out = builder.build();
+      String content = "Create with a generic type of createFile!";
+      byte[] contentOrigin = content.getBytes("UTF8");
+      out.write(contentOrigin);
+      out.close();
+
+      FileStatus fstatus = fileSys.getFileStatus(path);
+
+      FSDataInputStream input = fileSys.open(fstatus);
+      byte[] buffer =
+              new byte[(int) (fstatus.getLen())];
+      input.readFully(0, buffer);
+      input.close();
+      Assert.assertArrayEquals("The data be read should equals with the "
+              + "data written.", contentOrigin, buffer);
+    } catch (IOException e) {
+      throw e;
+    }
+  }
+
 
   @Test
   public void testFileStatusPipeFile() throws Exception {

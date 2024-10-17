@@ -82,6 +82,7 @@ public class TestHarFileSystem {
 
     public boolean mkdirs(Path f);
     public FSDataInputStream open(Path f);
+    public FSDataInputStream open(FileStatus f);
     public FSDataInputStream open(PathHandle f);
     public FSDataOutputStream create(Path f);
     public FSDataOutputStream create(Path f, boolean overwrite);
