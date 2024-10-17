@@ -554,6 +554,8 @@ public class DFSAdmin extends FsShell {
         replicatedBlockStats.getMissingReplicaBlocks());
     System.out.println("\tMissing blocks (with replication factor 1): " +
         replicatedBlockStats.getMissingReplicationOneBlocks());
+    System.out.println("\tBadly Distributed Blocks: " +
+        replicatedBlockStats.getBadlyDistributedBlocks());
     if (replicatedBlockStats.hasHighestPriorityLowRedundancyBlocks()) {
       System.out.println("\tLow redundancy blocks with highest priority " +
           "to recover: " +
@@ -571,6 +573,8 @@ public class DFSAdmin extends FsShell {
         ecBlockGroupStats.getCorruptBlockGroups());
     System.out.println("\tMissing block groups: " +
         ecBlockGroupStats.getMissingBlockGroups());
+    System.out.println("\tBadly Distributed Blocks: " +
+        ecBlockGroupStats.getBadlyDistributedBlocks());
     if (ecBlockGroupStats.hasHighestPriorityLowRedundancyBlocks()) {
       System.out.println("\tLow redundancy blocks with highest priority " +
           "to recover: " +

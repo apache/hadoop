@@ -122,6 +122,11 @@ public abstract class MembershipStats extends BaseRecord {
 
   public abstract long getNumberOfMissingBlocksWithReplicationFactorOne();
 
+  public abstract void setNumberOfBadlyDistributedBlocks(
+      long blocks);
+
+  public abstract long getNumberOfBadlyDistributedBlocks();
+
   public abstract void setHighestPriorityLowRedundancyReplicatedBlocks(
       long blocks);
 

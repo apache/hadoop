@@ -460,6 +460,9 @@ public class TestNameNodeMetrics {
     assertEquals("Missing blocks with replication factor one not matching!",
         namesystem.getMissingReplOneBlocksCount(),
         namesystem.getMissingReplicationOneBlocks());
+    assertEquals("Blocks with badly distributed are not matching!",
+        namesystem.getBadlyDistributedBlocksCount(),
+        namesystem.getBadlyDistributedBlocks());
     assertEquals("Bytes in future blocks metrics not matching!",
         namesystem.getBytesInFuture(),
         namesystem.getBytesInFutureReplicatedBlocks() +
@@ -510,6 +513,7 @@ public class TestNameNodeMetrics {
     assertGauge("LowRedundancyReplicatedBlocks", 1L, rb);
     assertGauge("CorruptReplicatedBlocks", 1L, rb);
     assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 1L, rb);
+    assertGauge("BadlyDistributedBlocks", 0L, rb);
     // Verify striped blocks metrics
     assertGauge("LowRedundancyECBlockGroups", 0L, rb);
     assertGauge("CorruptECBlockGroups", 0L, rb);
@@ -537,6 +541,7 @@ public class TestNameNodeMetrics {
     assertGauge("LowRedundancyReplicatedBlocks", 0L, rb);
     assertGauge("CorruptReplicatedBlocks", 0L, rb);
     assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
+    assertGauge("BadlyDistributedBlocks", 0L, rb);
     // Verify striped blocks metrics
     assertGauge("LowRedundancyECBlockGroups", 0L, rb);
     assertGauge("CorruptECBlockGroups", 0L, rb);
@@ -602,6 +607,7 @@ public class TestNameNodeMetrics {
     assertGauge("LowRedundancyReplicatedBlocks", 0L, rb);
     assertGauge("CorruptReplicatedBlocks", 0L, rb);
     assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
+    assertGauge("BadlyDistributedBlocks", 0L, rb);
     // Verify striped block groups metrics
     assertGauge("LowRedundancyECBlockGroups", 1L, rb);
     assertGauge("CorruptECBlockGroups", 1L, rb);
@@ -695,6 +701,7 @@ public class TestNameNodeMetrics {
     assertGauge("MissingReplOneBlocks", 1L, rb);
     assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
     assertGauge("HighestPriorityLowRedundancyECBlocks", 0L, rb);
+    assertGauge("BadlyDistributedBlocks", 0L, rb);
     fs.delete(file, true);
     waitForDnMetricValue(NS_METRICS, "UnderReplicatedBlocks", 0L);
   }

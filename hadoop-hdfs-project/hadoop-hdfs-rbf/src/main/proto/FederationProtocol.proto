@@ -55,6 +55,7 @@ message NamenodeMembershipStatsRecordProto {
   optional uint64 highestPriorityLowRedundancyReplicatedBlocks = 32;
   optional uint64 HighestPriorityLowRedundancyECBlocks = 33;
   optional uint32 pendingSPSPaths = 34;
+  optional uint64 badlyDistributedBlocks = 35;
 }
 
 message NamenodeMembershipRecordProto {
