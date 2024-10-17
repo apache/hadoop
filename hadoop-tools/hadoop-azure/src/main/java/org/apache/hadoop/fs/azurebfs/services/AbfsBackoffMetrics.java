@@ -29,6 +29,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.H
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.THOUSAND;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.RETRY;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.RETRY_LIST;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.COLON;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
@@ -42,19 +43,15 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
 
   private String[] getCountersName() {
     return Arrays.stream(AbfsBackoffMetricsEnum.values())
-            .flatMap(backoffMetricsEnum -> {
-              if (RETRY.equals(backoffMetricsEnum.getType())) {
-                return RETRY_LIST.stream()
-                        .map(retryCount -> retryCount + ":" + backoffMetricsEnum.getName());
-              } else {
-                return Stream.of(backoffMetricsEnum.getName());
-              }
-            })
+            .flatMap(backoffMetricsEnum ->
+                    RETRY.equals(backoffMetricsEnum.getType()) ?
+                            RETRY_LIST.stream().map(retryCount -> retryCount + COLON + backoffMetricsEnum.getName()) :
+                            Stream.of(backoffMetricsEnum.getName()))
             .toArray(String[]::new);
   }
 
   public void incrementCounter(AbfsBackoffMetricsEnum metric, String retryCount, long value) {
-    incCounter(retryCount + ":" + metric.getName(), value);
+    incCounter(retryCount + COLON + metric.getName(), value);
   }
 
   public void incrementCounter(AbfsBackoffMetricsEnum metric, String retryCount) {
@@ -70,7 +67,7 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
   }
 
   public Long getCounter(AbfsBackoffMetricsEnum metric, String retryCount) {
-    return lookupCounterValue(retryCount + ":" + metric.getName());
+    return lookupCounterValue(retryCount + COLON + metric.getName());
   }
 
   public Long getCounter(AbfsBackoffMetricsEnum metric) {
@@ -78,7 +75,7 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
   }
 
   public void setCounter(AbfsBackoffMetricsEnum metric, String retryCount, long value) {
-    setCounterValue(retryCount + ":" + metric.getName(), value);
+    setCounterValue(retryCount + COLON + metric.getName(), value);
   }
 
   public void setCounter(AbfsBackoffMetricsEnum metric, long value) {
@@ -210,51 +207,30 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
     long totalRequestsThrottled = getNumberOfBandwidthThrottledRequests()
             + getNumberOfIOPSThrottledRequests()
             + getNumberOfOtherThrottledRequests();
-    double percentageOfRequestsThrottled =
-        ((double) totalRequestsThrottled / getTotalNumberOfRequests()) * HUNDRED;
-    for (String retryCount: RETRY_LIST) {
-      metricString.append("$RCTSI$_").append(retryCount)
-          .append("R_").append("=")
-          .append(getNumberOfRequestsSucceeded(retryCount));
+    double percentageOfRequestsThrottled = ((double) totalRequestsThrottled / getTotalNumberOfRequests()) * HUNDRED;
+
+    for (String retryCount : RETRY_LIST) {
       long totalRequests = getTotalRequests(retryCount);
+      metricString.append("$RCTSI$_").append(retryCount).append("R=").append(getNumberOfRequestsSucceeded(retryCount));
       if (totalRequests > 0) {
-        metricString.append("$MMA$_").append(retryCount)
-            .append("R_").append("=")
-            .append(String.format("%.3f",
-                (double) getMinBackoff(retryCount) / THOUSAND))
-            .append("s")
-            .append(String.format("%.3f",
-                (double) getMaxBackoff(retryCount) / THOUSAND))
-            .append("s")
-            .append(String.format("%.3f",
-                ((double) getTotalBackoff(retryCount) / totalRequests)
-                    / THOUSAND))
-            .append("s");
+        metricString.append("$MMA$_").append(retryCount).append("R=")
+                .append(String.format("%.3f", (double) getMinBackoff(retryCount) / THOUSAND)).append("s")
+                .append(String.format("%.3f", (double) getMaxBackoff(retryCount) / THOUSAND)).append("s")
+                .append(String.format("%.3f", (double) getTotalBackoff(retryCount) / totalRequests / THOUSAND)).append("s");
       } else {
-        metricString.append("$MMA$_").append(retryCount)
-            .append("R_").append("=0s");
+        metricString.append("$MMA$_").append(retryCount).append("R=0s");
       }
     }
-    metricString.append("$BWT=")
-        .append(getNumberOfBandwidthThrottledRequests())
-        .append("$IT=")
-        .append(getNumberOfIOPSThrottledRequests())
-        .append("$OT=")
-        .append(getNumberOfOtherThrottledRequests())
-        .append("$RT=")
-        .append(String.format("%.3f", percentageOfRequestsThrottled))
-        .append("$NFR=")
-        .append(getNumberOfNetworkFailedRequests())
-        .append("$TRNR=")
-        .append(getNumberOfRequestsSucceededWithoutRetrying())
-        .append("$TRF=")
-        .append(getNumberOfRequestsFailed())
-        .append("$TR=")
-        .append(getTotalNumberOfRequests())
-        .append("$MRC=")
-        .append(getMaxRetryCount());
+    metricString.append("$BWT=").append(getNumberOfBandwidthThrottledRequests())
+            .append("$IT=").append(getNumberOfIOPSThrottledRequests())
+            .append("$OT=").append(getNumberOfOtherThrottledRequests())
+            .append("$RT=").append(String.format("%.3f", percentageOfRequestsThrottled))
+            .append("$NFR=").append(getNumberOfNetworkFailedRequests())
+            .append("$TRNR=").append(getNumberOfRequestsSucceededWithoutRetrying())
+            .append("$TRF=").append(getNumberOfRequestsFailed())
+            .append("$TR=").append(getTotalNumberOfRequests())
+            .append("$MRC=").append(getMaxRetryCount());
 
-    return metricString + "";
+    return metricString.toString();
   }
 }
-

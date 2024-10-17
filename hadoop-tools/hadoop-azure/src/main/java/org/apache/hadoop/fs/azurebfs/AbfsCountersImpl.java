@@ -331,12 +331,9 @@ public class AbfsCountersImpl implements AbfsCounters {
       }
     }
     if (abfsReadFooterMetrics != null) {
-      Map<String, AbfsReadFooterMetrics> metricsMap = getAbfsReadFooterMetrics().getMetricsMap();
-      if (metricsMap != null && !(metricsMap.isEmpty())) {
-        String readFooterMetric = getAbfsReadFooterMetrics().toString();
-        if (!readFooterMetric.equals("")) {
-          metric += "#FO:" + getAbfsReadFooterMetrics().toString();
-        }
+      long totalFiles = getAbfsReadFooterMetrics().getTotalFiles();
+      if (totalFiles > 0) {
+        metric += "#FO:" + getAbfsReadFooterMetrics().toString();
       }
     }
     return metric;

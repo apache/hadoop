@@ -18,28 +18,32 @@ public abstract class AbstractAbfsStatisticsSource implements IOStatisticsSource
         this.ioStatistics = ioStatistics;
     }
 
-    public long incCounter(String name) {
-        return incCounter(name, 1);
+    public void incCounter(String name) {
+        incCounter(name, 1);
     }
 
-    public long incCounter(String name, long value) {
-        return ioStatistics.incrementCounter(name, value);
+    public void incCounter(String name, long value) {
+        ioStatistics.incrementCounter(name, value);
     }
 
     public Long lookupCounterValue(String name) {
-        return ioStatistics.counters().get(name);
+        return ioStatistics.counters().getOrDefault(name, 0L);
     }
 
     public void setCounterValue(String name, long value) {
         ioStatistics.setCounter(name, value);
     }
 
+    public Long lookupGaugeValue(String name) {
+        return ioStatistics.gauges().getOrDefault(name, 0L);
+    }
+
+    public void updateGauge(String name, long value) {
+        ioStatistics.setGauge(name, lookupGaugeValue(name) + value);
+    }
+
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder(
-                "AbstractAbfsStatisticsStore{");
-        sb.append(ioStatistics);
-        sb.append('}');
-        return sb.toString();
+        return "AbstractAbfsStatisticsStore{" + ioStatistics + '}';
     }
 }

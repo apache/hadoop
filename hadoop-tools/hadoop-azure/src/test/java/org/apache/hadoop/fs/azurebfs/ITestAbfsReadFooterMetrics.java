@@ -26,6 +26,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.M
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.NON_PARQUET;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.PARQUET;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.*;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -165,7 +169,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
 
     // Get non-Parquet metrics and assert metrics equality.
     AbfsReadFooterMetrics nonParquetMetrics = getNonParquetMetrics();
-    String metrics = nonParquetMetrics.getReadFooterMetrics(nonParquetMetrics);
+    String metrics = nonParquetMetrics.toString();
     assertMetricsEquality(fs, metrics);
 
     // Close the AzureBlobFileSystem.
@@ -177,11 +181,12 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
    */
   private AbfsReadFooterMetrics getNonParquetMetrics() {
     AbfsReadFooterMetrics nonParquetMetrics = new AbfsReadFooterMetrics();
-    nonParquetMetrics.setIsParquetFile(false);
-    nonParquetMetrics.setSizeReadByFirstRead("16384.000_16384.000");
-    nonParquetMetrics.setOffsetDiffBetweenFirstAndSecondRead("1.000_16384.000");
-    nonParquetMetrics.setAvgFileLength(Double.parseDouble("32768.000"));
-    nonParquetMetrics.setAvgReadLenRequested(Double.parseDouble("16384.000"));
+    nonParquetMetrics.incrementMetricValue(NON_PARQUET, READ_COUNT, 10);;
+    nonParquetMetrics.updateMetric(NON_PARQUET, FILE_LENGTH, 32768);
+    nonParquetMetrics.updateMetric(NON_PARQUET, READ_LEN_REQUESTED, 16384);
+    nonParquetMetrics.updateMetric(NON_PARQUET, SIZE_READ_BY_FIRST_READ, 16384);
+    nonParquetMetrics.updateMetric(NON_PARQUET, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, 1);
+    nonParquetMetrics.incrementMetricValue(NON_PARQUET, TOTAL_FILES);
     return nonParquetMetrics;
   }
 
@@ -190,11 +195,12 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
    */
   private AbfsReadFooterMetrics getParquetMetrics() {
     AbfsReadFooterMetrics parquetMetrics = new AbfsReadFooterMetrics();
-    parquetMetrics.setIsParquetFile(true);
-    parquetMetrics.setSizeReadByFirstRead("1024.000");
-    parquetMetrics.setOffsetDiffBetweenFirstAndSecondRead("4096.000");
-    parquetMetrics.setAvgFileLength(Double.parseDouble("8388608.000"));
-    parquetMetrics.setAvgReadLenRequested(0.000);
+    parquetMetrics.incrementMetricValue(PARQUET, READ_COUNT, 10);;
+    parquetMetrics.updateMetric(PARQUET, FILE_LENGTH, 8388608);
+    parquetMetrics.updateMetric(PARQUET, READ_LEN_REQUESTED, 8388608);
+    parquetMetrics.updateMetric(PARQUET, SIZE_READ_BY_FIRST_READ, 1024);
+    parquetMetrics.updateMetric(PARQUET, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, 4096);
+    parquetMetrics.incrementMetricValue(PARQUET, TOTAL_FILES);
     return parquetMetrics;
   }
 
@@ -307,8 +313,8 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
     AbfsReadFooterMetrics nonParquetMetrics = getNonParquetMetrics();
 
     // Concatenate and assert the metrics equality.
-    String metrics = parquetMetrics.getReadFooterMetrics(parquetMetrics);
-    metrics += nonParquetMetrics.getReadFooterMetrics(nonParquetMetrics);
+    String metrics = parquetMetrics.toString();
+    metrics += nonParquetMetrics.toString();
     assertMetricsEquality(fs, metrics);
 
     // Close the AzureBlobFileSystem instance.
@@ -375,7 +381,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
 
       // Get and assert the footer metrics for non-Parquet scenarios.
       AbfsReadFooterMetrics nonParquetMetrics = getNonParquetMetrics();
-      String metrics = nonParquetMetrics.getReadFooterMetrics(nonParquetMetrics);
+      String metrics = nonParquetMetrics.toString();
       assertMetricsEquality(fs, metrics);
 
       // Introduce an additional idle period by sleeping.
