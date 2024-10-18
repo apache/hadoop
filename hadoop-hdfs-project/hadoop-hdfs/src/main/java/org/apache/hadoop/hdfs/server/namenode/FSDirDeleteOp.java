@@ -127,8 +127,9 @@ class FSDirDeleteOp {
    * @param fsd the FSDirectory instance
    * @param iip inodes of a path to be deleted
    * @param mtime the time the inode is removed
+   * @param asnyc whether to delete a block asynchronously
    */
-  static void deleteForEditLog(FSDirectory fsd, INodesInPath iip, long mtime)
+  static void deleteForEditLog(FSDirectory fsd, INodesInPath iip, long mtime, boolean asnyc)
       throws IOException {
     assert fsd.hasWriteLock();
     FSNamesystem fsn = fsd.getFSNamesystem();
@@ -148,7 +149,7 @@ class FSDirDeleteOp {
     if (filesRemoved) {
       fsn.removeSnapshottableDirs(snapshottableDirs);
       fsn.removeLeasesAndINodes(removedUCFiles, removedINodes, false);
-      fsn.getBlockManager().removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
+      fsn.getBlockManager().removeBlocksAndUpdateSafemodeTotal(collectedBlocks,asnyc);
     }
   }
 

@@ -2780,14 +2780,16 @@ public class BlockManager implements BlockStatsMXBean {
    * Removes the blocks from blocksmap and updates the safemode blocks total.
    * @param blocks An instance of {@link BlocksMapUpdateInfo} which contains a
    *               list of blocks that need to be removed from blocksMap
+   * @param asnyc whether to delete a block asynchronously
    */
-  public void removeBlocksAndUpdateSafemodeTotal(BlocksMapUpdateInfo blocks) {
+  public void removeBlocksAndUpdateSafemodeTotal(BlocksMapUpdateInfo blocks,boolean deleteAsync) {
     assert namesystem.hasWriteLock();
     // In the case that we are a Standby tailing edits from the
     // active while in safe-mode, we need to track the total number
     // of blocks and safe blocks in the system.
     boolean trackBlockCounts = bmSafeMode.isSafeModeTrackingBlocks();
     int numRemovedComplete = 0, numRemovedSafe = 0;
+    deleteAsync = deleteAsync && !trackBlockCounts;
 
     for (BlockInfo b : blocks.getToDeleteList()) {
       if (trackBlockCounts) {
@@ -2798,8 +2800,15 @@ public class BlockManager implements BlockStatsMXBean {
           }
         }
       }
-      removeBlock(b);
+      if (!deleteAsync){
+        removeBlock(b);
+      }
     }
+    // delete block async
+    if (deleteAsync) {
+      this.getMarkedDeleteQueue().add(blocks.getToDeleteList());
+    }
+
     if (trackBlockCounts) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Adjusting safe-mode totals for deletion."
