@@ -241,6 +241,8 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
+echo "Build URL = ${BUILD_URL}"
+
 # Process arguments to jenkins.sh
 if [ "$1" == "run_ci" ]; then
   # Check if the CI needs to be run, if so, do so :)
