@@ -14,18 +14,23 @@
 
 ## Hadoop Docker
 
-### hadoop-runner-* images
+### Running from existing setups
 
 There are special branches for running hadoop in docker.
-These branches contain scripts that set up base images that can be used for running any Hadoop version.
 
-E.g.
+The `docker-hadoop-runner*` branches contain scripts that set up base images that can be used for running any Hadoop version.
+
 * [docker-hadoop-runner-latest](https://github.com/apache/hadoop/tree/docker-hadoop-runner-latest)
 * [docker-hadoop-runner-jdk11](https://github.com/apache/hadoop/tree/docker-hadoop-runner-jdk11)
 * [docker-hadoop-runner-jdk8](https://github.com/apache/hadoop/tree/docker-hadoop-runner-jdk8)
 * [docker-hadoop-runner](https://github.com/apache/hadoop/tree/docker-hadoop-runner)
+
+The `docker-hadoop*` branches can be used for running a specific version.
+
 * [docker-hadoop-3](https://github.com/apache/hadoop/tree/docker-hadoop-3)
+  * `hadoop-3.3.6`
 * [docker-hadoop-2](https://github.com/apache/hadoop/tree/docker-hadoop-2)
+  * `hadoop-2.10.2`
 
 ### Running from the source code
 
