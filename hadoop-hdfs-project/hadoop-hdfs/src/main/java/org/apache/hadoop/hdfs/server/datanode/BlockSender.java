@@ -256,7 +256,7 @@ class BlockSender implements java.io.Closeable {
       // the append write.
       ChunkChecksum chunkChecksum = null;
       final long replicaVisibleLength;
-      try (AutoCloseableLock lock = datanode.getDataSetLockManager().readLock(
+      try (AutoCloseableLock lock = datanode.getDataSetLockManager().readLock("readBlock",
           LockLevel.BLOCK_POOl, block.getBlockPoolId())) {
         replica = getReplica(block, datanode);
         replicaVisibleLength = replica.getVisibleLength();

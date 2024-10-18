@@ -29,11 +29,11 @@ public class NoLockManager implements DataNodeLockManager<AutoCloseDataSetLock> 
   private static final class NoDataSetLock extends AutoCloseDataSetLock {
 
     private NoDataSetLock(Lock lock) {
-      super(lock);
+      super(lock, null, false, false, -1);
     }
 
     @Override
-    public void lock() {
+    public void lock(String opName, String lockName, boolean hasChild) {
     }
 
     @Override
@@ -45,12 +45,12 @@ public class NoLockManager implements DataNodeLockManager<AutoCloseDataSetLock> 
   }
 
   @Override
-  public AutoCloseDataSetLock readLock(LockLevel level, String... resources) {
+  public AutoCloseDataSetLock readLock(String op, LockLevel level, String... resources) {
     return lock;
   }
 
   @Override
-  public AutoCloseDataSetLock writeLock(LockLevel level, String... resources) {
+  public AutoCloseDataSetLock writeLock(String op, LockLevel level, String... resources) {
     return lock;
   }
 
@@ -59,7 +59,7 @@ public class NoLockManager implements DataNodeLockManager<AutoCloseDataSetLock> 
   }
 
   @Override
-  public void removeLock(LockLevel level, String... resources) {
+  public void removeLock(String op, LockLevel level, String... resources) {
   }
 
   @Override

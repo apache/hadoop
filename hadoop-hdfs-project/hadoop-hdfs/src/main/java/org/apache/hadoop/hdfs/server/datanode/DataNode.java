@@ -3599,7 +3599,7 @@ public class DataNode extends ReconfigurableBase
     final BlockConstructionStage stage;
 
     //get replica information
-    try (AutoCloseableLock lock = dataSetLockManager.readLock(
+    try (AutoCloseableLock lock = dataSetLockManager.readLock("transferReplica",
         LockLevel.BLOCK_POOl, b.getBlockPoolId())) {
       Block storedBlock = data.getStoredBlock(b.getBlockPoolId(),
           b.getBlockId());
