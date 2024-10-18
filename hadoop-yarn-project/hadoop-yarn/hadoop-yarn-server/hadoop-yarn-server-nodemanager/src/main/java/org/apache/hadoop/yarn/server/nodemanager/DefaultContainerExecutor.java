@@ -171,6 +171,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     String user = ctx.getUser();
     String appId = ctx.getAppId();
     String locId = ctx.getLocId();
+    String containerId = ctx.getContainerId();
     LocalDirsHandlerService dirsHandler = ctx.getDirsHandler();
 
     List<String> localDirs = dirsHandler.getLocalDirs();
@@ -199,7 +200,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
 
     ContainerLocalizer localizer =
         createContainerLocalizer(user, appId, locId, tokenFn, localDirs,
-            localizerFc);
+            localizerFc, containerId);
     // TODO: DO it over RPC for maintaining similarity?
     localizer.runLocalization(nmAddr);
   }
@@ -224,11 +225,11 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   @VisibleForTesting
   protected ContainerLocalizer createContainerLocalizer(String user,
       String appId, String locId, String tokenFileName, List<String> localDirs,
-      FileContext localizerFc) throws IOException {
+      FileContext localizerFc, String containerId) throws IOException {
     ContainerLocalizer localizer =
         new ContainerLocalizer(localizerFc, user, appId, locId, tokenFileName,
             getPaths(localDirs),
-            RecordFactoryProvider.getRecordFactory(getConf()));
+            RecordFactoryProvider.getRecordFactory(getConf()), containerId);
     return localizer;
   }
 
