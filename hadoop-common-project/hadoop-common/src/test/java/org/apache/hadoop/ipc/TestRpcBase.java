@@ -404,6 +404,14 @@ public class TestRpcBase {
     }
 
     @Override
+    public TestProtos.EmptyResponseProto error3(
+        RpcController unused, TestProtos.EmptyRequestProto request)
+        throws ServiceException {
+      throw new ServiceException("error",
+          new ReconstructibleExceptionTestImpl("1", "field2"));
+    }
+
+    @Override
     public TestProtos.EmptyResponseProto slowPing(
         RpcController unused, TestProtos.SlowPingRequestProto request)
         throws ServiceException {

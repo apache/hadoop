@@ -19,6 +19,7 @@
 package org.apache.hadoop.ipc;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.ExceptionReconstructProto;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
@@ -1232,10 +1233,14 @@ public class Client implements AutoCloseable {
                 header.getErrorMsg() : "ServerDidNotSetErrorMsg" ;
           final RpcErrorCodeProto erCode = 
                     (header.hasErrorDetail() ? header.getErrorDetail() : null);
+          final ExceptionReconstructProto reconstructProto =
+              (header.hasExceptionReconstruct() ?
+                  header.getExceptionReconstruct() : null);
           if (erCode == null) {
              LOG.warn("Detailed error code not set by server on rpc error");
           }
-          RemoteException re = new RemoteException(exceptionClassName, errorMsg, erCode);
+          RemoteException re = new RemoteException(exceptionClassName, errorMsg, erCode,
+              reconstructProto);
           if (status == RpcStatusProto.ERROR) {
             final Call call = calls.remove(callId);
             call.setException(re);
