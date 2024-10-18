@@ -21,6 +21,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 
 import java.nio.ByteBuffer;
+import java.util.List;
+
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 
 /**
  * A raw decoder in XOR code scheme in pure Java, adapted from HDFS-RAID.
@@ -42,13 +45,18 @@ public class XORRawDecoder extends RawErasureDecoder {
         decodingState.decodeLength);
     ByteBuffer output = decodingState.outputs[0];
 
-    int erasedIdx = decodingState.erasedIndexes[0];
+    List<Integer> erasedIdxs = Ints.asList(decodingState.erasedIndexes);
 
     // Process the inputs.
     int iIdx, oIdx;
     for (int i = 0; i < decodingState.inputs.length; i++) {
-      // Skip the erased location.
-      if (i == erasedIdx) {
+      // Skip the erased location/s.
+      if (erasedIdxs.contains(i)) {
+        continue;
+      }
+
+      // Skip the extra redundant item/s.
+      if (decodingState.inputs[i] == null) {
         continue;
       }
 
@@ -67,13 +75,18 @@ public class XORRawDecoder extends RawErasureDecoder {
     int dataLen = decodingState.decodeLength;
     CoderUtil.resetOutputBuffers(decodingState.outputs,
         decodingState.outputOffsets, dataLen);
-    int erasedIdx = decodingState.erasedIndexes[0];
+    List<Integer> erasedIdxs = Ints.asList(decodingState.erasedIndexes);
 
     // Process the inputs.
     int iIdx, oIdx;
     for (int i = 0; i < decodingState.inputs.length; i++) {
-      // Skip the erased location.
-      if (i == erasedIdx) {
+      // Skip the erased location/s.
+      if (erasedIdxs.contains(i)) {
+        continue;
+      }
+
+      // Skip the extra redundant item/s.
+      if (decodingState.inputs[i] == null) {
         continue;
       }
 
