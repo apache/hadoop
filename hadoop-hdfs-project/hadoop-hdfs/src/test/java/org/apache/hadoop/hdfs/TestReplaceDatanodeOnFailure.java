@@ -86,12 +86,12 @@ public class TestReplaceDatanodeOnFailure {
             final int half = replication/2;
             final boolean enoughReplica = replication <= nExistings;
             final boolean noReplica = nExistings == 0;
-            final boolean replicationL3 = replication < 3;
+            final boolean replicationL2 = replication < 2;
             final boolean existingsLEhalf = nExistings <= half;
             final boolean isAH = isAppend[i] || isHflushed[j];
   
             final boolean expected;
-            if (enoughReplica || noReplica || replicationL3) {
+            if (enoughReplica || noReplica || replicationL2) {
               expected = false;
             } else {
               expected = isAH || existingsLEhalf;
@@ -111,6 +111,50 @@ public class TestReplaceDatanodeOnFailure {
           }
         }
       }
+    }
+  }
+
+  /** Test replace datanode on failure with 2-replication file. */
+  @Test
+  public void testReplaceDatanodeOnFailureWith2Replications() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    // do not consider load factor when selecting a data node
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
+        false);
+    //set policy to DEFAULT
+    ReplaceDatanodeOnFailure.write(Policy.DEFAULT, false, conf);
+
+    final int repNum = 2;
+    final String[] racks = new String[repNum];
+    Arrays.fill(racks, RACK0);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf
+    ).racks(racks).numDataNodes(repNum).build();
+
+    try {
+      cluster.waitActive();
+      final DistributedFileSystem fs = cluster.getFileSystem();
+      final Path dir = new Path(DIR);
+      final SlowWriter[] slowwriter = new SlowWriter[1];
+      slowwriter[0] = new SlowWriter(fs, new Path(dir, "file-rep2"), 200L, (short) 2);
+      slowwriter[0].start();
+
+      //start new datanodes
+      cluster.startDataNodes(conf, 1, true, null, new String[]{RACK1});
+      cluster.waitActive();
+      // wait for first block reports for up to 10 seconds
+      cluster.waitFirstBRCompleted(0, 10000);
+
+      //stop an old datanode
+      MiniDFSCluster.DataNodeProperties dnprop = cluster.stopDataNode(
+          AppendTestUtil.nextInt(repNum));
+
+      sleepSeconds(3);
+      Assert.assertEquals(repNum, slowwriter[0].out.getCurrentBlockReplication());
+
+      slowwriter[0].interruptRunning();
+      slowwriter[0].joinAndClose();
+    } finally {
+      if (cluster != null) {cluster.shutdown();}
     }
   }
 
@@ -233,6 +277,14 @@ public class TestReplaceDatanodeOnFailure {
       super(SlowWriter.class.getSimpleName() + ":" + filepath);
       this.filepath = filepath;
       this.out = (HdfsDataOutputStream)fs.create(filepath, REPLICATION);
+      this.sleepms = sleepms;
+    }
+
+    SlowWriter(DistributedFileSystem fs, Path filepath, final long sleepms,
+        short replication) throws IOException {
+      super(SlowWriter.class.getSimpleName() + ":" + filepath);
+      this.filepath = filepath;
+      this.out = (HdfsDataOutputStream)fs.create(filepath, replication);
       this.sleepms = sleepms;
     }
 
