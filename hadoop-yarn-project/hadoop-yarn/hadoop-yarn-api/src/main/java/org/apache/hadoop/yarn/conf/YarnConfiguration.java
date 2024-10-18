@@ -1293,6 +1293,16 @@ public class YarnConfiguration extends Configuration {
   public static final int
       DEFAULT_RM_DECOMMISSIONING_NODES_WATCHER_POLL_INTERVAL = 20;
 
+  /**
+   * Allow Delayed Removal of Decommissioning Nodes to account for scheduled AM containers
+   * on that node. No delay if set to 0.
+   */
+  public static final String RM_DECOMMISSIONING_NODES_WATCHER_DELAY_MS =
+      RM_PREFIX + "decommissioning-nodes-watcher.delay-ms";
+
+  public static final int
+      DEFAULT_RM_DECOMMISSIONING_NODES_WATCHER_DELAY_MS = 0;
+
   ////////////////////////////////
   // Node Manager Configs
   ////////////////////////////////

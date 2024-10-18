@@ -1452,10 +1452,15 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
      * @return true if node has any AM scheduled on it.
      */
     private boolean hasScheduledAMContainers(RMNodeImpl rmNode) {
-      return rmNode.context.getScheduler()
+      boolean hasScheduledAMContainers = rmNode.context.getScheduler()
           .getSchedulerNode(rmNode.getNodeID())
           .getCopiedListOfRunningContainers()
           .stream().anyMatch(RMContainer::isAMContainer);
+      if (hasScheduledAMContainers) {
+        LOG.info("Node " + rmNode.nodeId + " has AM containers scheduled on it."
+            + " Will not deactivate it.");
+      }
+      return hasScheduledAMContainers;
     }
   }
 
