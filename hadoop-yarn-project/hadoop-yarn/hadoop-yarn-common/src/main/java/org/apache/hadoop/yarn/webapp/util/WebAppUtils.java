@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
@@ -438,6 +439,12 @@ public class WebAppUtils {
         user == null || user.isEmpty()) {
       return null;
     }
+    String[] ipAdds = serverHttpAddress.split("//");
+    if (ipAdds.length >= 2 && NetUtils.isIPV6Address(ipAdds[1])) {
+      ipAdds[1] = NetUtils.normalizeV6Address(ipAdds[1]);
+      serverHttpAddress = ipAdds[0] + "//" + ipAdds[1];
+    }
+
     return PATH_JOINER.join(serverHttpAddress, "applicationhistory", "logs",
         allocatedNode, containerId, entity, user);
   }

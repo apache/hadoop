@@ -798,4 +798,74 @@ public class TestNetUtils {
     String gotStr = StringUtils.join(got, ", ");
     assertEquals(expectStr, gotStr);
   }
+
+  @Test
+  public void testIPV6Address() {
+    final String IPV6_SAMPLE_ADDRESS1 = "FFFF:FFFF:FFFF:FFFF::1:12345";
+    final String IPV6_SAMPLE_ADDRESS2 = "FFFF:FFFF:FFFF::1:FFFF:12345";
+    final String IPV6_SAMPLE_ADDRESS3 = "FFFF:FFFF::1:FFFF:FFFF:12345";
+    final String IPV4_SAMPLE_ADDRESS = "192.168.0.1:12345";
+    assertTrue(NetUtils.isIPV6Address(IPV6_SAMPLE_ADDRESS1));
+    assertTrue(NetUtils.isIPV6Address(IPV6_SAMPLE_ADDRESS2));
+    assertTrue(NetUtils.isIPV6Address(IPV6_SAMPLE_ADDRESS3));
+    assertFalse(NetUtils.isIPV6Address(IPV4_SAMPLE_ADDRESS));
+  }
+
+  @Test
+  public void testNormalizeIPV6Address() {
+    final String IPV6_SAMPLE_ADDRESS1 = "FFFF:FFFF:FFFF:FFFF::1";
+    final String IPV6_SAMPLE_ADDRESS2 = "FFFF:FFFF:FFFF::1:FFFF";
+    final String IPV6_SAMPLE_ADDRESS3 = "FFFF:FFFF::1:FFFF:FFFF";
+    final String PORT_SUFFIX = ":12345";
+    String IPV6_SAMPLE_ADDRESS1_WITH_PORT = IPV6_SAMPLE_ADDRESS1 + PORT_SUFFIX;
+    String IPV6_SAMPLE_ADDRESS2_WITH_PORT = IPV6_SAMPLE_ADDRESS2 + PORT_SUFFIX;
+    String IPV6_SAMPLE_ADDRESS3_WITH_PORT = IPV6_SAMPLE_ADDRESS3 + PORT_SUFFIX;
+    assertEquals("[" + IPV6_SAMPLE_ADDRESS1 + "]" + PORT_SUFFIX , NetUtils.normalizeV6Address(IPV6_SAMPLE_ADDRESS1_WITH_PORT));
+    assertEquals("[" + IPV6_SAMPLE_ADDRESS2 + "]" + PORT_SUFFIX , NetUtils.normalizeV6Address(IPV6_SAMPLE_ADDRESS2_WITH_PORT));
+    assertEquals("[" + IPV6_SAMPLE_ADDRESS3 + "]" + PORT_SUFFIX , NetUtils.normalizeV6Address(IPV6_SAMPLE_ADDRESS3_WITH_PORT));
+  }
+
+  @Test
+  public void testCreateSocketAddressWithIPV6() throws Throwable {
+    final String IPV6_SAMPLE_ADDRESS1 = "FFFF:FFFF:FFFF:FFFF::1";
+    final String IPV6_SAMPLE_ADDRESS2 = "FFFF:FFFF:FFFF::1:FFFF";
+    final String IPV6_SAMPLE_ADDRESS3 = "FFFF:FFFF::1:FFFF:FFFF";
+    final String IPV4_SAMPLE_ADDRESS = "192.168.0.1";
+    final String PORT_SUFFIX = ":12345";
+    final int DEFAULT_PORT = 10000;
+
+    String IPV6_SAMPLE_ADDRESS1_WITH_PORT = IPV6_SAMPLE_ADDRESS1 + PORT_SUFFIX;
+    String IPV6_SAMPLE_ADDRESS2_WITH_PORT = IPV6_SAMPLE_ADDRESS2 + PORT_SUFFIX;
+    String IPV6_SAMPLE_ADDRESS3_WITH_PORT = IPV6_SAMPLE_ADDRESS3 + PORT_SUFFIX;
+    String IPV4_SAMPLE_ADDRESS_WITH_PORT = IPV4_SAMPLE_ADDRESS + PORT_SUFFIX;
+
+    InetSocketAddress addr1 = NetUtils.createSocketAddr(IPV6_SAMPLE_ADDRESS1_WITH_PORT, DEFAULT_PORT, "myconfig1");
+    InetSocketAddress addr2 = NetUtils.createSocketAddr(IPV6_SAMPLE_ADDRESS2_WITH_PORT, DEFAULT_PORT, "myconfig2");
+    InetSocketAddress addr3 = NetUtils.createSocketAddr(IPV6_SAMPLE_ADDRESS3_WITH_PORT, DEFAULT_PORT, "myconfig3");
+    InetSocketAddress addr4 = NetUtils.createSocketAddr(IPV4_SAMPLE_ADDRESS_WITH_PORT, DEFAULT_PORT, "myconfig4");
+    assertEquals("[" + IPV6_SAMPLE_ADDRESS1 + "]", addr1.getHostName());
+    assertEquals("[" + IPV6_SAMPLE_ADDRESS2 + "]", addr2.getHostName());
+    assertEquals("[" + IPV6_SAMPLE_ADDRESS3 + "]", addr3.getHostName());
+    assertEquals("[" + IPV4_SAMPLE_ADDRESS + "]", addr4.getHostName());
+    assertEquals(12345, addr1.getPort());
+    assertEquals(12345, addr2.getPort());
+    assertEquals(12345, addr3.getPort());
+    assertEquals(12345, addr4.getPort());
+
+    final String IPV6_SAMPLE_ADDRESS1_WITHSCOPE = IPV6_SAMPLE_ADDRESS1 + "%2";
+    final String IPV6_SAMPLE_ADDRESS2_WITHSCOPE = IPV6_SAMPLE_ADDRESS2 + "%2";
+    final String IPV6_SAMPLE_ADDRESS3_WITHSCOPE = IPV6_SAMPLE_ADDRESS3 + "%2";
+    IPV6_SAMPLE_ADDRESS1_WITH_PORT = IPV6_SAMPLE_ADDRESS1_WITHSCOPE + PORT_SUFFIX;
+    IPV6_SAMPLE_ADDRESS2_WITH_PORT = IPV6_SAMPLE_ADDRESS2_WITHSCOPE + PORT_SUFFIX;
+    IPV6_SAMPLE_ADDRESS3_WITH_PORT = IPV6_SAMPLE_ADDRESS3_WITHSCOPE + PORT_SUFFIX;
+    addr1 = NetUtils.createSocketAddr(IPV6_SAMPLE_ADDRESS1_WITH_PORT, DEFAULT_PORT, "myconfig1");
+    addr2 = NetUtils.createSocketAddr(IPV6_SAMPLE_ADDRESS2_WITH_PORT, DEFAULT_PORT, "myconfig2");
+    addr3 = NetUtils.createSocketAddr(IPV6_SAMPLE_ADDRESS3_WITH_PORT, DEFAULT_PORT, "myconfig3");
+    assertEquals("[" + IPV6_SAMPLE_ADDRESS1 + "]", addr1.getHostName());
+    assertEquals("[" + IPV6_SAMPLE_ADDRESS2 + "]", addr2.getHostName());
+    assertEquals("[" + IPV6_SAMPLE_ADDRESS3 + "]", addr3.getHostName());
+    assertEquals(12345, addr1.getPort());
+    assertEquals(12345, addr2.getPort());
+    assertEquals(12345, addr3.getPort());
+  }
 }
