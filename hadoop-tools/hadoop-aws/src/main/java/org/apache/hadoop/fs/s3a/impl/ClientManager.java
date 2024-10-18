@@ -61,6 +61,8 @@ public interface ClientManager extends Closeable {
    */
   S3AsyncClient getOrCreateAsyncClient() throws IOException;
 
+  S3Client getOrCreateUnencryptedS3Client() throws IOException;
+
   /**
    * Get the AsyncS3Client, raising a failure to create as an UncheckedIOException.
    * @return the S3 client

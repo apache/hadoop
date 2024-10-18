@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nonnull;
 
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -76,6 +77,7 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.Progressable;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_OCTET_STREAM;
 import static org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent.*;
@@ -1002,11 +1004,19 @@ class S3ABlockOutputStream extends OutputStream implements
             uploadData.getSize(),
             CONTENT_TYPE_OCTET_STREAM);
 
-        request = writeOperationHelper.newUploadPartRequestBuilder(
+        UploadPartRequest.Builder requestBuilder = writeOperationHelper.newUploadPartRequestBuilder(
             key,
             uploadId,
             currentPartNumber,
-            size).build();
+            isLast,
+            size);
+        request = requestBuilder.build();
+      } catch (SdkException aws) {
+        // catch and translate
+        IOException e = translateException("upload", key, aws);
+        // failure to start the upload.
+        noteUploadFailure(e);
+        throw e;
       } catch (IOException e) {
         // failure to prepare the upload.
         noteUploadFailure(e);

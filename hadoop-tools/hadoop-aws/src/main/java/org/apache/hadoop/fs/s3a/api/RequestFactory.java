@@ -203,6 +203,7 @@ public interface RequestFactory {
    * @param destKey      destination key of ongoing operation
    * @param uploadId     ID of ongoing upload
    * @param partNumber   current part number of the upload
+   * @param isLastPart   isLastPart is this the last part?
    * @param size         amount of data
    * @return the request builder.
    * @throws PathIOException if the part number is out of range.
@@ -211,6 +212,7 @@ public interface RequestFactory {
       String destKey,
       String uploadId,
       int partNumber,
+      boolean isLastPart,
       long size) throws PathIOException;
 
   /**

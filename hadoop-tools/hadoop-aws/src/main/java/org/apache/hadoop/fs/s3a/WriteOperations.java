@@ -190,6 +190,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @param destKey destination key of ongoing operation
    * @param uploadId ID of ongoing upload
    * @param partNumber current part number of the upload
+   * @param isLastPart is this the last part of the upload?
    * @param size amount of data
    * @return the request builder.
    * @throws IllegalArgumentException if the parameters are invalid
@@ -199,6 +200,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       String destKey,
       String uploadId,
       int partNumber,
+      boolean isLastPart,
       long size) throws IOException;
 
   /**

@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
+import org.apache.hadoop.fs.s3a.impl.CSEUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import org.junit.Assume;
@@ -35,7 +36,9 @@ import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE;
 import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
 
 /**
  * Tests behavior of a FileNotFound error that happens after open(), i.e. on
@@ -78,8 +81,14 @@ public class ITestS3ADelayedFNF extends AbstractS3ATestBase {
     final FSDataInputStream in = fs.open(p);
     assertDeleted(p, false);
 
+    Class exceptionClass = FileNotFoundException.class;
+    if (CSEUtils.isCSEEnabled(getEncryptionAlgorithm(
+        getTestBucketName(getConfiguration()), getConfiguration()).getMethod())) {
+      exceptionClass = AWSClientIOException.class;
+    }
+
     // This should fail since we deleted after the open.
-    LambdaTestUtils.intercept(FileNotFoundException.class,
+    LambdaTestUtils.intercept(exceptionClass,
         () -> in.read());
   }
 

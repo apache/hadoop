@@ -111,7 +111,7 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
 
   @Override
   public CompletableFuture<PartHandle> putPart(UploadHandle uploadId,
-      int partNumber, Path filePath,
+      int partNumber, boolean isLastPart, Path filePath,
       InputStream inputStream,
       long lengthInBytes)
       throws IOException {
