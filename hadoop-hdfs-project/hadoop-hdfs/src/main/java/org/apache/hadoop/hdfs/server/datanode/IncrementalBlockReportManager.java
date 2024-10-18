@@ -251,12 +251,20 @@ class IncrementalBlockReportManager {
       DatanodeStorage storage) {
     // Make sure another entry for the same block is first removed.
     // There may only be one such entry.
+    ReceivedDeletedBlockInfo removedInfo = null;
     for (PerStorageIBR perStorage : pendingIBRs.values()) {
-      if (perStorage.remove(rdbi.getBlock()) != null) {
+      removedInfo = perStorage.remove(rdbi.getBlock());
+      if (removedInfo != null) {
         break;
       }
     }
-    getPerStorageIBR(storage).put(rdbi);
+    if (removedInfo != null &&
+        removedInfo.getBlock().getGenerationStamp()
+            > rdbi.getBlock().getGenerationStamp()) {
+      getPerStorageIBR(storage).put(removedInfo);
+    } else {
+      getPerStorageIBR(storage).put(rdbi);
+    }
   }
 
   synchronized void notifyNamenodeBlock(ReceivedDeletedBlockInfo rdbi,
