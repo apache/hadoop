@@ -30,7 +30,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -97,17 +96,19 @@ public class UnmanagedAMPoolManager extends AbstractService {
 
   /**
    * Normally we should finish all applications before stop. If there are still
-   * UAMs running, force kill all of them. Do parallel kill because of
-   * performance reasons.
+   * UAMs running, force kill all of them. Do kill in asynchronous thread.
    *
    */
   @Override
   protected void serviceStop() throws Exception {
 
     if (!this.unmanagedAppMasterMap.isEmpty()) {
-      finishApplicationThread = new Thread(createForceFinishApplicationThread());
+      // Save a local copy of the key set so that it won't change with the map
+      finishApplicationThread =
+          new Thread(createForceFinishApplicationThread(new HashMap(this.unmanagedAppMasterMap)));
       finishApplicationThread.setName(dispatcherThreadName);
       finishApplicationThread.start();
+      this.unmanagedAppMasterMap.clear();
     }
 
     super.serviceStop();
@@ -485,45 +486,29 @@ public class UnmanagedAMPoolManager extends AbstractService {
     return responseMap;
   }
 
-  Runnable createForceFinishApplicationThread() {
+  Runnable createForceFinishApplicationThread(
+      Map<String, UnmanagedApplicationManager> unmanagedAppToFinish) {
     return () -> {
+      LOG.warn("Abnormal shutdown of UAMPoolManager, still {} UAMs in map",
+          unmanagedAppToFinish.size());
 
-      ExecutorCompletionService<Pair<String, KillApplicationResponse>> completionService =
-          new ExecutorCompletionService<>(threadpool);
-
-      // Save a local copy of the key set so that it won't change with the map
-      Set<String> addressList = new HashSet<>(unmanagedAppMasterMap.keySet());
-
-      LOG.warn("Abnormal shutdown of UAMPoolManager, still {} UAMs in map", addressList.size());
-
-      for (final String uamId : addressList) {
-        completionService.submit(() -> {
-          try {
-            ApplicationId appId = appIdMap.get(uamId);
-            LOG.info("Force-killing UAM id {} for application {}", uamId, appId);
-            UnmanagedApplicationManager applicationManager = unmanagedAppMasterMap.remove(uamId);
-            KillApplicationResponse response = applicationManager.forceKillApplication();
-            return Pair.of(uamId, response);
-          } catch (Exception e) {
-            LOG.error("Failed to kill unmanaged application master", e);
-            return Pair.of(uamId, null);
-          }
-        });
-      }
-
-      for (int i = 0; i < addressList.size(); ++i) {
+      // We should not use threadpool to execute the operation 'forceKillApplication'.
+      // Because ForceFinishApplication run in asynchronous thread, threadpool may be destroyed.
+      // Since we kill app in asynchronous thread, we could kill app sequentially,
+      // no operations will get stuck.
+      for (Map.Entry<String, UnmanagedApplicationManager> entry : unmanagedAppToFinish.entrySet()) {
+        String uamId = entry.getKey();
+        UnmanagedApplicationManager applicationManager = entry.getValue();
         try {
-          Future<Pair<String, KillApplicationResponse>> future = completionService.take();
-          Pair<String, KillApplicationResponse> pairs = future.get();
-          String uamId = pairs.getLeft();
           ApplicationId appId = appIdMap.get(uamId);
-          KillApplicationResponse response = pairs.getRight();
+          LOG.info("Force-killing UAM id {} for application {}", uamId, appId);
+          KillApplicationResponse response = applicationManager.forceKillApplication();
           if (response == null) {
-            throw new YarnException(
-                "Failed Force-killing UAM id " + uamId + " for application " + appId);
+            LOG.error("Failed Force-killing UAM id {} for application {}", uamId, appId);
+          } else {
+            LOG.info("Force-killing UAM id = {} for application {} KillCompleted {}.", uamId, appId,
+                response.getIsKillCompleted());
           }
-          LOG.info("Force-killing UAM id = {} for application {} KillCompleted {}.",
-              uamId, appId, response.getIsKillCompleted());
         } catch (Exception e) {
           LOG.error("Failed to kill unmanaged application master", e);
         }
@@ -548,7 +533,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
   }
 
   @VisibleForTesting
-  protected Thread getFinishApplicationThread() {
+  public Thread getFinishApplicationThread() {
     return finishApplicationThread;
   }
 }
