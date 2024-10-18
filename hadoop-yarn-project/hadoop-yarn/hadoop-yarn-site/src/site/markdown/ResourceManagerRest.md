@@ -368,7 +368,7 @@ The capacity scheduler supports hierarchical queues. This one request will print
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| memory | int | The amount of memory used (in MB) |
+| memory | long | The amount of memory used (in MB) |
 | vCores | int | The number of virtual cores |
 
 ### Elements of the health object in schedulerInfo:
@@ -4098,7 +4098,7 @@ Response Body:
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| memory | int | The amount of memory used (in MB) |
+| memory | long | The amount of memory used (in MB) |
 | vCores | int | The number of virtual cores |
 
 #### Response Examples
