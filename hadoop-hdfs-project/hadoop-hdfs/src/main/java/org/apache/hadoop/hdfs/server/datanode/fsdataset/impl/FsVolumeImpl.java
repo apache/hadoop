@@ -541,6 +541,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   @VisibleForTesting
+  @Override
   public long getReservedForReplicas() {
     return reservedForReplicas.get();
   }
