@@ -31,26 +31,25 @@ import org.apache.hadoop.mapred.nativetask.testutil.ResultVerifier;
 import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
 import org.apache.hadoop.util.Lists;
-import org.junit.AfterClass;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 
-@RunWith(Parameterized.class)
 public class KVTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(KVTest.class);
 
   private static Configuration nativekvtestconf = ScenarioConfiguration.getNativeConfiguration();
   private static Configuration hadoopkvtestconf = ScenarioConfiguration.getNormalConfiguration();
+
   static {
     nativekvtestconf.addResource(TestConstants.KVTEST_CONF_PATH);
     hadoopkvtestconf.addResource(TestConstants.KVTEST_CONF_PATH);
@@ -58,7 +57,7 @@ public class KVTest {
 
   private static List<Class<?>> parseClassNames(String spec) {
     List<Class<?>> ret = Lists.newArrayList();
-      Iterable<String> classNames = Splitter.on(';').trimResults()
+    Iterable<String> classNames = Splitter.on(';').trimResults()
         .omitEmptyStrings().split(spec);
     for (String className : classNames) {
       try {
@@ -73,14 +72,13 @@ public class KVTest {
   /**
    * Parameterize the test with the specified key and value types.
    */
-  @Parameters(name = "key:{0}\nvalue:{1}")
   public static Iterable<Class<?>[]> data() throws Exception {
     // Parse the config.
     final String valueClassesStr = nativekvtestconf
         .get(TestConstants.NATIVETASK_KVTEST_VALUECLASSES);
     LOG.info("Parameterizing with value classes: " + valueClassesStr);
     List<Class<?>> valueClasses = parseClassNames(valueClassesStr);
-    
+
     final String keyClassesStr = nativekvtestconf.get(
         TestConstants.NATIVETASK_KVTEST_KEYCLASSES);
     LOG.info("Parameterizing with key classes: " + keyClassesStr);
@@ -89,31 +87,33 @@ public class KVTest {
     // Generate an entry for each key type.
     List<Class<?>[]> pairs = Lists.newArrayList();
     for (Class<?> keyClass : keyClasses) {
-      pairs.add(new Class<?>[]{ keyClass, LongWritable.class });
+      pairs.add(new Class<?>[]{keyClass, LongWritable.class});
     }
     // ...and for each value type.
     for (Class<?> valueClass : valueClasses) {
-      pairs.add(new Class<?>[]{ LongWritable.class, valueClass });
+      pairs.add(new Class<?>[]{LongWritable.class, valueClass});
     }
     return pairs;
   }
 
-  private final Class<?> keyclass;
-  private final Class<?> valueclass;
+  private Class<?> keyclass;
+  private Class<?> valueclass;
 
-  public KVTest(Class<?> keyclass, Class<?> valueclass) {
+  public void initKVTest(Class<?> keyclass, Class<?> valueclass) {
     this.keyclass = keyclass;
     this.valueclass = valueclass;
   }
 
-  @Before
+  @BeforeEach
   public void startUp() throws Exception {
-    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
-    Assume.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
+    Assumptions.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    Assumptions.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
   }
 
-  @Test
-  public void testKVCompability() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest(name = "key:{0}\nvalue:{1}")
+  void testKVCompability(Class<?> keyclass, Class<?> valueclass) throws Exception {
+    initKVTest(keyclass, valueclass);
     final FileSystem fs = FileSystem.get(nativekvtestconf);
     final String jobName = "Test:" + keyclass.getSimpleName() + "--"
         + valueclass.getSimpleName();
@@ -148,7 +148,7 @@ public class KVTest {
     fs.close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanUp() throws IOException {
     final FileSystem fs = FileSystem.get(new ScenarioConfiguration());
     fs.delete(new Path(TestConstants.NATIVETASK_KVTEST_DIR), true);
