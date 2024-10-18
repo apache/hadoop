@@ -2194,8 +2194,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // put options are derived from the path and the
     // option builder.
     boolean keep = options.isPerformance() || keepDirectoryMarkers(path);
+    boolean conditionalCreate = options.isConditionalCreate();
     final PutObjectOptions putOptions =
-        new PutObjectOptions(keep, null, options.getHeaders());
+        new PutObjectOptions(keep, false, null, options.getHeaders());
 
     validateOutputStreamConfiguration(path, getConf());
 
@@ -2223,7 +2224,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withPutOptions(putOptions)
         .withIOStatisticsAggregator(
             IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator())
-        .withMultipartEnabled(isMultipartUploadEnabled);
+        .withMultipartEnabled(isMultipartUploadEnabled)
+        .withConditionalPutEnabled(conditionalCreate);
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);

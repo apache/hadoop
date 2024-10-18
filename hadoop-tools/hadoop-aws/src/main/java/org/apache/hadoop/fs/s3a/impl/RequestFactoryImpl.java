@@ -60,6 +60,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecretOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_NONE_MATCH;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PART_UPLOAD_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.UNKNOWN_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.setRequestTimeout;
@@ -532,12 +533,20 @@ public class RequestFactoryImpl implements RequestFactory {
   public CompleteMultipartUploadRequest.Builder newCompleteMultipartUploadRequestBuilder(
       String destKey,
       String uploadId,
-      List<CompletedPart> partETags) {
+      List<CompletedPart> partETags,
+      PutObjectOptions putOptions) {
+
     // a copy of the list is required, so that the AWS SDK doesn't
     // attempt to sort an unmodifiable list.
-    CompleteMultipartUploadRequest.Builder requestBuilder =
-        CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
+    CompleteMultipartUploadRequest.Builder requestBuilder;
+    Map<String, String> optionHeaders = putOptions.getHeaders();
+    requestBuilder = CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
             .multipartUpload(CompletedMultipartUpload.builder().parts(partETags).build());
+    if (putOptions.isconditionalPutEnabled()){
+      requestBuilder = CompleteMultipartUploadRequest.builder().overrideConfiguration(
+              override ->override.putHeader(IF_NONE_MATCH, optionHeaders.get(IF_NONE_MATCH)));
+
+    }
 
     return prepareRequest(requestBuilder);
   }
