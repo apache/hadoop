@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
 import static org.apache.hadoop.util.ExitUtil.terminate;
+import static org.apache.hadoop.util.Time.monotonicNowNanos;
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
@@ -445,6 +446,11 @@ public class BlockManager implements BlockStatsMXBean {
   private int numBlocksPerIteration;
 
   /**
+   * The maximum number of blocks to remove per tick.
+   */
+  private int numBlocksPerRemove;
+
+  /**
    * The blocks of deleted files are put into the queue,
    * and the cleanup thread processes these blocks periodically.
    */
@@ -577,6 +583,10 @@ public class BlockManager implements BlockStatsMXBean {
     this.numBlocksPerIteration = conf.getInt(
         DFSConfigKeys.DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT,
         DFSConfigKeys.DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT_DEFAULT);
+
+    this.numBlocksPerRemove = conf.getInt(
+            DFSConfigKeys.DFS_NAMENODE_REMOVE_BLOCKS_PER_INTERVAL_KEY,
+            DFSConfigKeys.DFS_NAMENODE_REMOVE_BLOCKS_PER_INTERVAL_DEFAULT);
 
     this.minReplicationToBeInMaintenance =
         (short) initMinReplicationToBeInMaintenance(conf);
@@ -1812,7 +1822,21 @@ public class BlockManager implements BlockStatsMXBean {
   void removeBlocksAssociatedTo(final DatanodeDescriptor node) {
     providedStorageMap.removeDatanode(node);
     final Iterator<BlockInfo> it = node.getBlockIterator();
+    int numBlocksRemovedPerLock = 0;
     while(it.hasNext()) {
+      if (numBlocksRemovedPerLock >= numBlocksPerRemove) {
+        namesystem.writeUnlock();
+        try {
+          LOG.debug("Yielded lock during removing blocks associated to the dead datanode");  //释放锁，并sleep 500ns（1 ns = 10-9 s）
+          Thread.sleep(0, 500);
+        } catch (InterruptedException ignored) {
+          return;
+        }
+        // reset
+        numBlocksRemovedPerLock = 0;
+        namesystem.writeLock();
+      }
+      numBlocksRemovedPerLock++;
       removeStoredBlock(it.next(), node);
     }
     // Remove all pending DN messages referencing this DN.

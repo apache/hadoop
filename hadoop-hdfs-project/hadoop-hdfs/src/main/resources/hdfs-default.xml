@@ -4350,6 +4350,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.remove.blocks.per.interval</name>
+  <value>500000</value>
+  <description>
+    The maximum number of blocks associated with dead datanodes to remove per tick.
+  </description>
+</property>
+
+<property>
   <name>dfs.block.placement.ec.classname</name>
   <value>org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant</value>
   <description>
