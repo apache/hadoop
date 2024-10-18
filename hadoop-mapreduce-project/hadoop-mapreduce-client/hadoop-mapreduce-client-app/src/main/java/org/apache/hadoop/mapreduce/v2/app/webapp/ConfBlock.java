@@ -22,8 +22,14 @@ import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.JOB_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.util.HashSet;
+import java.util.Set;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
@@ -46,6 +52,20 @@ public class ConfBlock extends HtmlBlock {
 
   @Inject ConfBlock(AppContext appctx) {
     appContext = appctx;
+  }
+
+  /**
+   * To URLDecode the string value for URLEncoded data.
+   * @param value string data to be decoded
+   * @return value data after decoded
+   * @throws UnsupportedEncodingException if empty string or unsupported enc parameter.
+   */
+  private String urlDecode(String value){
+    try {
+      return URLDecoder.decode(value, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      return value;
+    }
   }
 
   /*
@@ -95,12 +115,22 @@ public class ConfBlock extends HtmlBlock {
           first = false;
           buffer.append(sources[i]);
         }
+        Configuration conf = appContext.getJob(jobID).loadConfFile();
+        String decodeStrings = conf.getTrimmed(MRJobConfig.MR_DECODE_CONFIGS, "");
+        Set<String> decodeConfigs = new HashSet<>();
+        for (String config : decodeStrings.split(",")) {
+          decodeConfigs.add(config.trim());
+        }
+        String value = entry.getValue();
+        if(decodeConfigs.contains(entry.getName())){
+          value = urlDecode(value);
+        }
         tbody.
           tr().
-            td(entry.getName()).
-            td(entry.getValue()).
-            td(buffer.toString()).
-            __();
+          td(entry.getName()).
+          td(value).
+          td(buffer.toString()).
+          __();
       }
       tbody.__().
       tfoot().
