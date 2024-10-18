@@ -265,6 +265,7 @@ public class TestTaskProgressReporter {
 
   @Test (timeout=10000)
   public void testTaskProgress() throws Exception {
+    statusUpdateTimes = 0;
     JobConf job = new JobConf();
     job.setLong(MRJobConfig.TASK_PROGRESS_REPORT_INTERVAL, 1000);
     Task task = new DummyTask();
