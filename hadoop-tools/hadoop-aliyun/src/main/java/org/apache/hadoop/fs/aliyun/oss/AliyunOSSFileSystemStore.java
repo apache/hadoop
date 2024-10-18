@@ -147,6 +147,11 @@ public class AliyunOSSFileSystemStore {
       throw new IllegalArgumentException(msg);
     }
 
+    boolean redirectEnable = conf.getBoolean(REDIRECT_ENABLE_KEY,
+    REDIRECT_ENABLE_DEFAULT);
+    clientConf.setRedirectEnable(redirectEnable);
+    LOG.debug("oss redirectEnable " + redirectEnable);
+
     String endPoint = conf.getTrimmed(ENDPOINT_KEY, "");
     if (StringUtils.isEmpty(endPoint)) {
       throw new IllegalArgumentException("Aliyun OSS endpoint should not be " +
