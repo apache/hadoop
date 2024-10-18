@@ -426,8 +426,8 @@
       </exclusions>
     </dependency>
     <dependency>
-          <groupId>com.sun.jersey</groupId>
-          <artifactId>jersey-client</artifactId>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-client</artifactId>
       <optional>true</optional>
     </dependency>
     <dependency>

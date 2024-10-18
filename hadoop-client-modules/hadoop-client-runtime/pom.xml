@@ -159,6 +159,8 @@
                       <exclude>org.xerial.snappy:*</exclude>
                       <!-- leave out kotlin classes -->
                       <exclude>org.jetbrains.kotlin:*</exclude>
+                      <!-- leave out jsr311-compat classes -->
+                      <exclude>com.github.pjfanning:jsr311-compat</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
