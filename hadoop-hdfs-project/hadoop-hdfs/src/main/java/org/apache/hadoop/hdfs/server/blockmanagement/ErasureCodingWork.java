@@ -17,21 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.net.Node;
 
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 class ErasureCodingWork extends BlockReconstructionWork {
   private final byte[] liveBlockIndices;
-  private final byte[] liveBusyBlockIndices;
   private final byte[] excludeReconstructedIndices;
   private final String blockPoolId;
 
@@ -41,13 +35,12 @@ class ErasureCodingWork extends BlockReconstructionWork {
       List<DatanodeDescriptor> containingNodes,
       List<DatanodeStorageInfo> liveReplicaStorages,
       int additionalReplRequired, int priority,
-      byte[] liveBlockIndices, byte[] liveBusyBlockIndices,
+      byte[] liveBlockIndices,
       byte[] excludeReconstrutedIndices) {
     super(block, bc, srcNodes, containingNodes,
         liveReplicaStorages, additionalReplRequired, priority);
     this.blockPoolId = blockPoolId;
     this.liveBlockIndices = liveBlockIndices;
-    this.liveBusyBlockIndices = liveBusyBlockIndices;
     this.excludeReconstructedIndices = excludeReconstrutedIndices;
     LOG.debug("Creating an ErasureCodingWork to {} reconstruct ",
         block);
@@ -77,132 +70,19 @@ class ErasureCodingWork extends BlockReconstructionWork {
     setTargets(chosenTargets);
   }
 
-  /**
-   * @return true if the current source nodes cover all the internal blocks.
-   * I.e., we only need to have more racks.
-   */
-  private boolean hasAllInternalBlocks() {
-    final BlockInfoStriped block = (BlockInfoStriped) getBlock();
-    if (liveBlockIndices.length
-        + liveBusyBlockIndices.length < block.getRealTotalBlockNum()) {
-      return false;
-    }
-    BitSet bitSet = new BitSet(block.getTotalBlockNum());
-    for (byte index : liveBlockIndices) {
-      bitSet.set(index);
-    }
-    for (byte busyIndex: liveBusyBlockIndices) {
-      bitSet.set(busyIndex);
-    }
-    for (int i = 0; i < block.getRealDataBlockNum(); i++) {
-      if (!bitSet.get(i)) {
-        return false;
-      }
-    }
-    for (int i = block.getDataBlockNum(); i < block.getTotalBlockNum(); i++) {
-      if (!bitSet.get(i)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * We have all the internal blocks but not enough racks. Thus we do not need
-   * to do decoding but only simply make an extra copy of an internal block. In
-   * this scenario, use this method to choose the source datanode for simple
-   * replication.
-   * @return The index of the source datanode.
-   */
-  private int chooseSource4SimpleReplication() {
-    Map<String, List<Integer>> map = new HashMap<>();
-    for (int i = 0; i < getSrcNodes().length; i++) {
-      final String rack = getSrcNodes()[i].getNetworkLocation();
-      List<Integer> dnList = map.get(rack);
-      if (dnList == null) {
-        dnList = new ArrayList<>();
-        map.put(rack, dnList);
-      }
-      dnList.add(i);
-    }
-    List<Integer> max = null;
-    for (Map.Entry<String, List<Integer>> entry : map.entrySet()) {
-      if (max == null || entry.getValue().size() > max.size()) {
-        max = entry.getValue();
-      }
-    }
-    assert max != null;
-    return max.get(0);
-  }
-
   @Override
   boolean addTaskToDatanode(NumberReplicas numberReplicas) {
     final DatanodeStorageInfo[] targets = getTargets();
     assert targets.length > 0;
     BlockInfoStriped stripedBlk = (BlockInfoStriped) getBlock();
-    boolean flag = true;
-    if (hasNotEnoughRack()) {
-      // if we already have all the internal blocks, but not enough racks,
-      // we only need to replicate one internal block to a new rack
-      int sourceIndex = chooseSource4SimpleReplication();
-      createReplicationWork(sourceIndex, targets[0]);
-    } else if ((numberReplicas.decommissioning() > 0 ||
-        numberReplicas.liveEnteringMaintenanceReplicas() > 0) &&
-        hasAllInternalBlocks()) {
-      List<Integer> leavingServiceSources = findLeavingServiceSources();
-      // decommissioningSources.size() should be >= targets.length
-      final int num = Math.min(leavingServiceSources.size(), targets.length);
-      if (num == 0) {
-        flag = false;
-      }
-      for (int i = 0; i < num; i++) {
-        createReplicationWork(leavingServiceSources.get(i), targets[i]);
-      }
-    } else {
-      targets[0].getDatanodeDescriptor().addBlockToBeErasureCoded(
-          new ExtendedBlock(blockPoolId, stripedBlk), getSrcNodes(), targets,
-          liveBlockIndices, excludeReconstructedIndices, stripedBlk.getErasureCodingPolicy());
-    }
-    return flag;
+    targets[0].getDatanodeDescriptor().addBlockToBeErasureCoded(
+        new ExtendedBlock(blockPoolId, stripedBlk), getSrcNodes(), targets,
+        liveBlockIndices, excludeReconstructedIndices, stripedBlk.getErasureCodingPolicy());
+    return true;
   }
 
-  private void createReplicationWork(int sourceIndex,
-      DatanodeStorageInfo target) {
-    BlockInfoStriped stripedBlk = (BlockInfoStriped) getBlock();
-    final byte blockIndex = liveBlockIndices[sourceIndex];
-    final DatanodeDescriptor source = getSrcNodes()[sourceIndex];
-    final long internBlkLen = StripedBlockUtil.getInternalBlockLength(
-        stripedBlk.getNumBytes(), stripedBlk.getCellSize(),
-        stripedBlk.getDataBlockNum(), blockIndex);
-    final Block targetBlk = new Block(stripedBlk.getBlockId() + blockIndex,
-        internBlkLen, stripedBlk.getGenerationStamp());
-    source.addECBlockToBeReplicated(targetBlk,
-        new DatanodeStorageInfo[] {target});
-    LOG.debug("Add replication task from source {} to "
-        + "target {} for EC block {}", source, target, targetBlk);
-  }
-
-  private List<Integer> findLeavingServiceSources() {
-    // Mark the block in normal node.
-    BlockInfoStriped block = (BlockInfoStriped)getBlock();
-    BitSet bitSet = new BitSet(block.getRealTotalBlockNum());
-    for (int i = 0; i < getSrcNodes().length; i++) {
-      if (getSrcNodes()[i].isInService()) {
-        bitSet.set(liveBlockIndices[i]);
-      }
-    }
-    // If the block is on the node which is decommissioning or
-    // entering_maintenance, and it doesn't exist on other normal nodes,
-    // we just add the node into source list.
-    List<Integer> srcIndices = new ArrayList<>();
-    for (int i = 0; i < getSrcNodes().length; i++) {
-      if ((getSrcNodes()[i].isDecommissionInProgress() ||
-          (getSrcNodes()[i].isEnteringMaintenance() &&
-          getSrcNodes()[i].isAlive())) &&
-          !bitSet.get(liveBlockIndices[i])) {
-        srcIndices.add(i);
-      }
-    }
-    return srcIndices;
+  @VisibleForTesting
+  public byte[] getExcludeReconstructedIndices() {
+    return excludeReconstructedIndices;
   }
 }
