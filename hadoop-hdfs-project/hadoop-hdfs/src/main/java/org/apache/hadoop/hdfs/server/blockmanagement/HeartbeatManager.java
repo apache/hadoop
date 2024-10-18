@@ -66,8 +66,6 @@ class HeartbeatManager implements DatanodeStatistics {
   /** Statistics, which are synchronized by the heartbeat manager lock. */
   private final DatanodeStats stats = new DatanodeStats();
 
-  /** The time period to check for expired datanodes. */
-  private final long heartbeatRecheckInterval;
   /** Heartbeat monitor thread. */
   private final Daemon heartbeatThread = new Daemon(new Monitor());
   private final StopWatch heartbeatStopWatch = new StopWatch();
@@ -85,31 +83,12 @@ class HeartbeatManager implements DatanodeStatistics {
       final BlockManager blockManager, final Configuration conf) {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
-    boolean avoidStaleDataNodesForWrite = conf.getBoolean(
-        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY,
-        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT);
-    long recheckInterval = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
-        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 min
-    long staleInterval = conf.getLong(
-        DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
-        DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT);// 30s
     enableLogStaleNodes = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_ENABLE_LOG_STALE_DATANODE_KEY,
         DFSConfigKeys.DFS_NAMENODE_ENABLE_LOG_STALE_DATANODE_DEFAULT);
     this.numOfDeadDatanodesRemove = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_REMOVE_DEAD_DATANODE_BATCHNUM_KEY,
         DFSConfigKeys.DFS_NAMENODE_REMOVE_BAD_BATCH_NUM_DEFAULT);
-
-    if (avoidStaleDataNodesForWrite && staleInterval < recheckInterval) {
-      this.heartbeatRecheckInterval = staleInterval;
-      LOG.info("Setting heartbeat recheck interval to " + staleInterval
-          + " since " + DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY
-          + " is less than "
-          + DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY);
-    } else {
-      this.heartbeatRecheckInterval = recheckInterval;
-    }
   }
 
   void activate() {
@@ -354,7 +333,8 @@ class HeartbeatManager implements DatanodeStatistics {
   @VisibleForTesting
   boolean shouldAbortHeartbeatCheck(long offset) {
     long elapsed = heartbeatStopWatch.now(TimeUnit.MILLISECONDS);
-    return elapsed + offset > heartbeatRecheckInterval;
+    return elapsed + offset > blockManager.getDatanodeManager()
+        .getHeartbeatRecheckIntervalForMonitor();
   }
 
   /**
@@ -544,7 +524,8 @@ class HeartbeatManager implements DatanodeStatistics {
         restartHeartbeatStopWatch();
         try {
           final long now = Time.monotonicNow();
-          if (lastHeartbeatCheck + heartbeatRecheckInterval < now) {
+          if (lastHeartbeatCheck + blockManager.getDatanodeManager()
+              .getHeartbeatRecheckIntervalForMonitor() < now) {
             heartbeatCheck();
             lastHeartbeatCheck = now;
           }
