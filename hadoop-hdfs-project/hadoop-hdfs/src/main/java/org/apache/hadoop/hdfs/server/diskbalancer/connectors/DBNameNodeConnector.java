@@ -133,7 +133,9 @@ class DBNameNodeConnector implements ClusterConnector {
       throws Exception {
     Preconditions.checkNotNull(node);
     Preconditions.checkNotNull(reports);
-    for (StorageReport report : reports) {
+    int len = reports.length;
+    for (int i = 0; i < len; i++) {
+      StorageReport report = reports[i];
       DatanodeStorage storage = report.getStorage();
       DiskBalancerVolume volume = new DiskBalancerVolume();
       volume.setCapacity(report.getCapacity());
@@ -153,8 +155,11 @@ class DBNameNodeConnector implements ClusterConnector {
           .READ_ONLY_SHARED) || report.isFailed());
       volume.setStorageType(storage.getStorageType().name());
       volume.setIsTransient(storage.getStorageType().isTransient());
-      node.addVolume(volume);
+      boolean needComputeDensity = false;
+      if (i == len - 1) {
+        needComputeDensity = true;
+      }
+      node.addVolume(volume, needComputeDensity);
     }
-
   }
 }
