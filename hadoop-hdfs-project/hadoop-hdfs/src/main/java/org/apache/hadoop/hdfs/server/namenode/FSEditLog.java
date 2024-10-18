@@ -440,6 +440,25 @@ public class FSEditLog implements LogsPurgeable {
       }
     }
   }
+
+  /**
+   * Format all configured journals which are not file-based.
+   *
+   * File-based journals are skipped, since they are formatted by the
+   * Storage format code.
+   */
+  synchronized int formatUnformattedNonFileJournals(NamespaceInfo nsInfo) throws IOException {
+    Preconditions.checkState(state == State.OPEN_FOR_READING,
+        "Bad state: %s", state);
+
+    int formatted = 0;
+    for (JournalManager jm : journalSet.getJournalManagers()) {
+      if (!(jm instanceof FileJournalManager)) {
+        formatted += jm.formatUnformattedSharedJournals(nsInfo);
+      }
+    }
+    return formatted;
+  }
   
   synchronized List<FormatConfirmable> getFormatConfirmables() {
     Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,

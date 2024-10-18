@@ -194,6 +194,12 @@ public class JournalSet implements JournalManager {
     this.minimumRedundantJournals = minimumRedundantResources;
     lastJournalledTxId = INVALID_TXID;
   }
+
+  @Override
+  public int formatUnformattedSharedJournals(NamespaceInfo nsInfo) throws IOException {
+    // The operation is done by FSEditLog itself
+    throw new UnsupportedOperationException();
+  }
   
   @Override
   public void format(NamespaceInfo nsInfo, boolean force) throws IOException {

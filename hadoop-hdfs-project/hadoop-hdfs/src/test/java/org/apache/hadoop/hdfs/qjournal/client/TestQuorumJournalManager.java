@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.JID;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.verifyEdits;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeSegment;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeTxns;
+import static org.apache.hadoop.hdfs.qjournal.client.TestQuorumJournalManagerUnit.futureReturns;
 import static org.apache.hadoop.hdfs.qjournal.client.SpyQJournalUtil.spyGetJournaledEdits;
 import static org.apache.hadoop.hdfs.qjournal.client.TestQuorumJournalManagerUnit.futureThrows;
 import static org.junit.Assert.assertEquals;
@@ -147,9 +148,9 @@ public class TestQuorumJournalManager {
    * Enqueue a QJM for closing during shutdown. This makes the code a little
    * easier to follow, with fewer try..finally clauses necessary.
    */
-  private QuorumJournalManager closeLater(QuorumJournalManager qjm) {
-    toClose.add(qjm);
-    return qjm;
+  private QuorumJournalManager closeLater(QuorumJournalManager quorumJournalManager) {
+    toClose.add(quorumJournalManager);
+    return quorumJournalManager;
   }
   
   @Test
@@ -168,13 +169,45 @@ public class TestQuorumJournalManager {
   
   @Test
   public void testFormat() throws Exception {
-    QuorumJournalManager qjm = closeLater(new QuorumJournalManager(
+    QuorumJournalManager quorumJournalManager = closeLater(new QuorumJournalManager(
         conf, cluster.getQuorumJournalURI("testFormat-jid"), FAKE_NSINFO));
-    assertFalse(qjm.hasSomeData());
-    qjm.format(FAKE_NSINFO, false);
-    assertTrue(qjm.hasSomeData());
+    assertFalse(quorumJournalManager.hasSomeData());
+    quorumJournalManager.format(FAKE_NSINFO, false);
+    assertTrue(quorumJournalManager.hasSomeData());
   }
-  
+
+  @Test (expected = IOException.class)
+  public void testFormatUnformattedSharedJournalsWithNonFormatted() throws Exception {
+    QuorumJournalManager quorumJournalManager = closeLater(new QuorumJournalManager(
+        conf, cluster.getQuorumJournalURI("testFormat-jid"), FAKE_NSINFO));
+    assertFalse(quorumJournalManager.hasSomeData());
+    quorumJournalManager.formatUnformattedSharedJournals(FAKE_NSINFO);
+  }
+
+  @Test(expected = IOException.class)
+  public void testFormatUnformattedSharedJournalsWithMajorityFormatted() throws Exception {
+    QuorumJournalManager quorumJournalManager = closeLater(createSpyingQJM());
+    futureReturns(true).when(
+        quorumJournalManager.getLoggerSetForTests().getLoggersForTests().get(0)).isFormatted();
+    futureReturns(true).when(
+        quorumJournalManager.getLoggerSetForTests().getLoggersForTests().get(1)).isFormatted();
+    futureReturns(false).when(
+        quorumJournalManager.getLoggerSetForTests().getLoggersForTests().get(2)).isFormatted();
+    assertEquals(1, quorumJournalManager.formatUnformattedSharedJournals(FAKE_NSINFO));
+  }
+
+  @Test(expected = IOException.class)
+  public void testFormatUnformattedSharedJournalsWithException() throws Exception {
+    QuorumJournalManager quorumJournalManager = closeLater(createSpyingQJM());
+    futureReturns(true).when(
+        quorumJournalManager.getLoggerSetForTests().getLoggersForTests().get(0)).isFormatted();
+    futureReturns(true).when(
+        quorumJournalManager.getLoggerSetForTests().getLoggersForTests().get(1)).isFormatted();
+    futureThrows(new IOException("logger failed")).when(
+        quorumJournalManager.getLoggerSetForTests().getLoggersForTests().get(2)).isFormatted();
+    quorumJournalManager.formatUnformattedSharedJournals(FAKE_NSINFO);
+  }
+
   @Test
   public void testReaderWhileAnotherWrites() throws Exception {
     QuorumJournalManager readerQjm = closeLater(createSpyingQJM());
