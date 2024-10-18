@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
 
+import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -38,7 +39,6 @@ import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.DtUtilShell;
 import org.apache.hadoop.security.token.Token;
@@ -171,7 +171,8 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
 
   /**
    * When bound to a custom DT manager, it provides the service name.
-   * The stub returns the URI by default.
+   * By default, the returned value matches that which can be derived from the
+   * FS URI through {@link ExtensionHelper#buildCanonicalServiceName(URI)}.
    */
   @Test
   public void testCanonicalization() throws Throwable {
@@ -179,15 +180,32 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
     assertNotNull("No canonical service name from filesystem " + getFileSystem(),
         service);
     assertEquals("canonical URI and service name mismatch",
-        getFilesystemURI(), new URI(service));
+        ExtensionHelper.buildCanonicalServiceName(getFilesystemURI()),
+        ExtensionHelper.buildCanonicalServiceName(new URI(service)));
   }
 
+  /**
+   * Get the URI of the suite's FS.
+   * @return FS URI.
+   */
   protected URI getFilesystemURI() throws IOException {
     return getFileSystem().getUri();
   }
 
+  /**
+   * The canonical service name of the test suite's filesystem.
+   * @return service name.
+   */
   protected String getCanonicalServiceName() throws IOException {
     return getFileSystem().getCanonicalServiceName();
+  }
+
+  /**
+   * Build the canonical service name from the FS URI.
+   * @return string
+   */
+  protected String buildFilesystemURICanonicalServiceName() throws IOException {
+    return ExtensionHelper.buildCanonicalServiceName(getFilesystemURI());
   }
 
   /**
@@ -196,17 +214,19 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testDefaultCanonicalization() throws Throwable {
-    FileSystem fs = getFileSystem();
+
+    // clear the token service name in the stub DT manager.
     clearTokenServiceName();
 
-    assertEquals("canonicalServiceName is not the default",
-        getDefaultServiceName(fs), getCanonicalServiceName());
+    assertEquals("canonicalServiceName is not that expected",
+        buildFilesystemURICanonicalServiceName(),
+        getCanonicalServiceName());
   }
 
-  protected String getDefaultServiceName(final FileSystem fs) {
-    return SecurityUtil.buildDTServiceName(fs.getUri(), 0);
-  }
-
+  /**
+   * Set the canonical service name of the stub DT manager
+   * to null.
+   */
   protected void clearTokenServiceName() throws IOException {
     getStubDTManager().setCanonicalServiceName(null);
   }
@@ -229,23 +249,25 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
   @Test
   public void testRequestTokenDefault() throws Throwable {
     clearTokenServiceName();
-
+    final String canonicalServiceName = buildFilesystemURICanonicalServiceName();
     AzureBlobFileSystem fs = getFileSystem();
-    assertEquals("canonicalServiceName is not the default",
-        getDefaultServiceName(fs), fs.getCanonicalServiceName());
+    assertEquals("canonicalServiceName is not the expected value",
+        canonicalServiceName,
+        fs.getCanonicalServiceName());
 
     Credentials credentials = mkTokens(fs);
     assertEquals("Number of collected tokens", 1,
         credentials.numberOfTokens());
     verifyCredentialsContainsToken(credentials,
-        getDefaultServiceName(fs), getFilesystemURI().toString());
+        canonicalServiceName,
+        fs.getCanonicalServiceName());
   }
 
   public void verifyCredentialsContainsToken(final Credentials credentials,
       FileSystem fs) throws IOException {
     verifyCredentialsContainsToken(credentials,
         fs.getCanonicalServiceName(),
-        fs.getUri().toString());
+        fs.getCanonicalServiceName());
   }
 
   /**
@@ -264,15 +286,21 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
     Token<? extends TokenIdentifier> token = credentials.getToken(
         new Text(serviceName));
 
-    assertEquals("Token Kind in " + token,
-        StubAbfsTokenIdentifier.TOKEN_KIND, token.getKind());
-    assertEquals("Token Service Kind in " + token,
-        tokenService, token.getService().toString());
+    Assertions.assertThat(token)
+        .describedAs("No token found for %s", serviceName)
+        .isNotNull();
+
+    Assertions.assertThat(token.getKind())
+        .describedAs("Token Kind in %s", token)
+        .isEqualTo(StubAbfsTokenIdentifier.TOKEN_KIND);
+    Assertions.assertThat(token.getService().toString())
+        .describedAs("Token Service in %s", token)
+        .isEqualTo(tokenService);
 
     StubAbfsTokenIdentifier abfsId = (StubAbfsTokenIdentifier)
         token.decodeIdentifier();
     LOG.info("Created token {}", abfsId);
-    assertEquals("token URI in " + abfsId,
+    assertEquals("token URI in AbfsTokenIdentifier " + abfsId,
         tokenService, abfsId.getUri().toString());
     return abfsId;
   }
@@ -342,10 +370,15 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
         tokenfile.length() > 6);
 
     String printed = dtutil(0, getRawConfiguration(), "print", tfs);
-    assertTrue("no " + fsURI + " in " + printed,
-        printed.contains(fsURI));
-    assertTrue("no " + StubAbfsTokenIdentifier.ID + " in " + printed,
-        printed.contains(StubAbfsTokenIdentifier.ID));
+
+    // now look in the printed output and verify that it contains
+    // expected strings.
+    Assertions.assertThat(printed)
+        .describedAs("canonical service name in output")
+        .contains(getCanonicalServiceName());
+    Assertions.assertThat(printed)
+        .describedAs("token identifier in output")
+        .contains(StubAbfsTokenIdentifier.ID);
   }
 
   /**
@@ -362,9 +395,11 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
       Credentials credentials = mkTokens(fs);
       assertEquals("Number of collected tokens", 1,
           credentials.numberOfTokens());
+      // The (test) classic DT manager builds up its URI service name from
+      // a constant. this is canonicalized and used as the service name.
       verifyCredentialsContainsToken(credentials,
           fs.getCanonicalServiceName(),
-          ClassicDelegationTokenManager.UNSET);
+          ClassicDelegationTokenManager.UNSET_URI_SERVICE_NAME);
     }
   }
 }
