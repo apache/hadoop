@@ -23,25 +23,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import software.amazon.awssdk.core.exception.SdkException;
-
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.exception.SdkException;
 
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
@@ -71,20 +64,6 @@ public class ITestRenameDeleteRace extends AbstractS3ATestBase {
           EXECUTOR_THREAD_COUNT * 2,
           30, TimeUnit.SECONDS,
           "test-operations");
-
-  @Override
-  protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-
-    // use the keep policy to ensure that surplus markers exist
-    // to complicate failures
-    conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_DELETE);
-    removeBaseAndBucketOverrides(getTestBucketName(conf),
-        conf,
-        DIRECTORY_MARKER_POLICY);
-
-    return conf;
-  }
 
   /**
    * This test uses a subclass of S3AFileSystem to recreate the race between

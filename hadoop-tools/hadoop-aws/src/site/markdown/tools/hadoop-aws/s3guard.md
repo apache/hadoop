@@ -132,7 +132,7 @@ This auditing information can be used to identify opportunities to reduce load.
 Prints and optionally checks the status of a bucket.
 
 ```bash
-hadoop s3guard bucket-info [-fips] [-magic] [-encryption ENCRYPTION] [-markers MARKER] s3a://BUCKET
+hadoop s3guard bucket-info [-fips] [-magic] [-encryption ENCRYPTION] s3a://BUCKET
 ```
 
 Options
@@ -141,7 +141,6 @@ Options
 |----------------------|---------------------------------------------------------------------|
 | `-fips`              | Require FIPS endopint to be in use                                  |
 | `-magic`             | Require the S3 filesystem to be support the "magic" committer       |
-| `-markers`           | Directory marker status: `aware`, `keep`, `delete`, `authoritative` |
 | `-encryption <type>` | Require a specific encryption algorithm                             |
 
 The server side encryption options are not directly related to S3Guard, but

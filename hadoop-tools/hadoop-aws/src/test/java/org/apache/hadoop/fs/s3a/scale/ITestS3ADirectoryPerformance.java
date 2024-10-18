@@ -53,8 +53,6 @@ import java.util.concurrent.Executors;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
@@ -227,11 +225,6 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
     final Configuration conf =
             getConfigurationWithConfiguredBatchSize(batchSize);
 
-    removeBaseAndBucketOverrides(conf,
-        DIRECTORY_MARKER_POLICY);
-    // force directory markers = keep to save delete requests on every
-    // file created.
-    conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_KEEP);
     S3AFileSystem fs = (S3AFileSystem) FileSystem.get(dir.toUri(), conf);
 
     final List<String> originalListOfFiles = new ArrayList<>();
@@ -260,7 +253,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
                 null, 0, false);
         futures.add(submit(executorService,
             () -> writeOperationHelper.putObject(putObjectRequestBuilder.build(),
-                PutObjectOptions.keepingDirs(),
+                PutObjectOptions.defaultOptions(),
                 new S3ADataBlocks.BlockUploadData(new byte[0], null), null)));
       }
       LOG.info("Waiting for PUTs to complete");
