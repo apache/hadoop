@@ -61,7 +61,7 @@ public class TestPacketReceiver {
   @Test
   public void testPacketSize() {
     assertEquals(PacketReceiver.MAX_PACKET_SIZE,
-            HdfsClientConfigKeys.DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT);
+        HdfsClientConfigKeys.DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT);
   }
 
   @Test
