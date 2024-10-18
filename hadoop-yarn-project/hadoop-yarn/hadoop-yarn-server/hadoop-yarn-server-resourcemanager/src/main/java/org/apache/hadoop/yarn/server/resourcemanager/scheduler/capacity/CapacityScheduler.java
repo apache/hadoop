@@ -563,7 +563,7 @@ public class CapacityScheduler extends
 
       boolean printSkippedNodeLogging = isPrintSkippedNodeLogging(cs);
 
-      // Allocate containers of node [start, end)
+      // Allocate containers of node [start, end]
       for (FiCaSchedulerNode node : nodes) {
         if (current++ >= start) {
           if (shouldSkipNodeSchedule(node, cs, printSkippedNodeLogging)) {
@@ -577,7 +577,7 @@ public class CapacityScheduler extends
 
       // Allocate containers of node [0, start)
       for (FiCaSchedulerNode node : nodes) {
-        if (current++ > start) {
+        if (current++ >= start) {
           break;
         }
         if (shouldSkipNodeSchedule(node, cs, printSkippedNodeLogging)) {
@@ -595,7 +595,7 @@ public class CapacityScheduler extends
       int partitionSize = partitions.size();
       // First randomize the start point
       int start = random.nextInt(partitionSize);
-      // Allocate containers of partition [start, end)
+      // Allocate containers of partition [start, end]
       for (String partition : partitions) {
         if (current++ >= start) {
           CandidateNodeSet<FiCaSchedulerNode> candidates =
@@ -611,7 +611,7 @@ public class CapacityScheduler extends
 
       // Allocate containers of partition [0, start)
       for (String partition : partitions) {
-        if (current++ > start) {
+        if (current++ >= start) {
           break;
         }
         CandidateNodeSet<FiCaSchedulerNode> candidates =
