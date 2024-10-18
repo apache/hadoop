@@ -162,6 +162,52 @@ public class TestEditLogTailer {
   }
 
   @Test
+  public void testEditLogRollsAndTails() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
+
+    MiniDFSCluster cluster = createMiniDFSCluster(conf, 2);
+    if (cluster == null) {
+      fail("failed to start mini cluster.");
+    }
+
+    try {
+      int activeIndex = new Random().nextBoolean() ? 1 : 0;
+      int standbyIndex = (activeIndex == 0) ? 1 : 0;
+      cluster.transitionToActive(activeIndex);
+      NameNode active = cluster.getNameNode(activeIndex);
+      NameNode standby = cluster.getNameNode(standbyIndex);
+
+      long origTxId = active.getNamesystem().getFSImage().getEditLog()
+              .getCurSegmentTxId();
+      for (int i = 0; i < DIRS_TO_MAKE / 2; i++) {
+        NameNodeAdapter.mkdirs(active, getDirPath(i),
+                new PermissionStatus("test", "test",
+                        new FsPermission((short)00755)), true);
+      }
+
+      long activeTxId = active.getNamesystem().getFSImage().getEditLog()
+              .getLastWrittenTxId();
+      waitForStandbyToCatchUpWithInProgressEdits(standby, activeTxId, 2);
+
+      for (int i = DIRS_TO_MAKE / 2; i < DIRS_TO_MAKE; i++) {
+        NameNodeAdapter.mkdirs(active, getDirPath(i),
+                new PermissionStatus("test", "test",
+                        new FsPermission((short)00755)), true);
+      }
+
+      checkForLogRoll(active, origTxId, 3);
+      activeTxId = active.getNamesystem().getFSImage().getEditLog()
+              .getLastWrittenTxId();
+      waitForStandbyToCatchUpWithInProgressEdits(standby, activeTxId, 2);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test
   public void testTailerBackoff() throws Exception {
     Configuration conf = new Configuration();
     NameNode.initMetrics(conf, HdfsServerConstants.NamenodeRole.NAMENODE);
