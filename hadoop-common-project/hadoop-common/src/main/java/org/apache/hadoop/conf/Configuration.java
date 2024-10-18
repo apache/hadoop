@@ -322,7 +322,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * Configuration objects.
    */
-  private static final WeakHashMap<Configuration,Object> REGISTRY = 
+  private static WeakHashMap<Configuration, Object> REGISTRY =
     new WeakHashMap<Configuration,Object>();
 
   /**
@@ -830,9 +830,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   public Configuration(boolean loadDefaults) {
     this.loadDefaults = loadDefaults;
 
-    synchronized(Configuration.class) {
-      REGISTRY.put(this, null);
-    }
+    registerConfiguration(this);
   }
   
   /** 
@@ -866,18 +864,43 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       this.propertyTagsMap.putAll(other.propertyTagsMap);
     }
 
-    synchronized(Configuration.class) {
-      REGISTRY.put(this, null);
-    }
+    registerConfiguration(this);
+
     this.classLoader = other.classLoader;
     this.loadDefaults = other.loadDefaults;
     setQuietMode(other.getQuietMode());
   }
 
   /**
+   * Registers the configuration to enable reloading.
+   */
+  private static void registerConfiguration(Configuration conf) {
+    WeakHashMap<Configuration, Object> registry = REGISTRY;
+    if (registry != null) {
+      synchronized (Configuration.class) {
+        registry.put(conf, null);
+      }
+    }
+  }
+
+  public static synchronized void setConfigurationRegistryEnabled(boolean enable) {
+    if (enable) {
+      if (REGISTRY == null) {
+        REGISTRY = new WeakHashMap<Configuration, Object>();
+      }
+    } else {
+      REGISTRY = null;
+    }
+  }
+
+  /**
    * Reload existing configuration instances.
    */
   public static synchronized void reloadExistingConfigurations() {
+    if (REGISTRY == null) {
+      LOG.debug("Configuration registry is disabled!");
+      return;
+    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Reloading " + REGISTRY.keySet().size()
           + " existing configurations");
@@ -893,11 +916,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param name file name. File should be present in the classpath.
    */
   public static synchronized void addDefaultResource(String name) {
+    WeakHashMap<Configuration, Object> registry = REGISTRY;
     if(!defaultResources.contains(name)) {
       defaultResources.add(name);
-      for(Configuration conf : REGISTRY.keySet()) {
-        if(conf.loadDefaults) {
-          conf.reloadConfiguration();
+      if (registry != null) {
+        for (Configuration conf : registry.keySet()) {
+          if (conf.loadDefaults) {
+            conf.reloadConfiguration();
+          }
         }
       }
     }
