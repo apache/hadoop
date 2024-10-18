@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.util.HostsFileWriter;
 import org.apache.hadoop.util.Lists;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -2327,6 +2328,78 @@ public class TestBlockManager {
       assertEquals(0, blockManager.getExcessBlocksCount());
     } finally {
       DataNodeFaultInjector.set(oldInjector);
+    }
+  }
+
+  private void waitForDecommissionedNodes(final DatanodeAdminManager dnAdminMgr,
+      final int trackedNumber)
+      throws TimeoutException, InterruptedException {
+    GenericTestUtils
+        .waitFor(() -> dnAdminMgr.getNumTrackedNodes() == trackedNumber,
+            100, 2000);
+  }
+
+  @Test(timeout = 360000)
+  public void testDecommissionWithPendingTimeout() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY, false);
+
+    HostsFileWriter hostsFileWriter = new HostsFileWriter();
+    hostsFileWriter.initialize(conf, "work-dir/decommission");
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
+    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 2);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 10);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 1);
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_KEY, 1);
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    try {
+      cluster.waitActive();
+      BlockManager blockManager = cluster.getNamesystem().getBlockManager();
+      DatanodeManager dm = cluster.getNamesystem().getBlockManager().getDatanodeManager();
+      dm.setHeartbeatExpireInterval(3000);
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      // create a file
+      Path filePath = new Path("/tmp.txt");
+      DFSTestUtil.createFile(fs, filePath, 1024, (short) 1, 0L);
+
+      LocatedBlocks blocks =
+          NameNodeAdapter.getBlockLocations(cluster.getNameNode(), filePath.toString(), 0, 1);
+      LocatedBlock locatedBlock = blocks.get(0);
+      BlockInfo bi = blockManager.getStoredBlock(locatedBlock.getBlock().getLocalBlock());
+      String dnName = locatedBlock.getLocations()[0].getXferAddr();
+
+      ArrayList<String> dns = new ArrayList<String>(1);
+      dns.add(dnName);
+      hostsFileWriter.initExcludeHosts(dns);
+      dm.refreshNodes(conf);
+      // Force DatanodeManager to check decommission state.
+      BlockManagerTestUtil.recheckDecommissionState(dm);
+      // Block until the admin's monitor updates the number of tracked dns.
+      waitForDecommissionedNodes(dm.getDatanodeAdminManager(), 1);
+      // the node as decommissioning, even if it's dead
+      List<DatanodeDescriptor> decomlist = dm.getDecommissioningNodes();
+      assertTrue("The node should be be decommissioning", decomlist.size() == 1);
+
+      // 2. disable the IBR
+      for (DataNode dn : cluster.getDataNodes()) {
+        DataNodeTestUtils.pauseIBR(dn);
+      }
+      while (blockManager.numOfUnderReplicatedBlocks() > 0
+          || blockManager.pendingReconstruction.size() > 0) {
+        try {
+          Thread.sleep(500);
+        } catch (Exception e) {
+        }
+      }
+
+      assertEquals(false, blockManager.neededReconstruction.contains(bi));
+      assertEquals(0, blockManager.pendingReconstruction.getNumReplicas(bi));
+      assertEquals(true, blockManager.pendingReconstruction.hasTimeOutBlock(bi));
+    } finally {
+      cluster.shutdown();
     }
   }
 }
