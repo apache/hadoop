@@ -4682,6 +4682,40 @@ public class YarnConfiguration extends Configuration {
       ROUTER_PREFIX + "deregister.subcluster.enabled";
   public static final boolean DEFAULT_ROUTER_DEREGISTER_SUBCLUSTER_ENABLED = true;
 
+  public static final String ROUTER_SSPROXY_PREFIX = ROUTER_PREFIX + "ssproxy.";
+
+  public static final String ROUTER_SSPROXY_INTERCEPTOR_CLASS_PIPELINE =
+      ROUTER_SSPROXY_PREFIX + "interceptor-class.pipeline";
+
+  public static final String DEFAULT_ROUTER_SSPROXY_INTERCEPTOR_CLASS =
+      "org.apache.hadoop.yarn.server.router.ssproxy.StateStoreProxyDefaultInterceptor";
+
+  public static final String FEDERATION_STATESTORE_HTTP_PROXY_PREFIX =
+      FEDERATION_PREFIX + "state-store.http-proxy";
+
+  public static final String FEDERATION_STATESTORE_HTTP_PROXY_URL =
+      FEDERATION_STATESTORE_HTTP_PROXY_PREFIX + "url";
+
+  public static final String DEFAULT_FEDERATION_STATESTORE_HTTP_PROXY_URL =
+      DEFAULT_ROUTER_WEBAPP_ADDRESS;
+
+  //
+  public static final String FEDERATION_STATESTORE_HTTP_PROXY_CONNECT_TIMEOUT_MS =
+      FEDERATION_STATESTORE_HTTP_PROXY_PREFIX + "connect.timeout-ms";
+  public static final long DEFAULT_FEDERATION_STATESTORE_HTTP_PROXY_CONNECT_TIMEOUT_MS =
+      TimeUnit.SECONDS.toMillis(60);
+
+  //
+  public static final String FEDERATION_STATESTORE_HTTP_PROXY_READ_TIMEOUT_MS =
+      FEDERATION_STATESTORE_HTTP_PROXY_PREFIX + "read.timeout-ms";
+  public static final long DEFAULT_FEDERATION_STATESTORE_HTTP_PROXY_READ_TIMEOUT_MS =
+      TimeUnit.SECONDS.toMillis(60);
+
+  public final static String FEDERATION_STATE_STORE_FALLBACK_ENABLED =
+      "yarn.federation.statestore.fallback.enabled";
+
+  public final static boolean DEFAULT_FEDERATION_STATE_STORE_TIMEOUT_ENABLED = false;
+
   ////////////////////////////////
   // CSI Volume configs
   ////////////////////////////////
