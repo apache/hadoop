@@ -11308,7 +11308,7 @@
       <param name="filename" type="java.lang.String"/>
       <exception name="IOException" type="java.io.IOException"/>
       <doc>
-      <![CDATA[Convert a os-native filename to a path that works for the shell.
+      <![CDATA[Convert an os-native filename to a path that works for the shell.
  @param filename The filename to convert
  @return The unix pathname
  @throws IOException on windows, there can be problems with the subprocess]]>
@@ -11321,7 +11321,7 @@
       <param name="file" type="java.io.File"/>
       <exception name="IOException" type="java.io.IOException"/>
       <doc>
-      <![CDATA[Convert a os-native filename to a path that works for the shell.
+      <![CDATA[Convert an os-native filename to a path that works for the shell.
  @param file The filename to convert
  @return The unix pathname
  @throws IOException on windows, there can be problems with the subprocess]]>
@@ -11335,7 +11335,7 @@
       <param name="makeCanonicalPath" type="boolean"/>
       <exception name="IOException" type="java.io.IOException"/>
       <doc>
-      <![CDATA[Convert a os-native filename to a path that works for the shell.
+      <![CDATA[Convert an os-native filename to a path that works for the shell.
  @param file The filename to convert
  @param makeCanonicalPath 
           Whether to make canonical path for the file passed
