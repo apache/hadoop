@@ -644,7 +644,6 @@ public class TestObserverNode {
       futures[i] = threadPool.submit(new MkDirRunner(conf2, clientStates[i]));
     }
 
-    Thread.sleep(150); // wait until mkdir is logged
     long activStateId =
         dfsCluster.getNameNode(0).getFSImage().getLastAppliedOrWrittenTxId();
     dfsCluster.rollEditLogAndTail(0);
@@ -699,6 +698,15 @@ public class TestObserverNode {
     public void run() {
       try {
         fs.mkdirs(DIR_PATH);
+        // wait until mkdir is logged and get last seen stateId
+        GenericTestUtils.waitFor(() -> {
+          try {
+            return HATestUtil.getLastSeenStateId(fs) > 0L;
+          } catch (Exception e) {
+            LOG.warn("Not get last seen stateId yet: " + e.getMessage());
+            return false;
+          }
+        }, 50, 150);
         clientState.lastSeenStateId = HATestUtil.getLastSeenStateId(fs);
         assertSentTo(fs, 0);
 
