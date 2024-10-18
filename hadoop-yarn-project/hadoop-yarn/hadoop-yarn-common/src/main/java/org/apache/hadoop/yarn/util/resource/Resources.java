@@ -515,6 +515,15 @@ public class Resources {
     return rc.fitsIn(smaller, bigger);
   }
   
+  public static boolean fitsInMultiplyMemory(
+      Resource smaller, Resource bigger, float by) {
+    // below 0 means no limit
+    ResourceInformation rhsValue = bigger.getResourceInformation(Resource.MEMORY_INDEX);
+    ResourceInformation lhsValue = smaller.getResourceInformation(Resource.MEMORY_INDEX);
+    return (int)(rhsValue.getValue() * by) < 0 ||
+        lhsValue.getValue() <= (int)(rhsValue.getValue() * by);
+  }
+
   public static Resource componentwiseMin(Resource lhs, Resource rhs) {
     Resource ret = createResource(0);
     int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();

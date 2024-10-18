@@ -127,6 +127,11 @@ public class FairSchedulerConfiguration extends Configuration {
   public static final float  DEFAULT_LOCALITY_THRESHOLD_RACK =
 		  DEFAULT_LOCALITY_THRESHOLD;
 
+  /** Enable app submit fair share ratio limit or not. */
+  protected static final String APP_SUBMISSION_LIMIT_ENABLED = CONF_PREFIX +
+      "app-submission-limit-enabled";
+  protected static final boolean DEFAULT_APP_SUBMISSION_LIMIT_ENABLED = false;
+
   /**
    * Delay for node locality.
    * @deprecated Continuous scheduling is known to cause locking issue inside
@@ -359,6 +364,10 @@ public class FairSchedulerConfiguration extends Configuration {
 
   public float getLocalityThresholdRack() {
     return getFloat(LOCALITY_THRESHOLD_RACK, DEFAULT_LOCALITY_THRESHOLD_RACK);
+  }
+
+  public boolean isAppSubmissionLimitEnabled() {
+    return getBoolean(APP_SUBMISSION_LIMIT_ENABLED, DEFAULT_APP_SUBMISSION_LIMIT_ENABLED);
   }
 
   /**
