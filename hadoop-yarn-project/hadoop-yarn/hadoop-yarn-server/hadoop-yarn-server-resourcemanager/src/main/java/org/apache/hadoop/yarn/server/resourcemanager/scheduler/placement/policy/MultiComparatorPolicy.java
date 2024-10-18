@@ -97,8 +97,23 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
         // for node ID
         put(ComparatorKey.NODE_ID, SchedulerNode::getNodeID);
       }});
-  // conf keys and default values
+
+  /*
+   * Configuration key for specifying comparators in a MultiComparatorPolicy instance.
+   * Use this key to define comparators for a policy instance as follows:
+   *   yarn.scheduler.capacity.multi-node-sorting-policy.<policy-name>.comparators=<comparators-config-value>
+   * The value should be a comma-separated list of comparator keys with optional
+   *  order directions (ASC by default).
+   *  Example: DOMINANT_ALLOCATED_RATIO,NODE_ID:DESC
+   */
   public static final String COMPARATORS_CONF_KEY = "comparators";
+
+  /*
+   * Default comparators for MultiComparatorPolicy:
+   *    DOMINANT_ALLOCATED_RATIO:ASC,NODE_ID:ASC,
+   * The default comparators are used when no comparators or invalid comparators
+   *  are specified in the configuration.
+   */
   protected static final List<Comparator> DEFAULT_COMPARATORS = Collections
       .unmodifiableList(Arrays.asList(
           new Comparator(ComparatorKey.DOMINANT_ALLOCATED_RATIO,

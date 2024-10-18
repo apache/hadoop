@@ -64,7 +64,7 @@ public class MultiNodeSorter<N extends SchedulerNode> extends AbstractService {
 
   public MultiNodeSorter(RMContext rmContext,
       MultiNodePolicySpec policy) {
-    super("MultiNodeLookupPolicy:"+policy.getPolicyName());
+    super("MultiNodeLookupPolicy: " + policy.getPolicyName());
     this.rmContext = rmContext;
     this.policySpec = policy;
   }
@@ -75,9 +75,7 @@ public class MultiNodeSorter<N extends SchedulerNode> extends AbstractService {
   }
 
   public void serviceInit(Configuration conf) throws Exception {
-    LOG.info("Initializing MultiNodeSorter policyName=" + policySpec.getPolicyName()
-        + ", policyClassName=" + policySpec.getPolicyClassName()
-        + ", with sorting interval=" + policySpec.getSortingInterval());
+    LOG.info("Initializing MultiNodeSorter with {}", policySpec);
     initPolicy(policySpec);
     super.serviceInit(conf);
   }

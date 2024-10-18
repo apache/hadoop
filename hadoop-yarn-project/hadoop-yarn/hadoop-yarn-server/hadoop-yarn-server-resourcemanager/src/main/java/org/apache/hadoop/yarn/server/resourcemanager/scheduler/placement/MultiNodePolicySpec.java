@@ -60,7 +60,8 @@ public class MultiNodePolicySpec {
   @Override
   public String toString() {
     return "MultiNodePolicySpec {" +
-        "policyClassName='" + policyClassName + '\'' +
+        "policyName='" + policyName + '\'' +
+        ", policyClassName='" + policyClassName + '\'' +
         ", sortingInterval=" + sortingInterval +
         '}';
   }
