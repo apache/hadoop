@@ -65,12 +65,15 @@ import java.nio.channels.ServerSocketChannel;
 import java.security.GeneralSecurityException;
 import java.util.Enumeration;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_INTERNAL_PROXY_PORT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NETTY_WORKER_NUM_THREADS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NETTY_WORKER_NUM_THREADS_DEFAULT;
 
 /**
  * Data node HTTP Server Class.
@@ -144,7 +147,15 @@ public class DatanodeHttpServer implements Closeable {
     confForCreate.set(FsPermission.UMASK_LABEL, "000");
 
     this.bossGroup = new NioEventLoopGroup();
-    this.workerGroup = new NioEventLoopGroup();
+    int workerCount = conf.getInt(DFS_DATANODE_NETTY_WORKER_NUM_THREADS_KEY,
+        DFS_DATANODE_NETTY_WORKER_NUM_THREADS_DEFAULT);
+    if (workerCount < 0) {
+      LOG.warn("The value of {} is less than 0, will use default value: {}",
+        DFS_DATANODE_NETTY_WORKER_NUM_THREADS_KEY, DFS_DATANODE_NETTY_WORKER_NUM_THREADS_DEFAULT);
+      workerCount = DFS_DATANODE_NETTY_WORKER_NUM_THREADS_DEFAULT;
+    }
+    this.workerGroup = new NioEventLoopGroup(workerCount, Executors.newCachedThreadPool());
+
     this.externalHttpChannel = externalHttpChannel;
     HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
     final ChannelHandler[] handlers = getFilterHandlers(conf);
