@@ -60,7 +60,8 @@ class MethodMetric extends MutableMetric {
       case GAUGE:
         return newGauge(resType);
       case DEFAULT:
-        return resType == String.class ? newTag(resType) : newGauge(resType);
+        return resType == String.class ? newTag(resType, true)
+            : newGauge(resType);
       case TAG:
         return newTag(resType);
       default:
@@ -123,12 +124,16 @@ class MethodMetric extends MutableMetric {
   }
 
   MutableMetric newTag(Class<?> resType) {
+    return newTag(resType, false);
+  }
+
+  MutableMetric newTag(Class<?> resType, boolean transform) {
     if (resType == String.class) {
       return new MutableMetric() {
         @Override public void snapshot(MetricsRecordBuilder rb, boolean all) {
           try {
             Object ret = method.invoke(obj, (Object[]) null);
-            rb.tag(info, (String) ret);
+            rb.tag(info, (String) ret, transform);
           } catch (Exception ex) {
             LOG.error("Error invoking method "+ method.getName(), ex);
           }

@@ -36,6 +36,19 @@ public abstract class MetricsRecordBuilder {
   public abstract MetricsRecordBuilder tag(MetricsInfo info, String value);
 
   /**
+   * Add a metrics value with metrics information
+   *
+   * @param info      metadata of the tag
+   * @param value     of the tag
+   * @param transform tag is transform from metric or not
+   * @return self
+   */
+  public MetricsRecordBuilder tag(MetricsInfo info, String value,
+      boolean transform) {
+    return tag(info, value);
+  }
+
+  /**
    * Add an immutable metrics tag object
    * @param tag a pre-made tag object (potentially save an object construction)
    * @return self
