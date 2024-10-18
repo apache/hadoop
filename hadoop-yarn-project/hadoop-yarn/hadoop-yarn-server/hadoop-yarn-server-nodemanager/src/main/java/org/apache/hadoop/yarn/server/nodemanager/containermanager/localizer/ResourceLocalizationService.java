@@ -1286,7 +1286,7 @@ public class ResourceLocalizationService extends CompositeService
         exception = e;
       } finally {
         if (exception != null) {
-          LOG.info("Localizer failed for "+localizerId, exception);
+          LOG.warn("Localizer failed for "+localizerId, exception);
           // On error, report failure to Container and signal ABORT
           // Notify resource of failed localization
           ContainerId cId = context.getContainerId();
