@@ -124,6 +124,29 @@ public class NetworkTopology {
     this.clusterMap = factory.newInnerNode(NodeBase.ROOT);
   }
 
+  /**
+   * Update a leaf node with new network location.
+   * @param node node to be updated;
+   * @param newNetworkLocations new network locations for node;
+   */
+  public void updateNodeNetworkLocation(Node node, String newNetworkLocations) {
+    if (node == null) {
+      return;
+    }
+    if (node instanceof InnerNode) {
+      throw new IllegalArgumentException(
+          "Not allow to update an inner node: " + NodeBase.getPath(node));
+    }
+    netlock.writeLock().lock();
+    try {
+      remove(node);
+      node.setNetworkLocation(newNetworkLocations);
+      add(node); // may throw InvalidTopologyException
+    } finally {
+      netlock.writeLock().unlock();
+    }
+  }
+
   /** Add a leaf node
    * Update node counter &amp; rack counter if necessary
    * @param node node to be added; can be null
