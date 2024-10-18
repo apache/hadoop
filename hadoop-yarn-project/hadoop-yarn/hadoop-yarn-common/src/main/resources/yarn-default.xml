@@ -1187,6 +1187,14 @@
 
   <property>
     <description>
+      Whether enable ResourceManager delegation token renew timeout and retry feature
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer-pool.tracker.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>
     Thread pool size for RMApplicationHistoryWriter.
     </description>
     <name>yarn.resourcemanager.history-writer.multi-threaded-dispatcher.pool-size</name>
