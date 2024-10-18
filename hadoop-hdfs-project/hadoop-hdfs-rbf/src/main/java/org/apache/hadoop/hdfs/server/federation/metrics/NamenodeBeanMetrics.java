@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -476,6 +477,7 @@ public class NamenodeBeanMetrics
         innerinfo.put("infoSecureAddr", node.getInfoSecureAddr());
         innerinfo.put("xferaddr", node.getXferAddr());
         innerinfo.put("location", node.getNetworkLocation());
+        innerinfo.put("uuid", Optional.ofNullable(node.getDatanodeUuid()).orElse(""));
         innerinfo.put("lastContact", getLastContact(node));
         innerinfo.put("usedSpace", node.getDfsUsed());
         innerinfo.put("adminState", node.getAdminState().toString());
@@ -492,6 +494,7 @@ public class NamenodeBeanMetrics
         innerinfo.put("volfails", -1); // node.getVolumeFailures()
         innerinfo.put("blockPoolUsedPercentStdDev",
             Util.getBlockPoolUsedPercentStdDev(storageReports));
+        innerinfo.put("lastBlockReport", getLastBlockReport(node));
         info.put(node.getXferAddrWithHostname(),
             Collections.unmodifiableMap(innerinfo));
       }
@@ -793,6 +796,10 @@ public class NamenodeBeanMetrics
 
   private long getLastContact(DatanodeInfo node) {
     return (now() - node.getLastUpdate()) / 1000;
+  }
+
+  private long getLastBlockReport(DatanodeInfo node) {
+    return (now() - node.getLastBlockReportTime()) / 60000;
   }
 
   /////////////////////////////////////////////////////////
