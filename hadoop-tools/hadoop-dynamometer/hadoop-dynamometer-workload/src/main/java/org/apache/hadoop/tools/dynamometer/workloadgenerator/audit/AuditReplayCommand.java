@@ -43,6 +43,7 @@ class AuditReplayCommand implements Delayed {
   private static final Pattern SIMPLE_UGI_PATTERN = Pattern
       .compile("([^/@ ]*).*?");
 
+  private Long sequence;
   private long absoluteTimestamp;
   private String ugi;
   private String command;
@@ -50,8 +51,9 @@ class AuditReplayCommand implements Delayed {
   private String dest;
   private String sourceIP;
 
-  AuditReplayCommand(long absoluteTimestamp, String ugi, String command,
+  AuditReplayCommand(Long sequence, long absoluteTimestamp, String ugi, String command,
       String src, String dest, String sourceIP) {
+    this.sequence = sequence;
     this.absoluteTimestamp = absoluteTimestamp;
     this.ugi = ugi;
     this.command = command;
@@ -60,6 +62,9 @@ class AuditReplayCommand implements Delayed {
     this.sourceIP = sourceIP;
   }
 
+  Long getSequence() {
+    return sequence;
+  }
   long getAbsoluteTimestamp() {
     return absoluteTimestamp;
   }
@@ -103,8 +108,12 @@ class AuditReplayCommand implements Delayed {
 
   @Override
   public int compareTo(Delayed o) {
-    return Long.compare(absoluteTimestamp,
-        ((AuditReplayCommand) o).absoluteTimestamp);
+    int result = Long.compare(absoluteTimestamp,
+            ((AuditReplayCommand) o).absoluteTimestamp);
+    if (result != 0) {
+      return result;
+    }
+    return Long.compare(sequence, ((AuditReplayCommand) o).sequence);
   }
 
   /**
@@ -122,9 +131,10 @@ class AuditReplayCommand implements Delayed {
    * information besides a timestamp; other getter methods wil return null.
    */
   private static final class PoisonPillCommand extends AuditReplayCommand {
+    private static final Long DEFAULT_SEQUENCE = -1L;
 
     private PoisonPillCommand(long absoluteTimestamp) {
-      super(absoluteTimestamp, null, null, null, null, null);
+      super(DEFAULT_SEQUENCE, absoluteTimestamp, null, null, null, null, null);
     }
 
     @Override
@@ -144,9 +154,9 @@ class AuditReplayCommand implements Delayed {
       return false;
     }
     AuditReplayCommand o = (AuditReplayCommand) other;
-    return absoluteTimestamp == o.absoluteTimestamp && ugi.equals(o.ugi)
-        && command.equals(o.command) && src.equals(o.src) && dest.equals(o.dest)
-        && sourceIP.equals(o.sourceIP);
+    return sequence.equals(o.sequence) && absoluteTimestamp == o.absoluteTimestamp
+        && ugi.equals(o.ugi) && command.equals(o.command) && src.equals(o.src)
+        && dest.equals(o.dest) && sourceIP.equals(o.sourceIP);
   }
 
   @Override
@@ -156,8 +166,8 @@ class AuditReplayCommand implements Delayed {
 
   @Override
   public String toString() {
-    return String.format("AuditReplayCommand(absoluteTimestamp=%d, ugi=%s, "
-            + "command=%s, src=%s, dest=%s, sourceIP=%s",
-        absoluteTimestamp, ugi, command, src, dest, sourceIP);
+    return String.format("AuditReplayCommand(sequence=%d, absoluteTimestamp=%d, "
+        + "ugi=%s, command=%s, src=%s, dest=%s, sourceIP=%s",
+        sequence, absoluteTimestamp, ugi, command, src, dest, sourceIP);
   }
 }
