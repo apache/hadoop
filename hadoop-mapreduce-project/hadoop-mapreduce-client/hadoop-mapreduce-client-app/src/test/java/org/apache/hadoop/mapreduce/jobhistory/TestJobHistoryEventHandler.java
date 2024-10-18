@@ -37,6 +37,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
+import java.util.Stack;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -1080,6 +1081,50 @@ public class TestJobHistoryEventHandler {
       jheh.stop();
     }
   }
+  @Test(timeout = 50000)
+  public void testJobHistoryDirectoryPermissions() throws Exception {
+    TestParams t = new TestParams(true);
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, dfsCluster.getURI().toString());
+
+    JHEvenHandlerForTest realJheh = new JHEvenHandlerForTest(t.mockAppContext,
+        0, false);
+    JHEvenHandlerForTest jheh = spy(realJheh);
+    jheh.init(conf);
+
+    try {
+      jheh.start();
+      handleEvent(jheh, new JobHistoryEvent(t.jobId,
+          new AMStartedEvent(t.appAttemptId, 200, t.containerId, "nmhost",
+              3000, 4000, -1)));
+
+      // Job finishes and successfully writes history
+      handleEvent(jheh, new JobHistoryEvent(t.jobId,
+          new JobFinishedEvent(TypeConverter.fromYarn(t.jobId), 0, 0,
+              0, 0, 0, 0, 0,
+              new Counters(),
+              new Counters(), new Counters())));
+      verify(jheh, times(1)).processDoneFiles(any(JobId.class));
+
+      String doneDir = JobHistoryUtils.getConfiguredHistoryIntermediateDoneDirPrefix(conf);
+      FileSystem fs = FileSystem.get(dfsCluster.getConfiguration(0));
+      Stack<Path> dirs = new Stack<Path>();
+      Path parent = new Path(doneDir);
+      while (!(parent.getParent() == null) && !parent.equals(fs.getHomeDirectory())) {
+        dirs.push(parent);
+        parent = parent.getParent();
+      }
+      while (!dirs.isEmpty()) {
+        FsPermission getIntermediateSummaryFilePermission =
+            fs.getFileStatus(dirs.pop()).getPermission();
+        assertEquals(getIntermediateSummaryFilePermission,
+            new FsPermission(JobHistoryUtils.HISTORY_INTERMEDIATE_DONE_DIR_PERMISSIONS));
+      }
+    } finally {
+      jheh.stop();
+    }
+  }
+
 }
 
 class JHEvenHandlerForTest extends JobHistoryEventHandler {
