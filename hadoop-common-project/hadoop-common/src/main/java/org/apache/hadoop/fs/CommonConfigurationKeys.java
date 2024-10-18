@@ -83,6 +83,10 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
       "ipc.maximum.data.length";
   /** Default value for IPC_MAXIMUM_DATA_LENGTH. */
   public static final int IPC_MAXIMUM_DATA_LENGTH_DEFAULT = 128 * 1024 * 1024;
+  /** Maximum number of stacked calls for one connection. **/
+  public static final String IPC_CONNECTION_MAXIMUM_STACKED_CALL =
+      "ipc.connection.maximum.stacked.call";
+  public static final long IPC_CONNECTION_MAXIMUM_STACKED_CALL_DEFAULT = 0;
 
   /** Max response size a client will accept. */
   public static final String IPC_MAXIMUM_RESPONSE_LENGTH =

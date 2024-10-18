@@ -1757,6 +1757,43 @@ public class TestIPC {
   }
 
   @Test
+  public void testRpcLimitStackedCall() throws Throwable {
+    Server server = new TestServer(1, true);
+    final InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    server.start();
+    final Configuration copyConf = new Configuration(conf);
+    copyConf.setInt(CommonConfigurationKeys.IPC_CONNECTION_MAXIMUM_STACKED_CALL, 1);
+    final AtomicInteger callReturned = new AtomicInteger(0);
+    final AtomicInteger callException = new AtomicInteger(0);
+
+    try (Client client = new Client(LongWritable.class, copyConf)) {
+      Thread[] threads = new Thread[2];
+      for (int i = 0; i < 2; i++) {
+        threads[i] = new Thread(new Runnable(){
+          @Override
+          public void run() {
+            try {
+              call(client, Thread.currentThread().getId(), addr, copyConf);
+              callReturned.incrementAndGet();
+            } catch (IOException e) {
+              LOG.error(e.toString());
+              callException.incrementAndGet();
+            }
+          }
+        });
+      }
+      for (Thread thread : threads) {
+        thread.start();
+      }
+      for (Thread thread : threads) {
+        thread.join();
+      }
+    }
+    assertEquals(1, callReturned.get());
+    assertEquals(1, callException.get());
+  }
+
+  @Test
   public void testUserBinding() throws Exception {
     checkUserBinding(false);
   }
