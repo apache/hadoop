@@ -1452,4 +1452,136 @@ public class TestOfflineImageViewer {
       }
     }
   }
+
+  /**
+   * Tests that ReverseXML processor doesn't accept XML files with the CacheManagerSection contains pool or directive tag
+   */
+  @Test
+  public void testReverseXmlWithCacheManagerSection() throws Throwable {
+    File imageXml = new File(tempDir, "cacheManagerImageXml.xml");
+    try (PrintWriter writer = new PrintWriter(imageXml, "UTF-8");) {
+      writer.println("<?xml version=\"1.0\"?>");
+      writer.println("<fsimage>");
+      writer.println("<version>");
+      writer.println(String.format("<layoutVersion>%d</layoutVersion>",
+          NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION));
+      writer.println("<onDiskVersion>1</onDiskVersion>");
+      writer.println("<oivRevision>" +
+          "545bbef596c06af1c3c8dca1ce29096a64608478</oivRevision>");
+      writer.println("</version>");
+      writer.println("<NameSection>"
+          + "<namespaceId>1127691130</namespaceId>"
+          + "<genstampV1>1000</genstampV1>"
+          + "<genstampV2>1012</genstampV2>"
+          + "<genstampV1Limit>0</genstampV1Limit>"
+          + "<lastAllocatedBlockId>1073741836</lastAllocatedBlockId>"
+          + "<txid>80</txid>"
+          + "</NameSection>");
+      writer.println("<INodeSection>"
+          + "<lastInodeId>16405</lastInodeId>"
+          + "<numInodes>1</numInodes>"
+          + "<inode>"
+          + "<id>16385</id>"
+          + "<type>DIRECTORY</type>"
+          + "<name></name>"
+          + " <mtime>1458455831853</mtime>"
+          + "<permission>zhexuan:supergroup:0755</permission>"
+          + "<nsquota>9223372036854775807</nsquota>"
+          + "<dsquota>-1</dsquota>"
+          + "</inode>"+"</INodeSection>");
+      writer.println("<INodeReferenceSection>"
+          + "<ref>"
+          + "<referredId>16404</referredId>" + "<name></name>"
+          + "<dstSnapshotId>2147483646</dstSnapshotId>"
+          + "<lastSnapshotId>0</lastSnapshotId>"
+          + "</ref>"
+          + "<ref>"
+          + "<referredId>16404</referredId>"
+          + "<name>orig</name>"
+          + "<dstSnapshotId>0</dstSnapshotId>"
+          + "<lastSnapshotId>0</lastSnapshotId>"
+          + "</ref>"
+          + "</INodeReferenceSection>");
+      writer.println("<SnapshotSection>"
+          + "<snapshotCounter>1</snapshotCounter>"
+          + "<numSnapshots>1</numSnapshots>"
+          + "<snapshottableDir>"
+          + "<dir>16403</dir>"
+          + "</snapshottableDir>"
+          + "<snapshot>"
+          + "<id>0</id>"
+          + "<root>"
+          + "<id>16403</id>"
+          + "<type>DIRECTORY</type>"
+          + "<name>snapshot</name>"
+          + "<mtime>1458455831837</mtime>"
+          + "<permission>zhexuan:supergroup:0755</permission>"
+          + "<nsquota>-1</nsquota>"
+          + "<dsquota>-1</dsquota>"
+          + "</root>"
+          + "</snapshot>"
+          + "</SnapshotSection>");
+      writer.println("<ErasureCodingSection></ErasureCodingSection>");
+      writer.println("<INodeDirectorySection>"
+          + "<directory>"
+          + "<parent>16385</parent>"
+          + "<child>16386</child>"
+          + "<child>16391</child>"
+          + "<child>16396</child>"
+          + "<child>16402</child>"
+          + "<child>16401</child>"
+          + "<child>16403</child>"
+          + "<child>16405</child>"
+          + "<refChild>0</refChild>"
+          + "</directory>" + "</INodeDirectorySection>");
+      writer.println("<FileUnderConstructionSection></FileUnderConstructionSection>");
+      writer.println("<SnapshotDiffSection>"
+          + "<dirDiffEntry>"
+          + "<inodeId>16385</inodeId>"
+          + "<count>0</count>"
+          + "</dirDiffEntry>" + "</SnapshotDiffSection>");
+      writer.println("<SecretManagerSection>"
+          + "<currentId>2</currentId>"
+          + "<tokenSequenceNumber>1</tokenSequenceNumber>"
+          + "<numDelegationKeys>2</numDelegationKeys>"
+          + "<numTokens>1</numTokens>"
+          + "<delegationKey>"
+          + "<id>1</id>"
+          + "<key>696c8a02c617790a</key>"
+          + "<expiry>2016-03-20T06:37:19.806</expiry>"
+          + "</delegationKey>"
+          + "<delegationKey>"
+          + "<id>2</id>"
+          + "<key>11df597a666a6a2e</key>"
+          + "<expiry>2016-03-21T06:37:19.807</expiry>"
+          + "</delegationKey>"
+          + "<token>"
+          + "<owner>zhexuan</owner>"
+          + "<renewer>JobTracker</renewer>"
+          + "<realUser></realUser>"
+          + "<issueDate>2016-03-20T06:37:11.810</issueDate>"
+          + "<maxDate>2016-03-20T06:37:21.810</maxDate>"
+          + "<sequenceNumber>1</sequenceNumber>"
+          + "<masterKeyId>2</masterKeyId>"
+          + "<expiryDate>2016-03-20T06:37:16.810</expiryDate>"
+          + "</token>"
+          + "</SecretManagerSection>");
+      writer.println("<CacheManagerSection>");
+      writer.println("<nextDirectiveId>1</nextDirectiveId>");
+      writer.println("<numDirectives>0</numDirectives>");
+      writer.println("<numPools>1</numPools>");
+      writer.println("<pool>");
+      writer.println("<poolName>0</poolName>");
+      writer.println("<ownerName>1</ownerName>");
+      writer.println("<groupName>2</groupName>");
+      writer.println("<mode>3</mode>");
+      writer.println("<limit>4</limit>");
+      writer.println("<maxRelativeExpiry>455545555</maxRelativeExpiry>");
+      writer.println("</pool>");
+      writer.println("</CacheManagerSection>");
+      writer.println("</fsimage>");
+    }
+    OfflineImageReconstructor.run(imageXml.getAbsolutePath(),
+        imageXml.getAbsolutePath() + ".out");
+  }
 }
