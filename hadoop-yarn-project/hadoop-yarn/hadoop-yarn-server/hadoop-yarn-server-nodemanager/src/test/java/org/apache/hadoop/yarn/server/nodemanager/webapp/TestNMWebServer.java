@@ -108,6 +108,11 @@ public class TestNMWebServer {
       public boolean isPmemCheckEnabled() {
         return true;
       }
+
+      @Override
+      public boolean isPcoreCheckEnabled() {
+        return false;
+      }
     };
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
@@ -170,6 +175,11 @@ public class TestNMWebServer {
       @Override
       public boolean isPmemCheckEnabled() {
         return true;
+      }
+
+      @Override
+      public boolean isPcoreCheckEnabled() {
+        return false;
       }
     };
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
