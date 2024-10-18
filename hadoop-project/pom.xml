@@ -227,7 +227,7 @@
     <junit.platform.version>1.8.2</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
     <jline.version>3.9.0</jline.version>
-    <powermock.version>1.5.6</powermock.version>
+    <powermock.version>2.0.9</powermock.version>
     <solr.version>8.11.2</solr.version>
     <openssl-wildfly.version>2.1.4.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
@@ -1350,8 +1350,8 @@
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
-        <artifactId>mockito-core</artifactId>
-        <version>2.28.2</version>
+        <artifactId>mockito-inline</artifactId>
+        <version>4.11.0</version>
         <exclusions>
           <exclusion>
             <groupId>log4j</groupId>

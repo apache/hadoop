@@ -35,6 +35,8 @@ import org.apache.hadoop.ipc.Server.Call;
 import org.junit.Test;
 import org.slf4j.Logger;
 
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
+
 /**
  * This is intended to be a set of unit tests for the 
  * org.apache.hadoop.ipc.Server class.

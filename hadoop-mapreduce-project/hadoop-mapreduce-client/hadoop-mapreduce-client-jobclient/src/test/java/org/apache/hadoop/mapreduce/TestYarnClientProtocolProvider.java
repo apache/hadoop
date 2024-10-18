@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.doNothing;
@@ -35,6 +34,7 @@ import org.apache.hadoop.mapred.ResourceMgrDelegate;
 import org.apache.hadoop.mapred.YARNRunner;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.MockitoUtil;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
@@ -105,7 +105,8 @@ public class TestYarnClientProtocolProvider {
       rmDTToken.setPassword(ByteBuffer.wrap("testcluster".getBytes()));
       rmDTToken.setService("0.0.0.0:8032");
       getDTResponse.setRMDelegationToken(rmDTToken);
-      final ApplicationClientProtocol cRMProtocol = mock(ApplicationClientProtocol.class);
+      final ApplicationClientProtocol cRMProtocol =
+          MockitoUtil.mockProtocol(ApplicationClientProtocol.class);
       when(cRMProtocol.getDelegationToken(any(
           GetDelegationTokenRequest.class))).thenReturn(getDTResponse);
       ResourceMgrDelegate rmgrDelegate = new ResourceMgrDelegate(
