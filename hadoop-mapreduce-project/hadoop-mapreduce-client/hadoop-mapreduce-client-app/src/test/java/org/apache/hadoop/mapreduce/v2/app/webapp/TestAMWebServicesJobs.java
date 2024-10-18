@@ -32,6 +32,9 @@ import java.util.Map;
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPathFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathExpressionException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
@@ -483,9 +486,11 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
   }
 
-  public void verifyAMJobXML(NodeList nodes, AppContext appContext) {
-
+  public void verifyAMJobXML(NodeList nodes, AppContext appContext) throws XPathExpressionException {
     assertEquals("incorrect number of elements", 1, nodes.getLength());
+
+    XPathFactory xPathfactory = XPathFactory.newInstance();
+    XPath xpath = xPathfactory.newXPath();
 
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
@@ -496,7 +501,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
       verifyAMJobGeneric(job, WebServicesTestUtils.getXmlString(element, "id"),
           WebServicesTestUtils.getXmlString(element, "user"),
-          WebServicesTestUtils.getXmlString(element, "name"),
+          xpath.evaluate("name", element),
           WebServicesTestUtils.getXmlString(element, "state"),
           WebServicesTestUtils.getXmlLong(element, "startTime"),
           WebServicesTestUtils.getXmlLong(element, "finishTime"),
