@@ -1054,13 +1054,12 @@ public class INodeFile extends INodeWithAdditionalFields
       blocks = allBlocks;
     }
 
-    final short replication = getPreferredBlockReplication();
     for (BlockInfo b : blocks) {
       long blockSize = b.isComplete() ? b.getNumBytes() :
           getPreferredBlockSize();
-      counts.addStorageSpace(blockSize * replication);
+      counts.addStorageSpace(blockSize * b.getReplication());
       if (bsp != null) {
-        List<StorageType> types = bsp.chooseStorageTypes(replication);
+        List<StorageType> types = bsp.chooseStorageTypes(b.getReplication());
         for (StorageType t : types) {
           if (t.supportTypeQuota()) {
             counts.addTypeSpace(t, blockSize);
