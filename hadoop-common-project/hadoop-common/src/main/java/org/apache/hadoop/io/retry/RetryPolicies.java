@@ -221,6 +221,13 @@ public class RetryPolicies {
         maxRetries, delayMillis, maxDelayBase);
   }
 
+  public static final RetryPolicy failoverOnNetworkException(
+      RetryPolicy fallbackPolicy, int maxFailovers, int maxRetries,
+      long delayMillis, long maxDelayBase, int nnSize) {
+    return new FailoverOnNetworkExceptionRetry(fallbackPolicy, maxFailovers,
+        maxRetries, delayMillis, maxDelayBase, nnSize);
+  }
+
   static class TryOnceThenFail implements RetryPolicy {
     @Override
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
@@ -659,12 +666,13 @@ public class RetryPolicies {
    * Fall back on underlying retry policy otherwise.
    */
   static class FailoverOnNetworkExceptionRetry implements RetryPolicy {
-    
+    private static final int minNnSize = 2;
     private RetryPolicy fallbackPolicy;
     private int maxFailovers;
     private int maxRetries;
     private long delayMillis;
     private long maxDelayBase;
+    private int nnSize;
     
     public FailoverOnNetworkExceptionRetry(RetryPolicy fallbackPolicy,
         int maxFailovers) {
@@ -678,11 +686,18 @@ public class RetryPolicies {
     
     public FailoverOnNetworkExceptionRetry(RetryPolicy fallbackPolicy,
         int maxFailovers, int maxRetries, long delayMillis, long maxDelayBase) {
+      this(fallbackPolicy, maxFailovers, maxRetries, delayMillis, maxDelayBase, minNnSize);
+    }
+
+    public FailoverOnNetworkExceptionRetry(RetryPolicy fallbackPolicy,
+        int maxFailovers, int maxRetries, long delayMillis, long maxDelayBase, int nnSize) {
       this.fallbackPolicy = fallbackPolicy;
       this.maxFailovers = maxFailovers;
       this.maxRetries = maxRetries;
       this.delayMillis = delayMillis;
       this.maxDelayBase = maxDelayBase;
+      // set the nn size to reduce the failover sleep time.
+      this.nnSize = nnSize;
     }
 
     /**
@@ -690,7 +705,7 @@ public class RetryPolicies {
      *         sleep exponentially otherwise
      */
     private long getFailoverOrRetrySleepTime(int times) {
-      return times == 0 ? 0 : 
+      return times < (nnSize - 1) ? 0 :
         calculateExponentialTime(delayMillis, times, maxDelayBase);
     }
     
