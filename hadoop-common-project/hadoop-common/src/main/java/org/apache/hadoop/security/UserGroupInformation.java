@@ -33,8 +33,6 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.security.Principal;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
@@ -90,6 +88,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.subject.SubjectAdapter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -585,8 +584,7 @@ public class UserGroupInformation {
   @InterfaceStability.Evolving
   public static UserGroupInformation getCurrentUser() throws IOException {
     ensureInitialized();
-    AccessControlContext context = AccessController.getContext();
-    Subject subject = Subject.getSubject(context);
+    Subject subject = SubjectAdapter.getSubject();
     if (subject == null || subject.getPrincipals(User.class).isEmpty()) {
       return getLoginUser();
     } else {
