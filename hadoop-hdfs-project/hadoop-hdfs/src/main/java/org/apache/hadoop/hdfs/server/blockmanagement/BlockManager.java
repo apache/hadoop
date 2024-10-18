@@ -3817,7 +3817,11 @@ public class BlockManager implements BlockStatsMXBean {
     int numUsableReplicas = num.liveReplicas() +
         num.decommissioning() + num.liveEnteringMaintenanceReplicas();
 
-    if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
+
+    // if block is still under construction, then done for now
+    if (!storedBlock.isCompleteOrCommitted()) {
+      return storedBlock;
+    } else if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
         hasMinStorage(storedBlock, numUsableReplicas)) {
       addExpectedReplicasToPending(storedBlock);
       completeBlock(storedBlock, null, false);
@@ -3828,11 +3832,6 @@ public class BlockManager implements BlockStatsMXBean {
       // In the case that the block just became complete above, completeBlock()
       // handles the safe block count maintenance.
       bmSafeMode.incrementSafeBlockCount(numCurrentReplica, storedBlock);
-    }
-    
-    // if block is still under construction, then done for now
-    if (!storedBlock.isCompleteOrCommitted()) {
-      return storedBlock;
     }
 
     // do not try to handle extra/low redundancy blocks during first safe mode
@@ -3864,7 +3863,24 @@ public class BlockManager implements BlockStatsMXBean {
     if ((corruptReplicasCount > 0) && (numUsableReplicas >= fileRedundancy)) {
       invalidateCorruptReplicas(storedBlock, reportedBlock, num);
     }
+    if (shouldInvalidateDecommissionedRedundancy(num, fileRedundancy)) {
+      for (DatanodeStorageInfo storage : blocksMap.getStorages(block)) {
+        final DatanodeDescriptor datanode = storage.getDatanodeDescriptor();
+        if (datanode.isDecommissioned()
+            || datanode.isDecommissionInProgress()) {
+          addToInvalidates(storedBlock, datanode);
+        }
+      }
+    }
     return storedBlock;
+  }
+
+  // If there are enough live replicas, start invalidating
+  // decommissioned + decommissioning replicas
+  private boolean shouldInvalidateDecommissionedRedundancy(NumberReplicas num,
+      int expectedNum) {
+    return num.liveReplicas() >= expectedNum
+        && num.decommissionedAndDecommissioning() > 0;
   }
 
   // If there is any maintenance replica, we don't have to restore
