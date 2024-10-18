@@ -40,6 +40,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
@@ -256,6 +257,67 @@ public class TestCredentialProviderFactory {
     Exception exception = assertThrows(IOException.class,
         () -> CredentialProviderFactory.getProviders(conf));
     assertEquals("Can't create keystore", exception.getMessage());
+  }
+
+  @Test
+  public void testCustomKeyProviderProperty() throws Exception {
+    Configuration conf = new Configuration();
+    final String defaultCredentialKey = "default.credential.key";
+    final char[] defaultCredentialPassword = {'p', 'a', 's', 's', 'w', 'o',
+        'r', 'd', '1', '2', '3'};
+
+    final String customCredentialProviderKey =
+        "fs.cloud.storage.account.key.provider.path";
+    final String customCredentialKey = "custom.credential.key";
+    final char[] customCredentialPassword = {'c', 'u', 's', 't', 'o', 'm', '.',
+        'p', 'a', 's', 's', 'w', 'o', 'r', 'd'};
+
+    String defaultJksName = "default.jks";
+    String customJksName = "custom.jks";
+    try {
+      // Set provider in default credential path property
+      createCredentialProviderPath(conf, defaultJksName,
+          CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
+          defaultCredentialKey, defaultCredentialPassword);
+      assertThat(conf.getPassword(defaultCredentialKey))
+          .isEqualTo(defaultCredentialPassword);
+    } finally {
+      // Clean jks files
+      File defaultJks = new File(tmpDir, defaultJksName);
+      if (defaultJks.exists()) {
+        defaultJks.delete();
+      }
+    }
+
+    try {
+      // Set provider in custom credential path property
+      createCredentialProviderPath(conf, customJksName,
+          customCredentialProviderKey, customCredentialKey,
+          customCredentialPassword);
+
+      assertThat(conf.getPasswordFromCredentialProvider(customCredentialKey,
+          new URI(conf.get(customCredentialProviderKey))))
+              .isEqualTo(customCredentialPassword);
+    } finally {
+      // Clean jks files
+      File defaultJks = new File(tmpDir, customJksName);
+      if (defaultJks.exists()) {
+        defaultJks.delete();
+      }
+    }
+  }
+
+  private void createCredentialProviderPath(Configuration conf, String jksName,
+      String credentialProvider, String key, char[] value) throws Exception {
+    final Path jksPath = new Path(tmpDir.toString(), jksName);
+    final String ourUrl = LocalJavaKeyStoreProvider.SCHEME_NAME + "://file"
+        + jksPath.toUri();
+
+    conf.set(credentialProvider, ourUrl);
+    CredentialProvider provider = CredentialProviderFactory
+        .getProvider(conf, new URI(ourUrl));
+    provider.createCredentialEntry(key, value);
+    provider.flush();
   }
 
   public void checkPermissionRetention(Configuration conf, String ourUrl,
