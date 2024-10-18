@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -166,13 +167,17 @@ class ReplicaMap {
   /**
    * Merge all entries from the given replica map into the local replica map.
    */
-  void mergeAll(ReplicaMap other) {
+  void mergeAll(ReplicaMap other) throws IOException {
     Set<String> bplist = other.map.keySet();
     for (String bp : bplist) {
       checkBlockPool(bp);
       try (AutoCloseDataSetLock l = lockManager.writeLock(LockLevel.BLOCK_POOl, bp)) {
         LightWeightResizableGSet<Block, ReplicaInfo> replicaInfos = other.map.get(bp);
         LightWeightResizableGSet<Block, ReplicaInfo> curSet = map.get(bp);
+        if (curSet == null) {
+          // Can't find the block pool id in the replicaMap. Maybe it has been removed.
+          throw new IOException("Can't find " + bp + " in the replicaMap.");
+        }
         HashSet<ReplicaInfo> replicaSet = new HashSet<>();
         //Can't add to GSet while in another GSet iterator may cause endlessLoop
         for (ReplicaInfo replicaInfo : replicaInfos) {

@@ -428,9 +428,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       ReplicaMap replicaMap,
       Storage.StorageDirectory sd, StorageType storageType,
       FsVolumeReference ref) throws IOException {
-    for (String bp : volumeMap.getBlockPoolList()) {
-      lockManager.addLock(LockLevel.VOLUME, bp, ref.getVolume().getStorageID());
-    }
     DatanodeStorage dnStorage = storageMap.get(sd.getStorageUuid());
     if (dnStorage != null) {
       final String errorMsg = String.format(
@@ -455,6 +452,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       throw new IOException(errorMsg);
     }
     volumeMap.mergeAll(replicaMap);
+    for (String bp : volumeMap.getBlockPoolList()) {
+      lockManager.addLock(LockLevel.VOLUME, bp, ref.getVolume().getStorageID());
+    }
     storageMap.put(sd.getStorageUuid(),
         new DatanodeStorage(sd.getStorageUuid(),
             DatanodeStorage.State.NORMAL,
@@ -3245,7 +3245,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override
-  public void addBlockPool(String bpid, Configuration conf)
+  public synchronized void addBlockPool(String bpid, Configuration conf)
       throws IOException {
     LOG.info("Adding block pool " + bpid);
     AddBlockPoolException volumeExceptions = new AddBlockPoolException();
@@ -3282,7 +3282,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override
-  public void shutdownBlockPool(String bpid) {
+  public synchronized void shutdownBlockPool(String bpid) {
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
       LOG.info("Removing block pool " + bpid);
       Map<DatanodeStorage, BlockListAsLongs> blocksPerVolume
