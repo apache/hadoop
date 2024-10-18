@@ -1448,7 +1448,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             try {
               heartbeatMonitor.wait(nextHeartBeatInterval);
             } catch (InterruptedException e) {
-              // Do Nothing
+              LOG.debug("Update wait interrupted in status-updater", e);
             }
           }
         }
