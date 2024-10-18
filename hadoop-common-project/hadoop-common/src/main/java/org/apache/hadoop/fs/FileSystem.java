@@ -507,7 +507,11 @@ public abstract class FileSystem extends Configured
    */
   public static LocalFileSystem getLocal(Configuration conf)
     throws IOException {
-    return (LocalFileSystem)get(LocalFileSystem.NAME, conf);
+    FileSystem fs = get(LocalFileSystem.NAME, conf);
+    Preconditions.checkArgument(fs instanceof LocalFileSystem,
+        "fs.file.impl should extend " + LocalFileSystem.class.getName() + ", actual: "
+        + fs.getClass().getName());
+    return (LocalFileSystem) fs;
   }
 
   /**
