@@ -126,7 +126,7 @@ public class BlockDecompressorStream extends DecompressorStream {
     while (n < len) {
       int count = in.read(buffer, off + n, len - n);
       if (count < 0) {
-        throw new EOFException("Unexpected end of block in input stream");
+        throw EOF_EXCEPTION;
       }
       n += count;
     }
@@ -141,13 +141,15 @@ public class BlockDecompressorStream extends DecompressorStream {
     super.resetState();
   }
 
+  private static final EOFException EOF_EXCEPTION = new EOFException("EOF in BlockDecompressorStream");
+
   private int rawReadInt() throws IOException {
     int b1 = in.read();
     int b2 = in.read();
     int b3 = in.read();
     int b4 = in.read();
     if ((b1 | b2 | b3 | b4) < 0)
-      throw new EOFException();
+      throw EOF_EXCEPTION;
     return ((b1 << 24) + (b2 << 16) + (b3 << 8) + (b4 << 0));
   }
 }
