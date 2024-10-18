@@ -217,16 +217,22 @@ public class NameNodeProxies {
   private static InMemoryAliasMapProtocol createNNProxyWithInMemoryAliasMapProtocol(
       InetSocketAddress address, Configuration conf, UserGroupInformation ugi,
       AlignmentContext alignmentContext) throws IOException {
+    int timeout = getRPCTimeout(conf,
+        DFSConfigKeys.IPC_RPC_TIMEOUT_FOR_ALIASHMAP_PROTOCOL,
+        DFSConfigKeys.IPC_RPC_TIMEOUT_FOR_ALIASHMAP_PROTOCOL_DEFAULT);
     AliasMapProtocolPB proxy = createNameNodeProxy(
-        address, conf, ugi, AliasMapProtocolPB.class, 30000, alignmentContext);
+        address, conf, ugi, AliasMapProtocolPB.class, timeout, alignmentContext);
     return new InMemoryAliasMapProtocolClientSideTranslatorPB(proxy);
   }
 
   private static JournalProtocol createNNProxyWithJournalProtocol(
       InetSocketAddress address, Configuration conf, UserGroupInformation ugi,
       AlignmentContext alignmentContext) throws IOException {
+    int timeout = getRPCTimeout(conf,
+        DFSConfigKeys.IPC_RPC_TIMEOUT_FOR_JOURNAL_PROTOCOL,
+        DFSConfigKeys.IPC_RPC_TIMEOUT_FOR_JOURNAL_PROTOCOL_DEFAULT);
     JournalProtocolPB proxy = createNameNodeProxy(address,
-        conf, ugi, JournalProtocolPB.class, 30000, alignmentContext);
+        conf, ugi, JournalProtocolPB.class, timeout, alignmentContext);
     return new JournalProtocolTranslatorPB(proxy);
   }
 
@@ -234,8 +240,11 @@ public class NameNodeProxies {
       createNNProxyWithRefreshAuthorizationPolicyProtocol(InetSocketAddress address,
       Configuration conf, UserGroupInformation ugi,
       AlignmentContext alignmentContext) throws IOException {
+    int timeout = getRPCTimeout(conf,
+        DFSConfigKeys.IPC_RPC_TIMEOUT_FOR_REFRESH_AUTHORIZATION_PROTOCOL,
+        DFSConfigKeys.IPC_RPC_TIMEOUT_FOR_REFRESH_AUTHORIZATION_PROTOCOL_DEFAULT);
     RefreshAuthorizationPolicyProtocolPB proxy = createNameNodeProxy(address,
-        conf, ugi, RefreshAuthorizationPolicyProtocolPB.class, 0,
+        conf, ugi, RefreshAuthorizationPolicyProtocolPB.class, timeout,
         alignmentContext);
     return new RefreshAuthorizationPolicyProtocolClientSideTranslatorPB(proxy);
   }
@@ -244,8 +253,11 @@ public class NameNodeProxies {
       createNNProxyWithRefreshUserMappingsProtocol(InetSocketAddress address,
       Configuration conf, UserGroupInformation ugi,
       AlignmentContext alignmentContext) throws IOException {
+    int timeout = getRPCTimeout(conf,
+        DFSConfigKeys.IPC_RPC_TIMEOUT_FOR_REFRESH_USER_MAPPING_PROTOCOL,
+        DFSConfigKeys.IPC_RPC_TIMEOUT_FOR_REFRESH_USER_MAPPING_PROTOCOL_DEFAULT);
     RefreshUserMappingsProtocolPB proxy = createNameNodeProxy(address, conf,
-        ugi, RefreshUserMappingsProtocolPB.class, 0, alignmentContext);
+        ugi, RefreshUserMappingsProtocolPB.class, timeout, alignmentContext);
     return new RefreshUserMappingsProtocolClientSideTranslatorPB(proxy);
   }
 
@@ -253,16 +265,22 @@ public class NameNodeProxies {
       createNNProxyWithRefreshCallQueueProtocol(InetSocketAddress address,
       Configuration conf, UserGroupInformation ugi,
       AlignmentContext alignmentContext) throws IOException {
+    int timeout = getRPCTimeout(conf,
+        DFSConfigKeys.IPC_RPC_TIMEOUT_FOR_REFRESH_CALL_QUEUE_PROTOCOL,
+        DFSConfigKeys.IPC_RPC_TIMEOUT_FOR_REFRESH_CALL_QUEUE_PROTOCOL_DEFAULT);
     RefreshCallQueueProtocolPB proxy = createNameNodeProxy(address, conf, ugi,
-        RefreshCallQueueProtocolPB.class, 0, alignmentContext);
+        RefreshCallQueueProtocolPB.class, timeout, alignmentContext);
     return new RefreshCallQueueProtocolClientSideTranslatorPB(proxy);
   }
 
   private static GetUserMappingsProtocol createNNProxyWithGetUserMappingsProtocol(
       InetSocketAddress address, Configuration conf, UserGroupInformation ugi,
       AlignmentContext alignmentContext) throws IOException {
+    int timeout = getRPCTimeout(conf,
+        DFSConfigKeys.IPC_RPC_TIMEOUT_FOR_GET_USER_MAPPING_PROTOCOL,
+        DFSConfigKeys.IPC_RPC_TIMEOUT_FOR_GET_USER_MAPPING_PROTOCOL_DEFAULT);
     GetUserMappingsProtocolPB proxy = createNameNodeProxy(address, conf, ugi,
-        GetUserMappingsProtocolPB.class, 0, alignmentContext);
+        GetUserMappingsProtocolPB.class, timeout, alignmentContext);
     return new GetUserMappingsProtocolClientSideTranslatorPB(proxy);
   }
   
@@ -270,8 +288,11 @@ public class NameNodeProxies {
       InetSocketAddress address, Configuration conf, UserGroupInformation ugi,
       boolean withRetries, AlignmentContext alignmentContext)
       throws IOException {
-    NamenodeProtocolPB proxy = createNameNodeProxy(
-        address, conf, ugi, NamenodeProtocolPB.class, 0, alignmentContext);
+    int timeout = getRPCTimeout(conf,
+        DFSConfigKeys.IPC_RPC_TIMEOUT_FOR_NAMENODE_PROTOCOL,
+        DFSConfigKeys.IPC_RPC_TIMEOUT_FOR_NAMENODE_PROTOCOL_DEFAULT);
+    NamenodeProtocolPB proxy = createNameNodeProxy(address, conf, ugi,
+        NamenodeProtocolPB.class, timeout, alignmentContext);
     if (withRetries) { // create the proxy with retries
       RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(5, 200,
               TimeUnit.MILLISECONDS);
@@ -312,4 +333,21 @@ public class NameNodeProxies {
         alignmentContext).getProxy();
   }
 
+  /**
+   * Try to obtain the timeout for confKey from Conf.
+   * If the value is invalid, just print some warn log and return the default value.
+   * @param conf input Configuration.
+   * @param confKey input conf key.
+   * @param defaultValue input default conf value.
+   * @return a non negative number.
+   */
+  private static int getRPCTimeout(Configuration conf, String confKey, long defaultValue) {
+    long tmpTimeout = conf.getLong(confKey, defaultValue);
+    if (tmpTimeout < 0) {
+      LOG.warn("Invalid value {} configured for {} should be greater than or equal to 0. " +
+          "Using default value of : {}ms instead.", tmpTimeout, conf, defaultValue);
+      tmpTimeout = defaultValue;
+    }
+    return (int) tmpTimeout;
+  }
 }

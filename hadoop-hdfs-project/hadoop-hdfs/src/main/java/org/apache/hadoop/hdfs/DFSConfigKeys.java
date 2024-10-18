@@ -2080,4 +2080,25 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_LEASE_HARDLIMIT_DEFAULT =
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT;
 
+  public static final String IPC_RPC_TIMEOUT_FOR_ALIASHMAP_PROTOCOL =
+      "ipc.rpc-timeout.for.aliash-map.ms";
+  public static final long IPC_RPC_TIMEOUT_FOR_ALIASHMAP_PROTOCOL_DEFAULT = 30000;
+  public static final String IPC_RPC_TIMEOUT_FOR_JOURNAL_PROTOCOL =
+      "ipc.rpc-timeout.for.journal.ms";
+  public static final long IPC_RPC_TIMEOUT_FOR_JOURNAL_PROTOCOL_DEFAULT = 30000;
+  public static final String IPC_RPC_TIMEOUT_FOR_REFRESH_AUTHORIZATION_PROTOCOL =
+      "ipc.rpc-timeout.for.refresh-authorization.ms";
+  public static final long IPC_RPC_TIMEOUT_FOR_REFRESH_AUTHORIZATION_PROTOCOL_DEFAULT = 0;
+  public static final String IPC_RPC_TIMEOUT_FOR_REFRESH_USER_MAPPING_PROTOCOL =
+      "ipc.rpc-timeout.for.refresh-user-mappings.ms";
+  public static final long IPC_RPC_TIMEOUT_FOR_REFRESH_USER_MAPPING_PROTOCOL_DEFAULT = 0;
+  public static final String IPC_RPC_TIMEOUT_FOR_REFRESH_CALL_QUEUE_PROTOCOL =
+      "ipc.rpc-timeout.for.refresh-call-queue.ms";
+  public static final long IPC_RPC_TIMEOUT_FOR_REFRESH_CALL_QUEUE_PROTOCOL_DEFAULT = 0;
+  public static final String IPC_RPC_TIMEOUT_FOR_GET_USER_MAPPING_PROTOCOL =
+      "ipc.rpc-timeout.for.get-user-mappings.ms";
+  public static final long IPC_RPC_TIMEOUT_FOR_GET_USER_MAPPING_PROTOCOL_DEFAULT = 0;
+  public static final String IPC_RPC_TIMEOUT_FOR_NAMENODE_PROTOCOL =
+      "ipc.rpc-timeout.for.namenode.ms";
+  public static final long IPC_RPC_TIMEOUT_FOR_NAMENODE_PROTOCOL_DEFAULT = 0;
 }
