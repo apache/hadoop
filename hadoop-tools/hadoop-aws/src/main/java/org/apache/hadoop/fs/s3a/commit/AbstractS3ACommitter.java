@@ -23,9 +23,16 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import org.slf4j.Logger;
@@ -699,6 +706,148 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
   }
 
   /**
+   * Construct destination directory from the commit
+   * @param conf Configuration
+   * @param commit SinglePendingCommit
+   * @return destination directory
+   * @throws IOException
+   */
+  private Path constructDestinationDirectory(Configuration conf,
+      SinglePendingCommit commit) throws IOException {
+    // get the temporary destination path. For Magic committer it will be
+    // s3://<bucket>/<warehouse>/__magic/<jobId>/tasks/<attemptId>/__base/<file>
+    Path temporaryDestinationPath = commit.destinationPath();
+    String schema = temporaryDestinationPath.getFileSystem(conf).getScheme();
+    String finalDestPathStr =  schema +
+        "://"
+        + commit.getBucket() +
+        "/"
+        + commit.getDestinationKey();
+    return new Path(finalDestPathStr).getParent();
+  }
+
+  private void deleteAndCommit(CommitContext commitContext, Path directory,
+      List<SinglePendingCommit> pendingCommits,
+      ActiveCommit activeCommit) throws IOException {
+    FileSystem fs = directory.getFileSystem(commitContext.getConf());
+    fs.delete(directory, true);
+    TaskPool.foreach(pendingCommits)
+        .stopOnFailure()
+        .suppressExceptions(false)
+        .executeWith(commitContext.getOuterSubmitter())
+        .onFailure((commit, exception) ->
+            commitContext.abortSingleCommit(commit))
+        .abortWith(commitContext::abortSingleCommit)
+        .revertWith(commitContext::revertCommit)
+        .run(commit -> {
+          commitContext.commitOrFail(commit);
+          activeCommit.uploadCommitted(
+              commit.getDestinationKey(), commit.getLength());
+        });
+  }
+
+  /**
+   * 1. Loads the pending commits from all the tasks
+   * 2. Combines all the pending commits which writes to same directory
+   * 3. Deletes the directory recursively and commits the file
+   * @param commitContext CommitContext
+   * @param activeCommit ActiveCommits
+   * @throws IOException
+   */
+  private void overWriteAndCommitPendingUploads(
+      final CommitContext commitContext,
+      final ActiveCommit activeCommit) throws IOException {
+    List<SinglePendingCommit> pendingCommits =
+        Collections.synchronizedList(new ArrayList<>());
+    Configuration conf = commitContext.getConf();
+
+    // Load pending commits
+    try (DurationInfo ignored = new DurationInfo(LOG,
+        "Loading the pending commits from %s task(s)",
+        activeCommit.size())) {
+      TaskPool.foreach(activeCommit.getSourceFiles())
+          .stopOnFailure()
+          .suppressExceptions(false)
+          .executeWith(commitContext.getInnerSubmitter())
+          .run(status -> {
+            PendingSet pendingSet = PersistentCommitData.load(
+                activeCommit.getSourceFS(),
+                status,
+                commitContext.getPendingSetSerializer());
+            pendingCommits.addAll(pendingSet.getCommits());
+          });
+    }
+
+    // create destination directory to commits map
+    Map<Path, List<SinglePendingCommit>> destinationToCommitsMap = new HashMap<>();
+    for (SinglePendingCommit commit : pendingCommits) {
+      Path destinationDirectory = constructDestinationDirectory(conf, commit);
+      // store this in map
+      destinationToCommitsMap.computeIfAbsent(
+          destinationDirectory, val -> new ArrayList<>()).add(commit);
+    }
+
+    doMultiThreadedDirectoryDeleteAndCommit(conf, destinationToCommitsMap,
+        commitContext, activeCommit);
+  }
+
+  private void doMultiThreadedDirectoryDeleteAndCommit(Configuration conf,
+      Map<Path, List<SinglePendingCommit>> destinationToCommitsMap,
+      CommitContext commitContext, ActiveCommit activeCommit) throws IOException {
+    // create a thread pool with size configured size
+    int threadPoolSize = conf.getInt(
+        FS_S3A_COMMITTER_DELETE_DIRECTORY_THREADS,
+        DEFAULT_COMMITTER_DELETE_DIRECTORY_THREADS);
+    ExecutorService executorService = Executors.newFixedThreadPool(threadPoolSize);
+
+    // flag to indicate if any thread has failed
+    AtomicBoolean threadFailed = new AtomicBoolean(false);
+
+    try (DurationInfo ignored = new DurationInfo(LOG,
+        "deleting and committing the output from %s directories",
+        destinationToCommitsMap.size())) {
+      // List to hold the future object of the task
+      List<Future<?>> futures = new ArrayList<>();
+
+      // Submit task to executor service
+      for (Map.Entry<Path, List<SinglePendingCommit>> entry :
+          destinationToCommitsMap.entrySet()) {
+        if (!threadFailed.get()) {
+          Future<?> future = executorService.submit(() -> {
+            try {
+              deleteAndCommit(commitContext, entry.getKey(),
+                  entry.getValue(), activeCommit);
+            } catch (Exception e) {
+              LOG.error("Unable to overwrite the directory: {} and "
+                  + "commit the file", entry.getKey(), e);
+              threadFailed.set(true);
+              // Cancel other task if any thread encountered exception
+              for (Future<?> f :futures) {
+                f.cancel(true);
+              }
+            }
+          });
+          futures.add(future);
+        }
+      }
+
+      // Wait for all the tasks to complete
+      for (Future<?> future : futures) {
+        try {
+          future.get();
+        } catch (Exception e) {
+          throw e;
+        }
+      }
+    } catch (Exception e) {
+      throw new IOException(e);
+    } finally {
+      // Shutdown the executor
+      executorService.shutdown();
+    }
+  }
+
+  /**
    * Run a precommit check that all files are loadable.
    * This check avoids the situation where the inability to read
    * a file only surfaces partway through the job commit, so
@@ -900,9 +1049,16 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       final CommitContext commitContext,
       final ActiveCommit pending)
       throws IOException {
-    trackDurationOfInvocation(committerStatistics,
-        COMMITTER_COMMIT_JOB.getSymbol(),
-        () -> commitPendingUploads(commitContext, pending));
+    boolean overWriteAndCommit = commitContext.getConf().getBoolean(
+        FS_S3A_COMMITTER_OVERWRITE_AND_COMMIT, false);
+    if (overWriteAndCommit) {
+      trackDurationOfInvocation(committerStatistics,
+          COMMITTER_COMMIT_JOB.getSymbol(),
+          () -> overWriteAndCommitPendingUploads(commitContext, pending));
+    } else {
+      trackDurationOfInvocation(committerStatistics, COMMITTER_COMMIT_JOB.getSymbol(),
+          () -> commitPendingUploads(commitContext, pending));
+    }
   }
 
   @Override
