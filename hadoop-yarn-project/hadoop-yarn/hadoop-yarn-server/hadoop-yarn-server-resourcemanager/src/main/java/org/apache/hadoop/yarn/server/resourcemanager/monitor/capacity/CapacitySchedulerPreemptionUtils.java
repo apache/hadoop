@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -34,6 +37,9 @@ import java.util.Map;
 import java.util.Set;
 
 public class CapacitySchedulerPreemptionUtils {
+
+  private boolean enableAMPreemption;
+
   public static Map<String, Resource> getResToObtainByPartitionForLeafQueue(
       CapacitySchedulerPreemptionContext context, String queueName,
       Resource clusterResource) {
@@ -56,12 +62,25 @@ public class CapacitySchedulerPreemptionUtils {
     return resToObtainByPartition;
   }
 
+  public static boolean getAMPreemptionEnabled(){
+    Configuration conf = new Configuration();
+    return conf.getBoolean(
+            CapacitySchedulerConfiguration.AM_PREEMPTION_ENABLED, CapacitySchedulerConfiguration.DEFAULT_AM_PREEMPTION);
+  }
+
+  @VisibleForTesting
+  public static void setEnableAMPreemption(boolean enableAMPreemption) {
+    this.enableAMPreemption = enableAMPreemption;
+  }
+
   public static boolean isContainerAlreadySelected(RMContainer container,
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates) {
     if (null == selectedCandidates) {
       return false;
     }
-
+    if(container.isAMContainer() && !getAMPreemptionEnabled()) {
+      return false;
+    }
     Set<RMContainer> containers = selectedCandidates
         .get(container.getApplicationAttemptId());
     if (containers == null) {
