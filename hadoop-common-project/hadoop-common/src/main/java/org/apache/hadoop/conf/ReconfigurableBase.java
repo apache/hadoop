@@ -224,11 +224,11 @@ public abstract class ReconfigurableBase
   public final void reconfigureProperty(String property, String newVal)
     throws ReconfigurationException {
     if (isPropertyReconfigurable(property)) {
-      LOG.info("changing property " + property + " to " + newVal);
       synchronized(getConf()) {
         getConf().get(property);
         String effectiveValue = reconfigurePropertyImpl(property, newVal);
-        if (newVal != null) {
+        if (effectiveValue != null) {
+          LOG.info("changing property " + property + " to " + effectiveValue);
           getConf().set(property, effectiveValue);
         } else {
           getConf().unset(property);
