@@ -27,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -228,5 +229,16 @@ public class TestAvailableSpaceResolver {
       assertNotEquals(0, i);
     }
     subclusters.clear();
+  }
+
+  @Test
+  public void testChooseFirstNamespace() throws Exception {
+    MultipleDestinationMountTableResolver mountTableResolver =
+            mockAvailableSpaceResolver(1.0f);
+    PathLocation loc = mountTableResolver.getDestinationForPath("/space");
+    Method method = MultipleDestinationMountTableResolver.class.getDeclaredMethod("chooseFirstNamespace", String.class,PathLocation.class);
+    method.setAccessible(true);
+    String cluster = (String)method.invoke(mountTableResolver, "/space", loc);
+    assertEquals("subcluster9", cluster);
   }
 }
