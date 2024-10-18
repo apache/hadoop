@@ -377,7 +377,7 @@ public class FSDirAttrOp {
 
     final int latest = iip.getLatestSnapshotId();
     dirNode.recordModification(latest);
-    dirNode.setQuota(fsd.getBlockStoragePolicySuite(), nsQuota, ssQuota, type);
+    dirNode.setQuota(fsd, nsQuota, ssQuota, type);
     return dirNode;
   }
 

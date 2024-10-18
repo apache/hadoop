@@ -54,6 +54,7 @@ import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -1087,6 +1088,32 @@ public class DFSAdmin extends FsShell {
   }
 
   /**
+   * Get listing of all the QuotaUsage for a directory.
+   *
+   * @return Information about all the QuotaUsage for a directory.
+   */
+  public int getQuotaList(String path)
+      throws IOException {
+    DistributedFileSystem dfs = getDFS();
+    QuotaUsage[] quotaInfo;
+    try {
+      quotaInfo = dfs.getQuotaListing(new Path(path));
+    } catch (IOException ioe) {
+      System.out.println("List quotaUsage failed.");
+      throw ioe;
+    }
+    for (QuotaUsage info : quotaInfo) {
+      System.out.printf("%12s %15s %15s %15s %18s%n",
+          info.getQuota(),
+          info.getFileAndDirectoryCount(),
+          info.getSpaceQuota(),
+          info.getSpaceConsumed(),
+          info.getPath());
+    }
+    return 0;
+  }
+
+  /**
    * Command to ask the active namenode to set the balancer bandwidth.
    * Usage: hdfs dfsadmin -setBalancerBandwidth bandwidth
    * @param argv List of of command line parameters.
@@ -1353,6 +1380,8 @@ public class DFSAdmin extends FsShell {
         + "\tIf 'blockingDecommission' option is specified, it will list the\n"
         + "\topen files only that are blocking the ongoing Decommission.";
 
+    String getQuotaList = "-getQuotaList <path>\n" 
+        +"\tGet listing of all the QuotaUsage for a directory.";
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -1426,6 +1455,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(triggerBlockReport);
     } else if ("listOpenFiles".equalsIgnoreCase(cmd)) {
       System.out.println(listOpenFiles);
+    } else if ("lsQuotaList".equals(cmd)) {
+      System.out.println(getQuotaList);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -1442,6 +1473,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(metaSave);
       System.out.println(SetQuotaCommand.DESCRIPTION);
       System.out.println(ClearQuotaCommand.DESCRIPTION);
+      System.out.println(getQuotaList);
       System.out.println(SetSpaceQuotaCommand.DESCRIPTION);
       System.out.println(ClearSpaceQuotaCommand.DESCRIPTION);
       System.out.println(refreshServiceAcl);
@@ -2573,6 +2605,8 @@ public class DFSAdmin extends FsShell {
         exitCode = new SetQuotaCommand(argv, i, getConf()).runAll();
       } else if (ClearSpaceQuotaCommand.matches(cmd)) {
         exitCode = new ClearSpaceQuotaCommand(argv, i, getConf()).runAll();
+      } else if ("-lsQuotaList".matches(cmd)) {
+        exitCode = getQuotaList(argv[i]);
       } else if (SetSpaceQuotaCommand.matches(cmd)) {
         exitCode = new SetSpaceQuotaCommand(argv, i, getConf()).runAll();
       } else if ("-refreshServiceAcl".equals(cmd)) {

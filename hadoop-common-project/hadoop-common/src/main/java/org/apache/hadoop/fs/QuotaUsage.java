@@ -37,6 +37,17 @@ public class QuotaUsage {
   private long[] typeConsumed;
   private long[] typeQuota;
 
+  public String getPath() {
+    return path;
+  }
+
+  public QuotaUsage setPath(String path) {
+    this.path = path;
+    return this;
+  }
+
+  private String path;
+
   /** Builder class for QuotaUsage. */
   public static class Builder {
     public Builder() {
@@ -66,6 +77,11 @@ public class QuotaUsage {
 
     public Builder spaceQuota(long spaceQuota) {
       this.spaceQuota = spaceQuota;
+      return this;
+    }
+
+    public Builder setPath(String path) {
+      this.path = path;
       return this;
     }
 
@@ -100,6 +116,7 @@ public class QuotaUsage {
     private long spaceQuota;
     private long[] typeConsumed;
     private long[] typeQuota;
+    public String path;
   }
 
   // Make it protected for the deprecated ContentSummary constructor.
@@ -115,6 +132,7 @@ public class QuotaUsage {
     this.spaceQuota = builder.spaceQuota;
     this.typeConsumed = builder.typeConsumed;
     this.typeQuota = builder.typeQuota;
+    this.path = builder.path;
   }
 
   protected void setQuota(long quota) {

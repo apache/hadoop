@@ -1058,6 +1058,20 @@ public class DistributedFileSystem extends FileSystem
     }.resolve(this, absF);
   }
 
+  /**
+   * Get listing of all the QuotaUsage for a directory.
+   *
+   * @return Information about all the QuotaUsage for a directory.
+   * @throws IOException If an I/O error occurred
+   * @see ClientProtocol#getQuotaListing(String)
+   */
+  public QuotaUsage[] getQuotaListing(Path f) throws IOException {
+    Path absF = fixRelativePart(f);
+    statistics.incrementReadOps(1);
+    storageStatistics
+        .incrementOpCounter(OpType.GET_QUOTA_LIST);
+    return dfs.getQuotaListing(getPathName(absF));
+  }
   /** Set a directory's quotas
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setQuota(String,
    * long, long, StorageType)

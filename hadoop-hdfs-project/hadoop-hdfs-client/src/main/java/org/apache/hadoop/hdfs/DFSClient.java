@@ -2611,6 +2611,22 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * Get listing of all the QuotaUsage for a directory.
+   *
+   * @return Information about all the QuotaUsage for a directory.
+   * @throws IOException If an I/O error occurred
+   * @see ClientProtocol#getQuotaListing(String)
+   */
+  QuotaUsage[] getQuotaListing(String src) throws IOException {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("getQuotaListing")) {
+      return namenode.getQuotaListing(src);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
+  /**
    * Sets or resets quotas for a directory.
    * @see ClientProtocol#setQuota(String, long, long, StorageType)
    */
