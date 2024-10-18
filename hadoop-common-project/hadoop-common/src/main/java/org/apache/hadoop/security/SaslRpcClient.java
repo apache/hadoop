@@ -457,9 +457,6 @@ public class SaslRpcClient {
 
   private void sendSaslMessage(OutputStream out, RpcSaslProto message)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sending sasl message "+message);
-    }
     ResponseBuffer buf = new ResponseBuffer();
     saslHeader.writeDelimitedTo(buf);
     message.writeDelimitedTo(buf);
