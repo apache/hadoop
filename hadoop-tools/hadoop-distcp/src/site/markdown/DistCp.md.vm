@@ -350,7 +350,7 @@ Command Line Options
 | `-filelimit <n>` | Limit the total number of files to be <= n | **Deprecated!** Ignored in the new DistCp. |
 | `-sizelimit <n>` | Limit the total size to be <= n bytes | **Deprecated!** Ignored in the new DistCp. |
 | `-delete` | Delete the files existing in the dst but not in src | The deletion is done by FS Shell. So the trash will be used, if it is enable. Delete is applicable only with update or overwrite options. |
-| `-strategy {dynamic|uniformsize}` | Choose the copy-strategy to be used in DistCp. | By default, uniformsize is used. (i.e. Maps are balanced on the total size of files copied by each map. Similar to legacy.) If "dynamic" is specified, `DynamicInputFormat` is used instead. (This is described in the Architecture section, under InputFormats.) |
+| `-strategy {dynamic\|uniformsize\|uniformrecord}` | Choose the copy-strategy to be used in DistCp. | By default, uniformsize is used. (i.e. Maps are balanced on the total size of files copied by each map. Similar to legacy.) If uniformrecord is used, Maps are balanced on the total number of files copied by each map, this is especially useful when there are lots of empty directories. If "dynamic" is specified, `DynamicInputFormat` is used instead. (This is described in the Architecture section, under InputFormats.) |
 | `-bandwidth` | Specify bandwidth per map, in MB/second. | Each map will be restricted to consume only the specified bandwidth. This is not always exact. The map throttles back its bandwidth consumption during a copy, such that the **net** bandwidth used tends towards the specified value. |
 | `-atomic {-tmp <tmp_dir>}` | Specify atomic commit, with optional tmp directory. | `-atomic` instructs DistCp to copy the source data to a temporary target location, and then move the temporary target to the final-location atomically. Data will either be available at final target in a complete and consistent form, or not at all. Optionally, `-tmp` may be used to specify the location of the tmp-target. If not specified, a default is chosen. **Note:** tmp_dir must be on the final target cluster. |
 | `-async` | Run DistCp asynchronously. Quits as soon as the Hadoop Job is launched. | The Hadoop Job-id is logged, for tracking. |
@@ -456,7 +456,14 @@ $H3 Copy-listing Generator
      `distcp.exclude-file-regex` parameter in "DistCpOptions". Support regular
      expressions specified by java.util.regex.Pattern. This is a more dynamic approach
      as compared to "RegexCopyFilter".
-  3. `distcp.filters.class` to "TrueCopyFilter". This is used as a default
+  3. `distcp.filters.class` to "DirCopyFilter". If you are using this
+       implementation, you will filter out all files and only directories remains.
+       What's more, you can overwrite shouldCopy(CopyListingFileStatus fileStatus) method,
+       which gives you a more fluent way to filter files/dirs by their file statuses.
+       (i.e. A file status contains a lot of useful info such as file path, file length,
+       isDir, modificationTime, owner, etc. You can use them in your own way
+       by extends FileStatusCopyFilter class)
+  4. `distcp.filters.class` to "TrueCopyFilter". This is used as a default
      implementation if none of the above options are specified.
 
   The legacy implementation only lists those paths that must definitely be
@@ -485,6 +492,16 @@ $H3 InputFormats and MapReduce Components
     that the sum of file-sizes in each InputSplit is nearly equal to every
     other map. The splitting isn't always perfect, but its trivial
     implementation keeps the setup-time low.
+
+  * **UniformRecordInputFormat:**
+    This implementation of org.apache.hadoop.mapreduce.InputFormat provides
+    equivalence with Legacy DistCp in balancing load across maps too. The aim of
+    the UniformRecordInputFormat is to make each map copy roughly the same number
+    of file/directories. Apropos, the listing file is split into groups of paths, such
+    that the sum of file/directories number in each InputSplit is nearly equal to every
+    other map. The splitting isn't always perfect, but its trivial
+    implementation keeps the setup-time low. This implementation is especially useful
+    when there are lots of empty directories to be copied.
 
   * **DynamicInputFormat and DynamicRecordReader:**
     The DynamicInputFormat implements `org.apache.hadoop.mapreduce.InputFormat`,
