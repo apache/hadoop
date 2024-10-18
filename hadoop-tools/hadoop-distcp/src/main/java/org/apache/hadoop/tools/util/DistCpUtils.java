@@ -596,6 +596,9 @@ public class DistCpUtils {
     } else if (sourceChecksum.equals(targetChecksum)) {
       return CopyMapper.ChecksumComparison.TRUE;
     }
+    LOG.info("Checksum not equal. Source path: {}, source checksum: {}, target path {}, " +
+            "target checksum: {}",
+        source, sourceChecksum, target, targetChecksum);
     return CopyMapper.ChecksumComparison.FALSE;
   }
 
