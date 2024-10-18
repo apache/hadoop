@@ -4557,7 +4557,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           } else {
             if (isNoManualAndResourceLowSafeMode()) {
               LOG.info("Namenode has sufficient available resources, exiting safe mode.");
-              leaveSafeMode(false);
+              leaveResourceLowSafeMode();
             }
           }
           try {
@@ -5262,6 +5262,23 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         setManualAndResourceLowSafeMode(false, false);
         startSecretManagerIfNecessary();
       }
+    } finally {
+      writeUnlock("leaveSafeMode", getLockReportInfoSupplier(null));
+    }
+  }
+
+  /**
+   * Leave resource low safe mode.
+   */
+  void leaveResourceLowSafeMode() {
+    writeLock();
+    try {
+      if (!isInSafeMode()) {
+        NameNode.stateChangeLog.info("STATE* Safe mode is already OFF");
+        return;
+      }
+      setManualAndResourceLowSafeMode(false, false);
+      startSecretManagerIfNecessary();
     } finally {
       writeUnlock("leaveSafeMode", getLockReportInfoSupplier(null));
     }
