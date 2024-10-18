@@ -29,6 +29,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -63,7 +64,7 @@ public class MultiNodeSorter<N extends SchedulerNode> extends AbstractService {
 
   public MultiNodeSorter(RMContext rmContext,
       MultiNodePolicySpec policy) {
-    super("MultiNodeLookupPolicy");
+    super("MultiNodeLookupPolicy: " + policy.getPolicyName());
     this.rmContext = rmContext;
     this.policySpec = policy;
   }
@@ -74,23 +75,28 @@ public class MultiNodeSorter<N extends SchedulerNode> extends AbstractService {
   }
 
   public void serviceInit(Configuration conf) throws Exception {
-    LOG.info("Initializing MultiNodeSorter=" + policySpec.getPolicyClassName()
-        + ", with sorting interval=" + policySpec.getSortingInterval());
-    initPolicy(policySpec.getPolicyClassName());
+    LOG.info("Initializing MultiNodeSorter with {}", policySpec);
+    initPolicy(policySpec);
     super.serviceInit(conf);
   }
 
   @SuppressWarnings("unchecked")
-  void initPolicy(String policyName) throws YarnException {
+  void initPolicy(MultiNodePolicySpec policySpec) throws YarnException {
+    String policyName = policySpec.getPolicyName();
+    String policyClassName = policySpec.getPolicyClassName();
     Class<?> policyClass;
     try {
-      policyClass = Class.forName(policyName);
+      policyClass = Class.forName(policyClassName);
     } catch (ClassNotFoundException e) {
       throw new YarnException(
-          "Invalid policy name:" + policyName + e.getMessage());
+          "Invalid policy class name:" + policyClassName + e.getMessage());
     }
+    Configuration policyConf = new Configuration(this.getConfig());
+    policyConf.set(
+        CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_CURRENT_NAME,
+        policyName);
     this.multiNodePolicy = (MultiNodeLookupPolicy<N>) ReflectionUtils
-        .newInstance(policyClass, null);
+        .newInstance(policyClass, policyConf);
   }
 
   @Override
