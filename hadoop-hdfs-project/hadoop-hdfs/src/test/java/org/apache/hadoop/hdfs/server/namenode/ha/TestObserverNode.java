@@ -164,7 +164,7 @@ public class TestObserverNode {
       FileStatus fileStatus = scheduledFuture.get(10000, TimeUnit.MILLISECONDS);
       assertNotNull(fileStatus);
     } finally {
-      EditLogTailer editLogTailer = new EditLogTailer(observerFsNS, conf);
+      EditLogTailer editLogTailer = new EditLogTailer(observerFsNS, conf, false);
       observerFsNS.setEditLogTailerForTests(editLogTailer);
       editLogTailer.start();
     }
