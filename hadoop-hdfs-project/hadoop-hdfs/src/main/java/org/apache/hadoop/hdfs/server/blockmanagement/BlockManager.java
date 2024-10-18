@@ -89,6 +89,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplic
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.ReportedBlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingReconstructionBlocks.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessRedundancyMap.ExcessBlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.SourceUnavailableDetail;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
@@ -2180,6 +2181,8 @@ public class BlockManager implements BlockStatsMXBean {
       for (BlockReconstructionWork rw : reconWork) {
         final DatanodeStorageInfo[] targets = rw.getTargets();
         if (targets == null || targets.length == 0) {
+          ReconstructionSkipReason.genReasonWithDetail(rw.getBlock(), null,
+                  ReconstructionSkipReason.TARGET_UNAVAILABLE);
           rw.resetTargets();
           continue;
         }
@@ -2187,6 +2190,10 @@ public class BlockManager implements BlockStatsMXBean {
         synchronized (neededReconstruction) {
           if (validateReconstructionWork(rw)) {
             scheduledWork++;
+          }
+          else{
+            ReconstructionSkipReason.genReasonWithDetail(rw.getBlock(), null,
+                    ReconstructionSkipReason.VALIDATION_FAILED);
           }
         }
       }
@@ -2570,7 +2577,6 @@ public class BlockManager implements BlockStatsMXBean {
     liveBlockIndices.clear();
     final boolean isStriped = block.isStriped();
     DatanodeDescriptor decommissionedSrc = null;
-
     BitSet liveBitSet = null;
     BitSet decommissioningBitSet = null;
     if (isStriped) {
@@ -2595,6 +2601,9 @@ public class BlockManager implements BlockStatsMXBean {
       // do not select the replica if it is corrupt or excess
       if (state == StoredReplicaState.CORRUPT ||
           state == StoredReplicaState.EXCESS) {
+        ReconstructionSkipReason.genReasonWithDetail(block, storage,
+                ReconstructionSkipReason.SOURCE_UNAVAILABLE,
+                SourceUnavailableDetail.CORRUPT_OR_EXCESS);
         continue;
       }
 
@@ -2602,6 +2611,9 @@ public class BlockManager implements BlockStatsMXBean {
       // or unknown state replicas.
       if (state == null
           || state == StoredReplicaState.MAINTENANCE_NOT_FOR_READ) {
+        ReconstructionSkipReason.genReasonWithDetail(block, storage,
+                ReconstructionSkipReason.SOURCE_UNAVAILABLE,
+                SourceUnavailableDetail.MAINTENANCE_NOT_FOR_READ);
         continue;
       }
 
@@ -2613,6 +2625,9 @@ public class BlockManager implements BlockStatsMXBean {
             ThreadLocalRandom.current().nextBoolean()) {
           decommissionedSrc = node;
         }
+        ReconstructionSkipReason.genReasonWithDetail(block, storage,
+                ReconstructionSkipReason.SOURCE_UNAVAILABLE,
+                SourceUnavailableDetail.DECOMMISSIONED);
         continue;
       }
 
@@ -2637,6 +2652,9 @@ public class BlockManager implements BlockStatsMXBean {
           //HDFS-16566 ExcludeReconstructed won't be reconstructed.
           excludeReconstructed.add(blockIndex);
         }
+        ReconstructionSkipReason.genReasonWithDetail(block, storage,
+                ReconstructionSkipReason.SOURCE_UNAVAILABLE,
+                SourceUnavailableDetail.REPLICATION_SOFT_LIMIT);
         continue; // already reached replication limit
       }
 
@@ -2648,6 +2666,9 @@ public class BlockManager implements BlockStatsMXBean {
           //HDFS-16566 ExcludeReconstructed won't be reconstructed.
           excludeReconstructed.add(blockIndex);
         }
+        ReconstructionSkipReason.genReasonWithDetail(block, storage,
+                ReconstructionSkipReason.SOURCE_UNAVAILABLE,
+                SourceUnavailableDetail.REPLICATION_HARD_LIMIT);
         continue;
       }
 
@@ -5406,9 +5427,13 @@ public class BlockManager implements BlockStatsMXBean {
         * this.blocksReplWorkMultiplier;
     final int nodesToProcess = (int) Math.ceil(numlive
         * this.blocksInvalidateWorkPct);
-
+    if(LOG.isDebugEnabled()){
+      ReconstructionSkipReason.start();
+    }
     int workFound = this.computeBlockReconstructionWork(blocksToProcess);
-
+    if(LOG.isDebugEnabled()){
+      ReconstructionSkipReason.summary();
+    }
     // Update counters
     namesystem.writeLock();
     try {
