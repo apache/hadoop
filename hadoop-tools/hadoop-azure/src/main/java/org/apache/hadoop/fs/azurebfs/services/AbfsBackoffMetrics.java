@@ -56,9 +56,17 @@ import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_COUNTER
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_GAUGE;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
+/**
+ * This class is responsible for tracking and
+ * updating metrics related to backoff and
+ * retry operations in Azure Blob File System (ABFS).
+ */
 public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
   private static final List<RetryValue> RETRY_LIST = Arrays.asList(ONE, TWO, THREE, FOUR, FIVE_FIFTEEN, FIFTEEN_TWENTY_FIVE, TWENTY_FIVE_AND_ABOVE);
 
+  /**
+   * Constructor to initialize the IOStatisticsStore with counters and gauges.
+   */
   public AbfsBackoffMetrics() {
     IOStatisticsStore ioStatisticsStore = iostatisticsStore()
             .withCounters(getMetricNames(TYPE_COUNTER))
@@ -67,6 +75,12 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
     setIOStatistics(ioStatisticsStore);
   }
 
+  /**
+   * Retrieves the metric names based on the statistic type.
+   *
+   * @param type the type of the statistic (counter or gauge)
+   * @return an array of metric names
+   */
   private String[] getMetricNames(StatisticTypeEnum type) {
     return Arrays.stream(AbfsBackoffMetricsEnum.values())
             .filter(backoffMetricsEnum -> backoffMetricsEnum.getStatisticType().equals(type))
@@ -77,6 +91,13 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
             ).toArray(String[]::new);
   }
 
+  /**
+   * Constructs the metric name based on the metric and retry value.
+   *
+   * @param metric the metric enum
+   * @param retryValue the retry value
+   * @return the constructed metric name
+   */
   private String getMetricName(AbfsBackoffMetricsEnum metric, RetryValue retryValue) {
     if (RETRY.equals(metric.getType())) {
       return retryValue + COLON + metric.getName();
@@ -84,6 +105,13 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
     return metric.getName();
   }
 
+  /**
+   * Retrieves the value of a specific metric.
+   *
+   * @param metric the metric enum
+   * @param retryValue the retry value
+   * @return the value of the metric
+   */
   public long getMetricValue(AbfsBackoffMetricsEnum metric, RetryValue retryValue) {
     String metricName = getMetricName(metric, retryValue);
     switch (metric.getStatisticType()) {
@@ -96,10 +124,22 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
     }
   }
 
+  /**
+   * Retrieves the value of a specific metric.
+   *
+   * @param metric the metric enum
+   * @return the value of the metric
+   */
   public long getMetricValue(AbfsBackoffMetricsEnum metric) {
     return getMetricValue(metric, null);
   }
 
+  /**
+   * Increments the value of a specific metric.
+   *
+   * @param metric the metric enum
+   * @param retryValue the retry value
+   */
   public void incrementMetricValue(AbfsBackoffMetricsEnum metric, RetryValue retryValue) {
     String metricName = getMetricName(metric, retryValue);
     switch (metric.getStatisticType()) {
@@ -115,10 +155,22 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
     }
   }
 
+  /**
+   * Increments the value of a specific metric.
+   *
+   * @param metric the metric enum
+   */
   public void incrementMetricValue(AbfsBackoffMetricsEnum metric) {
     incrementMetricValue(metric, null);
   }
 
+  /**
+   * Sets the value of a specific metric.
+   *
+   * @param metric the metric enum
+   * @param value the new value of the metric
+   * @param retryValue the retry value
+   */
   public void setMetricValue(AbfsBackoffMetricsEnum metric, long value, RetryValue retryValue) {
     String metricName = getMetricName(metric, retryValue);
     switch (metric.getStatisticType()) {
@@ -134,6 +186,12 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
     }
   }
 
+  /**
+   * Sets the value of a specific metric.
+   *
+   * @param metric the metric enum
+   * @param value the new value of the metric
+   */
   public void setMetricValue(AbfsBackoffMetricsEnum metric, long value) {
     setMetricValue(metric, value, null);
   }

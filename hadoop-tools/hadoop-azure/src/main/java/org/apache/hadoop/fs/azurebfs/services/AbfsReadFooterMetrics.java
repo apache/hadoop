@@ -48,10 +48,16 @@ import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_COUNTER
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_GAUGE;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
+/**
+ * This class is responsible for tracking and updating metrics related to reading footers in files.
+ */
 public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
     private static final String FOOTER_LENGTH = "20";
     private static final List<FileType> FILE_TYPE_LIST = Arrays.asList(PARQUET, NON_PARQUET);
 
+    /**
+     * Inner class to handle file type checks.
+     */
     private static final class CheckFileType {
         private final AtomicBoolean collectMetrics;
         private final AtomicBoolean collectMetricsForNextRead;
@@ -147,6 +153,9 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
 
     private final Map<String, CheckFileType> checkFileMap = new HashMap<>();
 
+    /**
+     * Constructor to initialize the IOStatisticsStore with counters and gauges.
+     */
     public AbfsReadFooterMetrics() {
         IOStatisticsStore ioStatisticsStore = iostatisticsStore()
                 .withCounters(getMetricNames(TYPE_COUNTER))
@@ -176,22 +185,62 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         }
     }
 
+    /**
+     * Updates the value of a specific metric.
+     *
+     * @param fileType the type of the file
+     * @param metric the metric to update
+     * @param value the new value of the metric
+     */
     public void updateMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metric, long value) {
         updateGaugeValue(fileType + COLON + metric.getName(), value);
     }
 
+    /**
+     * Increments the value of a specific metric.
+     *
+     * @param fileType the type of the file
+     * @param metricName the metric to increment
+     */
     public void incrementMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metricName) {
         incCounterValue(fileType + COLON + metricName.getName());
     }
 
+    /**
+     * Returns the total number of files.
+     *
+     * @return the total number of files
+     */
     public Long getTotalFiles() {
         return getMetricValue(PARQUET, TOTAL_FILES) + getMetricValue(NON_PARQUET, TOTAL_FILES);
     }
 
+    /**
+     * Returns the total read count.
+     *
+     * @return the total read count
+     */
+    public Long getTotalReadCount() {
+        return getMetricValue(PARQUET, READ_COUNT) + getMetricValue(NON_PARQUET, READ_COUNT);
+    }
+
+    /**
+     * Updates the map with a new file path identifier.
+     *
+     * @param filePathIdentifier the file path identifier
+     */
     public void updateMap(String filePathIdentifier) {
         checkFileMap.computeIfAbsent(filePathIdentifier, key -> new CheckFileType());
     }
 
+    /**
+     * Checks and updates the metrics for a given file read.
+     *
+     * @param filePathIdentifier the file path identifier
+     * @param len the length of the read
+     * @param contentLength the total content length of the file
+     * @param nextReadPos the position of the next read
+     */
     public void checkMetricUpdate(final String filePathIdentifier, final int len, final long contentLength, final long nextReadPos) {
         CheckFileType checkFileType = checkFileMap.computeIfAbsent(filePathIdentifier, key -> new CheckFileType());
         if (checkFileType.getReadCount() == 0 || (checkFileType.getReadCount() >= 1 && checkFileType.getCollectMetrics())) {
@@ -257,6 +306,12 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         incrementMetricValue(fileType, TOTAL_FILES);
     }
 
+    /**
+     * Returns the read footer metrics for a given file type.
+     *
+     * @param fileType the type of the file
+     * @return the read footer metrics as a string
+     */
     public String getReadFooterMetrics(FileType fileType) {
         StringBuilder readFooterMetric = new StringBuilder();
         appendMetrics(readFooterMetric, fileType);

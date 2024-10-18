@@ -22,6 +22,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.FILE;
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_COUNTER;
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_GAUGE;
 
+/**
+ * Enum representing various ABFS read footer metrics.
+ */
 public enum AbfsReadFooterMetricsEnum {
     TOTAL_FILES("totalFiles", "Total files in a file system", FILE,  TYPE_COUNTER),
     FILE_LENGTH("fileLength", "File length", FILE, TYPE_GAUGE),
@@ -37,6 +40,14 @@ public enum AbfsReadFooterMetricsEnum {
     private final String type;
     private final StatisticTypeEnum statisticType;
 
+    /**
+     * Constructor for AbfsReadFooterMetricsEnum.
+     *
+     * @param name the name of the metric
+     * @param description the description of the metric
+     * @param type the type of the metric (FILE)
+     * @param statisticType the statistic type of the metric (counter or gauge)
+     */
     AbfsReadFooterMetricsEnum(String name, String description, String type, StatisticTypeEnum statisticType) {
         this.name = name;
         this.description = description;
@@ -44,18 +55,38 @@ public enum AbfsReadFooterMetricsEnum {
         this.statisticType = statisticType;
     }
 
+    /**
+     * Gets the name of the metric.
+     *
+     * @return the name of the metric
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Gets the description of the metric.
+     *
+     * @return the description of the metric
+     */
     public String getDescription() {
         return description;
     }
 
+    /**
+     * Gets the type of the metric.
+     *
+     * @return the type of the metric
+     */
     public String getType() {
         return type;
     }
 
+    /**
+     * Gets the statistic type of the metric.
+     *
+     * @return the statistic type of the metric
+     */
     public StatisticTypeEnum getStatisticType() {
         return statisticType;
     }

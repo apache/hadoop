@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs.enums;
 
+/**
+ * Enum for statistic types.
+ */
 public enum StatisticTypeEnum {
     /**
      * Counter.

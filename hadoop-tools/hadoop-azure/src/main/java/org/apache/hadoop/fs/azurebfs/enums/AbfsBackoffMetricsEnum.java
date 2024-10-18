@@ -23,6 +23,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.RETRY;
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_COUNTER;
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_GAUGE;
 
+/**
+ * Enum representing various ABFS backoff metrics
+ */
 public enum AbfsBackoffMetricsEnum {
     NUMBER_OF_IOPS_THROTTLED_REQUESTS("numberOfIOPSThrottledRequests", "Number of IOPS throttled requests", BASE, TYPE_COUNTER),
     NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS("numberOfBandwidthThrottledRequests", "Number of bandwidth throttled requests", BASE, TYPE_COUNTER),
@@ -44,6 +47,14 @@ public enum AbfsBackoffMetricsEnum {
     private final String type;
     private final StatisticTypeEnum statisticType;
 
+    /**
+     * Constructor for AbfsBackoffMetricsEnum.
+     *
+     * @param name the name of the metric
+     * @param description the description of the metric
+     * @param type the type of the metric (BASE or RETRY)
+     * @param statisticType the statistic type of the metric (counter or gauge)
+     */
     AbfsBackoffMetricsEnum(String name, String description, String type, StatisticTypeEnum statisticType) {
         this.name = name;
         this.description = description;
@@ -51,18 +62,38 @@ public enum AbfsBackoffMetricsEnum {
         this.statisticType = statisticType;
     }
 
+    /**
+     * Gets the name of the metric.
+     *
+     * @return the name of the metric
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Gets the description of the metric.
+     *
+     * @return the description of the metric
+     */
     public String getDescription() {
         return description;
     }
 
+    /**
+     * Gets the type of the metric.
+     *
+     * @return the type of the metric
+     */
     public String getType() {
         return type;
     }
 
+    /**
+     * Gets the statistic type of the metric.
+     *
+     * @return the statistic type of the metric
+     */
     public StatisticTypeEnum getStatisticType() {
         return statisticType;
     }

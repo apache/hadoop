@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs.enums;
 
+/**
+ * Enum for retry values.
+ */
 public enum RetryValue {
     ONE("1"),
     TWO("2"),
@@ -33,14 +36,30 @@ public enum RetryValue {
 
     private final String value;
 
+    /**
+     * Constructor for RetryValue enum.
+     *
+     * @param value the string representation of the retry value
+     */
     RetryValue(String value) {
         this.value = value;
     }
 
+    /**
+     * Gets the string representation of the retry value.
+     *
+     * @return the string representation of the retry value
+     */
     public String getValue() {
         return value;
     }
 
+    /**
+     * Gets the RetryValue enum based on the retry count.
+     *
+     * @param retryCount the retry count
+     * @return the corresponding RetryValue enum
+     */
     public static RetryValue getRetryValue(int retryCount) {
         if (retryCount == 1) {
             return ONE;

@@ -21,19 +21,89 @@ package org.apache.hadoop.fs.azurebfs.services;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.azurebfs.enums.FileType.PARQUET;
+
 /**
  * Unit test for Abfs read footer metrics
  */
 public class TestAbfsReadFooterMetrics {
+    private static final long CONTENT_LENGTH = 50000;
+    private static final int LENGTH = 10000;
+    private static final int NEXT_READ_POS = 30000;
+    private static final String TEST_FILE1 = "TestFile";
+    private static final String TEST_FILE2 = "TestFile2";
+
+    /**
+     * Tests that metrics are updated correctly for the first read of a file.
+     *
+     * @throws Exception if an error occurs during the test
+     */
     @Test
-    public void testReadFooterMetrics() throws Exception {
+    public void checkMetricUpdate_shouldUpdateMetricsForFirstRead() throws Exception {
         AbfsReadFooterMetrics metrics = new AbfsReadFooterMetrics();
-        metrics.checkMetricUpdate("Test",
-                Integer.parseInt("1000"), Long.parseLong("4000"), Long.parseLong("20"));
-        metrics.checkMetricUpdate("Test1",
-                Integer.parseInt("988"), Long.parseLong("1998"), Long.parseLong("20"));
+        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
+        Assertions.assertThat(metrics.getTotalFiles()).isEqualTo(0);
+        Assertions.assertThat(metrics.getTotalReadCount()).isEqualTo(0);
+    }
+
+    /**
+     * Tests that metrics are updated correctly for the second read of the same file.
+     *
+     * @throws Exception if an error occurs during the test
+     */
+    @Test
+    public void checkMetricUpdate_shouldUpdateMetricsForSecondRead() throws Exception {
+        AbfsReadFooterMetrics metrics = new AbfsReadFooterMetrics();
+        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
+        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+LENGTH);
+        Assertions.assertThat(metrics.getTotalFiles()).isEqualTo(1);
+        Assertions.assertThat(metrics.getTotalReadCount()).isEqualTo(0);
+    }
+
+    /**
+     * Tests that metrics are updated correctly for multiple reads in one files.
+     *
+     * @throws Exception if an error occurs during the test
+     */
+    @Test
+    public void checkMetricUpdate_shouldHandleMultipleFiles() throws Exception {
+        AbfsReadFooterMetrics metrics = new AbfsReadFooterMetrics();
+        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
+        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+LENGTH);
+        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+2*LENGTH);
+        Assertions.assertThat(metrics.getTotalFiles())
+                .describedAs("Total number of files")
+                .isEqualTo(1);
+        Assertions.assertThat(metrics.getTotalReadCount())
+                .describedAs("Total number of read count")
+                .isEqualTo(1);
         Assertions.assertThat(metrics.toString())
-                .describedAs("Abfs read footer metrics value")
-                .isEmpty();
+                .describedAs("Metrics after reading 3 reads of the same file")
+                .isEqualTo("$NON_PARQUET:$FR=10000.000_20000.000$SR=10000.000_10000.000$FL=50000.000$RL=30000.000");
+    }
+
+    /**
+     * Tests that the getReadFooterMetrics method returns the correct metrics after multiple reads on different files.
+     *
+     * @throws Exception if an error occurs during the test
+     */
+    @Test
+    public void getReadFooterMetrics_shouldReturnCorrectMetrics() throws Exception {
+        AbfsReadFooterMetrics metrics = new AbfsReadFooterMetrics();
+        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
+        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+LENGTH);
+        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+2*LENGTH);
+        metrics.checkMetricUpdate(TEST_FILE2, LENGTH, CONTENT_LENGTH/2, NEXT_READ_POS);
+        metrics.checkMetricUpdate(TEST_FILE2, LENGTH, CONTENT_LENGTH/2, NEXT_READ_POS+LENGTH);
+        metrics.checkMetricUpdate(TEST_FILE2, LENGTH, CONTENT_LENGTH/2, NEXT_READ_POS+2*LENGTH);
+        Assertions.assertThat(metrics.getTotalFiles())
+                .describedAs("Total number of files")
+                .isEqualTo(2);
+        Assertions.assertThat(metrics.getTotalReadCount())
+                .describedAs("Total number of read count")
+                .isEqualTo(2);
+        Assertions.assertThat(metrics.toString())
+                .describedAs("Metrics after reading 3 reads of the same file")
+                .isEqualTo("$NON_PARQUET:$FR=10000.000_12500.000$SR=10000.000_10000.000$FL=37500.000$RL=30000.000");
     }
 }
