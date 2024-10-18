@@ -25,6 +25,11 @@ package org.apache.hadoop.fs;
 public class FSExceptionMessages {
 
   /**
+   * The operation failed because the file system is closed: {@value}
+   */
+  public static final String FILESYSTEM_IS_CLOSED = "Filesystem is closed!";
+
+  /**
    * The operation failed because the stream is closed: {@value}
    */
   public static final String STREAM_IS_CLOSED = "Stream is closed!";
