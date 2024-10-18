@@ -153,7 +153,7 @@ public class DistributedFileSystem extends FileSystem
   private URI uri;
 
   DFSClient dfs;
-  private boolean verifyChecksum = true;
+  private boolean verifyChecksum;
 
   private DFSOpsCountStatistics storageStatistics;
 
@@ -190,6 +190,8 @@ public class DistributedFileSystem extends FileSystem
     initDFSClient(uri, conf);
     this.uri = URI.create(uri.getScheme()+"://"+uri.getAuthority());
     this.workingDir = getHomeDirectory();
+    this.verifyChecksum = conf.getBoolean(HdfsClientConfigKeys.DFS_CLIENT_VERIFY_CHECKSUM_ENABLED,
+      HdfsClientConfigKeys.DFS_CLIENT_VERIFY_CHECKSUM_ENABLED_DEFAULT);
 
     storageStatistics = (DFSOpsCountStatistics) GlobalStorageStatistics.INSTANCE
         .put(DFSOpsCountStatistics.NAME,
