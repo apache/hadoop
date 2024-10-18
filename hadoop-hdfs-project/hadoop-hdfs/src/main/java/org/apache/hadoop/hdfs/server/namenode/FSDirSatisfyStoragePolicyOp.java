@@ -85,10 +85,16 @@ final class FSDirSatisfyStoragePolicyOp {
         }
       } else if (inodeHasSatisfyXAttr(inode)) {
         NameNode.LOG
-            .warn("Cannot request to call satisfy storage policy on path: "
+            .info("Call satisfy storage policy on path: "
                 + inode.getFullPathName()
                 + ", as this file/dir was already called for satisfying "
                 + "storage policy.");
+        // Adding pathId in the pending queue if we re-satisfy path
+        StoragePolicySatisfyManager spsManager =
+            fsd.getBlockManager().getSPSManager();
+        if (spsManager != null) {
+          spsManager.addPathId(inode.getId());
+        }
       } else {
         XAttr satisfyXAttr = XAttrHelper
             .buildXAttr(XATTR_SATISFY_STORAGE_POLICY);
@@ -131,7 +137,7 @@ final class FSDirSatisfyStoragePolicyOp {
 
   private static boolean inodeHasSatisfyXAttr(INode inode) {
     final XAttrFeature f = inode.getXAttrFeature();
-    if (inode.isFile() && f != null
+    if (f != null
         && f.getXAttr(XATTR_SATISFY_STORAGE_POLICY) != null) {
       return true;
     }
