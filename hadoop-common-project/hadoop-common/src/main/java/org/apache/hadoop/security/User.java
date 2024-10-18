@@ -24,6 +24,7 @@ import javax.security.auth.login.LoginContext;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 
 /**
