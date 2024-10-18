@@ -91,7 +91,11 @@ public class NioInetPeer implements Peer {
     try {
       in.close();
     } finally {
-      out.close();
+      try {
+        out.close();
+      } finally {
+        socket.close();
+      }
     }
   }
 
