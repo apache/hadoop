@@ -29,12 +29,13 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
 /**
  * This tests basic operations of {@link FileSystemStorageStatistics} class.
@@ -42,41 +43,25 @@ import static org.junit.Assert.assertNull;
 public class TestFileSystemStorageStatistics {
   private static final Logger LOG = LoggerFactory.getLogger(
       TestFileSystemStorageStatistics.class);
-  private static final String FS_STORAGE_STATISTICS_NAME = "test-fs-statistics";
-  private static final String[] STATISTICS_KEYS = {
-      "bytesRead",
-      "bytesWritten",
-      "readOps",
-      "largeReadOps",
-      "writeOps",
-      "bytesReadLocalHost",
-      "bytesReadDistanceOfOneOrTwo",
-      "bytesReadDistanceOfThreeOrFour",
-      "bytesReadDistanceOfFiveOrLarger",
-      "bytesReadErasureCoded",
-      "remoteReadTimeMS"
-  };
 
-  private FileSystem.Statistics statistics =
-      new FileSystem.Statistics("test-scheme");
-  private FileSystemStorageStatistics storageStatistics =
-      new FileSystemStorageStatistics(FS_STORAGE_STATISTICS_NAME, statistics);
+  private final FileSystemStorageStatistics storageStatistics =
+      new FileSystemStorageStatistics("test-scheme");
 
   @Rule
   public final Timeout globalTimeout = new Timeout(10, TimeUnit.SECONDS);
 
+  private final Map<String, Long> expectedStats = new HashMap<>();
+
   @Before
   public void setup() {
-    statistics.incrementBytesRead(RandomUtils.nextInt(0, 100));
-    statistics.incrementBytesWritten(RandomUtils.nextInt(0, 100));
-    statistics.incrementLargeReadOps(RandomUtils.nextInt(0, 100));
-    statistics.incrementWriteOps(RandomUtils.nextInt(0, 100));
-
-    statistics.incrementBytesReadByDistance(0, RandomUtils.nextInt(0, 100));
-    statistics.incrementBytesReadByDistance(1, RandomUtils.nextInt(0, 100));
-    statistics.incrementBytesReadByDistance(3, RandomUtils.nextInt(0, 100));
-    statistics.incrementBytesReadErasureCoded(RandomUtils.nextInt(0, 100));
-    statistics.increaseRemoteReadTime(RandomUtils.nextInt(0, 100));
+    expectedStats.clear();
+    for (Statistic op : Statistic.VALUES) {
+      expectedStats.put(op.getSymbol(), RandomUtils.nextLong(0, 100));
+    }
+    storageStatistics.reset();
+    for (Statistic op : Statistic.VALUES) {
+      storageStatistics.incrementCounter(op, expectedStats.get(op.getSymbol()));
+    }
   }
 
   @Test
@@ -85,7 +70,7 @@ public class TestFileSystemStorageStatistics {
     while (iter.hasNext()) {
       final LongStatistic longStat = iter.next();
       assertNotNull(longStat);
-      final long expectedStat = getStatisticsValue(longStat.getName());
+      final long expectedStat = expectedStats.get(longStat.getName());
       LOG.info("{}: FileSystem.Statistics={}, FileSystemStorageStatistics={}",
           longStat.getName(), expectedStat, longStat.getValue());
       assertEquals(expectedStat, longStat.getValue());
@@ -94,56 +79,14 @@ public class TestFileSystemStorageStatistics {
 
   @Test
   public void testGetLong() {
-    for (String key : STATISTICS_KEYS) {
-      final long expectedStat = getStatisticsValue(key);
-      final long storageStat = storageStatistics.getLong(key);
+    for (Statistic op : Statistic.VALUES) {
+      final long expectedStat = expectedStats.get(op.getSymbol());
+      final long storageStatFromOp = storageStatistics.getLong(op);
+      final long storageStat = storageStatistics.getLong(op.getSymbol());
       LOG.info("{}: FileSystem.Statistics={}, FileSystemStorageStatistics={}",
-          key, expectedStat, storageStat);
+          op, expectedStat, storageStat);
+      assertEquals(expectedStat, storageStatFromOp);
       assertEquals(expectedStat, storageStat);
     }
   }
-
-  @Test
-  public void testStatisticsDataReferenceCleanerClassLoader() {
-    Thread thread = Thread.getAllStackTraces().keySet().stream()
-        .filter(t -> t.getName().contains("StatisticsDataReferenceCleaner")).findFirst().get();
-    ClassLoader classLoader = thread.getContextClassLoader();
-    assertNull(classLoader);
-  }
-
-  /**
-   * Helper method to retrieve the specific FileSystem.Statistics value by name.
-   *
-   * Basically, the {@link FileSystemStorageStatistics} should do this
-   * internally in a similar approach.
-   */
-  private long getStatisticsValue(String name) {
-    switch (name) {
-    case "bytesRead":
-      return statistics.getBytesRead();
-    case "bytesWritten":
-      return statistics.getBytesWritten();
-    case "readOps":
-      return statistics.getReadOps();
-    case "largeReadOps":
-      return statistics.getLargeReadOps();
-    case "writeOps":
-      return statistics.getWriteOps();
-    case "bytesReadLocalHost":
-      return statistics.getBytesReadByDistance(0);
-    case "bytesReadDistanceOfOneOrTwo":
-      return statistics.getBytesReadByDistance(1);
-    case "bytesReadDistanceOfThreeOrFour":
-      return statistics.getBytesReadByDistance(3);
-    case "bytesReadDistanceOfFiveOrLarger":
-      return statistics.getBytesReadByDistance(5);
-    case "bytesReadErasureCoded":
-      return statistics.getBytesReadErasureCoded();
-    case "remoteReadTimeMS":
-      return statistics.getRemoteReadTime();
-    default:
-      return 0;
-    }
-  }
-
 }

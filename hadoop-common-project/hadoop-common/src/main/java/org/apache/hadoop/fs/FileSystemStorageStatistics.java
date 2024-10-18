@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.fs;
 
+import java.util.EnumMap;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileSystem.Statistics.StatisticsData;
 
 /**
  * A basic StorageStatistics instance which simply returns data from
@@ -31,50 +32,25 @@ import org.apache.hadoop.fs.FileSystem.Statistics.StatisticsData;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class FileSystemStorageStatistics extends StorageStatistics {
-  /**
-   * The per-class FileSystem statistics.
-   */
-  private final FileSystem.Statistics stats;
+public class FileSystemStorageStatistics
+    extends StorageStatistics
+    implements Iterable<StorageStatistics.LongStatistic> {
 
-  private static final String[] KEYS = {
-      "bytesRead",
-      "bytesWritten",
-      "readOps",
-      "largeReadOps",
-      "writeOps",
-      "bytesReadLocalHost",
-      "bytesReadDistanceOfOneOrTwo",
-      "bytesReadDistanceOfThreeOrFour",
-      "bytesReadDistanceOfFiveOrLarger",
-      "bytesReadErasureCoded",
-      "remoteReadTimeMS"
-  };
+  private class LongStatisticIterator implements Iterator<LongStatistic> {
 
-  private static class LongStatisticIterator
-      implements Iterator<LongStatistic> {
-    private final StatisticsData data;
-
-    private int keyIdx;
-
-    LongStatisticIterator(StatisticsData data) {
-      this.data = data;
-      this.keyIdx = 0;
-    }
+    private final Iterator<Map.Entry<Statistic, AtomicLong>> iterator =
+        opsCount.entrySet().iterator();
 
     @Override
     public boolean hasNext() {
-      return (this.keyIdx < KEYS.length);
+      return this.iterator.hasNext();
     }
 
     @Override
     public LongStatistic next() {
-      if (this.keyIdx >= KEYS.length) {
-        throw new NoSuchElementException();
-      }
-      String key = KEYS[this.keyIdx++];
-      Long val = fetch(data, key);
-      return new LongStatistic(key, val.longValue());
+      Map.Entry<Statistic, AtomicLong> entry = iterator.next();
+      return new LongStatistic(
+          entry.getKey().getSymbol(), entry.getValue().get());
     }
 
     @Override
@@ -83,60 +59,49 @@ public class FileSystemStorageStatistics extends StorageStatistics {
     }
   }
 
-  private static Long fetch(StatisticsData data, String key) {
-    Preconditions.checkArgument(key != null,
-        "The stat key of FileSystemStorageStatistics should not be null!");
+  private final Map<Statistic, AtomicLong> opsCount =
+      new EnumMap<>(Statistic.class);
 
-    switch (key) {
-    case "bytesRead":
-      return data.getBytesRead();
-    case "bytesWritten":
-      return data.getBytesWritten();
-    case "readOps":
-      return (long) (data.getReadOps() + data.getLargeReadOps());
-    case "largeReadOps":
-      return Long.valueOf(data.getLargeReadOps());
-    case "writeOps":
-      return Long.valueOf(data.getWriteOps());
-    case "bytesReadLocalHost":
-      return data.getBytesReadLocalHost();
-    case "bytesReadDistanceOfOneOrTwo":
-      return data.getBytesReadDistanceOfOneOrTwo();
-    case "bytesReadDistanceOfThreeOrFour":
-      return data.getBytesReadDistanceOfThreeOrFour();
-    case "bytesReadDistanceOfFiveOrLarger":
-      return data.getBytesReadDistanceOfFiveOrLarger();
-    case "bytesReadErasureCoded":
-      return data.getBytesReadErasureCoded();
-    case "remoteReadTimeMS":
-      return data.getRemoteReadTimeMS();
-    default:
-      return null;
+  FileSystemStorageStatistics(String name) {
+    super(name);
+    for (Statistic opType : Statistic.VALUES) {
+      this.opsCount.put(opType, new AtomicLong(0));
     }
   }
 
-  FileSystemStorageStatistics(String name, FileSystem.Statistics stats) {
-    super(name);
-    Preconditions.checkArgument(stats != null,
-        "FileSystem.Statistics can not be null");
-    Preconditions.checkArgument(stats.getData() != null,
-        "FileSystem.Statistics can not have null data");
-    this.stats = stats;
+  /**
+   * Increment a specific counter.
+   * @param op operation
+   * @param count increment value
+   * @return the new value
+   */
+  public long incrementCounter(Statistic op, long count) {
+    return opsCount.get(op).addAndGet(count);
   }
 
   @Override
   public String getScheme() {
-    return stats.getScheme();
+    return getName();
   }
 
   @Override
   public Iterator<LongStatistic> getLongStatistics() {
-    return new LongStatisticIterator(stats.getData());
+    return new LongStatisticIterator();
+  }
+
+  @Override
+  public Iterator<LongStatistic> iterator() {
+    return getLongStatistics();
   }
 
   @Override
   public Long getLong(String key) {
-    return fetch(stats.getData(), key);
+    Statistic type = Statistic.fromSymbol(key);
+    return type == null ? null : getLong(type);
+  }
+
+  public long getLong(Statistic op) {
+    return opsCount.get(op).get();
   }
 
   /**
@@ -146,16 +111,13 @@ public class FileSystemStorageStatistics extends StorageStatistics {
    */
   @Override
   public boolean isTracked(String key) {
-    for (String k: KEYS) {
-      if (k.equals(key)) {
-        return true;
-      }
-    }
-    return false;
+    return Statistic.fromSymbol(key) != null;
   }
 
   @Override
   public void reset() {
-    stats.reset();
+    for (AtomicLong value : opsCount.values()) {
+      value.set(0);
+    }
   }
 }
