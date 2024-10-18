@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -46,6 +47,26 @@ public class TestBlockDecompressorStream {
   public void testRead2() throws IOException {
     // Test eof after getting non-zero block size info
     testRead(4);
+  }
+
+  @Test
+  public void testDecompressorStreamSkipOutOfBound() throws IOException {
+    ByteArrayInputStream bytesIn;
+    DecompressorStream decompStream;
+    int bufLen = 4;
+    bytesOut = new ByteArrayOutputStream();
+    bytesOut.write(ByteBuffer.allocate(bufLen).putInt(1024).array(), 0, bufLen);
+    buf = bytesOut.toByteArray();
+    bytesIn = new ByteArrayInputStream(buf);
+
+    decompStream = new DecompressorStream(bytesIn, new FakeDecompressor());
+    try {
+      // check that skipping a length longer than Integer.MAX_VALUE does not
+      // throw IndexOutOfBoundsException
+      decompStream.skip((long)Integer.MAX_VALUE + 1);
+    } catch (EOFException e) {
+      // expected exception, because the input is not that long
+    }
   }
 
   private void testRead(int bufLen) throws IOException {
