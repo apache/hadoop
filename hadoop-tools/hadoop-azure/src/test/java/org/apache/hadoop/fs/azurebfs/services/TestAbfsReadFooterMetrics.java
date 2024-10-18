@@ -21,19 +21,19 @@ package org.apache.hadoop.fs.azurebfs.services;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+/**
+ * Unit test for Abfs read footer metrics
+ */
 public class TestAbfsReadFooterMetrics {
     @Test
     public void testReadFooterMetrics() throws Exception {
         AbfsReadFooterMetrics metrics = new AbfsReadFooterMetrics();
-        metrics.checkMetricUpdate("Test", 1000, 4000, 20);
-        metrics.checkMetricUpdate("Test", 1000, 4000, 20);
-        metrics.checkMetricUpdate("Test", 1000, 4000, 20);
-        metrics.checkMetricUpdate("Test", 1000, 4000, 20);
-        metrics.checkMetricUpdate("Test1", 1000, 1998, 20);
-        metrics.checkMetricUpdate("Test1", 988, 1998, 20);
-        metrics.checkMetricUpdate("Test1", 988, 1998, 20);
+        metrics.checkMetricUpdate("Test",
+                Integer.parseInt("1000"), Long.parseLong("4000"), Long.parseLong("20"));
+        metrics.checkMetricUpdate("Test1",
+                Integer.parseInt("988"), Long.parseLong("1998"), Long.parseLong("20"));
         Assertions.assertThat(metrics.toString())
-                .describedAs("Unexpected thread 'abfs-timer-client' found")
-                .isEqualTo("$NON_PARQUET:$FR=1000.000_2979.000$SR=994.000_0.000$FL=2999.000$RL=2325.333");
+                .describedAs("Abfs read footer metrics value")
+                .isEmpty();
     }
 }

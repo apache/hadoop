@@ -72,15 +72,16 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
 
         private void updateFileType() {
             if (fileType == null) {
-                fileType = collectMetrics.get() && readCount.get() >= 2 &&
-                        haveEqualValues(sizeReadByFirstRead) &&
-                        haveEqualValues(offsetDiffBetweenFirstAndSecondRead) ? PARQUET : NON_PARQUET;
+                fileType = collectMetrics.get() && readCount.get() >= 2
+                        && haveEqualValues(sizeReadByFirstRead)
+                        && haveEqualValues(offsetDiffBetweenFirstAndSecondRead) ? PARQUET : NON_PARQUET;
             }
         }
 
         private boolean haveEqualValues(String value) {
             String[] parts = value.split("_");
-            return parts.length == 2 && parts[0].equals(parts[1]);
+            return parts.length == 2
+                    && parts[0].equals(parts[1]);
         }
 
         private void incrementReadCount() {
@@ -158,9 +159,9 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         return Arrays.stream(AbfsReadFooterMetricsEnum.values())
                 .filter(readFooterMetricsEnum -> readFooterMetricsEnum.getStatisticType().equals(type))
                 .flatMap(readFooterMetricsEnum ->
-                        FILE.equals(readFooterMetricsEnum.getType()) ?
-                                FILE_TYPE_LIST.stream().map(fileType -> fileType + COLON + readFooterMetricsEnum.getName()) :
-                                Stream.of(readFooterMetricsEnum.getName()))
+                        FILE.equals(readFooterMetricsEnum.getType())
+                                ? FILE_TYPE_LIST.stream().map(fileType -> fileType + COLON + readFooterMetricsEnum.getName())
+                                : Stream.of(readFooterMetricsEnum.getName()))
                 .toArray(String[]::new);
     }
 
@@ -264,11 +265,14 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
 
     private void appendMetrics(StringBuilder metricBuilder, FileType fileType) {
         long totalFiles = getMetricValue(fileType, TOTAL_FILES);
-        if (totalFiles <= 0) return;
+        if (totalFiles <= 0) {
+            return;
+        }
 
         long readCount = getMetricValue(fileType, READ_COUNT);
         String sizeReadByFirstRead = String.format("%.3f", getMetricValue(fileType, SIZE_READ_BY_FIRST_READ) / (double) totalFiles);
-        String offsetDiffBetweenFirstAndSecondRead = String.format("%.3f", getMetricValue(fileType, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ) / (double) totalFiles);
+        String offsetDiffBetweenFirstAndSecondRead = String.format("%.3f",
+                getMetricValue(fileType, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ) / (double) totalFiles);
 
         if (NON_PARQUET.equals(fileType)) {
             sizeReadByFirstRead += "_" + String.format("%.3f", getMetricValue(fileType, FIRST_OFFSET_DIFF) / (double) totalFiles);

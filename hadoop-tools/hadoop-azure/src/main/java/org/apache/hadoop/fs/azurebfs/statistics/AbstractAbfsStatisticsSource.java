@@ -21,6 +21,9 @@ package org.apache.hadoop.fs.azurebfs.statistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
+/**
+ * Abstract class for Abfs statistics source.
+ */
 public abstract class AbstractAbfsStatisticsSource implements IOStatisticsSource {
     private IOStatisticsStore ioStatistics;
 

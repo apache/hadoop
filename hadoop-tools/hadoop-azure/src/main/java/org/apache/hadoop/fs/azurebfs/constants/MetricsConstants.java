@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.fs.azurebfs.constants;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+/**
+ * Responsible to keep all constant keys related to ABFS metrics.
+ */
+@InterfaceAudience.Private
 public final class MetricsConstants {
     public static final String COLON = ":";
     public static final String RETRY = "RETRY";

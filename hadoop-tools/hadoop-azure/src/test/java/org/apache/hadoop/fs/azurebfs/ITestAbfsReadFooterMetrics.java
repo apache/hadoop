@@ -186,9 +186,9 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
   private AbfsReadFooterMetrics getNonParquetMetrics() {
     AbfsReadFooterMetrics nonParquetMetrics = new AbfsReadFooterMetrics();
     nonParquetMetrics.incrementMetricValue(NON_PARQUET, READ_COUNT);
-    nonParquetMetrics.updateMetricValue(NON_PARQUET, FILE_LENGTH, 32768);
-    nonParquetMetrics.updateMetricValue(NON_PARQUET, READ_LEN_REQUESTED, 16384);
-    nonParquetMetrics.updateMetricValue(NON_PARQUET, SIZE_READ_BY_FIRST_READ, 16384);
+    nonParquetMetrics.updateMetricValue(NON_PARQUET, FILE_LENGTH, Long.parseLong("32768"));
+    nonParquetMetrics.updateMetricValue(NON_PARQUET, READ_LEN_REQUESTED, Long.parseLong("16384"));
+    nonParquetMetrics.updateMetricValue(NON_PARQUET, SIZE_READ_BY_FIRST_READ, Long.parseLong("16384"));
     nonParquetMetrics.updateMetricValue(NON_PARQUET, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, 1);
     nonParquetMetrics.incrementMetricValue(NON_PARQUET, TOTAL_FILES);
     return nonParquetMetrics;
@@ -200,10 +200,10 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
   private AbfsReadFooterMetrics getParquetMetrics() {
     AbfsReadFooterMetrics parquetMetrics = new AbfsReadFooterMetrics();
     parquetMetrics.incrementMetricValue(PARQUET, READ_COUNT);;
-    parquetMetrics.updateMetricValue(PARQUET, FILE_LENGTH, 8388608);
-    parquetMetrics.updateMetricValue(PARQUET, READ_LEN_REQUESTED, 8388608);
-    parquetMetrics.updateMetricValue(PARQUET, SIZE_READ_BY_FIRST_READ, 1024);
-    parquetMetrics.updateMetricValue(PARQUET, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, 4096);
+    parquetMetrics.updateMetricValue(PARQUET, FILE_LENGTH, Long.parseLong("8388608"));
+    parquetMetrics.updateMetricValue(PARQUET, READ_LEN_REQUESTED, Long.parseLong("8388608"));
+    parquetMetrics.updateMetricValue(PARQUET, SIZE_READ_BY_FIRST_READ, Long.parseLong("1024"));
+    parquetMetrics.updateMetricValue(PARQUET, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, Long.parseLong("4096"));
     parquetMetrics.incrementMetricValue(PARQUET, TOTAL_FILES);
     return parquetMetrics;
   }

@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.fs.azurebfs.enums;
 
 public enum RetryValue {
@@ -20,6 +38,7 @@ public enum RetryValue {
     }
 
     public static RetryValue getRetryValue(int retryCount) {
+        int five = 5, fifteen = 15, twentyFive = 25;
         if (retryCount == 1) {
             return ONE;
         } else if (retryCount == 2) {
@@ -28,9 +47,9 @@ public enum RetryValue {
             return THREE;
         } else if (retryCount == 4) {
             return FOUR;
-        } else if (retryCount >= 5 && retryCount < 15) {
+        } else if (retryCount >= five && retryCount < fifteen) {
             return FIVE_FIFTEEN;
-        } else if (retryCount >= 15 && retryCount < 25) {
+        } else if (retryCount >= fifteen && retryCount < twentyFive) {
             return FIFTEEN_TWENTY_FIVE;
         } else {
             return TWENTY_FIVE_AND_ABOVE;

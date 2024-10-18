@@ -71,9 +71,9 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
     return Arrays.stream(AbfsBackoffMetricsEnum.values())
             .filter(backoffMetricsEnum -> backoffMetricsEnum.getStatisticType().equals(type))
             .flatMap(backoffMetricsEnum ->
-                    RETRY.equals(backoffMetricsEnum.getType()) ?
-                            RETRY_LIST.stream().map(retryCount -> retryCount + COLON + backoffMetricsEnum.getName()) :
-                            Stream.of(backoffMetricsEnum.getName())
+                    RETRY.equals(backoffMetricsEnum.getType())
+                            ? RETRY_LIST.stream().map(retryCount -> retryCount + COLON + backoffMetricsEnum.getName())
+                            : Stream.of(backoffMetricsEnum.getName())
             ).toArray(String[]::new);
   }
 
@@ -109,6 +109,9 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
       case TYPE_GAUGE:
         incGaugeValue(metricName);
         break;
+      default:
+        // Do nothing
+        break;
     }
   }
 
@@ -124,6 +127,9 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
         break;
       case TYPE_GAUGE:
         setGaugeValue(metricName, value);
+        break;
+      default:
+        // Do nothing
         break;
     }
   }
