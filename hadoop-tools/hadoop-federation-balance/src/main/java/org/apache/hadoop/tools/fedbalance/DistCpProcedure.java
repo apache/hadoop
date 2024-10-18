@@ -476,7 +476,7 @@ public class DistCpProcedure extends BalanceProcedure {
       boolean useSnapshotDiff) throws IOException {
     List<String> command = new ArrayList<>();
     command.addAll(Arrays
-        .asList(new String[] {"-async", "-update", "-append", "-pruxgpcab"}));
+        .asList(new String[] {"-async", "-update", "-append", "-pruxgpcabt"}));
     if (useSnapshotDiff) {
       command.add("-diff");
       command.add(LAST_SNAPSHOT_NAME);
