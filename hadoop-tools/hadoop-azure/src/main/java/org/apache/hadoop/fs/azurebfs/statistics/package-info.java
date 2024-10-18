@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,22 +16,8 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.constants;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-
-/**
- * Responsible to keep all constant keys related to ABFS metrics.
- */
 @InterfaceAudience.Private
-public final class MetricsConstants {
-    public static final String COLON = ":";
-    public static final String RETRY = "RETRY";
-    public static final String BASE = "BASE";
-    public static final String FILE = "FILE";
-
-    // Private constructor to prevent instantiation
-    private MetricsConstants() {
-        throw new AssertionError("Cannot instantiate MetricsConstants");
-    }
-}
+@InterfaceStability.Evolving
+package org.apache.hadoop.fs.azurebfs.statistics;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

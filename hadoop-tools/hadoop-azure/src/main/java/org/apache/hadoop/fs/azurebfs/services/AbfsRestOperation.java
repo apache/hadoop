@@ -26,7 +26,6 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.List;
 
-import org.apache.hadoop.fs.azurebfs.enums.RetryValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +43,7 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.enums.RetryValue;
 import org.apache.http.impl.execchain.RequestAbortedException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;

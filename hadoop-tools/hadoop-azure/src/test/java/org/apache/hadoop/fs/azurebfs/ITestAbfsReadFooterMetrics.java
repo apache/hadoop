@@ -199,7 +199,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
    */
   private AbfsReadFooterMetrics getParquetMetrics() {
     AbfsReadFooterMetrics parquetMetrics = new AbfsReadFooterMetrics();
-    parquetMetrics.incrementMetricValue(PARQUET, READ_COUNT);;
+    parquetMetrics.incrementMetricValue(PARQUET, READ_COUNT);
     parquetMetrics.updateMetricValue(PARQUET, FILE_LENGTH, Long.parseLong("8388608"));
     parquetMetrics.updateMetricValue(PARQUET, READ_LEN_REQUESTED, Long.parseLong("8388608"));
     parquetMetrics.updateMetricValue(PARQUET, SIZE_READ_BY_FIRST_READ, Long.parseLong("1024"));

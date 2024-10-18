@@ -265,11 +265,11 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
 
     private void appendMetrics(StringBuilder metricBuilder, FileType fileType) {
         long totalFiles = getMetricValue(fileType, TOTAL_FILES);
-        if (totalFiles <= 0) {
+        long readCount = getMetricValue(fileType, READ_COUNT);
+        if (totalFiles <= 0 || readCount <= 0) {
             return;
         }
 
-        long readCount = getMetricValue(fileType, READ_COUNT);
         String sizeReadByFirstRead = String.format("%.3f", getMetricValue(fileType, SIZE_READ_BY_FIRST_READ) / (double) totalFiles);
         String offsetDiffBetweenFirstAndSecondRead = String.format("%.3f",
                 getMetricValue(fileType, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ) / (double) totalFiles);

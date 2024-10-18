@@ -72,7 +72,7 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
             .filter(backoffMetricsEnum -> backoffMetricsEnum.getStatisticType().equals(type))
             .flatMap(backoffMetricsEnum ->
                     RETRY.equals(backoffMetricsEnum.getType())
-                            ? RETRY_LIST.stream().map(retryCount -> retryCount + COLON + backoffMetricsEnum.getName())
+                            ? RETRY_LIST.stream().map(retryCount -> retryCount.getValue() + COLON + backoffMetricsEnum.getName())
                             : Stream.of(backoffMetricsEnum.getName())
             ).toArray(String[]::new);
   }

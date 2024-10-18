@@ -27,6 +27,10 @@ public enum RetryValue {
     FIFTEEN_TWENTY_FIVE("15_25"),
     TWENTY_FIVE_AND_ABOVE("25AndAbove");
 
+    private static final int FIVE = 5;
+    private static final int FIFTEEN = 15;
+    private static final int TWENTY_FIVE = 25;
+
     private final String value;
 
     RetryValue(String value) {
@@ -38,7 +42,6 @@ public enum RetryValue {
     }
 
     public static RetryValue getRetryValue(int retryCount) {
-        int five = 5, fifteen = 15, twentyFive = 25;
         if (retryCount == 1) {
             return ONE;
         } else if (retryCount == 2) {
@@ -47,9 +50,9 @@ public enum RetryValue {
             return THREE;
         } else if (retryCount == 4) {
             return FOUR;
-        } else if (retryCount >= five && retryCount < fifteen) {
+        } else if (retryCount >= FIVE && retryCount < FIFTEEN) {
             return FIVE_FIFTEEN;
-        } else if (retryCount >= fifteen && retryCount < twentyFive) {
+        } else if (retryCount >= FIFTEEN && retryCount < TWENTY_FIVE) {
             return FIFTEEN_TWENTY_FIVE;
         } else {
             return TWENTY_FIVE_AND_ABOVE;
