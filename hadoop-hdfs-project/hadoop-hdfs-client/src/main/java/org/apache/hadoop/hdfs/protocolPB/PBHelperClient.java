@@ -2037,13 +2037,13 @@ public class PBHelperClient {
       return new ReplicatedBlockStats(res.getLowRedundancy(),
           res.getCorruptBlocks(), res.getMissingBlocks(),
           res.getMissingReplOneBlocks(), res.getBlocksInFuture(),
-          res.getPendingDeletionBlocks(),
+          res.getPendingDeletionBlocks(), res.getBadlyDistributedBlocks(),
           res.getHighestPrioLowRedundancyBlocks());
     }
     return new ReplicatedBlockStats(res.getLowRedundancy(),
         res.getCorruptBlocks(), res.getMissingBlocks(),
         res.getMissingReplOneBlocks(), res.getBlocksInFuture(),
-        res.getPendingDeletionBlocks());
+        res.getBadlyDistributedBlocks(), res.getPendingDeletionBlocks());
   }
 
   public static ECBlockGroupStats convert(
@@ -2052,11 +2052,12 @@ public class PBHelperClient {
       return new ECBlockGroupStats(res.getLowRedundancy(),
           res.getCorruptBlocks(), res.getMissingBlocks(),
           res.getBlocksInFuture(), res.getPendingDeletionBlocks(),
-          res.getHighestPrioLowRedundancyBlocks());
+          res.getBadlyDistributedBlocks(), res.getHighestPrioLowRedundancyBlocks());
     }
     return new ECBlockGroupStats(res.getLowRedundancy(),
         res.getCorruptBlocks(), res.getMissingBlocks(),
-        res.getBlocksInFuture(), res.getPendingDeletionBlocks());
+        res.getBlocksInFuture(), res.getPendingDeletionBlocks(),
+        res.getBadlyDistributedBlocks());
   }
 
   public static DatanodeReportTypeProto convert(DatanodeReportType t) {
@@ -2525,6 +2526,8 @@ public class PBHelperClient {
         replicatedBlockStats.getBytesInFutureBlocks());
     result.setPendingDeletionBlocks(
         replicatedBlockStats.getPendingDeletionBlocks());
+    result.setBadlyDistributedBlocks(
+        replicatedBlockStats.getBadlyDistributedBlocks());
     if (replicatedBlockStats.hasHighestPriorityLowRedundancyBlocks()) {
       result.setHighestPrioLowRedundancyBlocks(
           replicatedBlockStats.getHighestPriorityLowRedundancyBlocks());
@@ -2544,6 +2547,8 @@ public class PBHelperClient {
         ecBlockGroupStats.getBytesInFutureBlockGroups());
     result.setPendingDeletionBlocks(
         ecBlockGroupStats.getPendingDeletionBlocks());
+    result.setBadlyDistributedBlocks(
+        ecBlockGroupStats.getBadlyDistributedBlocks());
     if (ecBlockGroupStats.hasHighestPriorityLowRedundancyBlocks()) {
       result.setHighestPrioLowRedundancyBlocks(
           ecBlockGroupStats.getHighestPriorityLowRedundancyBlocks());

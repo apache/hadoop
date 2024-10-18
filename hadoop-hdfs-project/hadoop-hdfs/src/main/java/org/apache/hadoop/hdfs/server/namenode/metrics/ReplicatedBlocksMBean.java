@@ -52,6 +52,11 @@ public interface ReplicatedBlocksMBean {
   long getMissingReplicationOneBlocks();
 
   /**
+    * Return count of badly distributed blocks
+   */
+  long getBadlyDistributedBlocks();
+
+  /**
    * Return total bytes of future blocks.
    */
   long getBytesInFutureReplicatedBlocks();
