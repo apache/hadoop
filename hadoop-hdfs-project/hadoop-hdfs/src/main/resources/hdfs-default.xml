@@ -6312,6 +6312,14 @@
   </property>
 
   <property>
+    <name>dfs.namenode.block.deletion.async</name>
+    <value>true</value>
+    <description>
+      If false, disable block deleting asynchronously
+    </description>
+  </property>
+
+  <property>
     <name>dfs.namenode.rpc-address.auxiliary-ports</name>
     <value></value>
     <description>
