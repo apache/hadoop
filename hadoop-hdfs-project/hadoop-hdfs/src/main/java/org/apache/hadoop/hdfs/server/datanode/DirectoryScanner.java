@@ -746,19 +746,23 @@ public class DirectoryScanner implements Runnable {
       if (throttleLimitMsPerSec > 0L) {
         final long runningTime = throttleTimer.now(TimeUnit.MILLISECONDS);
         if (runningTime >= throttleLimitMsPerSec) {
-          final long sleepTime;
-          if (runningTime >= 1000L) {
-            LOG.warn("Unable to throttle within the second. Blocking for 1s.");
-            sleepTime = 1000L;
-          } else {
-            // Sleep for the expected time plus any time processing ran over
-            final long overTime = runningTime - throttleLimitMsPerSec;
-            sleepTime = (1000L - throttleLimitMsPerSec) + overTime;
-          }
-          Thread.sleep(sleepTime);
+          Thread.sleep(calculateSleepTime(runningTime));
           throttleTimer.reset().start();
         }
         accumulateTimeWaiting();
+      }
+    }
+
+    @VisibleForTesting
+    long calculateSleepTime(long runningTime) {
+      if (throttleLimitMsPerSec <= 0) return 0;
+      if (runningTime >= 1000L) {
+        LOG.warn("Unable to throttle within the second. Blocking for 1s.");
+        return 1000L;
+      } else {
+        // Sleep for the expected time plus any time processing ran over
+        final long overTime = runningTime - throttleLimitMsPerSec;
+        return (1000L - throttleLimitMsPerSec) + overTime;
       }
     }
 
