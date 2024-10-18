@@ -120,6 +120,7 @@ public class NodesListManager extends CompositeService implements
           YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
       this.hostsReader =
           createHostsFileReader(this.includesFile, this.excludesFile);
+      LOG.debug("Calling setDecommissionedNMs from serviceInit");
       setDecommissionedNMs();
       printConfiguredHosts(false);
     } catch (YarnException ex) {
@@ -241,6 +242,34 @@ public class NodesListManager extends CompositeService implements
     }
   }
 
+  public void refreshNodesForActiveRMTransition(Configuration yarnConf)
+      throws IOException, YarnException {
+    refreshHostsReader(yarnConf, false, null);
+    /*
+     * The call to refreshHostsReader() will read the excludeFile and handle
+     * decommission for nodes which are in this.rmContext.getRMNodes(). When an
+     * active RM newly started, the serviceInit() method of this
+     * NodesListManager Service would have been called. There is a call to
+     * setDecommissionedNMs which will make an artificial state change for those
+     * excluded nodes. This will help RM to give a proper list about
+     * decommissioned nodes. But in case of an active standby RM HA, the standby
+     * RM is already started and the serviceInit() of this Service been already
+     * happened. Later on the exclude file got added with some decommissioning
+     * nodes. When this standby become active, we refresh the nodes and as part
+     * of that reread the exclude file. But by then we don't have any entries in
+     * this.rmContext.getRMNodes() and so not really able to make any state
+     * transition for any of the nodes. Later, this RM will never give those
+     * nodes in decommissioned list. At the same time those NMs will get
+     * shutdown as the RM already had reinit the excluded nodes list. We are
+     * calling this method whenever an RM becomes active and so calling
+     * setDecommissionedNMs here also which will add those excluded nodes into
+     * rmContext.getInactiveRMNodes() and will do a decommission state
+     * transition.
+     */
+    LOG.debug("Calling setDecommissionedNMs as part of RM becoming active.");
+    setDecommissionedNMs();
+  }
+
   public void refreshNodes(Configuration yarnConf, boolean graceful)
       throws IOException, YarnException {
     refreshHostsReader(yarnConf, graceful, null);
@@ -287,11 +316,30 @@ public class NodesListManager extends CompositeService implements
     Set<String> excludeList = hostsReader.getExcludedHosts();
     for (final String host : excludeList) {
       NodeId nodeId = createUnknownNodeId(host);
-      RMNodeImpl rmNode = new RMNodeImpl(nodeId,
-          rmContext, host, -1, -1, new UnknownNode(host),
-          Resource.newInstance(0, 0), "unknown");
-      rmContext.getInactiveRMNodes().put(nodeId, rmNode);
-      rmNode.handle(new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION));
+      if (!rmContext.getInactiveRMNodes().containsKey(nodeId)) {
+        RMNodeImpl rmNode = new RMNodeImpl(nodeId,
+            rmContext, host, -1, -1, new UnknownNode(host),
+            Resource.newInstance(0, 0), "unknown");
+        rmContext.getInactiveRMNodes().put(nodeId, rmNode);
+        rmNode.handle(new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION));
+      }
+    }
+    // In case of RM switchover, there might be NMs already added into the
+    // rmContext#InactiveRMNodes.
+    // This got added while this RM started as standby RM.
+    // If an NM in this inactive nodes list, is currently not excluded as per
+    // excluded file, we have to remove that node from InactiveRMNodes.
+    Iterator<Entry<NodeId, RMNode>> inactiveNodes = rmContext
+        .getInactiveRMNodes().entrySet().iterator();
+    while (inactiveNodes.hasNext()) {
+      Entry<NodeId, RMNode> inactiveNode = inactiveNodes.next();
+      if (!excludeList.contains(inactiveNode.getKey().getHost())) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Removing the node " + inactiveNode.getKey().getHost()
+              + " from inactiveRMNodes as it is no longer part of excluded nodes");
+        }
+        inactiveNodes.remove();
+      }
     }
   }
 
@@ -320,6 +368,10 @@ public class NodesListManager extends CompositeService implements
 
     for (RMNode n : this.rmContext.getRMNodes().values()) {
       NodeState s = n.getState();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Checking possible decommission/recommission for the NM "
+            + n.getHostName() + ". Current state " + s);
+      }
       // An invalid node (either due to explicit exclude or not include)
       // should be excluded.
       boolean isExcluded = !isValidNode(

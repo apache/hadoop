@@ -497,11 +497,13 @@ public class AdminService extends CompositeService implements
     }
   }
 
-  private void refreshNodes() throws IOException, YarnException {
+  private void refreshNodesForActiveRMTransition()
+      throws IOException, YarnException {
     Configuration conf =
         getConfiguration(new Configuration(false),
             YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
-    rm.getRMContext().getNodesListManager().refreshNodes(conf);
+    rm.getRMContext().getNodesListManager()
+        .refreshNodesForActiveRMTransition(conf);
   }
 
   @Override
@@ -789,7 +791,7 @@ public class AdminService extends CompositeService implements
         }
       }
       refreshQueues();
-      refreshNodes();
+      refreshNodesForActiveRMTransition();
       refreshSuperUserGroupsConfiguration();
       refreshUserToGroupsMappings();
       if (getConfig().getBoolean(
