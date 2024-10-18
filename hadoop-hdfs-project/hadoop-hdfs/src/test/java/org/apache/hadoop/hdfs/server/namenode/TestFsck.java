@@ -436,7 +436,7 @@ public class TestFsck {
     util.cleanup(fs, topDir);
   }
 
-  static private class CorruptedTestFile {
+  static class CorruptedTestFile {
     final private String name;
     final private Set<Integer> blocksToCorrupt;
     final private DFSClient dfsClient;
