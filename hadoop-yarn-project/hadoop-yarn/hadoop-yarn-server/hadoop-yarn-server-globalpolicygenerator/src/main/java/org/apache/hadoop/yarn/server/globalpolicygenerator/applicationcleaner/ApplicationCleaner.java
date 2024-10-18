@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.yarn.server.globalpolicygenerator.applicationcleaner;
 
-import java.util.HashSet;
-import java.util.Set;
-
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -33,8 +31,6 @@ import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.DeSelectFields;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
-import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,60 +95,46 @@ public abstract class ApplicationCleaner implements Runnable {
   }
 
   /**
-   * Query router for applications.
+   * To determine if the application comes from RM.
    *
-   * @return the set of applications
-   * @throws YarnRuntimeException when router call fails
+   * @param webAppAddress RM webAppAddress.
+   * @param applicationId applicationId.
+   * @return If it is true, the application can be found in the subCluster.
+   * If it is false, the application cannot be found.
+   * @throws YarnRuntimeException if get application error.
    */
-  public Set<ApplicationId> getAppsFromRouter() throws YarnRuntimeException {
-    String webAppAddress = WebAppUtils.getRouterWebAppURLWithScheme(conf);
+  public Boolean isApplicationExistsSubCluster(String webAppAddress, ApplicationId applicationId)
+      throws YarnRuntimeException {
 
-    LOG.info("Contacting router at: {}.", webAppAddress);
-    AppsInfo appsInfo = GPGUtils.invokeRMWebService(webAppAddress, RMWSConsts.APPS,
-        AppsInfo.class, conf, DeSelectFields.DeSelectType.RESOURCE_REQUESTS.toString());
+    try {
+      AppInfo appInfo = GPGUtils.invokeRMWebService(webAppAddress,
+          RMWSConsts.APPS + "/" + applicationId, AppInfo.class, conf,
+           DeSelectFields.DeSelectType.RESOURCE_REQUESTS.toString());
 
-    Set<ApplicationId> appSet = new HashSet<>();
-    for (AppInfo appInfo : appsInfo.getApps()) {
-      appSet.add(ApplicationId.fromString(appInfo.getAppId()));
+      if(appInfo != null && isApplicationIdEqual(appInfo, applicationId)) {
+        return true;
+      }
+    } catch (Exception e) {
+      LOG.error("We cannot get application = {} from webAppAddress = {}.",
+          applicationId, webAppAddress, e);
     }
-    return appSet;
+
+    return false;
   }
 
   /**
-   * Get the list of known applications in the cluster from Router.
+   * Check if the applicationId is equal.
    *
-   * @return the list of known applications
-   * @throws YarnException if get app fails
+   * @param appInfo appInfo comes from the specified SubCluster.
+   * @param applicationId ApplicationId that needs to be checked.
+   * @return true, they are equal, can be deleted; false, they are not equal, cannot be deleted.
    */
-  public Set<ApplicationId> getRouterKnownApplications() throws YarnException {
-    int successCount = 0, totalAttemptCount = 0;
-    Set<ApplicationId> resultSet = new HashSet<>();
-    while (totalAttemptCount < this.maxRouterRetry) {
-      try {
-        Set<ApplicationId> routerApps = getAppsFromRouter();
-        resultSet.addAll(routerApps);
-        LOG.info("Attempt {}: {} known apps from Router, {} in total",
-            totalAttemptCount, routerApps.size(), resultSet.size());
-
-        successCount++;
-        if (successCount >= this.minRouterSuccessCount) {
-          return resultSet;
-        }
-
-        // Wait for the next attempt
-        try {
-          Thread.sleep(this.routerQueryIntevalMillis);
-        } catch (InterruptedException e) {
-          LOG.warn("Sleep interrupted after attempt {}.", totalAttemptCount);
-        }
-      } catch (Exception e) {
-        LOG.warn("Router query attempt {} failed.", totalAttemptCount, e);
-      } finally {
-        totalAttemptCount++;
-      }
+  private boolean isApplicationIdEqual(AppInfo appInfo, ApplicationId applicationId) {
+    String appId = appInfo.getAppId();
+    if (appId != null && StringUtils.equals(appId, applicationId.toString())) {
+      return true;
     }
-    throw new YarnException("Only " + successCount
-        + " success Router queries after " + totalAttemptCount + " retries");
+    return false;
   }
 
   @Override
