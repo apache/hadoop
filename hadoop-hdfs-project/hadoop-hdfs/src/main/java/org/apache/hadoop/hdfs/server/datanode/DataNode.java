@@ -3012,6 +3012,8 @@ public class DataNode extends ReconfigurableBase
     /** Throttle to block replication when data transfers or writes. */
     private DataTransferThrottler throttler;
 
+    private IOException lastException = null;
+
     /**
      * Connect to the first item in the target list.  Pass along the 
      * entire target list, the block, and the data.
@@ -3056,6 +3058,7 @@ public class DataNode extends ReconfigurableBase
       final boolean isClient = clientname.length() > 0;
       
       try {
+        DataNodeFaultInjector.get().failTransfer(id);
         final String dnAddr = targets[0].getXferAddr(connectToDnViaHostname);
         InetSocketAddress curTarget = NetUtils.createSocketAddr(dnAddr);
         LOG.debug("Connecting to datanode {}", dnAddr);
@@ -3128,8 +3131,10 @@ public class DataNode extends ReconfigurableBase
         handleBadBlock(b, ie, false);
         LOG.warn("{}:Failed to transfer {} to {} got",
             bpReg, b, targets[0], ie);
+        lastException = ie;
       } catch (Throwable t) {
         LOG.error("Failed to transfer block {}", b, t);
+        lastException = new IOException("Failed to transfer block " + b, t);
       } finally {
         decrementXmitsInProgress();
         IOUtils.closeStream(blockSender);
@@ -3137,6 +3142,10 @@ public class DataNode extends ReconfigurableBase
         IOUtils.closeStream(in);
         IOUtils.closeSocket(sock);
       }
+    }
+
+    public IOException getLastException() {
+      return this.lastException;
     }
 
     @Override
@@ -3645,6 +3654,9 @@ public class DataNode extends ReconfigurableBase
       } catch (InterruptedException | ExecutionException e) {
         throw new IOException("Pipeline recovery for " + b + " is interrupted.",
             e);
+      }
+      if (dataTransferTask.getLastException() != null) {
+        throw dataTransferTask.getLastException();
       }
     }
   }
