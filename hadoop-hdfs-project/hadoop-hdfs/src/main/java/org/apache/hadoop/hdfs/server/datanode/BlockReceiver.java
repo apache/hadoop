@@ -373,6 +373,10 @@ class BlockReceiver implements Closeable {
           streams.syncDataOut();
           datanode.metrics.addFsyncNanos(System.nanoTime() - fsyncStartNanos);
         }
+        if (dropCacheBehindWrites) {
+          streams.dropCacheBehindWrites(block.getBlockName(), 0, 0,
+              POSIX_FADV_DONTNEED);
+        }
         flushTotalNanos += flushEndNanos - flushStartNanos;
         measuredFlushTime = true;
         streams.closeDataStream();
