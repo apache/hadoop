@@ -152,6 +152,7 @@ public class DfsClientConf {
 
   private final ShortCircuitConf shortCircuitConf;
   private final int clientShortCircuitNum;
+  private final boolean noLocalWrite;
 
   private final long hedgedReadThresholdMillis;
   private final int hedgedReadThreadpoolSize;
@@ -311,6 +312,8 @@ public class DfsClientConf {
     Preconditions.checkArgument(clientShortCircuitNum <= 5,
             HdfsClientConfigKeys.DFS_CLIENT_SHORT_CIRCUIT_NUM +
                     "can't be more then 5.");
+    noLocalWrite = conf.getBoolean(HdfsClientConfigKeys.DFS_CLIENT_NO_LOCAL_WRITE,
+            HdfsClientConfigKeys.DFS_CLIENT_NO_LOCAL_WRITE_DEFAULT);
     maxPipelineRecoveryRetries = conf.getInt(
         HdfsClientConfigKeys.DFS_CLIENT_PIPELINE_RECOVERY_MAX_RETRIES,
         HdfsClientConfigKeys.DFS_CLIENT_PIPELINE_RECOVERY_MAX_RETRIES_DEFAULT
@@ -745,6 +748,12 @@ public class DfsClientConf {
     return maxPipelineRecoveryRetries;
   }
 
+  /**
+   *@return the noLocalWrite
+   */
+  public boolean getNoLocalWrite() {
+    return noLocalWrite;
+  }
   /**
    * Configuration for short-circuit reads.
    */
