@@ -83,6 +83,7 @@ public class TestRMFailoverProxyProvider {
    * gets called.
    */
   @Test
+  @SuppressWarnings("unchecked")
   public void testFailoverChange() throws Exception {
     //Adjusting the YARN Conf
     conf.set(YarnConfiguration.RM_HA_IDS, "rm0, rm1");
@@ -196,6 +197,7 @@ public class TestRMFailoverProxyProvider {
    */
   @SuppressWarnings("unchecked")
   @Test
+  @SuppressWarnings("unchecked")
   public void testAutoRefreshFailoverChange() throws Exception {
     conf.setClass(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,
         AutoRefreshRMFailoverProxyProvider.class,

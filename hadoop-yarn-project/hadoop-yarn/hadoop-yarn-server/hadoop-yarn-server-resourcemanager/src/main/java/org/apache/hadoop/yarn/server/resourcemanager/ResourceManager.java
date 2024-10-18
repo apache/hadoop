@@ -265,7 +265,7 @@ public class ResourceManager extends CompositeService
   }
 
   @VisibleForTesting
-  Dispatcher getRmDispatcher() {
+  public Dispatcher getRmDispatcher() {
     return rmDispatcher;
   }
 
