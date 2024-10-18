@@ -154,6 +154,12 @@ public enum DistCpOptionSwitch {
           "dividing work based on file sizes")),
 
   /**
+   * Copy file uses fastCopy.
+   */
+  USE_FASTCOPY(DistCpConstants.CONF_LABEL_USE_FAST_COPY,
+      new Option("fastcopy", false, "Copy file uses fastCopy.")),
+
+  /**
    * Skip CRC checks between source and target, when determining what
    * files need to be copied.
    */

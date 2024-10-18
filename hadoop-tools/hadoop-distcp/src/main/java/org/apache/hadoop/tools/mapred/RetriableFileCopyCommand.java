@@ -67,7 +67,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
   private static Logger LOG = LoggerFactory.getLogger(RetriableFileCopyCommand.class);
   private boolean skipCrc = false;
   private boolean directWrite = false;
-  private FileAction action;
+  protected FileAction action;
 
   /**
    * Constructor, taking a description of the action.
@@ -193,7 +193,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
   }
 
   @SuppressWarnings("checkstyle:parameternumber")
-  private long copyToFile(Path targetPath, FileSystem targetFS,
+  protected long copyToFile(Path targetPath, FileSystem targetFS,
       CopyListingFileStatus source, long sourceOffset, Mapper.Context context,
       EnumSet<FileAttribute> fileAttributes, final FileChecksum sourceChecksum,
       FileStatus sourceStatus,FileSystem sourceFS)

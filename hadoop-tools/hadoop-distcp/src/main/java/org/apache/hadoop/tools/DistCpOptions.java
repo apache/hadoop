@@ -161,6 +161,7 @@ public final class DistCpOptions {
   private final boolean directWrite;
 
   private final boolean useIterator;
+  private final boolean useFastCopy;
 
   private final boolean updateRoot;
 
@@ -230,6 +231,7 @@ public final class DistCpOptions {
     this.directWrite = builder.directWrite;
 
     this.useIterator = builder.useIterator;
+    this.useFastCopy = builder.useFastCopy;
 
     this.updateRoot = builder.updateRoot;
   }
@@ -288,6 +290,10 @@ public final class DistCpOptions {
 
   public boolean shouldSkipCRC() {
     return skipCRC;
+  }
+
+  public boolean shouldUseFastCopy() {
+    return useFastCopy;
   }
 
   public boolean shouldBlock() {
@@ -406,6 +412,8 @@ public final class DistCpOptions {
         String.valueOf(useRdiff));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.SKIP_CRC,
         String.valueOf(skipCRC));
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.USE_FASTCOPY,
+        String.valueOf(useFastCopy));
     if (mapBandwidth > 0) {
       DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.BANDWIDTH,
           String.valueOf(mapBandwidth));
@@ -531,6 +539,8 @@ public final class DistCpOptions {
     private boolean useIterator = false;
 
     private boolean updateRoot = false;
+
+    private boolean useFastCopy = false;
 
     public Builder(List<Path> sourcePaths, Path targetPath) {
       Preconditions.checkArgument(sourcePaths != null && !sourcePaths.isEmpty(),
@@ -814,6 +824,11 @@ public final class DistCpOptions {
 
     public Builder withUpdateRoot(boolean updateRootAttrs) {
       this.updateRoot = updateRootAttrs;
+      return this;
+    }
+
+    public Builder withUseFastCopy(boolean useFastCopy) {
+      this.useFastCopy = useFastCopy;
       return this;
     }
   }

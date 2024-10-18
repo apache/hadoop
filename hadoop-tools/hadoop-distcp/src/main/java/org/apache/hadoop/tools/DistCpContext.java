@@ -99,6 +99,10 @@ public class DistCpContext {
     return options.shouldSkipCRC();
   }
 
+  public boolean shouldUseFastCopy() {
+    return options.shouldSkipCRC();
+  }
+
   public boolean shouldBlock() {
     return options.shouldBlock();
   }

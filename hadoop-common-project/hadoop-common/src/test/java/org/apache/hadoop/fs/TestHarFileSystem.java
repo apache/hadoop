@@ -234,6 +234,8 @@ public class TestHarFileSystem {
     public Collection<FileStatus> getTrashRoots(boolean allUsers) throws IOException;
     StorageStatistics getStorageStatistics();
 
+    public void fastCopy(Path src, Path dst, boolean overwrite) throws IOException;
+
     FutureDataInputStreamBuilder openFile(Path path)
         throws IOException, UnsupportedOperationException;
 

@@ -118,6 +118,8 @@ public class OptionsParser {
             command.hasOption(DistCpOptionSwitch.DIRECT_WRITE.getSwitch()))
         .withUseIterator(
             command.hasOption(DistCpOptionSwitch.USE_ITERATOR.getSwitch()))
+        .withUseFastCopy(
+            command.hasOption(DistCpOptionSwitch.USE_FASTCOPY.getSwitch()))
         .withUpdateRoot(
             command.hasOption(DistCpOptionSwitch.UPDATE_ROOT.getSwitch()));
 

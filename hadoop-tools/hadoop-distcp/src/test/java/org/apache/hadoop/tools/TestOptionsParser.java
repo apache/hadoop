@@ -153,6 +153,21 @@ public class TestOptionsParser {
   }
 
   @Test
+  public void testParseUseFastCopy() {
+    DistCpOptions options = OptionsParser.parse(new String[] {
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    Assert.assertFalse(options.shouldUseFastCopy());
+
+    options = OptionsParser.parse(new String[] {
+        "-update",
+        "-fastcopy",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    Assert.assertTrue(options.shouldUseFastCopy());
+  }
+
+  @Test
   public void testParseAtomicCommit() {
     DistCpOptions options = OptionsParser.parse(new String[] {
         "hdfs://localhost:8020/source/first",

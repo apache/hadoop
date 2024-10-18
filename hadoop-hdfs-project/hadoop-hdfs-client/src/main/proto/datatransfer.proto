@@ -331,3 +331,10 @@ message OpBlockChecksumResponseProto {
 message OpCustomProto {
   required string customId = 1;
 }
+
+message OpCopyBlockCrossNamespaceProto {
+  required BaseHeaderProto header = 1;
+  required ExtendedBlockProto targetBlock = 2;
+  required hadoop.common.TokenProto targetToken = 3;
+  required DatanodeInfoProto targetDatanode = 4;
+}
