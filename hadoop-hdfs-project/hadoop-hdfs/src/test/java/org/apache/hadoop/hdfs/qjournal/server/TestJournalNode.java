@@ -125,6 +125,11 @@ public class TestJournalNode {
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
           "qjournal://jn0:9900;jn1:9901/" + journalId);
     } else if (testName.getMethodName().equals(
+        "testJournalNodeSyncerStartWhenSyncEnabledAndUnresolved")) {
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
+          "qjournal://jn0:9900;jn1:9901/" + journalId);
+      conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_REQUIRED, false);
+    } else if (testName.getMethodName().equals(
         "testJournalNodeSyncwithFederationTypeConfigWithNameServiceId")) {
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1",
           "qjournal://journalnode0:9900;journalnode0:9901/" + journalId);
@@ -570,6 +575,12 @@ public class TestJournalNode {
 
   }
 
+  /**
+   * Require resolution.  Syncer must not start when there aren't any other known journal
+   * nodes due to the required resolution.
+   *
+   * @throws IOException if unable to get or create the journal
+   */
   @Test
   public void testJournalNodeSyncerNotStartWhenSyncEnabled()
       throws IOException {
@@ -593,6 +604,20 @@ public class TestJournalNode {
 
   }
 
+  /**
+   * Attempt resolution, but allow unresolved.  Syncer must start because there are other potential
+   * journal nodes and syncing is enabled.  The syncing will include the unresolved addresses in
+   * syncing so that once the target server is available it can be included in syncing.
+   *
+   * @throws IOException if unable to get or create the journal
+   */
+  @Test
+  public void testJournalNodeSyncerStartWhenSyncEnabledAndUnresolved()
+      throws IOException {
+    jn.getOrCreateJournal(journalId);
+    Assert.assertEquals(true,
+        jn.getJournalSyncerStatus(journalId));
+  }
 
   @Test
   public void testJournalNodeSyncwithFederationTypeConfigWithNameServiceId()
