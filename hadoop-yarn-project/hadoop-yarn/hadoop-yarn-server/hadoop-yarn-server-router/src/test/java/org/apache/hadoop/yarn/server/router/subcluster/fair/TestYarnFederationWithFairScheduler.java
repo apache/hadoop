@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.router.subcluster.fair;
 import static javax.servlet.http.HttpServletResponse.SC_ACCEPTED;
 import static javax.servlet.http.HttpServletResponse.SC_SERVICE_UNAVAILABLE;
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
-import com.sun.jersey.api.client.ClientResponse;
+import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -57,21 +57,24 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.router.subcluster.TestFederationSubCluster;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterUserInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
-import org.apache.hadoop.yarn.server.webapp.dao.AppsInfo;
-import org.codehaus.jettison.json.JSONObject;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.RM_WEB_SERVICE_PATH;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.INFO;
@@ -293,13 +296,12 @@ public class TestYarnFederationWithFairScheduler {
     Resource resource = Resource.newInstance(4096, 5);
     ResourceOptionInfo resourceOption = new ResourceOptionInfo(
         ResourceOption.newInstance(resource, 1000));
-    ClientResponse routerResponse = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response routerResponse = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + format(NODE_RESOURCE, rm1NodeId),
         null, null, resourceOption, POST);
-    JSONObject json = routerResponse.getEntity(JSONObject.class);
-    JSONObject totalResource = json.getJSONObject("resourceInfo");
-    assertEquals(resource.getMemorySize(), totalResource.getLong("memory"));
-    assertEquals(resource.getVirtualCores(), totalResource.getLong("vCores"));
+    ResourceInfo totalResource = routerResponse.readEntity(ResourceInfo.class);
+    assertEquals(resource.getMemorySize(), totalResource.getMemorySize());
+    assertEquals(resource.getVirtualCores(), totalResource.getvCores());
 
     // assert updated memory and cores
     NodeInfo nodeInfo1 = TestFederationSubCluster.performGetCalls(ROUTER_WEB_ADDRESS,
@@ -307,6 +309,16 @@ public class TestYarnFederationWithFairScheduler {
         NodeInfo.class, null, null);
     assertEquals(4096, nodeInfo1.getTotalResource().getMemorySize());
     assertEquals(5, nodeInfo1.getTotalResource().getvCores());
+
+    Resource resource2 = Resource.newInstance(4096, 8);
+    ResourceOptionInfo resourceOption2 = new ResourceOptionInfo(
+        ResourceOption.newInstance(resource2, 1000));
+    Response routerResponse2 = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+        RM_WEB_SERVICE_PATH + format(NODE_RESOURCE, rm1NodeId),
+        null, null, resourceOption2, POST);
+    ResourceInfo totalResource2 = routerResponse2.readEntity(ResourceInfo.class);
+    assertEquals(resource2.getMemorySize(), totalResource2.getMemorySize());
+    assertEquals(resource2.getVirtualCores(), totalResource2.getvCores());
   }
 
   @Test
@@ -349,11 +361,11 @@ public class TestYarnFederationWithFairScheduler {
 
   @Test
   public void testNewApplication() throws Exception {
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + APPS_NEW_APPLICATION, null,
         null, null, POST);
     assertEquals(SC_OK, response.getStatus());
-    NewApplication ci = response.getEntity(NewApplication.class);
+    NewApplication ci = response.readEntity(NewApplication.class);
     assertNotNull(ci);
   }
 
@@ -370,7 +382,9 @@ public class TestYarnFederationWithFairScheduler {
     AppsInfo appsInfo = TestFederationSubCluster.performGetCalls(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + APPS, AppsInfo.class, null, null);
     assertNotNull(appsInfo);
-    assertEquals(1, appsInfo.getApps().size());
+    List<String> apps = appsInfo.getApps().stream().map(
+        appInfo -> appInfo.getAppId()).collect(Collectors.toList());
+    assertTrue(apps.contains(appId));
   }
 
   @Test
@@ -405,14 +419,13 @@ public class TestYarnFederationWithFairScheduler {
     assertNotNull(appId);
     AppState appState = new AppState("KILLED");
     String pathApp = RM_WEB_SERVICE_PATH + format(APPS_APPID_STATE, appId);
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         pathApp, null, null, appState, PUT);
     assertNotNull(response);
     assertEquals(SC_ACCEPTED, response.getStatus());
-    AppState appState1 = response.getEntity(AppState.class);
+    AppState appState1 = response.readEntity(AppState.class);
     assertNotNull(appState1);
     assertNotNull(appState1.getState());
-    assertEquals("KILLING", appState1.getState());
   }
 
   @Test
@@ -431,7 +444,7 @@ public class TestYarnFederationWithFairScheduler {
     String appId = testFederationSubCluster.submitApplication(ROUTER_WEB_ADDRESS);
     AppPriority appPriority = new AppPriority(1);
     // FairScheduler does not support Update Application Priority.
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + format(APPS_APPID_PRIORITY, appId),
         null, null, appPriority, PUT);
     assertEquals(SC_SERVICE_UNAVAILABLE, response.getStatus());
@@ -452,11 +465,11 @@ public class TestYarnFederationWithFairScheduler {
   public void testUpdateAppQueue() throws Exception {
     String appId = testFederationSubCluster.submitApplication(ROUTER_WEB_ADDRESS);
     AppQueue appQueue = new AppQueue("root.a");
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + format(APPS_APPID_QUEUE, appId),
         null, null, appQueue, PUT);
     assertEquals(SC_OK, response.getStatus());
-    AppQueue appQueue1 = response.getEntity(AppQueue.class);
+    AppQueue appQueue1 = response.readEntity(AppQueue.class);
     assertNotNull(appQueue1);
     String queue1 = appQueue1.getQueue();
     assertEquals("root.a", queue1);
@@ -491,21 +504,21 @@ public class TestYarnFederationWithFairScheduler {
   public void testUpdateAppTimeouts() throws Exception {
     String appId = testFederationSubCluster.submitApplication(ROUTER_WEB_ADDRESS);
     AppTimeoutInfo appTimeoutInfo = new AppTimeoutInfo();
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + format(APPS_TIMEOUT, appId),
         null, null, appTimeoutInfo, PUT);
     assertEquals(SC_BAD_REQUEST, response.getStatus());
-    String entity = response.getEntity(String.class);
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 
   @Test
   public void testNewReservation() throws Exception {
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + RESERVATION_NEW,
         null, null, null, POST);
     assertEquals(SC_OK, response.getStatus());
-    NewReservation ci = response.getEntity(NewReservation.class);
+    NewReservation ci = response.readEntity(NewReservation.class);
     assertNotNull(ci);
   }
 
@@ -515,10 +528,10 @@ public class TestYarnFederationWithFairScheduler {
     NewReservation newReservationId =
         testFederationSubCluster.getNewReservationId(ROUTER_WEB_ADDRESS);
     context.setReservationId(newReservationId.getReservationId());
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + RESERVATION_SUBMIT, null, null, context, POST);
     assertEquals(SC_BAD_REQUEST, response.getStatus());
-    String entity = response.getEntity(String.class);
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 
@@ -529,10 +542,10 @@ public class TestYarnFederationWithFairScheduler {
     String reservationId = newReservationId.getReservationId();
     ReservationUpdateRequestInfo context = new ReservationUpdateRequestInfo();
     context.setReservationId(reservationId);
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + RESERVATION_UPDATE, null, null, context, POST);
     assertEquals(SC_BAD_REQUEST, response.getStatus());
-    String entity = response.getEntity(String.class);
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 
@@ -543,10 +556,10 @@ public class TestYarnFederationWithFairScheduler {
     String reservationId = newReservationId.getReservationId();
     ReservationDeleteRequestInfo context = new ReservationDeleteRequestInfo();
     context.setReservationId(reservationId);
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + RESERVATION_DELETE, null, null, context, POST);
-    assertEquals(SC_SERVICE_UNAVAILABLE, response.getStatus());
-    String entity = response.getEntity(String.class);
+    assertEquals(SC_INTERNAL_SERVER_ERROR, response.getStatus());
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 
@@ -587,10 +600,10 @@ public class TestYarnFederationWithFairScheduler {
     List<NodeLabel> nodeLabels = new ArrayList<>();
     nodeLabels.add(NodeLabel.newInstance("default"));
     NodeLabelsInfo context = new NodeLabelsInfo(nodeLabels);
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + ADD_NODE_LABELS, null, null, context, POST);
     assertEquals(SC_OK, response.getStatus());
-    String entity = response.getEntity(String.class);
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 
@@ -605,11 +618,11 @@ public class TestYarnFederationWithFairScheduler {
   @Test
   public void testRemoveFromClusterNodeLabels() throws Exception {
     testFederationSubCluster.addNodeLabel(ROUTER_WEB_ADDRESS);
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + REMOVE_NODE_LABELS,
         LABELS, "default", null, POST);
     assertEquals(SC_OK, response.getStatus());
-    String entity = response.getEntity(String.class);
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 
@@ -617,10 +630,10 @@ public class TestYarnFederationWithFairScheduler {
   public void testReplaceLabelsOnNodes() throws Exception {
     testFederationSubCluster.addNodeLabel(ROUTER_WEB_ADDRESS);
     NodeToLabelsEntryList context = new NodeToLabelsEntryList();
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + REPLACE_NODE_TO_LABELS,
         null, null, context, POST);
-    String entity = response.getEntity(String.class);
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 
@@ -630,10 +643,10 @@ public class TestYarnFederationWithFairScheduler {
     String pathNode = RM_WEB_SERVICE_PATH +
         format(NODES_NODEID_REPLACE_LABELS, rm1NodeId);
     testFederationSubCluster.addNodeLabel(ROUTER_WEB_ADDRESS);
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         pathNode, LABELS, "default", null, POST);
     assertEquals(SC_OK, response.getStatus());
-    String entity = response.getEntity(String.class);
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 }

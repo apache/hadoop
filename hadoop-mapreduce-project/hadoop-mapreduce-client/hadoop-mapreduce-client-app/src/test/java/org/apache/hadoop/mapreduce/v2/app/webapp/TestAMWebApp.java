@@ -40,6 +40,11 @@ import javax.net.ssl.SSLException;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
+import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.WebApps;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -62,7 +67,6 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.amfilter.AmFilterInitializer;
-import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.http.HttpStatus;
@@ -208,7 +212,7 @@ public class TestAMWebApp {
         NetUtils.getHostPortString(((MRClientService) app.getClientService())
           .getWebApp().getListenerAddress());
     // http:// should be accessible
-    URL httpUrl = new URL("http://" + hostPort);
+    URL httpUrl = new URL("http://" + hostPort + "/mapreduce/");
     HttpURLConnection conn = (HttpURLConnection) httpUrl.openConnection();
     InputStream in = conn.getInputStream();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -216,7 +220,7 @@ public class TestAMWebApp {
     Assert.assertTrue(out.toString().contains("MapReduce Application"));
 
     // https:// is not accessible.
-    URL httpsUrl = new URL("https://" + hostPort);
+    URL httpsUrl = new URL("https://" + hostPort + "/mapreduce/");
     try {
       HttpURLConnection httpsConn =
           (HttpURLConnection) httpsUrl.openConnection();
@@ -262,7 +266,7 @@ public class TestAMWebApp {
         NetUtils.getHostPortString(((MRClientService) app.getClientService())
             .getWebApp().getListenerAddress());
     // https:// should be accessible
-    URL httpsUrl = new URL("https://" + hostPort);
+    URL httpsUrl = new URL("https://" + hostPort + "/mapreduce/");
     HttpsURLConnection httpsConn =
         (HttpsURLConnection) httpsUrl.openConnection();
     KeyStoreTestUtil.setAllowAllSSL(httpsConn);
@@ -273,7 +277,7 @@ public class TestAMWebApp {
     Assert.assertTrue(out.toString().contains("MapReduce Application"));
 
     // http:// is not accessible.
-    URL httpUrl = new URL("http://" + hostPort);
+    URL httpUrl = new URL("http://" + hostPort + "/mapreduce/");
     try {
       HttpURLConnection httpConn =
           (HttpURLConnection) httpUrl.openConnection();
@@ -329,7 +333,7 @@ public class TestAMWebApp {
         NetUtils.getHostPortString(((MRClientService) app.getClientService())
             .getWebApp().getListenerAddress());
     // https:// should be accessible
-    URL httpsUrl = new URL("https://" + hostPort);
+    URL httpsUrl = new URL("https://" + hostPort + "/mapreduce/");
     HttpsURLConnection httpsConn =
         (HttpsURLConnection) httpsUrl.openConnection();
     KeyStoreTestUtil.setAllowAllSSL(httpsConn, clientCert, clientKeyPair);
@@ -414,7 +418,32 @@ public class TestAMWebApp {
   }
 
   public static void main(String[] args) {
-    WebApps.$for("yarn", AppContext.class, new MockAppContext(0, 8, 88, 4)).
-        at(58888).inDevMode().start(new AMWebApp()).joinThread();
+    AppContext context = new MockAppContext(0, 8, 88, 4);
+    WebApps.$for("yarn", AppContext.class, context).withResourceConfig(configure(context)).
+        at(58888).inDevMode().start(new AMWebApp(context)).joinThread();
+  }
+
+  protected static ResourceConfig configure(AppContext context) {
+    ResourceConfig config = new ResourceConfig();
+    config.packages("org.apache.hadoop.mapreduce.v2.app.webapp");
+    config.register(new JerseyBinder(context));
+    config.register(AMWebServices.class);
+    config.register(GenericExceptionHandler.class);
+    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    return config;
+  }
+
+  private static class JerseyBinder extends AbstractBinder {
+    private AppContext context;
+
+    JerseyBinder(AppContext context) {
+      this.context = context;
+    }
+
+    @Override
+    protected void configure() {
+      bind(context).to(AppContext.class).named("am");
+      bind(new App(context)).to(App.class).named("app");
+    }
   }
 }

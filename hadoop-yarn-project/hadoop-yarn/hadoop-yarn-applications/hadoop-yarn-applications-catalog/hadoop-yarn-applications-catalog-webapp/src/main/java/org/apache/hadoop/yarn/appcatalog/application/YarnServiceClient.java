@@ -32,13 +32,14 @@ import org.apache.hadoop.yarn.service.client.ApiServiceClient;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.ClientProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 /**
  * Driver class for calling YARN Resource Manager REST API.
@@ -47,11 +48,10 @@ public class YarnServiceClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(YarnServiceClient.class);
   private static Configuration conf = new Configuration();
+
   private static ClientConfig getClientConfig() {
-    ClientConfig config = new DefaultClientConfig();
-    config.getProperties().put(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, 0);
-    config.getProperties()
-        .put(ClientConfig.PROPERTY_BUFFER_RESPONSE_ENTITY_ON_EXCEPTION, true);
+    ClientConfig config = new ClientConfig();
+    config.property(ClientProperties.CHUNKED_ENCODING_SIZE, 0);
     return config;
   }
 
@@ -68,7 +68,7 @@ public class YarnServiceClient {
   public void createApp(Service app) {
     ObjectMapper mapper = new ObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    ClientResponse response;
+    Response response;
     try {
       boolean useKerberos = UserGroupInformation.isSecurityEnabled();
       if (useKerberos) {
@@ -89,32 +89,30 @@ public class YarnServiceClient {
         kerberos.setKeytab(keytab);
         app.setKerberosPrincipal(kerberos);
       }
-      response = asc.getApiClient().post(ClientResponse.class,
-          mapper.writeValueAsString(app));
+      response = asc.getApiClient().post(
+          Entity.entity(mapper.writeValueAsString(app), MediaType.APPLICATION_JSON));
       if (response.getStatus() >= 299) {
-        String message = response.getEntity(String.class);
+        String message = response.readEntity(String.class);
         throw new RuntimeException("Failed : HTTP error code : "
             + response.getStatus() + " error: " + message);
       }
-    } catch (UniformInterfaceException | ClientHandlerException
-        | IOException e) {
+    } catch (IOException e) {
       LOG.error("Error in deploying application: ", e);
     }
   }
 
   public void deleteApp(String appInstanceId) {
-    ClientResponse response;
+    Response response;
     try {
       response = asc.getApiClient(asc.getServicePath(appInstanceId))
-          .delete(ClientResponse.class);
+          .delete(Response.class);
       if (response.getStatus() >= 299) {
-        String message = response.getEntity(String.class);
+        String message = response.readEntity(String.class);
         throw new RuntimeException("Failed : HTTP error code : "
             + response.getStatus() + " error: " + message);
       }
-    } catch (UniformInterfaceException | ClientHandlerException
-        | IOException e) {
-      LOG.error("Error in deleting application: ", e);
+    } catch (IOException e) {
+      LOG.error("Error in deleting application.", e);
     }
   }
 
@@ -123,18 +121,17 @@ public class YarnServiceClient {
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     String appInstanceId = app.getName();
     String yarnFile = mapper.writeValueAsString(app);
-    ClientResponse response;
+    Response response;
     try {
       response = asc.getApiClient(asc.getServicePath(appInstanceId))
-          .put(ClientResponse.class, yarnFile);
+          .put(Entity.entity(yarnFile, MediaType.APPLICATION_JSON));
       if (response.getStatus() >= 299) {
-        String message = response.getEntity(String.class);
+        String message = response.readEntity(String.class);
         throw new RuntimeException("Failed : HTTP error code : "
             + response.getStatus() + " error: " + message);
       }
-    } catch (UniformInterfaceException | ClientHandlerException
-        | IOException e) {
-      LOG.error("Error in restarting application: ", e);
+    } catch (IOException e) {
+      LOG.error("Error in restarting application.", e);
     }
   }
 
@@ -143,18 +140,17 @@ public class YarnServiceClient {
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     String appInstanceId = app.getName();
     String yarnFile = mapper.writeValueAsString(app);
-    ClientResponse response;
+    Response response;
     try {
       response = asc.getApiClient(asc.getServicePath(appInstanceId))
-          .put(ClientResponse.class, yarnFile);
+          .put(Entity.entity(yarnFile, MediaType.APPLICATION_JSON));
       if (response.getStatus() >= 299) {
-        String message = response.getEntity(String.class);
+        String message = response.readEntity(String.class);
         throw new RuntimeException("Failed : HTTP error code : "
             + response.getStatus() + " error: " + message);
       }
-    } catch (UniformInterfaceException | ClientHandlerException
-        | IOException e) {
-      LOG.error("Error in stopping application: ", e);
+    } catch (IOException e) {
+      LOG.error("Error in stopping application.", e);
     }
   }
 
@@ -164,12 +160,11 @@ public class YarnServiceClient {
     String appInstanceId = entry.getName();
     Service app = null;
     try {
-      String yarnFile = asc.getApiClient(asc.getServicePath(appInstanceId))
-          .get(String.class);
+      String yarnFile = asc.getApiClient(asc.getServicePath(appInstanceId)).get(String.class);
       app = mapper.readValue(yarnFile, Service.class);
       entry.setYarnfile(app);
-    } catch (UniformInterfaceException | IOException e) {
-      LOG.error("Error in fetching application status: ", e);
+    } catch (IOException e) {
+      LOG.error("Error in fetching application status.", e);
     }
   }
 
@@ -179,18 +174,17 @@ public class YarnServiceClient {
     String appInstanceId = app.getName();
     app.setState(ServiceState.EXPRESS_UPGRADING);
     String yarnFile = mapper.writeValueAsString(app);
-    ClientResponse response;
+    Response response;
     try {
       response = asc.getApiClient(asc.getServicePath(appInstanceId))
-          .put(ClientResponse.class, yarnFile);
+          .put(Entity.entity(yarnFile, MediaType.APPLICATION_JSON));
       if (response.getStatus() >= 299) {
-        String message = response.getEntity(String.class);
+        String message = response.readEntity(String.class);
         throw new RuntimeException("Failed : HTTP error code : "
             + response.getStatus() + " error: " + message);
       }
-    } catch (UniformInterfaceException | ClientHandlerException
-        | IOException e) {
-      LOG.error("Error in stopping application: ", e);
+    } catch (IOException e) {
+      LOG.error("Error in stopping application.", e);
     }
   }
 }

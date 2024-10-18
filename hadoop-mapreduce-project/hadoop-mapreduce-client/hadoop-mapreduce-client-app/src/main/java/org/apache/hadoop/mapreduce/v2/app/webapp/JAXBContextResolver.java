@@ -21,8 +21,6 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
 import com.google.inject.Singleton;
 
 import javax.ws.rs.ext.ContextResolver;
@@ -50,6 +48,7 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskCounterInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TasksInfo;
 import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
 
 @Singleton
 @Provider
@@ -72,13 +71,9 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
     JAXBContext context;
     JAXBContext unWrappedRootContext;
 
-    this.typesContextMap = new HashMap<Class, JAXBContext>();
-    context =
-        new JSONJAXBContext(JSONConfiguration.natural().rootUnwrapping(false)
-            .build(), cTypes);
-    unWrappedRootContext =
-        new JSONJAXBContext(JSONConfiguration.natural().rootUnwrapping(true)
-            .build(), rootUnwrappedTypes);
+    this.typesContextMap = new HashMap<>();
+    context = new JettisonJaxbContext(cTypes);
+    unWrappedRootContext = new JettisonJaxbContext(rootUnwrappedTypes);
     for (Class type : cTypes) {
       typesContextMap.put(type, context);
     }

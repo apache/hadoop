@@ -17,19 +17,17 @@
 */
 package org.apache.hadoop.yarn.webapp.util;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.WebResource.Builder;
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONMarshaller;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
-import org.codehaus.jettison.json.JSONObject;
 
-import java.io.StringWriter;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 
 /**
  * This class contains several utility function which could be used to generate
@@ -40,57 +38,45 @@ public final class YarnWebServiceUtils {
 
   private YarnWebServiceUtils() {}
 
+  private static ObjectMapper mapper = new ObjectMapper();
+
   /**
    * Utility function to get NodeInfo by calling RM WebService.
    * @param conf the configuration
-   * @param nodeId the nodeId
+   * @param nodeId the node
    * @return a JSONObject which contains the NodeInfo
-   * @throws ClientHandlerException if there is an error
-   *         processing the response.
-   * @throws UniformInterfaceException if the response status
-   *         is 204 (No Content).
    */
   public static JSONObject getNodeInfoFromRMWebService(Configuration conf,
-      String nodeId) throws ClientHandlerException,
-      UniformInterfaceException {
+      String nodeId) throws ProcessingException, IllegalStateException {
     try {
-      return WebAppUtils.execOnActiveRM(conf,
-          YarnWebServiceUtils::getNodeInfoFromRM, nodeId);
+      return WebAppUtils.execOnActiveRM(conf, YarnWebServiceUtils::getNodeInfoFromRM, nodeId);
+    } catch (ProcessingException | IllegalStateException e) {
+      throw e;
     } catch (Exception e) {
-      if (e instanceof ClientHandlerException) {
-        throw ((ClientHandlerException) e);
-      } else if (e instanceof UniformInterfaceException) {
-        throw ((UniformInterfaceException) e);
-      } else {
-        throw new RuntimeException(e);
-      }
+      throw new RuntimeException(e);
     }
   }
 
   private static JSONObject getNodeInfoFromRM(String webAppAddress,
-      String nodeId) throws ClientHandlerException, UniformInterfaceException {
-    Client webServiceClient = Client.create();
-    ClientResponse response = null;
-    try {
-      Builder builder = webServiceClient.resource(webAppAddress)
-          .path("ws").path("v1").path("cluster")
-          .path("nodes").path(nodeId).accept(MediaType.APPLICATION_JSON);
-      response = builder.get(ClientResponse.class);
-      return response.getEntity(JSONObject.class);
+      String nodeId) {
+    Client webServiceClient = ClientBuilder.newClient();
+    try (Response response = webServiceClient.target(webAppAddress).
+         path("ws").
+         path("v1").
+         path("cluster")
+        .path("nodes").path(nodeId)
+        .request(MediaType.APPLICATION_JSON)
+        .get(Response.class)) {
+      String s = response.readEntity(String.class);
+      return new JSONObject(s);
+    } catch (JSONException e) {
+      throw new RuntimeException(e);
     } finally {
-      if (response != null) {
-        response.close();
-      }
-      webServiceClient.destroy();
+      webServiceClient.close();
     }
   }
 
-  @SuppressWarnings("rawtypes")
-  public static String toJson(Object nsli, Class klass) throws Exception {
-    StringWriter sw = new StringWriter();
-    JSONJAXBContext ctx = new JSONJAXBContext(klass);
-    JSONMarshaller jm = ctx.createJSONMarshaller();
-    jm.marshallToJSON(nsli, sw);
-    return sw.toString();
+  public static String toJson(Object obj, Class<?> klass) throws Exception {
+    return mapper.writerFor(klass).writeValueAsString(obj);
   }
 }

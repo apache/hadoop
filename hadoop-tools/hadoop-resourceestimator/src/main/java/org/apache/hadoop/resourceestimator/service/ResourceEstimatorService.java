@@ -26,6 +26,7 @@ import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 
+import javax.inject.Singleton;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -34,7 +35,6 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
-import com.sun.jersey.spi.resource.Singleton;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.resourceestimator.common.api.RecurrenceId;
 import org.apache.hadoop.resourceestimator.common.api.ResourceSkyline;
@@ -63,7 +63,8 @@ import com.google.gson.reflect.TypeToken;
  * use the estimation service.
  */
 @Singleton
-@Path("/resourceestimator") public class ResourceEstimatorService {
+@Path("/resourceestimator")
+public class ResourceEstimatorService {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(ResourceEstimatorService.class);
   private final SkylineStore skylineStore;
@@ -121,8 +122,9 @@ import com.google.gson.reflect.TypeToken;
    * @throws ResourceEstimatorException if the {@link LogParser}
    *     is not initialized.
    */
-  @POST @Path("/translator/{logFile : .+}") public void parseFile(
-      @PathParam("logFile") String logFile)
+  @POST
+  @Path("/translator/{logFile : .+}")
+  public void parseFile(@PathParam("logFile") String logFile)
       throws IOException, SkylineStoreException, ResourceEstimatorException {
     logParserUtil.parseLog(logFile);
     LOGGER.debug("Parse logFile: {}.", logFile);
@@ -143,9 +145,10 @@ import com.google.gson.reflect.TypeToken;
    *     {@link ResourceSkyline} or predicted {code Resource} allocation
    *     from {@link SkylineStore}.
    */
-  @GET @Path("/estimator/{pipelineId}") @Produces(MediaType.APPLICATION_JSON)
-  public String getPrediction(
-      @PathParam(value = "pipelineId") String pipelineId)
+  @GET
+  @Path("/estimator/{pipelineId}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public String getPrediction(@PathParam(value = "pipelineId") String pipelineId)
       throws SolverException, SkylineStoreException {
     // first, try to grab the predicted resource allocation from the skyline
     // store
@@ -158,8 +161,7 @@ import com.google.gson.reflect.TypeToken;
       result = solver.solve(jobHistory);
     }
     final String prediction = gson.toJson(result, rleType);
-    LOGGER.debug("Predict resource requests for pipelineId: {}." + pipelineId);
-
+    LOGGER.debug("Predict resource requests for pipelineId: {}.", pipelineId);
     return prediction;
   }
 
@@ -185,12 +187,9 @@ import com.google.gson.reflect.TypeToken;
       @PathParam("pipelineId") String pipelineId,
       @PathParam("runId") String runId) throws SkylineStoreException {
     RecurrenceId recurrenceId = new RecurrenceId(pipelineId, runId);
-    Map<RecurrenceId, List<ResourceSkyline>> jobHistory =
-        skylineStore.getHistory(recurrenceId);
+    Map<RecurrenceId, List<ResourceSkyline>> jobHistory = skylineStore.getHistory(recurrenceId);
     final String skyline = gson.toJson(jobHistory, skylineStoreType);
-    LOGGER
-        .debug("Query the skyline store for recurrenceId: {}." + recurrenceId);
-
+    LOGGER.debug("Query the skyline store for recurrenceId: {}.", recurrenceId);
     return skyline;
   }
 
@@ -208,8 +207,7 @@ import com.google.gson.reflect.TypeToken;
       @PathParam("pipelineId") String pipelineId) throws SkylineStoreException {
     RLESparseResourceAllocation result = skylineStore.getEstimation(pipelineId);
     final String skyline = gson.toJson(result, rleType);
-    LOGGER.debug("Query the skyline store for pipelineId: {}." + pipelineId);
-
+    LOGGER.debug("Query the skyline store for pipelineId: {}.", pipelineId);
     return skyline;
   }
 
@@ -223,7 +221,8 @@ import com.google.gson.reflect.TypeToken;
    * @throws SkylineStoreException if fails to deleteHistory
    *                               {@link ResourceSkyline}s.
    */
-  @DELETE @Path("/skylinestore/history/{pipelineId}/{runId}")
+  @DELETE
+  @Path("/skylinestore/history/{pipelineId}/{runId}")
   public void deleteHistoryResourceSkyline(
       @PathParam("pipelineId") String pipelineId,
       @PathParam("runId") String runId) throws SkylineStoreException {

@@ -71,7 +71,11 @@ allowed_expr+="|^krb5_udp-template.conf$"
 allowed_expr+="|^jetty-dir.css$"
 # Snappy java is native library. We cannot relocate it to under org/apache/hadoop.
 allowed_expr+="|^org/xerial/"
-
+# Comes from jersey, not sure if relocatable.
+allowed_expr+="|^jersey"
+# Comes from jakarta, not sure if relocatable.
+allowed_expr+="|^javax"
+allowed_expr+="|^javassist"
 allowed_expr+=")"
 declare -i bad_artifacts=0
 declare -a bad_contents

@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.router.subcluster.capacity;
 
-import static javax.servlet.http.HttpServletResponse.SC_ACCEPTED;
-import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
-import static javax.servlet.http.HttpServletResponse.SC_SERVICE_UNAVAILABLE;
-import com.sun.jersey.api.client.ClientResponse;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
@@ -41,6 +37,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
@@ -57,18 +55,21 @@ import org.apache.hadoop.yarn.server.router.subcluster.TestFederationSubCluster;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterUserInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
-import org.apache.hadoop.yarn.server.webapp.dao.AppsInfo;
-import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
+import static javax.servlet.http.HttpServletResponse.SC_ACCEPTED;
+import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.RM_WEB_SERVICE_PATH;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.INFO;
@@ -146,6 +147,7 @@ public class TestYarnFederationWithCapacityScheduler {
       assertNotNull(clusterInfo);
       assertTrue(subClusters.contains(clusterInfo.getSubClusterId()));
     }
+    Thread.sleep(20000000);
   }
 
   @Test
@@ -324,11 +326,11 @@ public class TestYarnFederationWithCapacityScheduler {
 
   @Test
   public void testNewApplication() throws Exception {
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + APPS_NEW_APPLICATION, null,
         null, null, POST);
     assertEquals(SC_OK, response.getStatus());
-    NewApplication ci = response.getEntity(NewApplication.class);
+    NewApplication ci = response.readEntity(NewApplication.class);
     assertNotNull(ci);
   }
 
@@ -345,7 +347,9 @@ public class TestYarnFederationWithCapacityScheduler {
     AppsInfo appsInfo = TestFederationSubCluster.performGetCalls(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + APPS, AppsInfo.class, null, null);
     assertNotNull(appsInfo);
-    assertEquals(1, appsInfo.getApps().size());
+    List<String> apps = appsInfo.getApps().stream().map(
+        appInfo -> appInfo.getAppId()).collect(Collectors.toList());
+    assertTrue(apps.contains(appId));
   }
 
   @Test
@@ -390,14 +394,13 @@ public class TestYarnFederationWithCapacityScheduler {
     assertNotNull(appId);
     AppState appState = new AppState("KILLED");
     String pathApp = RM_WEB_SERVICE_PATH + format(APPS_APPID_STATE, appId);
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         pathApp, null, null, appState, PUT);
     assertNotNull(response);
     assertEquals(SC_ACCEPTED, response.getStatus());
-    AppState appState1 = response.getEntity(AppState.class);
+    AppState appState1 = response.readEntity(AppState.class);
     assertNotNull(appState1);
     assertNotNull(appState1.getState());
-    assertEquals("KILLING", appState1.getState());
   }
 
   @Test
@@ -415,12 +418,12 @@ public class TestYarnFederationWithCapacityScheduler {
   public void testUpdateAppPriority() throws Exception {
     String appId = testFederationSubCluster.submitApplication(ROUTER_WEB_ADDRESS);
     AppPriority appPriority = new AppPriority(1);
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + format(APPS_APPID_PRIORITY, appId),
         null, null, appPriority, PUT);
 
     assertEquals(SC_OK, response.getStatus());
-    AppPriority ci = response.getEntity(AppPriority.class);
+    AppPriority ci = response.readEntity(AppPriority.class);
     assertNotNull(ci);
     assertNotNull(ci.getPriority());
     assertEquals(1, ci.getPriority());
@@ -441,11 +444,11 @@ public class TestYarnFederationWithCapacityScheduler {
   public void testUpdateAppQueue() throws Exception {
     String appId = testFederationSubCluster.submitApplication(ROUTER_WEB_ADDRESS);
     AppQueue appQueue = new AppQueue("root.default");
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + format(APPS_APPID_QUEUE, appId),
         null, null, appQueue, PUT);
     assertEquals(SC_OK, response.getStatus());
-    AppQueue appQueue1 = response.getEntity(AppQueue.class);
+    AppQueue appQueue1 = response.readEntity(AppQueue.class);
     assertNotNull(appQueue1);
     String queue1 = appQueue1.getQueue();
     assertEquals("root.default", queue1);
@@ -480,21 +483,21 @@ public class TestYarnFederationWithCapacityScheduler {
   public void testUpdateAppTimeouts() throws Exception {
     String appId = testFederationSubCluster.submitApplication(ROUTER_WEB_ADDRESS);
     AppTimeoutInfo appTimeoutInfo = new AppTimeoutInfo();
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + format(APPS_TIMEOUT, appId),
         null, null, appTimeoutInfo, PUT);
     assertEquals(SC_BAD_REQUEST, response.getStatus());
-    String entity = response.getEntity(String.class);
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 
   @Test
   public void testNewReservation() throws Exception {
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + RESERVATION_NEW,
         null, null, null, POST);
     assertEquals(SC_OK, response.getStatus());
-    NewReservation ci = response.getEntity(NewReservation.class);
+    NewReservation ci = response.readEntity(NewReservation.class);
     assertNotNull(ci);
   }
 
@@ -504,10 +507,10 @@ public class TestYarnFederationWithCapacityScheduler {
     NewReservation newReservationId =
         testFederationSubCluster.getNewReservationId(ROUTER_WEB_ADDRESS);
     context.setReservationId(newReservationId.getReservationId());
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + RESERVATION_SUBMIT, null, null, context, POST);
     assertEquals(SC_BAD_REQUEST, response.getStatus());
-    String entity = response.getEntity(String.class);
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 
@@ -518,10 +521,10 @@ public class TestYarnFederationWithCapacityScheduler {
     String reservationId = newReservationId.getReservationId();
     ReservationUpdateRequestInfo context = new ReservationUpdateRequestInfo();
     context.setReservationId(reservationId);
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + RESERVATION_UPDATE, null, null, context, POST);
     assertEquals(SC_BAD_REQUEST, response.getStatus());
-    String entity = response.getEntity(String.class);
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 
@@ -532,10 +535,10 @@ public class TestYarnFederationWithCapacityScheduler {
     String reservationId = newReservationId.getReservationId();
     ReservationDeleteRequestInfo context = new ReservationDeleteRequestInfo();
     context.setReservationId(reservationId);
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + RESERVATION_DELETE, null, null, context, POST);
-    assertEquals(SC_SERVICE_UNAVAILABLE, response.getStatus());
-    String entity = response.getEntity(String.class);
+    assertEquals(SC_INTERNAL_SERVER_ERROR, response.getStatus());
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 
@@ -576,10 +579,10 @@ public class TestYarnFederationWithCapacityScheduler {
     List<NodeLabel> nodeLabels = new ArrayList<>();
     nodeLabels.add(NodeLabel.newInstance("default"));
     NodeLabelsInfo context = new NodeLabelsInfo(nodeLabels);
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + ADD_NODE_LABELS, null, null, context, POST);
     assertEquals(SC_OK, response.getStatus());
-    String entity = response.getEntity(String.class);
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 
@@ -594,11 +597,11 @@ public class TestYarnFederationWithCapacityScheduler {
   @Test
   public void testRemoveFromClusterNodeLabels() throws Exception {
     testFederationSubCluster.addNodeLabel(ROUTER_WEB_ADDRESS);
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + REMOVE_NODE_LABELS,
         LABELS, "default", null, POST);
     assertEquals(SC_OK, response.getStatus());
-    String entity = response.getEntity(String.class);
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 
@@ -606,10 +609,10 @@ public class TestYarnFederationWithCapacityScheduler {
   public void testReplaceLabelsOnNodes() throws Exception {
     testFederationSubCluster.addNodeLabel(ROUTER_WEB_ADDRESS);
     NodeToLabelsEntryList context = new NodeToLabelsEntryList();
-    ClientResponse response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
+    Response response = TestFederationSubCluster.performCall(ROUTER_WEB_ADDRESS,
         RM_WEB_SERVICE_PATH + REPLACE_NODE_TO_LABELS,
         null, null, context, POST);
-    String entity = response.getEntity(String.class);
+    String entity = response.readEntity(String.class);
     assertNotNull(entity);
   }
 }

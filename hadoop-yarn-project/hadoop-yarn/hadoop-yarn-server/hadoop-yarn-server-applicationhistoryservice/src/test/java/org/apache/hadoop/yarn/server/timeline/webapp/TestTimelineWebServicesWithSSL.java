@@ -19,12 +19,11 @@
 package org.apache.hadoop.yarn.server.timeline.webapp;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import net.jodah.failsafe.RetryPolicy;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -44,6 +43,9 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistor
 import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
+
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Response;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -129,20 +131,18 @@ public class TestTimelineWebServicesWithSSL {
 
   private static class TestTimelineClient extends TimelineClientImpl {
 
-    private ClientResponse resp;
+    private Response resp;
 
     @Override
     protected TimelineWriter createTimelineWriter(Configuration conf,
-        UserGroupInformation authUgi, Client client, URI resURI)
-            throws IOException {
-      return new DirectTimelineWriter(authUgi, client, resURI) {
+        UserGroupInformation authUgi, Client client, URI resURI, RetryPolicy<Object> retryPolicy) {
+      return new DirectTimelineWriter(authUgi, client, resURI, retryPolicy) {
         @Override
-        public ClientResponse doPostingObject(Object obj, String path) {
+        public Response doPostingObject(Object obj, String path) throws JsonProcessingException {
           resp = super.doPostingObject(obj, path);
           return resp;
         }
       };
     }
   }
-
 }

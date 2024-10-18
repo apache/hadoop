@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
-import com.sun.jersey.api.client.Client;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
@@ -38,6 +37,7 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.inject.Inject;
 
+import javax.ws.rs.client.Client;
 import java.util.Date;
 
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_SC;
@@ -126,7 +126,7 @@ public class NodesBlock extends RouterBlock {
         .genericForward(webAddress, null, NodesInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.NODES, null, null, conf,
         client);
-    client.destroy();
+    client.close();
     return nodes;
   }
 

@@ -31,6 +31,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -54,18 +55,16 @@ import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
 @Evolving
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TimelineEntity implements Comparable<TimelineEntity> {
 
   private String entityType;
   private String entityId;
   private Long startTime;
   private List<TimelineEvent> events = new ArrayList<TimelineEvent>();
-  private HashMap<String, Set<String>> relatedEntities =
-      new HashMap<String, Set<String>>();
-  private HashMap<String, Set<Object>> primaryFilters =
-      new HashMap<String, Set<Object>>();
-  private HashMap<String, Object> otherInfo =
-      new HashMap<String, Object>();
+  private HashMap<String, Set<String>> relatedEntities = new HashMap<>();
+  private HashMap<String, Set<Object>> primaryFilters = new HashMap<>();
+  private HashMap<String, Object> otherInfo = new HashMap<>();
   private String domainId;
 
   public TimelineEntity() {

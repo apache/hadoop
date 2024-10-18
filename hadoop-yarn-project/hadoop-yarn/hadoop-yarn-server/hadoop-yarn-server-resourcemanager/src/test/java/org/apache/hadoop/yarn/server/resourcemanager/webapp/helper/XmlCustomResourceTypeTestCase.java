@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.helper;
 
-import com.sun.jersey.api.client.WebResource;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.XMLUtils;
 import org.codehaus.jettison.json.JSONObject;
@@ -28,6 +27,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.transform.*;
@@ -42,7 +42,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * This class hides the implementation details of how to verify the structure of
  * XML responses. Tests should only provide the path of the
- * {@link WebResource}, the response from the resource and
+ * {@link WebTarget}, the response from the resource and
  * the verifier Consumer to
  * {@link XmlCustomResourceTypeTestCase#verify(Consumer)}. An instance of
  * {@link JSONObject} will be passed to that consumer to be able to
@@ -52,12 +52,12 @@ public class XmlCustomResourceTypeTestCase {
   private static final Logger LOG =
       LoggerFactory.getLogger(XmlCustomResourceTypeTestCase.class);
 
-  private WebResource path;
+  private WebTarget path;
   private BufferedClientResponse response;
   private Document parsedResponse;
 
-  public XmlCustomResourceTypeTestCase(WebResource path,
-                                       BufferedClientResponse response) {
+  public XmlCustomResourceTypeTestCase(WebTarget path,
+      BufferedClientResponse response) {
     this.path = path;
     verifyStatus(response);
     this.response = response;
@@ -66,13 +66,12 @@ public class XmlCustomResourceTypeTestCase {
   private void verifyStatus(BufferedClientResponse response) {
     String responseStr = response.getEntity(String.class);
     assertEquals("HTTP status should be 200, " +
-                    "status info: " + response.getStatusInfo() +
-                    " response as string: " + responseStr,
-            200, response.getStatus());
+        "status info: " + response.getStatusInfo() + " response as string: " + responseStr,
+        200, response.getStatus());
   }
 
   public void verify(Consumer<Document> verifier) {
-    assertEquals(MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8,
+    assertEquals(MediaType.APPLICATION_XML + ";" + JettyUtils.UTF_8,
         response.getType().toString());
 
     parsedResponse = parseXml(response);
@@ -96,10 +95,8 @@ public class XmlCustomResourceTypeTestCase {
 
   private void logResponse(Document doc) {
     String responseStr = response.getEntity(String.class);
-    LOG.info("Raw response from service URL {}: {}", path.toString(),
-        responseStr);
-    LOG.info("Parsed response from service URL {}: {}", path.toString(),
-        toXml(doc));
+    LOG.info("Raw response from service URL {}: {}", path, responseStr);
+    LOG.info("Parsed response from service URL {}: {}", path, toXml(doc));
   }
 
   public static String toXml(Node node) {
