@@ -248,7 +248,7 @@ final class ReadBufferManager {
 
     // first, try buffers where all bytes have been consumed (approximated as first and last bytes consumed)
     for (ReadBuffer buf : completedReadList) {
-      if (buf.isFirstByteConsumed() && buf.isLastByteConsumed()) {
+      if (buf.getStream().isClosed() || (buf.isFirstByteConsumed() && buf.isLastByteConsumed())) {
         nodeToEvict = buf;
         break;
       }
