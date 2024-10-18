@@ -55,6 +55,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_THREADS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_THREADS_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -948,4 +950,35 @@ public class TestDataNodeReconfiguration {
     }
   }
 
+  @Test
+  public void testDataNodeECReconstructionThreads() throws Exception {
+    for (int i = 0; i < NUM_DATA_NODE; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+
+      // Verify DFS_DN_EC_RECONSTRUCTION_THREADS_KEY.
+      // Try invalid values.
+      LambdaTestUtils.intercept(ReconfigurationException.class,
+          "Could not change property dfs.datanode.ec.reconstruction.threads from "
+              + "'8' to 'text'",
+          () -> dn.reconfigureProperty(DFS_DN_EC_RECONSTRUCTION_THREADS_KEY, "text"));
+      LambdaTestUtils.intercept(ReconfigurationException.class,
+          "Could not change property dfs.datanode.ec.reconstruction.threads from "
+              + "'8' to '-1'",
+          () -> dn.reconfigureProperty(DFS_DN_EC_RECONSTRUCTION_THREADS_KEY, "-1"));
+      LambdaTestUtils.intercept(ReconfigurationException.class,
+          "Could not change property dfs.datanode.ec.reconstruction.threads from "
+              + "'8' to '0'",
+          () -> dn.reconfigureProperty(DFS_DN_EC_RECONSTRUCTION_THREADS_KEY, "0"));
+
+      // Set value is 10.
+      dn.reconfigureProperty(DFS_DN_EC_RECONSTRUCTION_THREADS_KEY,
+          String.valueOf(10));
+      assertEquals(10, dn.getErasureCodingWorker().getStripedReconstructionPoolSize());
+
+      // Set default value.
+      dn.reconfigureProperty(DFS_DN_EC_RECONSTRUCTION_THREADS_KEY, null);
+      assertEquals(DFS_DN_EC_RECONSTRUCTION_THREADS_DEFAULT,
+          dn.getErasureCodingWorker().getStripedReconstructionPoolSize());
+    }
+  }
 }

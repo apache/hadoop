@@ -89,6 +89,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_THREADS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_THREADS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT;
@@ -374,7 +376,8 @@ public class DataNode extends ReconfigurableBase
               DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY,
               DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY,
               DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY,
-              DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY));
+              DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY,
+              DFS_DN_EC_RECONSTRUCTION_THREADS_KEY));
 
   public static final String METRICS_LOG_NAME = "DataNodeMetricsLog";
 
@@ -740,6 +743,8 @@ public class DataNode extends ReconfigurableBase
       return reconfDiskBalancerParameters(property, newVal);
     case DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY:
       return reconfSlowIoWarningThresholdParameters(property, newVal);
+    case DFS_DN_EC_RECONSTRUCTION_THREADS_KEY:
+      return reconfStripedReconstructionParameters(property, newVal);
     default:
       break;
     }
@@ -1073,6 +1078,20 @@ public class DataNode extends ReconfigurableBase
       result = Long.toString(slowIoWarningThreshold);
       dnConf.setDatanodeSlowIoWarningThresholdMs(slowIoWarningThreshold);
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
+      return result;
+    } catch (IllegalArgumentException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(property), e);
+    }
+  }
+
+  private String reconfStripedReconstructionParameters(String property, String newVal)
+      throws ReconfigurationException {
+    String result = null;
+    try {
+      int size = (newVal == null ? DFS_DN_EC_RECONSTRUCTION_THREADS_DEFAULT :
+          Integer.parseInt(newVal));
+      result = Integer.toString(size);
+      ecWorker.setStripedReconstructionPoolSize(size);
       return result;
     } catch (IllegalArgumentException e) {
       throw new ReconfigurationException(property, newVal, getConf().get(property), e);
