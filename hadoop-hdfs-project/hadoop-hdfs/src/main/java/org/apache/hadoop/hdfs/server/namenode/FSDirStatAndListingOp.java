@@ -155,7 +155,7 @@ class FSDirStatAndListingOp {
       // Just get INodesInPath without access checks, since we check for path
       // access later
       final INodesInPath iip = fsd.resolvePath(null, src, DirOp.READ);
-      src = iip.getPath();
+      // src = iip.getPath();
       final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
       if (fsd.isPermissionEnabled()) {
         fsd.checkUnreadableBySuperuser(pc, iip);
