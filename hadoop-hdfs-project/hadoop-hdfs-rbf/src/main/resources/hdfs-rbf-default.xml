@@ -663,11 +663,12 @@
 
   <property>
     <name>dfs.federation.router.client.allow-partial-listing</name>
-    <value>true</value>
+    <value>false</value>
     <description>
       If the Router can return a partial list of files in a multi-destination mount point when one of the subclusters is unavailable.
       True may return a partial list of files if a subcluster is down.
       False will fail the request if one is unavailable.
+      Making default value as false to avoid users get a partial list but they don't know.
     </description>
   </property>
 
