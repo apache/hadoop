@@ -1611,6 +1611,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_PIPELINE_SLOWNODE_ENABLED_DEFAULT = false;
   public static final String DFS_PIPELINE_CONGESTION_RATIO = "dfs.pipeline.congestion.ratio";
   public static final double DFS_PIPELINE_CONGESTION_RATIO_DEFAULT = 1.5;
+  public static final String DFS_DATANODE_READ_BLOCKID_COUNTS_METRIC_ENABLED_KEY =
+      "dfs.datanode.read.blockid.counts.metric.enabled";
+  public static final boolean DFS_DATANODE_READ_BLOCKID_COUNTS_METRIC_ENABLED_DEFAULT = false;
 
   // Key Provider Cache Expiry
   public static final String DFS_DATANODE_BLOCK_PINNING_ENABLED =
