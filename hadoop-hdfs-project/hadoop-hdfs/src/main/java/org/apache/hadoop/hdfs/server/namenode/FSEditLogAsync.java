@@ -47,6 +47,9 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
   private Thread syncThread;
   private static final ThreadLocal<Edit> THREAD_EDIT = new ThreadLocal<Edit>();
 
+  // number of retry times for sending edit log sync response.
+  private static final int RESPONSE_SEND_RETRIES = 3;
+
   // requires concurrent access from caller threads and syncing thread.
   private final BlockingQueue<Edit> editPendingQ;
 
@@ -383,13 +386,18 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
 
     @Override
     public void logSyncNotify(RuntimeException syncEx) {
-      try {
-        if (syncEx == null) {
-          call.sendResponse();
-        } else {
-          call.abortResponse(syncEx);
+      for (int retries = 0; retries <= RESPONSE_SEND_RETRIES; retries++) {
+        try {
+          if (syncEx == null) {
+            call.sendResponse();
+          } else {
+            call.abortResponse(syncEx);
+          }
+          break;
+        } catch (Exception e) {
+          LOG.info("Error in sending log sync response, retry " + retries, e);
         }
-      } catch (Exception e) {} // don't care if not sent.
+      }
     }
 
     @Override
