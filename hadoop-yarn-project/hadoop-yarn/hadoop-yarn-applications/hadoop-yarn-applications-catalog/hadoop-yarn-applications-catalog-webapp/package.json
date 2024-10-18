@@ -6,7 +6,7 @@
     "repository": "git://git.apache.org/hadoop.git",
     "license": "Apache 2.0",
     "dependencies": {
-        "jquery": "3.3.1",
+        "jquery": "3.5.0",
         "angular-loader": "~1.6.4",
         "angular-mocks": "~1.6.4",
         "angular-route": "~1.6.4",
