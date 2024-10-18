@@ -98,10 +98,11 @@ public class RMContainerAllocator extends RMContainerRequestor
     implements ContainerAllocator {
 
   static final Logger LOG = LoggerFactory.getLogger(RMContainerAllocator.class);
-  
+
+  static final String ANY = "*";
   public static final 
   float DEFAULT_COMPLETED_MAPS_PERCENT_FOR_REDUCE_SLOWSTART = 0.05f;
-  
+
   static final Priority PRIORITY_FAST_FAIL_MAP;
   static final Priority PRIORITY_REDUCE;
   static final Priority PRIORITY_MAP;
@@ -160,6 +161,8 @@ public class RMContainerAllocator extends RMContainerRequestor
   private int hostLocalAssigned = 0;
   private int rackLocalAssigned = 0;
   private int lastCompletedTasks = 0;
+
+  private boolean isLocationIrrelevant = false;
   
   private boolean recalculateReduceSchedule = false;
   private Resource mapResourceRequest = Resources.none();
@@ -1127,6 +1130,10 @@ public class RMContainerAllocator extends RMContainerRequestor
               new ContainerRequest(event, PRIORITY_MAP, mapNodeLabelExpression);
           for (String host : event.getHosts()) {
             LinkedList<TaskAttemptId> list = mapsHostMapping.get(host);
+            if (ANY.equals(host)) {
+              LOG.info("Location is irrelevant in map hosts");
+              isLocationIrrelevant = true;
+            }
             if (list == null) {
               list = new LinkedList<TaskAttemptId>();
               mapsHostMapping.put(host, list);
@@ -1345,8 +1352,13 @@ public class RMContainerAllocator extends RMContainerRequestor
           || PRIORITY_OPPORTUNISTIC_MAP.equals(priority)) {
         LOG.info("Replacing MAP container " + allocated.getId());
         // allocated container was for a map
-        String host = allocated.getNodeId().getHost();
-        LinkedList<TaskAttemptId> list = mapsHostMapping.get(host);
+        LinkedList<TaskAttemptId> list;
+        if (isLocationIrrelevant) {
+          list = mapsHostMapping.get(ANY);
+        } else {
+          String host = allocated.getNodeId().getHost();
+          list = mapsHostMapping.get(host);
+        }
         if (list != null && list.size() > 0) {
           TaskAttemptId tId = list.removeLast();
           if (maps.containsKey(tId)) {
@@ -1411,7 +1423,12 @@ public class RMContainerAllocator extends RMContainerRequestor
           // "if (maps.containsKey(tId))" below should be almost always true.
           // hence this while loop would almost always have O(1) complexity
           String host = allocated.getNodeId().getHost();
-          LinkedList<TaskAttemptId> list = mapsHostMapping.get(host);
+          LinkedList<TaskAttemptId> list;
+          if (isLocationIrrelevant){
+            list = mapsHostMapping.get(ANY);
+          } else {
+            list = mapsHostMapping.get(host);
+          }
           while (list != null && list.size() > 0) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Host matched to the request list " + host);
