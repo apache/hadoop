@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
 
@@ -29,11 +30,16 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.apache.hadoop.util.Lists;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_STS;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_ACQUISITION_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_IDLE_TIME;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_KEEPALIVE;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_TTL;
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_HEADERS_S3;
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_HEADERS_STS;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_IDLE_TIME_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_KEEPALIVE;
@@ -48,6 +54,7 @@ import static org.apache.hadoop.fs.s3a.Constants.MINIMUM_NETWORK_OPERATION_DURAT
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.createApiConnectionSettings;
+import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.createClientConfigBuilder;
 import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.createConnectionSettings;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.enforceMinimumDuration;
 
@@ -200,5 +207,65 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
    */
   private void setOptionsToValue(String value, Configuration conf, String... keys) {
     Arrays.stream(keys).forEach(key -> conf.set(key, value));
+  }
+
+  /**
+   * if {@link org.apache.hadoop.fs.s3a.Constants#CUSTOM_HEADERS_STS} is set,
+   * verify that returned client configuration has desired headers set.
+   */
+  @Test
+  public void testInitRequestHeadersForSTS() throws IOException {
+    final Configuration conf = new Configuration();
+    conf.set(CUSTOM_HEADERS_STS, "foo=bar;baz,qux=quux");
+    Assertions.assertThat(conf.get(CUSTOM_HEADERS_S3))
+            .describedAs("Custom client headers for s3 %s", CUSTOM_HEADERS_S3)
+            .isNull();
+
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+            .headers().size())
+        .describedAs("Count of S3 client headers")
+        .isEqualTo(0);
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+            .headers().size())
+        .describedAs("Count of STS client headers")
+        .isEqualTo(2);
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+            .headers().get("foo"))
+        .describedAs("STS client 'foo' header value")
+        .isEqualTo(Lists.newArrayList("bar", "baz"));
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+            .headers().get("qux"))
+        .describedAs("STS client 'qux' header value")
+        .isEqualTo(Lists.newArrayList("quux"));
+  }
+
+  /**
+   * if {@link org.apache.hadoop.fs.s3a.Constants#CUSTOM_HEADERS_S3} is set,
+   * verify that returned client configuration has desired headers set.
+   */
+  @Test
+  public void testInitRequestHeadersForS3() throws IOException {
+    final Configuration conf = new Configuration();
+    conf.set(CUSTOM_HEADERS_S3, "foo=bar;baz,qux=quux");
+    Assertions.assertThat(conf.get(CUSTOM_HEADERS_STS))
+            .describedAs("Custom client headers for STS %s", CUSTOM_HEADERS_STS)
+            .isNull();
+
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+            .headers().size())
+        .describedAs("Count of STS client headers")
+        .isEqualTo(0);
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+            .headers().size())
+        .describedAs("Count of S3 client headers")
+        .isEqualTo(2);
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+            .headers().get("foo"))
+        .describedAs("S3 client 'foo' header value")
+        .isEqualTo(Lists.newArrayList("bar", "baz"));
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+            .headers().get("qux"))
+        .describedAs("S3 client 'qux' header value")
+        .isEqualTo(Lists.newArrayList("quux"));
   }
 }
