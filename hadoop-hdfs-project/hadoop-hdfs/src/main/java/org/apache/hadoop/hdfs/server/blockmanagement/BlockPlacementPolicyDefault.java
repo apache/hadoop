@@ -28,6 +28,8 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -110,6 +112,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   private volatile boolean excludeSlowNodesEnabled;
   protected NetworkTopology clusterMap;
   protected Host2NodesMap host2datanodeMap;
+  private NameNodeMetrics metrics;
   private FSClusterStats stats;
   protected long heartbeatInterval;   // interval for DataNode heartbeats
   private long staleInterval;   // interval used to identify stale DataNodes
@@ -143,6 +146,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     this.stats = stats;
     this.clusterMap = clusterMap;
     this.host2datanodeMap = host2datanodeMap;
+    this.metrics = NameNode.getNameNodeMetrics();
     this.heartbeatInterval = conf.getTimeDuration(
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT,
@@ -1017,6 +1021,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     if ((nodeLoad > maxLoad) && (maxLoad > 0)) {
       logNodeIsNotChosen(node, NodeNotChosenReason.NODE_TOO_BUSY,
           "(load: " + nodeLoad + " > " + maxLoad + ")");
+      metrics.incrAvoidXceiverOverLoadNodeCount();
       return true;
     }
     if (considerLoadByVolume) {
@@ -1026,6 +1031,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       if (maxLoadForVolumes > 0.0 && nodeLoad > maxLoadForVolumes) {
         logNodeIsNotChosen(node, NodeNotChosenReason.NODE_TOO_BUSY_BY_VOLUME,
             "(load: " + nodeLoad + " > " + maxLoadForVolumes + ") ");
+        metrics.incrAvoidVolumeOverLoadNodeCount();
         return true;
       }
     }
@@ -1094,6 +1100,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     // check if the node is in state 'In Service'
     if (!node.isInService()) {
       logNodeIsNotChosen(node, NodeNotChosenReason.NOT_IN_SERVICE);
+      metrics.incrAvoidNotInServiceNodeCount();
       return false;
     }
 
@@ -1101,6 +1108,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     if (avoidStaleNodes) {
       if (node.isStale(this.staleInterval)) {
         logNodeIsNotChosen(node, NodeNotChosenReason.NODE_STALE);
+        metrics.incrAvoidStaleNodeCount();
         return false;
       }
     }
@@ -1123,6 +1131,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
     if (counter > maxTargetPerRack) {
       logNodeIsNotChosen(node, NodeNotChosenReason.TOO_MANY_NODES_ON_RACK);
+      metrics.incrAvoidPerRackOverStorageLimitNodeCount();
       return false;
     }
 
@@ -1131,6 +1140,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       Set<String> slowNodesUuidSet = DatanodeManager.getSlowNodesUuidSet();
       if (slowNodesUuidSet.contains(node.getDatanodeUuid())) {
         logNodeIsNotChosen(node, NodeNotChosenReason.NODE_SLOW);
+        metrics.incrAvoidSlowNodeCount();
         return false;
       }
     }

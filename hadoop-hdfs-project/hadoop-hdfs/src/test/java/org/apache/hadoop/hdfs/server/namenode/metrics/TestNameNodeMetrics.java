@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.metrics;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -26,6 +27,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
+import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 
@@ -48,7 +50,10 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Supplier;
 
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeRpcServer;
 import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
@@ -1141,4 +1146,39 @@ public class TestNameNodeMetrics {
     // CommitBlockSynchronizationNumOps should exist.
     assertCounter("CommitBlockSynchronizationNumOps", 0L, rb);
   }
+
+  @Test
+  public void testAvoidTargetDataNodeMetrics() throws Exception {
+    // The statistical logic of the metrics is consistent, verify one of the metrics.
+    Configuration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build()) {
+      cluster.waitActive();
+      final NameNode nameNode = cluster.getNameNode();
+      final DatanodeManager datanodeManager =
+          nameNode.getNamesystem().getBlockManager().getDatanodeManager();
+      Map<String, DatanodeDescriptor> datanodeMap = datanodeManager.getDatanodeMap();
+      // mock 'NotInServiceNode' state
+      datanodeMap.get(cluster.getDataNodes().get(1).getDatanodeUuid()).setDecommissioned();
+      datanodeMap.get(cluster.getDataNodes().get(2).getDatanodeUuid()).setDecommissioned();
+
+      NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
+      assertEquals(0, metrics.totalAvoidDataNodeOps());
+
+      DatanodeDescriptor writerDn =
+          datanodeMap.get(cluster.getDataNodes().get(0).getDatanodeUuid());
+      DatanodeStorageInfo[] targets =
+          nameNode.getNamesystem().getBlockManager().getBlockPlacementPolicy()
+              .chooseTarget("testFile.txt", 3, writerDn, new ArrayList<>(), false, null, 1024,
+                  TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
+      assertEquals(1, targets.length);
+
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return NameNode.getNameNodeMetrics().totalAvoidDataNodeOps() > 0;
+        }
+      }, 100, 5000);
+    }
+  }
+
 }
