@@ -158,35 +158,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         endif()
     endif()
 
-    # Determine float ABI of JVM on ARM.
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
-        find_program(READELF readelf)
-        if(READELF MATCHES "NOTFOUND")
-            message(WARNING "readelf not found; JVM float ABI detection disabled")
-        else(READELF MATCHES "NOTFOUND")
-            execute_process(
-                COMMAND ${READELF} -A ${JAVA_JVM_LIBRARY}
-                OUTPUT_VARIABLE JVM_ELF_ARCH
-                ERROR_QUIET)
-            if(NOT JVM_ELF_ARCH MATCHES "Tag_ABI_VFP_args: VFP registers")
-                # Test compilation with -mfloat-abi=softfp using an arbitrary libc function
-                # (typically fails with "fatal error: bits/predefs.h: No such file or directory"
-                # if soft-float dev libraries are not installed)
-                message("Soft-float JVM detected")
-                include(CMakePushCheckState)
-                cmake_push_check_state()
-                set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -mfloat-abi=softfp")
-                include(CheckSymbolExists)
-                check_symbol_exists(exit stdlib.h SOFTFP_AVAILABLE)
-                if(NOT SOFTFP_AVAILABLE)
-                    message(FATAL_ERROR "Soft-float dev libraries required (e.g. 'apt-get install libc6-dev-armel' on Debian/Ubuntu)")
-                endif()
-                cmake_pop_check_state()
-                hadoop_add_compiler_flags("-mfloat-abi=softfp")
-            endif()
-        endif()
-    endif()
-
 #
 # Solaris-specific configuration.
 #
