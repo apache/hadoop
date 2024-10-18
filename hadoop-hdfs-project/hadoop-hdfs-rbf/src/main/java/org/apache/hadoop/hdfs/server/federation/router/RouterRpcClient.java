@@ -613,8 +613,10 @@ public class RouterRpcClient {
           // Other communication error, this is a failure
           // Communication retries are handled by the retry policy
           if (this.rpcMonitor != null) {
+
+            LOG.error("Cannot connect to the namenode for {}  at {}", nsId,
+                rpcAddress, ioe);
             this.rpcMonitor.proxyOpFailureCommunicate(nsId);
-            this.rpcMonitor.proxyOpComplete(false, nsId, namenode.getState());
           }
           throw ioe;
         }
@@ -623,9 +625,6 @@ public class RouterRpcClient {
           connection.release();
         }
       }
-    }
-    if (this.rpcMonitor != null) {
-      this.rpcMonitor.proxyOpComplete(false, null, null);
     }
 
     // All namenodes were unavailable or in standby
