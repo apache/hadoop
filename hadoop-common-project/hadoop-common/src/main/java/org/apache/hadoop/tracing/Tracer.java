@@ -17,22 +17,24 @@
  */
 package org.apache.hadoop.tracing;
 
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.context.Context;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 /**
  * No-Op Tracer (for now) to remove HTrace without changing too many files.
  */
 public class Tracer {
+  public static final Logger LOG = LoggerFactory.getLogger(Tracer.class.getName());
+  private static final String INSTRUMENTATION_NAME = "io.opentelemetry.contrib.hadoop";
   // Singleton
-  private static final Tracer globalTracer = null;
-  private final NullTraceScope nullTraceScope;
-  private final String name;
+  private static Tracer globalTracer = null;
+  io.opentelemetry.api.trace.Tracer OTelTracer = GlobalOpenTelemetry.getTracer(INSTRUMENTATION_NAME);
 
   public final static String SPAN_RECEIVER_CLASSES_KEY =
       "span.receiver.classes";
 
-  public Tracer(String name) {
-    this.name = name;
-    nullTraceScope = NullTraceScope.INSTANCE;
-  }
+  private Tracer() {}
 
   // Keeping this function at the moment for HTrace compatiblity,
   // in fact all threads share a single global tracer for OpenTracing.
@@ -45,53 +47,52 @@ public class Tracer {
    * @return org.apache.hadoop.tracing.Span
    */
   public static Span getCurrentSpan() {
-    return null;
+    io.opentelemetry.api.trace.Span span = io.opentelemetry.api.trace.Span.current();
+    return span.getSpanContext().isValid()? new Span(span): null;
   }
 
   public TraceScope newScope(String description) {
-    return nullTraceScope;
+    Span span = new Span(OTelTracer.spanBuilder(description).startSpan());
+    return new TraceScope(span);
   }
 
   public Span newSpan(String description, SpanContext spanCtx) {
-    return new Span();
+    io.opentelemetry.api.trace.Span parentSpan = io.opentelemetry.api.trace.Span.wrap(spanCtx.getOpenSpanContext());
+    io.opentelemetry.api.trace.Span span = OTelTracer.spanBuilder(description).setParent(Context.current().with(parentSpan)).startSpan();
+    return new Span(span);
   }
 
   public TraceScope newScope(String description, SpanContext spanCtx) {
-    return nullTraceScope;
+    if(spanCtx == null){
+      return new TraceScope(new Span(io.opentelemetry.api.trace.Span.getInvalid()));
+    }
+    return new TraceScope(newSpan(description, spanCtx));
   }
 
   public TraceScope newScope(String description, SpanContext spanCtx,
       boolean finishSpanOnClose) {
-    return nullTraceScope;
+    return new TraceScope(newSpan(description, spanCtx));
   }
 
   public TraceScope activateSpan(Span span) {
-    return nullTraceScope;
+    return new TraceScope(span);
   }
 
   public void close() {
   }
 
-  public String getName() {
-    return name;
-  }
-
+  
   public static class Builder {
-    static Tracer globalTracer;
-    private String name;
+    static Tracer globalTracer = new Tracer();
 
-    public Builder(final String name) {
-      this.name = name;
+    public Builder() {
     }
 
     public Builder conf(TraceConfiguration conf) {
       return this;
     }
 
-    public Tracer build() {
-      if (globalTracer == null) {
-        globalTracer = new Tracer(name);
-      }
+    public synchronized Tracer build() {
       return globalTracer;
     }
   }

@@ -17,23 +17,32 @@
  */
 package org.apache.hadoop.tracing;
 
+import io.opentelemetry.context.Scope;
+
 import java.io.Closeable;
 
 public class TraceScope implements Closeable {
   Span span;
-
+  Scope openScope;
   public TraceScope(Span span) {
     this.span = span;
+    if(span != null){
+      this.openScope = span.makeCurrent();
+    }
   }
 
   // Add tag to the span
   public void addKVAnnotation(String key, String value) {
+    span.addKVAnnotation(key, value);
   }
 
   public void addKVAnnotation(String key, Number value) {
+    span.addKVAnnotation(key, value.toString());
   }
 
+
   public void addTimelineAnnotation(String msg) {
+    span.addTimelineAnnotation(msg);
   }
 
   public Span span() {
@@ -51,6 +60,9 @@ public class TraceScope implements Closeable {
   }
 
   public void close() {
+    if(openScope != null){
+      openScope.close();
+    }
     if (span != null) {
       span.close();
     }
