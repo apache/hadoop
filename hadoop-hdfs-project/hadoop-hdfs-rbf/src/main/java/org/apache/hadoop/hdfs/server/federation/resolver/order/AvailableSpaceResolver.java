@@ -29,6 +29,7 @@ import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.resolver.PathLocation;
+import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.AvailableSpaceResolver.SubclusterAvailableSpace;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
@@ -116,8 +117,10 @@ public class AvailableSpaceResolver
   protected String chooseFirstNamespace(String path, PathLocation loc) {
     Map<String, SubclusterAvailableSpace> subclusterInfo =
         getSubclusterMapping();
-    List<SubclusterAvailableSpace> subclusterList = new LinkedList<>(
-        subclusterInfo.values());
+    List<SubclusterAvailableSpace> subclusterList = new LinkedList<>();
+    for (RemoteLocation dest : loc.getDestinations()) {
+      subclusterList.add(subclusterInfo.get(dest.getNameserviceId()));
+    }
     Collections.sort(subclusterList, comparator);
 
     return subclusterList.size() > 0 ? subclusterList.get(0).getNameserviceId()
