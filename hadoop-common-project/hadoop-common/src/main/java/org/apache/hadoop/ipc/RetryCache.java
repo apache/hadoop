@@ -320,6 +320,10 @@ public class RetryCache {
   
   public void addCacheEntryWithPayload(byte[] clientId, int callId,
       Object payload) {
+    // invalid callId or clientId recorded in edit log which is meaningless and no need to be added into cache.
+    if (skipRetryCache(clientId, callId)) {
+      return;
+    }
     // since the entry is loaded from editlog, we can assume it succeeded.    
     CacheEntry newEntry = new CacheEntryWithPayload(clientId, callId, payload,
         System.nanoTime() + expirationTime, true);
