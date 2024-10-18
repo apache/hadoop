@@ -345,6 +345,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       int failures, TaskAttemptID mapId, boolean readError,
       boolean connectExcpt, boolean hostFailed) {
     if (connectExcpt || (reportReadErrorImmediately && readError)
+        || (maxFetchFailuresBeforeReporting == 0)
         || ((failures % maxFetchFailuresBeforeReporting) == 0) || hostFailed) {
       LOG.info("Reporting fetch failure for " + mapId + " to MRAppMaster.");
       status.addFetchFailedMap((org.apache.hadoop.mapred.TaskAttemptID) mapId);
