@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -47,7 +48,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
+import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
+import org.apache.hadoop.hdfs.web.resources.RedirectByIPAddressParam;
 import org.apache.hadoop.hdfs.web.resources.StartAfterParam;
 import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
@@ -532,6 +535,51 @@ public class TestWebHdfsUrl {
           dfs.getFileStatus(plus).getPath().getName());
       assertEquals(percent.getName(),
           dfs.getFileStatus(percent).getPath().getName());
+    }
+  }
+
+  @Test
+  public void testWebHdfsRedirectByIPAddress() throws Exception {
+    try (MiniDFSCluster cluster =
+                 new MiniDFSCluster.Builder(WebHdfsTestUtil.createConf())
+                         .numDataNodes(1)
+                         .hosts(new String[] {"host1.rack1.com"})
+                         .build()) {
+      cluster.waitActive();
+
+      final WebHdfsFileSystem webhdfs = WebHdfsTestUtil.getWebHdfsFileSystem(
+              cluster.getConfiguration(0), WebHdfs.SCHEME);
+      final Path file = new Path("/testWebHdfsRedirectByIPAddress");
+
+      {
+        final HttpOpParam.Op op = PutOpParam.Op.CREATE;
+        final URL url = webhdfs.toUrl(op, file,
+                new RedirectByIPAddressParam(true));
+        final HttpURLConnection conn =
+                (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod(op.getType().toString());
+        conn.setDoOutput(false);
+        conn.setInstanceFollowRedirects(false);
+        conn.connect();
+        final URL redirectUrl = new URL(conn.getHeaderField("Location"));
+        conn.disconnect();
+        assertEquals("127.0.0.1", redirectUrl.getHost());
+      }
+
+      {
+        final HttpOpParam.Op op = PutOpParam.Op.CREATE;
+        final URL url = webhdfs.toUrl(op, file,
+                new RedirectByIPAddressParam(false));
+        final HttpURLConnection conn =
+                (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod(op.getType().toString());
+        conn.setDoOutput(false);
+        conn.setInstanceFollowRedirects(false);
+        conn.connect();
+        final URL redirectUrl = new URL(conn.getHeaderField("Location"));
+        conn.disconnect();
+        assertEquals("host1.rack1.com", redirectUrl.getHost());
+      }
     }
   }
 }
