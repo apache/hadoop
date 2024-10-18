@@ -261,6 +261,9 @@ class IncrementalBlockReportManager {
 
   synchronized void notifyNamenodeBlock(ReceivedDeletedBlockInfo rdbi,
       DatanodeStorage storage, boolean isOnTransientStorage) {
+    if (storage == null) {
+      return;
+    }
     addRDBI(rdbi, storage);
 
     final BlockStatus status = rdbi.getStatus();
