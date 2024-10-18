@@ -40,10 +40,17 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.security.Principal;
+import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
@@ -63,6 +70,7 @@ import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -73,6 +81,11 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosPrincipal;
+import javax.security.auth.login.AppConfigurationEntry;
+import javax.security.auth.login.LoginContext;
 
 /**
  * Test for HDFS encryption zone without external Kerberos KDC by leveraging
@@ -336,5 +349,94 @@ public class TestSecureEncryptionZoneWithKMS {
       dfsAdmin.createEncryptionZone(zone1, testKey, NO_TRASH);
       return null;
     });
+  }
+
+  private static class KerberosConfiguration
+      extends javax.security.auth.login.Configuration {
+    private String principal;
+    private String keytab;
+
+    public KerberosConfiguration(String principal, String keytab) {
+      this.principal = principal;
+      this.keytab = keytab;
+    }
+
+    @Override
+    public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
+      Map<String, String> options = new HashMap<String, String>();
+      options.put("keyTab", keytab);
+      options.put("principal", principal);
+      options.put("useKeyTab", "true");
+      options.put("storeKey", "true");
+      options.put("doNotPrompt", "true");
+      options.put("useTicketCache", "true");
+      options.put("renewTGT", "true");
+      options.put("refreshKrb5Config", "true");
+      options.put("isInitiator", "true");
+      String ticketCache = System.getenv("KRB5CCNAME");
+      if (ticketCache != null) {
+        options.put("ticketCache", ticketCache);
+      }
+      options.put("debug", "true");
+
+      return new AppConfigurationEntry[]{
+          new AppConfigurationEntry(KerberosUtil.getKrb5LoginModuleName(),
+              AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+              options),};
+    }
+  }
+
+  <T> T doAsWithExternalLogin(String principal, String keytab,
+      final Callable<T> callable) throws Exception {
+    LoginContext loginContext = null;
+    try {
+      Set<Principal> principals = new HashSet<Principal>();
+      principals.add(new KerberosPrincipal(principal));
+      Subject subject = new Subject(false, principals,
+          new HashSet<Object>(), new HashSet<Object>());
+      loginContext = new LoginContext("", subject, null,
+          new KerberosConfiguration(principal, keytab));
+      loginContext.login();
+      subject = loginContext.getSubject();
+      return Subject.doAs(subject, new PrivilegedExceptionAction<T>() {
+        @Override
+        public T run() throws Exception {
+          return callable.call();
+        }
+      });
+    } catch (PrivilegedActionException ex) {
+      throw ex.getException();
+    } finally {
+      if (loginContext != null) {
+        loginContext.logout();
+      }
+    }
+  }
+
+
+  @Test
+  public void testCreateZoneWithExternalLogin() throws Exception {
+    doAsWithExternalLogin(hdfsPrincipal, keytab, this::getCreateZoneCallable);
+  }
+
+  private Callable<Void> getCreateZoneCallable() {
+    Callable<Void> callable = new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        final Path zone = new Path("/expire1");
+        fsWrapper.mkdir(zone, FsPermission.getDirDefault(), true);
+        dfsAdmin.createEncryptionZone(zone, testKey, NO_TRASH);
+
+        final Path zone1 = new Path("/expire2");
+        fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
+        final long sleepInterval = (AUTH_TOKEN_VALIDITY + 1) * 1000;
+        LOG.info("Sleeping {} seconds to wait for kms auth token expiration",
+            sleepInterval);
+        Thread.sleep(sleepInterval);
+        dfsAdmin.createEncryptionZone(zone1, testKey, NO_TRASH);
+        return null;
+      }
+    };
+    return callable;
   }
 }
