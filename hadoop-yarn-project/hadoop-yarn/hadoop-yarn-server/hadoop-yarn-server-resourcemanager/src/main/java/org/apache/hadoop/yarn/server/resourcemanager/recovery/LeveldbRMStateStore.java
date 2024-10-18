@@ -153,7 +153,11 @@ public class LeveldbRMStateStore extends RMStateStore {
   private Path createStorageDir() throws IOException {
     Path root = getStorageDir();
     FileSystem fs = FileSystem.getLocal(getConfig());
-    fs.mkdirs(root, new FsPermission((short)0700));
+    FsPermission perm = new FsPermission((short)0700);
+    fs.mkdirs(root, perm);
+    if (!perm.equals(perm.applyUMask(FsPermission.getUMask(getConfig())))) {
+      fs.setPermission(root, perm);
+    }
     return root;
   }
 
