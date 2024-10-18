@@ -36,6 +36,7 @@ public class JobIndexInfo {
   private int numReduces;
   private String jobStatus;
   private long jobStartTime;
+  private String resourceManagerHost;
   
   public JobIndexInfo() {
   }
@@ -59,6 +60,7 @@ public class JobIndexInfo {
     this.jobStatus = jobStatus;
     this.jobStartTime = -1;
     this.queueName = queueName;
+    this.resourceManagerHost = null;
   }
 
   public long getSubmitTime() {
@@ -120,6 +122,12 @@ public class JobIndexInfo {
   }
   public void setJobStartTime(long lTime) {
       this.jobStartTime = lTime;
+  }
+  public String getResourceManagerHost() {
+    return resourceManagerHost;
+  }
+  public void setResourceManagerHost(String resourceManagerHost) {
+    this.resourceManagerHost = resourceManagerHost;
   }
 
   @Override
