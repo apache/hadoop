@@ -14,10 +14,10 @@
 
 ## Hadoop Docker
 
-### Official releases
+### hadoop-runner-* images
 
-There are special branches for running specific hadoop version in docker.
-These branches, use the files from official hadoop releases for running hadoop inside the containers.
+There are special branches for running hadoop in docker.
+These branches contain scripts that set up base images that can be used for running any Hadoop version.
 
 E.g.
 * [docker-hadoop-runner-latest](https://github.com/apache/hadoop/tree/docker-hadoop-runner-latest)
@@ -27,7 +27,7 @@ E.g.
 * [docker-hadoop-3](https://github.com/apache/hadoop/tree/docker-hadoop-3)
 * [docker-hadoop-2](https://github.com/apache/hadoop/tree/docker-hadoop-2)
 
-### Source code
+### Running from the source code
 
 There is a setup under `hadoop-dist` that contains Docker Compose definitions
 for running the current version of Hadoop in a multi-node docker environment.
