@@ -1364,7 +1364,12 @@ public class RouterAdmin extends Configured implements Tool {
    * @throws IOException if the operation was not successful.
    */
   private int refreshCallQueue() throws IOException {
+    // for security authorization
+    // server principal for this call
+    // should be Routers's one.
     Configuration conf = getConf();
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY,
+        conf.get(RBFConfigKeys.DFS_ROUTER_KERBEROS_PRINCIPAL_KEY, ""));
     String hostport =  getConf().getTrimmed(
         RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
         RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_DEFAULT);
