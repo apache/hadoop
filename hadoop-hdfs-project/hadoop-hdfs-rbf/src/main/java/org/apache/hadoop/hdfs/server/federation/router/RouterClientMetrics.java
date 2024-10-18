@@ -650,4 +650,8 @@ public class RouterClientMetrics {
       concurrentOtherOps.incr();
     }
   }
+
+  public long getMsyncOps(){
+    return msyncOps.value();
+  }
 }

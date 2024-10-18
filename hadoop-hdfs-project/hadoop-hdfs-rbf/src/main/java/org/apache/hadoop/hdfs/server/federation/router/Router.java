@@ -118,6 +118,8 @@ public class Router extends CompositeService implements
   private ActiveNamenodeResolver namenodeResolver;
   /** Updates the namenode status in the namenode resolver. */
   private Collection<NamenodeHeartbeatService> namenodeHeartbeatServices;
+  /** Router peridically send msync to all nameservices. */
+  private RouterAutoMsyncService routerAutoMsyncService;
 
   /** Router metrics. */
   private RouterMetricsService metrics;
@@ -237,6 +239,14 @@ public class Router extends CompositeService implements
       // Periodically update the router state
       this.routerHeartbeatService = new RouterHeartbeatService(this);
       addService(this.routerHeartbeatService);
+    }
+
+    boolean isRouterAutoMsyncEnable = conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_AUTO_MSYNC_ENABLE,
+        RBFConfigKeys.DFS_ROUTER_AUTO_MSYNC_ENABLE_DEFAULT);
+    if (isRouterAutoMsyncEnable) {
+      this.routerAutoMsyncService = new RouterAutoMsyncService(this.rpcServer);
+      addService(this.routerAutoMsyncService);
     }
 
     // Router metrics system
@@ -840,6 +850,14 @@ public class Router extends CompositeService implements
   @VisibleForTesting
   Collection<NamenodeHeartbeatService> getNamenodeHeartbeatServices() {
     return this.namenodeHeartbeatServices;
+  }
+
+  /**
+   * Get this router msync service.
+   */
+  @VisibleForTesting
+  RouterAutoMsyncService getRouterAutoMsyncService() {
+    return this.routerAutoMsyncService;
   }
 
   /**
