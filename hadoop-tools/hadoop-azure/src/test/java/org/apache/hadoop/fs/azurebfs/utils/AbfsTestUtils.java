@@ -20,12 +20,11 @@ package org.apache.hadoop.fs.azurebfs.utils;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
-
-import org.apache.hadoop.conf.Configuration;
 import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
@@ -37,7 +36,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST
 /**
  * Some Utils for ABFS tests.
  */
-public final class AbfsTestUtils extends AbstractAbfsIntegrationTest{
+public final class AbfsTestUtils extends AbstractAbfsIntegrationTest {
     private static final Logger LOG =
             LoggerFactory.getLogger(AbfsTestUtils.class);
 
