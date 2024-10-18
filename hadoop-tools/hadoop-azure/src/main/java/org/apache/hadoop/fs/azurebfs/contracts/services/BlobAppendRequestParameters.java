@@ -16,45 +16,31 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.contracts.services;
 
 /**
- * The REST operation type (Read, Append, Other ).
+ * Following parameters are used by AbfsBlobClient only.
+ * Blob Endpoint Append API requires blockId and eTag to be passed in the request.
  */
-public enum AbfsRestOperationType {
-    CreateFileSystem,
-    GetFileSystemProperties,
-    SetFileSystemProperties,
-    ListPaths,
-    DeleteFileSystem,
-    CreatePath,
-    RenamePath,
-    GetAcl,
-    GetPathProperties,
-    GetPathStatus,
-    SetAcl,
-    SetOwner,
-    SetPathProperties,
-    SetPermissions,
-    Append,
-    Flush,
-    ReadFile,
-    DeletePath,
-    CheckAccess,
-    LeasePath,
-    CreateContainer,
-    GetContainerProperties,
-    SetContainerMetadata,
-    DeleteContainer,
-    ListBlobs,
-    PutBlob,
-    PutBlock,
-    PutBlockList,
-    LeaseBlob,
-    GetBlob,
-    GetBlockList,
-    GetBlobProperties,
-    SetBlobMetadata,
-    DeleteBlob,
-    CopyBlob
+public class BlobAppendRequestParameters {
+  private String blockId;
+  private String eTag;
+
+  /**
+   * Constructor to be used for interacting with AbfsBlobClient.
+   * @param blockId blockId of the block to be appended
+   * @param eTag eTag of the blob being appended
+   */
+  public BlobAppendRequestParameters(String blockId, String eTag) {
+    this.blockId = blockId;
+    this.eTag = eTag;
+  }
+
+  public String getBlockId() {
+    return blockId;
+  }
+
+  public String getETag() {
+    return eTag;
+  }
 }

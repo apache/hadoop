@@ -42,6 +42,32 @@ public final class HttpQueryParams {
   public static final String QUERY_PARAM_BLOBTYPE = "blobtype";
   public static final String QUERY_PARAM_PAGINATED = "paginated";
 
+  // query parameters for Blob Endpoint Rest APIs
+
+  /**
+   * Http Query parameter for specifying resource type.
+   * {@value}
+   */
+  public static final String QUERY_PARAM_RESTYPE = "restype";
+
+  /**
+   * Http Query parameter for specifying component.
+   * {@value}
+   */
+  public static final String QUERY_PARAM_COMP = "comp";
+
+  /**
+   * Http Query parameter for specifying blockId.
+   * {@value}
+   */
+  public static final String QUERY_PARAM_BLOCKID = "blockid";
+
+  /**
+   * Http Query parameter for specifying block list type.
+   * {@value}
+   */
+  public static final String QUERY_PARAM_BLOCKLISTTYPE = "blocklisttype";
+
   //query params for SAS
   public static final String QUERY_PARAM_SAOID = "saoid";
   public static final String QUERY_PARAM_SKOID = "skoid";
