@@ -319,7 +319,7 @@ public class UserGroupInformation {
       }
     }
     try {
-        kerberosMinSecondsBeforeRelogin = 1000L * conf.getLong(
+        kerberosMinSecondsBeforeRelogin = conf.getLong(
                 HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN,
                 HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT);
     }
@@ -372,7 +372,7 @@ public class UserGroupInformation {
     authenticationMethod = null;
     conf = null;
     groups = null;
-    kerberosMinSecondsBeforeRelogin = 0;
+    kerberosMinSecondsBeforeRelogin = 0L;
     kerberosKeyTabLoginRenewalEnabled = false;
     kerberosLoginRenewalExecutor = Optional.empty();
     setLoginUser(null);
@@ -992,7 +992,7 @@ public class UserGroupInformation {
             return;
           }
           nextRefresh = Math.max(getRefreshTime(tgt),
-              now + kerberosMinSecondsBeforeRelogin);
+              now + TimeUnit.SECONDS.toMillis(kerberosMinSecondsBeforeRelogin));
           metrics.renewalFailures.set(0);
           rp = null;
         } catch (InterruptedException ie) {
@@ -1034,7 +1034,7 @@ public class UserGroupInformation {
             // The final retry time will be later limited within the
             // tgt endTime in getNextTgtRenewalTime.
             rp = RetryPolicies.exponentialBackoffRetry(Long.SIZE - 2,
-                kerberosMinSecondsBeforeRelogin, TimeUnit.MILLISECONDS);
+                kerberosMinSecondsBeforeRelogin, TimeUnit.SECONDS);
           }
           try {
             nextRefresh = getNextTgtRenewalTime(tgtEndTime, now, rp);
@@ -1111,7 +1111,8 @@ public class UserGroupInformation {
   @VisibleForTesting
   static long getNextTgtRenewalTime(final long tgtEndTime, final long now,
       final RetryPolicy rp) throws Exception {
-    final long lastRetryTime = tgtEndTime - kerberosMinSecondsBeforeRelogin;
+    final long lastRetryTime =
+        tgtEndTime - TimeUnit.SECONDS.toMillis(kerberosMinSecondsBeforeRelogin);
     final RetryPolicy.RetryAction ra = rp.shouldRetry(null,
         metrics.renewalFailures.value(), 0, false);
     return Math.min(lastRetryTime, now + ra.delayMillis);
@@ -1401,10 +1402,11 @@ public class UserGroupInformation {
 
   private boolean hasSufficientTimeElapsed(long now) {
     if (!shouldRenewImmediatelyForTests &&
-        now - user.getLastLogin() < kerberosMinSecondsBeforeRelogin ) {
-      LOG.warn("Not attempting to re-login since the last re-login was " +
-          "attempted less than " + (kerberosMinSecondsBeforeRelogin/1000) +
-          " seconds before. Last Login=" + user.getLastLogin());
+        (now - user.getLastLogin()) < TimeUnit.SECONDS
+            .toMillis(kerberosMinSecondsBeforeRelogin)) {
+      LOG.warn("Not attempting to re-login since the last re-login was "
+          + "attempted less than " + kerberosMinSecondsBeforeRelogin
+          + " seconds before. Last Login=" + user.getLastLogin());
       return false;
     }
     return true;
