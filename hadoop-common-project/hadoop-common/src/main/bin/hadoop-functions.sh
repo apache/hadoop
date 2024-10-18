@@ -901,8 +901,10 @@ function hadoop_basic_init
   HADOOP_NICENESS=${HADOOP_NICENESS:-0}
   HADOOP_STOP_TIMEOUT=${HADOOP_STOP_TIMEOUT:-5}
   HADOOP_PID_DIR=${HADOOP_PID_DIR:-/tmp}
-  HADOOP_ROOT_LOGGER=${HADOOP_ROOT_LOGGER:-${HADOOP_LOGLEVEL},console}
-  HADOOP_DAEMON_ROOT_LOGGER=${HADOOP_DAEMON_ROOT_LOGGER:-${HADOOP_LOGLEVEL},RFA}
+  HADOOP_ROOT_LOGGER_DEFAULT="${HADOOP_LOGLEVEL},console"
+  HADOOP_DAEMON_ROOT_LOGGER_DEFAULT="${HADOOP_LOGLEVEL},RFA"
+  HADOOP_ROOT_LOGGER=${HADOOP_ROOT_LOGGER:-${HADOOP_ROOT_LOGGER_DEFAULT}}
+  HADOOP_DAEMON_ROOT_LOGGER=${HADOOP_DAEMON_ROOT_LOGGER:-${HADOOP_DAEMON_ROOT_LOGGER_DEFAULT}}
   HADOOP_SECURITY_LOGGER=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}
   HADOOP_SSH_OPTS=${HADOOP_SSH_OPTS-"-o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=10s"}
   HADOOP_SECURE_LOG_DIR=${HADOOP_SECURE_LOG_DIR:-${HADOOP_LOG_DIR}}
@@ -2732,8 +2734,15 @@ function hadoop_generic_java_subcmd_handler
 
   # are we actually in daemon mode?
   # if yes, use the daemon logger and the appropriate log file.
+  # In daemon mode, when and only when use has already customized HADOOP_DAEMON_ROOT_LOGGER
+  # we will use HADOOP_DAEMON_ROOT_LOGGER as the final hadoop.root.logger
   if [[ "${HADOOP_DAEMON_MODE}" != "default" ]]; then
-    HADOOP_ROOT_LOGGER="${HADOOP_DAEMON_ROOT_LOGGER}"
+    if [[ "${HADOOP_ROOT_LOGGER}" = "${HADOOP_ROOT_LOGGER_DEFAULT}" ||
+        "${HADOOP_DAEMON_ROOT_LOGGER}" != "${HADOOP_DAEMON_ROOT_LOGGER_DEFAULT}"  ]]; then
+      HADOOP_ROOT_LOGGER="${HADOOP_DAEMON_ROOT_LOGGER}"
+    else
+      hadoop_error "Using customized HADOOP_ROOT_LOGGER as final hadoop.root.logger. Recommending using HADOOP_LOGLEVEL or customize HADOOP_DAEMON_ROOT_LOGGER for logging in daemon mode."
+    fi
     if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
       HADOOP_LOGFILE="hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.log"
     else
