@@ -89,6 +89,8 @@ public class NameNodeMetrics {
   MutableCounterLong blockOpsBatched;
   @Metric("Number of pending edits")
   MutableGaugeInt pendingEditsCount;
+  @Metric("Number of pending sync edits")
+  MutableGaugeInt pendingSyncEditsCount;
   @Metric("Number of delete blocks Queued")
   MutableGaugeInt deleteBlocksQueued;
   @Metric("Number of pending deletion blocks")
@@ -363,6 +365,10 @@ public class NameNodeMetrics {
 
   public void setPendingEditsCount(int size) {
     pendingEditsCount.set(size);
+  }
+
+  public void setPendingSyncEditsCount(int size) {
+    pendingSyncEditsCount.set(size);
   }
 
   public void addTransaction(long latency) {
