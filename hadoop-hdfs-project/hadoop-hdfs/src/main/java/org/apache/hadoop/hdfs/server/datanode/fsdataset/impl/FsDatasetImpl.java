@@ -303,7 +303,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     // The number of volumes required for operation is the total number
     // of volumes minus the number of failed volumes we can tolerate.
-    volFailuresTolerated = datanode.getDnConf().getVolFailuresTolerated();
+    volFailuresTolerated = datanode.getDnConf().getVolFailuresTolerated(); // The value is 0
 
     Collection<StorageLocation> dataLocations = DataNode.getStorageLocations(conf);
     List<VolumeFailureInfo> volumeFailureInfos = getInitialVolumeFailureInfos(
@@ -312,7 +312,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     volsConfigured = datanode.getDnConf().getVolsConfigured();
     int volsFailed = volumeFailureInfos.size();
 
-    if (volFailuresTolerated < DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT
+    if (volFailuresTolerated < DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT // The value is -1
         || volFailuresTolerated >= volsConfigured) {
       throw new HadoopIllegalArgumentException("Invalid value configured for "
           + "dfs.datanode.failed.volumes.tolerated - " + volFailuresTolerated
