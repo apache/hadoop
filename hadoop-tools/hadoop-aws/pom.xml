@@ -459,6 +459,7 @@
                     <exclusion>org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory</exclusion>
                     <exclusion>org.apache.hadoop.fs.s3a.commit.impl.*</exclusion>
                     <exclusion>org.apache.hadoop.fs.s3a.commit.magic.*</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.optimized.*</exclusion>
                     <exclusion>org.apache.hadoop.fs.s3a.commit.staging.*</exclusion>
                   </exclusions>
                   <bannedImports>
