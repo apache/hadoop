@@ -41,6 +41,9 @@ public class TestPoolAlignmentContext {
     poolContext1.advanceClientStateId(30L);
     assertRequestHeaderStateId(poolContext1, 30L);
     assertRequestHeaderStateId(poolContext2, Long.MIN_VALUE);
+
+    poolContext2.advanceClientStateId(Long.MIN_VALUE);
+    assertRequestHeaderStateId(poolContext2, 20L);
     Assertions.assertEquals(20L, poolContext1.getLastSeenStateId());
     Assertions.assertEquals(20L, poolContext2.getLastSeenStateId());
   }

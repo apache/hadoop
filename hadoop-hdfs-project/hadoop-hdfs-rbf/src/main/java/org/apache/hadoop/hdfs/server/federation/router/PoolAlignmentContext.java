@@ -104,7 +104,11 @@ public class PoolAlignmentContext implements AlignmentContext {
   }
 
   public void advanceClientStateId(Long clientStateId) {
-    poolLocalStateId.accumulate(clientStateId);
+    if (clientStateId == Long.MIN_VALUE){
+      poolLocalStateId.accumulate(sharedGlobalStateId.get());
+    } else {
+      poolLocalStateId.accumulate(clientStateId);
+    }
   }
 
   @VisibleForTesting
