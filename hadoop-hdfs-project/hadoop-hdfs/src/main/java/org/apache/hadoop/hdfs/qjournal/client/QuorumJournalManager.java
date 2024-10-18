@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.qjournal.client;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_MAINTENANCE_NODES_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_MAINTENANCE_NODES_KEY;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -31,6 +34,7 @@ import java.util.PriorityQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.hdfs.server.blockmanagement.HostSet;
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,6 +112,7 @@ public class QuorumJournalManager implements JournalManager {
   private static final int OUTPUT_BUFFER_CAPACITY_DEFAULT = 512 * 1024;
   private int outputBufferCapacity;
   private final URLConnectionFactory connectionFactory;
+  private int quorumJournalCount;
 
   /** Limit logging about input stream selection to every 5 seconds max. */
   private static final long SELECT_INPUT_STREAM_LOG_INTERVAL_MS = 5000;
@@ -144,7 +149,18 @@ public class QuorumJournalManager implements JournalManager {
     this.uri = uri;
     this.nsInfo = nsInfo;
     this.nameServiceId = nameServiceId;
-    this.loggers = new AsyncLoggerSet(createLoggers(loggerFactory));
+
+    // createLoggers() will set quorumJournalCount to total number of journal nodes while return a
+    // list of healthy/good journal nodes.
+    List<AsyncLogger> asyncLoggerList = createLoggers(loggerFactory);
+    this.loggers = new AsyncLoggerSet(asyncLoggerList, this.quorumJournalCount);
+
+    // Check whether the number of jn maintenance lists is valid
+    int quorumThreshold = quorumJournalCount / 2 + 1;
+    Preconditions.checkArgument(
+        this.loggers.size() >= quorumThreshold,
+        "The total journalnode minus %s the number of blacklists must be greater than or equal to"
+            + " %s!", DFS_JOURNALNODE_MAINTENANCE_NODES_KEY, quorumThreshold);
 
     this.maxTxnsPerRpc =
         conf.getInt(QJM_RPC_MAX_TXNS_KEY, QJM_RPC_MAX_TXNS_DEFAULT);
@@ -250,6 +266,10 @@ public class QuorumJournalManager implements JournalManager {
   
   @Override
   public void format(NamespaceInfo nsInfo, boolean force) throws IOException {
+    if (isJNInMaintenanceMode()) {
+      throw new IOException(
+          "Formatting a journal node is not support while in jn maintenance mode");
+    }
     QuorumCall<AsyncLogger, Void> call = loggers.format(nsInfo, force);
     try {
       call.waitFor(loggers.size(), loggers.size(), 0, timeoutMs,
@@ -406,12 +426,24 @@ public class QuorumJournalManager implements JournalManager {
             logToSync.getStartTxId(),
             logToSync.getEndTxId()));
   }
-  
-  static List<AsyncLogger> createLoggers(Configuration conf,
+
+  List<AsyncLogger> createLoggers(Configuration conf,
+                                  URI uri,
+                                  NamespaceInfo nsInfo,
+                                  AsyncLogger.Factory factory,
+                                  String nameServiceId)
+      throws IOException {
+    String[] skipNodesHostPort = conf.getTrimmedStrings(
+        DFS_JOURNALNODE_MAINTENANCE_NODES_KEY, DFS_JOURNALNODE_MAINTENANCE_NODES_DEFAULT);
+    return createLoggers(conf, uri, nsInfo, factory, nameServiceId, skipNodesHostPort);
+  }
+
+  private List<AsyncLogger> createLoggers(Configuration conf,
                                          URI uri,
                                          NamespaceInfo nsInfo,
                                          AsyncLogger.Factory factory,
-                                         String nameServiceId)
+                                         String nameServiceId,
+                                         String[] skipNodesHostPort)
       throws IOException {
     List<AsyncLogger> ret = Lists.newArrayList();
     List<InetSocketAddress> addrs = Util.getAddressesList(uri, conf);
@@ -419,8 +451,14 @@ public class QuorumJournalManager implements JournalManager {
       LOG.warn("Quorum journal URI '" + uri + "' has an even number " +
           "of Journal Nodes specified. This is not recommended!");
     }
+    setQuorumJournalCount(addrs.size());
+    HostSet skipSet = DFSUtil.getHostSet(skipNodesHostPort);
     String jid = parseJournalId(uri);
     for (InetSocketAddress addr : addrs) {
+      if(skipSet.match(addr)) {
+        LOG.info("The node {} is a maintenance node and will be skipped.", addr);
+        continue;
+      }
       ret.add(factory.createLogger(conf, nsInfo, jid, nameServiceId, addr));
     }
     return ret;
@@ -667,6 +705,9 @@ public class QuorumJournalManager implements JournalManager {
 
   @Override
   public void doPreUpgrade() throws IOException {
+    if (isJNInMaintenanceMode()) {
+      throw new IOException("doPreUpgrade() is not support while in jn maintenance mode");
+    }
     QuorumCall<AsyncLogger, Void> call = loggers.doPreUpgrade();
     try {
       call.waitFor(loggers.size(), loggers.size(), 0, timeoutMs,
@@ -684,6 +725,9 @@ public class QuorumJournalManager implements JournalManager {
 
   @Override
   public void doUpgrade(Storage storage) throws IOException {
+    if (isJNInMaintenanceMode()) {
+      throw new IOException("doUpgrade() is not support while in jn maintenance mode");
+    }
     QuorumCall<AsyncLogger, Void> call = loggers.doUpgrade(storage);
     try {
       call.waitFor(loggers.size(), loggers.size(), 0, timeoutMs,
@@ -701,6 +745,9 @@ public class QuorumJournalManager implements JournalManager {
   
   @Override
   public void doFinalize() throws IOException {
+    if (isJNInMaintenanceMode()) {
+      throw new IOException("doFinalize() is not support while in jn maintenance mode");
+    }
     QuorumCall<AsyncLogger, Void> call = loggers.doFinalize();
     try {
       call.waitFor(loggers.size(), loggers.size(), 0, timeoutMs,
@@ -719,6 +766,9 @@ public class QuorumJournalManager implements JournalManager {
   @Override
   public boolean canRollBack(StorageInfo storage, StorageInfo prevStorage,
       int targetLayoutVersion) throws IOException {
+    if (isJNInMaintenanceMode()) {
+      throw new IOException("canRollBack() is not support while in jn maintenance mode");
+    }
     QuorumCall<AsyncLogger, Boolean> call = loggers.canRollBack(storage,
         prevStorage, targetLayoutVersion);
     try {
@@ -753,6 +803,9 @@ public class QuorumJournalManager implements JournalManager {
 
   @Override
   public void doRollback() throws IOException {
+    if (isJNInMaintenanceMode()) {
+      throw new IOException("doRollback() is not support while in jn maintenance mode");
+    }
     QuorumCall<AsyncLogger, Void> call = loggers.doRollback();
     try {
       call.waitFor(loggers.size(), loggers.size(), 0, timeoutMs,
@@ -770,6 +823,9 @@ public class QuorumJournalManager implements JournalManager {
   
   @Override
   public void discardSegments(long startTxId) throws IOException {
+    if (isJNInMaintenanceMode()) {
+      throw new IOException("discardSegments() is not support while in jn maintenance mode");
+    }
     QuorumCall<AsyncLogger, Void> call = loggers.discardSegments(startTxId);
     try {
       call.waitFor(loggers.size(), loggers.size(), 0,
@@ -789,6 +845,9 @@ public class QuorumJournalManager implements JournalManager {
   
   @Override
   public long getJournalCTime() throws IOException {
+    if (isJNInMaintenanceMode()) {
+      throw new IOException("getJournalCTime() is not support while in jn maintenance mode");
+    }
     QuorumCall<AsyncLogger, Long> call = loggers.getJournalCTime();
     try {
       call.waitFor(loggers.size(), loggers.size(), 0,
@@ -818,5 +877,13 @@ public class QuorumJournalManager implements JournalManager {
     }
     
     throw new AssertionError("Unreachable code.");
+  }
+
+  public void setQuorumJournalCount(int quorumJournalCount) {
+    this.quorumJournalCount = quorumJournalCount;
+  }
+
+  private boolean isJNInMaintenanceMode() {
+    return this.loggers.size() < quorumJournalCount;
   }
 }
