@@ -130,7 +130,7 @@ public class TestRouterQuota {
 
   @Test
   public void testNamespaceQuotaExceed() throws Exception {
-    long nsQuota = 3;
+    long nsQuota = 4;
     final FileSystem nnFs1 = nnContext1.getFileSystem();
     final FileSystem nnFs2 = nnContext2.getFileSystem();
 
@@ -168,6 +168,8 @@ public class TestRouterQuota {
       }
       return isNsQuotaViolated;
     }, 5000, 60000);
+    QuotaUsage quota = routerFs.getQuotaUsage(new Path("/nsquota"));
+    assertEquals(quota.getQuota(), quota.getFileAndDirectoryCount());
 
     // mkdir in real FileSystem should be okay
     nnFs1.mkdirs(new Path("/testdir1/" + UUID.randomUUID()));
@@ -184,7 +186,7 @@ public class TestRouterQuota {
 
   @Test
   public void testStorageSpaceQuotaExceed() throws Exception {
-    long ssQuota = 3071;
+    long ssQuota = 3072;
     final FileSystem nnFs1 = nnContext1.getFileSystem();
     final FileSystem nnFs2 = nnContext2.getFileSystem();
 
@@ -222,6 +224,9 @@ public class TestRouterQuota {
       }
       return isDsQuotaViolated;
     }, 5000, 60000);
+
+    QuotaUsage quota = routerContext.getFileSystem().getQuotaUsage(new Path("/ssquota"));
+    assertEquals(quota.getSpaceQuota(), quota.getSpaceConsumed());
 
     // append data to destination path in real FileSystem should be okay
     appendData("/testdir3/file", nnContext1.getClient(), BLOCK_SIZE);
