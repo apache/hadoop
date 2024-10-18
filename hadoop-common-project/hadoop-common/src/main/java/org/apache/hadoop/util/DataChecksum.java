@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,6 +22,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.function.ToIntFunction;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
@@ -118,15 +119,14 @@ public class DataChecksum implements Checksum {
    * @return the int representation of the polynomial associated with the
    *     CRC {@code type}, suitable for use with further CRC arithmetic.
    */
-  public static int getCrcPolynomialForType(Type type) {
+  static ToIntFunction<Long> getModFunction(Type type) {
     switch (type) {
     case CRC32:
-      return CrcUtil.GZIP_POLYNOMIAL;
+      return PureJavaCrc32::mod;
     case CRC32C:
-      return CrcUtil.CASTAGNOLI_POLYNOMIAL;
+      return PureJavaCrc32C::mod;
     default:
-      throw new IllegalArgumentException(
-          "No CRC polynomial could be associated with type: " + type);
+      throw new IllegalArgumentException("Unexpected type: " + type);
     }
   }
 
