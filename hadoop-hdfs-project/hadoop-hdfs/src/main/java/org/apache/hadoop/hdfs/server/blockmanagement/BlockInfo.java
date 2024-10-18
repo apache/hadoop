@@ -387,6 +387,19 @@ public abstract class BlockInfo extends Block
     return getBlockUCState().equals(BlockUCState.UNDER_RECOVERY);
   }
 
+  /**
+   * Is this block still under construction or recoery.
+   *
+   * @return true if the state of the block is
+   * {@link BlockUCState#UNDER_CONSTRUCTION} or
+   * {@link BlockUCState#UNDER_RECOVERY}
+   */
+  public final boolean isUnderConstructionOrRecovery() {
+    final BlockUCState state = getBlockUCState();
+    return state.equals(BlockUCState.UNDER_CONSTRUCTION) ||
+        state.equals(BlockUCState.UNDER_RECOVERY);
+  }
+
   public final boolean isCompleteOrCommitted() {
     final BlockUCState state = getBlockUCState();
     return state.equals(BlockUCState.COMPLETE) ||
