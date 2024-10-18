@@ -121,6 +121,7 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -4027,6 +4028,8 @@ public abstract class Server {
           new ConcurrentHashMap<Connection,Boolean>(
               maxQueueSize, 0.75f, readThreads+2));
       this.userToConnectionsMap = new ConcurrentHashMap<>();
+      Preconditions.checkArgument(idleScanInterval >= 0, "%s should be non-negative", 
+          CommonConfigurationKeys.IPC_CLIENT_CONNECTION_IDLESCANINTERVAL_KEY);
     }
 
     private boolean add(Connection connection) {
