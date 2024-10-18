@@ -636,6 +636,14 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.list.all.nameservices.trash</name>
+    <value>true</value>
+    <description>
+      If true, client listatus TrashRoot will return all nameservices's trash.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.client.thread-size</name>
     <value>32</value>
     <description>
