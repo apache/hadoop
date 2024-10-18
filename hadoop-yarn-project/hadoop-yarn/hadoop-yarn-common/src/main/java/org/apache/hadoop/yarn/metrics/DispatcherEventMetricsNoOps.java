@@ -15,28 +15,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.metrics;
 
-package org.apache.hadoop.yarn.server.resourcemanager.recovery;
+import org.slf4j.Logger;
 
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.metrics2.MetricsCollector;
 
 /**
- * A event used to remove an attempt.
+ * Used if metric publication should be disabled
  */
-public class RMStateStoreRemoveAppAttemptEvent extends RMStateStoreEvent {
-  private ApplicationAttemptId applicationAttemptId;
+public class DispatcherEventMetricsNoOps implements DispatcherEventMetrics {
 
-  RMStateStoreRemoveAppAttemptEvent(ApplicationAttemptId applicationAttemptId) {
-    super(RMStateStoreEventType.REMOVE_APP_ATTEMPT);
-    this.applicationAttemptId = applicationAttemptId;
-  }
+  private final Logger log;
 
-  public ApplicationAttemptId getApplicationAttemptId() {
-    return applicationAttemptId;
+  public DispatcherEventMetricsNoOps(Logger log) {
+    this.log = log;
   }
 
   @Override
-  public String getLockKey() {
-    return applicationAttemptId.getApplicationId().toString();
+  public void getMetrics(MetricsCollector collector, boolean all) {
+    log.trace("called getMetrics");
+  }
+
+  @Override
+  public void init(Class<? extends Enum> typeClass) {
+    log.trace("called init");
+  }
+
+  @Override
+  public void addEvent(Object type) {
+    log.trace("called addEvent");
+  }
+
+  @Override
+  public void removeEvent(Object type) {
+    log.trace("called removeEvent");
+  }
+
+  @Override
+  public void updateRate(Object type, long millisecond) {
+    log.trace("called updateRate");
   }
 }

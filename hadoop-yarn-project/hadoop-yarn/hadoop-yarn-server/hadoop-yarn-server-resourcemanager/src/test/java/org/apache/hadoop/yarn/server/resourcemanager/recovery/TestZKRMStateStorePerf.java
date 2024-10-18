@@ -192,7 +192,7 @@ public class TestZKRMStateStorePerf extends RMStateStoreTestBase
             + e.getMessage());
         return -1;
       }
-      waitNotify(dispatcher);
+      dispatcher.waitNotify(appId);
       rmApps.add(app);
     }
 

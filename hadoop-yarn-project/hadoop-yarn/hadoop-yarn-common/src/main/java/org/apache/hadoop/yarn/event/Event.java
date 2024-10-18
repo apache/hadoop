@@ -32,4 +32,14 @@ public interface Event<TYPE extends Enum<TYPE>> {
   TYPE getType();
   long getTimestamp();
   String toString();
+
+  /**
+   * In case of parallel execution of events in the same dispatcher,
+   * the result of this method will be used as semaphore.
+   * If method returns null, then a default semaphore will be used.
+   * @return the semaphore
+   */
+  default String getLockKey() {
+    return null;
+  };
 }
