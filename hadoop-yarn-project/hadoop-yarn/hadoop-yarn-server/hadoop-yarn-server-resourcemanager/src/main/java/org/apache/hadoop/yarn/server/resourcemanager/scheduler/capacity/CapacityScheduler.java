@@ -700,6 +700,7 @@ public class CapacityScheduler extends
         try {
           ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request =
               backlogs.take();
+          CapacitySchedulerMetrics.getMetrics().decrBackLogs();
           cs.writeLock.lock();
           try {
             cs.tryCommit(cs.getClusterResource(), request, true);
@@ -718,6 +719,7 @@ public class CapacityScheduler extends
     public void addNewCommitRequest(
         ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> proposal) {
       backlogs.add(proposal);
+      CapacitySchedulerMetrics.getMetrics().incrBacklogs();
     }
 
     public int getPendingBacklogs() {
