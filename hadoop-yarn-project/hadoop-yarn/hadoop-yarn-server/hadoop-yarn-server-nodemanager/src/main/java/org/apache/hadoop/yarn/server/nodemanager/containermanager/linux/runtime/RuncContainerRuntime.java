@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Reso
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.runc.RuncContainerTransformerPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.volume.csi.ContainerVolumePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 
@@ -86,6 +87,7 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_NM_RUNC_IMAG
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_NM_RUNC_LAYER_MOUNTS_TO_KEEP;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_NM_REAP_RUNC_LAYER_MOUNTS_INTERVAL;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_NM_RUNC_MANIFEST_TO_RESOURCES_PLUGIN;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_CONTAINER_TRANSFORMER_PLUGIN;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_IMAGE_TAG_TO_MANIFEST_PLUGIN;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_LAYER_MOUNTS_TO_KEEP;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_MANIFEST_TO_RESOURCES_PLUGIN;
@@ -164,6 +166,7 @@ public class RuncContainerRuntime extends OCIContainerRuntime {
   private CGroupsHandler cGroupsHandler;
   private RuncImageTagToManifestPlugin imageTagToManifestPlugin;
   private RuncManifestToResourcesPlugin manifestToResourcesPlugin;
+  private RuncContainerTransformerPlugin containerTransformerPlugin;
   private ObjectMapper mapper;
   private String seccomp;
   private int layersToKeep;
@@ -206,6 +209,10 @@ public class RuncContainerRuntime extends OCIContainerRuntime {
     imageTagToManifestPlugin.init(conf);
     manifestToResourcesPlugin = chooseManifestToResourcesPlugin();
     manifestToResourcesPlugin.init(conf);
+    containerTransformerPlugin = chooseContainerTransformerPlugin();
+    if (containerTransformerPlugin != null) {
+      containerTransformerPlugin.init(conf);
+    }
     mapper = new ObjectMapper();
     defaultRuncImage = conf.get(YarnConfiguration.NM_RUNC_IMAGE_NAME);
 
@@ -282,6 +289,9 @@ public class RuncContainerRuntime extends OCIContainerRuntime {
         }, 0, reapRuncLayerMountsInterval, TimeUnit.SECONDS);
     imageTagToManifestPlugin.start();
     manifestToResourcesPlugin.start();
+    if (containerTransformerPlugin != null) {
+      containerTransformerPlugin.start();
+    }
   }
 
   @Override
@@ -289,6 +299,9 @@ public class RuncContainerRuntime extends OCIContainerRuntime {
     exec.shutdownNow();
     imageTagToManifestPlugin.stop();
     manifestToResourcesPlugin.stop();
+    if (containerTransformerPlugin != null) {
+      containerTransformerPlugin.stop();
+    }
   }
 
   @Override
@@ -301,7 +314,6 @@ public class RuncContainerRuntime extends OCIContainerRuntime {
     ContainerId containerId = container.getContainerId();
     ApplicationId appId = containerId.getApplicationAttemptId()
         .getApplicationId();
-
     Map<String, String> environment = container.getLaunchContext()
         .getEnvironment();
     ArrayList<OCIMount> mounts = new ArrayList<>();
@@ -313,14 +325,11 @@ public class RuncContainerRuntime extends OCIContainerRuntime {
     String containerIdStr = containerId.toString();
     String applicationId = appId.toString();
     Path containerWorkDir = ctx.getExecutionAttribute(CONTAINER_WORK_DIR);
-
     RuncRuntimeObject runcRuntimeObject =
         container.getContainerRuntimeData(RuncRuntimeObject.class);
     List<LocalResource> layerResources = runcRuntimeObject.getOCILayers();
-
     ResourceLocalizationService localizationService =
         nmContext.getContainerManager().getResourceLocalizationService();
-
     List<String> args = new ArrayList<>();
 
     try {
@@ -384,7 +393,6 @@ public class RuncContainerRuntime extends OCIContainerRuntime {
     args.add(launchDst.toUri().getPath());
 
     String cgroupPath = getCgroupPath(resourcesOpts, "runc-" + containerIdStr);
-
     String pidFile = ctx.getExecutionAttribute(PID_FILE_PATH).toString();
 
     @SuppressWarnings("unchecked")
@@ -419,6 +427,11 @@ public class RuncContainerRuntime extends OCIContainerRuntime {
         nmPrivateTokensPath.toString(), https, keystore, truststore,
         localDirs, logDirs, layers,
         ociRuntimeConfig);
+
+    if (containerTransformerPlugin != null) {
+      runcContainerExecutorConfig =
+        containerTransformerPlugin.transform(runcContainerExecutorConfig);
+    }
 
     String commandFile = writeCommandToFile(
         runcContainerExecutorConfig, container);
@@ -633,6 +646,31 @@ public class RuncContainerRuntime extends OCIContainerRuntime {
       throw new ContainerExecutionException(e);
     }
     return runcManifestToResourcesPlugin;
+  }
+
+  protected RuncContainerTransformerPlugin chooseContainerTransformerPlugin()
+      throws ContainerExecutionException {
+    RuncContainerTransformerPlugin runcContainerTransformerPlugin = null;
+
+    // Optional plugin, will default to null if you do not specify
+    // within YARN configs
+    String pluginName = conf.get(NM_RUNC_CONTAINER_TRANSFORMER_PLUGIN, null);
+
+    if (pluginName == null) {
+      LOG.info("No runC container transformer plugin is specified in the" +
+          " configurations");
+    } else {
+      LOG.info("Using runC container transformer plugin: " + pluginName);
+      try {
+        Class<?> clazz = Class.forName(pluginName);
+        runcContainerTransformerPlugin =
+          (RuncContainerTransformerPlugin) clazz.newInstance();
+      } catch (Exception e) {
+        throw new ContainerExecutionException(e);
+      }
+    }
+
+    return runcContainerTransformerPlugin;
   }
 
   @SuppressWarnings("unchecked")
