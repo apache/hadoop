@@ -400,9 +400,11 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
           conf);
       fileSystemsOpenedInTest.add(fs);
+      // Default for this config should be true here as FNS Accounts would have failed initialization.
+      // This is needed to make sure test runs even if test config is missing.
       Assertions.assertThat(
           getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
-              false))
+              true))
           .describedAs("Encryption tests should run only on namespace enabled account")
           .isTrue();
       return fs;
