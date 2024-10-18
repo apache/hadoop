@@ -437,14 +437,17 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
 
   // decode old style block report of longs
   private static class LongsDecoder extends BlockListAsLongs {
-    private final List<Long> values;
+    private final long[] values;
     private final int finalizedBlocks;
     private final int numBlocks;
     private final int maxDataLength;
 
     // set the header
     LongsDecoder(List<Long> values, int maxDataLength) {
-      this.values = values.subList(2, values.size());
+      this.values = new long[values.size() - 2];
+      for (int i = 2; i < values.size(); i++) {
+        this.values[i - 2] = values.get(i);
+      }
       this.finalizedBlocks = values.get(0).intValue();
       this.numBlocks = finalizedBlocks + values.get(1).intValue();
       this.maxDataLength = maxDataLength;
@@ -466,11 +469,11 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
 
     @Override
     public long[] getBlockListAsLongs() {
-      long[] longs = new long[2+values.size()];
+      long[] longs = new long[2 + values.length];
       longs[0] = finalizedBlocks;
       longs[1] = numBlocks - finalizedBlocks;
-      for(int i=0; i<values.size(); i++) {
-        longs[2+i] = values.get(i);
+      for (int i = 0; i < values.length; i++) {
+        longs[2 + i] = values[i];
       }
       return longs;
     }
@@ -479,7 +482,7 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
     public Iterator<BlockReportReplica> iterator() {
       return new Iterator<BlockReportReplica>() {
         private final BlockReportReplica block = new BlockReportReplica();
-        final Iterator<Long> iter = values.iterator();
+        private int idx = 0;
         private int currentBlockIndex = 0;
 
         @Override
@@ -502,15 +505,15 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
           if (currentBlockIndex++ < finalizedBlocks) {
             block.setState(ReplicaState.FINALIZED);
           } else {
-            block.setState(ReplicaState.getState(iter.next().intValue()));
+            block.setState(ReplicaState.getState((int) values[idx++]));
           }
           return block;
         }
 
         private void readBlock() {
-          block.setBlockId(iter.next());
-          block.setNumBytes(iter.next());
-          block.setGenerationStamp(iter.next());
+          block.setBlockId(values[idx++]);
+          block.setNumBytes(values[idx++]);
+          block.setGenerationStamp(values[idx++]);
         }
 
         @Override
