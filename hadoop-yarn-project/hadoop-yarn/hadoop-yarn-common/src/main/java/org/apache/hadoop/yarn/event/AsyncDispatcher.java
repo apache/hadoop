@@ -41,6 +41,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -185,6 +186,8 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
                     YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD,
             YarnConfiguration.
                     DEFAULT_YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD);
+    Preconditions.checkArgument(this.detailsInterval > 0, "%s should be a positive integer",
+            YarnConfiguration.YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD);
 
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
         .setNameFormat("PrintEventDetailsThread #%d")
