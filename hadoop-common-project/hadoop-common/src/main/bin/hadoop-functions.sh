@@ -1126,6 +1126,8 @@ function hadoop_validate_classname
 ## @param        envvar
 ## @param        checkstring
 ## @param        appendstring
+
+
 function hadoop_add_param
 {
   #
@@ -1133,22 +1135,49 @@ function hadoop_add_param
   # $1 is what we are adding to
   # $2 is the name of what we want to add (key)
   # $3 is the key+value of what we're adding
-  #
+  #hadoop_finalize_hadoop_heap
   # doing it this way allows us to support all sorts of
   # different syntaxes, just so long as they are space
-  # delimited
+  # delimited.
   #
-  if [[ ! ${!1} =~ $2 ]] ; then
+  # testing with string regexp fails (see HADOOP-16649) : we' ll test equality on each string instead.
+  # reject if either key is already present in form of "-key[=]*" or value is already present
+
+  accepted=true
+
+  if [[ ${3:0:1} == "-" ]]; then
+    # first char of value is a - (ex: -Xmx1024), we search for presence of "key (ex: -Xmx)
+    for s in $(echo "${!1}" | tr ' ' '\n'); do
+      key="${s%=*}"
+      if [[ $key =~ -$2 ]] ; then {
+          accepted=false
+          hadoop_debug "${!1} already contains key $2 ($key) of value $3"
+          }
+     fi
+    done
+  else
+      for s in $(echo "${!1}" | tr ' ' '\n'); do
+      # first char of value is NOT a - : we search for presence of value (ex: hadoop-azure)
+      if  [[ "$3" = "$s" ]]  ; then
+        accepted=false
+        hadoop_debug "${!1}  already contains value $3"
+      fi
+    done
+  fi
+  if [ $accepted == true ]; then
+    hadoop_debug "'${!1}' accepted new key '$2', value '$3'"
     #shellcheck disable=SC2140
-    eval "$1"="'${!1} $3'"
+    eval "$1"="\"${!1} $3\""
     if [[ ${!1:0:1} = ' ' ]]; then
       #shellcheck disable=SC2140
-      eval "$1"="'${!1# }'"
+      eval "$1"="\"${!1# }\""
+
     fi
-    hadoop_debug "$1 accepted $3"
+    hadoop_debug "new string : '${!1}'"
   else
-    hadoop_debug "$1 declined $3"
+    hadoop_debug "skipped! "
   fi
+
 }
 
 ## @description  Register the given `shellprofile` to the Hadoop
