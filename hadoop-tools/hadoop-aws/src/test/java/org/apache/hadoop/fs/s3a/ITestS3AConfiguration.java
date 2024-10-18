@@ -80,6 +80,10 @@ public class ITestS3AConfiguration {
   private static final String AP_ILLEGAL_ACCESS =
       "ARN of type accesspoint cannot be passed as a bucket";
 
+  private static final String US_EAST_1 = "us-east-1";
+
+  private static final String STS_ENDPOINT = "sts.us-east-1.amazonaws.com";
+
   private Configuration conf;
   private S3AFileSystem fs;
 
@@ -576,8 +580,9 @@ public class ITestS3AConfiguration {
 
     final String bucket = fs.getBucket();
     StsClient stsClient =
-        STSClientFactory.builder(config, bucket, new AnonymousAWSCredentialsProvider(), "",
-            "").build();
+        STSClientFactory.builder(config, bucket, new AnonymousAWSCredentialsProvider(),
+                STS_ENDPOINT, US_EAST_1).build();
+
 
     intercept(StsException.class, "", () ->
         stsClient.getSessionToken());
