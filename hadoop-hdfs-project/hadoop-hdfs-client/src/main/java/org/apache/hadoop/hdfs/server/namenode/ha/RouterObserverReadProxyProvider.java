@@ -82,6 +82,15 @@ public class RouterObserverReadProxyProvider<T> extends AbstractNNFailoverProxyP
    */
   private volatile long lastMsyncTimeMs = -1;
 
+  /**
+   * A client using RouterObserverReadProxyProvider should first sync with the
+   * Active NameNode on startup. This ensures that the client reads data which
+   * is consistent with the state of the world as of the time of its
+   * instantiation. This variable will be true after this initial sync has
+   * been performed.
+   */
+  private volatile boolean msynced = false;
+
   public RouterObserverReadProxyProvider(Configuration conf, URI uri, Class<T> xface,
       HAProxyFactory<T> factory) {
     this(conf, uri, xface, factory, new IPFailoverProxyProvider<>(conf, uri, xface, factory));
@@ -156,6 +165,23 @@ public class RouterObserverReadProxyProvider<T> extends AbstractNNFailoverProxyP
 
   /**
    * This will call {@link ClientProtocol#msync()} on the active NameNode
+   * (via the {@link #innerProxy}) to initialize the state of this client.
+   * Calling it multiple times is a no-op; only the first will perform an
+   * msync.
+   *
+   * @see #msynced
+   */
+  private synchronized void initializeMsync() throws IOException {
+    if (msynced) {
+      return; // No need for an msync
+    }
+    getProxyAsClientProtocol(innerProxy.getProxy().proxy).msync();
+    msynced = true;
+    lastMsyncTimeMs = Time.monotonicNow();
+  }
+
+  /**
+   * This will call {@link ClientProtocol#msync()} on the active NameNode
    * (via the {@link #innerProxy}) to update the state of this client, only
    * if at least {@link #autoMsyncPeriodMs} ms has elapsed since the last time
    * an msync was performed.
@@ -209,7 +235,13 @@ public class RouterObserverReadProxyProvider<T> extends AbstractNNFailoverProxyP
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
       if (observerReadEnabled && isRead(method)) {
-        autoMsyncIfNecessary();
+        if (!msynced) {
+          // An msync() must first be performed to ensure that this client is
+          // up-to-date with the active's state. This will only be done once.
+          initializeMsync();
+        } else {
+          autoMsyncIfNecessary();
+        }
       }
 
       try {

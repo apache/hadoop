@@ -817,6 +817,55 @@ public class TestObserverWithRouter {
 
   @EnumSource(ConfigSetting.class)
   @ParameterizedTest
+  public void testAutoMsyncDefault(ConfigSetting configSetting) throws Exception {
+    Configuration clientConfiguration = getConfToEnableObserverReads(configSetting);
+    fileSystem = routerContext.getFileSystem(clientConfiguration);
+
+    List<? extends FederationNamenodeContext> namenodes = routerContext
+        .getRouter().getNamenodeResolver()
+        .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
+    assertEquals("First namenode should be observer", namenodes.get(0).getState(),
+        FederationNamenodeServiceState.OBSERVER);
+    Path path = new Path("/");
+
+    long rpcCountForActive;
+    long rpcCountForObserver;
+
+    // Send read requests
+    int numListings = 15;
+    for (int i = 0; i < numListings; i++) {
+      fileSystem.listFiles(path, false);
+    }
+    fileSystem.close();
+
+    rpcCountForActive = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+
+    rpcCountForObserver = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
+
+    switch (configSetting) {
+      case USE_NAMENODE_PROXY_FLAG:
+        // First read goes to active.
+        assertEquals("Calls sent to the active", 1, rpcCountForActive);
+        // The rest of the reads are sent to the observer.
+        assertEquals("Reads sent to observer", numListings - 1, rpcCountForObserver);
+        break;
+      case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
+      case USE_ROUTER_OBSERVER_READ_CONFIGURED_FAILOVER_PROXY_PROVIDER:
+        // An msync is sent to each active namenode.
+        assertEquals("Msyncs sent to the active namenodes",
+            NUM_NAMESERVICES * 1, rpcCountForActive);
+        // All reads should be sent of the observer.
+        assertEquals("Reads sent to observer", numListings, rpcCountForObserver);
+        break;
+      default:
+        Assertions.fail("Unknown config setting: " + configSetting);
+    }
+  }
+
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
   public void testAutoMsyncEqualsZero(ConfigSetting configSetting) throws Exception {
     Configuration clientConfiguration = getConfToEnableObserverReads(configSetting);
     String configKeySuffix =
