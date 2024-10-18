@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum;
 import org.apache.hadoop.fs.azurebfs.enums.RetryValue;
 import org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum;
@@ -70,7 +71,7 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
   public AbfsBackoffMetrics() {
     IOStatisticsStore ioStatisticsStore = iostatisticsStore()
             .withCounters(getMetricNames(TYPE_COUNTER))
-            .withCounters(getMetricNames(TYPE_GAUGE))
+            .withGauges(getMetricNames(TYPE_GAUGE))
             .build();
     setIOStatistics(ioStatisticsStore);
   }
@@ -100,7 +101,7 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
    */
   private String getMetricName(AbfsBackoffMetricsEnum metric, RetryValue retryValue) {
     if (RETRY.equals(metric.getType())) {
-      return retryValue + COLON + metric.getName();
+      return retryValue.getValue() + COLON + metric.getName();
     }
     return metric.getName();
   }
@@ -222,14 +223,14 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
 
     for (RetryValue retryCount : RETRY_LIST) {
       long totalRequests = getMetricValue(TOTAL_REQUESTS, retryCount);
-      metricString.append("$RCTSI$_").append(retryCount).append("R=").append(getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, retryCount));
+      metricString.append("$RCTSI$_").append(retryCount.getValue()).append("R=").append(getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, retryCount));
       if (totalRequests > 0) {
-        metricString.append("$MMA$_").append(retryCount).append("R=")
+        metricString.append("$MMA$_").append(retryCount.getValue()).append("R=")
                 .append(String.format("%.3f", (double) getMetricValue(MIN_BACK_OFF, retryCount) / THOUSAND)).append("s")
                 .append(String.format("%.3f", (double) getMetricValue(MAX_BACK_OFF, retryCount) / THOUSAND)).append("s")
                 .append(String.format("%.3f", (double) getMetricValue(TOTAL_BACK_OFF, retryCount) / totalRequests / THOUSAND)).append("s");
       } else {
-        metricString.append("$MMA$_").append(retryCount).append("R=0s");
+        metricString.append("$MMA$_").append(retryCount.getValue()).append("R=0s");
       }
     }
     metricString.append("$BWT=").append(getMetricValue(NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS))
@@ -243,5 +244,10 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
             .append("$MRC=").append(getMetricValue(MAX_RETRY_COUNT));
 
     return metricString.toString();
+  }
+
+  @VisibleForTesting
+  String[] getMetricNamesByType(StatisticTypeEnum type) {
+    return getMetricNames(type);
   }
 }

@@ -20,8 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-
-import static org.apache.hadoop.fs.azurebfs.enums.FileType.PARQUET;
+import org.junit.Before;
 
 /**
  * Unit test for Abfs read footer metrics
@@ -32,42 +31,47 @@ public class TestAbfsReadFooterMetrics {
     private static final int NEXT_READ_POS = 30000;
     private static final String TEST_FILE1 = "TestFile";
     private static final String TEST_FILE2 = "TestFile2";
+    private AbfsReadFooterMetrics metrics;
+
+    @Before
+    public void setUp() {
+        metrics = new AbfsReadFooterMetrics();
+    }
 
     /**
      * Tests that metrics are updated correctly for the first read of a file.
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
-    public void checkMetricUpdate_shouldUpdateMetricsForFirstRead() throws Exception {
-        AbfsReadFooterMetrics metrics = new AbfsReadFooterMetrics();
+    public void metricsUpdateForFirstRead() {
         metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
-        Assertions.assertThat(metrics.getTotalFiles()).isEqualTo(0);
-        Assertions.assertThat(metrics.getTotalReadCount()).isEqualTo(0);
+        Assertions.assertThat(metrics.getTotalFiles())
+                .describedAs("Total number of files")
+                .isEqualTo(0);
+        Assertions.assertThat(metrics.getTotalReadCount())
+                .describedAs("Total number of read count")
+                .isEqualTo(0);
     }
 
     /**
      * Tests that metrics are updated correctly for the second read of the same file.
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
-    public void checkMetricUpdate_shouldUpdateMetricsForSecondRead() throws Exception {
-        AbfsReadFooterMetrics metrics = new AbfsReadFooterMetrics();
+    public void metricsUpdateForSecondRead() {
         metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
         metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+LENGTH);
-        Assertions.assertThat(metrics.getTotalFiles()).isEqualTo(1);
-        Assertions.assertThat(metrics.getTotalReadCount()).isEqualTo(0);
+        Assertions.assertThat(metrics.getTotalFiles())
+                .describedAs("Total number of files")
+                .isEqualTo(1);
+        Assertions.assertThat(metrics.getTotalReadCount())
+                .describedAs("Total number of read count")
+                .isEqualTo(0);
     }
 
     /**
      * Tests that metrics are updated correctly for multiple reads in one files.
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
-    public void checkMetricUpdate_shouldHandleMultipleFiles() throws Exception {
-        AbfsReadFooterMetrics metrics = new AbfsReadFooterMetrics();
+    public void metricsUpdateForOneFile() {
         metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
         metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+LENGTH);
         metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+2*LENGTH);
@@ -84,12 +88,9 @@ public class TestAbfsReadFooterMetrics {
 
     /**
      * Tests that the getReadFooterMetrics method returns the correct metrics after multiple reads on different files.
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
-    public void getReadFooterMetrics_shouldReturnCorrectMetrics() throws Exception {
-        AbfsReadFooterMetrics metrics = new AbfsReadFooterMetrics();
+    public void metricsUpdateForMultipleFiles() {
         metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
         metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+LENGTH);
         metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+2*LENGTH);
