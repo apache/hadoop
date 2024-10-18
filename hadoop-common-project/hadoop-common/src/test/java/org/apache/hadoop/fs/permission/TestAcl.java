@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.fs.permission;
 
-import static org.junit.Assert.*;
-
+import org.assertj.core.api.Assertions;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -136,75 +135,74 @@ public class TestAcl {
 
   @Test
   public void testEntryEquals() {
-    assertNotSame(ENTRY1, ENTRY2);
-    assertNotSame(ENTRY1, ENTRY3);
-    assertNotSame(ENTRY1, ENTRY4);
-    assertNotSame(ENTRY2, ENTRY3);
-    assertNotSame(ENTRY2, ENTRY4);
-    assertNotSame(ENTRY3, ENTRY4);
-    assertEquals(ENTRY1, ENTRY1);
-    assertEquals(ENTRY2, ENTRY2);
-    assertEquals(ENTRY1, ENTRY2);
-    assertEquals(ENTRY2, ENTRY1);
-    assertFalse(ENTRY1.equals(ENTRY3));
-    assertFalse(ENTRY1.equals(ENTRY4));
-    assertFalse(ENTRY3.equals(ENTRY4));
-    assertFalse(ENTRY1.equals(null));
-    assertFalse(ENTRY1.equals(new Object()));
+    Assertions.assertThat(ENTRY2).isNotSameAs(ENTRY1);
+    Assertions.assertThat(ENTRY3).isNotSameAs(ENTRY1);
+    Assertions.assertThat(ENTRY4).isNotSameAs(ENTRY1);
+    Assertions.assertThat(ENTRY3).isNotSameAs(ENTRY2);
+    Assertions.assertThat(ENTRY4).isNotSameAs(ENTRY2);
+    Assertions.assertThat(ENTRY4).isNotSameAs(ENTRY3);
+    Assertions.assertThat(ENTRY1).isEqualTo(ENTRY1);
+    Assertions.assertThat(ENTRY2).isEqualTo(ENTRY2);
+    Assertions.assertThat(ENTRY2).isEqualTo(ENTRY1);
+    Assertions.assertThat(ENTRY1).isEqualTo(ENTRY2);
+    Assertions.assertThat(ENTRY1).isNotEqualTo(ENTRY3);
+    Assertions.assertThat(ENTRY1).isNotEqualTo(ENTRY4);
+    Assertions.assertThat(ENTRY3).isNotEqualTo(ENTRY4);
+    Assertions.assertThat(ENTRY1).isNotEqualTo(null);
+    Assertions.assertThat(ENTRY1).isNotEqualTo(new Object());
   }
 
   @Test
   public void testEntryHashCode() {
-    assertEquals(ENTRY1.hashCode(), ENTRY2.hashCode());
-    assertFalse(ENTRY1.hashCode() == ENTRY3.hashCode());
-    assertFalse(ENTRY1.hashCode() == ENTRY4.hashCode());
-    assertFalse(ENTRY3.hashCode() == ENTRY4.hashCode());
+    Assertions.assertThat(ENTRY2.hashCode()).isEqualTo(ENTRY1.hashCode());
+    Assertions.assertThat(ENTRY1.hashCode()).isNotEqualTo(ENTRY3.hashCode());
+    Assertions.assertThat(ENTRY1.hashCode()).isNotEqualTo(ENTRY4.hashCode());
+    Assertions.assertThat(ENTRY3.hashCode()).isNotEqualTo(ENTRY4.hashCode());
   }
 
   @Test
   public void testEntryScopeIsAccessIfUnspecified() {
-    assertEquals(AclEntryScope.ACCESS, ENTRY1.getScope());
-    assertEquals(AclEntryScope.ACCESS, ENTRY2.getScope());
-    assertEquals(AclEntryScope.ACCESS, ENTRY3.getScope());
-    assertEquals(AclEntryScope.DEFAULT, ENTRY4.getScope());
+    Assertions.assertThat(ENTRY1.getScope()).isEqualTo(AclEntryScope.ACCESS);
+    Assertions.assertThat(ENTRY2.getScope()).isEqualTo(AclEntryScope.ACCESS);
+    Assertions.assertThat(ENTRY3.getScope()).isEqualTo(AclEntryScope.ACCESS);
+    Assertions.assertThat(ENTRY4.getScope()).isEqualTo(AclEntryScope.DEFAULT);
   }
 
   @Test
   public void testStatusEquals() {
-    assertNotSame(STATUS1, STATUS2);
-    assertNotSame(STATUS1, STATUS3);
-    assertNotSame(STATUS2, STATUS3);
-    assertEquals(STATUS1, STATUS1);
-    assertEquals(STATUS2, STATUS2);
-    assertEquals(STATUS1, STATUS2);
-    assertEquals(STATUS2, STATUS1);
-    assertFalse(STATUS1.equals(STATUS3));
-    assertFalse(STATUS2.equals(STATUS3));
-    assertFalse(STATUS1.equals(null));
-    assertFalse(STATUS1.equals(new Object()));
+    Assertions.assertThat(STATUS2).isNotSameAs(STATUS1);
+    Assertions.assertThat(STATUS3).isNotSameAs(STATUS1);
+    Assertions.assertThat(STATUS3).isNotSameAs(STATUS2);
+    Assertions.assertThat(STATUS1).isEqualTo(STATUS1);
+    Assertions.assertThat(STATUS2).isEqualTo(STATUS2);
+    Assertions.assertThat(STATUS2).isEqualTo(STATUS1);
+    Assertions.assertThat(STATUS1).isEqualTo(STATUS2);
+    Assertions.assertThat(STATUS1).isNotEqualTo(STATUS3);
+    Assertions.assertThat(STATUS2).isNotEqualTo(STATUS3);
+    Assertions.assertThat(STATUS1).isNotEqualTo(null);
+    Assertions.assertThat(STATUS1).isNotEqualTo(new Object());
   }
 
   @Test
   public void testStatusHashCode() {
-    assertEquals(STATUS1.hashCode(), STATUS2.hashCode());
-    assertFalse(STATUS1.hashCode() == STATUS3.hashCode());
+    Assertions.assertThat(STATUS2.hashCode()).isEqualTo(STATUS1.hashCode());
+    Assertions.assertThat(STATUS1.hashCode()).isNotEqualTo(STATUS3.hashCode());
   }
 
   @Test
   public void testToString() {
-    assertEquals("user:user1:rwx", ENTRY1.toString());
-    assertEquals("user:user1:rwx", ENTRY2.toString());
-    assertEquals("group:group2:rw-", ENTRY3.toString());
-    assertEquals("default:other::---", ENTRY4.toString());
+    Assertions.assertThat(ENTRY1.toString()).isEqualTo("user:user1:rwx");
+    Assertions.assertThat(ENTRY2.toString()).isEqualTo("user:user1:rwx");
+    Assertions.assertThat(ENTRY3.toString()).isEqualTo("group:group2:rw-");
+    Assertions.assertThat(ENTRY4.toString()).isEqualTo("default:other::---");
 
-    assertEquals(
-      "owner: owner1, group: group1, acl: {entries: [user:user1:rwx, group:group2:rw-, default:other::---], stickyBit: false}",
-      STATUS1.toString());
-    assertEquals(
-      "owner: owner1, group: group1, acl: {entries: [user:user1:rwx, group:group2:rw-, default:other::---], stickyBit: false}",
-      STATUS2.toString());
-    assertEquals(
-      "owner: owner2, group: group2, acl: {entries: [], stickyBit: true}",
-      STATUS3.toString());
+    Assertions.assertThat(STATUS1.toString()).isEqualTo(
+        "owner: owner1, group: group1, acl: {entries: "
+            + "[user:user1:rwx, group:group2:rw-, default:other::---], stickyBit: false}");
+    Assertions.assertThat(STATUS2.toString()).isEqualTo(
+        "owner: owner1, group: group1, acl: {entries: "
+            + "[user:user1:rwx, group:group2:rw-, default:other::---], stickyBit: false}");
+    Assertions.assertThat(STATUS3.toString())
+        .isEqualTo("owner: owner2, group: group2, acl: {entries: [], stickyBit: true}");
   }
 }
