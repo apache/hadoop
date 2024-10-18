@@ -58,9 +58,13 @@ public class WebPageUtils {
     StringBuilder sb = new StringBuilder();
     sb.append("[\n")
       .append("{'sType':'natural', 'aTargets': [0], ")
-      .append("'mRender': parseHadoopID },\n")
-      .append("{'sType':'num-ignore-str', 'aTargets': [7, 8, 9], ")
-      .append("'mRender': renderHadoopDate },\n");
+      .append("'mRender': parseHadoopID },\n");
+    if (isResourceManager) {
+      sb.append("{'sType':'num-ignore-str', 'aTargets': [7, 8, 9], ");
+    } else if (isFairSchedulerPage) {
+      sb.append("{'sType':'num-ignore-str', 'aTargets': [6, 7], ");
+    }
+    sb.append("'mRender': renderHadoopDate },\n");
     if (isResourceManager) {
       // Update following line if any column added in RM page before column 11
       sb.append("{'sType':'num-ignore-str', ")
