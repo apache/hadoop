@@ -113,7 +113,7 @@ final class BalancerParameters {
     return this.sortTopNodes;
   }
 
-  int getlimitOverUtilizedNum() {
+  int getLimitOverUtilizedNum() {
     return this.limitOverUtilizedNum;
   }
 

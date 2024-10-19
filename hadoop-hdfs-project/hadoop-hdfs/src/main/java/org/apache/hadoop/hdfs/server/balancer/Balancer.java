@@ -355,7 +355,7 @@ public class Balancer {
     this.sourceNodes = p.getSourceNodes();
     this.runDuringUpgrade = p.getRunDuringUpgrade();
     this.sortTopNodes = p.getSortTopNodes();
-    this.limitOverUtilizedNum = p.getlimitOverUtilizedNum();
+    this.limitOverUtilizedNum = p.getLimitOverUtilizedNum();
 
     this.maxSizeToMove = getLongBytes(conf,
         DFSConfigKeys.DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY,
@@ -472,8 +472,8 @@ public class Balancer {
     metrics.setNumOfUnderUtilizedNodes(underUtilized.size());
 
     Preconditions.checkState(dispatcher.getStorageGroupMap().size() - excludedOverUtilizedNum
-            == overUtilized.size() + underUtilized.size() + aboveAvgUtilized.size()
-            + belowAvgUtilized.size(),
+        == overUtilized.size() + underUtilized.size() + aboveAvgUtilized.size()
+           + belowAvgUtilized.size(),
         "Mismatched number of storage groups");
     
     // return number of bytes to be moved in order to make the cluster balanced
