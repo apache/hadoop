@@ -470,7 +470,7 @@ public class Balancer {
     logUtilizationCollections();
     metrics.setNumOfOverUtilizedNodes(overUtilized.size());
     metrics.setNumOfUnderUtilizedNodes(underUtilized.size());
-
+    
     Preconditions.checkState(dispatcher.getStorageGroupMap().size() - excludedOverUtilizedNum
         == overUtilized.size() + underUtilized.size() + aboveAvgUtilized.size()
            + belowAvgUtilized.size(),
