@@ -32,6 +32,8 @@ import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_GAUGE;
 
 public class TestAbfsBackoffMetrics {
     private AbfsBackoffMetrics metrics;
+    private static final int TOTAL_COUNTERS = 22;
+    private static final int TOTAL_GAUGES = 21;
 
     @Before
     public void setUp() {
@@ -44,10 +46,10 @@ public class TestAbfsBackoffMetrics {
         String[] gaugeMetrics = metrics.getMetricNamesByType(TYPE_GAUGE);
         Assertions.assertThat(counterMetrics.length)
                 .describedAs("Counter metrics should have 22 elements")
-                .isEqualTo(22);
+                .isEqualTo(TOTAL_COUNTERS);
         Assertions.assertThat(gaugeMetrics.length)
                 .describedAs("Counter metrics should have 21 elements")
-                .isEqualTo(21);
+                .isEqualTo(TOTAL_GAUGES);
     }
 
     @Test
