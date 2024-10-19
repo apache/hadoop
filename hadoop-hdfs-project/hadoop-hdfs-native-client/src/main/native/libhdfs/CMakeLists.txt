@@ -67,7 +67,7 @@ set(LIBHDFS_VERSION "0.0.0")
 set_target_properties(hdfs PROPERTIES
     SOVERSION ${LIBHDFS_VERSION})
 
-build_libhdfs_test(test_libhdfs_ops hdfs_static test_libhdfs_ops.c ../libhdfs/hdfs.c)
+build_libhdfs_test(test_libhdfs_ops hdfs_static test_libhdfs_ops.c)
 link_libhdfs_test(test_libhdfs_ops hdfs_static native_mini_dfs ${JAVA_JVM_LIBRARY})
 add_libhdfs_test(test_libhdfs_ops hdfs_static)
 
