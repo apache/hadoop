@@ -156,8 +156,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/create-container">
-   *   Create Container</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#create-container">Create Container</a>.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
@@ -180,8 +179,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/set-container-metadata">
-   *   Set Container Metadata</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#set-container-metadata">Set Container Metadata</a>.
    * @param properties comma separated list of metadata key-value pairs.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
@@ -216,8 +214,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-container-properties">
-   *   Get Container Metadata</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#get-container-properties">Get Container Metadata</a>.
    * Gets all the properties of the filesystem.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
@@ -241,8 +238,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/delete-container">
-   *   Delete Container</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#delete-container">Delete Container</a>.
    * Deletes the Container acting as current filesystem.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
@@ -266,8 +262,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/list-blobs">
-   *   List Blobs</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#list-blobs">List Blobs</a>.
    * @param relativePath to return only blobs with names that begin with the specified prefix.
    * @param recursive to return all blobs in the path, including those in subdirectories.
    * @param listMaxResults maximum number of blobs to return.
@@ -288,8 +283,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob">
-   *   Put Blob</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#put-blob">Put Blob</a>.
    * Creates a file or directory(marker file) at specified path.
    * @param path of the directory to be created.
    * @param tracingContext for tracing the service call.
@@ -311,8 +305,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">
-   *   Lease Blob</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#lease-blob">Lease Blob</a>.
    * @param path on which lease has to be acquired.
    * @param duration for which lease has to be acquired.
    * @param tracingContext for tracing the service call.
@@ -340,8 +333,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">
-   *   Lease Blob</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#lease-blob">Lease Blob</a>.
    * @param path on which lease has to be renewed.
    * @param leaseId of the lease to be renewed.
    * @param tracingContext for tracing the service call.
@@ -368,8 +360,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">
-   *   Lease Blob</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#lease-blob">Lease Blob</a>.
    * @param path on which lease has to be released.
    * @param leaseId of the lease to be released.
    * @param tracingContext for tracing the service call.
@@ -396,8 +387,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">
-   *   Lease Blob</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#lease-blob">Lease Blob</a>.
    * @param path on which lease has to be broken.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
@@ -450,8 +440,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/put-block">
-   *   Put Block</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#put-block">Put Block</a>.
    * Uploads data to be appended to a file.
    * @param path to which data has to be appended.
    * @param buffer containing data to be appended.
@@ -573,8 +562,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/put-block-list">
-   *   Put Block List</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#put-block-list">Put Block List</a>.
    * The flush operation to commit the blocks.
    * @param buffer This has the xml in byte format with the blockIds to be flushed.
    * @param path The path to flush the data to.
@@ -644,8 +632,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/set-blob-metadata">
-   *   Set Blob Metadata</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#set-blob-metadata">Set Blob Metadata</a>.
    * Set the properties of a file or directory.
    * @param path on which properties have to be set.
    * @param properties comma separated list of metadata key-value pairs.
@@ -686,8 +673,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob-properties">
-   *   Get Blob Properties</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#get-blob-properties">Get Blob Properties</a>.
    * Get the properties of a file or directory.
    * @param path of which properties have to be fetched.
    * @param includeProperties to include user defined properties.
@@ -709,8 +695,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob-properties">
-   *   Get Blob Properties</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#get-blob-properties">Get Blob Properties</a>.
    * Get the properties of a file or directory.
    * @param path of which properties have to be fetched.
    * @param tracingContext for tracing the service call.
@@ -764,8 +749,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob">
-   *   Get Blob</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#get-blob">Get Blob</a>.
    * Read the contents of the file at specified path
    * @param path of the file to be read.
    * @param position in the file from where data has to be read.
@@ -956,8 +940,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-block-list">
-   *   Get Block List</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#get-block-list">Get Block List</a>.
    * Get the list of committed block ids of the blob.
    * @param path The path to get the list of blockId's.
    * @param tracingContext for tracing the service call.
@@ -985,8 +968,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/copy-blob">
-   *   Copy Blob</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#copy-blob">Copy Blob</a>.
    * This is an asynchronous API, it returns copyId and expects client
    * to poll the server on the destination and check the copy-progress.
    * @param sourceBlobPath path of source to be copied.
@@ -1028,8 +1010,7 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Get Rest Operation for API
-   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/delete-blob">
-   *   Delete Blob</a>.
+   * <a href="../../../../site/markdown/blobEndpoint.md#delete-blob">Delete Blob</a>.
    * Deletes the blob at the given path.
    * @param blobPath path of the blob to be deleted.
    * @param leaseId if path has an active lease.

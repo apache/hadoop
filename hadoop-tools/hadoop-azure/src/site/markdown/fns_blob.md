@@ -27,7 +27,7 @@ Refer to [WASB Deprication](./wasb.html) for more details.
 
 ## Azure Service Endpoints Used by ABFS Driver
 Azure Services offers two set of endpoints for interacting with storage accounts:
-1. [Azure Blob Storage](https://learn.microsoft.com/en-us/rest/api/storageservices/blob-service-rest-api) referred as Blob Endpoint
+1. [Azure Blob Storage](./blobEndpoint.md) referred as Blob Endpoint
 2. [Azure Data Lake Storage](https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/operation-groups) referred as DFS Endpoint
 
 The ABFS Driver by default is designed to work with DFS Endpoint only which primarily

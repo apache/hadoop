@@ -97,6 +97,9 @@ public final class AbfsHttpConstants {
 
   public static final String APN_VERSION = "APN/1.0";
   public static final String CLIENT_VERSION = "Azure Blob FS/" + VersionInfo.getVersion();
+  /**
+   * {@value}.
+   */
   public static final String TOKEN_VERSION = "2";
 
   // Abfs Http Verb
