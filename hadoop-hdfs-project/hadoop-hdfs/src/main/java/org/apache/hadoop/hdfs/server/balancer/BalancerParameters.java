@@ -38,6 +38,11 @@ final class BalancerParameters {
    */
   private final Set<String> sourceNodes;
   /**
+   * If empty, any node can be a target; otherwise, use only these nodes as
+   * target nodes.
+   */
+  private final Set<String> targetNodes;
+  /**
    * A set of block pools to run the balancer on.
    */
   private final Set<String> blockpools;
@@ -63,6 +68,7 @@ final class BalancerParameters {
     this.excludedNodes = builder.excludedNodes;
     this.includedNodes = builder.includedNodes;
     this.sourceNodes = builder.sourceNodes;
+    this.targetNodes = builder.targetNodes;
     this.blockpools = builder.blockpools;
     this.runDuringUpgrade = builder.runDuringUpgrade;
     this.runAsService = builder.runAsService;
@@ -94,6 +100,10 @@ final class BalancerParameters {
     return this.sourceNodes;
   }
 
+  Set<String> getTargetNodes() {
+    return this.targetNodes;
+  }
+
   Set<String> getBlockPools() {
     return this.blockpools;
   }
@@ -119,12 +129,13 @@ final class BalancerParameters {
     return String.format("%s.%s [%s," + " threshold = %s,"
         + " max idle iteration = %s," + " #excluded nodes = %s,"
         + " #included nodes = %s," + " #source nodes = %s,"
+        + " #target nodes = %s,"
         + " #blockpools = %s," + " run during upgrade = %s,"
         + " sort top nodes = %s,"
         + " hot block time interval = %s]",
         Balancer.class.getSimpleName(), getClass().getSimpleName(), policy,
         threshold, maxIdleIteration, excludedNodes.size(),
-        includedNodes.size(), sourceNodes.size(), blockpools.size(),
+        includedNodes.size(), sourceNodes.size(), targetNodes.size(), blockpools.size(),
         runDuringUpgrade, sortTopNodes, hotBlockTimeInterval);
   }
 
@@ -137,6 +148,7 @@ final class BalancerParameters {
     private Set<String> excludedNodes = Collections.<String> emptySet();
     private Set<String> includedNodes = Collections.<String> emptySet();
     private Set<String> sourceNodes = Collections.<String> emptySet();
+    private Set<String> targetNodes = Collections.<String> emptySet();
     private Set<String> blockpools = Collections.<String> emptySet();
     private boolean runDuringUpgrade = false;
     private boolean runAsService = false;
@@ -178,6 +190,11 @@ final class BalancerParameters {
 
     Builder setSourceNodes(Set<String> nodes) {
       this.sourceNodes = nodes;
+      return this;
+    }
+
+    Builder setTargetNodes(Set<String> nodes) {
+      this.targetNodes = nodes;
       return this;
     }
 

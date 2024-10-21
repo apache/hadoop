@@ -195,6 +195,8 @@ public class Balancer {
       + "\tIncludes only the specified datanodes."
       + "\n\t[-source [-f <hosts-file> | <comma-separated list of hosts>]]"
       + "\tPick only the specified datanodes as source nodes."
+      + "\n\t[-target [-f <hosts-file> | <comma-separated list of hosts>]]"
+      + "\tPick only the specified datanodes as target nodes."
       + "\n\t[-blockpools <comma-separated list of blockpool ids>]"
       + "\tThe balancer will only run on blockpools included in this list."
       + "\n\t[-idleiterations <idleiterations>]"
@@ -222,6 +224,7 @@ public class Balancer {
   private final NameNodeConnector nnc;
   private final BalancingPolicy policy;
   private final Set<String> sourceNodes;
+  private final Set<String> targetNodes;
   private final boolean runDuringUpgrade;
   private final double threshold;
   private final long maxSizeToMove;
@@ -350,6 +353,7 @@ public class Balancer {
     this.threshold = p.getThreshold();
     this.policy = p.getBalancingPolicy();
     this.sourceNodes = p.getSourceNodes();
+    this.targetNodes = p.getTargetNodes();
     this.runDuringUpgrade = p.getRunDuringUpgrade();
     this.sortTopNodes = p.getSortTopNodes();
 
@@ -408,6 +412,7 @@ public class Balancer {
     for(DatanodeStorageReport r : reports) {
       final DDatanode dn = dispatcher.newDatanode(r.getDatanodeInfo());
       final boolean isSource = Util.isIncluded(sourceNodes, dn.getDatanodeInfo());
+      final boolean isTarget = Util.isIncluded(targetNodes, dn.getDatanodeInfo());
       for(StorageType t : StorageType.getMovableTypes()) {
         final Double utilization = policy.getUtilization(r, t);
         if (utilization == null) { // datanode does not have such storage type
@@ -419,6 +424,12 @@ public class Balancer {
           LOG.info(dn + "[" + t + "] has utilization=" + utilization
               + " >= average=" + average
               + " but it is not specified as a source; skipping it.");
+          continue;
+        }
+        if (utilization <= average && !isTarget) {
+          LOG.info(dn + "[" + t + "] has utilization=" + utilization
+              + " <= average=" + average
+              + " but it is not specified as a target; skipping it.");
           continue;
         }
 
@@ -804,6 +815,7 @@ public class Balancer {
     LOG.info("included nodes = " + p.getIncludedNodes());
     LOG.info("excluded nodes = " + p.getExcludedNodes());
     LOG.info("source nodes = " + p.getSourceNodes());
+    LOG.info("target nodes = " + p.getTargetNodes());
     checkKeytabAndInit(conf);
     System.out.println("Time Stamp               Iteration#"
         + "  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved"
@@ -1034,6 +1046,10 @@ public class Balancer {
               Set<String> sourceNodes = new HashSet<>();
               i = processHostList(args, i, "source", sourceNodes);
               b.setSourceNodes(sourceNodes);
+            } else if ("-target".equalsIgnoreCase(args[i])) {
+              Set<String> targetNodes = new HashSet<>();
+              i = processHostList(args, i, "target", targetNodes);
+              b.setTargetNodes(targetNodes);
             } else if ("-blockpools".equalsIgnoreCase(args[i])) {
               Preconditions.checkArgument(
                   ++i < args.length,

@@ -1247,6 +1247,14 @@ public class TestBalancer {
     } catch (IllegalArgumentException ignored) {
       // expected
     }
+
+    parameters = new String[] {"-target"};
+    try {
+      Balancer.Cli.parse(parameters);
+      fail(reason + " for -target parameter");
+    } catch (IllegalArgumentException ignored) {
+      // expected
+    }
   }
 
   @Test
