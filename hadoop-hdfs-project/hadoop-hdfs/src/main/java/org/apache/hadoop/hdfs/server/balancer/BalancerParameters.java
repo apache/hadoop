@@ -38,10 +38,20 @@ final class BalancerParameters {
    */
   private final Set<String> sourceNodes;
   /**
+   * If empty, any node can be a source; otherwise, these nodes will be excluded as
+   * source nodes.
+   */
+  private final Set<String> excludedSourceNodes;
+  /**
    * If empty, any node can be a target; otherwise, use only these nodes as
    * target nodes.
    */
   private final Set<String> targetNodes;
+  /**
+   * If empty, any node can be a target; otherwise, these nodes will be excluded as
+   * target nodes.
+   */
+  private final Set<String> excludedTargetNodes;
   /**
    * A set of block pools to run the balancer on.
    */
@@ -68,7 +78,9 @@ final class BalancerParameters {
     this.excludedNodes = builder.excludedNodes;
     this.includedNodes = builder.includedNodes;
     this.sourceNodes = builder.sourceNodes;
+    this.excludedSourceNodes = builder.excludedSourceNodes;
     this.targetNodes = builder.targetNodes;
+    this.excludedTargetNodes = builder.excludedTargetNodes;
     this.blockpools = builder.blockpools;
     this.runDuringUpgrade = builder.runDuringUpgrade;
     this.runAsService = builder.runAsService;
@@ -100,8 +112,16 @@ final class BalancerParameters {
     return this.sourceNodes;
   }
 
+  Set<String> getExcludedSourceNodes() {
+    return this.excludedSourceNodes;
+  }
+
   Set<String> getTargetNodes() {
     return this.targetNodes;
+  }
+
+  Set<String> getExcludedTargetNodes() {
+    return this.excludedTargetNodes;
   }
 
   Set<String> getBlockPools() {
@@ -148,7 +168,9 @@ final class BalancerParameters {
     private Set<String> excludedNodes = Collections.<String> emptySet();
     private Set<String> includedNodes = Collections.<String> emptySet();
     private Set<String> sourceNodes = Collections.<String> emptySet();
+    private Set<String> excludedSourceNodes = Collections.<String> emptySet();
     private Set<String> targetNodes = Collections.<String> emptySet();
+    private Set<String> excludedTargetNodes = Collections.<String> emptySet();
     private Set<String> blockpools = Collections.<String> emptySet();
     private boolean runDuringUpgrade = false;
     private boolean runAsService = false;
@@ -193,8 +215,18 @@ final class BalancerParameters {
       return this;
     }
 
+    Builder setExcludedSourceNodes(Set<String> nodes) {
+      this.excludedSourceNodes = nodes;
+      return this;
+    }
+
     Builder setTargetNodes(Set<String> nodes) {
       this.targetNodes = nodes;
+      return this;
+    }
+
+    Builder setExcludedTargetNodes(Set<String> nodes) {
+      this.excludedTargetNodes = nodes;
       return this;
     }
 
