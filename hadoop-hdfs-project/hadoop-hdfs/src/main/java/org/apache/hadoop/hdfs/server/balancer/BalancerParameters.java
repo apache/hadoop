@@ -149,14 +149,15 @@ final class BalancerParameters {
     return String.format("%s.%s [%s," + " threshold = %s,"
         + " max idle iteration = %s," + " #excluded nodes = %s,"
         + " #included nodes = %s," + " #source nodes = %s,"
-        + " #target nodes = %s,"
+        + " #excluded source nodes = %s," + " #target nodes = %s,"
+        + " #excluded target nodes = %s,"
         + " #blockpools = %s," + " run during upgrade = %s,"
         + " sort top nodes = %s,"
         + " hot block time interval = %s]",
         Balancer.class.getSimpleName(), getClass().getSimpleName(), policy,
         threshold, maxIdleIteration, excludedNodes.size(),
-        includedNodes.size(), sourceNodes.size(), targetNodes.size(), blockpools.size(),
-        runDuringUpgrade, sortTopNodes, hotBlockTimeInterval);
+        includedNodes.size(), sourceNodes.size(), excludedSourceNodes.size(), targetNodes.size(),
+        excludedTargetNodes.size(), blockpools.size(), runDuringUpgrade, sortTopNodes, hotBlockTimeInterval);
   }
 
   static class Builder {
