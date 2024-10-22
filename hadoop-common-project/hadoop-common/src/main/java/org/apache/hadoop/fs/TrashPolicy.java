@@ -25,6 +25,9 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /** 
  * This interface is used for implementing different Trash policies.
  * Provides factory method to create instances of the configured Trash policy.
@@ -32,9 +35,34 @@ import java.io.IOException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class TrashPolicy extends Configured {
-  protected FileSystem fs; // the FileSystem
-  protected Path trash; // path to trash directory
-  protected long deletionInterval; // deletion interval for Emptier
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TrashPolicy.class);
+
+  /**
+   * Global configuration key for the Trash policy classname: {@value}.
+   */
+  public static final String FS_TRASH_CLASSNAME = "fs.trash.classname";
+
+  /**
+   * FS specific configuration key for the Trash policy classname: {@value}.
+   */
+  public static final String FS_TRASH_SCHEMA_CLASSNAME = "fs.%s.trash.classname";
+
+  /**
+   * The FileSystem.
+   */
+  protected FileSystem fs;
+
+  /**
+   * The path to trash directory.
+   */
+  protected Path trash;
+
+  /**
+   * The deletion interval for Emptier.
+   */
+  protected long deletionInterval;
 
   /**
    * Used to setup the trash policy. Must be implemented by all TrashPolicy
@@ -55,7 +83,7 @@ public abstract class TrashPolicy extends Configured {
    * @param fs the filesystem to be used
    */
   public void initialize(Configuration conf, FileSystem fs) {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("TrashPolicy");
   }
 
   /**
@@ -127,6 +155,30 @@ public abstract class TrashPolicy extends Configured {
   public abstract Runnable getEmptier() throws IOException;
 
   /**
+   * Get the filesystem
+   * @return the FS
+   */
+  public FileSystem getFileSystem() {
+    return fs;
+  }
+
+  /**
+   * Get the path to trash directory.
+   * @return The path to trash directory.
+   */
+  public Path getTrash() {
+    return trash;
+  }
+
+  /**
+   * The deletion interval for Emptier.
+   * @return The deletion interval for Emptier.
+   */
+  public long getDeletionInterval() {
+    return deletionInterval;
+  }
+
+  /**
    * Get an instance of the configured TrashPolicy based on the value
    * of the configuration parameter fs.trash.classname.
    *
@@ -139,23 +191,38 @@ public abstract class TrashPolicy extends Configured {
   @Deprecated
   public static TrashPolicy getInstance(Configuration conf, FileSystem fs, Path home) {
     Class<? extends TrashPolicy> trashClass = conf.getClass(
-        "fs.trash.classname", TrashPolicyDefault.class, TrashPolicy.class);
+        FS_TRASH_CLASSNAME, TrashPolicyDefault.class, TrashPolicy.class);
     TrashPolicy trash = ReflectionUtils.newInstance(trashClass, conf);
     trash.initialize(conf, fs, home); // initialize TrashPolicy
     return trash;
   }
 
   /**
-   * Get an instance of the configured TrashPolicy based on the value
-   * of the configuration parameter fs.trash.classname.
-   *
-   * @param conf the configuration to be used
+   * Get an instance of the configured TrashPolicy based on the value of
+   * the configuration parameter
+   * <ol>
+   *   <li>{@code fs.${fs.getUri().getScheme()}.trash.classname}</li>
+   *   <li>{@code fs.trash.classname}</li>
+   * </ol>
+   * The configuration passed in is used to look up both values and load
+   * in the policy class, not that of the FileSystem instance.
+   * @param conf the configuration to be used for lookup and classloading
    * @param fs the file system to be used
    * @return an instance of TrashPolicy
    */
+  @SuppressWarnings("ClassReferencesSubclass")
   public static TrashPolicy getInstance(Configuration conf, FileSystem fs) {
+    String scheme = fs.getUri().getScheme();
+    String key = String.format(FS_TRASH_SCHEMA_CLASSNAME, scheme);
+    if (conf.get(key) == null) {
+      // no specific trash policy for this scheme, use the default key
+      key = FS_TRASH_CLASSNAME;
+    }
+    LOG.debug("Looking up trash policy from configuration key {}", key);
     Class<? extends TrashPolicy> trashClass = conf.getClass(
-        "fs.trash.classname", TrashPolicyDefault.class, TrashPolicy.class);
+        key, TrashPolicyDefault.class, TrashPolicy.class);
+    LOG.debug("Trash policy class: {}", trashClass);
+
     TrashPolicy trash = ReflectionUtils.newInstance(trashClass, conf);
     trash.initialize(conf, fs); // initialize TrashPolicy
     return trash;

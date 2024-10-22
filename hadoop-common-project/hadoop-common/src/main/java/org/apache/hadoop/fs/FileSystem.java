@@ -85,6 +85,8 @@ import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.tracing.TraceScope;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.functional.ConsumerRaisingIOE;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,6 +94,8 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_BU
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
+import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -3452,23 +3456,29 @@ public abstract class FileSystem extends Configured
   public Collection<FileStatus> getTrashRoots(boolean allUsers) {
     Path userHome = new Path(getHomeDirectory().toUri().getPath());
     List<FileStatus> ret = new ArrayList<>();
+    // an operation to look up a path status and add it to the return list
+    ConsumerRaisingIOE<Path> addIfFound = (userTrash) -> {
+      try {
+        FileStatus status = getFileStatus(userTrash);
+        ret.add(status);
+      } catch (FileNotFoundException noTrashFound) {
+        // user doesn't have a trash directory
+      }
+    };
     try {
       if (!allUsers) {
-        Path userTrash = new Path(userHome, TRASH_PREFIX);
-        if (exists(userTrash)) {
-          ret.add(getFileStatus(userTrash));
-        }
+        // Single user: return the value off the home dir.
+        addIfFound.accept(new Path(userHome, TRASH_PREFIX));
       } else {
-        Path homeParent = userHome.getParent();
-        if (exists(homeParent)) {
-          FileStatus[] candidates = listStatus(homeParent);
-          for (FileStatus candidate : candidates) {
-            Path userTrash = new Path(candidate.getPath(), TRASH_PREFIX);
-            if (exists(userTrash)) {
-              candidate.setPath(userTrash);
-              ret.add(candidate);
-            }
-          }
+        // use the iterator for scale/performance improvements against
+        // HDFS and object stores
+        try {
+          foreach(mappingRemoteIterator(
+              listStatusIterator(userHome.getParent()), (candidate) ->
+                      new Path(candidate.getPath(), TRASH_PREFIX)),
+              addIfFound);
+        } catch (FileNotFoundException noUserHomeParent) {
+          // no /user
         }
       }
     } catch (IOException e) {

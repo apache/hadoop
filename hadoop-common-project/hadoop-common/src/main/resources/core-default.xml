@@ -2199,6 +2199,17 @@ The switch to turn S3A auditing on or off.
   </description>
 </property>
 
+<!--
+Set the Trash policy for S3A to be Empty.
+-->
+<property>
+  <name>fs.s3a.trash.classname</name>
+  <value>org.apache.hadoop.fs.EmptyTrashPolicy</value>
+  <description>
+    Set the Trash policy for S3A to be Empty. No-op on Trash.
+  </description>
+</property>
+
   <!-- Azure file system properties -->
 <property>
   <name>fs.AbstractFileSystem.wasb.impl</name>
@@ -2244,6 +2255,25 @@ The switch to turn S3A auditing on or off.
   <name>fs.abfss.impl</name>
   <value>org.apache.hadoop.fs.azurebfs.SecureAzureBlobFileSystem</value>
   <description>The implementation class of the Secure Azure Blob Filesystem</description>
+</property>
+
+<!--
+Set the Trash policy for ABFS to be Empty.
+-->
+<property>
+  <name>fs.abfs.trash.classname</name>
+  <value>org.apache.hadoop.fs.EmptyTrashPolicy</value>
+  <description>
+    Set the Trash policy for ABFS to be Empty. No-op on Trash.
+  </description>
+</property>
+
+<property>
+  <name>fs.abfss.trash.classname</name>
+  <value>org.apache.hadoop.fs.EmptyTrashPolicy</value>
+  <description>
+    Set the Trash policy for ABFSS to be Empty. No-op on Trash.
+  </description>
 </property>
 
 <property>
