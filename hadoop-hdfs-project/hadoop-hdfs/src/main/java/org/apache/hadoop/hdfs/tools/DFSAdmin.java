@@ -702,13 +702,18 @@ public class DFSAdmin extends FsShell {
           HAUtil.getProxiesForAllNameNodesInNameservice(
           dfsConf, nsId, ClientProtocol.class);
       for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
-        ClientProtocol haNn = proxy.getProxy();
-        boolean inSafeMode = haNn.setSafeMode(action, false);
-        if (waitExitSafe) {
-          inSafeMode = waitExitSafeMode(haNn, inSafeMode);
+        try {
+          ClientProtocol haNn = proxy.getProxy();
+          boolean inSafeMode = haNn.setSafeMode(action, false);
+          if (waitExitSafe) {
+            inSafeMode = waitExitSafeMode(haNn, inSafeMode);
+          }
+          System.out.println("Safe mode is " + (inSafeMode ? "ON" : "OFF")
+              + " in " + proxy.getAddress());
+        } catch (Throwable e) {
+          System.err.println("Set safe mode failed in " + proxy.getAddress() + ", error message: "
+              + e.getMessage());
         }
-        System.out.println("Safe mode is " + (inSafeMode ? "ON" : "OFF")
-            + " in " + proxy.getAddress());
       }
     } else {
       boolean inSafeMode = dfs.setSafeMode(action);
