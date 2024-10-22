@@ -91,6 +91,7 @@ The default timeunit used for RPC metrics is milliseconds (as per the below desc
 | `RpcSlowCalls` | Total number of slow RPC calls |
 | `RpcRequeueCalls` | Total number of requeue RPC calls |
 | `RpcCallsSuccesses` | Total number of RPC calls that are successfully processed |
+| `RpcCallsRejectedByObserver` | Total number of RPC calls that are observer namenode rejected |
 | `NumOpenConnections` | Current number of open connections |
 | `NumInProcessHandler` | Current number of handlers on working |
 | `CallQueueLength` | Current length of the call queue |
