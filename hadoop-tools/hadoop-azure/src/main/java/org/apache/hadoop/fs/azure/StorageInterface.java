@@ -386,28 +386,36 @@ abstract class StorageInterface {
     void setMetadata(HashMap<String, String> metadata);
 
     /**
-     * Copies an existing blob's contents, properties, and metadata to this instance of the <code>CloudBlob</code>
-     * class, using the specified operation context.
+     * Copies the contents, properties, and metadata from an existing source blob to this instance of the <code>CloudBlob</code>
+     * class, while providing optional request options and an operation context.
      *
      * @param sourceBlob
-     *            A <code>CloudBlob</code> object that represents the source blob to copy.
+     *            A <code>CloudBlobWrapper</code> object that represents the source blob to copy from.
      * @param options
-     *            A {@link BlobRequestOptions} object that specifies any additional options for the request. Specifying
-     *            <code>null</code> will use the default request options from the associated service client (
-     *            {@link CloudBlobClient}).
+     *            A {@link BlobRequestOptions} object that specifies additional options for the copy request.
+     *            Use <code>null</code> to use the default request options from the associated service client
+     *            ({@link CloudBlobClient}).
      * @param opContext
-     *            An {@link OperationContext} object that represents the context for the current operation. This object
-     *            is used to track requests to the storage service, and to provide additional runtime information about
-     *            the operation.
+     *            An {@link OperationContext} object that provides context information for tracking requests to the storage service
+     *            and additional runtime details about the operation.
+     * @param overwriteDestination
+     *            A boolean flag indicating whether to overwrite the destination blob if it already exists. If set to true,
+     *            the destination blob will be replaced; if set to false and the destination blob exists, the copy operation
+     *            will fail.
+     * @param destEtag
+     *            A string representing the ETag (entity tag) of the destination blob. This is used for conditional copying.
+     *            If provided and the destination blob's ETag matches the specified value, the copy will proceed; otherwise,
+     *            it will fail.
      *
      * @throws StorageException
-     *             If a storage service error occurred.
+     *             If an error occurs during the storage service operation.
      * @throws URISyntaxException
-     *
+     *             If the URI for the source blob is not well-formed.
      */
     public abstract void startCopyFromBlob(CloudBlobWrapper sourceBlob,
-        BlobRequestOptions options, OperationContext opContext, boolean overwriteDestination)
-        throws StorageException, URISyntaxException;
+                                           BlobRequestOptions options, OperationContext opContext, boolean overwriteDestination,
+                                           String destEtag)
+            throws StorageException, URISyntaxException;
     
     /**
      * Returns the blob's copy state.
@@ -467,6 +475,9 @@ abstract class StorageInterface {
      */
     void delete(OperationContext opContext, SelfRenewingLease lease)
         throws StorageException;
+
+    void delete(OperationContext opContext, SelfRenewingLease lease, String eTag)
+      throws StorageException;
 
     /**
      * Checks to see if the blob exists, using the specified operation context.
@@ -642,6 +653,11 @@ abstract class StorageInterface {
     OutputStream openOutputStream(
         BlobRequestOptions options,
         OperationContext opContext) throws StorageException;
+
+    OutputStream openOutputStream(
+            AccessCondition accessCondition,
+            BlobRequestOptions options,
+            OperationContext opContext) throws StorageException;
 
     /**
      *

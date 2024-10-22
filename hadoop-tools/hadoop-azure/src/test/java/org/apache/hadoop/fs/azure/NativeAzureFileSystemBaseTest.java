@@ -1616,7 +1616,7 @@ public abstract class NativeAzureFileSystemBaseTest
     // and renews the lease.
     Thread.sleep(42000);
 
-    nfs.getStore().delete(fullKey, lease);
+    nfs.getStore().delete(fullKey, lease, nfs.getStore().retrieveMetadata(fullKey).getEtag());
 
     // Check that the file is really gone and the lease is freed.
     assertTrue(!fs.exists(path));

@@ -44,6 +44,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
+import com.microsoft.azure.storage.AccessCondition;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -372,6 +373,12 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   private boolean metadataKeyCaseSensitive;
 
+  public static final String AZURE_ETAG_CHECK = "fs.azure.etag.check";
+
+  public static final boolean DEFAULT_ETAG_CHECK = true;
+
+  private boolean eTagCheck;
+
   /** The error message template when container is not accessible. */
   public static final String NO_ACCESS_TO_CONTAINER_MSG = "No credentials found for "
       + "account %s in the configuration, and its container %s is not "
@@ -548,6 +555,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         DEFAULT_USE_SECURE_MODE);
     useLocalSasKeyMode = conf.getBoolean(KEY_USE_LOCAL_SAS_KEY_MODE,
         DEFAULT_USE_LOCAL_SAS_KEY_MODE);
+    eTagCheck = conf.getBoolean(AZURE_ETAG_CHECK, DEFAULT_ETAG_CHECK);
 
     if (null == this.storageInteractionLayer) {
       if (!useSecureMode) {
@@ -844,7 +852,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     }
 
     OperationContext.setLoggingEnabledByDefault(sessionConfiguration.
-        getBoolean(KEY_ENABLE_STORAGE_CLIENT_LOGGING, false));
+        getBoolean(KEY_ENABLE_STORAGE_CLIENT_LOGGING, true));
 
     LOG.debug(
         "AzureNativeFileSystemStore init. Settings={},{},{},{{},{},{},{}},{{},{},{}}",
@@ -1568,7 +1576,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
         outputStream = blockBlobOutputStream;
       } else {
-        outputStream = openOutputStream(blob);
+        if (eTagCheck) {
+          AccessCondition accessCondition = new AccessCondition();
+          accessCondition.setIfNoneMatch("*");
+          outputStream = openOutputStream(blob, accessCondition);
+        } else {
+          outputStream = openOutputStream(blob);
+        }
       }
 
       DataOutputStream dataOutStream = new SyncableDataOutputStream(outputStream);
@@ -1595,6 +1609,24 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // MockCloudBlockBlobWrapper.
       return ((CloudBlockBlobWrapper) blob).openOutputStream(getUploadOptions(),
                 getInstrumentedContext());
+    }
+  }
+
+  private OutputStream openOutputStream(final CloudBlobWrapper blob, AccessCondition accessCondition)
+          throws StorageException {
+    if (blob instanceof CloudPageBlobWrapper){
+      return new PageBlobOutputStream(
+              (CloudPageBlobWrapper) blob, getInstrumentedContext(), sessionConfiguration);
+    } else {
+
+      // Handle both ClouldBlockBlobWrapperImpl and (only for the test code path)
+      // MockCloudBlockBlobWrapper.
+      if (accessCondition != null) {
+        return ((CloudBlockBlobWrapper) blob).openOutputStream(accessCondition, getUploadOptions(),
+                getInstrumentedContext());
+      }
+      return ((CloudBlockBlobWrapper) blob).openOutputStream(getUploadOptions(),
+              getInstrumentedContext());
     }
   }
 
@@ -1829,13 +1861,18 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
+  public void storeEmptyLinkFile(String key, String tempBlobKey,
+                                 PermissionStatus permissionStatus) {
+  }
+
   /**
    * Stores an empty blob that's linking to the temporary file where're we're
    * uploading the initial data.
    */
   @Override
   public void storeEmptyLinkFile(String key, String tempBlobKey,
-      PermissionStatus permissionStatus) throws AzureException {
+      PermissionStatus permissionStatus, String eTag,
+      final String[] createdFileETag) throws AzureException {
     if (null == storageInteractionLayer) {
       final String errMsg = String.format(
           "Storage session expected for URI '%s' but does not exist.",
@@ -1858,7 +1895,25 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       CloudBlobWrapper blob = getBlobReference(key);
       storePermissionStatus(blob, permissionStatus);
       storeLinkAttribute(blob, tempBlobKey);
-      openOutputStream(blob).close();
+      if (eTagCheck && eTag != null) {
+        AccessCondition accessCondition = new AccessCondition();
+        accessCondition.setIfMatch(eTag);
+        openOutputStream(blob, accessCondition).close();
+        if (blob.getBlob() != null) {
+          createdFileETag[0] = blob.getBlob().getProperties().getEtag();
+        }
+      } else {
+        if (eTagCheck) {
+          AccessCondition accessCondition = new AccessCondition();
+          accessCondition.setIfNoneMatch("*");
+          openOutputStream(blob, accessCondition).close();
+          if (blob.getBlob() != null) {
+            createdFileETag[0] = blob.getBlob().getProperties().getEtag();
+          }
+        } else {
+          openOutputStream(blob).close();
+        }
+      }
     } catch (Exception e) {
       // Caught exception while attempting upload. Re-throw as an Azure
       // storage exception.
@@ -2219,7 +2274,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
                 key, // Always return denormalized key with metadata.
                 getDataLength(blob, properties),
                 properties.getLastModified().getTime(),
-                getPermissionStatus(blob), hadoopBlockSize);
+                getPermissionStatus(blob), hadoopBlockSize, properties.getEtag());
           }
         } catch(StorageException e){
           if (!NativeAzureFileSystemHelper.isFileNotFoundException(e)) {
@@ -2666,10 +2721,14 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * @param lease Azure blob lease, or null if no lease is to be used.
    * @throws StorageException
    */
-  private void safeDelete(CloudBlobWrapper blob, SelfRenewingLease lease) throws StorageException {
+  private void safeDelete(CloudBlobWrapper blob, SelfRenewingLease lease, String eTag) throws StorageException {
     OperationContext operationContext = getInstrumentedContext();
     try {
-      blob.delete(operationContext, lease);
+      if (eTagCheck) {
+        blob.delete(operationContext, lease, eTag);
+      } else {
+        blob.delete(operationContext, lease);
+      }
     } catch (StorageException e) {
       if (!NativeAzureFileSystemHelper.isFileNotFoundException(e)) {
         LOG.error("Encountered Storage Exception for delete on Blob: {}"
@@ -2700,7 +2759,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * API implementation to delete a blob in the back end azure storage.
    */
   @Override
-  public boolean delete(String key, SelfRenewingLease lease) throws IOException {
+  public boolean delete(String key, SelfRenewingLease lease, String eTag) throws IOException {
     try {
       if (checkContainer(ContainerAccessType.ReadThenWrite) == ContainerState.DoesntExist) {
         // Container doesn't exist, no need to do anything
@@ -2708,7 +2767,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       }
       // Get the blob reference and delete it.
       CloudBlobWrapper blob = getBlobReference(key);
-      safeDelete(blob, lease);
+      safeDelete(blob, lease, eTag);
       return true;
     } catch (Exception e) {
       if (e instanceof StorageException
@@ -2725,9 +2784,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * API implementation to delete a blob in the back end azure storage.
    */
   @Override
-  public boolean delete(String key) throws IOException {
+  public boolean delete(String key, String eTag) throws IOException {
     try {
-      return delete(key, null);
+      return delete(key, null, eTag);
     } catch (IOException e) {
       Throwable t = e.getCause();
       if (t instanceof StorageException) {
@@ -2736,7 +2795,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           SelfRenewingLease lease = null;
           try {
             lease = acquireLease(key);
-            return delete(key, lease);
+            return delete(key, lease, eTag);
           } catch (AzureException e3) {
             LOG.warn("Got unexpected exception trying to acquire lease on "
                 + key + "." + e3.getMessage());
@@ -2761,18 +2820,23 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   @Override
   public void rename(String srcKey, String dstKey) throws IOException {
-    rename(srcKey, dstKey, false, null, true);
+    rename(srcKey, dstKey, false, null, true, null);
+  }
+
+  @Override
+  public void rename(String srcKey, String dstKey, String eTag) throws IOException {
+    rename(srcKey, dstKey, false, null, true, eTag);
   }
 
   @Override
   public void rename(String srcKey, String dstKey, boolean acquireLease,
                      SelfRenewingLease existingLease) throws IOException {
-    rename(srcKey, dstKey, acquireLease, existingLease, true);
+    rename(srcKey, dstKey, acquireLease, existingLease, true, null);
   }
 
-    @Override
+  @Override
   public void rename(String srcKey, String dstKey, boolean acquireLease,
-      SelfRenewingLease existingLease, boolean overwriteDestination) throws IOException {
+      SelfRenewingLease existingLease, boolean overwriteDestination, String destEtag) throws IOException {
 
     LOG.debug("Moving {} to {}", srcKey, dstKey);
 
@@ -2834,8 +2898,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // a more intensive exponential retry policy when the cluster is getting
       // throttled.
       try {
-        dstBlob.startCopyFromBlob(srcBlob, null,
-            getInstrumentedContext(), overwriteDestination);
+        if (eTagCheck && destEtag != null) {
+          dstBlob.startCopyFromBlob(srcBlob, null,
+                  getInstrumentedContext(), overwriteDestination, destEtag);
+        } else {
+          dstBlob.startCopyFromBlob(srcBlob, null,
+                  getInstrumentedContext(), overwriteDestination, null);
+        }
       } catch (StorageException se) {
         if (se.getHttpStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
           int copyBlobMinBackoff = sessionConfiguration.getInt(
@@ -2858,14 +2927,19 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           options.setRetryPolicyFactory(new RetryExponentialRetry(
             copyBlobMinBackoff, copyBlobDeltaBackoff, copyBlobMaxBackoff,
             copyBlobMaxRetries));
-          dstBlob.startCopyFromBlob(srcBlob, options,
-              getInstrumentedContext(), overwriteDestination);
+          if (eTagCheck && destEtag != null) {
+            dstBlob.startCopyFromBlob(srcBlob, options,
+                    getInstrumentedContext(), overwriteDestination, destEtag);
+          } else {
+            dstBlob.startCopyFromBlob(srcBlob, options,
+                    getInstrumentedContext(), overwriteDestination, null);
+          }
         } else {
           throw se;
         }
       }
       waitForCopyToComplete(dstBlob, getInstrumentedContext());
-      safeDelete(srcBlob, lease);
+      safeDelete(srcBlob, lease, null);
     } catch (StorageException e) {
       if (e.getHttpStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
         LOG.warn("Rename: CopyBlob: StorageException: ServerBusy: Retry complete, will attempt client side copy for page blob");
@@ -2886,7 +2960,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           } else {
             throw new AzureException(e);
           }
-          safeDelete(srcBlob, lease);
+          safeDelete(srcBlob, lease, null);
         } catch(StorageException se) {
           LOG.warn("Rename: CopyBlob: StorageException: Failed");
           throw new AzureException(se);

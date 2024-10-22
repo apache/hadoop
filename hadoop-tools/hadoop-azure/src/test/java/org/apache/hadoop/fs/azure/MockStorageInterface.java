@@ -34,6 +34,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.TimeZone;
 import java.util.List;
+
+import com.microsoft.azure.storage.blob.CloudBlockBlob;
+import com.microsoft.azure.storage.blob.DeleteSnapshotsOption;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.commons.lang3.NotImplementedException;
@@ -437,13 +440,14 @@ public class MockStorageInterface extends StorageInterface {
 
     @Override
     public void startCopyFromBlob(CloudBlobWrapper sourceBlob, BlobRequestOptions options,
-        OperationContext opContext, boolean overwriteDestination) throws StorageException, URISyntaxException {
+                                  OperationContext opContext, boolean overwriteDestination, String eTag)
+            throws StorageException, URISyntaxException {
       if (!overwriteDestination && backingStore.exists(convertUriToDecodedString(uri))) {
         throw new StorageException("BlobAlreadyExists",
-            "The blob already exists.",
-            HttpURLConnection.HTTP_CONFLICT,
-            null,
-            null);
+                "The blob already exists.",
+                HttpURLConnection.HTTP_CONFLICT,
+                null,
+                null);
       }
       backingStore.copy(convertUriToDecodedString(sourceBlob.getUri()), convertUriToDecodedString(uri));
       //TODO: set the backingStore.properties.CopyState and
@@ -458,6 +462,12 @@ public class MockStorageInterface extends StorageInterface {
     @Override
     public void delete(OperationContext opContext, SelfRenewingLease lease)
         throws StorageException {
+      backingStore.delete(convertUriToDecodedString(uri));
+    }
+
+    @Override
+    public void delete(OperationContext opContext, SelfRenewingLease lease, String eTag)
+            throws StorageException {
       backingStore.delete(convertUriToDecodedString(uri));
     }
 
@@ -528,6 +538,14 @@ public class MockStorageInterface extends StorageInterface {
         OperationContext opContext) throws StorageException {
       return backingStore.uploadBlockBlob(convertUriToDecodedString(uri),
           metadata);
+    }
+
+    public OutputStream openOutputStream(
+            AccessCondition accessCondition,
+            BlobRequestOptions options,
+            OperationContext opContext) throws StorageException {
+      return backingStore.uploadBlockBlob(convertUriToDecodedString(uri),
+              metadata);
     }
 
     @Override

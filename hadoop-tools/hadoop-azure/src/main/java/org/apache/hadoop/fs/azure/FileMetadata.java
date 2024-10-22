@@ -32,7 +32,8 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 class FileMetadata extends FileStatus {
   // this is not final so that it can be cleared to save memory when not needed.
   private String key;
-  private final BlobMaterialization blobMaterialization;
+  private BlobMaterialization blobMaterialization;
+  public String eTag;
 
   /**
    * Constructs a FileMetadata object for a file.
@@ -87,6 +88,20 @@ class FileMetadata extends FileStatus {
     this.blobMaterialization = blobMaterialization;
   }
 
+  public FileMetadata(String key, long length, long lastModified,
+                      PermissionStatus permissionStatus, final long blockSize, String eTag)  {
+    this(key, length, lastModified, permissionStatus, blockSize);
+    this.blobMaterialization = BlobMaterialization.Explicit;
+    this.eTag = eTag;
+  }
+
+  public FileMetadata(String key, long lastModified,
+                      PermissionStatus permissionStatus, BlobMaterialization blobMaterialization,
+                      final long blockSize, String eTag) {
+    this(key, lastModified, permissionStatus, blobMaterialization, blockSize);
+    this.eTag = eTag;
+  }
+
   @Override
   public Path getPath() {
     Path p = super.getPath();
@@ -121,5 +136,9 @@ class FileMetadata extends FileStatus {
 
   void removeKey() {
     key = null;
+  }
+
+  public String getEtag() {
+    return eTag;
   }
 }

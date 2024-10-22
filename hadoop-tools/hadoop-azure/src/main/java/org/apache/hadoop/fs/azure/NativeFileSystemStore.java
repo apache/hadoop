@@ -72,6 +72,10 @@ interface NativeFileSystemStore {
   void storeEmptyLinkFile(String key, String tempBlobKey,
       PermissionStatus permissionStatus) throws AzureException;
 
+  void storeEmptyLinkFile(String key, String tempBlobKey,
+                          PermissionStatus permissionStatus, String eTag,
+      final String[] createdFileETag) throws AzureException;
+
   String getLinkInFileMetadata(String key) throws AzureException;
 
   FileMetadata[] list(String prefix, final int maxListingCount,
@@ -87,21 +91,26 @@ interface NativeFileSystemStore {
   /**
    * API to delete a blob in the back end azure storage.
    * @param key - key to the blob being deleted.
+   * @param eTag - eTag of file to be deleted.
    * @return return true when delete is successful, false if
    * blob cannot be found or delete is not possible without
    * exception.
    * @throws IOException Exception encountered while deleting in
    * azure storage.
    */
-  boolean delete(String key) throws IOException;
+  //boolean delete(String key) throws IOException;
+
+  boolean delete(String key, String eTag) throws IOException;
 
   void rename(String srcKey, String dstKey) throws IOException;
+
+  void rename(String srcKey, String dstKey, String destEtag) throws IOException;
 
   void rename(String srcKey, String dstKey, boolean acquireLease, SelfRenewingLease existingLease)
       throws IOException;
 
   void rename(String srcKey, String dstKey, boolean acquireLease,
-              SelfRenewingLease existingLease, boolean overwriteDestination)
+              SelfRenewingLease existingLease, boolean overwriteDestination, String destEtag)
       throws IOException;
 
   /**
@@ -132,13 +141,14 @@ interface NativeFileSystemStore {
    * API to delete a blob in the back end azure storage.
    * @param key - key to the blob being deleted.
    * @param lease - Active lease on the blob.
+   * @param eTag - eTag of the file to be deleted.
    * @return return true when delete is successful, false if
    * blob cannot be found or delete is not possible without
    * exception.
    * @throws IOException Exception encountered while deleting in
    * azure storage.
    */
-  boolean delete(String key, SelfRenewingLease lease) throws IOException;
+  boolean delete(String key, SelfRenewingLease lease, String eTag) throws IOException;
       
   SelfRenewingLease acquireLease(String key) throws AzureException;
 

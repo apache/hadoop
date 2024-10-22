@@ -591,7 +591,7 @@ public class NativeAzureFileSystem extends FileSystem {
           }
 
           // Now we can safely delete the source folder.
-          fs.getStoreInterface().delete(srcKey, lease);
+          fs.getStoreInterface().delete(srcKey, lease, srcMetaData.getEtag());
         } catch (Exception e) {
           LOG.info("Unable to delete source folder during folder rename redo. "
               + "If the source folder is already gone, this is not an error "
@@ -1037,8 +1037,10 @@ public class NativeAzureFileSystem extends FileSystem {
     private String keyEncoded;
     private OutputStream out;
 
+    private final String keyPathEtag;
+
     public NativeAzureFsOutputStream(OutputStream out, String aKey,
-        String anEncodedKey) throws IOException {
+        String anEncodedKey, final String[] keyFileETag) throws IOException {
       // Check input arguments. The output stream should be non-null and the
       // keys
       // should be valid strings.
@@ -1062,6 +1064,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
       setKey(aKey);
       setEncodedKey(anEncodedKey);
+      keyPathEtag = keyFileETag[0];
     }
 
     /**
@@ -1245,7 +1248,8 @@ public class NativeAzureFileSystem extends FileSystem {
      * when the stream is closed.
      */
     private void restoreKey() throws IOException {
-      store.rename(getEncodedKey(), getKey());
+      String key = getKey();
+      store.rename(getEncodedKey(), key, keyPathEtag);
     }
 
     /**
@@ -1881,7 +1885,9 @@ public class NativeAzureFileSystem extends FileSystem {
     String key = pathToKey(absolutePath);
 
     FileMetadata existingMetadata = store.retrieveMetadata(key);
+    String eTag = null;
     if (existingMetadata != null) {
+      eTag = existingMetadata.getEtag();
       if (existingMetadata.isDirectory()) {
         throw new FileAlreadyExistsException("Cannot create file " + f
             + "; already exists as a directory.");
@@ -1943,7 +1949,8 @@ public class NativeAzureFileSystem extends FileSystem {
       // we're
       // doing.
       // 3. Makes it easier to restore/cleanup data in the event of us crashing.
-      store.storeEmptyLinkFile(key, keyEncoded, permissionStatus);
+      String[] keyFileETag = new String[1];
+      store.storeEmptyLinkFile(key, keyEncoded, permissionStatus, eTag, keyFileETag);
 
       // The key is encoded to point to a common container at the storage server.
       // This reduces the number of splits on the server side when load balancing.
@@ -1956,7 +1963,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // these
       // blocks.
       bufOutStream = new NativeAzureFsOutputStream(store.storefile(
-          keyEncoded, permissionStatus, key), key, keyEncoded);
+          keyEncoded, permissionStatus, key), key, keyEncoded, keyFileETag);
     }
     // Construct the data output stream from the buffered output stream.
     FSDataOutputStream fsOut = new FSDataOutputStream(bufOutStream, statistics);
@@ -2007,6 +2014,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     // Capture the metadata for the path.
     FileMetadata metaFile = null;
+    String eTag;
     try {
       metaFile = store.retrieveMetadata(key);
     } catch (IOException e) {
@@ -2024,6 +2032,8 @@ public class NativeAzureFileSystem extends FileSystem {
     if (null == metaFile) {
       // The path to be deleted does not exist.
       return false;
+    } else {
+      eTag = metaFile.getEtag();
     }
 
     FileMetadata parentMetadata = null;
@@ -2097,7 +2107,7 @@ public class NativeAzureFileSystem extends FileSystem {
       }
 
       try {
-        if (store.delete(key)) {
+        if (store.delete(key, eTag)) {
           instrumentation.fileDeleted();
         } else {
           return false;
@@ -2322,7 +2332,7 @@ public class NativeAzureFileSystem extends FileSystem {
       }
 
       try {
-        if (store.delete(key)) {
+        if (store.delete(key, metaFile.getEtag())) {
           instrumentation.fileDeleted();
         } else {
           return false;
@@ -2670,7 +2680,12 @@ public class NativeAzureFileSystem extends FileSystem {
    */
   @VisibleForTesting
   boolean deleteFile(String path, boolean isDir) throws IOException {
-    if (!store.delete(path)) {
+    FileMetadata metadata = store.retrieveMetadata(path);
+    String eTag = null;
+    if (metadata != null) {
+      eTag = metadata.getEtag();
+    }
+    if (!store.delete(path, eTag)) {
       return false;
     }
 
@@ -3306,7 +3321,7 @@ public class NativeAzureFileSystem extends FileSystem {
         // files, redo a failed rename operation, or rename a directory
         // recursively; for these cases the destination may exist.
         store.rename(srcKey, dstKey, false, null,
-            false);
+            false, null);
       } catch(IOException ex) {
         Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
 
@@ -3828,8 +3843,8 @@ public class NativeAzureFileSystem extends FileSystem {
       LOG.debug("Deleting dangling file {}", file.getKey());
       // Not handling delete return type as false return essentially
       // means its a no-op for the caller
-      store.delete(file.getKey());
-      store.delete(tempFile.getKey());
+      store.delete(file.getKey(), file.getEtag());
+      store.delete(tempFile.getKey(), tempFile.getEtag());
     }
   }
 
@@ -3855,7 +3870,7 @@ public class NativeAzureFileSystem extends FileSystem {
       store.rename(tempFile.getKey(), finalDestinationKey);
       if (!finalDestinationKey.equals(file.getKey())) {
         // Delete the empty link file now that we've restored it.
-        store.delete(file.getKey());
+        store.delete(file.getKey(), file.getEtag());
       }
     }
   }

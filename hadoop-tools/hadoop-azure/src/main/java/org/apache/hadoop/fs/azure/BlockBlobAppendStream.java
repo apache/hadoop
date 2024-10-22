@@ -365,6 +365,7 @@ public class BlockBlobAppendStream extends OutputStream implements Syncable,
       // Acquiring lease on the blob.
       lease = new SelfRenewingLease(blob, true);
       accessCondition.setLeaseID(lease.getLeaseID());
+      accessCondition.setIfNoneMatch("*");
 
     } catch (StorageException ex) {
       if (ex.getErrorCode().equals(StorageErrorCodeStrings.BLOB_NOT_FOUND)) {
