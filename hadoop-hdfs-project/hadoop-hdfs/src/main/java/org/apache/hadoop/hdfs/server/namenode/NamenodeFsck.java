@@ -121,6 +121,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   // return string marking fsck status
   public static final String CORRUPT_STATUS = "is CORRUPT";
   public static final String HEALTHY_STATUS = "is HEALTHY";
+  public static final String SLOW_STATUS = "is SLOW";
   public static final String DECOMMISSIONING_STATUS = "is DECOMMISSIONING";
   public static final String DECOMMISSIONED_STATUS = "is DECOMMISSIONED";
   public static final String ENTERING_MAINTENANCE_STATUS =
@@ -377,7 +378,11 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     } else if (blockManager.isExcess(dn, blockManager.getStoredBlock(block))) {
       out.print(EXCESS_STATUS);
     } else {
-      out.print(HEALTHY_STATUS);
+      if (blockManager.getDatanodeManager().getAllSlowDataNodes().contains(dn)) {
+        out.print(SLOW_STATUS);
+      } else {
+        out.print(HEALTHY_STATUS);
+      }
     }
     out.print("\n");
   }

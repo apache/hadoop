@@ -399,6 +399,8 @@ public class DFSck extends Configured implements Tool {
       errCode = 0;
     } else if (lastLine.endsWith(NamenodeFsck.EXCESS_STATUS)) {
       errCode = 0;
+    } else if (lastLine.endsWith(NamenodeFsck.SLOW_STATUS)) {
+      errCode = 0;
     } else if (lastLine.endsWith(NamenodeFsck.DECOMMISSIONED_STATUS)) {
       errCode = 2;
     } else if (lastLine.endsWith(NamenodeFsck.DECOMMISSIONING_STATUS)) {
