@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.junit.Before;
@@ -77,7 +78,27 @@ public class TestIPCLoggerChannel {
     
     ch.setEpoch(1);
   }
-  
+
+  @Test
+  public void testAddressUpdate() throws InterruptedException {
+    NetUtils.addStaticResolution("host", "127.0.0.1");
+    IPCLoggerChannel ch1 = new IPCLoggerChannel(conf, FAKE_NSINFO, JID, NetUtils.createSocketAddrForHost("host", 1));
+    assertEquals("127.0.0.1", ch1.updatedAddr.getHostAddress());
+
+    NetUtils.addStaticResolution("host", "222.0.0.2");
+    ch1.setHostnameRefreshMillis(1);
+    // Start the stopwatch
+    ch1.checkPeriodicHostUpdate();
+    // This should not trigger the refresh because refreshMs hasn't reached yet
+    ch1.checkPeriodicHostUpdate();
+    assertEquals("127.0.0.1", ch1.updatedAddr.getHostAddress());
+
+    Thread.sleep(2);
+    // This should trigger the refresh because sleepMs > refreshMs
+    ch1.checkPeriodicHostUpdate();
+    assertEquals("222.0.0.2", ch1.updatedAddr.getHostAddress());
+  }
+
   @Test
   public void testSimpleCall() throws Exception {
     ch.sendEdits(1, 1, 3, FAKE_DATA).get();

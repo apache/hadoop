@@ -18,10 +18,7 @@
 package org.apache.hadoop.hdfs.qjournal.client;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
+import java.net.*;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -53,6 +50,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.StopWatch;
 
@@ -149,7 +147,19 @@ public class IPCLoggerChannel implements AsyncLogger {
    * Stopwatch which starts counting on each heartbeat that is sent
    */
   private final StopWatch lastHeartbeatStopwatch = new StopWatch();
-  
+
+  /**
+   * Stopwatch which updates addr after every HOSTNAME_REFRESH_MILLIS
+   */
+  private final StopWatch lastHostNameRefresh = new StopWatch();
+
+  /**
+   * Need to use an extra field to store updatedAddr as addr is final.
+   */
+  protected InetAddress updatedAddr;
+
+  private long hostnameRefreshMillis = 60 * 1000;
+
   private static final long HEARTBEAT_INTERVAL_MILLIS = 1000;
 
   private static final long WARN_JOURNAL_MILLIS_THRESHOLD = 1000;
@@ -168,6 +178,7 @@ public class IPCLoggerChannel implements AsyncLogger {
     this.journalId = journalId;
     this.nameServiceId = nameServiceId;
     this.addr = addr;
+    this.updatedAddr = addr.getAddress();
     this.queueSizeLimitBytes = 1024 * 1024 * conf.getInt(
         DFSConfigKeys.DFS_QJOURNAL_QUEUE_SIZE_LIMIT_KEY,
         DFSConfigKeys.DFS_QJOURNAL_QUEUE_SIZE_LIMIT_DEFAULT);
@@ -600,7 +611,28 @@ public class IPCLoggerChannel implements AsyncLogger {
 
   @Override
   public String toString() {
+    checkPeriodicHostUpdate();
     return InetAddresses.toAddrString(addr.getAddress()) + ':' + addr.getPort();
+  }
+
+  public void setHostnameRefreshMillis(long hostnameRefreshMillis) {
+    this.hostnameRefreshMillis = hostnameRefreshMillis;
+  }
+
+  protected void checkPeriodicHostUpdate() {
+    if (lastHostNameRefresh.isRunning()) {
+      if (lastHostNameRefresh.now(TimeUnit.MILLISECONDS) > hostnameRefreshMillis) {
+        InetSocketAddress newAddr = NetUtils.createSocketAddrForHost(addr.getHostName(), addr.getPort());
+        if (!newAddr.isUnresolved() && !updatedAddr.equals(newAddr.getAddress())) {
+          QuorumJournalManager.LOG.warn("Address change detected on QJM (Only for JMX purposes). Old: " +
+                  updatedAddr + " New: " + newAddr.getAddress());
+          updatedAddr = newAddr.getAddress();
+        }
+        lastHostNameRefresh.reset().start();
+      }
+    } else {
+      lastHostNameRefresh.start();
+    }
   }
 
   @Override
