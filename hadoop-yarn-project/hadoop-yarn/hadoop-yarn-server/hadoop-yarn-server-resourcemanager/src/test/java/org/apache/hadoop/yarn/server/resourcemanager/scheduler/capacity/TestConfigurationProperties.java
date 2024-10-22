@@ -22,8 +22,11 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
 
 public class TestConfigurationProperties {
   private static final Map<String, String> PROPERTIES = new HashMap<>();
@@ -121,5 +124,57 @@ public class TestConfigurationProperties {
     Assert.assertEquals(0, propsEmptyPrefix.size());
     Assert.assertEquals(0, propsLongPrefix.size());
     Assert.assertEquals(0, propsNonExistingRootPrefix.size());
+  }
+  @Test
+  public void testWhiteListConstructor() {ConfigurationProperties configurationProperties =
+      new ConfigurationProperties(PROPERTIES, "root.1", "2");
+
+    Map<String, String> props = configurationProperties
+        .getPropertiesWithPrefix("root", true);
+
+    Assert.assertTrue(props.containsKey("root.1.2.3"));
+    Assert.assertEquals("TEST_VALUE_1", props.get("root.1.2.3"));
+    Assert.assertTrue(props.containsKey("root.1.2"));
+    Assert.assertEquals("TEST_VALUE_3", props.get("root.1.2"));
+    Assert.assertTrue(props.containsKey("root.1.2.4.5"));
+    Assert.assertEquals("TEST_VALUE_3_2", props.get("root.1.2.4.5"));
+    Assert.assertTrue(props.containsKey("root.1.2.4"));
+    Assert.assertEquals("TEST_VALUE_3_1", props.get("root.1.2.4"));
+    Assert.assertFalse(props.containsKey("root"));
+  }
+
+  @Test
+  public void testMutation() {
+    ConfigurationProperties configurationProperties = new ConfigurationProperties(PROPERTIES);
+    Map<String, String> props;
+
+    configurationProperties.set("root.1", "TEST_VALUE_3");
+    configurationProperties.set("root.1.2.3", "TEST_VALUE_4");
+    props = configurationProperties.getPropertiesWithPrefix("root", true);
+    Assert.assertEquals("TEST_VALUE_3", props.get("root.1"));
+    Assert.assertEquals("TEST_VALUE_4", props.get("root.1.2.3"));
+
+    configurationProperties.unset("root.1");
+    props = configurationProperties.getPropertiesWithPrefix("root", true);
+    Assert.assertFalse(props.containsKey("root.1"));
+    Assert.assertEquals("TEST_VALUE_4", props.get("root.1.2.3"));
+  }
+
+  @Test
+  public void testEmptyConfCanBeReused() {
+    ConfigurationProperties conf = new ConfigurationProperties(Collections.emptyMap());
+    conf.set("root", StringUtils.SPACE);
+    conf.set("root.a", StringUtils.SPACE);
+    Assert.assertEquals(StringUtils.SPACE, conf.getPropertiesWithPrefix(
+        "root.a", true).get("root.a"));
+    conf.unset("root");
+    Assert.assertEquals(StringUtils.SPACE, conf.getPropertiesWithPrefix(
+        "root.a", true).get("root.a"));
+    conf.unset("root.a");
+    Assert.assertNull(conf.getPropertiesWithPrefix(
+        "root.a", true).get("root.a"));
+    conf.set("root.a", StringUtils.SPACE);
+    Assert.assertEquals(StringUtils.SPACE, conf.getPropertiesWithPrefix(
+        "root.a", true).get("root.a"));
   }
 }

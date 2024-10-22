@@ -27,6 +27,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.commons.lang3.StringUtils.startsWithAny;
+import static org.apache.hadoop.thirdparty.com.google.common.collect.Maps.filterKeys;
+
 /**
  * A trie storage to preprocess and store configuration properties for optimised
  * retrieval. A node is created for every key part delimited by ".".
@@ -66,6 +69,17 @@ public class ConfigurationProperties {
   }
 
   /**
+   * A constructor defined in order to conform to the type used by
+   * {@code Configuration}. It must only be called with String keys and values.
+   * @param props properties to store
+   * @param whiteListPrefix only those properties will be in the nodes
+   *                        which starts with one of the provided prefixes.
+   */
+  public ConfigurationProperties(Map<String, String> props, String... whiteListPrefix) {
+    this(filterKeys(props, key -> startsWithAny(key, whiteListPrefix)));
+  }
+
+  /**
    * Filters all properties by a prefix.
    * @param prefix prefix to filter property keys
    * @param fullyQualifiedKey whether collected property keys are to be trimmed
@@ -92,6 +106,43 @@ public class ConfigurationProperties {
         propertyPrefixParts.iterator(), trimPrefix);
 
     return properties;
+  }
+
+
+  /**
+   * Update or create value in the nodes.
+   * @param name name of the property
+   * @param value value of the property
+   */
+  public void set(String name, String value) {
+    PrefixNode node = getNode(name);
+    if (node != null) {
+      node.getValues().put(name, value);
+    }
+  }
+
+  /**
+   * Delete value from nodes.
+   * @param name name of the property
+   */
+  public void unset(String name) {
+    PrefixNode node = getNode(name);
+    if (node != null) {
+      node.getValues().remove(name);
+      cleanUpEmptyNodes(node);
+    }
+  }
+
+  private void cleanUpEmptyNodes(PrefixNode node) {
+    if (node.getValues().isEmpty() && node.getChildren().isEmpty()) {
+      PrefixNode parent = node.getParent();
+      if (parent != null) {
+        parent.getChildren().values().remove(node);
+        cleanUpEmptyNodes(parent);
+      } else {
+        nodes.values().remove(node);
+      }
+    }
   }
 
   /**
@@ -158,30 +209,41 @@ public class ConfigurationProperties {
    */
   private void storePropertiesInPrefixNodes(Map<String, String> props) {
     for (Map.Entry<String, String> prop : props.entrySet()) {
-      List<String> propertyKeyParts = splitPropertyByDelimiter(prop.getKey());
-      if (!propertyKeyParts.isEmpty()) {
-        PrefixNode node = findOrCreatePrefixNode(nodes,
-            propertyKeyParts.iterator());
+      PrefixNode node = getNode(prop.getKey());
+      if (node != null) {
         node.getValues().put(prop.getKey(), prop.getValue());
-      } else {
-        LOG.warn("Empty configuration property, skipping...");
       }
+    }
+  }
+
+  /**
+   * Finds the node that matches the whole key or create it, if it does not exist.
+   * @param name name of the property
+   * @return the found or created node, if the name is empty, than return with null
+   */
+  private PrefixNode getNode(String name) {
+    List<String> propertyKeyParts = splitPropertyByDelimiter(name);
+    if (!propertyKeyParts.isEmpty()) {
+      return findOrCreatePrefixNode(null, propertyKeyParts.iterator());
+    } else {
+      LOG.warn("Empty configuration property");
+      return null;
     }
   }
 
   /**
    * Finds the node that matches the whole key or create it, if it does not
    * exist.
-   * @param children child nodes on current level
+   * @param parent the current level of the tree
    * @param propertyKeyParts a property key split by delimiter
    * @return the last node
    */
-  private PrefixNode findOrCreatePrefixNode(
-      Map<String, PrefixNode> children, Iterator<String> propertyKeyParts) {
+  private PrefixNode findOrCreatePrefixNode(PrefixNode parent, Iterator<String> propertyKeyParts) {
     String prefix = propertyKeyParts.next();
+    Map<String, PrefixNode> children = parent == null ? nodes : parent.children;
     PrefixNode candidate = children.get(prefix);
     if (candidate == null) {
-      candidate = new PrefixNode();
+      candidate = new PrefixNode(parent);
       children.put(prefix, candidate);
     }
 
@@ -189,8 +251,7 @@ public class ConfigurationProperties {
       return candidate;
     }
 
-    return findOrCreatePrefixNode(candidate.getChildren(),
-        propertyKeyParts);
+    return findOrCreatePrefixNode(candidate, propertyKeyParts);
   }
 
   private List<String> splitPropertyByDelimiter(String property) {
@@ -207,10 +268,12 @@ public class ConfigurationProperties {
   private static class PrefixNode {
     private final Map<String, String> values;
     private final Map<String, PrefixNode> children;
+    private final PrefixNode parent;
 
-    PrefixNode() {
+    PrefixNode(PrefixNode parent) {
       this.values = new HashMap<>();
       this.children = new HashMap<>();
+      this.parent = parent;
     }
 
     public Map<String, String> getValues() {
@@ -219,6 +282,10 @@ public class ConfigurationProperties {
 
     public Map<String, PrefixNode> getChildren() {
       return children;
+    }
+
+    public PrefixNode getParent() {
+      return parent;
     }
   }
 }
