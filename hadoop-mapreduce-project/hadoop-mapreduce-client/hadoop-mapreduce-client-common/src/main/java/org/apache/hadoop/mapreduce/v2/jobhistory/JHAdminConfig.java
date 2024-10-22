@@ -102,6 +102,11 @@ public class JHAdminConfig {
   public static final short
       DEFAULT_MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS = 0770;
   
+  /** Cache job list or not when initializing.*/
+  public static final String MR_HISTORY_JOBLIST_INITIAL_CACHE_ENABLE =
+          MR_HISTORY_PREFIX + "joblist.cache.enable";
+  public static final boolean DEFAULT_MR_HISTORY_JOBLIST_INITIAL_CACHE_ENABLE = true;
+
   /** Size of the job list cache.*/
   public static final String MR_HISTORY_JOBLIST_CACHE_SIZE =
     MR_HISTORY_PREFIX + "joblist.cache.size";

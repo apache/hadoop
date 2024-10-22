@@ -794,7 +794,9 @@ public class HistoryFileManager extends AbstractService {
     final double maxCacheSize = (double) jobListCache.maxSize;
     int prevCacheSize = jobListCache.size();
     for (int i= timestampedDirList.size() - 1;
-        i >= 0 && !jobListCache.isFull(); i--) {
+        i >= 0 && !jobListCache.isFull() &&
+        conf.getBoolean(JHAdminConfig.MR_HISTORY_JOBLIST_INITIAL_CACHE_ENABLE,
+        JHAdminConfig.DEFAULT_MR_HISTORY_JOBLIST_INITIAL_CACHE_ENABLE); i--) {
       FileStatus fs = timestampedDirList.get(i); 
       addDirectoryToJobListCache(fs.getPath());
 
