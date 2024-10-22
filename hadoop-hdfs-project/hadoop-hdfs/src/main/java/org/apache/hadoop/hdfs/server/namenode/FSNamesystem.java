@@ -4791,7 +4791,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   long[] getStats() {
     final long[] stats = datanodeStatistics.getStats();
     stats[ClientProtocol.GET_STATS_LOW_REDUNDANCY_IDX] =
-        getLowRedundancyBlocks();
+        getLowRedundancyBlocks() +
+            getPendingReplicatedBlocks() + getPendingEcBlocks();
     stats[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX] =
         getCorruptReplicaBlocks();
     stats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX] =
@@ -4812,10 +4813,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @see ClientProtocol#getReplicatedBlockStats()
    */
   ReplicatedBlockStats getReplicatedBlockStats() {
-    return new ReplicatedBlockStats(getLowRedundancyReplicatedBlocks(),
-        getCorruptReplicatedBlocks(), getMissingReplicatedBlocks(),
-        getMissingReplicationOneBlocks(), getBytesInFutureReplicatedBlocks(),
-        getPendingDeletionReplicatedBlocks(),
+    return new ReplicatedBlockStats(getLowRedundancyReplicatedBlocks() +
+        getPendingReplicatedBlocks(), getCorruptReplicatedBlocks(),
+        getMissingReplicatedBlocks(), getMissingReplicationOneBlocks(),
+        getBytesInFutureReplicatedBlocks(), getPendingDeletionReplicatedBlocks(),
         getHighestPriorityLowRedundancyReplicatedBlocks());
   }
 
@@ -4826,7 +4827,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @see ClientProtocol#getECBlockGroupStats()
    */
   ECBlockGroupStats getECBlockGroupStats() {
-    return new ECBlockGroupStats(getLowRedundancyECBlockGroups(),
+    return new ECBlockGroupStats(getLowRedundancyECBlockGroups() + getPendingEcBlocks(),
         getCorruptECBlockGroups(), getMissingECBlockGroups(),
         getBytesInFutureECBlockGroups(), getPendingDeletionECBlocks(),
         getHighestPriorityLowRedundancyECBlocks());
@@ -5429,6 +5430,24 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric
   public long getPendingReconstructionBlocks() {
     return blockManager.getPendingReconstructionBlocksCount();
+  }
+
+  /**
+   * Get aggregated count of replicated blocks pending to be reconstructed.
+   *
+   * @return The number of pending replicated blocks.
+   */
+  public long getPendingReplicatedBlocks() {
+    return blockManager.getNumReplicatedPendingBlocks();
+  }
+
+  /**
+   * Get aggregated count of EC blocks pending to be reconstructed.
+   *
+   * @return The number of pending EC blocks.
+   */
+  public long getPendingEcBlocks() {
+    return blockManager.getNumEcPendingBlocks();
   }
 
   /**

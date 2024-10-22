@@ -54,6 +54,10 @@ class PendingReconstructionBlocks {
   Daemon timerThread = null;
   private volatile boolean fsRunning = true;
   private long timedOutCount = 0L;
+  private long replicatedPendingNum = 0L;
+  private long ecPendingNum = 0L;
+  private long replicatedTimedOutNum = 0L;
+  private long ecTimedOutNum = 0L;
 
   //
   // It might take anywhere between 5 to 10 minutes before
@@ -94,6 +98,11 @@ class PendingReconstructionBlocks {
       PendingBlockInfo found = pendingReconstructions.get(block);
       if (found == null) {
         pendingReconstructions.put(block, new PendingBlockInfo(targets));
+        if (block.isStriped()) {
+          ecPendingNum++;
+        } else {
+          replicatedPendingNum++;
+        }
       } else {
         found.incrementReplicas(targets);
         found.setTimeStamp();
@@ -119,6 +128,11 @@ class PendingReconstructionBlocks {
         if (found.getNumReplicas() <= 0) {
           pendingReconstructions.remove(block);
           removed = true;
+          if (block.isStriped()) {
+            ecPendingNum--;
+          } else {
+            replicatedPendingNum--;
+          }
         }
       }
     }
@@ -134,6 +148,14 @@ class PendingReconstructionBlocks {
    */
   PendingBlockInfo remove(BlockInfo block) {
     synchronized (pendingReconstructions) {
+      PendingBlockInfo found = pendingReconstructions.get(block);
+      if (found !=  null && found.getNumReplicas() > 0) {
+        if (block.isStriped()) {
+          ecPendingNum--;
+        } else {
+          replicatedPendingNum--;
+        }
+      }
       return pendingReconstructions.remove(block);
     }
   }
@@ -145,6 +167,10 @@ class PendingReconstructionBlocks {
         timedOutItems.clear();
       }
       timedOutCount = 0L;
+      ecPendingNum = 0L;
+      replicatedPendingNum = 0L;
+      replicatedTimedOutNum = 0L;
+      ecTimedOutNum = 0L;
     }
   }
 
@@ -181,6 +207,32 @@ class PendingReconstructionBlocks {
   }
 
   /**
+   * Used for metrics.
+   *
+   * @return The number of pending replicated blocks.
+   */
+  long getNumReplicatedPendingBlocks() {
+    synchronized (pendingReconstructions) {
+      synchronized (timedOutItems) {
+        return replicatedPendingNum;
+      }
+    }
+  }
+
+  /**
+   * Used for metrics.
+   *
+   * @return The number of pending EC blocks.
+   */
+  long getNumEcPendingBlocks() {
+    synchronized (pendingReconstructions) {
+      synchronized (timedOutItems) {
+        return ecPendingNum;
+      }
+    }
+  }
+
+  /**
    * Returns a list of blocks that have timed out their
    * reconstruction requests. Returns null if no blocks have
    * timed out.
@@ -195,6 +247,10 @@ class PendingReconstructionBlocks {
           new BlockInfo[size]);
       timedOutItems.clear();
       timedOutCount += size;
+      ecPendingNum -= ecTimedOutNum;
+      replicatedPendingNum -= replicatedTimedOutNum;
+      ecTimedOutNum = 0L;
+      replicatedTimedOutNum = 0L;
       return blockList;
     }
   }
@@ -287,6 +343,11 @@ class PendingReconstructionBlocks {
             BlockInfo block = entry.getKey();
             synchronized (timedOutItems) {
               timedOutItems.add(block);
+              if (block.isStriped()) {
+                ecTimedOutNum++;
+              } else {
+                replicatedTimedOutNum++;
+              }
             }
             LOG.warn("PendingReconstructionMonitor timed out " + block);
             NameNode.getNameNodeMetrics().incTimeoutReReplications();
