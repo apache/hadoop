@@ -81,6 +81,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.MRAppMaster;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
 import org.apache.hadoop.mapreduce.v2.app.commit.CommitterTaskAbortEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttemptStateInternal;
@@ -181,7 +182,7 @@ public abstract class TaskAttemptImpl implements
   private final List<String> diagnostics = new ArrayList<String>();
   private final Lock readLock;
   private final Lock writeLock;
-  private final AppContext appContext;
+  private AppContext appContext;
   private Credentials credentials;
   private Token<JobTokenIdentifier> jobToken;
   private static AtomicBoolean initialClasspathFlag = new AtomicBoolean();
@@ -1608,7 +1609,7 @@ public abstract class TaskAttemptImpl implements
 
     locality = Locality.OFF_SWITCH;
     if (dataLocalHosts.size() > 0) {
-      String cHost = resolveHost(containerNodeId.getHost());
+      String cHost = resolveHostByMap(containerNodeId.getHost());
       if (dataLocalHosts.contains(cHost)) {
         locality = Locality.NODE_LOCAL;
       }
@@ -1845,6 +1846,21 @@ public abstract class TaskAttemptImpl implements
     }
   }
 
+  protected String resolveHostByMap(String ip) {
+    if(appContext == null) {
+      return resolveHost(ip);
+    }
+
+    String host = ((MRAppMaster.RunningAppContext) appContext).getHost(ip);
+    if (host != null) {
+      return host;
+    } else {
+      String resolveHost = resolveHost(ip);
+      ((MRAppMaster.RunningAppContext) appContext).putHost(ip, resolveHost);
+      return resolveHost;
+    }
+  }
+
   protected Set<String> resolveHosts(String[] src) {
     Set<String> result = new HashSet<String>();
     if (src != null) {
@@ -1852,7 +1868,7 @@ public abstract class TaskAttemptImpl implements
         if (src[i] == null) {
           continue;
         } else if (isIP(src[i])) {
-          result.add(resolveHost(src[i]));
+          result.add(resolveHostByMap(src[i]));
         } else {
           result.add(src[i]);
         }
@@ -1861,7 +1877,7 @@ public abstract class TaskAttemptImpl implements
     return result;
   }
 
-  protected String resolveHost(String src) {
+  protected static String resolveHost(String src) {
     String result = src; // Fallback in case of failure.
     try {
       InetAddress addr = InetAddress.getByName(src);
