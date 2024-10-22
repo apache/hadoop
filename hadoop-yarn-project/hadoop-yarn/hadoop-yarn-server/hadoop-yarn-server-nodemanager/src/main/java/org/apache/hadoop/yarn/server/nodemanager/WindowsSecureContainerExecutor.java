@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -52,7 +53,6 @@ import org.apache.hadoop.io.nativeio.NativeIOException;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.CommandExecutor;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
@@ -717,11 +717,11 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
 
   @Override
   protected CommandExecutor buildCommandExecutor(String wrapperScriptPath,
-      String containerIdStr, String userName, Path pidFile, Resource resource,
-      File wordDir, Map<String, String> environment, String[] numaCommands) {
+       String userName, Path pidFile, File wordDir,
+       Container container, String[] numaCommands) {
      return new WintuilsProcessStubExecutor(
          wordDir.toString(),
-         containerIdStr, userName, pidFile.toString(),
+         container.getContainerId().toString(), userName, pidFile.toString(),
          "cmd /c " + wrapperScriptPath);
    }
    
