@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
@@ -576,7 +577,16 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
 
     validateRunning();
 
-    return GetApplicationsResponse.newInstance(null);
+    List<ApplicationReport> applications = applicationMap.stream().map(applicationId -> {
+      ApplicationReport report = Records.newRecord(ApplicationReport.class);
+      report.setYarnApplicationState(YarnApplicationState.ACCEPTED);
+      report.setApplicationId(applicationId);
+      report.setCurrentApplicationAttemptId(ApplicationAttemptId.newInstance(applicationId, 1));
+      report.setAMRMToken(Token.newInstance(new byte[0], "", new byte[0], ""));
+      return report;
+    }).collect(Collectors.toList());
+
+    return GetApplicationsResponse.newInstance(applications);
   }
 
   @Override

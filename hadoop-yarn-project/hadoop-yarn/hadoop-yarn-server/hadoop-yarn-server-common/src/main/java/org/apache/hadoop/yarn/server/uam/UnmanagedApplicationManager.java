@@ -292,8 +292,7 @@ public class UnmanagedApplicationManager {
     KillApplicationRequest request =
         KillApplicationRequest.newInstance(this.applicationId);
     if (this.rmClient == null) {
-      this.rmClient = createRMProxy(ApplicationClientProtocol.class, this.conf,
-          UserGroupInformation.createRemoteUser(this.submitter), null);
+      this.rmClient = createRMClient();
     }
     return this.rmClient.forceKillApplication(request);
   }
@@ -384,15 +383,7 @@ public class UnmanagedApplicationManager {
   protected Token<AMRMTokenIdentifier> initializeUnmanagedAM(
       ApplicationId appId) throws IOException, YarnException {
     try {
-      UserGroupInformation appSubmitter;
-      if (UserGroupInformation.isSecurityEnabled()) {
-        appSubmitter = UserGroupInformation.createProxyUser(this.submitter,
-            UserGroupInformation.getLoginUser());
-      } else {
-        appSubmitter = UserGroupInformation.createRemoteUser(this.submitter);
-      }
-      this.rmClient = createRMProxy(ApplicationClientProtocol.class, this.conf,
-          appSubmitter, null);
+      this.rmClient = createRMClient();
 
       // Submit the application
       submitUnmanagedApp(appId);
@@ -407,6 +398,17 @@ public class UnmanagedApplicationManager {
     } finally {
       this.rmClient = null;
     }
+  }
+
+  private ApplicationClientProtocol createRMClient() throws IOException {
+    UserGroupInformation appSubmitter;
+    if (UserGroupInformation.isSecurityEnabled()) {
+      appSubmitter = UserGroupInformation.createProxyUser(this.submitter,
+          UserGroupInformation.getLoginUser());
+    } else {
+      appSubmitter = UserGroupInformation.createRemoteUser(this.submitter);
+    }
+    return createRMProxy(ApplicationClientProtocol.class, this.conf, appSubmitter, null);
   }
 
   private void submitUnmanagedApp(ApplicationId appId) throws YarnException, IOException {

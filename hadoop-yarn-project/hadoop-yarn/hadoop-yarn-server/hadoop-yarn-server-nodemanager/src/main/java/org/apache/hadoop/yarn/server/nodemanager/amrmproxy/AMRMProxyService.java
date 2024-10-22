@@ -567,7 +567,9 @@ public class AMRMProxyService extends CompositeService implements
       this.secretManager.applicationMasterFinished(pipeline.getApplicationAttemptId());
       LOG.info("Stopping the request processing pipeline for application: {}.", applicationId);
       try {
-        pipeline.getRootInterceptor().shutdown();
+        RequestInterceptor interceptor = pipeline.getRootInterceptor();
+        stopUnmanagedApplicaiton(interceptor);
+        interceptor.shutdown();
       } catch (Throwable ex) {
         LOG.warn("Failed to shutdown the request processing pipeline for app: {}.",
             applicationId, ex);
@@ -593,6 +595,16 @@ public class AMRMProxyService extends CompositeService implements
     } else {
       this.metrics.incrFailedAppStopRequests();
     }
+  }
+
+  private void stopUnmanagedApplicaiton(RequestInterceptor interceptor) {
+    if (interceptor == null) {
+      return;
+    }
+    if (interceptor instanceof FederationInterceptor) {
+      ((FederationInterceptor) interceptor).getUnmanagedAMPool().stop();
+    }
+    stopUnmanagedApplicaiton(interceptor.getNextInterceptor());
   }
 
   private void updateAMRMTokens(AMRMTokenIdentifier amrmTokenIdentifier,
