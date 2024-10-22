@@ -109,6 +109,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -1483,7 +1484,7 @@ public class DFSTestUtil {
     
     // OP_REASSIGN_LEASE 22
     String filePath = "/hard-lease-recovery-test";
-    byte[] bytes = "foo-bar-baz".getBytes();
+    byte[] bytes = DFSUtil.string2Bytes("foo-bar-baz");
     DFSClientAdapter.stopLeaseRenewer(filesystem);
     FSDataOutputStream leaseRecoveryPath = filesystem.create(new Path(filePath));
     leaseRecoveryPath.write(bytes);
