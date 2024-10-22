@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
@@ -212,6 +213,18 @@ public class JobHistoryEventHandler extends AbstractService
               new FsPermission(
             JobHistoryUtils.HISTORY_INTERMEDIATE_DONE_DIR_PERMISSIONS
                 .toShort()));
+        Stack<Path> dirs = new Stack<Path>();
+        Path parent = doneDirPath;
+        while (!(parent.getParent() == null) && !parent.equals(doneDirFS.getHomeDirectory())) {
+          dirs.push(parent);
+          parent = parent.getParent();
+        }
+        while (!dirs.isEmpty()) {
+          Path path = dirs.pop();
+          doneDirFS.setPermission(path,new FsPermission(
+              JobHistoryUtils.HISTORY_INTERMEDIATE_DONE_DIR_PERMISSIONS
+              .toShort()));
+        }
           // TODO Temporary toShort till new FsPermission(FsPermissions)
           // respects
         // sticky
