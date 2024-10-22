@@ -115,27 +115,34 @@ service associated with the client id. See [*Active Directory Library For Java*]
 
 ##### Generating the Service Principal
 
-1.  Go to [the portal](https://portal.azure.com)
-2.  Under services in left nav, look for Azure Active Directory and click it.
-3.  Using "App Registrations" in the menu, create "Web Application". Remember
-    the name you create here - that is what you will add to your ADL account
-    as authorized user.
-4.  Go through the wizard
-5.  Once app is created, go to "keys" under "settings" for the app
-6.  Select a key duration and hit save. Save the generated keys.
-7.  Go back to the App Registrations page, and click on the "Endpoints" button
-    at the top
-    a. Note down the  "Token Endpoint" URL
-8. Note down the properties you will need to auth:
-    -  The "Application ID" of the Web App you created above
-    -  The key you just generated above
-    -  The token endpoint
+*Warning* the Azure Portal UI moves entries around. The current instructions date from Feburary 2020.
 
-##### Adding the service principal to your ADL Account
-1.  Go to the portal again, and open your ADL account
-2.  Select `Access control (IAM)`
-3.  Add your user name you created in Step 6 above (note that it does not show up in the list, but will be found if you searched for the name)
-4.  Add "Owner" role
+The key concepts are: you have to register an application, and use the oauth id/secret as your client keys,
+and grant the application access to the ADLS stores you are using. Every account has its own OAuth2 endpoint,
+which must be used to authenticate the client.
+
+Note also that the client SDK isn't great at validating auth failures -because the Azure OAuth endpoints
+do not return a 40x unauthed error, they return 200 and an HTML page telling the user that they are not
+authenticated. This makes troubleshooting connectivity problems harder than need be. Tip: try using
+[Cloudstore](https://github.com/steveloughran/cloudstore) to troubleshoot problems here.
+
+1.  Go to [the portal](https://portal.azure.com)
+1.  Under services in left navigation list, look for _Azure Active Directory_ and click it.
+1.  In _App Registrations_ select "New Registration".
+1.  Register a new application
+1. Remember the _application name_ you create here - that is what you will add to your ADL account
+    as authorized user.
+1.  Go through the wizard to register a new app. For security reasons, restrict it to your organization.
+1.  Once the application is created you will be on its overview page.
+1.  Copy _Application (client) ID_ -this UUID is the value of `fs.adl.oauth2.client.id`.
+1.  Go to "Credentials and Secrets"
+1.  Select a key duration and hit save. Note the generated key.
+    This is the value of `fs.adl.oauth2.credential`.
+    Tip: save the key expiry date to your calendar to remind you to refresh it.
+1.  Go back to the _App Registrations_ page, and select _Endpoints_
+    at the top.
+1. Note down the "OAuth 2.0 token endpoint (v2)" URL.
+    This is the value of `fs.adl.oauth2.refresh.url`.
 
 ##### Configure core-site.xml
 Add the following properties to your `core-site.xml`
@@ -148,12 +155,12 @@ Add the following properties to your `core-site.xml`
 
 <property>
   <name>fs.adl.oauth2.refresh.url</name>
-  <value>TOKEN ENDPOINT FROM STEP 7 ABOVE</value>
+  <value>OAuth 2.0 token endpoint</value>
 </property>
 
 <property>
   <name>fs.adl.oauth2.client.id</name>
-  <value>CLIENT ID FROM STEP 7 ABOVE</value>
+  <value>Application (client) ID</value>
 </property>
 
 <property>
@@ -161,6 +168,42 @@ Add the following properties to your `core-site.xml`
   <value>PASSWORD FROM STEP 7 ABOVE</value>
 </property>
 ```
+
+The final result should look similar to this (generated) example
+
+```xml
+  <property>
+   <name>fs.adl.v2.access.token.provider.type</name>
+   <value>ClientCredential</value>
+  </property>
+
+  <property>
+   <name>fs.adl.oauth2.client.id</name>
+   <value>81d983a6-4c45-4323-a628-04cd79572714</value>
+  </property>
+
+  <property>
+   <name>fs.adl.oauth2.credential</name>
+   <value>ml(N@OPQ=.+^RS1+Xc+ABcd/eFgH2Yz3?</value>
+  </property>
+
+  <property>
+   <name>fs.adl.oauth2.refresh.url</name>
+   <value>https://login.microsoftonline.com/719bbd25-193c-45ab-a3cc-8af651718ed8/oauth2/v2.0/token</value>
+  </property>
+ 
+```
+
+For maximum security: save these to a JCEKs file.
+
+##### Adding the service principal to your ADL Account
+
+1.  On the Azure Portal, Go to "Datalake Storage Gen1"
+.  Locate your ADLS Gen storage account
+1. Select `Access control (IAM)`
+1. Select `Add a role assignment"
+1. Add the _application name_ to the _Owner_ role
+
 
 #### Using MSI (Managed Service Identity)
 
