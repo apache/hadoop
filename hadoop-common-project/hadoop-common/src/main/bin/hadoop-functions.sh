@@ -1140,10 +1140,10 @@ function hadoop_add_param
   #
   if [[ ! ${!1} =~ $2 ]] ; then
     #shellcheck disable=SC2140
-    eval "$1"="'${!1} $3'"
+    eval "$1"="\"${!1} $3\""
     if [[ ${!1:0:1} = ' ' ]]; then
       #shellcheck disable=SC2140
-      eval "$1"="'${!1# }'"
+      eval "$1"="\"${!1# }\""
     fi
     hadoop_debug "$1 accepted $3"
   else
@@ -1791,7 +1791,7 @@ function hadoop_java_exec
 
   export CLASSPATH
   #shellcheck disable=SC2086
-  exec "${JAVA}" "-Dproc_${command}" ${HADOOP_OPTS} "${class}" "$@"
+  eval exec '"${JAVA}"' '"-Dproc_${command}"' ${HADOOP_OPTS} '"${class}"' '"$@"'
 }
 
 ## @description  Start a non-privileged daemon in the foreground.
@@ -1828,7 +1828,7 @@ function hadoop_start_daemon
 
   export CLASSPATH
   #shellcheck disable=SC2086
-  exec "${JAVA}" "-Dproc_${command}" ${HADOOP_OPTS} "${class}" "$@"
+  eval exec '"${JAVA}"' '"-Dproc_${command}"' ${HADOOP_OPTS} '"${class}"' '"$@"'
 }
 
 ## @description  Start a non-privileged daemon in the background.
