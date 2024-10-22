@@ -102,6 +102,9 @@ public class AMLauncher implements Runnable {
         timelineServiceV2Enabled(conf);
   }
 
+  public AMLauncherEventType getEventType() {
+    return eventType;
+  }
   private void connect() throws IOException {
     ContainerId masterContainerID = masterContainer.getId();
 
