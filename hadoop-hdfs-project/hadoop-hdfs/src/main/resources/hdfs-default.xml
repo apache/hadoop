@@ -530,7 +530,20 @@
   <description>
     Determines if the given qjournals address is a domain name which needs to
     be resolved.
-    This is used by namenode to resolve qjournals.
+    This is used by namenode to resolve qjournals, and journalnode for syncing.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.edits.qjournals.resolution-required</name>
+  <value>true</value>
+  <description>
+    Determines if the given qjournals address is a domain name which is
+    required to be resolved.
+    if resolution is required, then unresolvable addresses are ignored.
+    if resolution is not required, then the address may be temporarily
+    unresolved, allowing the client to resolve it later.
+    This is used by namenode to resolve qjournals, and journalnode for syncing.
   </description>
 </property>
 

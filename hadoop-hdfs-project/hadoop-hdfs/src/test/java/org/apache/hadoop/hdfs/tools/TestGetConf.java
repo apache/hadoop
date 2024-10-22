@@ -484,8 +484,9 @@ public class TestGetConf {
     conf.clear();
   }
 
-  /*
-   ** Test for unknown journal node host exception.
+  /**
+   * Test handling of unresolvable journal node hosts.  They are still configured assuming that
+   * they will be resolvable in the future.
   */
   @Test(expected = UnknownHostException.class, timeout = 10000)
   public void testUnknownJournalNodeHost()

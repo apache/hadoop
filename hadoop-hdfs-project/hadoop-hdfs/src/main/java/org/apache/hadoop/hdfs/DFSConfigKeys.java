@@ -703,6 +703,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_ENABLED_DEFAULT = false;
 
   public static final String
+      DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_REQUIRED =
+      "dfs.namenode.edits.qjournals.resolution-required";
+  public static final boolean
+      DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_REQUIRED_DEFAULT = true;
+
+  public static final String
       DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_RESOLVER_IMPL =
       "dfs.namenode.edits.qjournals.resolver.impl";
 
