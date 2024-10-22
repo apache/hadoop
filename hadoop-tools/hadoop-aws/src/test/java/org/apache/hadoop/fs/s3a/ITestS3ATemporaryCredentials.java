@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -51,6 +50,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.unsetHadoopCredentialProvide
 import static org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding.fromSTSCredentials;
 import static org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding.toAWSCredentials;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.assertCredentialsEqual;
+import static org.apache.hadoop.fs.s3a.auth.STSClientFactory.E_INVALID_STS_ENDPOINT_ERROR_MSG;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
 import static org.apache.hadoop.fs.s3a.auth.delegation.SessionTokenBinding.CREDENTIALS_CONVERTED_TO_DELEGATION_TOKEN;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -160,6 +160,119 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
     } catch (AWSS3IOException | AWSBadRequestException ex) {
       LOG.info("Expected Exception: {}", ex.toString());
       LOG.debug("Expected Exception: {}", ex, ex);
+    }
+  }
+
+  /**
+   * Create a StsClientBuilder instance with a given STS URL.
+   *
+   * @param stsURL The STS URL to be used to create an StsClientBuilder instance.
+   * @return StsClientBuilder.
+   *
+   * @throws IOException If there is an error while creating the StsClientBuilder instance.
+   */
+  private StsClientBuilder createSTS(String stsURL, String region) throws IOException {
+    Configuration conf = getContract().getConf();
+    S3AFileSystem testFS = getFileSystem();
+    credentials = getS3AInternals().shareCredentials("testSTS");
+
+    String bucket = testFS.getBucket();
+    return STSClientFactory.builder(conf, bucket, credentials, stsURL, region);
+  }
+
+  /**
+   * Interface for creating a lambda function that verifies the exception that is thrown when creating
+   * an StsClientBuilder.
+   */
+  @FunctionalInterface
+  interface VerifyCreateSTSException {
+    void verifyException(String stsURL) throws IOException;
+  }
+
+  /**
+   * Test different STS URLs. We will test a combination of valid and invalid URLs.
+   *
+   * The property test.sts.endpoint can be set to point this at different
+   * STS endpoints. This test will use the AWS credentials (if provided) for
+   * S3A tests to request temporary credentials, then attempt to use those
+   * credentials instead.
+   *
+   * @throws IOException failure
+   */
+
+  @Test
+  public void testSTSURLs() throws IOException {
+    // List of STS URLs to check for validity.
+    String [] validStsURLs = {
+      "sts.amazonaws.com",
+      "sts.us-east-2.amazonaws.com",
+      "sts.us-east-1.amazonaws.com",
+      "sts.us-west-1.amazonaws.com",
+      "sts.us-west-2.amazonaws.com",
+      "sts.af-south-1.amazonaws.com",
+      "sts.ap-east-1.amazonaws.com",
+      "sts.ap-south-2.amazonaws.com",
+      "sts.ap-southeast-3.amazonaws.com",
+      "sts.ap-southeast-4.amazonaws.com",
+      "sts.ap-south-1.amazonaws.com",
+      "sts.ap-northeast-3.amazonaws.com",
+      "sts.ap-northeast-2.amazonaws.com",
+      "sts.ap-southeast-1.amazonaws.com",
+      "sts.ap-southeast-2.amazonaws.com",
+      "sts.ap-northeast-1.amazonaws.com",
+      "sts.ca-central-1.amazonaws.com",
+      "sts.ca-west-1.amazonaws.com",
+      "sts.cn-north-1.amazonaws.com.cn",
+      "sts.cn-northwest-1.amazonaws.com.cn",
+      "sts.eu-central-1.amazonaws.com",
+      "sts.eu-west-1.amazonaws.com",
+      "sts.eu-west-2.amazonaws.com",
+      "sts.eu-south-1.amazonaws.com",
+      "sts.eu-west-3.amazonaws.com",
+      "sts.eu-south-2.amazonaws.com",
+      "sts.eu-north-1.amazonaws.com",
+      "sts.eu-central-2.amazonaws.com",
+      "sts.il-central-1.amazonaws.com",
+      "sts.me-south-1.amazonaws.com",
+      "sts.me-central-1.amazonaws.com",
+      "sts.sa-east-1.amazonaws.com"
+    };
+
+    // The lambda function can run an invalid STS URL and verify
+    // that the correct exception is thrown.
+    VerifyCreateSTSException vcse = (stsURL) -> {
+      try {
+        createSTS(stsURL, "us-west-2");
+      } catch (IllegalArgumentException iae) {
+        LOG.info("Expected Exception: {}", iae.toString());
+      }
+    };
+
+    // INVALID STS URL VERIFICATIONS
+
+    // STS URLs start with sts.
+    vcse.verifyException("invalid-sts.eu-west-2.com");
+
+    // Should have been sts.cn-northwest-1.amazonaws.com.cn.
+    vcse.verifyException("sts.cn-north-1.amazonaws.cn");
+
+    // Not a valid STS URL.
+    vcse.verifyException("www.google.com");
+
+    // Random string is not a valid STS URL.
+    vcse.verifyException("invalid-sts");
+
+    // VALID STS URL VERIFICATIONS
+
+    // Verify that there are no exceptions when testing for the different STS URLs.
+    for (String validStsURL : validStsURLs) {
+      String [] splits = validStsURL.split("\\.");
+      if (validStsURL == "sts.amazonaws.com") {
+        createSTS(validStsURL, "");
+      }
+      else {
+        createSTS(validStsURL, splits[1]);
+      }
     }
   }
 
@@ -327,14 +440,11 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
     describe("Create a session with a bad region and expect fast failure");
     IllegalArgumentException ex
         = expectedSessionRequestFailure(
-        IllegalArgumentException.class,
+            IllegalArgumentException.class,
         " ",
         EU_IRELAND,
         "");
     LOG.info("Outcome: ", ex);
-    if (!(ex.getCause() instanceof URISyntaxException)) {
-      throw ex;
-    }
   }
 
   @Test
