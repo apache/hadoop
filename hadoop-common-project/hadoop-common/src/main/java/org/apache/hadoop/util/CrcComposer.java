@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.function.ToIntFunction;
 
 /**
  * Encapsulates logic for composing multiple CRCs into one or more combined CRCs
@@ -35,11 +36,11 @@ import java.io.IOException;
  */
 @InterfaceAudience.LimitedPrivate({"Common", "HDFS", "MapReduce", "Yarn"})
 @InterfaceStability.Unstable
-public class CrcComposer {
+public final class CrcComposer {
   private static final int CRC_SIZE_BYTES = 4;
   private static final Logger LOG = LoggerFactory.getLogger(CrcComposer.class);
 
-  private final int crcPolynomial;
+  private final ToIntFunction<Long> mod;
   private final int precomputedMonomialForHint;
   private final long bytesPerCrcHint;
   private final long stripeLength;
@@ -79,28 +80,14 @@ public class CrcComposer {
    */
   public static CrcComposer newStripedCrcComposer(
       DataChecksum.Type type, long bytesPerCrcHint, long stripeLength) {
-    int polynomial = DataChecksum.getCrcPolynomialForType(type);
-    return new CrcComposer(
-        polynomial,
-        CrcUtil.getMonomial(bytesPerCrcHint, polynomial),
-        bytesPerCrcHint,
-        stripeLength);
+    return new CrcComposer(type, bytesPerCrcHint, stripeLength);
   }
 
-  CrcComposer(
-      int crcPolynomial,
-      int precomputedMonomialForHint,
-      long bytesPerCrcHint,
-      long stripeLength) {
-    LOG.debug(
-        "crcPolynomial=0x{}, precomputedMonomialForHint=0x{}, "
-        + "bytesPerCrcHint={}, stripeLength={}",
-        Integer.toString(crcPolynomial, 16),
-        Integer.toString(precomputedMonomialForHint, 16),
-        bytesPerCrcHint,
-        stripeLength);
-    this.crcPolynomial = crcPolynomial;
-    this.precomputedMonomialForHint = precomputedMonomialForHint;
+  private CrcComposer(DataChecksum.Type type, long bytesPerCrcHint, long stripeLength) {
+    LOG.debug("type={}, bytesPerCrcHint={}, stripeLength={}",
+        type, bytesPerCrcHint, stripeLength);
+    this.mod = DataChecksum.getModFunction(type);
+    this.precomputedMonomialForHint = CrcUtil.getMonomial(bytesPerCrcHint, mod);
     this.bytesPerCrcHint = bytesPerCrcHint;
     this.stripeLength = stripeLength;
   }
@@ -161,10 +148,10 @@ public class CrcComposer {
       curCompositeCrc = crcB;
     } else if (bytesPerCrc == bytesPerCrcHint) {
       curCompositeCrc = CrcUtil.composeWithMonomial(
-          curCompositeCrc, crcB, precomputedMonomialForHint, crcPolynomial);
+          curCompositeCrc, crcB, precomputedMonomialForHint, mod);
     } else {
       curCompositeCrc = CrcUtil.compose(
-          curCompositeCrc, crcB, bytesPerCrc, crcPolynomial);
+          curCompositeCrc, crcB, bytesPerCrc, mod);
     }
 
     curPositionInStripe += bytesPerCrc;

@@ -20,6 +20,7 @@ package org.apache.hadoop.util;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.function.ToIntFunction;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Rule;
@@ -35,7 +36,7 @@ public class TestCrcUtil {
   @Rule
   public Timeout globalTimeout = new Timeout(10000, TimeUnit.MILLISECONDS);
 
-  private static final Random RANDOM = new Random(1234);
+  private static final Random RANDOM = new Random();
 
   @Test
   public void testComposeCrc32() {
@@ -94,7 +95,7 @@ public class TestCrcUtil {
    */
   private static void doTestComposeCrc(
       byte[] data, DataChecksum.Type type, int chunkSize, boolean useMonomial) {
-    int crcPolynomial = DataChecksum.getCrcPolynomialForType(type);
+    final ToIntFunction<Long> mod = DataChecksum.getModFunction(type);
 
     // Get full end-to-end CRC in a single shot first.
     DataChecksum checksum = DataChecksum.newDataChecksum(
@@ -107,7 +108,7 @@ public class TestCrcUtil {
     // second pass to compare to the end-to-end CRC.
     int compositeCrc = 0;
     int crcMonomial =
-        useMonomial ? CrcUtil.getMonomial(chunkSize, crcPolynomial) : 0;
+        useMonomial ? CrcUtil.getMonomial(chunkSize, mod) : 0;
     for (int offset = 0;
         offset + chunkSize <= data.length;
         offset += chunkSize) {
@@ -116,10 +117,10 @@ public class TestCrcUtil {
       int partialCrc = (int) checksum.getValue();
       if (useMonomial) {
         compositeCrc = CrcUtil.composeWithMonomial(
-            compositeCrc, partialCrc, crcMonomial, crcPolynomial);
+            compositeCrc, partialCrc, crcMonomial, mod);
       } else {
         compositeCrc = CrcUtil.compose(
-            compositeCrc, partialCrc, chunkSize, crcPolynomial);
+            compositeCrc, partialCrc, chunkSize, mod);
       }
     }
 
@@ -130,13 +131,11 @@ public class TestCrcUtil {
       checksum.update(data, data.length - partialChunkSize, partialChunkSize);
       int partialCrc = (int) checksum.getValue();
       compositeCrc = CrcUtil.compose(
-          compositeCrc, partialCrc, partialChunkSize, crcPolynomial);
+          compositeCrc, partialCrc, partialChunkSize, mod);
     }
-    assertEquals(
-        String.format(
-            "Using CRC type '%s' with crcPolynomial '0x%08x' and chunkSize '%d'"
-            + ", expected '0x%08x', got '0x%08x'",
-            type, crcPolynomial, chunkSize, fullCrc, compositeCrc),
+    assertEquals(String.format(
+            "Using CRC type '%s' and chunkSize '%d', expected '0x%08x', got '0x%08x'",
+            type, chunkSize, fullCrc, compositeCrc),
         fullCrc,
         compositeCrc);
   }
@@ -149,16 +148,16 @@ public class TestCrcUtil {
     // Without loss of generality, we can pick any integer as our fake crcA
     // even if we don't happen to know the preimage.
     int crcA = 0xCAFEBEEF;
-    int crcPolynomial = DataChecksum.getCrcPolynomialForType(type);
+    final ToIntFunction<Long> mod = DataChecksum.getModFunction(type);
     DataChecksum checksum = DataChecksum.newDataChecksum(
         type, Integer.MAX_VALUE);
     Objects.requireNonNull(checksum, "checksum");
     int crcB = (int) checksum.getValue();
-    assertEquals(crcA, CrcUtil.compose(crcA, crcB, 0, crcPolynomial));
+    assertEquals(crcA, CrcUtil.compose(crcA, crcB, 0, mod));
 
-    int monomial = CrcUtil.getMonomial(0, crcPolynomial);
+    int monomial = CrcUtil.getMonomial(0, mod);
     assertEquals(
-        crcA, CrcUtil.composeWithMonomial(crcA, crcB, monomial, crcPolynomial));
+        crcA, CrcUtil.composeWithMonomial(crcA, crcB, monomial, mod));
   }
 
   @Test
@@ -226,5 +225,146 @@ public class TestCrcUtil {
     assertEquals(
         "[]",
         CrcUtil.toMultiCrcString(new byte[0]));
+  }
+
+  @Test
+  public void testMultiplyMod() {
+    runTestMultiplyMod(10_000_000, DataChecksum.Type.CRC32);
+    runTestMultiplyMod(10_000_000, DataChecksum.Type.CRC32C);
+  }
+
+  private static long[] runTestMultiplyMod(int n, DataChecksum.Type type) {
+    System.out.printf("Run %s with %d computations%n", type, n);
+    final int polynomial = getCrcPolynomialForType(type);
+    final ToIntFunction<Long> mod = DataChecksum.getModFunction(type);
+
+    final int[] p = new int[n];
+    final int[] q = new int[n];
+    for (int i = 0; i < n; i++) {
+      p[i] = RANDOM.nextInt();
+      q[i] = RANDOM.nextInt();
+    }
+
+    final int[] expected = new int[n];
+    final long[] times = new long[2];
+    final long t0 = System.currentTimeMillis();
+    for (int i = 0; i < n; i++) {
+      expected[i] = galoisFieldMultiply(p[i], q[i], polynomial);
+    }
+    times[0] = System.currentTimeMillis() - t0;
+    final double ops0 = n * 1000.0 / times[0];
+    System.out.printf("galoisFieldMultiply: %.3fs (%.2f ops)%n", times[0] / 1000.0, ops0);
+
+    final int[] computed = new int[n];
+    final long t1 = System.currentTimeMillis();
+    for (int i = 0; i < n; i++) {
+      computed[i] = CrcUtil.multiplyMod(p[i], q[i], mod);
+    }
+    times[1] = System.currentTimeMillis() - t1;
+    final double ops1 = n * 1000.0 / times[1];
+    System.out.printf("multiplyCrc32      : %.3fs (%.2f ops)%n", times[1] / 1000.0, ops1);
+    System.out.printf("multiplyCrc32 is %.2f%% faster%n", (ops1 - ops0) * 100.0 / ops0);
+
+    for (int i = 0; i < n; i++) {
+      if (expected[i] != computed[i]) {
+        System.out.printf("expected %08X%n", expected[i]);
+        System.out.printf("computed %08X%n", computed[i]);
+        throw new IllegalStateException();
+      }
+    }
+    return times;
+  }
+
+  /**
+   * getCrcPolynomialForType.
+   *
+   * @param type type.
+   * @return the int representation of the polynomial associated with the
+   * CRC {@code type}, suitable for use with further CRC arithmetic.
+   */
+  private static int getCrcPolynomialForType(DataChecksum.Type type) {
+    switch (type) {
+    case CRC32:
+      return CrcUtil.GZIP_POLYNOMIAL;
+    case CRC32C:
+      return CrcUtil.CASTAGNOLI_POLYNOMIAL;
+    default:
+      throw new IllegalArgumentException("Unexpected type: " + type);
+    }
+  }
+
+  /**
+   * Galois field multiplication of {@code p} and {@code q} with the
+   * generator polynomial {@code m} as the modulus.
+   *
+   * @param m The little-endian polynomial to use as the modulus when
+   *          multiplying p and q, with implicit "1" bit beyond the bottom bit.
+   */
+  private static int galoisFieldMultiply(int p, int q, int m) {
+    int summation = 0;
+
+    // Top bit is the x^0 place; each right-shift increments the degree of the
+    // current term.
+    int curTerm = CrcUtil.MULTIPLICATIVE_IDENTITY;
+
+    // Iteratively multiply p by x mod m as we go to represent the q[i] term
+    // (of degree x^i) times p.
+    int px = p;
+
+    while (curTerm != 0) {
+      if ((q & curTerm) != 0) {
+        summation ^= px;
+      }
+
+      // Bottom bit represents highest degree since we're little-endian; before
+      // we multiply by "x" for the next term, check bottom bit to know whether
+      // the resulting px will thus have a term matching the implicit "1" term
+      // of "m" and thus will need to subtract "m" after mutiplying by "x".
+      boolean hasMaxDegree = ((px & 1) != 0);
+      px >>>= 1;
+      if (hasMaxDegree) {
+        px ^= m;
+      }
+      curTerm >>>= 1;
+    }
+    return summation;
+  }
+
+  /** For running benchmarks. */
+  public static class Benchmark {
+    /**
+     * Usages: java {@link Benchmark} [m] [n] [type]
+     *      m: the number of iterations
+     *      n: the number of multiplication
+     *   type: the CRC type, either CRC32 or CRC32C.
+     */
+    public static void main(String[] args) throws Exception {
+      final int m = args.length >= 1? Integer.parseInt(args[0]) : 10;
+      final int n = args.length >= 2? Integer.parseInt(args[1]) : 100_000_000;
+      final DataChecksum.Type type = args.length >= 3? DataChecksum.Type.valueOf(args[2])
+          : DataChecksum.Type.CRC32;
+
+      final int warmUpIterations = 2;
+      System.out.printf("%nStart warming up with %d iterations ...%n", warmUpIterations);
+      for (int i = 0; i < 2; i++) {
+        runTestMultiplyMod(n, type);
+      }
+
+      System.out.printf("%nStart benchmark with %d iterations ...%n", m);
+      final long[] times = new long[2];
+      for (int i = 0; i < m; i++) {
+        System.out.printf("%d) ", i);
+        final long[] t = runTestMultiplyMod(n, type);
+        times[0] += t[0];
+        times[1] += t[1];
+      }
+
+      System.out.printf("%nResult) %d x %d computations:%n", m, n);
+      final double ops0 = n * 1000.0 / times[0];
+      System.out.printf("galoisFieldMultiply: %.3fs (%.2f ops)%n", times[0] / 1000.0, ops0);
+      final double ops1 = n * 1000.0 / times[1];
+      System.out.printf("multiplyCrc32      : %.3fs (%.2f ops)%n", times[1] / 1000.0, ops1);
+      System.out.printf("multiplyCrc32 is %.2f%% faster%n", (ops1 - ops0) * 100.0 / ops0);
+    }
   }
 }
