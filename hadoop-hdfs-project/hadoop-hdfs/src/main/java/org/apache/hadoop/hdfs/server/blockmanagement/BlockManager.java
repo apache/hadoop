@@ -4318,7 +4318,6 @@ public class BlockManager implements BlockStatsMXBean {
     BitSet found = new BitSet(groupSize); //indices found
     BitSet duplicated = new BitSet(groupSize); //indices found more than once
     HashMap<DatanodeStorageInfo, Integer> storage2index = new HashMap<>();
-    boolean logEmptyExcessType = true;
     for (DatanodeStorageInfo storage : nonExcess) {
       int index = sblk.getStorageBlockIndex(storage);
       assert index >= 0;
@@ -4342,23 +4341,11 @@ public class BlockManager implements BlockStatsMXBean {
       Integer index = storage2index.get(delStorageHint);
       if (index != null && duplicated.get(index)) {
         processChosenExcessRedundancy(nonExcess, delStorageHint, storedBlock);
-        logEmptyExcessType = false;
       }
     }
 
-    // cardinality of found indicates the expected number of internal blocks
-    final int numOfTarget = found.cardinality();
     final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(
         bc.getStoragePolicyID());
-    final List<StorageType> excessTypes = storagePolicy.chooseExcess(
-        (short) numOfTarget, DatanodeStorageInfo.toStorageTypes(nonExcess));
-    if (excessTypes.isEmpty()) {
-      if(logEmptyExcessType) {
-        LOG.warn("excess types chosen for block {} among storages {} is empty",
-                storedBlock, nonExcess);
-      }
-      return;
-    }
 
     BlockPlacementPolicy placementPolicy = placementPolicies.getPolicy(STRIPED);
     // for each duplicated index, delete some replicas until only one left
@@ -4372,9 +4359,11 @@ public class BlockManager implements BlockStatsMXBean {
         }
       }
       if (candidates.size() > 1) {
+        List<StorageType> internalExcessTypes = storagePolicy.chooseExcess(
+            (short) 1, DatanodeStorageInfo.toStorageTypes(candidates));
         List<DatanodeStorageInfo> replicasToDelete = placementPolicy
             .chooseReplicasToDelete(nonExcess, candidates, (short) 1,
-                excessTypes, null, null);
+                internalExcessTypes, null, null);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Choose redundant EC replicas to delete from blk_{} which is located in {}",
               sblk.getBlockId(), storage2index);
