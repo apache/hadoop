@@ -293,6 +293,9 @@ export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 # this is the default:
 # export HDFS_NAMENODE_OPTS="-Dhadoop.security.logger=INFO,RFAS"
 
+# Use NameNode specific heap size
+# export HDFS_NAMENODE_HEAPSIZE=
+
 ###
 # SecondaryNameNode specific parameters
 ###
@@ -302,6 +305,9 @@ export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 #
 # This is the default:
 # export HDFS_SECONDARYNAMENODE_OPTS="-Dhadoop.security.logger=INFO,RFAS"
+
+# Use secondary NameNode specific heap size
+# export HDFS_SECONDARYNAMENODE_HEAPSIZE=
 
 ###
 # DataNode specific parameters
@@ -325,6 +331,9 @@ export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 # By default, Hadoop uses jsvc which needs to know to launch a
 # server jvm.
 # export HDFS_DATANODE_SECURE_EXTRA_OPTS="-jvm server"
+
+# Use DataNode specific heap size
+# export HDFS_DATANODE_HEAPSIZE=
 
 ###
 # NFS3 Gateway specific parameters
@@ -367,6 +376,9 @@ export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 # and therefore may override any similar flags set in HADOOP_OPTS
 #
 # export HDFS_JOURNALNODE_OPTS=""
+
+# Use JournalNode specific heap size
+# export HDFS_JOURNALNODE_HEAPSIZE=
 
 ###
 # HDFS Balancer specific parameters
