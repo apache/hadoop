@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -53,9 +54,15 @@ public class RouterPolicyFacade {
   private final SubClusterResolver subClusterResolver;
   private final FederationStateStoreFacade federationFacade;
   private Map<String, SubClusterPolicyConfiguration> globalConfMap;
+  private boolean userAsDefaultQueue;
 
   @VisibleForTesting
   Map<String, FederationRouterPolicy> globalPolicyMap;
+
+  @VisibleForTesting
+  public void setUserAsDefaultQueue(boolean userAsDefaultQueue) {
+    this.userAsDefaultQueue = userAsDefaultQueue;
+  }
 
   public RouterPolicyFacade(Configuration conf,
       FederationStateStoreFacade facade, SubClusterResolver resolver,
@@ -66,6 +73,9 @@ public class RouterPolicyFacade {
     this.subClusterResolver = resolver;
     this.globalConfMap = new ConcurrentHashMap<>();
     this.globalPolicyMap = new ConcurrentHashMap<>();
+    this.userAsDefaultQueue = conf.getBoolean(
+            YarnConfiguration.USER_AS_DEFAULT_QUEUE,
+            YarnConfiguration.DEFAULT_USER_AS_DEFAULT_QUEUE);
 
     // load default behavior from store if possible
     String defaultKey = YarnConfiguration.DEFAULT_FEDERATION_POLICY_KEY;
@@ -119,6 +129,8 @@ public class RouterPolicyFacade {
    *          {@link SubClusterId} to blackList from the selection of the home
    *          subCluster.
    *
+   * @param user the user who submit the application.
+   *
    * @return the {@link SubClusterId} that will be the "home" for this
    *         application.
    *
@@ -127,7 +139,7 @@ public class RouterPolicyFacade {
    */
   public SubClusterId getHomeSubcluster(
       ApplicationSubmissionContext appSubmissionContext,
-      List<SubClusterId> blackListSubClusters) throws YarnException {
+      List<SubClusterId> blackListSubClusters, String user) throws YarnException {
 
     // the maps are concurrent, but we need to protect from reset()
     // reinitialization mid-execution by creating a new reference local to this
@@ -147,6 +159,14 @@ public class RouterPolicyFacade {
     // default behavior.
     if (queue == null) {
       queue = YarnConfiguration.DEFAULT_QUEUE_NAME;
+    }
+
+    if (userAsDefaultQueue
+            && queue.equals(YarnConfiguration.DEFAULT_QUEUE_NAME)
+            && user != null && !user.isEmpty()) {
+      queue = user.trim();
+      LOG.info("Application {} use user {} as default queue",
+          appSubmissionContext.getApplicationId(), user);
     }
 
     FederationRouterPolicy policy = getFederationRouterPolicy(cachedConfs, policyMap, queue);

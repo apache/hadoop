@@ -3879,6 +3879,12 @@
     <value>1s</value>
   </property>
 
+  <property>
+    <description>Flag to indicate whether to use user as default queue.</description>
+    <name>yarn.federation.user-as-default-queue.enabled</name>
+    <value>false</value>
+  </property>
+
   <!-- Other Configuration -->
 
   <property>
