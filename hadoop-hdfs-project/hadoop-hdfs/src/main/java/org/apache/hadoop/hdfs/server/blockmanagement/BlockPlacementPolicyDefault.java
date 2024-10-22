@@ -393,7 +393,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     int clusterSize = clusterMap.getNumOfLeaves();
     int totalNumOfReplicas = numOfChosen + numOfReplicas;
     if (totalNumOfReplicas > clusterSize) {
-      numOfReplicas -= (totalNumOfReplicas-clusterSize);
+      numOfReplicas = clusterSize - numOfChosen;
       totalNumOfReplicas = clusterSize;
     }
     // No calculation needed when there is only one rack or picking one node.
