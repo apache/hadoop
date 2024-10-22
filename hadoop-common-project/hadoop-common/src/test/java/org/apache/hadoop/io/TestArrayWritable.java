@@ -22,8 +22,15 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 
@@ -100,6 +107,30 @@ public class TestArrayWritable {
         Text.class, arrayWritable.getValueClass());
     assertArrayEquals("testArrayWritableStringConstructor toString error!!!",
       original, arrayWritable.toStrings());
+  }
+
+  @Test
+  public void testArrayWritableStrings() throws Exception {
+    String[] original = {"The 1896 Cedar Keys hurricane was a powerful tropical cyclone " +
+        "that devastated much of the East Coast of the United States, starting with " +
+        "Florida's Cedar Keys, near the end of September. The storm's rapid movement " +
+        "allowed it to maintain much of its intensity after landfall, becoming one " +
+        "of the costliest United States hurricanes at the time.",
+        "The fourth tropical cyclone of the 1896 Atlantic hurricane season, it washed out " +
+        "connecting the Cedar Keys to the mainland with a 10.5 ft (3.2 m) storm surge, " +
+        "and submerged much of the island group (Cedar Key flooding pictured)."};
+    ArrayWritable arrayWritable = new ArrayWritable(original);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutput out = new DataOutputStream(baos);
+    arrayWritable.write(out);
+    baos.close();
+
+    DataInput in = new DataInputStream(new ByteArrayInputStream(baos.toByteArray()));
+    arrayWritable.readFields(in);
+
+    String[] current = arrayWritable.toStrings();
+    Assert.assertEquals(original[0], current[0]);
+    Assert.assertEquals(original[1], current[1]);
   }
   
 }
