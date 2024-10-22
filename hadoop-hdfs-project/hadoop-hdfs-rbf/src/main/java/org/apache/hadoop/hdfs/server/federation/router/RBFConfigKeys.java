@@ -119,6 +119,15 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "namenode.heartbeat.jmx.interval";
   public static final long DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS_DEFAULT = 0;
 
+  // HDFS Router Msync
+  public static final String DFS_ROUTER_AUTO_MSYNC_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "auto.msync.enable";
+  public static final boolean DFS_ROUTER_AUTO_MSYNC_ENABLE_DEFAULT = false;
+  public static final String DFS_ROUTER_AUTO_MSYNC_INTERVAL_MS =
+      FEDERATION_ROUTER_PREFIX + "auto.msync.interval";
+  public static final long DFS_ROUTER_AUTO_MSYNC_INTERVAL_MS_DEFAULT =
+      TimeUnit.SECONDS.toMillis(5);
+
   // HDFS Router NN client
   public static final String
       DFS_ROUTER_NAMENODE_CONNECTION_CREATOR_QUEUE_SIZE =
