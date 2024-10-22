@@ -24,9 +24,11 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -395,7 +397,23 @@ public class ApplicationMasterService extends AbstractService implements
 
     ApplicationAttemptId appAttemptId =
         amrmTokenIdentifier.getApplicationAttemptId();
+    RMAppAttemptMetrics rmMetrics = getAppAttemptMetrics(appAttemptId);
+    // we do this here to prevent the internal lock in allocate()
+    if (rmMetrics != null) {
+      rmMetrics.setAllocateLatenciesTimestamps(request.getAskList());
+    }
+    AllocateResponse response = allocate(request, amrmTokenIdentifier);
+    if (rmMetrics != null) {
+      rmMetrics.updateAllocateLatencies(response.getAllocatedContainers());
+    }
+    return response;
+  }
 
+  protected AllocateResponse allocate(AllocateRequest request,
+      AMRMTokenIdentifier amrmTokenIdentifier)
+      throws YarnException, IOException {
+    ApplicationAttemptId appAttemptId =
+        amrmTokenIdentifier.getApplicationAttemptId();
     this.amLivelinessMonitor.receivedPing(appAttemptId);
 
     /* check if its in cache */
@@ -469,6 +487,33 @@ public class ApplicationMasterService extends AbstractService implements
           AMRMClientUtils.getNextResponseId(lastResponse.getResponseId()));
       lock.setAllocateResponse(response);
       return response;
+    }
+  }
+
+  protected RMAppAttemptMetrics getAppAttemptMetrics(
+      ApplicationAttemptId appAttemptId) {
+    if (appAttemptId == null) {
+      return null;
+    }
+    ConcurrentMap<ApplicationId, RMApp>  apps = this.rmContext.getRMApps();
+    ApplicationId appId = appAttemptId.getApplicationId();
+    if (appId == null) {
+      return null;
+    }
+    RMApp app = apps.get(appId);
+    if (app == null) {
+      return null;
+    }
+
+    Map<ApplicationAttemptId, RMAppAttempt> attempts = app.getAppAttempts();
+    if (attempts == null) {
+      return null;
+    } else {
+      RMAppAttempt attempt = attempts.get(appAttemptId);
+      if (attempt == null) {
+        return null;
+      }
+      return attempt.getRMAppAttemptMetrics();
     }
   }
 

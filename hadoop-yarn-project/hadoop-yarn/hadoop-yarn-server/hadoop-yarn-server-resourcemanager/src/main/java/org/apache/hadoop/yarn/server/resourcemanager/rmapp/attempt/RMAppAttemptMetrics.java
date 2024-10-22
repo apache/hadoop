@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -29,6 +30,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.lang3.time.DateUtils;
+import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -62,6 +69,11 @@ public class RMAppAttemptMetrics {
   private int[][] localityStatistics =
       new int[NodeType.values().length][NodeType.values().length];
   private volatile int totalAllocatedContainers;
+
+  private ConcurrentHashMap<Long, Long> allocationGuaranteedLatencies =
+      new ConcurrentHashMap<Long, Long>();
+  private ConcurrentHashMap<Long, Long> allocationOpportunisticLatencies =
+      new ConcurrentHashMap<Long, Long>();
 
   public RMAppAttemptMetrics(ApplicationAttemptId attemptId,
       RMContext rmContext) {
@@ -241,5 +253,122 @@ public class RMAppAttemptMetrics {
 
   public void setApplicationAttemptHeadRoom(Resource headRoom) {
     this.applicationHeadroom = headRoom;
+  }
+
+  /**
+   * Add allocationID latency to the application ID with a specific timestamp
+   * (guaranteed).
+   *
+   * @param allocId   allocationId
+   * @param timestamp the timestamp to associate
+   */
+  public void addAllocationGuarLatencyIfNotExists(long allocId,
+      long timestamp) {
+    allocationGuaranteedLatencies.putIfAbsent(allocId, timestamp);
+  }
+
+  /**
+   * Add allocationID latency to the application ID with a specific timestamp
+   * (opportunistic).
+   *
+   * @param allocId   allocationId
+   * @param timestamp the timestamp to associate
+   */
+  public void addAllocationOppLatencyIfNotExists(long allocId, long timestamp) {
+    allocationOpportunisticLatencies.putIfAbsent(allocId, timestamp);
+  }
+
+  /**
+   * Returns the time associated when the allocation Id was added. This method
+   * removes the allocation Id from the class (guaranteed).
+   *
+   * @param allocId the allocation ID to get the associated time
+   * @return the timestamp associated with that allocation id as well as stop
+   * tracking it
+   */
+  public long getAndRemoveGuaAllocationLatencies(long allocId) {
+    Long ret = allocationGuaranteedLatencies.remove(allocId);
+    return ret != null ? ret : 0L;
+  }
+
+  /**
+   * Returns the time associated when the allocation Id was added. This method
+   * removes the allocation Id from the class (opportunistic).
+   *
+   * @param allocId the allocation ID to get the associated time
+   * @return the timestamp associated with that allocation id as well as stop
+   * tracking it
+   */
+  public long getAndRemoveOppAllocationLatencies(long allocId) {
+    Long ret = allocationOpportunisticLatencies.remove(allocId);
+    return ret != null ? ret : 0L;
+  }
+
+  /**
+   * Set timestamp for the provided ResourceRequest. It will correctly identify
+   * their ExecutionType, provided they have they have allocateId != 0 (DEFAULT)
+   * This is used in conjunction with updatePromoteLatencies method.
+   *
+   * @param requests the ResourceRequests to add.
+   */
+  public void setAllocateLatenciesTimestamps(List<ResourceRequest> requests) {
+    long now = Time.now();
+    for (ResourceRequest req : requests) {
+      if (req.getNumContainers() > 0) {
+        // we dont support tracking with negative or zero allocationIds
+        long allocationRequestId = req.getAllocationRequestId();
+        if (allocationRequestId > 0) {
+          ExecutionTypeRequest execReq = req.getExecutionTypeRequest();
+          if (execReq != null) {
+            if (ExecutionType.GUARANTEED.equals(execReq.getExecutionType())) {
+              addAllocationGuarLatencyIfNotExists(allocationRequestId, now);
+            } else {
+              addAllocationOppLatencyIfNotExists(allocationRequestId, now);
+            }
+          }
+        } else {
+          LOG.warn("Can't register allocate latency for {} container with"
+                  + "less than or equal to 0 allocation IDs",
+              req.getExecutionTypeRequest().getExecutionType());
+        }
+      }
+    }
+  }
+
+  /**
+   * Updated the JMX metrics class (ClusterMetrics) with the delta time when
+   * these containers where added. It will correctly identify their
+   * ExecutionType, provided they have they have allocateId != 0 (DEFAULT).
+   *
+   * @param response the list of the containers to allocate.
+   */
+  public void updateAllocateLatencies(List<Container> response) {
+    for (Container container : response) {
+      long allocationRequestId = container.getAllocationRequestId();
+      ExecutionType executionType = container.getExecutionType();
+      // we dont support tracking with negative or zero allocationIds
+      if (allocationRequestId > 0) {
+        long now = System.currentTimeMillis();
+        long allocIdTime = (executionType == ExecutionType.GUARANTEED) ?
+            getAndRemoveGuaAllocationLatencies(allocationRequestId) :
+            getAndRemoveOppAllocationLatencies(allocationRequestId);
+        if (allocIdTime != 0) {
+          if (executionType == ExecutionType.GUARANTEED) {
+            ClusterMetrics.getMetrics()
+                .addAllocateGuarLatencyEntry(now - allocIdTime);
+          } else {
+            ClusterMetrics.getMetrics()
+                .addAllocateOppLatencyEntry(now - allocIdTime);
+          }
+        } else {
+          LOG.error("Can't register allocate latency for {} container {}; "
+              + "allotTime={}", executionType, container.getId(), allocIdTime);
+        }
+      } else {
+        LOG.warn("Cant register promotion latency for {} container {}. Either "
+                + "allocationID is less than or equal to 0 or container is lost",
+            executionType, container.getId());
+      }
+    }
   }
 }
