@@ -504,6 +504,7 @@ public class TestMRAppMaster {
   @Test
   public void testMRAppMasterShutDownJob() throws Exception,
       InterruptedException {
+    ExitUtil.resetFirstExitException();
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";
     String userName = "TestAppMasterUser";
