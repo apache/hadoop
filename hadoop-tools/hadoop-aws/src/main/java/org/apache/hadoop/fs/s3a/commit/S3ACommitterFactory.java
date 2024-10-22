@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitterFactory;
+import org.apache.hadoop.fs.s3a.commit.optimized.OptimizedS3MagicCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterFactory;
@@ -48,6 +49,8 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
  *   Staging partitioned committer.</li>
  *   <li>{@link CommitConstants#COMMITTER_NAME_MAGIC}:
  *   the "Magic" committer</li>
+ *    <li>{@link CommitConstants#COMMITTER_NAME_OPTIMIZED}:
+ *  *   the "OptimizedMagic" committer</li>
  *   <li>{@link InternalCommitterConstants#COMMITTER_NAME_STAGING}:
  *   the "staging" committer, which isn't intended for use outside tests.</li>
  * </ul>
@@ -131,6 +134,9 @@ public class S3ACommitterFactory extends AbstractS3ACommitterFactory {
       break;
     case COMMITTER_NAME_MAGIC:
       factory = new MagicS3GuardCommitterFactory();
+      break;
+    case COMMITTER_NAME_OPTIMIZED:
+      factory = new OptimizedS3MagicCommitterFactory();
       break;
     case InternalCommitterConstants.COMMITTER_NAME_STAGING:
       factory = new StagingCommitterFactory();
