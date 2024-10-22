@@ -1091,23 +1091,20 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             targetStorageType, targetStorageId);
     boolean useVolumeOnSameMount = false;
 
-    try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
-        block.getBlockPoolId())) {
-      if (shouldConsiderSameMountVolume) {
-        volumeRef = volumes.getVolumeByMount(targetStorageType,
-            ((FsVolumeImpl) replicaInfo.getVolume()).getMount(),
-            block.getNumBytes());
-        if (volumeRef != null) {
-          useVolumeOnSameMount = true;
-        }
+    if (shouldConsiderSameMountVolume) {
+      volumeRef = volumes.getVolumeByMount(targetStorageType,
+          ((FsVolumeImpl) replicaInfo.getVolume()).getMount(),
+          block.getNumBytes());
+      if (volumeRef != null) {
+        useVolumeOnSameMount = true;
       }
-      if (!useVolumeOnSameMount) {
-        volumeRef = volumes.getNextVolume(
-            targetStorageType,
-            targetStorageId,
-            block.getNumBytes()
-        );
-      }
+    }
+    if (!useVolumeOnSameMount) {
+      volumeRef = volumes.getNextVolume(
+          targetStorageType,
+          targetStorageId,
+          block.getNumBytes()
+      );
     }
     try {
       LOG.debug("moving block {} from {} to {}", block,
@@ -1595,75 +1592,76 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       StorageType storageType, String storageId, ExtendedBlock b,
       boolean allowLazyPersist, long newGS) throws IOException {
     long startTimeMs = Time.monotonicNow();
+    ReplicaInfo replicaInfo = null;
     try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
         b.getBlockPoolId())) {
-      ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(),
+      replicaInfo = volumeMap.get(b.getBlockPoolId(),
           b.getBlockId());
-      if (replicaInfo != null) {
-        // In case of retries with same blockPoolId + blockId as before
-        // with updated GS, cleanup the old replica to avoid
-        // any multiple copies with same blockPoolId + blockId
-        if (newGS != 0L) {
-          cleanupReplica(b.getBlockPoolId(), replicaInfo);
-        } else {
-          throw new ReplicaAlreadyExistsException("Block " + b +
-              " already exists in state " + replicaInfo.getState() +
-              " and thus cannot be created.");
+    }
+    if (replicaInfo != null) {
+      // In case of retries with same blockPoolId + blockId as before
+      // with updated GS, cleanup the old replica to avoid
+      // any multiple copies with same blockPoolId + blockId
+      if (newGS != 0L) {
+        cleanupReplica(b.getBlockPoolId(), replicaInfo);
+      } else {
+        throw new ReplicaAlreadyExistsException("Block " + b +
+            " already exists in state " + replicaInfo.getState() +
+            " and thus cannot be created.");
+      }
+    }
+    // create a new block
+    FsVolumeReference ref = null;
+
+    // Use ramdisk only if block size is a multiple of OS page size.
+    // This simplifies reservation for partially used replicas
+    // significantly.
+    if (allowLazyPersist &&
+        lazyWriter != null &&
+        b.getNumBytes() % cacheManager.getOsPageSize() == 0 &&
+        reserveLockedMemory(b.getNumBytes())) {
+      try {
+        // First try to place the block on a transient volume.
+        ref = volumes.getNextTransientVolume(b.getNumBytes());
+        datanode.getMetrics().incrRamDiskBlocksWrite();
+      } catch (DiskOutOfSpaceException de) {
+        // Ignore the exception since we just fall back to persistent storage.
+        LOG.warn("Insufficient space for placing the block on a transient "
+            + "volume, fall back to persistent storage: "
+            + de.getMessage());
+      } finally {
+        if (ref == null) {
+          cacheManager.release(b.getNumBytes());
         }
       }
-      // create a new block
-      FsVolumeReference ref = null;
+    }
 
-      // Use ramdisk only if block size is a multiple of OS page size.
-      // This simplifies reservation for partially used replicas
-      // significantly.
-      if (allowLazyPersist &&
-          lazyWriter != null &&
-          b.getNumBytes() % cacheManager.getOsPageSize() == 0 &&
-          reserveLockedMemory(b.getNumBytes())) {
-        try {
-          // First try to place the block on a transient volume.
-          ref = volumes.getNextTransientVolume(b.getNumBytes());
-          datanode.getMetrics().incrRamDiskBlocksWrite();
-        } catch (DiskOutOfSpaceException de) {
-          // Ignore the exception since we just fall back to persistent storage.
-          LOG.warn("Insufficient space for placing the block on a transient "
-              + "volume, fall back to persistent storage: "
-              + de.getMessage());
-        } finally {
-          if (ref == null) {
-            cacheManager.release(b.getNumBytes());
-          }
-        }
+    if (ref == null) {
+      ref = volumes.getNextVolume(storageType, storageId, b.getNumBytes());
+    }
+    LOG.debug("Creating Rbw, block: {} on volume: {}", b, ref.getVolume());
+
+    FsVolumeImpl v = (FsVolumeImpl) ref.getVolume();
+    // create an rbw file to hold block in the designated volume
+
+    if (allowLazyPersist && !v.isTransientStorage()) {
+      datanode.getMetrics().incrRamDiskBlocksWriteFallback();
+    }
+
+    ReplicaInPipeline newReplicaInfo;
+    try (AutoCloseableLock l = lockManager.writeLock(LockLevel.VOLUME,
+        b.getBlockPoolId(), v.getStorageID())) {
+      newReplicaInfo = v.createRbw(b);
+      if (newReplicaInfo.getReplicaInfo().getState() != ReplicaState.RBW) {
+        throw new IOException("CreateRBW returned a replica of state "
+            + newReplicaInfo.getReplicaInfo().getState()
+            + " for block " + b.getBlockId());
       }
-
-      if (ref == null) {
-        ref = volumes.getNextVolume(storageType, storageId, b.getNumBytes());
-      }
-      LOG.debug("Creating Rbw, block: {} on volume: {}", b, ref.getVolume());
-
-      FsVolumeImpl v = (FsVolumeImpl) ref.getVolume();
-      // create an rbw file to hold block in the designated volume
-
-      if (allowLazyPersist && !v.isTransientStorage()) {
-        datanode.getMetrics().incrRamDiskBlocksWriteFallback();
-      }
-
-      ReplicaInPipeline newReplicaInfo;
-      try (AutoCloseableLock l = lockManager.writeLock(LockLevel.VOLUME,
-          b.getBlockPoolId(), v.getStorageID())) {
-        newReplicaInfo = v.createRbw(b);
-        if (newReplicaInfo.getReplicaInfo().getState() != ReplicaState.RBW) {
-          throw new IOException("CreateRBW returned a replica of state "
-              + newReplicaInfo.getReplicaInfo().getState()
-              + " for block " + b.getBlockId());
-        }
-        volumeMap.add(b.getBlockPoolId(), newReplicaInfo.getReplicaInfo());
-        return new ReplicaHandler(newReplicaInfo, ref);
-      } catch (IOException e) {
-        IOUtils.cleanupWithLogger(null, ref);
-        throw e;
-      }
+      volumeMap.add(b.getBlockPoolId(), newReplicaInfo.getReplicaInfo());
+      return new ReplicaHandler(newReplicaInfo, ref);
+    } catch (IOException e) {
+      IOUtils.cleanupWithLogger(null, ref);
+      throw e;
     } finally {
       if (dataNodeMetrics != null) {
         long createRbwMs = Time.monotonicNow() - startTimeMs;
@@ -3578,33 +3576,32 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
               block.getBlockPoolId())) {
             replicaInfo = volumeMap.get(block.getBlockPoolId(), block.getBlockId());
+          }
+          // If replicaInfo is null, the block was either deleted before
+          // it could be checkpointed or it is already on persistent storage.
+          // This can occur if a second replica on persistent storage was found
+          // after the lazy write was scheduled.
+          if (replicaInfo != null &&
+              replicaInfo.getVolume().isTransientStorage()) {
+            // Pick a target volume to persist the block.
+            targetReference = volumes.getNextVolume(
+                StorageType.DEFAULT, null, replicaInfo.getNumBytes());
+            targetVolume = (FsVolumeImpl) targetReference.getVolume();
 
-            // If replicaInfo is null, the block was either deleted before
-            // it could be checkpointed or it is already on persistent storage.
-            // This can occur if a second replica on persistent storage was found
-            // after the lazy write was scheduled.
-            if (replicaInfo != null &&
-                replicaInfo.getVolume().isTransientStorage()) {
-              // Pick a target volume to persist the block.
-              targetReference = volumes.getNextVolume(
-                  StorageType.DEFAULT, null, replicaInfo.getNumBytes());
-              targetVolume = (FsVolumeImpl) targetReference.getVolume();
+            ramDiskReplicaTracker.recordStartLazyPersist(
+                block.getBlockPoolId(), block.getBlockId(), targetVolume);
 
-              ramDiskReplicaTracker.recordStartLazyPersist(
-                  block.getBlockPoolId(), block.getBlockId(), targetVolume);
-
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("LazyWriter: Start persisting RamDisk block:"
-                    + " block pool Id: " + block.getBlockPoolId()
-                    + " block id: " + block.getBlockId()
-                    + " on target volume " + targetVolume);
-              }
-
-              asyncLazyPersistService.submitLazyPersistTask(
-                  block.getBlockPoolId(), block.getBlockId(),
-                  replicaInfo.getGenerationStamp(), block.getCreationTime(),
-                  replicaInfo, targetReference);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("LazyWriter: Start persisting RamDisk block:"
+                  + " block pool Id: " + block.getBlockPoolId()
+                  + " block id: " + block.getBlockId()
+                  + " on target volume " + targetVolume);
             }
+
+            asyncLazyPersistService.submitLazyPersistTask(
+                block.getBlockPoolId(), block.getBlockId(),
+                replicaInfo.getGenerationStamp(), block.getCreationTime(),
+                replicaInfo, targetReference);
           }
         }
         succeeded = true;
