@@ -22,12 +22,23 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
  */
 public class MultiNodePolicySpec {
 
+  private String policyName;
   private String policyClassName;
   private long sortingInterval;
 
-  public MultiNodePolicySpec(String policyClassName, long timeout) {
+  public MultiNodePolicySpec(String policyName, String policyClassName,
+      long timeout) {
+    this.setPolicyName(policyName);
     this.setSortingInterval(timeout);
     this.setPolicyClassName(policyClassName);
+  }
+
+  public String getPolicyName() {
+    return policyName;
+  }
+
+  public void setPolicyName(String policyName) {
+    this.policyName = policyName;
   }
 
   public long getSortingInterval() {
@@ -49,7 +60,8 @@ public class MultiNodePolicySpec {
   @Override
   public String toString() {
     return "MultiNodePolicySpec {" +
-        "policyClassName='" + policyClassName + '\'' +
+        "policyName='" + policyName + '\'' +
+        ", policyClassName='" + policyClassName + '\'' +
         ", sortingInterval=" + sortingInterval +
         '}';
   }

@@ -98,7 +98,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   final ResourceCalculator resourceCalculator;
   Set<String> resourceTypes;
   final RMNodeLabelsManager labelManager;
-  private String multiNodeSortingPolicyClassName = null;
+  private String multiNodeSortingPolicyName = null;
 
   Map<AccessType, AccessControlList> acls =
       new HashMap<AccessType, AccessControlList>();
@@ -423,7 +423,7 @@ public abstract class AbstractCSQueue implements CSQueue {
           getQueuePathObject());
 
       // Update multi-node sorting algorithm for scheduling as configured.
-      setMultiNodeSortingPolicyClassName(
+      setMultiNodeSortingPolicyName(
           configuration.getMultiNodesSortingAlgorithmPolicy(getQueuePathObject()));
 
       // Setup application related limits
@@ -1197,12 +1197,12 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Override
-  public String getMultiNodeSortingPolicyClassName() {
-    return this.multiNodeSortingPolicyClassName;
+  public String getMultiNodeSortingPolicyName() {
+    return this.multiNodeSortingPolicyName;
   }
 
-  public void setMultiNodeSortingPolicyClassName(String policyName) {
-    this.multiNodeSortingPolicyClassName = policyName;
+  public void setMultiNodeSortingPolicyName(String policyName) {
+    this.multiNodeSortingPolicyName = policyName;
   }
 
   public long getMaximumApplicationLifetime() {
