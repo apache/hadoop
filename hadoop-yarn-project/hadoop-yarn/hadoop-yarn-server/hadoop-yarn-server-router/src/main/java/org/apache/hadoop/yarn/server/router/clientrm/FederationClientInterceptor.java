@@ -187,7 +187,7 @@ import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConsta
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_NODESTOATTRIBUTES;
 
 /**
- * Extends the {@code AbstractRequestInterceptorClient} class and provides an
+ * Extends the {@code AbstractClientRequestInterceptor} class and provides an
  * implementation for federation of YARN RM and scaling an application across
  * multiple YARN SubClusters. All the federation specific implementation is
  * encapsulated in this class. This is always the last interceptor in the chain.

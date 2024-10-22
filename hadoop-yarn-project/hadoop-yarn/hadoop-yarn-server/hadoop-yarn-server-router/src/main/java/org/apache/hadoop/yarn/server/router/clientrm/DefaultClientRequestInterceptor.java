@@ -102,7 +102,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Extends the {@code AbstractRequestInterceptorClient} class and provides an
+ * Extends the {@code AbstractClientRequestInterceptor} class and provides an
  * implementation that simply forwards the client requests to the cluster
  * resource manager.
  *
