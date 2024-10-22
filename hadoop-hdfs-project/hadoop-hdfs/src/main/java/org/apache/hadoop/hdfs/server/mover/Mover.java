@@ -180,6 +180,10 @@ public class Mover {
     }
   }
 
+  void resetData() {
+    dispatcher.reset4Mover();
+  }
+
   private void initStoragePolicies() throws IOException {
     Collection<BlockStoragePolicy> policies =
         dispatcher.getDistributedFileSystem().getAllStoragePolicies();
@@ -703,6 +707,7 @@ public class Mover {
               excludedPinnedBlocks);
 
           final ExitStatus r = m.run();
+          m.resetData();
 
           if (r == ExitStatus.SUCCESS) {
             IOUtils.cleanupWithLogger(LOG, nnc);
