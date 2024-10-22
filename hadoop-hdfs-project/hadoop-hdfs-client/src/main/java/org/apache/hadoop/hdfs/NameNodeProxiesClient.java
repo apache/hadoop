@@ -316,13 +316,16 @@ public class NameNodeProxiesClient {
       Configuration conf, URI nameNodeUri, Class<T> xface,
       AbstractNNFailoverProxyProvider<T> failoverProxyProvider) {
     Preconditions.checkNotNull(failoverProxyProvider);
+    Map<String, Map<String, InetSocketAddress>> map =
+        DFSUtilClient.getAddresses(conf, null, HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+    Map<String, InetSocketAddress> nnMap = map.get(nameNodeUri.getHost());
     // HA case
     DfsClientConf config = new DfsClientConf(conf);
     T proxy = (T) RetryProxy.create(xface, failoverProxyProvider,
         RetryPolicies.failoverOnNetworkException(
             RetryPolicies.TRY_ONCE_THEN_FAIL, config.getMaxFailoverAttempts(),
             config.getMaxRetryAttempts(), config.getFailoverSleepBaseMillis(),
-            config.getFailoverSleepMaxMillis()));
+            config.getFailoverSleepMaxMillis(), nnMap.size()));
 
     Text dtService;
     if (failoverProxyProvider.useLogicalURI()) {
