@@ -460,6 +460,7 @@
                     <exclusion>org.apache.hadoop.fs.s3a.commit.impl.*</exclusion>
                     <exclusion>org.apache.hadoop.fs.s3a.commit.magic.*</exclusion>
                     <exclusion>org.apache.hadoop.fs.s3a.commit.staging.*</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.audit.mapreduce.*</exclusion>
                   </exclusions>
                   <bannedImports>
                     <bannedImport>org.apache.hadoop.mapreduce.**</bannedImport>
@@ -470,6 +471,23 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-avro-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>schema</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <sourceDirectory>src/main/java/org/apache/hadoop/fs/s3a/audit/avro</sourceDirectory>
+          <outputDirectory>${project.build.directory}/generated-sources/avro</outputDirectory>
+        </configuration>
       </plugin>
     </plugins>
   </build>
