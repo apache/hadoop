@@ -22,10 +22,12 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntFunction;
 
 import org.slf4j.Logger;
@@ -35,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.util.functional.Function4RaisingIOE;
+import org.apache.hadoop.util.functional.FutureIO;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
@@ -424,6 +427,97 @@ public final class VectoredReadUtils {
     readData = readData.slice();
     return readData;
   }
+
+  /**
+   * Implement {@link ByteBufferPositionedReadable#readFully(long, ByteBuffer)} by
+   * converting to a vector read.
+   * @param stream stream
+   * @param position position within file
+   * @param buf the ByteBuffer to receive the results of the read operation.
+   * @throws IOException if there is some error performing the read
+   * @throws EOFException the end of the data was reached before
+   * the read operation completed
+   */
+  public static void vectorizeByteBufferPositionedReadableReadFully(
+      final PositionedReadable stream,
+      final long position,
+      final ByteBuffer buf) throws IOException {
+    final int length = buf.remaining();
+    if (length == 0) {
+      // exit fast on zero-length read
+      return;
+    }
+    final FileRange range = FileRange.createFileRange(position, length);
+    // read with an allocator which returns the buffer passed in
+    // rejecting a second attempt or any attempt to read a different length.
+    readVectored(
+        stream,
+        Collections.singletonList(range),
+        allocateExistingBuffer(buf));
+    FutureIO.awaitFuture(range.getData());
+  }
+
+  /**
+   * Special allocator which always returns the same buffer.
+   * It will reject any request for a buffer of a different size,
+   * or any attempt to issue a second buffer.
+   * @param buf buffer
+   * @return an allocator which serves up the buffer, once.
+   */
+  private static IntFunction<ByteBuffer> allocateExistingBuffer(final ByteBuffer buf) {
+    final AtomicBoolean issued = new AtomicBoolean(false);
+    final int length = buf.remaining();
+    return len -> {
+      checkArgument(len == length,
+          "Read length must match buffer length: %s != %s",
+          length, len);
+      checkArgument(!issued.getAndSet(true),
+          "buffer already issued");
+      return buf;
+    };
+  }
+
+  /**
+   * Implement {@link ByteBufferPositionedReadable#read(long, ByteBuffer)} by
+   * converting to a vector read.
+   * This attempts to read the whole buffer and fails on partial reads,
+   * returning -1.
+   * @param stream stream
+   * @param fileLength known file length
+   * @param position position within file
+   * @param buf the ByteBuffer to receive the results of the read operation.
+   * @return the number of bytes read, possibly zero, or -1 if reached
+   * end-of-stream
+   * @throws IOException if there is some error performing the read
+   */
+  public static int vectorizeByteBufferPositionedReadableRead(
+      final PositionedReadable stream,
+      final long fileLength,
+      final long position,
+      final ByteBuffer buf) throws IOException {
+    final int remaining = buf.remaining();
+    if (remaining == 0) {
+      // exit fast on zero-length read
+      return 0;
+    }
+    if (position >= fileLength) {
+      // EOF
+      return -1;
+    }
+
+    long toEOF = fileLength - position;
+    int length = (int)(Math.min(remaining, toEOF));
+    try {
+      vectorizeByteBufferPositionedReadableReadFully(stream, position, buf);
+      return length;
+    } catch (EOFException e) {
+      final int bytesRead = length - buf.remaining();
+      LOG.debug("EOF reading from {} at position {} bytesRead {}",
+          stream, position, bytesRead, e);
+      return bytesRead;
+    }
+  }
+
 
   /**
    * private constructor.
