@@ -26,6 +26,7 @@ import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.AtomicLongMap;
 
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -213,6 +214,8 @@ public class DatanodeManager {
   private Daemon slowPeerCollectorDaemon;
   private volatile long slowPeerCollectionInterval;
   private volatile int maxSlowPeerReportNodes;
+
+  private final AtomicLongMap<String> collectSlowNodesIpAddrCounts = AtomicLongMap.create();
 
   @Nullable
   private final SlowDiskTracker slowDiskTracker;
@@ -421,6 +424,7 @@ public class DatanodeManager {
     } finally {
       slowPeerCollectorDaemon = null;
       slowNodesUuidSet.clear();
+      collectSlowNodesIpAddrCounts.clear();
     }
   }
 
@@ -2227,8 +2231,18 @@ public class DatanodeManager {
     Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
     slowNodes = slowPeerTracker.getSlowNodes(maxSlowPeerReportNodes);
     List<DatanodeDescriptor> datanodeDescriptors = getDnDescriptorsFromIpAddr(slowNodes);
-    datanodeDescriptors.forEach(
-        datanodeDescriptor -> slowPeersUuidSet.add(datanodeDescriptor.getDatanodeUuid()));
+    datanodeDescriptors.forEach(datanodeDescriptor -> {
+      slowPeersUuidSet.add(datanodeDescriptor.getDatanodeUuid());
+      String ipAddr = datanodeDescriptor.getIpAddr();
+      collectSlowNodesIpAddrCounts.incrementAndGet(ipAddr);
+    });
+    // Clean up nodes that are not in the host2DatanodeMap
+    for (String ipAddr : collectSlowNodesIpAddrCounts.asMap().keySet()) {
+      DatanodeDescriptor datanodeByHost = host2DatanodeMap.getDatanodeByHost(ipAddr);
+      if (datanodeByHost == null) {
+        collectSlowNodesIpAddrCounts.decrementAndGet(ipAddr);
+      }
+    }
     return slowPeersUuidSet;
   }
 
@@ -2254,6 +2268,14 @@ public class DatanodeManager {
    */
   public static Set<String> getSlowNodesUuidSet() {
     return slowNodesUuidSet;
+  }
+
+  /**
+   * Return the map of the frequency of collecting slow datanodes.
+   * @return map type
+   */
+  public Map<String, Long> getCollectSlowNodesIpAddrCounts() {
+    return collectSlowNodesIpAddrCounts.asMap();
   }
 
   /**

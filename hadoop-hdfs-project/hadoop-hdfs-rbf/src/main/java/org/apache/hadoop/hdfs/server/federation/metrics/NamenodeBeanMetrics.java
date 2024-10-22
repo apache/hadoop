@@ -896,6 +896,11 @@ public class NamenodeBeanMetrics
     return 0;
   }
 
+  @Override
+  public String getCollectSlowNodesIpAddrCounts() {
+    return "N/A";
+  }
+
   private Router getRouter() throws IOException {
     if (this.router == null) {
       throw new IOException("Router is not initialized");

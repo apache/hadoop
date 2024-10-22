@@ -4937,6 +4937,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return blockManager.getReconstructionQueuesInitProgress();
   }
 
+  @Override // FSNamesystemMBean
+  @Metric
+  public String getCollectSlowNodesIpAddrCounts() {
+    Map<String, Long> recordSlowNodesIpCounts =
+        getBlockManager().getDatanodeManager().getCollectSlowNodesIpAddrCounts();
+    return JSON.toString(recordSlowNodesIpCounts);
+  }
+
   /**
    * Returns the length of the wait Queue for the FSNameSystemLock.
    *
