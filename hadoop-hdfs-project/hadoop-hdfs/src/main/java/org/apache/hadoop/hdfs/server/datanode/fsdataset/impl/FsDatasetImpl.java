@@ -3249,17 +3249,15 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       throws IOException {
     LOG.info("Adding block pool " + bpid);
     AddBlockPoolException volumeExceptions = new AddBlockPoolException();
-    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
-      try {
-        volumes.addBlockPool(bpid, conf);
-      } catch (AddBlockPoolException e) {
-        volumeExceptions.mergeException(e);
-      }
-      volumeMap.initBlockPool(bpid);
-      Set<String> vols = storageMap.keySet();
-      for (String v : vols) {
-        lockManager.addLock(LockLevel.VOLUME, bpid, v);
-      }
+    try {
+      volumes.addBlockPool(bpid, conf);
+    } catch (AddBlockPoolException e) {
+      volumeExceptions.mergeException(e);
+    }
+    volumeMap.initBlockPool(bpid);
+    Set<String> vols = storageMap.keySet();
+    for (String v : vols) {
+      lockManager.addLock(LockLevel.VOLUME, bpid, v);
     }
     try {
       volumes.getAllVolumesMap(bpid, volumeMap, ramDiskReplicaTracker);
