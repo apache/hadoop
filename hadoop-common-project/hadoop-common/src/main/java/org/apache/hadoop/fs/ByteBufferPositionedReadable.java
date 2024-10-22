@@ -25,9 +25,24 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
+ * The javadocs for this interface follows RFC 2119 rules regarding the use of
+ * MUST, MUST NOT, MAY, and SHALL.
+ * <p>
  * Implementers of this interface provide a positioned read API that writes to a
  * {@link ByteBuffer} rather than a {@code byte[]}.
- *
+ * <p>
+ * <b>Thread safety</b>
+ * <p>
+ * These operations doe not change the current offset of a stream as returned
+ * by {@link Seekable#getPos()} and MUST BE thread-safe.
+ * Implementations MAY block other readers while one read operation
+ * is in progress; this MAY include blocking <i>all</i> read() calls.
+ * <p>
+ * <b>Concurrent file access</b>
+ * <p>
+ * No guarantees are made as to when or whether changes made to a file
+ * are visible to readers of this API reading the data through an already
+ * open stream instance.
  * @see PositionedReadable
  * @see ByteBufferReadable
  */
@@ -54,12 +69,11 @@ public interface ByteBufferPositionedReadable {
    * stream supports this interface, otherwise they might get a
    * {@link UnsupportedOperationException}.
    * <p>
-   * Implementations should treat 0-length requests as legitimate, and must not
+   * Implementations MUST treat 0-length requests as legitimate, and MUST NOT
    * signal an error upon their receipt.
-   * <p>
-   * This does not change the current offset of a file, and is thread-safe.
-   *
-   * @param position position within file
+   * The {@code position} offset MUST BE zero or positive; if negative
+   * an EOFException SHALL BE raised.
+   * @param position position within stream. This MUST be &gt;=0.
    * @param buf the ByteBuffer to receive the results of the read operation.
    * @return the number of bytes read, possibly zero, or -1 if reached
    *         end-of-stream
@@ -78,12 +92,23 @@ public interface ByteBufferPositionedReadable {
    * {@link #read(long, ByteBuffer)}, the difference is that this method is
    * guaranteed to read data until the {@link ByteBuffer} is full, or until
    * the end of the data stream is reached.
-   *
-   * @param position position within file
+   * <p>
+   * The {@code position} offset MUST BE zero or positive; if negative
+   * an EOFException SHALL BE raised.
+   * <p>
+   * Implementations MUST treat 0-length requests as legitimate -and, and so
+   * MUST NOT signal an error if the read position was valid.
+   * For zero-byte reads, read position greater {@code getPos()} MAY be
+   * considered valid; a negative position MUST always fail.
+   * <p>
+   * If the EOF was reached before the buffer was completely read -the
+   * state of the buffer is undefined. It may be unchanged or it may be
+   * partially or completely overwritten.
+   * @param position position within stream. This must be &gt;=0.
    * @param buf the ByteBuffer to receive the results of the read operation.
    * @throws IOException if there is some error performing the read
    * @throws EOFException the end of the data was reached before
-   * the read operation completed
+   * the read operation completed, or the position value is negative.
    * @see #read(long, ByteBuffer)
    */
   void readFully(long position, ByteBuffer buf) throws IOException;
