@@ -1440,10 +1440,25 @@ public abstract class Server {
       selector= Selector.open();
       readers = new Reader[readThreads];
       for (int i = 0; i < readThreads; i++) {
-        Reader reader = new Reader(
+        try {
+          Reader reader = new Reader(
             "Socket Reader #" + (i + 1) + " for port " + port);
-        readers[i] = reader;
-        reader.start();
+          readers[i] = reader;
+          reader.start();
+        } catch (IOException e) {
+          if (e.getMessage().equals("Too many open files")) {
+            // close the opened readers
+            running = false;
+            for (int j = 0; j < i; j++) {
+              readers[j].shutdown();
+            }
+            throw new IOException("The number of readers for the server is set larger than the system limit. " +
+              "Consider lowering " + CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY +
+              " or the number of readers configured for the server.", e);
+          } else {
+            throw e;
+          }
+        }
       }
 
       // Register accepts on the server socket with the selector.
