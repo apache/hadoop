@@ -44,7 +44,7 @@ final class LocalJobRunnerMetrics {
   public static LocalJobRunnerMetrics create() {
     MetricsSystem ms = DefaultMetricsSystem.initialize("JobTracker");
     return ms.register("LocalJobRunnerMetrics-" +
-            ThreadLocalRandom.current().nextInt(), null,
+            ThreadLocalRandom.current().nextLong(), null,
         new LocalJobRunnerMetrics());
   }
 
