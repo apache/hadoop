@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
+import software.amazon.awssdk.services.s3.model.S3Object;
+
 /**
  * Stub implementation of {@link ListingOperationCallbacks}.
  */
@@ -67,6 +69,12 @@ public class MinimalListingOperationCallbacks
 
   @Override
   public long getDefaultBlockSize(Path path) {
+    return 0;
+  }
+
+
+  @Override
+  public long getObjectSize(S3Object s3Object) throws IOException {
     return 0;
   }
 

@@ -116,7 +116,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.fs.s3a.commit.magic.InMemoryMagicCommitTracker;
 import org.apache.hadoop.fs.s3a.impl.AWSCannedACL;
-import org.apache.hadoop.fs.s3a.impl.AWSHeaders;
+import org.apache.hadoop.fs.s3a.impl.BaseS3AFileSystemHandler;
 import org.apache.hadoop.fs.s3a.impl.BulkDeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.BulkDeleteOperationCallbacksImpl;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
@@ -126,6 +126,10 @@ import org.apache.hadoop.fs.s3a.impl.ConfigurationHelper;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyFromLocalOperation;
 import org.apache.hadoop.fs.s3a.impl.CreateFileBuilder;
+import org.apache.hadoop.fs.s3a.impl.S3AFileSystemHandler;
+import org.apache.hadoop.fs.s3a.impl.CSES3AFileSystemHandler;
+import org.apache.hadoop.fs.s3a.impl.CSEV1CompatibleS3AFileSystemHandler;
+import org.apache.hadoop.fs.s3a.impl.CSEMaterials;
 import org.apache.hadoop.fs.s3a.impl.DeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
@@ -147,6 +151,7 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.impl.StoreContextFactory;
 import org.apache.hadoop.fs.s3a.impl.UploadContentProviders;
+import org.apache.hadoop.fs.s3a.impl.CSEUtils;
 import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
@@ -212,7 +217,6 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.RateLimitingFactory;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
@@ -249,7 +253,6 @@ import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_OCTET_STREAM;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_REQUIRED_EXCEPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.ARN_BUCKET_OPTION;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_403_FORBIDDEN;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
@@ -465,6 +468,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private ArnResource accessPoint;
 
   /**
+   * Handler for certain filesystem operations.
+   */
+  private S3AFileSystemHandler fsHandler;
+
+
+  /**
    * Does this S3A FS instance have multipart upload enabled?
    */
   private boolean isMultipartUploadEnabled = DEFAULT_MULTIPART_UPLOAD_ENABLED;
@@ -622,11 +631,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
 
-      // If CSE-KMS method is set then CSE is enabled.
-      isCSEEnabled = S3AEncryptionMethods.CSE_KMS.getMethod()
-          .equals(getS3EncryptionAlgorithm().getMethod());
-      LOG.debug("Client Side Encryption enabled: {}", isCSEEnabled);
-      setCSEGauge();
+      // If encryption method is set to CSE-KMS or CSE-CUSTOM then CSE is enabled.
+      isCSEEnabled = CSEUtils.isCSEEnabled(getS3EncryptionAlgorithm().getMethod());
+
+      // Create the appropriate fsHandler instance using a factory method
+      fsHandler = createFileSystemHandler();
+      fsHandler.setCSEGauge((IOStatisticsStore) getIOStatistics());
       // Username is the current user at the time the FS was instantiated.
       owner = UserGroupInformation.getCurrentUser();
       username = owner.getShortUserName();
@@ -772,7 +782,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
       checkArgument(pageSize <= InternalConstants.MAX_ENTRIES_TO_DELETE,
               "page size out of range: %s", pageSize);
-      listing = new Listing(listingOperationCallbacks, createStoreContext());
+      listing = new Listing(listingOperationCallbacks, createStoreContext(), fsHandler);
       // now the open file logic
       openFileHelper = new OpenFileSupport(
           changeDetectionPolicy,
@@ -822,6 +832,26 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Creates and returns an instance of the appropriate S3AFileSystemHandler.
+   * Creation is baaed on the client-side encryption (CSE) settings.
+   *
+   * @return An instance of the appropriate S3AFileSystemHandler implementation.
+   */
+  private S3AFileSystemHandler createFileSystemHandler() {
+    if (isCSEEnabled) {
+      if (getConf().getBoolean(S3_ENCRYPTION_CSE_V1_COMPATIBILITY_ENABLED,
+          S3_ENCRYPTION_CSE_V1_COMPATIBILITY_ENABLED_DEFAULT)) {
+        return new CSEV1CompatibleS3AFileSystemHandler();
+      } else {
+        return new CSES3AFileSystemHandler();
+      }
+    } else {
+      return new BaseS3AFileSystemHandler();
+    }
+  }
+
+
+  /**
    * Create the S3AStore instance.
    * This is protected so that tests can override it.
    * @param clientManager client manager
@@ -860,22 +890,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             .setMinSeekForVectoredReads(minSeekVectored)
             .setMaxReadSizeForVectoredReads(maxReadSizeVectored)
             .build();
-  }
-
-  /**
-   * Set the client side encryption gauge to 0 or 1, indicating if CSE is
-   * enabled through the gauge or not.
-   */
-  private void setCSEGauge() {
-    IOStatisticsStore ioStatisticsStore =
-        (IOStatisticsStore) getIOStatistics();
-    if (isCSEEnabled) {
-      ioStatisticsStore
-          .setGauge(CLIENT_SIDE_ENCRYPTION_ENABLED.getSymbol(), 1L);
-    } else {
-      ioStatisticsStore
-          .setGauge(CLIENT_SIDE_ENCRYPTION_ENABLED.getSymbol(), 0L);
-    }
   }
 
   /**
@@ -1123,9 +1137,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       credentials = createAWSCredentialProviderList(fsURI, conf);
     }
     LOG.debug("Using credential provider {}", credentials);
-    Class<? extends S3ClientFactory> s3ClientFactoryClass = conf.getClass(
-        S3_CLIENT_FACTORY_IMPL, DEFAULT_S3_CLIENT_FACTORY_IMPL,
-        S3ClientFactory.class);
+
+    S3ClientFactory clientFactory = fsHandler.getS3ClientFactory(conf);
+    S3ClientFactory unencryptedClientFactory = fsHandler.getUnencryptedS3ClientFactory(conf);
+    CSEMaterials cseMaterials = fsHandler.getClientSideEncryptionMaterials(conf, bucket,
+        getS3EncryptionAlgorithm());
 
     S3ClientFactory.S3ClientCreationParameters parameters =
         new S3ClientFactory.S3ClientCreationParameters()
@@ -1146,17 +1162,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withExpressCreateSession(
             conf.getBoolean(S3EXPRESS_CREATE_SESSION, S3EXPRESS_CREATE_SESSION_DEFAULT))
         .withChecksumValidationEnabled(
-            conf.getBoolean(CHECKSUM_VALIDATION, CHECKSUM_VALIDATION_DEFAULT));
+            conf.getBoolean(CHECKSUM_VALIDATION, CHECKSUM_VALIDATION_DEFAULT))
+        .withClientSideEncryptionEnabled(isCSEEnabled)
+        .withClientSideEncryptionMaterials(cseMaterials);
 
-    S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
     // this is where clients and the transfer manager are created on demand.
-    return createClientManager(clientFactory, parameters, getDurationTrackerFactory());
+    return createClientManager(clientFactory, unencryptedClientFactory, parameters,
+        getDurationTrackerFactory());
   }
 
   /**
    * Create the Client Manager; protected to allow for mocking.
    * Requires {@link #unboundedThreadPool} to be initialized.
    * @param clientFactory (reflection-bonded) client factory.
+   * @param unencryptedClientFactory (reflection-bonded) client factory.
    * @param clientCreationParameters parameters for client creation.
    * @param durationTrackerFactory factory for duration tracking.
    * @return a client manager instance.
@@ -1164,9 +1183,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   protected ClientManager createClientManager(
       final S3ClientFactory clientFactory,
+      final S3ClientFactory unencryptedClientFactory,
       final S3ClientFactory.S3ClientCreationParameters clientCreationParameters,
       final DurationTrackerFactory durationTrackerFactory) {
     return new ClientManagerImpl(clientFactory,
+        unencryptedClientFactory,
         clientCreationParameters,
         durationTrackerFactory
     );
@@ -1942,10 +1963,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public ResponseInputStream<GetObjectResponse> getObject(GetObjectRequest request) {
+    public ResponseInputStream<GetObjectResponse> getObject(GetObjectRequest request) throws
+        IOException {
       // active the audit span used for the operation
       try (AuditSpan span = auditSpan.activate()) {
-        return getS3Client().getObject(request);
+        return fsHandler.getObject(store, request, getRequestFactory());
       }
     }
 
@@ -2624,14 +2646,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         final S3AFileStatus status,
         final boolean includeSelf) throws IOException {
       auditSpan.activate();
-      return innerListFiles(
-          path,
-          true,
-          includeSelf
-              ? Listing.ACCEPT_ALL_BUT_S3N
-              : new Listing.AcceptAllButSelfAndS3nDirs(path),
-          status
-      );
+      return innerListFiles(path, true,
+          fsHandler.getFileStatusAcceptor(path, includeSelf), status);
     }
 
     @Override
@@ -2677,7 +2693,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           listing.createFileStatusListingIterator(path,
               createListObjectsRequest(key, null),
               ACCEPT_ALL,
-              Listing.ACCEPT_ALL_BUT_S3N,
+              fsHandler.getFileStatusAcceptor(path, true),
               auditSpan));
     }
 
@@ -2771,6 +2787,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public long getDefaultBlockSize(Path path) {
       return S3AFileSystem.this.getDefaultBlockSize(path);
+    }
+
+    /**
+     * Get the S3 object size.
+     * If the object is encrypted, the unpadded size will be returned.
+     * @param s3Object S3object
+     * @return plaintext S3 object size
+     * @throws IOException IO problems
+     */
+    @Override
+    public long getObjectSize(S3Object s3Object) throws IOException {
+      return fsHandler.getS3ObjectSize(s3Object.key(), s3Object.size(), store, bucket,
+          getRequestFactory(), null);
     }
 
     @Override
@@ -3051,8 +3080,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             if (changeTracker != null) {
               changeTracker.maybeApplyConstraint(requestBuilder);
             }
-            HeadObjectResponse headObjectResponse = getS3Client()
-                .headObject(requestBuilder.build());
+            HeadObjectResponse headObjectResponse = getS3Client().headObject(
+                requestBuilder.build());
+            long length = fsHandler.getS3ObjectSize(key, headObjectResponse.contentLength(),
+                store, bucket, getRequestFactory(), headObjectResponse);
+            // overwrite the content length
+            headObjectResponse = headObjectResponse.toBuilder()
+                .contentLength(length)
+                .build();
             if (changeTracker != null) {
               changeTracker.processMetadata(headObjectResponse, operation);
             }
@@ -3727,7 +3762,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         return listing.createProvidedFileStatusIterator(
                 stats,
                 ACCEPT_ALL,
-                Listing.ACCEPT_ALL_BUT_S3N);
+                fsHandler.getFileStatusAcceptor(path, true));
       }
     }
     // Here we have a directory which may or may not be empty.
@@ -3925,7 +3960,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public RemoteIterator<S3ALocatedFileStatus> listFilesIterator(final Path path,
         final boolean recursive) throws IOException {
-      return S3AFileSystem.this.innerListFiles(path, recursive, Listing.ACCEPT_ALL_BUT_S3N, null);
+      return S3AFileSystem.this.innerListFiles(path, recursive,
+          fsHandler.getFileStatusAcceptor(path, true), null);
     }
   }
 
@@ -4084,14 +4120,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // look for the simple file
         HeadObjectResponse meta = getObjectMetadata(key);
         LOG.debug("Found exact file: normal file {}", key);
-        long contentLength = meta.contentLength();
-        // check if CSE is enabled, then strip padded length.
-        if (isCSEEnabled &&
-            meta.metadata().get(AWSHeaders.CRYPTO_CEK_ALGORITHM) != null
-            && contentLength >= CSE_PADDING_LENGTH) {
-          contentLength -= CSE_PADDING_LENGTH;
-        }
-        return new S3AFileStatus(contentLength,
+        return new S3AFileStatus(meta.contentLength(),
             meta.lastModified().toEpochMilli(),
             path,
             getDefaultBlockSize(path),
@@ -5224,7 +5253,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return toLocatedFileStatusIterator(
         trackDurationAndSpan(INVOCATION_LIST_FILES, path, () ->
             innerListFiles(path, recursive,
-                new Listing.AcceptFilesOnly(path), null)));
+                fsHandler.getFileStatusAcceptor(path), null)));
   }
 
   /**
@@ -5242,7 +5271,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     final Path path = qualify(f);
     return trackDurationAndSpan(INVOCATION_LIST_FILES, path, () ->
         innerListFiles(path, recursive,
-            Listing.ACCEPT_ALL_BUT_S3N,
+            fsHandler.getFileStatusAcceptor(path, true),
             null));
   }
 

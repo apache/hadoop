@@ -139,6 +139,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
   public CompletableFuture<PartHandle> putPart(
       final UploadHandle uploadId,
       final int partNumber,
+      final boolean isLastPart,
       final Path filePath,
       final InputStream inputStream,
       final long lengthInBytes)
@@ -154,7 +155,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
     return context.submit(new CompletableFuture<>(),
         () -> {
           UploadPartRequest request = writeOperations.newUploadPartRequestBuilder(key,
-              uploadIdString, partNumber, lengthInBytes).build();
+              uploadIdString, partNumber, isLastPart, lengthInBytes).build();
           RequestBody body = RequestBody.fromInputStream(inputStream, lengthInBytes);
           UploadPartResponse response = writeOperations.uploadPart(request, body, statistics);
           statistics.partPut(lengthInBytes);

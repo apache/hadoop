@@ -92,7 +92,7 @@ public final class MultipartTestUtils {
       InputStream in = new ByteArrayInputStream(data);
       String uploadId = writeHelper.initiateMultiPartUpload(key, PutObjectOptions.keepingDirs());
       UploadPartRequest req = writeHelper.newUploadPartRequestBuilder(key, uploadId,
-          partNo, len).build();
+          partNo, true, len).build();
       RequestBody body = RequestBody.fromInputStream(in, len);
       UploadPartResponse response = writeHelper.uploadPart(req, body, null);
       LOG.debug("uploaded part etag {}, upid {}", response.eTag(), uploadId);
