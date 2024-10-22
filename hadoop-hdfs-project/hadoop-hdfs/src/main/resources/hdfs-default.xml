@@ -1493,6 +1493,7 @@
   <description>Specifies the maximum number of threads to use for
   adding block in volume. Default value for this configuration is
   max of (volume * number of bp_service, number of processor).
+  The value should be greater than 0.
   </description>
 </property>
 

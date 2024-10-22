@@ -285,9 +285,12 @@ public class BlockPoolSlice {
           VOLUMES_REPLICA_ADD_THREADPOOL_SIZE);
       // Default pool sizes is max of (volume * number of bp_service) and
       // number of processor.
-      addReplicaThreadPool = new ForkJoinPool(conf.getInt(
-          DFSConfigKeys.DFS_DATANODE_VOLUMES_REPLICA_ADD_THREADPOOL_SIZE_KEY,
-          poolsize));
+      int addReplicaThreadPoolSize = conf.getInt(
+              DFSConfigKeys.DFS_DATANODE_VOLUMES_REPLICA_ADD_THREADPOOL_SIZE_KEY, poolsize);
+      Preconditions.checkArgument(addReplicaThreadPoolSize > 0,
+              "%s should be a positive integer.",
+              DFSConfigKeys.DFS_DATANODE_VOLUMES_REPLICA_ADD_THREADPOOL_SIZE_KEY);
+      addReplicaThreadPool = new ForkJoinPool(addReplicaThreadPoolSize);
     }
   }
 
