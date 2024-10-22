@@ -3520,10 +3520,10 @@ public class BlockManager implements BlockStatsMXBean {
       // Nothing to re-process
       return;
     }
-    processQueuedMessages(queue);
+    processQueuedMessages(queue, false);
   }
   
-  private void processQueuedMessages(Iterable<ReportedBlockInfo> rbis)
+  private void processQueuedMessages(Iterable<ReportedBlockInfo> rbis, boolean verifyCorruptedBlock)
       throws IOException {
     boolean isPreviousMessageProcessed = true;
     for (ReportedBlockInfo rbi : rbis) {
@@ -3541,7 +3541,7 @@ public class BlockManager implements BlockStatsMXBean {
       } else {
         isPreviousMessageProcessed =
             processAndHandleReportedBlock(rbi.getStorageInfo(), rbi.getBlock(),
-                rbi.getReportedState(), null);
+                rbi.getReportedState(), null, verifyCorruptedBlock);
       }
     }
   }
@@ -3561,7 +3561,7 @@ public class BlockManager implements BlockStatsMXBean {
       LOG.info("Processing {} messages from DataNodes " +
           "that were previously queued during standby state", count);
     }
-    processQueuedMessages(pendingDNMessages.takeAll());
+    processQueuedMessages(pendingDNMessages.takeAll(), true);
     assert pendingDNMessages.count() == 0;
   }
 
@@ -4549,7 +4549,7 @@ public class BlockManager implements BlockStatsMXBean {
       }
     }
     processAndHandleReportedBlock(storageInfo, block, ReplicaState.FINALIZED,
-        delHintNode);
+        delHintNode, false);
   }
 
   /**
@@ -4560,7 +4560,7 @@ public class BlockManager implements BlockStatsMXBean {
    */
   private boolean processAndHandleReportedBlock(
       DatanodeStorageInfo storageInfo, Block block,
-      ReplicaState reportedState, DatanodeDescriptor delHintNode)
+      ReplicaState reportedState, DatanodeDescriptor delHintNode, boolean verifyCorruptedBlock)
       throws IOException {
     // blockReceived reports a finalized block
     Collection<BlockInfoToAdd> toAdd = new LinkedList<>();
@@ -4608,7 +4608,20 @@ public class BlockManager implements BlockStatsMXBean {
       addToInvalidates(b, node);
     }
     for (BlockToMarkCorrupt b : toCorrupt) {
-      markBlockAsCorrupt(b, storageInfo, node);
+      if (!verifyCorruptedBlock) {
+        markBlockAsCorrupt(b, storageInfo, node);
+      } else {
+        // Ignore this corrupted replica, if the storage list already contains this storage.
+        DatanodeStorageInfo otherStorage = b.getStored().findStorageInfo(node);
+        boolean alreadyExist = otherStorage != null;
+        if (alreadyExist) {
+          blockLog.info("BLOCK* processAndHandleReportedBlock: Redundant report request " +
+                  "received for {} on node {} with status {} and size {}.", b.getStored(), node,
+              b.getCorrupted(), b.getCorrupted().getNumBytes());
+        } else {
+          markBlockAsCorrupt(b, storageInfo, node);
+        }
+      }
     }
     return true;
   }
@@ -4672,7 +4685,7 @@ public class BlockManager implements BlockStatsMXBean {
       case RECEIVING_BLOCK:
         receiving++;
         processAndHandleReportedBlock(storageInfo, rdbi.getBlock(),
-                                      ReplicaState.RBW, null);
+                                      ReplicaState.RBW, null, false);
         break;
       default:
         String msg = 

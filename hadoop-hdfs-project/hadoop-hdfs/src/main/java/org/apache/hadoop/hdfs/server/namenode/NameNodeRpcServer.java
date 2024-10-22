@@ -1706,6 +1706,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     metrics.incrBlockReceivedAndDeletedOps();
     blockStateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: from {} {} blocks.",
         nodeReg, receivedAndDeletedBlocks.length);
+
+    BlockManagerFaultInjector.getInstance().mockDelayBlockReceiveAndDelete(namesystem.getHAState());
+
     final BlockManager bm = namesystem.getBlockManager();
     for (final StorageReceivedDeletedBlocks r : receivedAndDeletedBlocks) {
       bm.enqueueBlockOp(new Runnable() {
