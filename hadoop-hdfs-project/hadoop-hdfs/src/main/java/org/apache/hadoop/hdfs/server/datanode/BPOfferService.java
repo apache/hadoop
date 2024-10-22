@@ -668,6 +668,23 @@ class BPOfferService {
     }
   }
 
+  /**
+   * Run an immediate heartbeat from all actors. Wait until heartbeat is processed and BP thread
+   * queue is also processed. This should be used when we need to trigger the heartbeat and also
+   * wait for bpThreadQueue to be fully processed.
+   * Used by tests.
+   *
+   * @throws InterruptedException if interrupted while waiting for the queue to be processed.
+   * @throws IOException if the retries are exhausted and the BP thread queue could not be
+   * successfully processed.
+   */
+  @VisibleForTesting
+  void triggerHeartbeatAndWaitQueueProcessedForTests() throws InterruptedException, IOException {
+    for (BPServiceActor actor : bpServices) {
+      actor.triggerHeartbeatAndWaitUntilQueueProcessed();
+    }
+  }
+
   boolean processCommandFromActor(DatanodeCommand cmd,
       BPServiceActor actor) throws IOException {
     assert bpServices.contains(actor);

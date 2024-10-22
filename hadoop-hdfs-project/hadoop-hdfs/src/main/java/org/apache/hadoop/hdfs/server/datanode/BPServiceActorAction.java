@@ -27,6 +27,10 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
  * to take several actions.
  */
 public interface BPServiceActorAction {
-  public void reportTo(DatanodeProtocolClientSideTranslatorPB bpNamenode,
-    DatanodeRegistration bpRegistration) throws BPServiceActorActionException;
+
+  void reportTo(DatanodeProtocolClientSideTranslatorPB bpNamenode,
+      DatanodeRegistration bpRegistration) throws BPServiceActorActionException;
+
+  boolean isReportSuccessfullySent();
+
 }

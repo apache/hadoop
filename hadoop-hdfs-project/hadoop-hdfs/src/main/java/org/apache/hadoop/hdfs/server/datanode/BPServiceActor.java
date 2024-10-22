@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
@@ -354,6 +355,35 @@ class BPServiceActor implements Runnable {
         } catch (InterruptedException e) {
           return;
         }
+      }
+    }
+  }
+
+  /**
+   * Trigger the heartbeat and wait for BP thread queue to be fully processed.
+   * To be used as a test utility.
+   *
+   * @throws InterruptedException if interrupted while waiting for the queue to be processed.
+   * @throws IOException if the retries are exhausted and the BP thread queue could not be
+   * successfully processed.
+   */
+  @VisibleForTesting
+  void triggerHeartbeatAndWaitUntilQueueProcessed() throws InterruptedException, IOException {
+    Queue<BPServiceActorAction> bpServiceActorActions;
+    synchronized (bpThreadQueue) {
+      bpServiceActorActions = new LinkedList<>(bpThreadQueue);
+    }
+    triggerHeartbeatForTests();
+    while (!bpServiceActorActions.isEmpty()) {
+      BPServiceActorAction bpServiceActorAction = bpServiceActorActions.remove();
+      int retries = 5;
+      while (!bpServiceActorAction.isReportSuccessfullySent() && retries > 0) {
+        LOG.info("{} has not yet successfully sent report", bpServiceActorAction);
+        Thread.sleep(1000);
+        retries--;
+      }
+      if (retries == 0) {
+        throw new IOException("BP service actor action could not be completed successfully");
       }
     }
   }

@@ -1115,7 +1115,7 @@ public class TestFsDatasetImpl {
       block = DFSTestUtil.getFirstBlock(fs, filePath);
       // Test for the overloaded method reportBadBlocks
       dataNode.reportBadBlocks(block, dataNode.getFSDataset().getFsVolumeReferences().get(0));
-      DataNodeTestUtils.triggerHeartbeat(dataNode);
+      DataNodeTestUtils.triggerHeartbeatAndWaitQueueProcessedForTests(dataNode);
       BlockManagerTestUtil.updateState(cluster.getNamesystem().getBlockManager());
       assertEquals("Corrupt replica blocks could not be reflected with the heartbeat", 1,
           cluster.getNamesystem().getCorruptReplicaBlocks());
