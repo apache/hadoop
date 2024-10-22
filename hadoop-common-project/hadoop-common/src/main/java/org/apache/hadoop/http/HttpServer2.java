@@ -728,6 +728,7 @@ public final class HttpServer2 implements FilterContainer {
       throws IOException {
 
     Preconditions.checkNotNull(webAppContext);
+    webAppContext.getErrorHandler().setShowStacks(LOG.isTraceEnabled());
 
     int maxThreads = conf.getInt(HTTP_MAX_THREADS_KEY, -1);
     // If HTTP_MAX_THREADS is not configured, QueueThreadPool() will use the
