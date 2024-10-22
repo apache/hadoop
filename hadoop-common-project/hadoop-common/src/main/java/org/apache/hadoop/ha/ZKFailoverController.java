@@ -260,11 +260,15 @@ public abstract class ZKFailoverController {
       LOG.error("The failover controller encounters runtime error: ", e);
       throw e;
     } finally {
-      rpcServer.stopAndJoin();
-      
+      if (rpcServer != null) {
+        rpcServer.stopAndJoin();
+      }
+
       elector.quitElection(true);
-      healthMonitor.shutdown();
-      healthMonitor.join();
+      if (healthMonitor != null) {
+          healthMonitor.shutdown();
+          healthMonitor.join();
+      }
     }
     return 0;
   }
