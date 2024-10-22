@@ -165,6 +165,7 @@ public abstract class TaskAttemptImpl implements
   private static final Logger LOG =
       LoggerFactory.getLogger(TaskAttemptImpl.class);
   private static final long MEMORY_SPLITS_RESOLUTION = 1024; //TODO Make configurable?
+  private static final String ANY = "*";
   private final static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   protected final JobConf conf;
@@ -699,7 +700,9 @@ public abstract class TaskAttemptImpl implements
     RackResolver.init(conf);
     this.dataLocalRacks = new HashSet<String>(); 
     for (String host : this.dataLocalHosts) {
-      this.dataLocalRacks.add(RackResolver.resolve(host).getNetworkLocation());
+      if (!ANY.equals(host)) {
+        this.dataLocalRacks.add(RackResolver.resolve(host).getNetworkLocation());
+      }
     }
 
     locality = Locality.OFF_SWITCH;
@@ -1609,7 +1612,7 @@ public abstract class TaskAttemptImpl implements
     locality = Locality.OFF_SWITCH;
     if (dataLocalHosts.size() > 0) {
       String cHost = resolveHost(containerNodeId.getHost());
-      if (dataLocalHosts.contains(cHost)) {
+      if (dataLocalHosts.contains(ANY) || dataLocalHosts.contains(cHost)) {
         locality = Locality.NODE_LOCAL;
       }
     }
