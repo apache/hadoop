@@ -642,7 +642,8 @@ public class TestRegistryDNS extends Assert {
   @Test
   public void testExampleDotCom() throws Exception {
     Name name = Name.fromString("example.com.");
-    Record[] records = getRegistryDNS().getRecords(name, Type.SOA);
+    RegistryDNS.RemoteAnswer ra = getRegistryDNS().getRecords(name, Type.SOA);
+    Record[] records = ra.answers;
     assertNotNull("example.com exists:", records);
   }
 
@@ -703,8 +704,17 @@ public class TestRegistryDNS extends Assert {
   @Test(timeout=5000)
   public void testUpstreamFault() throws Exception {
     Name name = Name.fromString("19.0.17.172.in-addr.arpa.");
-    Record[] recs = getRegistryDNS().getRecords(name, Type.CNAME);
+    RegistryDNS.RemoteAnswer ra = getRegistryDNS().getRecords(name, Type.CNAME);
+    Record[] recs = ra.answers;
     assertNull("Record is not null", recs);
+  }
+
+  @Test
+  public void testNODATA() throws Exception {
+    Name name = Name.fromString("example.com.");
+    RegistryDNS.RemoteAnswer ra = getRegistryDNS().getRecords(name, Type.CNAME);
+    assertNull("CNAME record for example.com. should be null.", ra.answers);
+    assertEquals("The result of DNS query for example.com. should be NOERROR.", Rcode.NOERROR, ra.rcode);
   }
 
   public RegistryDNS getRegistryDNS() {
