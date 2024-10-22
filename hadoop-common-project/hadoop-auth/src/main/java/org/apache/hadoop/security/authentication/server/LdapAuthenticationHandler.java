@@ -100,6 +100,12 @@ public class LdapAuthenticationHandler implements AuthenticationHandler {
    */
   public static final String ENABLE_START_TLS = TYPE + ".enablestarttls";
 
+  /**
+   * Constant for disabling the host name verification for this handler.
+   */
+  private static final String DISABLE_HOSTNAME_VERIFICATION = TYPE +
+          ".hostname.verification.disable";
+
   private String ldapDomain;
   private String baseDN;
   private String providerUrl;
@@ -130,6 +136,15 @@ public class LdapAuthenticationHandler implements AuthenticationHandler {
     this.disableHostNameVerification = disableHostNameVerification;
   }
 
+  /**
+   * To get the configured value for Host name verification for this handler.
+   * This method is introduced only for unit testing.
+   */
+  @VisibleForTesting
+  boolean getDisableHostNameVerification() {
+    return disableHostNameVerification;
+  }
+
   @Override
   public String getType() {
     return TYPE;
@@ -142,6 +157,8 @@ public class LdapAuthenticationHandler implements AuthenticationHandler {
     this.ldapDomain = config.getProperty(LDAP_BIND_DOMAIN);
     this.enableStartTls =
         Boolean.valueOf(config.getProperty(ENABLE_START_TLS, "false"));
+    this.disableHostNameVerification =
+        Boolean.valueOf(config.getProperty(DISABLE_HOSTNAME_VERIFICATION, "false"));
 
     if (this.providerUrl == null) {
       throw new NullPointerException("The LDAP URI can not be null");

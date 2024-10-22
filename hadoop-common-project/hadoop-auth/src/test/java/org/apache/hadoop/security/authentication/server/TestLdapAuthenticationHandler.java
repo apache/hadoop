@@ -136,6 +136,11 @@ public class TestLdapAuthenticationHandler extends AbstractLdapTestUnit {
     Assert.assertEquals("bjones", token.getName());
   }
 
+  @Test
+  public void testDisableHostNameVerifyConf() throws Exception {
+    Assert.assertNotNull(handler.getDisableHostNameVerification());
+  }
+
   @Test(timeout = 60000)
   public void testRequestWithWrongCredentials() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
