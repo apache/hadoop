@@ -105,6 +105,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   private boolean considerLoadByStorageType;
   protected double considerLoadFactor;
   private boolean considerLoadByVolume = false;
+  protected int considerLoadMinLoad;
   private boolean preferLocalNode;
   private boolean dataNodePeerStatsEnabled;
   private volatile boolean excludeSlowNodesEnabled;
@@ -140,6 +141,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYVOLUME_KEY,
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYVOLUME_DEFAULT
     );
+    this.considerLoadMinLoad = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_MINLOAD_KEY,
+        DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_MINLOAD_DEFAULT);
     this.stats = stats;
     this.clusterMap = clusterMap;
     this.host2datanodeMap = host2datanodeMap;
@@ -1014,7 +1018,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     final double maxLoad = considerLoadFactor * inServiceXceiverCount;
 
     final int nodeLoad = node.getXceiverCount();
-    if ((nodeLoad > maxLoad) && (maxLoad > 0)) {
+    if ((nodeLoad > considerLoadMinLoad) &&(nodeLoad > maxLoad) && (maxLoad > 0)) {
       logNodeIsNotChosen(node, NodeNotChosenReason.NODE_TOO_BUSY,
           "(load: " + nodeLoad + " > " + maxLoad + ")");
       return true;
