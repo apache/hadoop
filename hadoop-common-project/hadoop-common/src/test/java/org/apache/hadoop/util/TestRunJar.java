@@ -57,7 +57,7 @@ public class TestRunJar {
   private static final int BUFF_SIZE = 2048;
   private File TEST_ROOT_DIR;
 
-  private static final String TEST_JAR_NAME="test-runjar.jar";
+  private static final String TEST_JAR_NAME = "test-runjar.jar";
   private static final String TEST_JAR_2_NAME = "test-runjar2.jar";
   private static final long MOCKED_NOW = 1_460_389_972_000L;
   private static final long MOCKED_NOW_PLUS_TWO_SEC = MOCKED_NOW + 2_000;
@@ -295,6 +295,37 @@ public class TestRunJar {
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains(
           "would create file outside of", e);
+    }
+  }
+
+  /**
+   * Tests that RunJar errors appropriately for classes with non-static main
+   * methods.
+   */
+  @Test
+  public void testRunNonStaticMain() throws Throwable {
+    RunJar runJar = spy(new RunJar());
+    // enable the client classloader
+    when(runJar.useClientClassLoader()).thenReturn(true);
+    // set the system classes and blacklist the test main class so it
+    // can be loaded by the application classloader
+    String mainCls = NonStaticMain.class.getName();
+    String systemClasses = "-" + mainCls + ","
+        + ApplicationClassLoader.SYSTEM_CLASSES_DEFAULT;
+    when(runJar.getSystemClasses()).thenReturn(systemClasses);
+
+    // create the test jar
+    File testJar = JarFinder.makeClassLoaderTestJar(this.getClass(),
+        TEST_ROOT_DIR, TEST_JAR_2_NAME, BUFF_SIZE, mainCls);
+    // form the args
+    String[] args = new String[] {testJar.getAbsolutePath(), mainCls};
+
+    // run RunJar
+    try {
+      runJar.run(args);
+      fail("run should throw IOException.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Method main must be static", e);
     }
   }
 }
