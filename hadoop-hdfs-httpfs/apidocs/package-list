@@ -1,0 +1,13 @@
+org.apache.hadoop.fs.http.client
+org.apache.hadoop.fs.http.server
+org.apache.hadoop.fs.http.server.metrics
+org.apache.hadoop.lib.lang
+org.apache.hadoop.lib.server
+org.apache.hadoop.lib.service
+org.apache.hadoop.lib.service.hadoop
+org.apache.hadoop.lib.service.instrumentation
+org.apache.hadoop.lib.service.scheduler
+org.apache.hadoop.lib.service.security
+org.apache.hadoop.lib.servlet
+org.apache.hadoop.lib.util
+org.apache.hadoop.lib.wsrs

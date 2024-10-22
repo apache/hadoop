@@ -1,0 +1,190 @@
+<html>
+<body>
+<h2>Configuration Properties</h2>
+<table border="1">
+<tr>
+<th>name</th><th>value</th><th>description</th>
+</tr>
+<tr>
+<td><a name="hadoop.kms.http.port">hadoop.kms.http.port</a></td><td>9600</td><td>
+      The HTTP port for KMS REST API.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.http.host">hadoop.kms.http.host</a></td><td>0.0.0.0</td><td>
+      The bind host for KMS REST API.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.http.administrators">hadoop.kms.http.administrators</a></td><td></td><td>ACL for the admins, this configuration is used to control
+      who can access the default KMS servlets. The value should be a comma
+      separated list of users and groups. The user list comes first and is
+      separated by a space followed by the group list,
+      e.g. "user1,user2 group1,group2". Both users and groups are optional,
+      so "user1", " group1", "", "user1 group1", "user1,user2 group1,group2"
+      are all valid (note the leading space in " group1"). '*' grants access
+      to all users and groups, e.g. '*', '* ' and ' *' are all valid.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.ssl.enabled">hadoop.kms.ssl.enabled</a></td><td>false</td><td>
+      Whether SSL is enabled. Default is false, i.e. disabled.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.http.max.threads">hadoop.http.max.threads</a></td><td>1000</td><td>
+      The maxmimum number of threads.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.http.max.request.header.size">hadoop.http.max.request.header.size</a></td><td>65536</td><td>
+      The maxmimum HTTP request header size.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.http.max.response.header.size">hadoop.http.max.response.header.size</a></td><td>65536</td><td>
+      The maxmimum HTTP response header size.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.http.temp.dir">hadoop.http.temp.dir</a></td><td>${hadoop.tmp.dir}/kms</td><td>
+      KMS temp directory.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.http.socket.backlog.size">hadoop.http.socket.backlog.size</a></td><td>500</td><td>
+      KMS Server accept queue size.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.http.idle_timeout.ms">hadoop.http.idle_timeout.ms</a></td><td>60000</td><td>
+      KMS Server connection timeout in milliseconds.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.key.provider.uri">hadoop.kms.key.provider.uri</a></td><td>jceks://file@/${user.home}/kms.keystore</td><td>
+      URI of the backing KeyProvider for the KMS.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.security.keystore.java-keystore-provider.password-file">hadoop.security.keystore.java-keystore-provider.password-file</a></td><td></td><td>
+      If using the JavaKeyStoreProvider, the file name for the keystore password.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.cache.enable">hadoop.kms.cache.enable</a></td><td>true</td><td>
+      Whether the KMS will act as a cache for the backing KeyProvider.
+      When the cache is enabled, operations like getKeyVersion, getMetadata,
+      and getCurrentKey will sometimes return cached data without consulting
+      the backing KeyProvider. Cached values are flushed when keys are deleted
+      or modified.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.cache.timeout.ms">hadoop.kms.cache.timeout.ms</a></td><td>600000</td><td>
+      Expiry time for the KMS key version and key metadata cache, in
+      milliseconds. This affects getKeyVersion and getMetadata.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.current.key.cache.timeout.ms">hadoop.kms.current.key.cache.timeout.ms</a></td><td>30000</td><td>
+      Expiry time for the KMS current key cache, in milliseconds. This
+      affects getCurrentKey operations.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.audit.aggregation.window.ms">hadoop.kms.audit.aggregation.window.ms</a></td><td>10000</td><td>
+      Duplicate audit log events within the aggregation window (specified in
+      ms) are quashed to reduce log traffic. A single message for aggregated
+      events is printed at the end of the window, along with a count of the
+      number of aggregated events.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.authentication.type">hadoop.kms.authentication.type</a></td><td>simple</td><td>
+      Authentication type for the KMS. Can be either 'simple' (default) or
+      'kerberos'.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.authentication.kerberos.keytab">hadoop.kms.authentication.kerberos.keytab</a></td><td>${user.home}/kms.keytab</td><td>
+      Path to the keytab with credentials for the configured Kerberos principal.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.authentication.kerberos.principal">hadoop.kms.authentication.kerberos.principal</a></td><td>HTTP/localhost</td><td>
+      The Kerberos principal to use for the HTTP endpoint.
+      The principal must start with 'HTTP/' as per the Kerberos HTTP SPNEGO specification.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.authentication.kerberos.name.rules">hadoop.kms.authentication.kerberos.name.rules</a></td><td>DEFAULT</td><td>
+      Rules used to resolve Kerberos principal names.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.authentication.signer.secret.provider">hadoop.kms.authentication.signer.secret.provider</a></td><td>random</td><td>
+      Indicates how the secret to sign the authentication cookies will be
+      stored. Options are 'random' (default), 'string' and 'zookeeper'.
+      If using a setup with multiple KMS instances, 'zookeeper' should be used.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.authentication.signer.secret.provider.zookeeper.path">hadoop.kms.authentication.signer.secret.provider.zookeeper.path</a></td><td>/hadoop-kms/hadoop-auth-signature-secret</td><td>
+      The Zookeeper ZNode path where the KMS instances will store and retrieve
+      the secret from.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.authentication.signer.secret.provider.zookeeper.connection.string">hadoop.kms.authentication.signer.secret.provider.zookeeper.connection.string</a></td><td>#HOSTNAME#:#PORT#,...</td><td>
+      The Zookeeper connection string, a list of hostnames and port comma
+      separated.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.authentication.signer.secret.provider.zookeeper.auth.type">hadoop.kms.authentication.signer.secret.provider.zookeeper.auth.type</a></td><td>none</td><td>
+      The Zookeeper authentication type, 'none' (default) or 'sasl' (Kerberos).
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.authentication.signer.secret.provider.zookeeper.kerberos.keytab">hadoop.kms.authentication.signer.secret.provider.zookeeper.kerberos.keytab</a></td><td>/etc/hadoop/conf/kms.keytab</td><td>
+      The absolute path for the Kerberos keytab with the credentials to
+      connect to Zookeeper.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.authentication.signer.secret.provider.zookeeper.kerberos.principal">hadoop.kms.authentication.signer.secret.provider.zookeeper.kerberos.principal</a></td><td>kms/#HOSTNAME#</td><td>
+      The Kerberos service principal used to connect to Zookeeper.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.audit.logger">hadoop.kms.audit.logger</a></td><td>org.apache.hadoop.crypto.key.kms.server.SimpleKMSAuditLogger</td><td>
+      The audit logger for KMS. It is a comma-separated list of KMSAuditLogger
+      class names. Default is the text-format SimpleKMSAuditLogger only.
+      If this is not configured, default will be used.
+    </td>
+</tr>
+<tr>
+<td><a name="hadoop.kms.key.authorization.enable">hadoop.kms.key.authorization.enable</a></td><td>true</td><td>Boolean property to Enable/Disable per Key authorization</td>
+</tr>
+<tr>
+<td><a name="hadoop.security.kms.encrypted.key.cache.size">hadoop.security.kms.encrypted.key.cache.size</a></td><td>100</td><td>The size of the cache. This is the maximum number of EEKs that
+      can be cached under each key name.</td>
+</tr>
+<tr>
+<td><a name="hadoop.security.kms.encrypted.key.cache.low.watermark">hadoop.security.kms.encrypted.key.cache.low.watermark</a></td><td>0.3</td><td>A low watermark on the cache. For each key name, if after a get call,
+      the number of cached EEKs are less than (size * low watermark),
+      then the cache under this key name will be filled asynchronously.
+      For each key name, only 1 thread could be running for the asynchronous filling.</td>
+</tr>
+<tr>
+<td><a name="hadoop.security.kms.encrypted.key.cache.num.fill.threads">hadoop.security.kms.encrypted.key.cache.num.fill.threads</a></td><td>2</td><td>The maximum number of asynchronous threads overall, across key names,
+      allowed to fill the queue in a cache.</td>
+</tr>
+<tr>
+<td><a name="hadoop.security.kms.encrypted.key.cache.expiry">hadoop.security.kms.encrypted.key.cache.expiry</a></td><td>43200000</td><td>The cache expiry time, in milliseconds. Internally Guava cache is used as the cache implementation.
+      The expiry approach is expireAfterAccess</td>
+</tr>
+</table>
+</body>
+</html>
