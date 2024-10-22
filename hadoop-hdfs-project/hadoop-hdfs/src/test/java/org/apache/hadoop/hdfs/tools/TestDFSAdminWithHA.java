@@ -341,6 +341,25 @@ public class TestDFSAdminWithHA {
   }
 
   @Test (timeout = 30000)
+  public void testRefreshTopology() throws Exception {
+    setUpHaCluster(false);
+    int exitCode = admin.run(new String[]{"-refreshTopology", NSID});
+    assertEquals(err.toString().trim(), 0, exitCode);
+    String message = "Refresh topology successful for.*";
+    assertOutputMatches(message + newLine + message + newLine);
+  }
+
+  @Test (timeout = 30000)
+  public void testRefreshTopologyUnknownNsid() throws Exception {
+    setUpHaCluster(false);
+    String unknownNsid = "unknown_nsid";
+    int exitCode = admin.run(new String[]{"-refreshTopology", unknownNsid});
+    assertEquals(err.toString().trim(), -1, exitCode);
+    String message = "refreshTopology: Can not get proxy for nameservice.*[\\s]*";
+    assertOutputMatches(message);
+  }
+
+  @Test (timeout = 30000)
   public void testRefreshNodesNN1UpNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(1);

@@ -1227,6 +1227,15 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
+  public void refreshTopology() throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
+
+    RemoteMethod method = new RemoteMethod("refreshTopology", new Class<?>[] {});
+    final Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    rpcClient.invokeConcurrent(nss, method, true, true);
+  }
+
+  @Override
   public void finalizeUpgrade() throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
 
