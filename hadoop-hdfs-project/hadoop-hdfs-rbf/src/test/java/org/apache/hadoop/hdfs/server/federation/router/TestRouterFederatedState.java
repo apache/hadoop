@@ -53,7 +53,7 @@ public class TestRouterFederatedState {
         0,
         RpcConstants.INVALID_RETRY_COUNT,
         uuid,
-        alignmentContext);
+        alignmentContext, System.currentTimeMillis());
 
     Map<String, Long> stateIdsFromHeader =
         RouterFederatedStateProto.parseFrom(

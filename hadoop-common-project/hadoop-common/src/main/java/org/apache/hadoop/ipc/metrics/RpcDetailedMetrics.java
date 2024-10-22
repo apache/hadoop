@@ -35,15 +35,21 @@ import org.slf4j.LoggerFactory;
 public class RpcDetailedMetrics {
   static final String DEFERRED_PREFIX = "Deferred";
   static final String OVERALL_PROCESSING_PREFIX = "Overall";
+  static final String ROUND_TRIP_TIME_PREFIX = "RoundTrip";
 
   // per-method RPC processing time
   @Metric MutableRatesWithAggregation rates;
   @Metric MutableRatesWithAggregation deferredRpcRates;
   /**
-   * per-method overall RPC processing time, from request arrival to when the
+   * per-method overall RPC processing time at the server-side, from request enqueuing to when the
    * response is sent back.
    */
   @Metric MutableRatesWithAggregation overallRpcProcessingRates;
+  /**
+   * per-method round-trip time, from call create time at the client-side to
+   * when the response is sent back to the client.
+   */
+  @Metric MutableRatesWithAggregation rpcRttRates;
 
   static final Logger LOG = LoggerFactory.getLogger(RpcDetailedMetrics.class);
   final MetricsRegistry registry;
@@ -52,6 +58,11 @@ public class RpcDetailedMetrics {
   // Mainly to facilitate testing in TestRPC.java
   public MutableRatesWithAggregation getOverallRpcProcessingRates() {
     return overallRpcProcessingRates;
+  }
+
+  // Mainly to facilitate testing in TestRPC.java
+  public MutableRatesWithAggregation getRpcRttRates() {
+    return rpcRttRates;
   }
 
   RpcDetailedMetrics(int port) {
@@ -76,6 +87,7 @@ public class RpcDetailedMetrics {
     rates.init(protocol);
     deferredRpcRates.init(protocol, DEFERRED_PREFIX);
     overallRpcProcessingRates.init(protocol, OVERALL_PROCESSING_PREFIX);
+    rpcRttRates.init(protocol, ROUND_TRIP_TIME_PREFIX);
   }
 
   /**
@@ -99,6 +111,17 @@ public class RpcDetailedMetrics {
    */
   public void addOverallProcessingTime(String rpcCallName, long overallProcessingTime) {
     overallRpcProcessingRates.add(rpcCallName, overallProcessingTime);
+  }
+
+  /**
+   * Add an RPC round-trip time sample.
+   * @param rpcCallName of the RPC call
+   * @param rtt  rpc round-trip time , from call create time at the client to
+   *             a response is sent back to the client.
+   */
+  public void addRpcRtt(String rpcCallName,
+      long rtt) {
+    rpcRttRates.add(rpcCallName, rtt);
   }
 
   /**

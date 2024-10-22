@@ -270,6 +270,10 @@ public class Client implements AutoCloseable {
     return new Call(rpcKind, rpcRequest);
   }
 
+  Call createCall(RPC.RpcKind rpcKind, Writable rpcRequest, long callCreateTime) {
+    return new Call(rpcKind, rpcRequest, callCreateTime);
+  }
+
   /** 
    * Class that represents an RPC call
    */
@@ -283,8 +287,13 @@ public class Client implements AutoCloseable {
     boolean done;               // true when call is done
     private final Object externalHandler;
     private AlignmentContext alignmentContext;
+    private final long createTimeNanos;  // creation time for this call at the client
 
     private Call(RPC.RpcKind rpcKind, Writable param) {
+      this(rpcKind, param, Time.monotonicNowNanos());
+    }
+
+    private Call(RPC.RpcKind rpcKind, Writable param, long callCreateTimeNanos) {
       this.rpcKind = rpcKind;
       this.rpcRequest = param;
 
@@ -304,6 +313,7 @@ public class Client implements AutoCloseable {
       }
 
       this.externalHandler = EXTERNAL_CALL_HANDLER.get();
+      this.createTimeNanos = callCreateTimeNanos;
     }
 
     @Override
@@ -1176,7 +1186,7 @@ public class Client implements AutoCloseable {
       // Items '1' and '2' are prepared here. 
       RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
           call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, call.retry,
-          clientId, call.alignmentContext);
+          clientId, call.alignmentContext, call.createTimeNanos);
 
       final ResponseBuffer buf = new ResponseBuffer();
       header.writeDelimitedTo(buf);

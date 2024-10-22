@@ -1481,6 +1481,51 @@ public class TestRPC extends TestRpcBase {
       stop(server, proxy);
     }
   }
+
+  /**
+   * Test per-type RPC round-trip time metric.
+   */
+  @Test
+  public void testRpcRTTMetric() throws Exception {
+    final Server server;
+    TestRpcService proxy = null;
+
+    server = setupTestServer(conf, 5);
+    try {
+      proxy = getClient(addr, conf);
+
+      // Sent a ping request and a lockAndSleep request
+      proxy.ping(null, newEmptyRequest());
+      proxy.lockAndSleep(null, newSleepRequest(10));
+
+      MetricsRecordBuilder rttRB = mockMetricsRecordBuilder();
+      MutableRatesWithAggregation rttRates =
+          server.rpcDetailedMetrics.getRpcRttRates();
+      rttRates.snapshot(rttRB, false);
+
+      MetricsRecordBuilder overallRB = mockMetricsRecordBuilder();
+      MutableRatesWithAggregation overallRates =
+          server.rpcDetailedMetrics.getOverallRpcProcessingRates();
+      overallRates.snapshot(overallRB, false);
+
+      // Rpc round-trip time should be longer than server-side overall processing time.
+      assertCounter("RoundTripPingNumOps", 1L, rttRB);
+      double rttPingAvgTime = getDoubleGauge("RoundTripPingAvgTime", rttRB);
+      double serverSidePingAvgTime = getDoubleGauge("OverallPingAvgTime", overallRB);
+      assertTrue(rttPingAvgTime > serverSidePingAvgTime);
+
+      // Rpc round-trip time should be longer than server-side overall processing time.
+      assertCounter("RoundTripLockAndSleepNumOps", 1L, rttRB);
+      double rttLockAndSleepAvgTime = getDoubleGauge("RoundTripLockAndSleepAvgTime", rttRB);
+      double serverSideLockAndSleepAvgTime =
+          getDoubleGauge("OverallLockAndSleepAvgTime", overallRB);
+      assertTrue(rttLockAndSleepAvgTime > serverSideLockAndSleepAvgTime);
+    } finally {
+      stop(server, proxy);
+    }
+  }
+
+
   /**
    *  Test RPC backoff by queue full.
    */

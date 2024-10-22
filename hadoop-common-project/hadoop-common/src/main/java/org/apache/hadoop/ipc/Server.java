@@ -195,8 +195,8 @@ public abstract class Server {
   }
 
   /**
-   * ExceptionsHandler manages Exception groups for special handling
-   * e.g., terse exception group for concise logging messages
+   * ExceptionsHandler manages Exception groups for special handling,
+   * such as terse exception group for concise logging messages
    */
   static class ExceptionsHandler {
 
@@ -369,7 +369,18 @@ public abstract class Server {
     Call call = CurCall.get();
     return call != null ? call.callId : RpcConstants.INVALID_CALL_ID;
   }
-  
+
+  /**
+   * Returns the currently active RPC call's create time at client-side.  0
+   * indicates an invalid value.
+   *
+   * @return long call create time at the client-side
+   */
+  public static long getClientCallCreateTime() {
+    Call call = CurCall.get();
+    return call != null ? call.clientCallCreateTimeNanos : 0;
+  }
+
   /**
    * @return The current active RPC call's retry count. -1 indicates the retry
    *         cache is not supported in the client side.
@@ -621,6 +632,7 @@ public abstract class Server {
     long completionTimeNanos = Time.monotonicNowNanos();
     long deltaNanos = completionTimeNanos - processingStartTimeNanos;
     long arrivalTimeNanos = call.timestampNanos;
+    long clientCallCreateTimeNanos = call.clientCallCreateTimeNanos;
 
     ProcessingDetails details = call.getProcessingDetails();
     // queue time is the delta between when the call first arrived and when it
@@ -655,10 +667,16 @@ public abstract class Server {
     processingTime -= waitTime;
     String name = call.getDetailedMetricsName();
     rpcDetailedMetrics.addProcessingTime(name, processingTime);
-    // Overall processing time is from arrival to completion.
+    // Server-side overall processing time is from call enqueuing time to completion.
     long overallProcessingTime = rpcMetrics.getMetricsTimeUnit()
         .convert(completionTimeNanos - arrivalTimeNanos, TimeUnit.NANOSECONDS);
     rpcDetailedMetrics.addOverallProcessingTime(name, overallProcessingTime);
+    // Round-trip time is from client call create time to completion.
+    if (clientCallCreateTimeNanos > 0) {
+      long roundTripTime = rpcMetrics.getMetricsTimeUnit().convert(
+          completionTimeNanos - clientCallCreateTimeNanos, TimeUnit.NANOSECONDS);
+      rpcDetailedMetrics.addRpcRtt(name, roundTripTime);
+    }
     callQueue.addResponseTime(name, call, details);
     if (isLogSlowRPC()) {
       logSlowRpcCalls(name, call, details);
@@ -962,6 +980,7 @@ public abstract class Server {
     private volatile String detailedMetricsName = "";
     final int callId;            // the client's call id
     final int retryCount;        // the retry count of the call
+    private long clientCallCreateTimeNanos; // call create time at client side
     private final long timestampNanos; // time the call was received
     long responseTimestampNanos; // time the call was served
     private AtomicInteger responseWaitCount = new AtomicInteger(1);
@@ -985,21 +1004,21 @@ public abstract class Server {
 
     Call(Call call) {
       this(call.callId, call.retryCount, call.rpcKind, call.clientId,
-          call.span, call.callerContext);
+          call.span, call.callerContext, call.clientCallCreateTimeNanos);
     }
 
     Call(int id, int retryCount, RPC.RpcKind kind, byte[] clientId) {
-      this(id, retryCount, kind, clientId, null, null);
+      this(id, retryCount, kind, clientId, null, null, 0);
     }
 
     @VisibleForTesting // primarily TestNamenodeRetryCache
     public Call(int id, int retryCount, Void ignore1, Void ignore2,
         RPC.RpcKind kind, byte[] clientId) {
-      this(id, retryCount, kind, clientId, null, null);
+      this(id, retryCount, kind, clientId, null, null, 0);
     }
 
     Call(int id, int retryCount, RPC.RpcKind kind, byte[] clientId,
-        Span span, CallerContext callerContext) {
+        Span span, CallerContext callerContext, long clientCallCreateTimeNanos) {
       this.callId = id;
       this.retryCount = retryCount;
       this.timestampNanos = Time.monotonicNowNanos();
@@ -1010,6 +1029,7 @@ public abstract class Server {
       this.callerContext = callerContext;
       this.clientStateId = Long.MIN_VALUE;
       this.isCallCoordinated = false;
+      this.clientCallCreateTimeNanos = clientCallCreateTimeNanos;
     }
 
     /**
@@ -1193,13 +1213,13 @@ public abstract class Server {
     RpcCall(Connection connection, int id, int retryCount) {
       this(connection, id, retryCount, null,
           RPC.RpcKind.RPC_BUILTIN, RpcConstants.DUMMY_CLIENT_ID,
-          null, null);
+          null, null, 0);
     }
 
     RpcCall(Connection connection, int id, int retryCount,
         Writable param, RPC.RpcKind kind, byte[] clientId,
-        Span span, CallerContext context) {
-      super(id, retryCount, kind, clientId, span, context);
+        Span span, CallerContext context, long clientCallCreateTime) {
+      super(id, retryCount, kind, clientId, span, context, clientCallCreateTime);
       this.connection = connection;
       this.rpcRequest = param;
     }
@@ -2926,7 +2946,7 @@ public abstract class Server {
       RpcCall call = new RpcCall(this, header.getCallId(),
           header.getRetryCount(), rpcRequest,
           ProtoUtil.convert(header.getRpcKind()),
-          header.getClientId().toByteArray(), span, callerContext);
+          header.getClientId().toByteArray(), span, callerContext, header.getCallCreateTime());
 
       // Save the priority level assignment by the scheduler
       call.setPriorityLevel(callQueue.getPriorityLevel(call));

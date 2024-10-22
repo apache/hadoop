@@ -95,6 +95,7 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
   // The client should not interpret these bytes, but only forward bytes
   // received from RpcResponseHeaderProto.routerFederatedState.
   optional bytes routerFederatedState = 9;
+  optional int64 callCreateTime = 10; // rpc call create time at client-side
 }
 
 

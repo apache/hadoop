@@ -171,16 +171,22 @@ public abstract class ProtoUtil {
   public static RpcRequestHeaderProto makeRpcRequestHeader(RPC.RpcKind rpcKind,
       RpcRequestHeaderProto.OperationProto operation, int callId,
       int retryCount, byte[] uuid) {
+    long callCreateTime = System.currentTimeMillis();
     return makeRpcRequestHeader(rpcKind, operation, callId, retryCount, uuid,
-        null);
+        null, callCreateTime);
   }
 
   public static RpcRequestHeaderProto makeRpcRequestHeader(RPC.RpcKind rpcKind,
       RpcRequestHeaderProto.OperationProto operation, int callId,
-      int retryCount, byte[] uuid, AlignmentContext alignmentContext) {
+      int retryCount, byte[] uuid, AlignmentContext alignmentContext,
+      long callCreateTime) {
     RpcRequestHeaderProto.Builder result = RpcRequestHeaderProto.newBuilder();
-    result.setRpcKind(convert(rpcKind)).setRpcOp(operation).setCallId(callId)
-        .setRetryCount(retryCount).setClientId(ByteString.copyFrom(uuid));
+    result.setRpcKind(convert(rpcKind))
+        .setRpcOp(operation)
+        .setCallId(callId)
+        .setRetryCount(retryCount)
+        .setClientId(ByteString.copyFrom(uuid))
+        .setCallCreateTime(callCreateTime);
 
     // Add tracing info if we are currently tracing.
     Span span = Tracer.getCurrentSpan();
