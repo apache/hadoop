@@ -281,8 +281,8 @@ public class TestPendingReconstruction {
           getDatanodes().iterator().next() };
 
       // Add a stored block to the pendingReconstruction.
-      pendingReconstruction.increment(blockInfo,
-          DFSTestUtil.createDatanodeStorageInfos(1));
+      pendingReconstruction.increment(storedBlock,
+          desc[0].getStorageInfos()[0]);
       assertEquals("Size of pendingReconstructions ", 1,
           pendingReconstruction.size());
 
@@ -310,9 +310,6 @@ public class TestPendingReconstruction {
       } finally {
         fsn.writeUnlock();
       }
-
-      GenericTestUtils.waitFor(() -> pendingReconstruction.size() == 0, 500,
-          10000);
       // The pending queue should be empty.
       assertEquals("Size of pendingReconstructions ", 0,
           pendingReconstruction.size());
