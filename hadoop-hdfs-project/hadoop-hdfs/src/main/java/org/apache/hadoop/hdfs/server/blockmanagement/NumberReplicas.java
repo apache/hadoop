@@ -37,29 +37,61 @@ import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.Store
 public class NumberReplicas extends EnumCounters<NumberReplicas.StoredReplicaState> {
 
   public enum StoredReplicaState {
-    // live replicas. for a striped block, this value excludes redundant
-    // replicas for the same internal block
-    LIVE,
-    READONLY,
-    // decommissioning replicas. for a striped block ,this value excludes
-    // redundant and live replicas for the same internal block.
-    DECOMMISSIONING,
-    DECOMMISSIONED,
+    // live replicas
+    LIVE((byte) 1),
+    READONLY((byte) 2),
+    // decommissioning replicas.
+    DECOMMISSIONING((byte) 5),
+    DECOMMISSIONED((byte) 11),
     // We need live ENTERING_MAINTENANCE nodes to continue
     // to serve read request while it is being transitioned to live
     // IN_MAINTENANCE if these are the only replicas left.
     // MAINTENANCE_NOT_FOR_READ == maintenanceReplicas -
     // Live ENTERING_MAINTENANCE.
-    MAINTENANCE_NOT_FOR_READ,
+    MAINTENANCE_NOT_FOR_READ((byte) 4),
     // Live ENTERING_MAINTENANCE nodes to serve read requests.
-    MAINTENANCE_FOR_READ,
-    CORRUPT,
+    MAINTENANCE_FOR_READ((byte) 3),
+    CORRUPT((byte) 13),
     // excess replicas already tracked by blockmanager's excess map
-    EXCESS,
-    STALESTORAGE,
+    EXCESS((byte) 12),
+    STALESTORAGE(Byte.MAX_VALUE),
     // for striped blocks only. number of redundant internal block replicas
     // that have not been tracked by blockmanager yet (i.e., not in excess)
-    REDUNDANT
+    REDUNDANT(Byte.MAX_VALUE);
+
+    /*
+     * Priority is used to handle the situation where some block index in
+     * an EC block has multiple replicas. The higher the priority, the
+     * healthier the storage. 1 is the highest priority.
+     * For example, if a block index has two replicas, one in the
+     * LIVE state and the other in the CORRUPT state, the state will be
+     * store as LIVE.
+     *
+     * The priorities are classified as follows:
+     * (1) States that may be read normally
+     *   including LIVE, READONLY, MAINTENANCE_FOR_READ, MAINTENANCE_NOT_FOR_READ,
+     *   and DECOMMISSIONING. These states have the highest priority, ranging
+     *   from 1 to 5. It is easy to understand that LIVE has the highest
+     *   priority, READONLY has the second highest priority, and MAINTENANCE_FOR_READ
+     *   must have a higher priority than MAINTENANCE_NOT_FOR_READ. Then
+     *   DECOMMISSIONING has a lower priority than MAINTENANCE_FOR_READ and
+     *   MAINTENANCE_NOT_FOR_READ, mainly because we can tolerate the temporary loss
+     *   of replicas in the MAINTENANCE state.
+     * (2) States that may not be read normally
+     *   including DECOMMISSIONED, EXCESS, and CORRUPT. Their priorities are the lowest,
+     *   ranging from 11 to 13.
+     * (3) Some special states, including STALESTORAGE and REDUNDANT, are only used for
+     *   statistical calculations.
+     * */
+    private final byte priority;
+
+    StoredReplicaState(byte priority) {
+      this.priority = priority;
+    }
+
+    public byte getPriority() {
+      return priority;
+    }
   }
 
   public NumberReplicas() {
@@ -133,5 +165,10 @@ public class NumberReplicas extends EnumCounters<NumberReplicas.StoredReplicaSta
 
   public int liveEnteringMaintenanceReplicas() {
     return (int)get(MAINTENANCE_FOR_READ);
+  }
+
+  public void add(final NumberReplicas.StoredReplicaState e, final long value, int blockIndex,
+      DatanodeStorageInfo storage, boolean allowReplaceIfExist) {
+    super.add(e, value);
   }
 }
