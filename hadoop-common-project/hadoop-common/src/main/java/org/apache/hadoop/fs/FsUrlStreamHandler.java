@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLStreamHandler;
@@ -41,6 +42,15 @@ class FsUrlStreamHandler extends URLStreamHandler {
 
   FsUrlStreamHandler() {
     this.conf = new Configuration();
+  }
+
+  @Override
+  protected void parseURL(URL u, String spec, int start, int limit) {
+    if (spec.startsWith("file:")) {
+      super.parseURL(u, spec.replace(File.separatorChar, '/'), start, limit);
+    } else {
+      super.parseURL(u, spec, start, limit);
+    }
   }
 
   @Override
