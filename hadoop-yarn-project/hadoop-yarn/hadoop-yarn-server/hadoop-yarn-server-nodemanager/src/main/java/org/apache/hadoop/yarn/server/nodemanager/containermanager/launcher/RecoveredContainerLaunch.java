@@ -107,6 +107,16 @@ public class RecoveredContainerLaunch extends ContainerLaunch {
         }
       }
     }
+    if (retCode == ExitCode.FORCE_KILLED.getExitCode()
+        || retCode == ExitCode.TERMINATED.getExitCode()) {
+      // If the process was killed, Send container_cleanedup_after_kill and
+      // just break out of this method.
+      this.dispatcher.getEventHandler().handle(
+          new ContainerExitEvent(containerId,
+              ContainerEventType.CONTAINER_KILLED_ON_REQUEST, retCode,
+              "Container exited with a non-zero exit code " + retCode));
+      return retCode;
+    }
 
     if (retCode != 0) {
       LOG.warn("Recovered container exited with a non-zero exit code "
