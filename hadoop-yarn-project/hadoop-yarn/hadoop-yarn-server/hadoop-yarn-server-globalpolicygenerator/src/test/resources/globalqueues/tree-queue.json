@@ -1,0 +1,128 @@
+{
+  "queueName": "root",
+  "scope" : {"id" : "sc1"},
+  "totCap": {
+    "memory": "100000",
+    "vCores": "1000"
+  },
+  "guarCap": {
+    "memory": "100000",
+    "vCores": "1000"
+  },
+  "maxCap": {
+    "memory": "100000",
+    "vCores": "1000"
+  },
+  "usedCap": {
+    "memory": "100000",
+    "vCores": "1000"
+  },
+  "demandCap": {
+    "memory": "1000",
+    "vCores": "10"
+  },
+  "testExpectedToBePreempted": {
+    "memory": "0",
+    "vCores": "0"
+  },
+  "children": [
+    {
+      "queueName": "A",
+      "scope" : {"id" : "sc1"},
+      "guarCap": {
+        "memory": "50000",
+        "vCores": "500"
+      },
+      "maxCap": {
+        "memory": "100000",
+        "vCores": "1000"
+      },
+      "usedCap": {
+        "memory": "75000",
+        "vCores": "750"
+      },
+      "demandCap": {
+        "memory": "0",
+        "vCores": "0"
+      },
+      "testExpectedToBePreempted": {
+        "memory": "10000",
+        "vCores": "100"
+      },
+      "children": [
+        {
+          "queueName": "A1",
+          "scope" : {"id" : "sc1"},
+          "guarCap": {
+            "memory": "25000",
+            "vCores": "250"
+          },
+          "maxCap": {
+            "memory": "100000",
+            "vCores": "1000"
+          },
+          "usedCap": {
+            "memory": "50000",
+            "vCores": "500"
+          },
+          "demandCap": {
+            "memory": "0",
+            "vCores": "0"
+          },
+          "testExpectedToBePreempted": {
+            "memory": "10000",
+            "vCores": "100"
+          }
+        },
+        {
+          "queueName": "A2",
+          "scope" : {"id" : "sc1"},
+          "guarCap": {
+            "memory": "25000",
+            "vCores": "250"
+          },
+          "maxCap": {
+            "memory": "100000",
+            "vCores": "1000"
+          },
+          "usedCap": {
+            "memory": "25000",
+            "vCores": "250"
+          },
+          "demandCap": {
+            "memory": "0",
+            "vCores": "0"
+          },
+          "testExpectedToBePreempted": {
+            "memory": "0",
+            "vCores": "0"
+          }
+        }
+      ]
+    },
+    {
+      "queueName": "B",
+      "scope" : {"id" : "sc1"},
+      "guarCap": {
+        "memory": "50000",
+        "vCores": "500"
+      },
+      "maxCap": {
+        "memory": "100000",
+        "vCores": "1000"
+      },
+      "usedCap": {
+        "memory": "25000",
+        "vCores": "250"
+      },
+      "demandCap": {
+        "memory": "10000",
+        "vCores": "100"
+      },
+      "testExpectedToBePreempted": {
+        "memory": "0",
+        "vCores": "0"
+      }
+    }
+  ]
+}
