@@ -37,6 +37,7 @@ import javax.crypto.SecretKey;
 import javax.net.ssl.HttpsURLConnection;
 
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
@@ -72,6 +73,7 @@ public class Fetcher<K, V> extends Thread {
   private static final long FETCH_RETRY_DELAY_DEFAULT = 1000L;
   static final int TOO_MANY_REQ_STATUS_CODE = 429;
   private static final String FETCH_RETRY_AFTER_HEADER = "Retry-After";
+  private static final int MAX_ERROR_LENGTH = 10000;
 
   protected final Reporter reporter;
   @VisibleForTesting
@@ -509,6 +511,18 @@ public class Fetcher<K, V> extends Thread {
         decompressedLength = header.uncompressedLength;
         forReduce = header.forReduce;
       } catch (IllegalArgumentException e) {
+        byte[] bytes = new byte[MAX_ERROR_LENGTH];
+        int len = 0;
+        int c = input.read();
+        while (c != -1 || len < MAX_ERROR_LENGTH) {
+          bytes[len] = (byte) c;
+          len++;
+          c = input.read();
+        }
+        String errorMessage = Text.decode(bytes, 0, len);
+        if (errorMessage.length() > 0) {
+          LOG.warn("Error message from Shuffle Handler: " + errorMessage);
+        }
         badIdErrs.increment(1);
         LOG.warn("Invalid map id ", e);
         //Don't know which one was bad, so consider all of them as bad
