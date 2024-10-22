@@ -638,6 +638,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
 
     @Override
+    public long getReservedForReplicas() {
+      return 0;
+    }
+
+    @Override
     public void releaseLockedMemory(long bytesToRelease) {
     }
 

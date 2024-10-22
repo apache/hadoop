@@ -21,6 +21,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_HIGH_AVAILABLE_VOLUME_RESERVED_THRESHOLD_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_HIGH_AVAILABLE_VOLUME_RESERVED_THRESHOLD_KEY;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -55,6 +57,7 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
   
   private long balancedSpaceThreshold = DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_DEFAULT;
   private float balancedPreferencePercent = DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT;
+  private long highAvailableVolumeReservedThreshold = DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_HIGH_AVAILABLE_VOLUME_RESERVED_THRESHOLD_DEFAULT;
 
   AvailableSpaceVolumeChoosingPolicy(Random random) {
     this.random = random;
@@ -81,6 +84,9 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
     balancedPreferencePercent = conf.getFloat(
         DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
         DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
+    highAvailableVolumeReservedThreshold = conf.getLongBytes(
+        DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_HIGH_AVAILABLE_VOLUME_RESERVED_THRESHOLD_KEY,
+        DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_HIGH_AVAILABLE_VOLUME_RESERVED_THRESHOLD_DEFAULT);
     
     LOG.info("Available space volume choosing policy initialized: " +
         DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_KEY +
@@ -151,34 +157,40 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
       // replica, always try to choose a volume with a lot of free space.
       long mostAvailableAmongLowVolumes = volumesWithSpaces
           .getMostAvailableSpaceAmongVolumesWithLowAvailableSpace();
-      
-      List<V> highAvailableVolumes = extractVolumesFromPairs(
-          volumesWithSpaces.getVolumesWithHighAvailableSpace());
+
+      List<V> highAvailableVolumes = filterVolumeReservedAvailable(extractVolumesFromPairs(
+          volumesWithSpaces.getVolumesWithHighAvailableSpace()));
       List<V> lowAvailableVolumes = extractVolumesFromPairs(
           volumesWithSpaces.getVolumesWithLowAvailableSpace());
-      
-      float preferencePercentScaler =
-          (highAvailableVolumes.size() * balancedPreferencePercent) +
-          (lowAvailableVolumes.size() * (1 - balancedPreferencePercent));
-      float scaledPreferencePercent =
-          (highAvailableVolumes.size() * balancedPreferencePercent) /
-          preferencePercentScaler;
-      if (mostAvailableAmongLowVolumes < replicaSize ||
-          random.nextFloat() < scaledPreferencePercent) {
-        volume = roundRobinPolicyHighAvailable.chooseVolume(
-            highAvailableVolumes, replicaSize, storageId);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Volumes are imbalanced. Selecting " + volume +
-              " from high available space volumes for write of block size "
-              + replicaSize);
-        }
+
+      if (highAvailableVolumes.isEmpty()) {
+        volume = roundRobinPolicyBalanced.chooseVolume(volumes, replicaSize,
+            storageId);
       } else {
-        volume = roundRobinPolicyLowAvailable.chooseVolume(
-            lowAvailableVolumes, replicaSize, storageId);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Volumes are imbalanced. Selecting " + volume +
-              " from low available space volumes for write of block size "
-              + replicaSize);
+        float preferencePercentScaler =
+            (highAvailableVolumes.size() * balancedPreferencePercent) +
+                (lowAvailableVolumes.size() * (1 - balancedPreferencePercent));
+        float scaledPreferencePercent =
+            (highAvailableVolumes.size() * balancedPreferencePercent) /
+                preferencePercentScaler;
+        if (mostAvailableAmongLowVolumes < replicaSize ||
+            random.nextFloat() < scaledPreferencePercent) {
+          volume = roundRobinPolicyHighAvailable.chooseVolume(
+              highAvailableVolumes, replicaSize, storageId);
+          // balance percent -= low/total * (balance-per*2-1) * 1%
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Volumes are imbalanced. Selecting " + volume +
+                " from high available space volumes for write of block size "
+                + replicaSize);
+          }
+        } else {
+          volume = roundRobinPolicyLowAvailable.chooseVolume(
+              lowAvailableVolumes, replicaSize, storageId);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Volumes are imbalanced. Selecting " + volume +
+                " from low available space volumes for write of block size "
+                + replicaSize);
+          }
         }
       }
       return volume;
@@ -296,4 +308,14 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
     return ret;
   }
 
+  // Extract the volumes which have too heavy writing
+  private List<V> filterVolumeReservedAvailable(List<V> availableVolumes) {
+    List<V> ret = new ArrayList<V>();
+    for (V volume: availableVolumes) {
+      if (volume.getReservedForReplicas() < highAvailableVolumeReservedThreshold) {
+        ret.add(volume);
+      }
+    }
+    return ret;
+  }
 }
