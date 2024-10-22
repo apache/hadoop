@@ -200,8 +200,8 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
 
   @Override
   public Map<DatanodeStorage, BlockListAsLongs> getBlockReports(String bpid) {
-    final Map<DatanodeStorage, BlockListAsLongs> result =
-	new HashMap<DatanodeStorage, BlockListAsLongs>();
+    final Map<DatanodeStorage, BlockListAsLongs> result = 
+        new TreeMap<DatanodeStorage, BlockListAsLongs>();
 
     result.put(storage, BlockListAsLongs.EMPTY);
     return result;
