@@ -252,8 +252,9 @@ class DataXceiverServer implements Runnable {
         new Daemon(datanode.threadGroup,
             DataXceiver.create(peer, datanode, this))
             .start();
-      } catch (SocketTimeoutException ignored) {
-        // wake up to see if should continue to run
+      } catch (SocketTimeoutException ste) {
+        IOUtils.closeStream(peer);
+        LOG.warn("{}:DataXceiverServer", datanode.getDisplayName(), ste);
       } catch (AsynchronousCloseException ace) {
         // another thread closed our listener socket - that's expected during shutdown,
         // but not in other circumstances
