@@ -33,6 +33,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Queue;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.Checksum;
 
@@ -549,7 +550,7 @@ class BlockReceiver implements Closeable {
    * Receives and processes a packet. It can contain many chunks.
    * returns the number of data bytes that the packet has.
    */
-  private int receivePacket() throws IOException {
+  private int receivePacket(final Semaphore ackSema) throws IOException {
     // read the next packet
     packetReceiver.receiveNextPacket(in);
 
@@ -634,6 +635,9 @@ class BlockReceiver implements Closeable {
       } catch (IOException e) {
         handleMirrorOutError(e);
       }
+    }
+    if (ackSema != null) {
+      ackSema.release();
     }
     
     ByteBuffer dataBuf = packetReceiver.getDataSlice();
@@ -1003,13 +1007,15 @@ class BlockReceiver implements Closeable {
     this.isReplaceBlock = isReplaceBlock;
 
     try {
+      Semaphore ackSema = null;
       if (isClient && !isTransfer) {
+        ackSema = new Semaphore(0);
         responder = new Daemon(datanode.threadGroup, 
-            new PacketResponder(replyOut, mirrIn, downstreams));
+            new PacketResponder(replyOut, mirrIn, downstreams, ackSema));
         responder.start(); // start thread to processes responses
       }
 
-      while (receivePacket() >= 0) { /* Receive until the last packet */ }
+      while (receivePacket(ackSema) >= 0) { /* Receive until the last packet */ }
 
       // wait for all outstanding packet responses. And then
       // indicate responder to gracefully shutdown.
@@ -1265,6 +1271,8 @@ class BlockReceiver implements Closeable {
     /** for log and error messages */
     private final String myString; 
     private boolean sending = false;
+    /** for synchronization with BlockReceiver */
+    private final Semaphore ackSema;
 
     @Override
     public String toString() {
@@ -1272,9 +1280,11 @@ class BlockReceiver implements Closeable {
     }
 
     PacketResponder(final DataOutputStream upstreamOut,
-        final DataInputStream downstreamIn, final DatanodeInfo[] downstreams) {
+        final DataInputStream downstreamIn, final DatanodeInfo[] downstreams,
+        final Semaphore ackSema) {
       this.downstreamIn = downstreamIn;
       this.upstreamOut = upstreamOut;
+      this.ackSema = ackSema;
 
       this.type = downstreams == null? PacketResponderType.NON_PIPELINE
           : downstreams.length == 0? PacketResponderType.LAST_IN_PIPELINE
@@ -1415,6 +1425,9 @@ class BlockReceiver implements Closeable {
           long seqno = PipelineAck.UNKOWN_SEQNO;
           long ackRecvNanoTime = 0;
           try {
+            if (ackSema != null) {
+              ackSema.acquire();
+            }
             if (type != PacketResponderType.LAST_IN_PIPELINE && !mirrorError) {
               DataNodeFaultInjector.get().failPipeline(replicaInfo, mirrorAddr);
               // read an ack from downstream datanode
