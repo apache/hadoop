@@ -98,6 +98,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private long fCursorAfterLastRead = -1;
   private int bCursor = 0;   // cursor of read within buffer - offset of next byte to be returned from buffer
   private int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
+
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
   private TracingContext tracingContext;
@@ -769,6 +770,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   byte[] getBuffer() {
     return buffer;
   }
+
+  public boolean isClosed() { return closed; }
 
   @VisibleForTesting
   public boolean isReadAheadEnabled() {
