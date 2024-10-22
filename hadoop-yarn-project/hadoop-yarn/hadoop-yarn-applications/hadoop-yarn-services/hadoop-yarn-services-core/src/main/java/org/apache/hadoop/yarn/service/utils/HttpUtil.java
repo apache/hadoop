@@ -24,6 +24,9 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.codec.binary.Base64;
@@ -37,8 +40,6 @@ import org.ietf.jgss.GSSName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource.Builder;
 
 /**
  * Http connection utilities.
@@ -101,13 +102,13 @@ public class HttpUtil {
     return challenge;
   }
 
-  public static Builder connect(String url) throws URISyntaxException,
+  public static Invocation.Builder connect(String url) throws URISyntaxException,
       IOException, InterruptedException {
     boolean useKerberos = UserGroupInformation.isSecurityEnabled();
     URI resource = new URI(url);
-    Client client = Client.create();
-    Builder builder = client
-        .resource(url).type(MediaType.APPLICATION_JSON);
+    Client client = ClientBuilder.newClient();
+    Invocation.Builder builder = client
+        .target(url).request(MediaType.APPLICATION_JSON);
     if (useKerberos) {
       String challenge = generateToken(resource.getHost());
       builder.header(HttpHeaders.AUTHORIZATION, "Negotiate " +

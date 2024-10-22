@@ -39,9 +39,8 @@ import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.inject.Inject;
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONUnmarshaller;
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
+import org.glassfish.jersey.jettison.JettisonUnmarshaller;
 
 class FederationBlock extends RouterBlock {
 
@@ -71,13 +70,11 @@ class FederationBlock extends RouterBlock {
   protected ClusterMetricsInfo getClusterMetricsInfo(String capability) {
     try {
       if (capability != null && !capability.isEmpty()) {
-        JSONJAXBContext jc = new JSONJAXBContext(
-            JSONConfiguration.mapped().rootUnwrapping(false).build(), ClusterMetricsInfo.class);
-        JSONUnmarshaller unmarShaller = jc.createJSONUnmarshaller();
-        StringReader stringReader = new StringReader(capability);
-        ClusterMetricsInfo clusterMetrics =
-            unmarShaller.unmarshalFromJSON(stringReader, ClusterMetricsInfo.class);
-        return clusterMetrics;
+        JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(ClusterMetricsInfo.class);
+        JettisonUnmarshaller jsonMarshaller = jettisonJaxbContext.createJsonUnmarshaller();
+        ClusterMetricsInfo clusterMetricsInfo = jsonMarshaller.unmarshalFromJSON(
+            new StringReader(capability), ClusterMetricsInfo.class);
+        return clusterMetricsInfo;
       }
     } catch (Exception e) {
       LOG.error("Cannot parse SubCluster info", e);

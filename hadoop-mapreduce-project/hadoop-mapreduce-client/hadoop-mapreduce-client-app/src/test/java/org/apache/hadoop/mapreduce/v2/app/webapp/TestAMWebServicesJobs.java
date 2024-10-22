@@ -24,12 +24,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 
 import java.io.StringReader;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -48,27 +54,19 @@ import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Before;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
-
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.ClientResponse.Status;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
 /**
  * Test the app master web service Rest API for getting jobs, a specific job,
@@ -84,103 +82,104 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   private static Configuration conf = new Configuration();
   private static AppContext appContext;
 
-  private static class WebServletModule extends ServletModule {
-    @Override
-    protected void configureServlets() {
-      appContext = new MockAppContext(0, 1, 2, 1);
-      bind(JAXBContextResolver.class);
-      bind(AMWebServices.class);
-      bind(GenericExceptionHandler.class);
-      bind(AppContext.class).toInstance(appContext);
-      bind(Configuration.class).toInstance(conf);
+  @Override
+  protected Application configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.register(new JerseyBinder());
+    config.register(AMWebServices.class);
+    config.register(GenericExceptionHandler.class);
+    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    return config;
+  }
 
-      serve("/*").with(GuiceContainer.class);
+  private static class JerseyBinder extends AbstractBinder {
+    @Override
+    protected void configure() {
+      appContext = new MockAppContext(0, 1, 2, 1);
+      App app = new App(appContext);
+      bind(appContext).to(AppContext.class).named("am");
+      bind(app).to(App.class).named("app");
+      bind(conf).to(Configuration.class).named("conf");
+      final HttpServletResponse response = mock(HttpServletResponse.class);
+      final HttpServletRequest request = mock(HttpServletRequest.class);
+      bind(response).to(HttpServletResponse.class);
+      bind(request).to(HttpServletRequest.class);
     }
   }
 
-  static {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
-  }
-
-  @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
-  }
-
-  public TestAMWebServicesJobs() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.mapreduce.v2.app.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   @Test
-  public void testJobs() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-        .path("jobs").accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+  public void testJobs() throws Exception {
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("mapreduce")
+        .path("jobs").request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String entity = response.readEntity(String.class);
+    JSONObject json = new JSONObject(entity);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject jobs = json.getJSONObject("jobs");
-    JSONArray arr = jobs.getJSONArray("job");
+    JSONObject jobObject = jobs.getJSONObject("job");
+    JSONArray arr = new JSONArray();
+    arr.put(jobObject);
     JSONObject info = arr.getJSONObject(0);
     Job job = appContext.getJob(MRApps.toJobID(info.getString("id")));
     verifyAMJob(info, job);
-
   }
 
   @Test
-  public void testJobsSlash() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-        .path("jobs/").accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+  public void testJobsSlash() throws Exception {
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("mapreduce")
+        .path("jobs/").request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String entity = response.readEntity(String.class);
+    JSONObject json = new JSONObject(entity);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject jobs = json.getJSONObject("jobs");
-    JSONArray arr = jobs.getJSONArray("job");
+    JSONObject jobObject = jobs.getJSONObject("job");
+    JSONArray arr = new JSONArray();
+    arr.put(jobObject);
     JSONObject info = arr.getJSONObject(0);
     Job job = appContext.getJob(MRApps.toJobID(info.getString("id")));
     verifyAMJob(info, job);
-
   }
 
   @Test
-  public void testJobsDefault() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-        .path("jobs").get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+  public void testJobsDefault() throws Exception {
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("mapreduce")
+        .path("jobs").request().get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String entity = response.readEntity(String.class);
+    JSONObject json = new JSONObject(entity);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject jobs = json.getJSONObject("jobs");
-    JSONArray arr = jobs.getJSONArray("job");
+    JSONObject jobObject = jobs.getJSONObject("job");
+    JSONArray arr = new JSONArray();
+    arr.put(jobObject);
     JSONObject info = arr.getJSONObject(0);
     Job job = appContext.getJob(MRApps.toJobID(info.getString("id")));
     verifyAMJob(info, job);
-
   }
 
   @Test
   public void testJobsXML() throws Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-        .path("jobs").accept(MediaType.APPLICATION_XML)
-        .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("mapreduce")
+        .path("jobs").request(MediaType.APPLICATION_XML)
+        .get(Response.class);
+    assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
     DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
@@ -191,42 +190,22 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
     NodeList job = dom.getElementsByTagName("job");
     assertEquals("incorrect number of elements", 1, job.getLength());
     verifyAMJobXML(job, appContext);
-
   }
 
   @Test
-  public void testJobId() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobId() throws Exception {
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-          .path("jobs").path(jobId).accept(MediaType.APPLICATION_JSON)
-          .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
-      JSONObject info = json.getJSONObject("job");
-      verifyAMJob(info, jobsMap.get(id));
-    }
-
-  }
-
-  @Test
-  public void testJobIdSlash() throws JSONException, Exception {
-    WebResource r = resource();
-    Map<JobId, Job> jobsMap = appContext.getAllJobs();
-    for (JobId id : jobsMap.keySet()) {
-      String jobId = MRApps.toString(id);
-
-      ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-          .path("jobs").path(jobId + "/").accept(MediaType.APPLICATION_JSON)
-          .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      Response response = r.path("ws").path("v1").path("mapreduce")
+          .path("jobs").path(jobId).request(MediaType.APPLICATION_JSON)
+          .get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String entity = response.readEntity(String.class);
+      JSONObject json = new JSONObject(entity);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("job");
       verifyAMJob(info, jobsMap.get(id));
@@ -234,133 +213,132 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobIdDefault() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobIdSlash() throws Exception {
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-          .path("jobs").path(jobId).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      Response response = r.path("ws").path("v1").path("mapreduce")
+          .path("jobs").path(jobId + "/").request(MediaType.APPLICATION_JSON)
+          .get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String entity = response.readEntity(String.class);
+      JSONObject json = new JSONObject(entity);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("job");
       verifyAMJob(info, jobsMap.get(id));
     }
-
   }
 
   @Test
-  public void testJobIdNonExist() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobIdDefault() throws Exception {
+    WebTarget r = target();
+    Map<JobId, Job> jobsMap = appContext.getAllJobs();
+    for (JobId id : jobsMap.keySet()) {
+      String jobId = MRApps.toString(id);
 
-    try {
-      r.path("ws").path("v1").path("mapreduce").path("jobs")
-          .path("job_0_1234").get(JSONObject.class);
-      fail("should have thrown exception on invalid uri");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
-      JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
-      String message = exception.getString("message");
-      String type = exception.getString("exception");
-      String classname = exception.getString("javaClassName");
-      WebServicesTestUtils.checkStringMatch("exception message",
-          "java.lang.Exception: job, job_0_1234, is not found", message);
-      WebServicesTestUtils.checkStringMatch("exception type",
-          "NotFoundException", type);
-      WebServicesTestUtils.checkStringMatch("exception classname",
-          "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+      Response response = r.path("ws").path("v1").path("mapreduce")
+          .path("jobs").path(jobId).request().get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String entity = response.readEntity(String.class);
+      JSONObject json = new JSONObject(entity);
+      assertEquals("incorrect number of elements", 1, json.length());
+      JSONObject info = json.getJSONObject("job");
+      verifyAMJob(info, jobsMap.get(id));
     }
   }
 
   @Test
-  public void testJobIdInvalid() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobIdNonExist() throws Exception {
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("mapreduce").path("jobs")
+        .path("job_0_1234").request().get();
+    assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String entity = response.readEntity(String.class);
+    JSONObject msg = new JSONObject(entity);
+    JSONObject exception = msg.getJSONObject("RemoteException");
+    assertEquals("incorrect number of elements", 3, exception.length());
+    String message = exception.getString("message");
+    String type = exception.getString("exception");
+    String classname = exception.getString("javaClassName");
+    WebServicesTestUtils.checkStringMatch("exception message",
+        "job, job_0_1234, is not found", message);
+    WebServicesTestUtils.checkStringMatch("exception type",
+        "NotFoundException", type);
+    WebServicesTestUtils.checkStringMatch("exception classname",
+        "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+  }
 
-    try {
-      r.path("ws").path("v1").path("mapreduce").path("jobs").path("job_foo")
-          .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
-      fail("should have thrown exception on invalid uri");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
-      JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
-      String message = exception.getString("message");
-      String type = exception.getString("exception");
-      String classname = exception.getString("javaClassName");
-      verifyJobIdInvalid(message, type, classname);
-    }
+  @Test
+  public void testJobIdInvalid() throws Exception {
+    WebTarget r = target();
+    Response response =
+        r.path("ws").path("v1").path("mapreduce").path("jobs").path("job_foo")
+        .request(MediaType.APPLICATION_JSON).get();
+    assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String entity = response.readEntity(String.class);
+    JSONObject msg = new JSONObject(entity);
+    JSONObject exception = msg.getJSONObject("RemoteException");
+    assertEquals("incorrect number of elements", 3, exception.length());
+    String message = exception.getString("message");
+    String type = exception.getString("exception");
+    String classname = exception.getString("javaClassName");
+    verifyJobIdInvalid(message, type, classname);
   }
 
   // verify the exception output default is JSON
   @Test
-  public void testJobIdInvalidDefault() throws JSONException, Exception {
-    WebResource r = resource();
-
-    try {
-      r.path("ws").path("v1").path("mapreduce").path("jobs").path("job_foo")
-          .get(JSONObject.class);
-      fail("should have thrown exception on invalid uri");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
-      JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
-      String message = exception.getString("message");
-      String type = exception.getString("exception");
-      String classname = exception.getString("javaClassName");
-      verifyJobIdInvalid(message, type, classname);
-    }
+  public void testJobIdInvalidDefault() throws Exception {
+    WebTarget r = target();
+    Response response =
+        r.path("ws").path("v1").path("mapreduce").path("jobs").path("job_foo").request().get();
+    assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String entity = response.readEntity(String.class);
+    JSONObject msg = new JSONObject(entity);
+    JSONObject exception = msg.getJSONObject("RemoteException");
+    assertEquals("incorrect number of elements", 3, exception.length());
+    String message = exception.getString("message");
+    String type = exception.getString("exception");
+    String classname = exception.getString("javaClassName");
+    verifyJobIdInvalid(message, type, classname);
   }
 
   // test that the exception output works in XML
   @Test
   public void testJobIdInvalidXML() throws JSONException, Exception {
-    WebResource r = resource();
-
-    try {
-      r.path("ws").path("v1").path("mapreduce").path("jobs").path("job_foo")
-          .accept(MediaType.APPLICATION_XML).get(JSONObject.class);
-      fail("should have thrown exception on invalid uri");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      String msg = response.getEntity(String.class);
-      System.out.println(msg);
-      DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
-      DocumentBuilder db = dbf.newDocumentBuilder();
-      InputSource is = new InputSource();
-      is.setCharacterStream(new StringReader(msg));
-      Document dom = db.parse(is);
-      NodeList nodes = dom.getElementsByTagName("RemoteException");
-      Element element = (Element) nodes.item(0);
-      String message = WebServicesTestUtils.getXmlString(element, "message");
-      String type = WebServicesTestUtils.getXmlString(element, "exception");
-      String classname = WebServicesTestUtils.getXmlString(element,
-          "javaClassName");
-      verifyJobIdInvalid(message, type, classname);
-    }
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("mapreduce").path("jobs").path("job_foo")
+        .request(MediaType.APPLICATION_XML).get();
+    assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+    assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String msg = response.readEntity(String.class);
+    System.out.println(msg);
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
+    DocumentBuilder db = dbf.newDocumentBuilder();
+    InputSource is = new InputSource();
+    is.setCharacterStream(new StringReader(msg));
+    Document dom = db.parse(is);
+    NodeList nodes = dom.getElementsByTagName("RemoteException");
+    Element element = (Element) nodes.item(0);
+    String message = WebServicesTestUtils.getXmlString(element, "message");
+    String type = WebServicesTestUtils.getXmlString(element, "exception");
+    String classname = WebServicesTestUtils.getXmlString(element, "javaClassName");
+    verifyJobIdInvalid(message, type, classname);
   }
 
   private void verifyJobIdInvalid(String message, String type, String classname) {
     WebServicesTestUtils.checkStringMatch("exception message",
-        "java.lang.Exception: JobId string : job_foo is not properly formed",
+        "JobId string : job_foo is not properly formed",
         message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "NotFoundException", type);
@@ -370,48 +348,41 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
   @Test
   public void testJobIdInvalidBogus() throws JSONException, Exception {
-    WebResource r = resource();
-
-    try {
-      r.path("ws").path("v1").path("mapreduce").path("jobs").path("bogusfoo")
-          .get(JSONObject.class);
-      fail("should have thrown exception on invalid uri");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
-      JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
-      String message = exception.getString("message");
-      String type = exception.getString("exception");
-      String classname = exception.getString("javaClassName");
-      WebServicesTestUtils
-          .checkStringMatch(
-              "exception message",
-              "java.lang.Exception: JobId string : bogusfoo is not properly formed",
-              message);
-      WebServicesTestUtils.checkStringMatch("exception type",
-          "NotFoundException", type);
-      WebServicesTestUtils.checkStringMatch("exception classname",
-          "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
-    }
+    WebTarget r = target();
+    Response response =
+        r.path("ws").path("v1").path("mapreduce").path("jobs").path("bogusfoo").request().get();
+    assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String entity = response.readEntity(String.class);
+    JSONObject msg = new JSONObject(entity);
+    JSONObject exception = msg.getJSONObject("RemoteException");
+    assertEquals("incorrect number of elements", 3, exception.length());
+    String message = exception.getString("message");
+    String type = exception.getString("exception");
+    String classname = exception.getString("javaClassName");
+    WebServicesTestUtils.checkStringMatch(
+        "exception message",
+        "JobId string : bogusfoo is not properly formed",
+        message);
+    WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
+    WebServicesTestUtils.checkStringMatch("exception classname",
+        "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
   }
 
   @Test
   public void testJobIdXML() throws Exception {
-    WebResource r = resource();
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-          .path("jobs").path(jobId).accept(MediaType.APPLICATION_XML)
-          .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      String xml = response.getEntity(String.class);
+      Response response = r.path("ws").path("v1").path("mapreduce")
+          .path("jobs").path(jobId).request(MediaType.APPLICATION_XML)
+          .get(Response.class);
+      assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String xml = response.readEntity(String.class);
       DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
       DocumentBuilder db = dbf.newDocumentBuilder();
       InputSource is = new InputSource();
@@ -420,7 +391,6 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       NodeList job = dom.getElementsByTagName("job");
       verifyAMJobXML(job, appContext);
     }
-
   }
 
   public void verifyAMJob(JSONObject info, Job job) throws JSONException {
@@ -635,18 +605,18 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobCounters() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobCounters() throws Exception {
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
-
-      ClientResponse response = r.path("ws").path("v1").path("mapreduce")
+      Response response = r.path("ws").path("v1").path("mapreduce")
           .path("jobs").path(jobId).path("counters")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String entity = response.readEntity(String.class);
+      JSONObject json = new JSONObject(entity);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobCounters");
       verifyAMJobCounters(info, jobsMap.get(id));
@@ -654,18 +624,19 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobCountersSlash() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobCountersSlash() throws Exception {
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1").path("mapreduce")
+      Response response = r.path("ws").path("v1").path("mapreduce")
           .path("jobs").path(jobId).path("counters/")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String entity = response.readEntity(String.class);
+      JSONObject json = new JSONObject(entity);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobCounters");
       verifyAMJobCounters(info, jobsMap.get(id));
@@ -674,16 +645,17 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
   @Test
   public void testJobCountersDefault() throws JSONException, Exception {
-    WebResource r = resource();
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-          .path("jobs").path(jobId).path("counters/").get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      Response response = r.path("ws").path("v1").path("mapreduce")
+          .path("jobs").path(jobId).path("counters/").request().get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String entity = response.readEntity(String.class);
+      JSONObject json = new JSONObject(entity);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobCounters");
       verifyAMJobCounters(info, jobsMap.get(id));
@@ -692,17 +664,17 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
   @Test
   public void testJobCountersXML() throws Exception {
-    WebResource r = resource();
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1").path("mapreduce")
+      Response response = r.path("ws").path("v1").path("mapreduce")
           .path("jobs").path(jobId).path("counters")
-          .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      String xml = response.getEntity(String.class);
+          .request(MediaType.APPLICATION_XML).get(Response.class);
+      assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String xml = response.readEntity(String.class);
       DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
       DocumentBuilder db = dbf.newDocumentBuilder();
       InputSource is = new InputSource();
@@ -791,18 +763,19 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobAttempts() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobAttempts() throws Exception {
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1")
+      Response response = r.path("ws").path("v1")
           .path("mapreduce").path("jobs").path(jobId).path("jobattempts")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String entity = response.readEntity(String.class);
+      JSONObject json = new JSONObject(entity);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobAttempts");
       verifyJobAttempts(info, jobsMap.get(id));
@@ -810,18 +783,18 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobAttemptsSlash() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobAttemptsSlash() throws Exception {
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
-
-      ClientResponse response = r.path("ws").path("v1")
+      Response response = r.path("ws").path("v1")
           .path("mapreduce").path("jobs").path(jobId).path("jobattempts/")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String entity = response.readEntity(String.class);
+      JSONObject json = new JSONObject(entity);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobAttempts");
       verifyJobAttempts(info, jobsMap.get(id));
@@ -829,18 +802,19 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobAttemptsDefault() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testJobAttemptsDefault() throws Exception {
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1")
-          .path("mapreduce").path("jobs").path(jobId).path("jobattempts")
-          .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      Response response = r.path("ws").path("v1")
+          .path("mapreduce").path("jobs").path(jobId).path("jobattempts").request()
+          .get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String entity = response.readEntity(String.class);
+      JSONObject json = new JSONObject(entity);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobAttempts");
       verifyJobAttempts(info, jobsMap.get(id));
@@ -849,17 +823,17 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
   @Test
   public void testJobAttemptsXML() throws Exception {
-    WebResource r = resource();
+    WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
 
-      ClientResponse response = r.path("ws").path("v1")
+      Response response = r.path("ws").path("v1")
           .path("mapreduce").path("jobs").path(jobId).path("jobattempts")
-          .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      String xml = response.getEntity(String.class);
+          .request(MediaType.APPLICATION_XML).get(Response.class);
+      assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      String xml = response.readEntity(String.class);
       DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
       DocumentBuilder db = dbf.newDocumentBuilder();
       InputSource is = new InputSource();

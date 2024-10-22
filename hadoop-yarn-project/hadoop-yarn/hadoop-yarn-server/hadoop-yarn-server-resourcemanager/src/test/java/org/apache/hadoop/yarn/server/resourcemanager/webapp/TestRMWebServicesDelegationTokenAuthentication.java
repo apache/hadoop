@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.concurrent.Callable;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 
@@ -58,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.After;
@@ -67,7 +69,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.sun.jersey.api.client.ClientResponse.Status;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_PROXY_USER_PREFIX;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -146,12 +147,12 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     return Arrays.asList(new Object[][] { {OldDelegationTokenHeader}, {NewDelegationTokenHeader}});
   }
 
-  public TestRMWebServicesDelegationTokenAuthentication(String header) throws Exception {
+  public TestRMWebServicesDelegationTokenAuthentication(String header) {
     super();
     this.delegationTokenHeader = header;
   }
 
-  private void setupAndStartRM() throws Exception {
+  private void setupAndStartRM() {
     Configuration rmconf = new Configuration();
     rmconf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
       YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -236,7 +237,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       conn.getInputStream();
       fail("we should not be here");
     } catch (IOException e) {
-      assertEquals(Status.UNAUTHORIZED.getStatusCode(), conn.getResponseCode());
+      assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), conn.getResponseCode());
     }
 
     conn = (HttpURLConnection) url.openConnection();
@@ -294,7 +295,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       conn.getInputStream();
       fail("Authentication should fail with expired delegation tokens");
     } catch (IOException e) {
-      assertEquals(Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
+      assertEquals(Response.Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
     }
   }
 
@@ -318,7 +319,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         fail("Creation/Renewing delegation tokens should not be "
             + "allowed with token auth");
       } catch (IOException e) {
-        assertEquals(Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
+        assertEquals(Response.Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
       }
     }
 
@@ -332,7 +333,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       conn.getInputStream();
       fail("Cancelling delegation tokens should not be allowed with token auth");
     } catch (IOException e) {
-      assertEquals(Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
+      assertEquals(Response.Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
     }
   }
 
@@ -354,7 +355,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         setupConn(conn, "POST", MediaType.APPLICATION_JSON, body);
         InputStream response = conn.getInputStream();
-        assertEquals(Status.OK.getStatusCode(), conn.getResponseCode());
+        assertEquals(Response.Status.OK.getStatusCode(), conn.getResponseCode());
         BufferedReader reader = null;
         try {
           reader = new BufferedReader(new InputStreamReader(response, StandardCharsets.UTF_8));
@@ -372,7 +373,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
           IOUtils.closeStream(response);
         }
         Assert.assertEquals("client2", owner);
-        Token<RMDelegationTokenIdentifier> realToken = new Token<RMDelegationTokenIdentifier>();
+        Token<RMDelegationTokenIdentifier> realToken = new Token<>();
         realToken.decodeFromUrlString(token);
         Assert.assertEquals("client2", realToken.decodeIdentifier().getOwner().toString());
         return null;
@@ -393,10 +394,10 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       fail("Client should not be allowed to impersonate using delegation tokens");
     }
     catch(IOException ie) {
-      assertEquals(Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
+      assertEquals(Response.Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
     }
 
-    // this should also fail due to client2 not being a super user
+    // this should also fail due to client2 not being a superuser
     KerberosTestUtils.doAs("client2@EXAMPLE.COM", new Callable<Void>() {
       @Override
       public Void call() throws Exception {
@@ -412,7 +413,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
           fail("Non superuser client should not be allowed to carry out doAs");
         }
         catch (IOException ie) {
-          assertEquals(Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
+          assertEquals(Response.Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
         }
         return null;
       }
@@ -431,7 +432,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         setupConn(conn, "POST", MediaType.APPLICATION_JSON, body);
         InputStream response = conn.getInputStream();
-        assertEquals(Status.OK.getStatusCode(), conn.getResponseCode());
+        assertEquals(Response.Status.OK.getStatusCode(), conn.getResponseCode());
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(
             response, StandardCharsets.UTF_8))) {
           String line;
@@ -464,7 +465,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
           tokenString);
         setupConn(conn, "DELETE", null, null);
         InputStream response = conn.getInputStream();
-        assertEquals(Status.OK.getStatusCode(), conn.getResponseCode());
+        assertEquals(Response.Status.OK.getStatusCode(), conn.getResponseCode());
         response.close();
         return null;
       }
@@ -473,12 +474,19 @@ public class TestRMWebServicesDelegationTokenAuthentication {
 
   static String getMarshalledAppInfo(ApplicationSubmissionContextInfo appInfo)
       throws Exception {
-
     StringWriter writer = new StringWriter();
     JAXBContext context =
         JAXBContext.newInstance(ApplicationSubmissionContextInfo.class);
     Marshaller m = context.createMarshaller();
     m.marshal(appInfo, writer);
+    return writer.toString();
+  }
+
+  static String getMarshalledAppState(AppState appState) throws Exception {
+    StringWriter writer = new StringWriter();
+    JAXBContext context = JAXBContext.newInstance(AppState.class);
+    Marshaller m = context.createMarshaller();
+    m.marshal(appState, writer);
     return writer.toString();
   }
 

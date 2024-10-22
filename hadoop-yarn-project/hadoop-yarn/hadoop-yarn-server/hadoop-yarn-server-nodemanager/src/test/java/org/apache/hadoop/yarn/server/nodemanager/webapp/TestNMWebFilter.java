@@ -18,30 +18,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import com.google.inject.Injector;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import org.apache.hadoop.conf.Configuration;
 import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -51,6 +34,21 @@ import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Basic sanity Tests for NMWebFilter.
@@ -91,17 +89,11 @@ public class TestNMWebFilter {
 
     HttpServletResponseForTest response = new HttpServletResponseForTest();
     // dummy filter
-    FilterChain chain = new FilterChain() {
-      @Override
-      public void doFilter(ServletRequest servletRequest,
-          ServletResponse servletResponse) throws IOException,
-          ServletException {
-        // Do Nothing
-      }
+    FilterChain chain = (servletRequest, servletResponse) -> {
+      // Do Nothing
     };
 
-    String uri = "testNM:8042/node/containerlogs/"
-            + containerId.toString() + "/" + USER;
+    String uri = "testNM:8042/node/containerlogs/" + containerId + "/" + USER;
     HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getRequestURI()).thenReturn(uri);
     testFilter.doFilter(request, response, chain);
@@ -113,7 +105,7 @@ public class TestNMWebFilter {
     assertTrue(redirect.contains(USER));
 
     String logType = "syslog";
-    uri = "testNM:8042/node/containerlogs/" + containerId.toString()
+    uri = "testNM:8042/node/containerlogs/" + containerId
         + "/" + USER + "/" + logType + "/?start=10";
     HttpServletRequest request2 = mock(HttpServletRequest.class);
     when(request2.getRequestURI()).thenReturn(uri);

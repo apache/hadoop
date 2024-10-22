@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
+import javax.inject.Singleton;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -36,6 +37,8 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -59,7 +62,6 @@ import org.apache.hadoop.yarn.server.timelineservice.metrics.PerNodeAggTimelineC
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
-import com.google.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,7 +81,9 @@ public class TimelineCollectorWebService {
   private static final Logger LOG =
       LoggerFactory.getLogger(TimelineCollectorWebService.class);
 
-  private @Context ServletContext context;
+  @Context
+  private ServletContext context;
+
   private static final PerNodeAggTimelineCollectorMetrics METRICS =
       PerNodeAggTimelineCollectorMetrics.getInstance();
 
@@ -143,6 +147,7 @@ public class TimelineCollectorWebService {
    *     appId is not there or it cannot be parsed, HTTP 400 will be sent back.
    * @param entities timeline entities to be put.
    * @return a Response with appropriate HTTP status.
+   * @throws JsonProcessingException json processing exception
    */
   @PUT
   @Path("/entities")
@@ -153,7 +158,11 @@ public class TimelineCollectorWebService {
       @QueryParam("async") String async,
       @QueryParam("subappwrite") String isSubAppEntities,
       @QueryParam("appid") String appId,
-      TimelineEntities entities) {
+      String entities) throws JsonProcessingException {
+
+    ObjectMapper mapper = new ObjectMapper();
+    TimelineEntities timelineEntities = mapper.readValue(entities, TimelineEntities.class);
+
     init(res);
     UserGroupInformation callerUgi = getUser(req);
     boolean isAsync = async != null && async.trim().equalsIgnoreCase("true");
@@ -180,10 +189,10 @@ public class TimelineCollectorWebService {
       }
 
       if (isAsync) {
-        collector.putEntitiesAsync(processTimelineEntities(entities, appId,
+        collector.putEntitiesAsync(processTimelineEntities(timelineEntities, appId,
             Boolean.valueOf(isSubAppEntities)), callerUgi);
       } else {
-        collector.putEntities(processTimelineEntities(entities, appId,
+        collector.putEntities(processTimelineEntities(timelineEntities, appId,
             Boolean.valueOf(isSubAppEntities)), callerUgi);
       }
 

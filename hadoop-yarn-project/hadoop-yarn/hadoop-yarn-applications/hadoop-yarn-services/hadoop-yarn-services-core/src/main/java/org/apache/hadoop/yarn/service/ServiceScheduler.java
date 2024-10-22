@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.service;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource.Builder;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -92,6 +90,10 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -1119,10 +1121,10 @@ public class ServiceScheduler extends CompositeService {
                 .append(UserGroupInformation.getCurrentUser()
                     .getShortUserName());
           }
-          Builder builder = HttpUtil.connect(requestPath.toString());
-          ClientResponse response = builder.put(ClientResponse.class, spec);
-          if (response.getStatus()!=ClientResponse.Status.OK.getStatusCode()) {
-            LOG.warn("Error synchronize YARN sysfs: {}.", response.getEntity(String.class));
+          Invocation.Builder builder = HttpUtil.connect(requestPath.toString());
+          Response response = builder.put(Entity.entity(spec, MediaType.APPLICATION_JSON));
+          if (response.getStatus() != Response.Status.OK.getStatusCode()) {
+            LOG.warn("Error synchronize YARN sysfs: {}.", response.readEntity(String.class));
             success = false;
           }
         }

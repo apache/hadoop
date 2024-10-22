@@ -17,7 +17,9 @@
 
 package org.apache.hadoop.yarn.service;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -51,6 +53,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test case for ApiServer REST API.
@@ -60,9 +64,10 @@ public class TestApiServer {
   private ApiServer apiServer;
   private HttpServletRequest request;
   private ServiceClientTest mockServerClient;
+  private static final Logger LOG = LoggerFactory.getLogger(TestApiServer.class);
 
   @BeforeEach
-  public void setup() throws Exception {
+  public void setup() {
     request = Mockito.mock(HttpServletRequest.class);
     Mockito.when(request.getRemoteUser())
         .thenReturn(System.getProperty("user.name"));
@@ -247,7 +252,7 @@ public class TestApiServer {
     Resource resource = new Resource();
     resource.setCpus(1);
     resource.setMemory("2048");
-    List<Component> components = new ArrayList<Component>();
+    List<Component> components = new ArrayList<>();
     Component c = new Component();
     c.setName("jenkins");
     c.setNumberOfContainers(0L);
@@ -273,7 +278,7 @@ public class TestApiServer {
     Resource resource = new Resource();
     resource.setCpus(1);
     resource.setMemory("2048");
-    List<Component> components = new ArrayList<Component>();
+    List<Component> components = new ArrayList<>();
     Component c = new Component();
     c.setName("no-jenkins");
     c.setNumberOfContainers(-1L);
@@ -282,12 +287,10 @@ public class TestApiServer {
     c.setResource(resource);
     components.add(c);
     service.setComponents(components);
-    System.out.println("before stop");
-    final Response actual = apiServer.updateService(request, "no-jenkins",
-        service);
+    LOG.info("before stop");
+    final Response actual = apiServer.updateService(request, "no-jenkins", service);
     assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "flex service is ");
+        actual.getStatus(), "flex service is ");
   }
 
   @Test
@@ -301,7 +304,7 @@ public class TestApiServer {
     Resource resource = new Resource();
     resource.setCpus(1);
     resource.setMemory("2048");
-    List<Component> components = new ArrayList<Component>();
+    List<Component> components = new ArrayList<>();
     Component c = new Component();
     c.setName("jenkins");
     c.setNumberOfContainers(2L);
@@ -327,7 +330,7 @@ public class TestApiServer {
     Resource resource = new Resource();
     resource.setCpus(1);
     resource.setMemory("2048");
-    List<Component> components = new ArrayList<Component>();
+    List<Component> components = new ArrayList<>();
     Component c = new Component();
     c.setName("jenkins");
     c.setNumberOfContainers(2L);
@@ -354,7 +357,7 @@ public class TestApiServer {
     Resource resource = new Resource();
     resource.setCpus(1);
     resource.setMemory("2048");
-    List<Component> components = new ArrayList<Component>();
+    List<Component> components = new ArrayList<>();
     Component c = new Component();
     c.setName("jenkins");
     c.setNumberOfContainers(2L);
@@ -380,7 +383,7 @@ public class TestApiServer {
     Resource resource = new Resource();
     resource.setCpus(1);
     resource.setMemory("2048");
-    List<Component> components = new ArrayList<Component>();
+    List<Component> components = new ArrayList<>();
     Component c = new Component();
     c.setName("no-jenkins");
     c.setNumberOfContainers(-1L);
@@ -389,12 +392,10 @@ public class TestApiServer {
     c.setResource(resource);
     components.add(c);
     service.setComponents(components);
-    System.out.println("before stop");
-    final Response actual = apiServer.updateService(request, "no-jenkins",
-        service);
+    LOG.info("before stop");
+    final Response actual = apiServer.updateService(request, "no-jenkins", service);
     assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "stop service is ");
+        actual.getStatus(), "stop service is ");
   }
 
   @Test
@@ -402,20 +403,19 @@ public class TestApiServer {
     Service service = new Service();
     service.setState(ServiceState.STOPPED);
     service.setName("jenkins");
-    System.out.println("before stop");
-    final Response actual = apiServer.updateService(request, "jenkins",
-        service);
+    LOG.info("before stop");
+    final Response actual = apiServer.updateService(request, "jenkins", service);
     assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
         "stop service is ");
   }
 
   @Test
-  void testBadSecondStopServices() throws Exception {
+  void testBadSecondStopServices() {
     Service service = new Service();
     service.setState(ServiceState.STOPPED);
     service.setName("jenkins-second-stop");
     // simulates stop on an already stopped service
-    System.out.println("before second stop");
+    LOG.info("before second stop");
     final Response actual = apiServer.updateService(request,
         "jenkins-second-stop", service);
     assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
@@ -438,7 +438,7 @@ public class TestApiServer {
     Resource resource = new Resource();
     resource.setCpus(1);
     resource.setMemory("2048");
-    List<Component> components = new ArrayList<Component>();
+    List<Component> components = new ArrayList<>();
     Component c = new Component();
     c.setName("no-jenkins");
     c.setNumberOfContainers(-1L);
@@ -447,9 +447,8 @@ public class TestApiServer {
     c.setResource(resource);
     components.add(c);
     service.setComponents(components);
-    System.out.println("before stop");
-    final Response actual = apiServer.updateService(request, "no-jenkins",
-        service);
+    LOG.info("before stop");
+    final Response actual = apiServer.updateService(request, "no-jenkins", service);
     assertEquals(Response.status(Status.BAD_REQUEST)
         .build().getStatus(), actual.getStatus(), "update service is ");
   }

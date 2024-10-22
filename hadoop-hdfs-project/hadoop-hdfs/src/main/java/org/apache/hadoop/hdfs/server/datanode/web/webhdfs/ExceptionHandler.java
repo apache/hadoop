@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 
-import com.sun.jersey.api.ParamException;
-import com.sun.jersey.api.container.ContainerException;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.glassfish.jersey.server.ContainerException;
+import org.glassfish.jersey.server.ParamException;
 import org.slf4j.Logger;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.ipc.RemoteException;

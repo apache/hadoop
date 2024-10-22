@@ -85,7 +85,7 @@ public final class ContextFactory {
     Class spFactory = Class.forName(
         "com.sun.xml.bind.v2.ContextFactory");
     Method m = spFactory.getMethod("createContext", Class[].class, Map.class);
-    return (JAXBContext) m.invoke((Object) null, classes, properties);
+    return (JAXBContext) m.invoke(null, classes, properties);
   }
 
   // Called from WebComponent.service

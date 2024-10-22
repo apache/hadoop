@@ -58,7 +58,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client-api</artifactId>
-      <scope>runtime</scope>
+      <scope>compile</scope>
     </dependency>
     <!-- This is the api's compile dependency, but we don't want it to be compile dependency here too. -->
     <dependency>
@@ -99,6 +99,7 @@
       <artifactId>jsr305</artifactId>
       <scope>runtime</scope>
     </dependency>
+
     <!-- Move log4j to optional, since it is needed for some pieces folks might not use:
          * one of the three custom log4j appenders we have
       -->
@@ -157,8 +158,24 @@
                       <exclude>org.bouncycastle:*</exclude>
                       <!-- Leave snappy that includes native methods which cannot be relocated. -->
                       <exclude>org.xerial.snappy:*</exclude>
-                      <!-- leave out kotlin classes -->
-                      <exclude>org.jetbrains.kotlin:*</exclude>
+                      <exclude>org.glassfish.jersey.test-framework:*</exclude>
+                      <exclude>org.glassfish.jersey.media:*</exclude>
+                      <exclude>org.glassfish.jersey.containers:*</exclude>
+                      <exclude>org.glassfish.jersey.test-framework.providers:*</exclude>
+                      <exclude>org.glassfish.hk2:*</exclude>
+                      <exclude>org.glassfish.jersey.inject:*</exclude>
+                      <exclude>org.glassfish.grizzly:*</exclude>
+                      <exclude>org.glassfish.jersey.core:*</exclude>
+                      <exclude>org.glassfish.hk2.external:*</exclude>
+                      <exclude>jakarta.ws.rs:*</exclude>
+                      <exclude>jakarta.annotation:*</exclude>
+                      <exclude>jakarta.validation:*</exclude>
+                      <exclude>jakarta.servlet:*</exclude>
+                      <exclude>javax.annotation:*</exclude>
+                      <exclude>org.hamcrest:*</exclude>
+                      <exclude>org.glassfish.jaxb:*</exclude>
+                      <exclude>aopalliance:*</exclude>
+                      <exclude>javassist:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
@@ -182,13 +199,6 @@
                       <artifact>tomcat:jasper-compiler</artifact>
                       <excludes>
                         <exclude>org/apache/jasper/compiler/Localizer.class</exclude>
-                      </excludes>
-                    </filter>
-                    <!-- We rely on jersey for our web interfaces. We want to use its java services stuff only internal to jersey -->
-                    <filter>
-                      <artifact>com.sun.jersey:*</artifact>
-                      <excludes>
-                        <exclude>META-INF/services/javax.*</exclude>
                       </excludes>
                     </filter>
                     <filter>
@@ -247,6 +257,7 @@
                         <exclude>META-INF/versions/9/module-info.class</exclude>
                         <exclude>META-INF/versions/11/module-info.class</exclude>
                         <exclude>META-INF/versions/18/module-info.class</exclude>
+                        <exclude>META-INF/versions/9/javax/xml/bind/ModuleUtil.class</exclude>
                       </excludes>
                     </filter>
 

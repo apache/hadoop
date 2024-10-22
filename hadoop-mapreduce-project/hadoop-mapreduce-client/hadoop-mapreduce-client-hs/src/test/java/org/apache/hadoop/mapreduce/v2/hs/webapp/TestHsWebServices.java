@@ -20,15 +20,18 @@ package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 
 import java.io.StringReader;
 
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import com.google.inject.util.Providers;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -40,27 +43,19 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Before;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
-
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.ClientResponse.Status;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
 /**
  * Test the History Server info web services api's. Also test non-existent urls.
@@ -71,199 +66,179 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 public class TestHsWebServices extends JerseyTestBase {
 
   private static Configuration conf = new Configuration();
-  private static HistoryContext appContext;
-  private static HsWebApp webApp;
+  private static ApplicationClientProtocol acp = mock(ApplicationClientProtocol.class);
 
-  private static class WebServletModule extends ServletModule {
+  @Override
+  protected Application configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.register(new JerseyBinder());
+    config.register(HsWebServices.class);
+    config.register(GenericExceptionHandler.class);
+    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    return config;
+  }
+
+  private static class JerseyBinder extends AbstractBinder {
     @Override
-    protected void configureServlets() {
-      appContext = new MockHistoryContext(0, 1, 1, 1);
-      JobHistory jobHistoryService = new JobHistory();
-      HistoryContext historyContext = (HistoryContext) jobHistoryService;
-      webApp = new HsWebApp(historyContext);
+    protected void configure() {
+      HistoryContext appContext = new MockHistoryContext(0, 1, 1, 1);
+      HistoryContext historyContext = new JobHistory();
+      HsWebApp webApp = new HsWebApp(historyContext);
 
-      bind(JAXBContextResolver.class);
-      bind(HsWebServices.class);
-      bind(GenericExceptionHandler.class);
-      bind(WebApp.class).toInstance(webApp);
-      bind(AppContext.class).toInstance(appContext);
-      bind(HistoryContext.class).toInstance(appContext);
-      bind(Configuration.class).toInstance(conf);
-      bind(ApplicationClientProtocol.class).toProvider(Providers.of(null));
-
-      serve("/*").with(GuiceContainer.class);
+      bind(webApp).to(WebApp.class).named("hsWebApp");
+      bind(appContext).to(AppContext.class);
+      bind(appContext).to(HistoryContext.class).named("ctx");
+      bind(conf).to(Configuration.class).named("conf");
+      bind(acp).to(ApplicationClientProtocol.class).named("appClient");
+      final HttpServletResponse response = mock(HttpServletResponse.class);
+      bind(response).to(HttpServletResponse.class);
     }
   }
 
-  static {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
-  }
-
-  @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
-  }
-
-  public TestHsWebServices() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.mapreduce.v2.hs.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   @Test
-  public void testHS() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("history")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+  public void testHS() throws Exception {
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("history")
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String entity = response.readEntity(String.class);
+    JSONObject json = new JSONObject(entity);
     assertEquals("incorrect number of elements", 1, json.length());
-    verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
+    verifyHSInfo(json.getJSONObject("historyInfo"));
   }
 
   @Test
-  public void testHSSlash() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("history/")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+  public void testHSSlash() throws Exception {
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("history/")
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String entity = response.readEntity(String.class);
+    JSONObject json = new JSONObject(entity);
     assertEquals("incorrect number of elements", 1, json.length());
-    verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
+    verifyHSInfo(json.getJSONObject("historyInfo"));
   }
 
   @Test
-  public void testHSDefault() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("history/")
-        .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+  public void testHSDefault() throws Exception {
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("history/")
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String entity = response.readEntity(String.class);
+    JSONObject json = new JSONObject(entity);
     assertEquals("incorrect number of elements", 1, json.length());
-    verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
+    verifyHSInfo(json.getJSONObject("historyInfo"));
   }
 
   @Test
-  public void testHSXML() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("history")
-        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
-    verifyHSInfoXML(xml, appContext);
+  public void testHSXML() throws Exception {
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("history")
+        .request(MediaType.APPLICATION_XML).get(Response.class);
+    assertEquals(MediaType.APPLICATION_XML + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
+    verifyHSInfoXML(xml);
   }
 
   @Test
-  public void testInfo() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("history")
-        .path("info").accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+  public void testInfo() throws Exception {
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("history")
+        .path("info").request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String entity = response.readEntity(String.class);
+    JSONObject json = new JSONObject(entity);
     assertEquals("incorrect number of elements", 1, json.length());
-    verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
+    verifyHSInfo(json.getJSONObject("historyInfo"));
   }
 
   @Test
-  public void testInfoSlash() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("history")
-        .path("info/").accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+  public void testInfoSlash() throws Exception {
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("history")
+        .path("info/").request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String entity = response.readEntity(String.class);
+    JSONObject json = new JSONObject(entity);
     assertEquals("incorrect number of elements", 1, json.length());
-    verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
+    verifyHSInfo(json.getJSONObject("historyInfo"));
   }
 
   @Test
-  public void testInfoDefault() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("history")
-        .path("info/").get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+  public void testInfoDefault() throws Exception {
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("history")
+        .path("info/").request().get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String entity = response.readEntity(String.class);
+    JSONObject json = new JSONObject(entity);
     assertEquals("incorrect number of elements", 1, json.length());
-    verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
+    verifyHSInfo(json.getJSONObject("historyInfo"));
   }
 
   @Test
-  public void testInfoXML() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("history")
-        .path("info/").accept(MediaType.APPLICATION_XML)
-        .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
-    verifyHSInfoXML(xml, appContext);
+  public void testInfoXML() throws Exception {
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("history")
+        .path("info/").request(MediaType.APPLICATION_XML)
+        .get();
+    assertEquals(MediaType.APPLICATION_XML + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
+    verifyHSInfoXML(xml);
   }
 
   @Test
-  public void testInvalidUri() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testInvalidUri() {
+    WebTarget r = target();
     String responseStr = "";
-    try {
-      responseStr = r.path("ws").path("v1").path("history").path("bogus")
-          .accept(MediaType.APPLICATION_JSON).get(String.class);
-      fail("should have thrown exception on invalid uri");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
-      WebServicesTestUtils.checkStringMatch(
-          "error string exists and shouldn't", "", responseStr);
-    }
+    Response response = r.path("ws").path("v1").path("history").path("bogus")
+        .request(MediaType.APPLICATION_JSON).get();
+    assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+    WebServicesTestUtils.checkStringMatch(
+        "error string exists and shouldn't", "", responseStr);
   }
 
   @Test
-  public void testInvalidUri2() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testInvalidUri2() {
+    WebTarget r = target();
     String responseStr = "";
-    try {
-      responseStr = r.path("ws").path("v1").path("invalid")
-          .accept(MediaType.APPLICATION_JSON).get(String.class);
-      fail("should have thrown exception on invalid uri");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
-      WebServicesTestUtils.checkStringMatch(
-          "error string exists and shouldn't", "", responseStr);
-    }
+    Response response = r.path("ws").path("v1").path("invalid")
+        .request(MediaType.APPLICATION_JSON).get();
+    assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+    WebServicesTestUtils.checkStringMatch(
+        "error string exists and shouldn't", "", responseStr);
   }
 
   @Test
-  public void testInvalidAccept() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testInvalidAccept() {
+    WebTarget r = target();
     String responseStr = "";
-    try {
-      responseStr = r.path("ws").path("v1").path("history")
-          .accept(MediaType.TEXT_PLAIN).get(String.class);
-      fail("should have thrown exception on invalid uri");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.INTERNAL_SERVER_ERROR,
-          response.getStatusInfo());
-      WebServicesTestUtils.checkStringMatch(
-          "error string exists and shouldn't", "", responseStr);
-    }
+    Response response =
+        r.path("ws").path("v1").path("history").request(MediaType.TEXT_PLAIN).get();
+    assertResponseStatusCode(Response.Status.SERVICE_UNAVAILABLE,
+        response.getStatusInfo());
+    WebServicesTestUtils.checkStringMatch(
+        "error string exists and shouldn't", "", responseStr);
   }
 
   public void verifyHsInfoGeneric(String hadoopVersionBuiltOn,
-      String hadoopBuildVersion, String hadoopVersion, long startedon) {
+      String hadoopBuildVersion, String hadoopVersion, long startedOn) {
     WebServicesTestUtils.checkStringMatch("hadoopVersionBuiltOn",
         VersionInfo.getDate(), hadoopVersionBuiltOn);
     WebServicesTestUtils.checkStringEqual("hadoopBuildVersion",
@@ -271,10 +246,10 @@ public class TestHsWebServices extends JerseyTestBase {
     WebServicesTestUtils.checkStringMatch("hadoopVersion",
         VersionInfo.getVersion(), hadoopVersion);
     assertEquals("startedOn doesn't match: ",
-        JobHistoryServer.historyServerTimeStamp, startedon);
+        JobHistoryServer.historyServerTimeStamp, startedOn);
   }
 
-  public void verifyHSInfo(JSONObject info, AppContext ctx)
+  public void verifyHSInfo(JSONObject info)
       throws JSONException {
     assertEquals("incorrect number of elements", 4, info.length());
 
@@ -283,8 +258,7 @@ public class TestHsWebServices extends JerseyTestBase {
         info.getLong("startedOn"));
   }
 
-  public void verifyHSInfoXML(String xml, AppContext ctx)
-      throws JSONException, Exception {
+  public void verifyHSInfoXML(String xml) throws Exception {
     DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
@@ -302,5 +276,4 @@ public class TestHsWebServices extends JerseyTestBase {
           WebServicesTestUtils.getXmlLong(element, "startedOn"));
     }
   }
-
 }

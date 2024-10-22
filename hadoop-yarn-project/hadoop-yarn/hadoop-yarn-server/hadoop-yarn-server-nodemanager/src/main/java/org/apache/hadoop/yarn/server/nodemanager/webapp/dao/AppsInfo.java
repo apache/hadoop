@@ -25,9 +25,10 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "apps")
 @XmlAccessorType(XmlAccessType.FIELD)
+@SuppressWarnings("checkstyle:VisibilityModifier")
 public class AppsInfo {
 
-  protected ArrayList<AppInfo> app = new ArrayList<AppInfo>();
+  protected ArrayList<AppInfo> app = new ArrayList<>();
 
   public AppsInfo() {
   } // JAXB needs this

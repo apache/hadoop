@@ -28,6 +28,8 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -64,8 +66,6 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,6 +102,7 @@ public class TimelineWebServices {
    */
   @GET
   @Path("/{entityType}")
+  @Consumes({ MediaType.APPLICATION_JSON })
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8
       /* , MediaType.APPLICATION_XML */})
   public TimelineEntities getEntities(
@@ -118,17 +119,18 @@ public class TimelineWebServices {
       @QueryParam("fields") String fields) {
     init(res);
     try {
-      return timelineDataManager.getEntities(
-          parseStr(entityType),
-          parsePairStr(primaryFilter, ":"),
-          parsePairsStr(secondaryFilter, ",", ":"),
-          parseLongStr(windowStart),
-          parseLongStr(windowEnd),
-          parseStr(fromId),
-          parseLongStr(fromTs),
-          parseLongStr(limit),
-          parseFieldsStr(fields, ","),
-          getUser(req));
+      TimelineEntities entities = timelineDataManager.getEntities(
+              parseStr(entityType),
+              parsePairStr(primaryFilter, ":"),
+              parsePairsStr(secondaryFilter, ",", ":"),
+              parseLongStr(windowStart),
+              parseLongStr(windowEnd),
+              parseStr(fromId),
+              parseLongStr(fromTs),
+              parseLongStr(limit),
+              parseFieldsStr(fields, ","),
+              getUser(req));
+      return entities;
     } catch (NumberFormatException e) {
       throw new BadRequestException(
         "windowStart, windowEnd, fromTs or limit is not a numeric value: " + e);
@@ -146,6 +148,7 @@ public class TimelineWebServices {
    */
   @GET
   @Path("/{entityType}/{entityId}")
+  @Consumes({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8
       /* , MediaType.APPLICATION_XML */})
   public TimelineEntity getEntity(
@@ -221,6 +224,12 @@ public class TimelineWebServices {
   /**
    * Store the given entities into the timeline store, and return the errors
    * that happen during storing.
+   *
+   * We’re migrating to Jersey2. Previously, using `TimelineEntities`
+   * and converting to JSON via `JAXBContext` led to type conversion issues.
+   *
+   * Therefore, we’ve changed the method parameter to `String`,
+   * passing JSON directly and performing deserialization here.
    */
   @POST
   @Consumes({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
@@ -261,6 +270,7 @@ public class TimelineWebServices {
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
       TimelineDomain domain) {
+
     init(res);
     UserGroupInformation callerUGI = getUser(req);
     if (callerUGI == null) {
@@ -284,6 +294,7 @@ public class TimelineWebServices {
       throw new WebApplicationException(e,
           Response.Status.INTERNAL_SERVER_ERROR);
     }
+
     return new TimelinePutResponse();
   }
 

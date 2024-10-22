@@ -234,7 +234,7 @@ public class Router extends CompositeService {
     RMWebAppUtil.setupSecurityAndFilters(conf, null);
 
     Builder<Object> builder =
-        WebApps.$for("cluster", null, null, "ws").with(conf).at(webAppAddress);
+        WebApps.$for("cluster", null, null, "router-ws").with(conf).at(webAppAddress);
     if (RouterServerUtil.isRouterWebProxyEnable(conf)) {
       fetcher = new FedAppReportFetcher(conf);
       builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME, ProxyUriUtils.PROXY_PATH_SPEC,
@@ -244,7 +244,9 @@ public class Router extends CompositeService {
       String[] proxyParts = proxyHostAndPort.split(":");
       builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
     }
-    webApp = builder.start(new RouterWebApp(this), getUIWebAppContext());
+    RouterWebApp routerWebApp = new RouterWebApp(this);
+    builder.withResourceConfig(routerWebApp.resourceConfig());
+    webApp = builder.start(routerWebApp, getUIWebAppContext());
   }
 
   private WebAppContext getUIWebAppContext() {
