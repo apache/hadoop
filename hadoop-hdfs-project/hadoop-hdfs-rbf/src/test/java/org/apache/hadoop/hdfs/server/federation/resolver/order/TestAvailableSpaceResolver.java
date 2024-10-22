@@ -229,4 +229,12 @@ public class TestAvailableSpaceResolver {
     }
     subclusters.clear();
   }
+
+  @Test
+  public void testChooseFirstNamespace() throws Exception {
+    MultipleDestinationMountTableResolver mountTableResolver =
+            mockAvailableSpaceResolver(1.0f);
+    PathLocation loc = mountTableResolver.getDestinationForPath("/space");
+    assertEquals("subcluster9", loc.getDefaultLocation().getNameserviceId());
+  }
 }
