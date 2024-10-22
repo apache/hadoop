@@ -90,6 +90,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 
@@ -104,6 +106,7 @@ public class DFSInputStream extends FSInputStream
     implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
                HasEnhancedByteBufferAccess, CanUnbuffer, StreamCapabilities,
                ByteBufferPositionedReadable {
+  private static final Logger LOG = LoggerFactory.getLogger(DFSInputStream.class);
   @VisibleForTesting
   public static boolean tcpReadsDisabledForTesting = false;
   private long hedgedReadOpsLoopNumForTesting = 0;
@@ -1111,7 +1114,7 @@ public class DFSInputStream extends FSInputStream
     }
     final String dnAddr =
         chosenNode.getXferAddr(dfsClient.getConf().isConnectToDnViaHostname());
-    DFSClient.LOG.debug("Connecting to datanode {}", dnAddr);
+    LOG.debug("Connecting to datanode {}", dnAddr);
     boolean uriCacheEnabled = dfsClient.getConf().isUriCacheEnabled();
     InetSocketAddress targetAddr = NetUtils.createSocketAddr(dnAddr,
         -1, null, uriCacheEnabled);
