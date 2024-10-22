@@ -376,7 +376,7 @@ public class DecommissioningNodesWatcher {
               (rmApp.getApplicationType() == null)?
                   "" : rmApp.getApplicationType(),
               100.0 * rmApp.getProgress(),
-              (mclock.getTime() - rmApp.getStartTime()) / 1000));
+              (System.currentTimeMillis() - rmApp.getStartTime()) / 1000));
         }
       }
       LOG.debug("Decommissioning node: " + sb.toString());
