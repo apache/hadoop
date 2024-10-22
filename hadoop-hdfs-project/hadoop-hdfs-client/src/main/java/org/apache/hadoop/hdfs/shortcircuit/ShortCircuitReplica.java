@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class ShortCircuitReplica {
   public static final Logger LOG = LoggerFactory.getLogger(
-      ShortCircuitCache.class);
+      ShortCircuitReplica.class);
 
   /**
    * Identifies this ShortCircuitReplica object.
