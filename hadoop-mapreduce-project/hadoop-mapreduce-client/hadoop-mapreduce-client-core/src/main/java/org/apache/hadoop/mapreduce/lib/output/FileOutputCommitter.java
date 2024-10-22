@@ -20,6 +20,11 @@ package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -100,11 +105,21 @@ public class FileOutputCommitter extends PathOutputCommitter {
   public static final boolean
       FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED_DEFAULT = false;
 
+  public static final String FILEOUTPUTCOMMITTER_COMMIT_JOB_THREAD_IO_NUM = "mapreduce.fileoutputcommitter.jobcommit.thread.io.num";
+
+  public static final int FILEOUTPUTCOMMITTER_COMMIT_JOB_THREAD_IO_NUM_DEFAULT = 50;
+
+  private Lock commitJobLock = new ReentrantLock();
+
   private Path outputPath = null;
   private Path workPath = null;
   private final int algorithmVersion;
   private final boolean skipCleanup;
   private final boolean ignoreCleanupFailures;
+
+  private final int commitJobThreadIONum;
+
+  private volatile boolean commitJobEncounterException = false;
 
   /**
    * Create a file output committer
@@ -140,8 +155,8 @@ public class FileOutputCommitter extends PathOutputCommitter {
         conf.getInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
                     FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT);
     LOG.info("File Output Committer Algorithm version is " + algorithmVersion);
-    if (algorithmVersion != 1 && algorithmVersion != 2) {
-      throw new IOException("Only 1 or 2 algorithm version is supported");
+    if (algorithmVersion != 1 && algorithmVersion != 2 && algorithmVersion != 3) {
+      throw new IOException("Only 1, 2 or 3 algorithm version is supported");
     }
 
     // if skip cleanup
@@ -153,6 +168,10 @@ public class FileOutputCommitter extends PathOutputCommitter {
     ignoreCleanupFailures = conf.getBoolean(
         FILEOUTPUTCOMMITTER_CLEANUP_FAILURES_IGNORED,
         FILEOUTPUTCOMMITTER_CLEANUP_FAILURES_IGNORED_DEFAULT);
+
+    commitJobThreadIONum = conf.getInt(
+         FILEOUTPUTCOMMITTER_COMMIT_JOB_THREAD_IO_NUM,
+         FILEOUTPUTCOMMITTER_COMMIT_JOB_THREAD_IO_NUM_DEFAULT);
 
     LOG.info("FileOutputCommitter skip cleanup _temporary folders under " +
         "output directory:" + skipCleanup + ", ignore cleanup failures: " +
@@ -404,6 +423,37 @@ public class FileOutputCommitter extends PathOutputCommitter {
         for (FileStatus stat: getAllCommittedTaskPaths(context)) {
           mergePaths(fs, stat, finalOutput, context);
         }
+      } else if (algorithmVersion == 3) {
+        ExecutorService pool = Executors.newFixedThreadPool(commitJobThreadIONum);
+        final List<Future<Void>> futures = new LinkedList<>();
+        for (FileStatus stat: getAllCommittedTaskPaths(context)) {
+          if (!commitJobEncounterException) {
+            futures.add(pool.submit(() -> {
+              try {
+                mergePaths(fs, stat, finalOutput, context);
+                return null;
+              } catch (Exception e) {
+                commitJobEncounterException = true;
+                throw e;
+              }
+            }));
+          } else {
+            LOG.error("commitJobEncounterException, break.");
+            break;
+          }
+        }
+        pool.shutdown();
+        try {
+          for (Future future : futures) {
+            future.get();
+          }
+        } catch (InterruptedException | ExecutionException e) {
+          LOG.error("Cancelling " + futures.size() + " commit job tasks");
+          for (Future future : futures) {
+            future.cancel(true);
+          }
+          throw new IOException("Exception when commit job", e);
+        }
       }
 
       if (skipCleanup) {
@@ -508,6 +558,28 @@ public class FileOutputCommitter extends PathOutputCommitter {
     if (algorithmVersion == 1) {
       if (!fs.rename(from.getPath(), to)) {
         throw new IOException("Failed to rename " + from + " to " + to);
+      }
+    } else if (algorithmVersion == 3) {
+      boolean rename = false;
+      if (!fs.exists(to)) {
+        commitJobLock.lock();
+        try {
+          if (!fs.exists(to)) { // double check
+            if (!fs.rename(from.getPath(), to)) {
+              throw new IOException("Failed to rename " + from + " to " + to);
+            }
+            rename = true;
+          }
+        } finally {
+          commitJobLock.unlock();
+        }
+      }
+
+      if (!rename) {
+        for (FileStatus subFrom : fs.listStatus(from.getPath())) {
+          Path subTo = new Path(to, subFrom.getPath().getName());
+          mergePaths(fs, subFrom, subTo, context);
+        }
       }
     } else {
       fs.mkdirs(to);
@@ -749,6 +821,9 @@ public class FileOutputCommitter extends PathOutputCommitter {
     sb.append(", algorithmVersion=").append(algorithmVersion);
     sb.append(", skipCleanup=").append(skipCleanup);
     sb.append(", ignoreCleanupFailures=").append(ignoreCleanupFailures);
+    if (algorithmVersion == 3) {
+      sb.append(", commitJobThreadIONum=").append(commitJobThreadIONum);
+    }
     sb.append('}');
     return sb.toString();
   }
