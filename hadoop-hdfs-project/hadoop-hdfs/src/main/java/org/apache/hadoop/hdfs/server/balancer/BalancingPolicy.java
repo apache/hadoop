@@ -79,7 +79,8 @@ abstract class BalancingPolicy {
   /** Get all {@link BalancingPolicy} instances*/
   static BalancingPolicy parse(String s) {
     final BalancingPolicy [] all = {BalancingPolicy.Node.INSTANCE,
-                                    BalancingPolicy.Pool.INSTANCE};
+                                    BalancingPolicy.Pool.INSTANCE,
+                                    NodeActual.INSTANCE};
     for(BalancingPolicy p : all) {
       if (p.getName().equalsIgnoreCase(s))
         return p;
@@ -119,6 +120,45 @@ abstract class BalancingPolicy {
         }
       }
       return capacity == 0L ? null : totalUsed * 100.0 / capacity;
+    }
+  }
+
+  /**
+   * Cluster is balanced if each node is balanced. Unlike {@link Node},
+   * The policy take into account non-DFS used spaces.
+   * <p>
+   * Actual DFS capacity (capacity - non-DFS used) is calculated by
+   * (DFS used + remaining).
+   */
+  static final class NodeActual extends BalancingPolicy {
+    static final NodeActual INSTANCE = new NodeActual();
+    private NodeActual() {}
+
+    @Override
+    String getName() {
+      return "datanode-actual";
+    }
+
+    @Override
+    void accumulateSpaces(DatanodeStorageReport r) {
+      for(StorageReport s : r.getStorageReports()) {
+        final StorageType t = s.getStorage().getStorageType();
+        totalCapacities.add(t, s.getDfsUsed() + s.getRemaining());
+        totalUsedSpaces.add(t, s.getDfsUsed());
+      }
+    }
+
+    @Override
+    Double getUtilization(DatanodeStorageReport r, final StorageType t) {
+      long capacity = 0L;
+      long dfsUsed = 0L;
+      for(StorageReport s : r.getStorageReports()) {
+        if (s.getStorage().getStorageType() == t) {
+          capacity += s.getDfsUsed() + s.getRemaining();
+          dfsUsed += s.getDfsUsed();
+        }
+      }
+      return capacity == 0L? null: dfsUsed*100.0/capacity;
     }
   }
 

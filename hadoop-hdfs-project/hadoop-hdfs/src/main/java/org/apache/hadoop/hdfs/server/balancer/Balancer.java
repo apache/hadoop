@@ -187,7 +187,8 @@ public class Balancer {
   private static final String USAGE = "Usage: hdfs balancer"
       + "\n\t[-policy <policy>]\tthe balancing policy: "
       + BalancingPolicy.Node.INSTANCE.getName() + " or "
-      + BalancingPolicy.Pool.INSTANCE.getName()
+      + BalancingPolicy.Pool.INSTANCE.getName() + " or "
+      + BalancingPolicy.NodeActual.INSTANCE.getName()
       + "\n\t[-threshold <threshold>]\tPercentage of disk capacity"
       + "\n\t[-exclude [-f <hosts-file> | <comma-separated list of hosts>]]"
       + "\tExcludes the specified datanodes."
