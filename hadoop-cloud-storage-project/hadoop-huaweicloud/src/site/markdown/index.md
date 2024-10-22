@@ -24,12 +24,14 @@ This support comes via the JAR file `hadoop-huaweicloud.jar`.
 
 ## Features
 
-* Read and write data stored in a HuaweiCloud OBS account.
-* Reference file system paths using URLs using the `obs` scheme.
-* Present a hierarchical file system view by implementing the standard Hadoop `FileSystem` interface.
-* Support multipart upload for a large file.
+* Present a hierarchical HDFS file system by implementing the standard Hadoop FileSystem interface.
+* In hadoop, Read and write data stored in a HuaweiCloud OBS bucket.
 * Can act as a source of data in a MapReduce job, or a sink.
+* Support multipart upload for a large file.
+* Reference file system paths using URLs using the obs scheme.
 * Uses HuaweiCloud OBS’s Java SDK with support for latest OBS features and authentication schemes.
+* For OBS 'Parallel file system bucket'(Posix), support rename with atomic semantics, Append, hflush&hsync.
+* For OBS 'Parallel file system bucket'(Posix), provide trash mechanism and quickly delete, which using rename and lifecircle of OBS bucket.
 * Tested for scale.
 
 ## Limitations
