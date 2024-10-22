@@ -102,10 +102,10 @@ public class RMContainerAllocator extends RMContainerRequestor
   public static final 
   float DEFAULT_COMPLETED_MAPS_PERCENT_FOR_REDUCE_SLOWSTART = 0.05f;
   
-  static final Priority PRIORITY_FAST_FAIL_MAP;
-  static final Priority PRIORITY_REDUCE;
-  static final Priority PRIORITY_MAP;
-  static final Priority PRIORITY_OPPORTUNISTIC_MAP;
+  static Priority PRIORITY_FAST_FAIL_MAP;
+  static Priority PRIORITY_REDUCE;
+  static Priority PRIORITY_MAP;
+  static Priority PRIORITY_OPPORTUNISTIC_MAP;
 
   @VisibleForTesting
   public static final String RAMPDOWN_DIAGNOSTIC = "Reducer preempted "
@@ -116,15 +116,11 @@ public class RMContainerAllocator extends RMContainerRequestor
 
   static {
     PRIORITY_FAST_FAIL_MAP = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(Priority.class);
-    PRIORITY_FAST_FAIL_MAP.setPriority(5);
     PRIORITY_REDUCE = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(Priority.class);
-    PRIORITY_REDUCE.setPriority(10);
     PRIORITY_MAP = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(Priority.class);
-    PRIORITY_MAP.setPriority(20);
     PRIORITY_OPPORTUNISTIC_MAP =
         RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
             Priority.class);
-    PRIORITY_OPPORTUNISTIC_MAP.setPriority(19);
   }
   
   /*
@@ -234,6 +230,18 @@ public class RMContainerAllocator extends RMContainerRequestor
                                 MRJobConfig.DEFAULT_MR_AM_TO_RM_WAIT_INTERVAL_MS);
     mapNodeLabelExpression = conf.get(MRJobConfig.MAP_NODE_LABEL_EXP);
     reduceNodeLabelExpression = conf.get(MRJobConfig.REDUCE_NODE_LABEL_EXP);
+    PRIORITY_FAST_FAIL_MAP.setPriority(conf.getInt(
+        MRJobConfig.MAPREDUCE_JOB_FAIL_MAP_PRIORITY,
+        MRJobConfig.DEFAULT_MAPREDUCE_JOB_FAIL_MAP_PRIORITY));
+    PRIORITY_REDUCE.setPriority(conf.getInt(
+        MRJobConfig.MAPREDUCE_JOB_REDUCE_PRIORITY,
+        MRJobConfig.DEFAULT_MAPREDUCE_JOB_REDUCE_PRIORITY));
+    PRIORITY_MAP.setPriority(conf.getInt(
+        MRJobConfig.MAPREDUCE_JOB_MAP_PRIORITY,
+        MRJobConfig.DEFAULT_MAPREDUCE_JOB_MAP_PRIORITY));
+    PRIORITY_OPPORTUNISTIC_MAP.setPriority(conf.getInt(
+        MRJobConfig.MAPREDUCE_JOB_OPPORTUNISTIC_MAP_PRIORITY,
+        MRJobConfig.DEFAULT_MAPREDUCE_JOB_OPPORTUNISTIC_MAP_PRIORITY));
     // Init startTime to current time. If all goes well, it will be reset after
     // first attempt to contact RM.
     retrystartTime = System.currentTimeMillis();
