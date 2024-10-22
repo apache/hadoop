@@ -4007,6 +4007,17 @@
 </property>
 
 <property>
+  <name>dfs.datanode.delete.corrupt.replica.from.disk.enable</name>
+  <value>true</value>
+  <description>
+    Whether the datanode delete replica from disk when client requests a missing block,
+    If true will delete the actual on-disk block and meta file,
+    otherwise will only remove it from volume map and notify namenode.
+    The default value is true.
+  </description>
+</property>
+
+<property>
   <name>dfs.webhdfs.rest-csrf.enabled</name>
   <value>false</value>
   <description>

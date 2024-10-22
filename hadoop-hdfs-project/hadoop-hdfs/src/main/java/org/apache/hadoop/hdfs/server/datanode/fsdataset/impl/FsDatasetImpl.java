@@ -129,6 +129,9 @@ import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_ENABLE;
+
 /**************************************************
  * FSDataset manages a set of data blocks.  Each block
  * has a unique name and an extent on disk.
@@ -287,6 +290,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private long curDirScannerNotifyCount;
   private long lastDirScannerNotifyTime;
   private volatile long lastDirScannerFinishTime;
+  private volatile boolean deleteCorruptReplicaFromDisk;
 
   /**
    * An FSDataset has a directory where it loads its data files.
@@ -392,6 +396,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_MAX_NOTIFY_COUNT_KEY,
         DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_MAX_NOTIFY_COUNT_DEFAULT);
     lastDirScannerNotifyTime = System.currentTimeMillis();
+    deleteCorruptReplicaFromDisk = conf.getBoolean(
+        DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_ENABLE,
+        DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_DEFAULT);
   }
 
   /**
@@ -2414,23 +2421,21 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
   /**
    * Invalidate a block which is not found on disk. We should remove it from
-   * memory and notify namenode, but unnecessary  to delete the actual on-disk
-   * block file again.
+   * memory and notify namenode, will decide whether to delete the actual on-disk block and meta
+   * file based on {@link DFSConfigKeys#DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_ENABLE}.
    *
    * @param bpid the block pool ID.
    * @param block The block to be invalidated.
    * @param checkFiles Whether to check data and meta files.
    */
-  public void invalidateMissingBlock(String bpid, Block block, boolean checkFiles) {
+  public void invalidateMissingBlock(String bpid, Block block, boolean checkFiles)
+      throws IOException {
 
     // The replica seems is on its volume map but not on disk.
     // We can't confirm here is block file lost or disk failed.
-    // If block lost:
-    //    deleted local block file is completely unnecessary
-    // If disk failed:
-    //    deleted local block file here may lead to missing-block
-    //    when it with only 1 replication left now.
-    // So remove if from volume map notify namenode is ok.
+    // If checkFiles is true, the existence of the block and metafile will be checked again.
+    // If deleteCorruptReplicaFromDisk is true, delete the existing block or metafile directly,
+    // otherwise just remove them from the memory volumeMap.
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
         bpid)) {
       // Check if this block is on the volume map.
@@ -2438,13 +2443,21 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       // Double-check block or meta file existence when checkFiles as true.
       if (replica != null && (!checkFiles ||
           (!replica.blockDataExists() || !replica.metadataExists()))) {
-        volumeMap.remove(bpid, block);
-        invalidate(bpid, replica);
+        if (deleteCorruptReplicaFromDisk) {
+          ExtendedBlock extendedBlock = new ExtendedBlock(bpid, block);
+          datanode
+              .notifyNamenodeDeletedBlock(extendedBlock, replica.getStorageUuid());
+          invalidate(bpid, new Block[] {extendedBlock.getLocalBlock()});
+        } else {
+          // For detailed info, please refer to HDFS-16985.
+          volumeMap.remove(bpid, block);
+          invalidate(bpid, replica);
+        }
       }
     }
   }
 
-  public void invalidateMissingBlock(String bpid, Block block) {
+  public void invalidateMissingBlock(String bpid, Block block) throws IOException {
     invalidateMissingBlock(bpid, block, true);
   }
 
@@ -3862,6 +3875,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override
   public long getPendingAsyncDeletions() {
     return asyncDiskService.countPendingDeletions();
+  }
+
+  @Override
+  public void setDeleteCorruptReplicaFromDisk(boolean deleteCorruptReplicaFromDisk) {
+    this.deleteCorruptReplicaFromDisk = deleteCorruptReplicaFromDisk;
+  }
+
+  @Override
+  public boolean isDeleteCorruptReplicaFromDisk() {
+    return deleteCorruptReplicaFromDisk;
   }
 }
 

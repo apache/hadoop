@@ -1956,10 +1956,13 @@ public class TestFsDatasetImpl {
   /**
    * Test the block file which is not found when disk with some exception.
    * We expect:
+   * If deleteCorruptReplicaFromDisk as false:
    *     1. block file wouldn't be deleted from disk.
    *     2. block info would be removed from dn memory.
    *     3. block would be reported to nn as missing block.
    *     4. block would be recovered when disk back to normal.
+   * If deleteCorruptReplicaFromDisk as true:
+   *     1. block file would be removed from dn memory and disk.
    */
   @Test
   public void testInvalidateMissingBlock() throws Exception {
@@ -1987,6 +1990,8 @@ public class TestFsDatasetImpl {
       File blockFile = new File(blockPath);
       File metaFile = new File(metaPath);
 
+      // Set deleteCorruptReplicaFromDisk as false will only remove block from mem.
+      fsdataset.setDeleteCorruptReplicaFromDisk(false);
       // Mock local block file not found when disk with some exception.
       fsdataset.invalidateMissingBlock(bpid, replicaInfo, false);
 
@@ -2007,6 +2012,17 @@ public class TestFsDatasetImpl {
       fsdataset.checkAndUpdate(bpid, info);
       GenericTestUtils.waitFor(() ->
           blockManager.getLowRedundancyBlocksCount() == 0, 100, 5000);
+
+      assertTrue(blockFile.exists());
+      // Set deleteCorruptReplicaFromDisk as true will remove block from mem and disk.
+      fsdataset.setDeleteCorruptReplicaFromDisk(true);
+      // Mock local block file not found when disk with some exception.
+      fsdataset.invalidateMissingBlock(bpid, replicaInfo, false);
+
+      // Assert local block file would be removed from mem and disk.
+      GenericTestUtils.waitFor(() -> !blockFile.exists(), 100, 5000);
+      assertEquals("null",
+          fsdataset.getReplicaString(bpid, replicaInfo.getBlockId()));
     } finally {
       cluster.shutdown();
     }
