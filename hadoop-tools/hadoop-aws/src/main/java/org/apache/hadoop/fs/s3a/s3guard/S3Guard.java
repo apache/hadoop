@@ -121,12 +121,6 @@ public final class S3Guard {
     return true;
   }
 
-  public static Collection<String> getAuthoritativePaths(S3AFileSystem fs) {
-    return getAuthoritativePaths(
-        fs.getUri(),
-        fs.getConf(),
-        p -> fs.maybeAddTrailingSlash(fs.qualify(p).toString()));
-  }
 
   /**
    * Get the authoritative paths of a filesystem.

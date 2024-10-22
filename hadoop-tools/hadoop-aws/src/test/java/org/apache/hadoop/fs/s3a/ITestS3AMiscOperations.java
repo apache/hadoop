@@ -112,7 +112,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
       LambdaTestUtils.intercept(IllegalStateException.class,
           () -> fs.putObjectDirect(
               putObjectRequestBuilder.build(),
-              PutObjectOptions.keepingDirs(),
+              PutObjectOptions.defaultOptions(),
               new S3ADataBlocks.BlockUploadData("PUT".getBytes(), null),
               null));
       assertPathDoesNotExist("put object was created", path);

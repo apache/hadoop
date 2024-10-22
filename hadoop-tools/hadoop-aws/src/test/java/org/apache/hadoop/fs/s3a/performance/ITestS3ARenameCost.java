@@ -18,15 +18,10 @@
 
 package org.apache.hadoop.fs.s3a.performance;
 
-
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,35 +30,14 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
-import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
 
 /**
  * Use metrics to assert about the cost of file API calls.
- * <p></p>
- * Parameterized on directory marker keep vs delete
  */
-@RunWith(Parameterized.class)
 public class ITestS3ARenameCost extends AbstractS3ACostTest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3ARenameCost.class);
-
-  /**
-   * Parameterization.
-   */
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> params() {
-    return Arrays.asList(new Object[][]{
-        {"keep-markers", true},
-        {"delete-markers", false},
-    });
-  }
-
-  public ITestS3ARenameCost(final String name,
-      final boolean keepMarkers) {
-    super(keepMarkers);
-
-  }
 
   @Test
   public void testRenameFileToDifferentDirectory() throws Throwable {
@@ -102,27 +76,9 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
         with(DIRECTORIES_CREATED, 0),
         with(DIRECTORIES_DELETED, 0),
         // keeping: only the core delete operation is issued.
-        withWhenKeeping(OBJECT_DELETE_REQUEST, DELETE_OBJECT_REQUEST),
-        withWhenKeeping(FAKE_DIRECTORIES_DELETED, 0),
-        withWhenKeeping(OBJECT_DELETE_OBJECTS, 1),
-
-        // deleting: delete any fake marker above the destination.
-        // the actual request count depends on whether bulk delete is
-        // enabled or not
-
-        // no bulk delete: multiple marker calls
-        probe(isDeleting() && !isBulkDelete(), OBJECT_DELETE_REQUEST,
-            DELETE_OBJECT_REQUEST + directoriesInPath),
-
-        // bulk delete: split up
-        probe(isDeleting() && isBulkDelete(), OBJECT_DELETE_REQUEST,
-                DELETE_OBJECT_REQUEST),
-        probe(isDeleting() && isBulkDelete(), OBJECT_BULK_DELETE_REQUEST,
-            DELETE_MARKER_REQUEST),
-        withWhenDeleting(FAKE_DIRECTORIES_DELETED,
-            directoriesInPath),
-        withWhenDeleting(OBJECT_DELETE_OBJECTS,
-            directoriesInPath + 1));
+        with(OBJECT_DELETE_REQUEST, DELETE_OBJECT_REQUEST),
+        with(FAKE_DIRECTORIES_DELETED, 0),
+        with(OBJECT_DELETE_OBJECTS, 1));
 
     assertIsFile(destFilePath);
     assertIsDirectory(srcDir);

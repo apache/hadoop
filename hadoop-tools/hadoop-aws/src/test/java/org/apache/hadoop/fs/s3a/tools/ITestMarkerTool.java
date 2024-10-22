@@ -35,12 +35,9 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_AUTHORITATIVE;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo.BUCKET_INFO;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.runS3GuardCommand;
-import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.runS3GuardCommandToFailure;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.*;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_INTERRUPTED;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
@@ -81,56 +78,14 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
    */
   private int expectedMarkersWithBaseDir;
 
-
-  @Test
-  public void testCleanMarkersLegacyDir() throws Throwable {
-    describe("Clean markers under a deleting FS -expect none");
-    CreatedPaths createdPaths = createPaths(getDeletingFS(), methodPath());
-    markerTool(getDeletingFS(), createdPaths.base, false, 0);
-    markerTool(getDeletingFS(), createdPaths.base, true, 0);
-  }
-
   @Test
   public void testCleanMarkersFileLimit() throws Throwable {
     describe("Clean markers under a keeping FS -with file limit");
-    CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
+    CreatedPaths createdPaths = createPaths(getFileSystem(), methodPath());
 
     // audit will be interrupted
-    markerTool(EXIT_INTERRUPTED, getDeletingFS(),
+    markerTool(EXIT_INTERRUPTED, getFileSystem(),
         createdPaths.base, false, 0, 1, false);
-  }
-
-  @Test
-  public void testCleanMarkersKeepingDir() throws Throwable {
-    describe("Audit then clean markers under a deleting FS "
-        + "-expect markers to be found and then cleaned up");
-    CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
-
-    // audit will find the expected entries
-    int expectedMarkerCount = createdPaths.dirs.size();
-    S3AFileSystem fs = getDeletingFS();
-    LOG.info("Auditing a directory with retained markers -expect failure");
-    markerTool(EXIT_NOT_ACCEPTABLE, fs,
-        createdPaths.base, false, 0, UNLIMITED_LISTING, false);
-
-    LOG.info("Auditing a directory expecting retained markers");
-    markerTool(fs, createdPaths.base, false,
-        expectedMarkerCount);
-
-    // we require that a purge didn't take place, so run the
-    // audit again.
-    LOG.info("Auditing a directory expecting retained markers");
-    markerTool(fs, createdPaths.base, false,
-        expectedMarkerCount);
-
-    LOG.info("Purging a directory of retained markers");
-    // purge cleans up
-    assertMarkersDeleted(expectedMarkerCount,
-        markerTool(fs, createdPaths.base, true, expectedMarkerCount));
-    // and a rerun doesn't find markers
-    LOG.info("Auditing a directory with retained markers -expect success");
-    assertMarkersDeleted(0,
-        markerTool(fs, createdPaths.base, true, 0));
   }
 
   @Test
@@ -141,7 +96,7 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
     Path source = new Path(base, "source");
     Path dest = new Path(base, "dest");
 
-    S3AFileSystem fs = getKeepingFS();
+    S3AFileSystem fs = getFileSystem();
     CreatedPaths createdPaths = createPaths(fs, source);
 
     // audit will find three entries
@@ -154,50 +109,6 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
     // there are no markers
     markerTool(fs, dest, false, 0);
     LOG.info("Auditing destination paths");
-    verifyRenamed(dest, createdPaths);
-  }
-
-  /**
-   * Create a FS where only dir2 in the source tree keeps markers;
-   * verify all is good.
-   */
-  @Test
-  public void testAuthPathIsMixed() throws Throwable {
-    describe("Create a source tree with mixed semantics");
-    Path base = methodPath();
-    Path source = new Path(base, "source");
-    Path dest = new Path(base, "dest");
-    Path dir2 = new Path(source, "dir2");
-    S3AFileSystem mixedFSDir2 = createFS(DIRECTORY_MARKER_POLICY_AUTHORITATIVE,
-        dir2.toUri().toString());
-    // line up for close in teardown
-    setMixedFS(mixedFSDir2);
-    // some of these paths will retain markers, some will not
-    CreatedPaths createdPaths = createPaths(mixedFSDir2, source);
-
-    // markers are only under dir2
-    markerTool(mixedFSDir2, toPath(source, "dir1"), false, 0);
-    markerTool(mixedFSDir2, source, false, expectedMarkersUnderDir2);
-
-    // full scan of source will fail
-    markerTool(EXIT_NOT_ACCEPTABLE,
-        mixedFSDir2, source, false, 0, 0, false);
-
-    // but add the -nonauth option and the markers under dir2 are skipped
-    markerTool(0, mixedFSDir2, source, false, 0, 0, true);
-
-    // if we now rename, all will be good
-    LOG.info("Executing rename");
-    mixedFSDir2.rename(source, dest);
-    assertIsDirectory(dest);
-
-    // there are no markers
-    MarkerTool.ScanResult scanResult = markerTool(mixedFSDir2, dest, false, 0);
-    // there are exactly the files we want
-    Assertions.assertThat(scanResult)
-        .describedAs("Scan result %s", scanResult)
-        .extracting(s -> s.getTracker().getFilesFound())
-        .isEqualTo(expectedFileCount);
     verifyRenamed(dest, createdPaths);
   }
 
@@ -248,7 +159,7 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
   public void testRunAuditWithExpectedMarkers() throws Throwable {
     describe("Run a verbose audit expecting some markers");
     // a run under the keeping FS will create paths
-    CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
+    CreatedPaths createdPaths = createPaths(getFileSystem(), methodPath());
     final File audit = tempAuditFile();
     run(MARKERS, V,
         AUDIT,
@@ -265,7 +176,7 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
     describe("Run a verbose audit with the min/max ranges swapped;"
         + " see HADOOP-17332");
     // a run under the keeping FS will create paths
-    CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
+    CreatedPaths createdPaths = createPaths(getFileSystem(), methodPath());
     final File audit = tempAuditFile();
     run(MARKERS, V,
         AUDIT,
@@ -281,7 +192,7 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
   public void testRunAuditWithExcessMarkers() throws Throwable {
     describe("Run a verbose audit failing as surplus markers were found");
     // a run under the keeping FS will create paths
-    CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
+    CreatedPaths createdPaths = createPaths(getFileSystem(), methodPath());
     final File audit = tempAuditFile();
     runToFailure(EXIT_NOT_ACCEPTABLE, MARKERS, V,
         AUDIT,
@@ -293,7 +204,7 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
   @Test
   public void testRunLimitedAudit() throws Throwable {
     describe("Audit with a limited number of files (2)");
-    CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
+    CreatedPaths createdPaths = createPaths(getFileSystem(), methodPath());
     runToFailure(EXIT_INTERRUPTED,
         MARKERS, V,
         m(OPT_LIMIT), 2,
@@ -325,47 +236,14 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
   }
 
   @Test
-  public void testBucketInfoKeepingOnDeleting() throws Throwable {
-    describe("Run bucket info with the keeping config on the deleting fs");
-    runS3GuardCommandToFailure(uncachedFSConfig(getDeletingFS()),
-        EXIT_NOT_ACCEPTABLE,
-        BUCKET_INFO,
-        m(MARKERS), DIRECTORY_MARKER_POLICY_KEEP,
-        methodPath());
-  }
-
-  @Test
   public void testBucketInfoKeepingOnKeeping() throws Throwable {
     describe("Run bucket info with the keeping config on the keeping fs");
-    runS3GuardCommand(uncachedFSConfig(getKeepingFS()),
+    runS3GuardCommand(uncachedFSConfig(getFileSystem()),
         BUCKET_INFO,
         m(MARKERS), DIRECTORY_MARKER_POLICY_KEEP,
         methodPath());
   }
 
-  @Test
-  public void testBucketInfoDeletingOnDeleting() throws Throwable {
-    describe("Run bucket info with the deleting config on the deleting fs");
-    runS3GuardCommand(uncachedFSConfig(getDeletingFS()),
-        BUCKET_INFO,
-        m(MARKERS), DIRECTORY_MARKER_POLICY_DELETE,
-        methodPath());
-  }
-
-  @Test
-  public void testBucketInfoAuthOnAuth() throws Throwable {
-    describe("Run bucket info with the auth FS");
-    Path base = methodPath();
-
-    S3AFileSystem authFS = createFS(DIRECTORY_MARKER_POLICY_AUTHORITATIVE,
-        base.toUri().toString());
-    // line up for close in teardown
-    setMixedFS(authFS);
-    runS3GuardCommand(uncachedFSConfig(authFS),
-        BUCKET_INFO,
-        m(MARKERS), DIRECTORY_MARKER_POLICY_AUTHORITATIVE,
-        methodPath());
-  }
 
   /**
    * Tracker of created paths.

@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.s3a.audit.AuditTestSupport;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase;
 import org.apache.hadoop.fs.s3a.impl.ClientManager;
-import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
@@ -233,13 +232,6 @@ public class MockS3AFileSystem extends S3AFileSystem {
   public boolean exists(Path f) throws IOException {
     event("exists(%s)", f);
     return mock.exists(f);
-  }
-
-  @Override
-  void finishedWrite(String key,
-      long length,
-      final PutObjectOptions putOptions) {
-
   }
 
   @Override
