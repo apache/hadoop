@@ -20,6 +20,8 @@ package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -36,16 +38,35 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 
 /**
  * A JUnit test to test Map-Reduce job committer.
  */
+@RunWith(Parameterized.class)
 public class TestJobOutputCommitter extends HadoopTestCase {
 
-  public TestJobOutputCommitter() throws IOException {
-    super(CLUSTER_MR, LOCAL_FS, 1, 1);
+  public TestJobOutputCommitter(int mrMode, int fsMode, int taskTrackers, int dataNodes,
+      int mvThreads) throws IOException {
+    super(mrMode, fsMode, taskTrackers, dataNodes);
+    this.mvThreads = mvThreads;
+  }
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> getParameters() {
+    // CLUSTER_MR, LOCAL_FS, taskTrackers, dataNodes, mvThreads
+    return Arrays.asList(new Object[][] {
+        { 2, 4, 1, 1, 1 },
+        { 2, 4, 1, 1, 2 },
+        { 2, 4, 1, 1, 4 },
+        { 2, 4, 1, 1, 8 },
+        { 2, 4, 1, 1, 10 },
+    });
   }
 
   private static String TEST_ROOT_DIR = new File(System.getProperty(
@@ -58,11 +79,13 @@ public class TestJobOutputCommitter extends HadoopTestCase {
   private static int outDirs = 0;
   private FileSystem fs;
   private Configuration conf = null;
+  private int mvThreads;
 
   @Before
   public void setUp() throws Exception {
     super.setUp();
     conf = createJobConf();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
     fs = getFileSystem();
   }
 
