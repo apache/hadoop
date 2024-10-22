@@ -411,7 +411,7 @@ public class FSEditLogLoader {
       INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path, true);
       if (oldFile != null && addCloseOp.overwrite) {
         // This is OP_ADD with overwrite
-        FSDirDeleteOp.deleteForEditLog(fsDir, iip, addCloseOp.mtime);
+        FSDirDeleteOp.deleteForEditLog(fsDir, iip, addCloseOp.mtime,false);
         iip = INodesInPath.replace(iip, iip.length() - 1, null);
         oldFile = null;
       }
@@ -627,7 +627,7 @@ public class FSEditLogLoader {
       final String src = renameReservedPathsOnUpgrade(
           deleteOp.path, logVersion);
       final INodesInPath iip = fsDir.getINodesInPath(src, DirOp.WRITE_LINK);
-      FSDirDeleteOp.deleteForEditLog(fsDir, iip, deleteOp.timestamp);
+      FSDirDeleteOp.deleteForEditLog(fsDir, iip, deleteOp.timestamp,true);
 
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(deleteOp.rpcClientId, deleteOp.rpcCallId);
@@ -823,7 +823,7 @@ public class FSEditLogLoader {
           new INode.ReclaimContext(fsNamesys.dir.getBlockStoragePolicySuite(),
               collectedBlocks, removedINodes, null), deleteSnapshotOp.mtime);
       fsNamesys.getBlockManager().removeBlocksAndUpdateSafemodeTotal(
-          collectedBlocks);
+          collectedBlocks,false);
       collectedBlocks.clear();
       fsNamesys.dir.removeFromInodeMap(removedINodes);
       removedINodes.clear();
