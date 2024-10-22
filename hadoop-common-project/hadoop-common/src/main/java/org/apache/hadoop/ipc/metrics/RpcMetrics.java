@@ -149,6 +149,8 @@ public class RpcMetrics {
   MutableCounterLong rpcRequeueCalls;
   @Metric("Number of successful RPC calls")
   MutableCounterLong rpcCallSuccesses;
+  @Metric("Number of stale calls")
+  private MutableCounterLong rpcStaleCalls;
 
   @Metric("Number of open connections") public int numOpenConnections() {
     return server.getNumOpenConnections();
@@ -382,6 +384,13 @@ public class RpcMetrics {
   }
 
   /**
+   * Increments the stale calls counter.
+   */
+  public void incrStableCalls() {
+    rpcStaleCalls.incr();
+  }
+
+  /**
    * Returns a MutableRate Counter.
    * @return Mutable Rate
    */
@@ -428,6 +437,15 @@ public class RpcMetrics {
   @VisibleForTesting
   public long getRpcRequeueCalls() {
     return rpcRequeueCalls.value();
+  }
+
+  /**
+   * Returns the number of stale calls.
+   * @return long
+   */
+  @VisibleForTesting
+  public long getRpcStaleCalls() {
+    return rpcStaleCalls.value();
   }
 
   public MutableRate getDeferredRpcProcessingTime() {

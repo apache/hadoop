@@ -25,6 +25,8 @@ import org.apache.hadoop.crypto.JceSm4CtrCryptoCodec;
 import org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec;
 import org.apache.hadoop.crypto.OpensslSm4CtrCryptoCodec;
 
+import java.util.concurrent.TimeUnit;
+
 /** 
  * This class contains constants for configuration keys used
  * in the common code.
@@ -1080,6 +1082,13 @@ public class CommonConfigurationKeysPublic {
   public static final String IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL =
       "ipc.server.metrics.update.runner.interval";
   public static final int IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL_DEFAULT = 5000;
+
+  public static final String IPC_SERVER_OBSERVER_STALE_RPC_ENABLE =
+      "ipc.server.observer.stale.rpc.enable";
+  public static final boolean IPC_SERVER_OBSERVER_STALE_RPC_ENABLE_DEFAULT = false;
+  public static final String IPC_SERVER_OBSERVER_STALE_RPC_INTERVAL =
+      "ipc.server.observer.stale.rpc.interval";
+  public static final long IPC_SERVER_OBSERVER_STALE_RPC_DEFAULT = TimeUnit.SECONDS.toNanos(15);
 
   /**
    * @see
