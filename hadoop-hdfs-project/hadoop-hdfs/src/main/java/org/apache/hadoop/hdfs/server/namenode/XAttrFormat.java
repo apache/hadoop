@@ -61,6 +61,9 @@ public enum XAttrFormat implements LongBitFormat.Enum {
     return BITS.getLength();
   }
 
+  public LongBitFormat getBitFormat() {
+    return BITS;
+  }
   static XAttr.NameSpace getNamespace(int record) {
     long nid = NS.BITS.retrieve(record);
     nid |= NS_EXT.BITS.retrieve(record) << NS_EXT_SHIFT;

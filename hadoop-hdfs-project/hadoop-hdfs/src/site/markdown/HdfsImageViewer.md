@@ -65,6 +65,10 @@ The Offline Image Viewer provides several output processors:
    it reconstructs an fsimage from an XML file. This processor makes it easy to
    create fsimages for testing, and manually edit fsimages when there is
    corruption.
+7. Transformed (experimental): It regenerates a low version fsimage file
+   from a high version fsimage file. The processor can be easily used to
+   provide downgrade feature when fsimage is incompatible due to a large
+   version span.
 
 Usage
 -----
@@ -147,6 +151,18 @@ ReverseXML processor is the opposite of the XML processor. Users can specify inp
        bash$ bin/hdfs oiv -p ReverseXML -i fsimage.xml -o fsimage
 
 This will reconstruct an fsimage from an XML file.
+
+### Transformed Processor
+
+Transformed processor is used to convert fsimage content structure. Users can specify input fsimage file and output fsimage file via -i and -o command-line.
+
+       bash$ bin/hdfs oiv -p Transformed -i fsimage -o transform_fsimage
+
+This will reconstruct a low version fsimage from a high version fsimage.
+
+In addition, user can specify the generated fsimage file layoutVersion by the following command (the current layoutVersion by default):
+
+       bash$ bin/hdfs oiv -p Transformed -i fsimage -o transform_fsimage -tv -64
 
 ### FileDistribution Processor
 
@@ -234,7 +250,7 @@ Options
 |:---- |:---- |
 | `-i`\|`--inputFile` *input file* | Specify the input fsimage file (or XML file, if ReverseXML processor is used) to process. Required. |
 | `-o`\|`--outputFile` *output file* | Specify the output filename, if the specified output processor generates one. If the specified file already exists, it is silently overwritten. (output to stdout by default) If the input file is an XML file, it also creates an &lt;outputFile&gt;.md5. |
-| `-p`\|`--processor` *processor* | Specify the image processor to apply against the image file. Currently valid options are `Web` (default), `XML`, `Delimited`, `DetectCorruption`, `FileDistribution` and `ReverseXML`. |
+| `-p`\|`--processor` *processor* | Specify the image processor to apply against the image file. Currently valid options are `Web` (default), `XML`, `Delimited`, `DetectCorruption`, `FileDistribution`, `ReverseXML` and `Transformed`. |
 | `-addr` *address* | Specify the address(host:port) to listen. (localhost:5978 by default). This option is used with Web processor. |
 | `-maxSize` *size* | Specify the range [0, maxSize] of file sizes to be analyzed in bytes (128GB by default). This option is used with FileDistribution processor. |
 | `-step` *size* | Specify the granularity of the distribution in bytes (2MB by default). This option is used with FileDistribution processor. |
