@@ -23,8 +23,10 @@ import static org.apache.hadoop.util.Preconditions.*;
 import org.junit.Assert;
 
 import static org.mockito.AdditionalMatchers.geq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
+import org.mockito.ArgumentMatchers;
 import org.mockito.stubbing.Answer;
 import org.mockito.invocation.InvocationOnMock;
 
@@ -248,6 +250,14 @@ public class MetricsAsserts {
   public static String getStringMetric(String name, MetricsRecordBuilder rb) {
     ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
     verify(rb, atLeast(0)).tag(eqName(info(name, "")), captor.capture());
+    checkCaptured(captor, name);
+    return captor.getValue();
+  }
+
+  public static String getTagFromMetric(String name, MetricsRecordBuilder rb) {
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(rb, atLeast(0)).tag(eqName(info(name, "")), captor.capture(),
+        ArgumentMatchers.anyBoolean());
     checkCaptured(captor, name);
     return captor.getValue();
   }

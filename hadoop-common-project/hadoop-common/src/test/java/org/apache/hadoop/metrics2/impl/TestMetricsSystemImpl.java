@@ -24,6 +24,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.StreamSupport;
+import org.apache.hadoop.metrics2.sink.PrometheusMetricsSink;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -650,6 +651,68 @@ public class TestMetricsSystemImpl {
               ms.getSinkAdapter(sinkName));
     } finally {
       ms.stop();
+    }
+  }
+
+  @Metrics(context = "MyMetrics")
+  static class MyMetrics {
+
+    @Metric({"Int", "Test Tag Int"})
+    int getInt() {
+      return 1;
+    }
+
+    @Metric({"String1", "Test Tag String"})
+    String getString1() {
+      return "string";
+    }
+
+    @Metric({"String2", "Test Tag String"})
+    String getString2() {
+      return "string";
+    }
+
+    @Metric({"String3", "Test Tag String"})
+    String getString3() {
+      return "string";
+    }
+  }
+
+  @Test
+  public void testIgnoreMetricTag() throws Exception {
+    String filename = TestMetricsConfig.getTestFilename("hadoop-metrics2-p1");
+    new ConfigBuilder().add("p1.source.metric.filter.exclude",
+        "String1,String2").save(filename);
+
+    MetricsSystemImpl ms = new MetricsSystemImpl("p1");
+    ms.start();
+    MyMetrics myMetrics = new MyMetrics();
+    ms.register(myMetrics);
+    PrometheusMetricsSink sink = new PrometheusMetricsSink();
+    ms.register("prom", "prom desc", sink);
+    ms.publishMetricsNow();
+    Map<String, Map<Collection<MetricsTag>, AbstractMetric>> metrics =
+        sink.getPromMetrics();
+    assertTrue(metrics.containsKey("my_metrics_int"));
+    Collection<MetricsTag> metricsTags = metrics.get("my_metrics_int").keySet()
+        .iterator().next();
+    boolean found = false;
+    for (MetricsTag metricsTag : metricsTags) {
+      if (metricsTag.equals(
+          new MetricsTag(info("String1", "Test Tag String"), "string"))) {
+        fail("getString1 should be filtered");
+      }
+      if (metricsTag.equals(
+          new MetricsTag(info("String2", "Test Tag String"), "string"))) {
+        fail("getString2 should be filtered");
+      }
+      if (metricsTag.equals(
+          new MetricsTag(info("String3", "Test Tag String"), "string"))) {
+        found = true;
+      }
+    }
+    if (!found) {
+      fail("getString2 should not be filtered");
     }
   }
 }

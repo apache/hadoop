@@ -18,12 +18,17 @@
 
 package org.apache.hadoop.metrics2.filter;
 
+import com.google.re2j.Matcher;
+import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.fs.GlobPattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import com.google.re2j.Pattern;
+import org.apache.hadoop.metrics2.MetricsException;
+import org.apache.hadoop.util.StringUtils;
+
 /**
  * A glob pattern filter for metrics.
  *
@@ -32,6 +37,48 @@ import com.google.re2j.Pattern;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class GlobFilter extends AbstractPatternFilter {
+
+  @Override
+  public void init(SubsetConfiguration conf) {
+    // since HADOOP-16925, multi metrics are array, but not string
+    // When we set GlobFilter pattern like {metrica, metricb}, patternStrings
+    // will return ["{metrica", "metricb}"]
+    String[] patternStrings = conf.getStringArray(INCLUDE_KEY);
+    if (patternStrings != null && patternStrings.length != 0) {
+      setIncludePattern(compile(formatGlobPattern(patternStrings)));
+    }
+    patternStrings = conf.getStringArray(EXCLUDE_KEY);
+    if (patternStrings != null && patternStrings.length != 0) {
+      setExcludePattern(compile(formatGlobPattern(patternStrings)));
+    }
+    patternStrings = conf.getStringArray(INCLUDE_TAGS_KEY);
+    if (patternStrings != null && patternStrings.length != 0) {
+      for (String pstr : patternStrings) {
+        Matcher matcher = tagPattern.matcher(pstr);
+        if (!matcher.matches()) {
+          throw new MetricsException("Illegal tag pattern: " + pstr);
+        }
+        setIncludeTagPattern(matcher.group(1), compile(matcher.group(2)));
+      }
+    }
+    patternStrings = conf.getStringArray(EXCLUDE_TAGS_KEY);
+    if (patternStrings != null && patternStrings.length != 0) {
+      for (String pstr : patternStrings) {
+        Matcher matcher = tagPattern.matcher(pstr);
+        if (!matcher.matches()) {
+          throw new MetricsException("Illegal tag pattern: " + pstr);
+        }
+        setExcludeTagPattern(matcher.group(1), compile(matcher.group(2)));
+      }
+    }
+  }
+
+  private static String formatGlobPattern(String[] patternStrings) {
+    StringBuilder builder = new StringBuilder("{");
+    builder.append(StringUtils.join(",", patternStrings));
+    builder.append("}");
+    return builder.toString();
+  }
 
   @Override
   protected Pattern compile(String s) {
