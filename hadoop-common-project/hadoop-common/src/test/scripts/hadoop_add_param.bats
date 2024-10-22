@@ -47,3 +47,30 @@ load hadoop-functions_test_helper
   echo ">${testvar}<"
   [ "${testvar}" = "foo bar baz" ]
 }
+
+
+@test "hadoop_add_param (HADOOP-16649 a)" {
+  hadoop_add_param testvar hadoop-azure-datalake hadoop-azure-datalake
+  hadoop_add_param testvar hadoop-azure hadoop-azure
+
+  echo ">${testvar}<"
+  [ "${testvar}" = "hadoop-azure-datalake hadoop-azure" ]
+}
+
+
+@test "hadoop_add_param (HADOOP-16649 b)" {
+  hadoop_add_param testvar hadoop-azure hadoop-azure
+  hadoop_add_param testvar hadoop-azure-datalake hadoop-azure-datalake
+
+  echo ">${testvar}<"
+  [ "${testvar}" = "hadoop-azure hadoop-azure-datalake" ]
+}
+
+@test "hadoop_add_param (HADOOP-16649 c )" {
+  hadoop_add_param testvar Xmx -Xmx2048
+  hadoop_add_param testvar Xmx -Xmx128
+  hadoop_add_param testvar Xms -Xms32
+  echo ">${testvar}<"
+  [ "${testvar}" = "-Xmx2048 -Xms32" ]
+}
+
