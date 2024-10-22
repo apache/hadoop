@@ -463,6 +463,11 @@ public class IOUtils {
     if (exception instanceof InterruptedIOException
         || exception instanceof PathIOException) {
       return exception;
+    } else if (exception.getCause() instanceof InterruptedException) {
+      InterruptedIOException interruptedIOException =
+              new InterruptedIOException(exception.getMessage());
+      interruptedIOException.initCause(exception.getCause());
+      return interruptedIOException;
     } else {
       String msg = String
           .format("Failed with %s while processing file/directory :[%s] in "
