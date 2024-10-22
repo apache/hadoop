@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.federation.resolver;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_LIST_ALL_NAMESERVICES_TRASH;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_LIST_ALL_NAMESERVICES_TRASH_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_CACHE_ENABLE;
@@ -29,6 +31,7 @@ import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -106,6 +109,7 @@ public class MountTableResolver
   private String defaultNameService = "";
   /** If use default nameservice to read and write files. */
   private boolean defaultNSEnable = true;
+  private boolean listAllNameservicesTrash;
 
   /** Synchronization for both the tree and the cache. */
   private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -152,6 +156,9 @@ public class MountTableResolver
     } else {
       this.locationCache = null;
     }
+
+    listAllNameservicesTrash = conf.getBoolean(DFS_ROUTER_FEDERATION_LIST_ALL_NAMESERVICES_TRASH,
+        DFS_ROUTER_FEDERATION_LIST_ALL_NAMESERVICES_TRASH_DEFAULT);
 
     registerCacheExternal();
     initDefaultNameService(conf);
@@ -362,6 +369,11 @@ public class MountTableResolver
   }
 
   @VisibleForTesting
+  public static boolean isTrashRoot(String path) throws IOException {
+    return getTrashRoot().equals(path);
+  }
+
+  @VisibleForTesting
   public static String getTrashRoot() throws IOException {
     // Gets the Trash directory for the current user.
     return FileSystem.USER_HOME_PREFIX + "/" +
@@ -449,6 +461,11 @@ public class MountTableResolver
     PathLocation res;
     readLock.lock();
     try {
+      // First process user trash root path.
+      if (listAllNameservicesTrash && MountTableResolver.isTrashRoot(path)) {
+        return lookupLocationForUserTrashRoot(path);
+      }
+
       if (this.locationCache == null) {
         res = lookupLocation(processTrashPath(path));
       } else {
@@ -509,6 +526,21 @@ public class MountTableResolver
       ret = new PathLocation(null, locations);
     }
     return ret;
+  }
+
+  /**
+   * Build the path location for user trash root path.
+   * @param str user trash root path
+   * @return New remote location.
+   */
+  public PathLocation lookupLocationForUserTrashRoot(final String str) {
+    final String path = RouterAdmin.normalizeFileSystemPath(str);
+    List<RemoteLocation> locations = new ArrayList<>();
+    Set<String> allNamespaces = getAllNamespaces();
+    for (String namespace : allNamespaces) {
+      locations.add(new RemoteLocation(namespace, path, path));
+    }
+    return new PathLocation(path, locations);
   }
 
   /**
@@ -619,6 +651,26 @@ public class MountTableResolver
   @Override
   public String getDefaultNamespace() {
     return this.defaultNameService;
+  }
+
+  @Override
+  public Set<String> getAllNamespaces() {
+    HashSet<String> namespaces = new HashSet<>();
+    if (defaultNSEnable) {
+      namespaces.add(defaultNameService);
+    }
+    readLock.lock();
+    try {
+      Collection<MountTable> mountTables = this.tree.values();
+      for (MountTable mountTable : mountTables) {
+        for (RemoteLocation remoteLocation : mountTable.getDestinations()) {
+          namespaces.add(remoteLocation.getNameserviceId());
+        }
+      }
+      return namespaces;
+    } finally {
+      readLock.unlock();
+    }
   }
 
   /**

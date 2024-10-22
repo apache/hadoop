@@ -282,6 +282,14 @@ public class TestRouterTrash {
     fileStatuses = fs.listStatus(new Path("/user/test-trash/.Trash/Current/" + MOUNT_POINT2));
     assertEquals(0, fileStatuses.length);
 
+    // In ns1, make a trash path with timestamp to simulate a trash path.
+    String trashPath = "/user/test-trash/.Trash/" + System.currentTimeMillis();
+    client1.mkdirs(trashPath, new FsPermission("770"),
+        true);
+    fileStatuses = fs.listStatus(new Path("/user/test-trash/.Trash"));
+    assertEquals(trashPath, fileStatuses[0].getPath().toUri().getPath());
+    assertEquals("/user/test-trash/.Trash/Current", fileStatuses[1].getPath().toUri().getPath());
+
     client1.delete("/user", true);
   }
 
