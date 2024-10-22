@@ -58,10 +58,16 @@ message MasterKeyProto {
   optional bytes bytes = 2;
 }
 
+message NodeHealthDetailsProto {
+  optional int32 overall_value = 1;
+  repeated IntLongMapProto node_health_details = 2;
+}
+
 message NodeHealthStatusProto {
   optional bool is_node_healthy = 1;
   optional string health_report = 2;
   optional int64 last_health_report_time = 3;
+  optional NodeHealthDetailsProto node_health_details = 4;
 }
 
 message VersionProto {

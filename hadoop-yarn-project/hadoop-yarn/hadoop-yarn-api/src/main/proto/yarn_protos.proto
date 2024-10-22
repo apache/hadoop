@@ -867,6 +867,11 @@ message StringLocalResourceMapProto {
   optional LocalResourceProto value = 2;
 }
 
+message IntLongMapProto {
+  required int32 key  = 1;
+  required int64 value = 2;
+}
+
 message StringStringMapProto {
   optional string key = 1;
   optional string value = 2;

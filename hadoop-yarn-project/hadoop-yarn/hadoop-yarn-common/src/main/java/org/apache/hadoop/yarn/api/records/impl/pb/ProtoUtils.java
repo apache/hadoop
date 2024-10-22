@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerSubStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.IntLongMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceVisibilityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LogAggregationStatusProto;
@@ -621,6 +622,33 @@ public class ProtoUtils {
     Map<String, Float> ret = new HashMap<>();
     if (pList != null) {
       for (YarnProtos.StringFloatMapProto p : pList) {
+        if (p.hasKey()) {
+          ret.put(p.getKey(), p.getValue());
+        }
+      }
+    }
+    return ret;
+  }
+
+  public static List<YarnProtos.IntLongMapProto>
+      convertIntLongMapToProtoList(Map<Integer, Long> integerLongMap) {
+    List<YarnProtos.IntLongMapProto> pList = new ArrayList<>();
+    if (integerLongMap != null && !integerLongMap.isEmpty()) {
+      IntLongMapProto.Builder pBuilder = IntLongMapProto.newBuilder();
+      for (Map.Entry<Integer, Long> entry : integerLongMap.entrySet()) {
+        pBuilder.setKey(entry.getKey());
+        pBuilder.setValue(entry.getValue());
+        pList.add(pBuilder.build());
+      }
+    }
+    return pList;
+  }
+
+  public static Map<Integer, Long> convertProtoListToIntLongMap(
+      List<IntLongMapProto> pList) {
+    Map<Integer, Long> ret = new HashMap<>();
+    if (pList != null) {
+      for (IntLongMapProto p : pList) {
         if (p.hasKey()) {
           ret.put(p.getKey(), p.getValue());
         }
