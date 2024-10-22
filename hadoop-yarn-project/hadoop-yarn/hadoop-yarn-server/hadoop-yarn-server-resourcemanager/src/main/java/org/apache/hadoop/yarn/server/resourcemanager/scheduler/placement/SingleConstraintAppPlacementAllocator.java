@@ -225,11 +225,13 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
         ((SchedulingRequestPBImpl) newSchedulingRequest).getProto());
 
 
-    LOG.info("Successfully added SchedulingRequest to app="
-        + appSchedulingInfo.getApplicationAttemptId()
-        + " placementConstraint=["
-        + schedulingRequest.getPlacementConstraint()
-        + "]. nodePartition=" + targetNodePartition);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Successfully added SchedulingRequest to app="
+          + appSchedulingInfo.getApplicationAttemptId()
+          + " placementConstraint=["
+          + schedulingRequest.getPlacementConstraint()
+          + "]. nodePartition=" + targetNodePartition);
+    }
   }
 
   // Tentatively find out potential exist node-partition in the placement
