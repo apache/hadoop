@@ -177,7 +177,7 @@ public class TestEditLogTailer {
     final Queue<Long> sleepDurations = new ConcurrentLinkedQueue<>();
     final int zeroEditCount = 5;
     final AtomicInteger tailEditsCallCount = new AtomicInteger(0);
-    EditLogTailer tailer = new EditLogTailer(mockNamesystem, conf) {
+    EditLogTailer tailer = new EditLogTailer(mockNamesystem, conf, true) {
       @Override
       void sleep(long sleepTimeMs) {
         if (sleepDurations.size() <= zeroEditCount) {
