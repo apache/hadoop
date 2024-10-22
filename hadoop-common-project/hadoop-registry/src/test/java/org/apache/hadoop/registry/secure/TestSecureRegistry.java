@@ -19,6 +19,7 @@
 package org.apache.hadoop.registry.secure;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.registry.client.impl.zk.ZKPathDumper;
 import org.apache.hadoop.registry.client.impl.zk.CuratorService;
@@ -52,6 +53,7 @@ public class TestSecureRegistry extends AbstractSecureRegistryTest {
   public void afterTestSecureZKService() throws Throwable {
     disableKerberosDebugging();
     RegistrySecurity.clearZKSaslClientProperties();
+    UserGroupInformation.reset();
   }
 
   @Test
