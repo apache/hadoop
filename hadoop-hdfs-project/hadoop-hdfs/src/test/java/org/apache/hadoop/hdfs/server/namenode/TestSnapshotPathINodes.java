@@ -20,13 +20,16 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -177,6 +180,32 @@ public class TestSnapshotPathINodes {
     assertEquals(nodesInPath.length(), components.length);
     assertSnapshot(nodesInPath, false, null, -1);
     assertEquals(nodesInPath.getLastINode().getFullPathName(), file1.toString());
+  }
+
+  /**
+   * Test case for  {@link INodesInPath#toString()}.
+   */
+  @Test(timeout = 120000)
+  public void testINodesInPathUnderSnapshot() throws IOException {
+    Path testSnapFile = new Path(sub1.toString()+"/secDir/testSnapFile");
+    DFSTestUtil.createFile(hdfs, testSnapFile, 1024, REPLICATION, seed);
+
+    // Create a snapshot for the dir, and check the inodes for the path
+    // pointing to a snapshot file
+    hdfs.allowSnapshot(sub1);
+    hdfs.createSnapshot(sub1, "s1");
+    DFSClient client = cluster.getFileSystem().getClient();
+    // "/sub1/secDir" rename to "/dirAfterRename"
+    String dst = "/dirAfterRename";
+    client.rename(testSnapFile.getParent().toString(), dst);
+    String snapshotPath = dst + "/testSnapFile";
+    byte[][] components = INode.getPathComponents(snapshotPath);
+    INodesInPath nodesInPath = INodesInPath.resolve(fsdir.rootDir, components, false);
+    try {
+      nodesInPath.toString();
+    } catch (Exception e) {
+      fail("should've failed.");
+    }
   }
   
   /** 
