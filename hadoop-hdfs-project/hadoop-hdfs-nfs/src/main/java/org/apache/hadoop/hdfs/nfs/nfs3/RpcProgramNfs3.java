@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
@@ -990,10 +991,14 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE) : 
           EnumSet.of(CreateFlag.CREATE);
 
-      fos = dfsClient.createWrappedOutputStream(
-          dfsClient.create(fileIdPath, permission, flag, false, replication,
-              blockSize, null, bufferSize, null),
-          null);
+      final DFSOutputStream dfsos = dfsClient.create(fileIdPath, permission, flag,
+          false, replication, blockSize, null, bufferSize, null);
+      try {
+        fos = dfsClient.createWrappedOutputStream(dfsos, null);
+      } catch (IOException ex) {
+        dfsos.close();
+        throw ex;
+      }
 
       if ((createMode == Nfs3Constant.CREATE_UNCHECKED)
           || (createMode == Nfs3Constant.CREATE_GUARDED)) {
