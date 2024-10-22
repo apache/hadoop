@@ -479,9 +479,11 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         }
       }
 
-      // Even if the block is without sufficient redundancy,
-      // it might not block decommission/maintenance if it
-      // has sufficient redundancy.
+      // Even if the block requires reconstruction for low sufficient, but it may still not block
+      // decommission/maintenance.  For example:
+      // 1) doesn't meet current block's expected live redundancy but meet
+      //    the system's default redundancy(replication factor)
+      // 2) the redundancy is fine but replicas are but badly located(placement policy unsatisfied)
       if (dnAdmin.isSufficient(block, bc, num, isDecommission, isMaintenance)) {
         if (pruneReliableBlocks) {
           it.remove();
