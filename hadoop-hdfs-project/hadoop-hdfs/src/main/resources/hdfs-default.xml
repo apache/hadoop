@@ -5349,6 +5349,18 @@
 </property>
 
 <property>
+  <name>dfs.namenode.edits.async.logsyncnotify.executor.size</name>
+  <value>10</value>
+  <description>
+    The size of the thread pool executing logSyncNotify in FSEditLogAsync.
+    This thread pool decouples the RPC response network sending from
+    the FSEditLogAsync thread so that FSEditLogAsync would not be affected
+    by the potential network hanging issue (HDFS-15869).
+    This property defaults to 10.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.edits.dir.minimum</name>
   <value>1</value>
   <description>
