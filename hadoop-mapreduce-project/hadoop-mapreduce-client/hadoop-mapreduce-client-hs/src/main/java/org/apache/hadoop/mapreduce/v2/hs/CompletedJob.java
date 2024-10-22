@@ -417,6 +417,11 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   }
 
   @Override
+  public String getResourceManagerHost() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public int getTotalMaps() {
     return (int) jobInfo.getTotalMaps();
   }

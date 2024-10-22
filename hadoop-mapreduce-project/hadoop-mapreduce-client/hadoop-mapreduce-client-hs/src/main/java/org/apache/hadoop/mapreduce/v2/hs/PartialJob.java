@@ -77,6 +77,11 @@ public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
   }
 
   @Override
+  public String getResourceManagerHost() {
+    return jobIndexInfo.getResourceManagerHost();
+  }
+
+  @Override
   public JobState getState() {
     JobState js = null;
     try {

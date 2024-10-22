@@ -52,6 +52,7 @@ public class FileNameIndexUtils {
   private static final int JOB_STATUS_INDEX = 7;
   private static final int QUEUE_NAME_INDEX = 8;
   private static final int JOB_START_TIME_INDEX = 9;
+  private static final int RESOURCE_MANAGER_INDEX = 10;
 
   /**
    * Constructs the job history file name from the JobIndexInfo.
@@ -115,6 +116,13 @@ public class FileNameIndexUtils {
     //JobStartTime
     sb.append(encodeJobHistoryFileName(
         String.valueOf(indexInfo.getJobStartTime())));
+
+    String resourceManagerName = getResourceManagerHost(indexInfo);
+    if (resourceManagerName != null) {
+      sb.append(DELIMITER);
+      sb.append(escapeDelimiters(encodeJobHistoryFileName(
+          getResourceManagerHost(indexInfo))));
+    }
 
     sb.append(encodeJobHistoryFileName(
         JobHistoryUtils.JOB_HISTORY_FILE_EXTENSION));
@@ -197,6 +205,12 @@ public class FileNameIndexUtils {
       } catch (NumberFormatException e){
         LOG.warn("Unable to parse start time from job history file "
             + jhFileName + " : " + e);
+      }
+
+      if (jobDetails.length > RESOURCE_MANAGER_INDEX) {
+        indexInfo.setResourceManagerHost(decodeJobHistoryFileName(jobDetails[RESOURCE_MANAGER_INDEX]));
+      } else {
+        LOG.warn("Could not parse cluster name from job history file " + jhFileName );
       }
     } catch (IndexOutOfBoundsException e) {
       LOG.warn("Parsing job history file with partial data encoded into name: "
@@ -290,6 +304,10 @@ public class FileNameIndexUtils {
 
   private static String getQueueName(JobIndexInfo indexInfo) {
     return getNonEmptyString(indexInfo.getQueueName());
+  }
+
+  private static String getResourceManagerHost(JobIndexInfo indexInfo) {
+    return getNonEmptyString(indexInfo.getResourceManagerHost());
   }
 
   //TODO Maybe handle default values for longs and integers here?
