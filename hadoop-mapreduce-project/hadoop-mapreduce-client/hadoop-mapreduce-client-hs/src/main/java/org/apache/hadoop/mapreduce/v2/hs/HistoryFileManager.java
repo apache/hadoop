@@ -439,20 +439,22 @@ public class HistoryFileManager extends AbstractService {
         Path targetDir = canonicalHistoryLogPath(jobId, completeTime);
         addDirectoryToSerialNumberIndex(targetDir);
         makeDoneSubdir(targetDir);
-        if (historyFile != null) {
-          Path toPath = doneDirFc.makeQualified(new Path(targetDir, historyFile
-              .getName()));
-          if (!toPath.equals(historyFile)) {
-            moveToDoneNow(historyFile, toPath);
-            historyFile = toPath;
-          }
-        }
-        if (confFile != null) {
+        if (confFile != null &&
+            intermediateDoneDirFc.util().exists(confFile)) {
           Path toPath = doneDirFc.makeQualified(new Path(targetDir, confFile
               .getName()));
           if (!toPath.equals(confFile)) {
             moveToDoneNow(confFile, toPath);
             confFile = toPath;
+          }
+        }
+        if (historyFile != null &&
+            intermediateDoneDirFc.util().exists(historyFile)) {
+          Path toPath = doneDirFc.makeQualified(new Path(targetDir, historyFile
+              .getName()));
+          if (!toPath.equals(historyFile)) {
+            moveToDoneNow(historyFile, toPath);
+            historyFile = toPath;
           }
         }
         state = HistoryInfoState.IN_DONE;
