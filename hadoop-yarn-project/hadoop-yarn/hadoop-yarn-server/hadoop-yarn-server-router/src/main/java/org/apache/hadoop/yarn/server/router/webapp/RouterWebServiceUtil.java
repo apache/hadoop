@@ -95,6 +95,9 @@ public final class RouterWebServiceUtil {
 
   private final static String PARTIAL_REPORT = "Partial Report ";
 
+  private static final String HADOOP_HTTP_AUTHENTICATION_TYPE =
+          "hadoop.http.authentication.type";
+
   /** Disable constructor. */
   private RouterWebServiceUtil() {
   }
@@ -123,7 +126,8 @@ public final class RouterWebServiceUtil {
 
     UserGroupInformation callerUGI = null;
 
-    if (hsr != null) {
+    if (hsr != null && !conf.get(HADOOP_HTTP_AUTHENTICATION_TYPE, "simple")
+            .equalsIgnoreCase("simple")) {
       callerUGI = RMWebAppUtil.getCallerUserGroupInformation(hsr, true);
     } else {
       // user not required

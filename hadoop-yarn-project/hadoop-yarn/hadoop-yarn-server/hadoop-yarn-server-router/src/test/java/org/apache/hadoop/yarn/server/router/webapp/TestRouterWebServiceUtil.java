@@ -26,9 +26,12 @@ import java.util.concurrent.TimeUnit;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.config.ClientConfig;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
@@ -43,6 +46,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.servlet.http.HttpServletRequest;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -771,5 +776,35 @@ public class TestRouterWebServiceUtil {
 
   private long getTimeDuration(YarnConfiguration conf, String varName, long defaultValue) {
     return conf.getTimeDuration(varName, defaultValue, TimeUnit.MILLISECONDS);
+  }
+
+  @Test
+  public void testGenericForwardAuthentication() {
+    Configuration conf = new Configuration();
+    conf.setBoolean("mockrm.webapp.enabled", true);
+    conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, "localhost:8088");
+
+    MockRM mockRM = new MockRM(conf);
+    mockRM.start();
+
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    Client client = RouterWebServiceUtil.createJerseyClient(conf);
+
+    conf.set("hadoop.http.authentication.type", "kerberos");
+    AppsInfo apps = RouterWebServiceUtil.genericForward("http://localhost:8088", request,
+            AppsInfo.class, HTTPMethods.GET,
+            RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, null,
+            null, conf, client);
+    Assert.assertNull(apps);
+
+    conf.set("hadoop.http.authentication.type", "simple");
+    apps = RouterWebServiceUtil.genericForward("http://localhost:8088", request,
+            AppsInfo.class, HTTPMethods.GET,
+            RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, null,
+            null, conf, client);
+    Assert.assertNotNull(apps);
+
+    client.destroy();
+    mockRM.stop();
   }
 }
