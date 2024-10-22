@@ -133,6 +133,14 @@ public final class FSImageFormatProtobuf {
         return map.entrySet();
       }
     }
+
+    private final SaverContext.DeduplicationMap<String> contiguousIdStringMap = SaverContext
+        .DeduplicationMap.newMap();
+
+    public SaverContext.DeduplicationMap<String> getContiguousIdStringMap() {
+      return contiguousIdStringMap;
+    }
+
     private final ArrayList<INodeReference> refList = Lists.newArrayList();
 
     public ArrayList<INodeReference> getRefList() {
@@ -618,11 +626,15 @@ public final class FSImageFormatProtobuf {
     private CompressionCodec codec;
     private OutputStream underlyingOutputStream;
     private Configuration conf;
+    private boolean enableSaveSplitIdStringTable;
 
     Saver(SaveNamespaceContext context, Configuration conf) {
       this.context = context;
       this.saverContext = new SaverContext();
       this.conf = conf;
+      this.enableSaveSplitIdStringTable = conf.getBoolean(
+          DFSConfigKeys.DFS_IMAGE_SAVE_STRING_TABLE_STRUCTURE_KEY,
+          DFSConfigKeys.DFS_IMAGE_SAVE_STRING_TABLE_STRUCTURE_DEFAULT);
     }
 
     public MD5Hash getSavedDigest() {
@@ -807,7 +819,7 @@ public final class FSImageFormatProtobuf {
     }
 
     private long saveInodes(FileSummary.Builder summary) throws IOException {
-      FSImageFormatPBINode.Saver saver = new FSImageFormatPBINode.Saver(this,
+      FSImageFormatPBINode.Saver saver = new FSImageFormatPBINode.Saver(conf, this,
           summary);
 
       saver.serializeINodeSection(sectionOutputStream);
@@ -825,11 +837,12 @@ public final class FSImageFormatProtobuf {
       FSImageFormatPBSnapshot.Saver snapshotSaver = new FSImageFormatPBSnapshot.Saver(
           this, summary, context, context.getSourceNamesystem());
 
-      snapshotSaver.serializeSnapshotSection(sectionOutputStream);
+      snapshotSaver.serializeSnapshotSection(sectionOutputStream, enableSaveSplitIdStringTable);
       // Skip snapshot-related sections when there is no snapshot.
       if (context.getSourceNamesystem().getSnapshotManager()
           .getNumSnapshots() > 0) {
-        snapshotSaver.serializeSnapshotDiffSection(sectionOutputStream);
+        snapshotSaver.serializeSnapshotDiffSection(sectionOutputStream,
+            enableSaveSplitIdStringTable);
       }
       snapshotSaver.serializeINodeReferenceSection(sectionOutputStream);
       return snapshotSaver.getNumImageErrors();
@@ -990,17 +1003,28 @@ public final class FSImageFormatProtobuf {
     private void saveStringTableSection(FileSummary.Builder summary)
         throws IOException {
       OutputStream out = sectionOutputStream;
+      StringTableSection.Builder b = null;
 
-      SerialNumberManager.StringTable stringTable =
-          SerialNumberManager.getStringTable();
-      StringTableSection.Builder b = StringTableSection.newBuilder()
-          .setNumEntry(stringTable.size())
-          .setMaskBits(stringTable.getMaskBits());
-      b.build().writeDelimitedTo(out);
-      for (Entry<Integer, String> e : stringTable) {
-        StringTableSection.Entry.Builder eb = StringTableSection.Entry
-            .newBuilder().setId(e.getKey()).setStr(e.getValue());
-        eb.build().writeDelimitedTo(out);
+      if(enableSaveSplitIdStringTable) {
+        SerialNumberManager.StringTable stringTable = SerialNumberManager.getStringTable();
+        b = StringTableSection.newBuilder()
+            .setNumEntry(stringTable.size())
+            .setMaskBits(stringTable.getMaskBits());
+        b.build().writeDelimitedTo(out);
+        for (Entry<Integer, String> e : stringTable) {
+          StringTableSection.Entry.Builder eb = StringTableSection.Entry
+              .newBuilder().setId(e.getKey()).setStr(e.getValue());
+          eb.build().writeDelimitedTo(out);
+        }
+      } else {
+        b = StringTableSection.newBuilder()
+            .setNumEntry(saverContext.contiguousIdStringMap.size());
+        b.build().writeDelimitedTo(out);
+        for (Entry<String, Integer> e : saverContext.contiguousIdStringMap.entrySet()) {
+          StringTableSection.Entry.Builder eb = StringTableSection.Entry
+              .newBuilder().setId(e.getValue()).setStr(e.getKey());
+          eb.build().writeDelimitedTo(out);
+        }
       }
       commitSection(summary, SectionName.STRING_TABLE);
     }

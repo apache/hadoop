@@ -1112,6 +1112,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_DEFAULT =
       "30m";
 
+  // property for fsimage structure
+  public static final String DFS_IMAGE_SAVE_STRING_TABLE_STRUCTURE_KEY =
+      "dfs.image.save.splitId.stringTable";
+  public static final boolean DFS_IMAGE_SAVE_STRING_TABLE_STRUCTURE_DEFAULT = false;
+
   // property for fsimage compression
   public static final String DFS_IMAGE_COMPRESS_KEY = "dfs.image.compress";
   public static final boolean DFS_IMAGE_COMPRESS_DEFAULT = false;
