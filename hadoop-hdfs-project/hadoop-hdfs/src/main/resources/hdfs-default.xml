@@ -4572,6 +4572,15 @@
 </property>
 
 <property>
+  <name>dfs.client.read.striped.datanode.max.attempts</name>
+  <value>1</value>
+  <description>
+    The number of times to reconnect to DN during
+    the striped read process, the default is 1.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.replica.accessor.builder.classes</name>
   <value></value>
   <description>
