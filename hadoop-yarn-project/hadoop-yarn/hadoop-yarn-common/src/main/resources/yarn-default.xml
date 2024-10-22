@@ -2322,10 +2322,24 @@
   </property>
 
   <property>
+    <description>The HDFS image namespace location that stores the runc image
+      property files.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-meta-namespace</name>
+    <value>library</value>
+  </property>
+
+  <property>
     <description>The runC image tag to manifest plugin
       class to be used.</description>
     <name>yarn.nodemanager.runtime.linux.runc.image-tag-to-manifest-plugin</name>
     <value>org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.runc.ImageTagToManifestPlugin</value>
+  </property>
+
+  <property>
+    <description>Optional cache to enable for the image tag to manifest
+      plugin.</description>
+    <name>yarn.nodemanager.runtime.linux.runc.image-tag-to-manifest-plugin.manifest-cache-enabled</name>
+    <value>true</value>
   </property>
 
   <property>
