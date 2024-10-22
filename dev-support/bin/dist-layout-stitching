@@ -151,6 +151,7 @@ run cp -p "${ROOT}/hadoop-client-modules/hadoop-client-minicluster/target/hadoop
 run copy "${ROOT}/hadoop-tools/hadoop-tools-dist/target/hadoop-tools-dist-${VERSION}" .
 run copy "${ROOT}/hadoop-tools/hadoop-dynamometer/hadoop-dynamometer-dist/target/hadoop-dynamometer-dist-${VERSION}" .
 
+run cp -pr "${ROOT}/hadoop-dist/src/main/compose" .
 
 echo
 echo "Hadoop dist layout available at: ${BASEDIR}/hadoop-${VERSION}"
