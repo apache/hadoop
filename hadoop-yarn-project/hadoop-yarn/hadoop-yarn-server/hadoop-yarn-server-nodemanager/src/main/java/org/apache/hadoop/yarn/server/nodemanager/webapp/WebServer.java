@@ -40,6 +40,8 @@ import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
+
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -123,7 +125,9 @@ public class WebServer extends AbstractService {
               .withCSRFProtection(YarnConfiguration.NM_CSRF_PREFIX)
               .withXFSProtection(YarnConfiguration.NM_XFS_PREFIX)
             .start(this.nmWebApp);
-      this.port = this.webApp.httpServer().getConnectorAddress(0).getPort();
+      InetSocketAddress webAddr = this.webApp.httpServer().getConnectorAddress(0);
+      this.port = webAddr.getPort();
+      LOG.info("NMWebApp at " + webAddr.getHostName() + ":" + port);
     } catch (Exception e) {
       String msg = "NMWebapps failed to start.";
       LOG.error(msg, e);

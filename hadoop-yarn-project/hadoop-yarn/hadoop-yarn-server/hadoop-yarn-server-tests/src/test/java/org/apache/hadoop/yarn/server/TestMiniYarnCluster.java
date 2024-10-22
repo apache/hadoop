@@ -30,6 +30,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.HATestUtil;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class TestMiniYarnCluster {
 
@@ -151,6 +153,42 @@ public class TestMiniYarnCluster {
           conf2.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS,
               RM2_NODE_ID)));
       assertEquals("rm2", conf2.get(YarnConfiguration.RM_HA_ID));
+    }
+  }
+
+  @Test
+  void testWebAppPortBinding() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    int numNodeManagers = 1;
+    int numLocalDirs = 1;
+    int numLogDirs = 1;
+
+    try (MiniYARNCluster cluster =
+        new MiniYARNCluster(TestMiniYarnCluster.class.getSimpleName(),
+            numNodeManagers, numLocalDirs, numLogDirs, numLogDirs)) {
+
+      cluster.init(conf);
+      cluster.start();
+
+      Configuration rmConf = cluster.getResourceManager(0).getConfig();
+      Configuration nmConf = cluster.getNodeManager(0).getConfig();
+
+      URL nmWebappURL =
+        new URL("http://" + nmConf.get(YarnConfiguration.NM_WEBAPP_ADDRESS) + "/node");
+      URL rmWebappURL =
+        new URL("http://" + rmConf.get(YarnConfiguration.RM_WEBAPP_ADDRESS) + "/cluster");
+
+      HttpURLConnection nmConn = (HttpURLConnection) nmWebappURL.openConnection();
+      nmConn.setRequestMethod("GET");
+      nmConn.connect();
+      assertEquals(nmConn.getResponseCode(), 200);
+
+      // Check the ResourceManager after the NodeManager to make sure it wasn't
+      // overwritten. Please see YARN-7747.
+      HttpURLConnection rmConn = (HttpURLConnection) rmWebappURL.openConnection();
+      rmConn.setRequestMethod("GET");
+      rmConn.connect();
+      assertEquals(rmConn.getResponseCode(), 200);
     }
   }
 }

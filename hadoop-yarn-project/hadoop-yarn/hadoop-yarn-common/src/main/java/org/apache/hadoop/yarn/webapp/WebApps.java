@@ -406,10 +406,6 @@ public class WebApps {
                                    restCsrfClassName, params,
                                    new String[] {"/*"});
         }
-
-        HttpServer2.defineFilter(server.getWebAppContext(), "guice",
-          GuiceFilter.class.getName(), null, new String[] { "/*" });
-
         webapp.setConf(conf);
         webapp.setHttpServer(server);
       } catch (ClassNotFoundException e) {
