@@ -16,25 +16,40 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.recovery;
+package org.apache.hadoop.yarn.event.multidispatcher;
 
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
+import java.util.Arrays;
+import java.util.Random;
 
-public class RMStateStoreAppEvent extends RMStateStoreEvent {
+import org.apache.hadoop.yarn.event.Event;
 
-  private final ApplicationStateData appState;
+class MockEvent implements Event<MockEventType> {
+  private static final Random RANDOM = new Random();
 
-  public RMStateStoreAppEvent(ApplicationStateData appState) {
-    super(RMStateStoreEventType.STORE_APP);
-    this.appState = appState;
+  private final MockEventType type = Math.random() < 0.5
+      ? MockEventType.TYPE_1
+      : MockEventType.TYPE_2;
+
+  private final long timestamp = System.currentTimeMillis();
+
+  private final String lockKey = Arrays.asList(
+      "APP1",
+      "APP2",
+      null
+  ).get(RANDOM.nextInt(3));
+
+  @Override
+  public MockEventType getType() {
+    return type;
   }
 
-  public ApplicationStateData getAppState() {
-    return appState;
+  @Override
+  public long getTimestamp() {
+    return timestamp;
   }
 
   @Override
   public String getLockKey() {
-    return appState.getApplicationSubmissionContext().getApplicationId().toString();
+    return lockKey;
   }
 }

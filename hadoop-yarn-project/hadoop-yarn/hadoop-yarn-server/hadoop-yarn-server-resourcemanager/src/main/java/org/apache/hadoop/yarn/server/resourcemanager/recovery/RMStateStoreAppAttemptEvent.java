@@ -31,4 +31,9 @@ public class RMStateStoreAppAttemptEvent extends RMStateStoreEvent {
   public ApplicationAttemptStateData getAppAttemptState() {
     return attemptState;
   }
+
+  @Override
+  public String getLockKey() {
+    return attemptState.getAttemptId().getApplicationId().toString();
+  }
 }

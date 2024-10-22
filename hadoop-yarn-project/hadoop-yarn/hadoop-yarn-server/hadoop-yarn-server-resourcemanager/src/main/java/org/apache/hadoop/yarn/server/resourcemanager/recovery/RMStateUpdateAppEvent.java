@@ -60,4 +60,9 @@ public class RMStateUpdateAppEvent extends RMStateStoreEvent {
   public SettableFuture<Object> getResult() {
     return future;
   }
+
+  @Override
+  public String getLockKey() {
+    return appState.getApplicationSubmissionContext().getApplicationId().toString();
+  }
 }

@@ -73,7 +73,6 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
         init(conf);
         Assert.assertNull(fs);
         assertTrue(workingDirPathURI.equals(fsWorkingPath));
-        dispatcher.disableExitOnDispatchException();
         start();
         Assert.assertNotNull(fs);
       }

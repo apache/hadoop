@@ -33,9 +33,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import javax.crypto.SecretKey;
 
@@ -59,9 +56,9 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerLaunchContextPBImpl;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.event.multidispatcher.MultiDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.proto.YarnProtos.ReservationAllocationStateProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
@@ -118,8 +115,6 @@ public abstract class RMStateStore extends AbstractService {
   protected long baseEpoch;
   private long epochRange;
   protected ResourceManager resourceManager;
-  private final ReadLock readLock;
-  private final WriteLock writeLock;
 
   public static final Logger LOG =
       LoggerFactory.getLogger(RMStateStore.class);
@@ -687,9 +682,6 @@ public abstract class RMStateStore extends AbstractService {
 
   public RMStateStore() {
     super(RMStateStore.class.getName());
-    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-    this.readLock = lock.readLock();
-    this.writeLock = lock.writeLock();
     stateMachine = stateMachineFactory.make(this);
   }
 
@@ -799,20 +791,18 @@ public abstract class RMStateStore extends AbstractService {
     this.rmDispatcher = dispatcher;
   }
   
-  AsyncDispatcher dispatcher;
+  MultiDispatcher dispatcher;
   @SuppressWarnings("rawtypes")
   @VisibleForTesting
   protected EventHandler rmStateStoreEventHandler;
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception{
-    // create async handler
-    dispatcher = new AsyncDispatcher("RM StateStore dispatcher");
+    dispatcher = new MultiDispatcher("RM State Store");
     dispatcher.init(conf);
     rmStateStoreEventHandler = new ForwardingEventHandler();
     dispatcher.register(RMStateStoreEventType.class, 
                         rmStateStoreEventHandler);
-    dispatcher.setDrainEventsOnStop();
     // read the base epoch value from conf
     baseEpoch = conf.getLong(YarnConfiguration.RM_EPOCH,
         YarnConfiguration.DEFAULT_RM_EPOCH);
@@ -1330,7 +1320,6 @@ public abstract class RMStateStore extends AbstractService {
 
   // Dispatcher related code
   protected void handleStoreEvent(RMStateStoreEvent event) {
-    this.writeLock.lock();
     try {
 
       LOG.debug("Processing event of type {}", event.getType());
@@ -1346,8 +1335,6 @@ public abstract class RMStateStore extends AbstractService {
 
     } catch (InvalidStateTransitionException e) {
       LOG.error("Can't handle this event at current state", e);
-    } finally {
-      this.writeLock.unlock();
     }
   }
 
@@ -1441,12 +1428,7 @@ public abstract class RMStateStore extends AbstractService {
   }
 
   public RMStateStoreState getRMStateStoreState() {
-    this.readLock.lock();
-    try {
-      return this.stateMachine.getCurrentState();
-    } finally {
-      this.readLock.unlock();
-    }
+    return this.stateMachine.getCurrentState();
   }
 
   @SuppressWarnings("rawtypes")
