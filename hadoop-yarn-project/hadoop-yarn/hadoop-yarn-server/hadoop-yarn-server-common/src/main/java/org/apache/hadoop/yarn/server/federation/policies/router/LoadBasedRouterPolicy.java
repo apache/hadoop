@@ -66,12 +66,19 @@ public class LoadBasedRouterPolicy extends AbstractRouterPolicy {
     Map<SubClusterIdInfo, Float> weights = getPolicyInfo().getRouterPolicyWeights();
     SubClusterIdInfo chosen = null;
     long currBestMem = -1;
+    long currBestVcore = -1;
     for (Map.Entry<SubClusterId, SubClusterInfo> entry : preSelectSubclusters.entrySet()) {
       SubClusterIdInfo id = new SubClusterIdInfo(entry.getKey());
       if (weights.containsKey(id) && weights.get(id) > 0) {
         long availableMemory = getAvailableMemory(entry.getValue());
-        if (availableMemory > currBestMem) {
+        long availableVcore = getAvailableVcore(entry.getValue());
+        if (availableMemory > currBestMem && availableVcore > currBestVcore) {
           currBestMem = availableMemory;
+          currBestVcore = availableVcore;
+          chosen = id;
+        } else if (availableMemory > currBestMem) {
+          currBestMem = availableMemory;
+          currBestVcore = availableVcore;
           chosen = id;
         }
       }
@@ -89,6 +96,17 @@ public class LoadBasedRouterPolicy extends AbstractRouterPolicy {
       JSONObject obj = new JSONObject(value.getCapability());
       mem = obj.getJSONObject("clusterMetrics").getLong("availableMB");
       return mem;
+    } catch (JSONException j) {
+      throw new YarnException("FederationSubClusterInfo cannot be parsed", j);
+    }
+  }
+
+  private long getAvailableVcore(SubClusterInfo value) throws YarnException {
+    try {
+      long vcore = -1;
+      JSONObject obj = new JSONObject(value.getCapability());
+      vcore = obj.getJSONObject("clusterMetrics").getLong("availableVirtualCores");
+      return vcore;
     } catch (JSONException j) {
       throw new YarnException("FederationSubClusterInfo cannot be parsed", j);
     }
