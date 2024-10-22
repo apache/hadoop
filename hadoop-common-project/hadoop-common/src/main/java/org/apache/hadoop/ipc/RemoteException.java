@@ -20,7 +20,10 @@ package org.apache.hadoop.ipc;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.util.List;
 
+import org.apache.hadoop.fs.protocolPB.PBHelper;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.ExceptionReconstructProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.xml.sax.Attributes;
 
@@ -32,27 +35,41 @@ public class RemoteException extends IOException {
   private final int errorCode;
 
   private final String className;
+  private final ExceptionReconstructProto exceptionReconstructProto;
   
   /**
-   * @param className wrapped exception, may be null
-   * @param msg may be null
+   * @param className wrapped exception, may be null.
+   * @param msg may be null.
    */
   public RemoteException(String className, String msg) {
     this(className, msg, null);
   }
   
   /**
-   * @param className wrapped exception, may be null
-   * @param msg may be null
-   * @param erCode may be null
+   * @param className wrapped exception, may be null.
+   * @param msg may be null.
+   * @param erCode may be null.
    */
   public RemoteException(String className, String msg, RpcErrorCodeProto erCode) {
+    this(className, msg, erCode, null);
+  }
+
+  /**
+   * @param className wrapped exception, may be null.
+   * @param msg may be null.
+   * @param erCode may be null.
+   * @param reconstructProto may be null.
+   */
+  public RemoteException(String className, String msg, RpcErrorCodeProto erCode,
+      ExceptionReconstructProto reconstructProto) {
     super(msg);
     this.className = className;
-    if (erCode != null)
+    if (erCode != null) {
       errorCode = erCode.getNumber();
-    else 
+    } else {
       errorCode = UNSPECIFIED_ERROR;
+    }
+    this.exceptionReconstructProto = reconstructProto;
   }
   
   /**
@@ -119,6 +136,23 @@ public class RemoteException extends IOException {
     Constructor<? extends IOException> cn = cls.getConstructor(String.class);
     cn.setAccessible(true);
     IOException ex = cn.newInstance(this.getMessage());
+    if (exceptionReconstructProto != null) {
+      // process params
+      List<String> params = exceptionReconstructProto.getParamList();
+      if (params.size() != 0 && ex instanceof ReconstructibleException) {
+        IOException reconstructed = ((ReconstructibleException<?>) ex).
+            reconstruct(params.toArray(new String[0]));
+        if (reconstructed != null) {
+          ex = reconstructed;
+        }
+      }
+      // process stacktrace
+      if (exceptionReconstructProto.hasStacktrace()) {
+        StackTraceElement[] stacktrace =
+            (StackTraceElement[]) PBHelper.toObject(exceptionReconstructProto.getStacktrace());
+        ex.setStackTrace(stacktrace);
+      }
+    }
     ex.initCause(this);
     return ex;
   }
