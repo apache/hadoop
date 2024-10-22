@@ -1026,4 +1026,79 @@ public class TestApplicationLimitsByPartition {
     rm.close();
 
   }
+
+  @Test(timeout = 120000)
+  public void testDiagnosticWhenAMActivated() throws Exception {
+    /*
+     * Test Case:
+     * Verify AM resource limit per partition level and per queue level.
+     * Queue a1 supports labels (x,y). Configure am-resource-limit as 0.2 (x)
+     * Queue a1 for label X can only support 2GB AM resource.
+     *
+     * Verify that 'AMResource request info' should be displayed whether AM
+     * is in state 'activated' or 'not activated'
+     */
+
+    simpleNodeLabelMappingToManager();
+    CapacitySchedulerConfiguration config = (CapacitySchedulerConfiguration)
+         TestUtils.getConfigurationWithQueueLabels(conf);
+
+    // After getting queue conf, configure AM resource percent for Queue a1
+    // as 0.2 (Label X)
+    config.setMaximumAMResourcePercentPerPartition(A1, "x", 0.2f);
+
+    // Now inject node label manager with this updated config.
+    MockRM rm = new MockRM(config) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm.getRMContext().setNodeLabelManager(mgr);
+    rm.start();
+    rm.registerNode("h1:1234", 10 * GB); // label = x
+    rm.registerNode("h2:1234", 10 * GB); // label = y
+    rm.registerNode("h3:1234", 10 * GB); // label = <empty>
+
+    // Submit app1 with 1GB AM resource to Queue a1 for label X
+    long amMemoryMB = GB;
+    MockRMAppSubmissionData data1 =
+         MockRMAppSubmissionData.Builder.createWithMemory(amMemoryMB, rm)
+             .withAppName("app")
+             .withUser("user")
+             .withAcls(null)
+             .withQueue("a1")
+             .withAmLabel("x")
+             .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
+
+    // Submit app2 with 1GB AM resource to Queue a1 for label X
+    MockRMAppSubmissionData data2 =
+         MockRMAppSubmissionData.Builder.createWithMemory(amMemoryMB, rm)
+             .withAppName("app")
+             .withUser("user")
+             .withAcls(null)
+             .withQueue("a1")
+             .withAmLabel("x")
+             .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data2);
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    LeafQueue leafQueue = (LeafQueue) cs.getQueue("a1");
+    Assert.assertNotNull(leafQueue);
+
+    // Only one AM will be activated here, and second AM will be not activated.
+    // The expectation: in either case, should be shown AMResource request info.
+    Assert.assertEquals(2, leafQueue.getNumActiveApplications());
+
+    String activatedDiagnostics="AM Resource Request = <memory:" + amMemoryMB;
+    Assert.assertTrue("Still doesn't show AMResource " +
+        "when application is activated", app1.getDiagnostics()
+         .toString().contains(activatedDiagnostics));
+    Assert.assertTrue("Doesn't show AMResource " +
+        "when application is not activated", app2.getDiagnostics()
+         .toString().contains(activatedDiagnostics));
+    rm.close();
+  }
 }
