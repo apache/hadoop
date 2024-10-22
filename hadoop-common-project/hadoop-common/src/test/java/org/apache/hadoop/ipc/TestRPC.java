@@ -764,6 +764,9 @@ public class TestRPC extends TestRpcBase {
 
   @Test
   public void testWrappedStopProxy() throws IOException {
+    RPC.setProtocolEngine(conf,
+        StoppedProtocol.class, StoppedRpcEngine.class);
+
     StoppedProtocol wrappedProxy = RPC.getProxy(StoppedProtocol.class,
         StoppedProtocol.versionID, null, conf);
     StoppedInvocationHandler invocationHandler = (StoppedInvocationHandler)
