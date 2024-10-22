@@ -80,8 +80,8 @@ public class PacketReceiver implements Closeable {
   static {
     Configuration conf = new HdfsConfiguration();
     MAX_PACKET_SIZE = conf.getInt(HdfsClientConfigKeys.
-                    DFS_DATA_TRANSFER_MAX_PACKET_SIZE,
-            HdfsClientConfigKeys.DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT);
+        DFS_DATA_TRANSFER_MAX_PACKET_SIZE,
+        HdfsClientConfigKeys.DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT);
   }
 
   public PacketReceiver(boolean useDirectBuffers) {
@@ -163,7 +163,8 @@ public class PacketReceiver implements Closeable {
     // Sanity check the buffer size so we don't allocate too much memory
     // and OOME.
     int totalLen = payloadLen + headerLen;
-    if (totalLen < 0 || totalLen > MAX_PACKET_SIZE) {
+    if (totalLen < 0 || totalLen > (MAX_PACKET_SIZE == 0 ?
+        HdfsClientConfigKeys.DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT : MAX_PACKET_SIZE)) {
       throw new IOException("Incorrect value for packet payload size: " +
                             payloadLen);
     }
