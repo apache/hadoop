@@ -20,7 +20,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.After;
 import org.junit.Test;
@@ -109,19 +112,33 @@ public class TestNetgroupCache {
     verifyGroupMembership(USER3, 0, null);
   }
 
+  /**
+   * Verifies that a group exists in the user's groups of a certain size.
+   *
+   * @param user the user name to fetch.
+   * @param size the expected size of the collection.
+   * @param group the group that should exist in the user's groups.
+   */
   private void verifyGroupMembership(String user, int size, String group) {
-    List<String> groups = new ArrayList<String>();
-    NetgroupCache.getNetgroups(user, groups);
+    Set<String> groupsSet = new LinkedHashSet<>();
+    // verify membership for set interface.
+    NetgroupCache.getNetgroups(user, groupsSet);
+    verifyGroupMembership(size, group, groupsSet);
+  }
+
+  /**
+   * Verifies that groups collection has expected size and the group exists.
+   *
+   * @param size the expected size of the collection.
+   * @param group the group that should exist in the collection.
+   * @param groups collection of user groups.
+   */
+  private void verifyGroupMembership(int size, String group,
+      Collection<String> groups) {
     assertEquals(size, groups.size());
-    if (size > 0) {
-      boolean present = false;
-      for (String groupEntry:groups) {
-        if (groupEntry.equals(group)) {
-          present = true;
-          break;
-        }
-      }
-      assertTrue(present);
+    if (!groups.isEmpty()) {
+      assertTrue("Group " + group + " should exist in the groups: "
+          + groups.toString(), groups.contains(group));
     }
   }
 }
