@@ -167,6 +167,12 @@ int32_t GzipDecompressStream::read(void * buff, uint32_t length) {
     }
     int ret = inflate(zstream, Z_NO_FLUSH);
     if (ret == Z_OK || ret == Z_STREAM_END) {
+      if (ret == Z_STREAM_END) {
+        int resetRet = inflateReset(zstream);
+        if (resetRet != Z_OK) {
+          return resetRet;
+        }
+      }
       if (zstream->avail_out == 0) {
         return length;
       }
