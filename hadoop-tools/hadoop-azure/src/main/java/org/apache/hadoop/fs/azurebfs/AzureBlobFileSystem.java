@@ -1641,8 +1641,9 @@ public class AzureBlobFileSystem extends FileSystem
   @Override
   public synchronized Token<?> getDelegationToken(final String renewer) throws IOException {
     statIncrement(CALL_GET_DELEGATION_TOKEN);
-    return this.delegationTokenEnabled ? this.delegationTokenManager.getDelegationToken(renewer)
-        : super.getDelegationToken(renewer);
+    return this.delegationTokenEnabled
+        ? this.delegationTokenManager.getDelegationToken(renewer)
+        : null;
   }
 
   /**
@@ -1652,11 +1653,12 @@ public class AzureBlobFileSystem extends FileSystem
    */
   @Override
   public String getCanonicalServiceName() {
-    String name = null;
     if (delegationTokenManager != null) {
-      name = delegationTokenManager.getCanonicalServiceName();
+      // ask the delegation token manager for the name.
+      return delegationTokenManager.getCanonicalServiceName();
     }
-    return name != null ? name : super.getCanonicalServiceName();
+    // no DT manager: No name.
+    return null;
   }
 
   @VisibleForTesting

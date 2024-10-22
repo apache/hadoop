@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -37,6 +38,31 @@ import org.apache.hadoop.io.IOUtils;
 public final class ExtensionHelper {
 
   private ExtensionHelper() {
+  }
+
+  /** Format string for a Canonical Service Name. */
+  public static final String SERVICE_NAME_FORMAT = "abfs://%s/";
+
+  /**
+   * Given a URI, build the Canonical Service Name.
+   * @param fsURI filesystem URI.
+   * @return Canonical Service Name
+   */
+  public static String buildCanonicalServiceName(URI fsURI) {
+    return String.format(SERVICE_NAME_FORMAT, fsURI.getHost());
+  }
+  /**
+   * Given a URI, build the Canonical Service Name.
+   * @param fsURI filesystem URI.
+   * @return URI built from Canonical Service name
+   * @throws RuntimeException if somehow the URI regeneration failes.
+   */
+  public static URI buildCanonicalServiceURI(URI fsURI) {
+    try {
+      return new URI(buildCanonicalServiceName(fsURI));
+    } catch (URISyntaxException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**

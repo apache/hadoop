@@ -45,7 +45,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Test continuation token which has equal sign.
+ * Test misc FS operations.
  */
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   private static final int LIST_MAX_RESULTS = 500;
@@ -208,5 +208,21 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       task.get();
     }
     es.shutdownNow();
+  }
+
+  /**
+   * Test DT support when the FS doesn't have DTs enabled.
+   * No DTs. no service name.
+   */
+  @Test
+  public void testDelegationTokensInUnmanagedFS() throws Throwable {
+    final AzureBlobFileSystem fs = getFileSystem();
+
+    Assertions.assertThat(fs.getDelegationToken("yarn@EXAMPLE"))
+        .describedAs("fs.getDelegationToken()")
+        .isNull();
+    Assertions.assertThat(fs.getCanonicalServiceName())
+        .describedAs("fs.getCanonicalServiceName()")
+        .isNull();
   }
 }
