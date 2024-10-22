@@ -413,7 +413,8 @@ public class NamenodeWebHdfsMethods {
       final UserParam username, final DoAsParam doAsUser,
       final String path, final HttpOpParam.Op op, final long openOffset,
       final long blocksize, final String excludeDatanodes,
-      final Param<?, ?>... parameters) throws URISyntaxException, IOException {
+      final boolean redirectByIPAddress, final Param<?, ?>... parameters
+      ) throws URISyntaxException, IOException {
     if (!DFSUtil.isValidName(path)) {
       throw new InvalidPathException(path);
     }
@@ -464,8 +465,8 @@ public class NamenodeWebHdfsMethods {
 
     int port = "http".equals(scheme) ? dn.getInfoPort() : dn
         .getInfoSecurePort();
-    final URI uri = new URI(scheme, null, dn.getHostName(), port, uripath,
-        queryBuilder.toString(), null);
+    final URI uri = new URI(scheme, null, redirectByIPAddress ? dn.getIpAddr():
+            dn.getHostName(), port, uripath, queryBuilder.toString(), null);
 
     if (LOG.isTraceEnabled()) {
       LOG.trace("redirectURI=" + uri);
@@ -548,7 +549,10 @@ public class NamenodeWebHdfsMethods {
       final StorageSpaceQuotaParam storagespaceQuota,
       @QueryParam(StorageTypeParam.NAME)
       @DefaultValue(StorageTypeParam.DEFAULT)
-      final StorageTypeParam storageType
+      final StorageTypeParam storageType,
+      @QueryParam(RedirectByIPAddressParam.NAME)
+      @DefaultValue(RedirectByIPAddressParam.DEFAULT)
+      final RedirectByIPAddressParam redirectByIPAddress
   ) throws IOException, InterruptedException {
     return put(ugi, delegation, username, doAsUser, ROOT, op, destination,
         owner, group, permission, unmaskedPermission, overwrite, bufferSize,
@@ -556,7 +560,7 @@ public class NamenodeWebHdfsMethods {
         createParent, delegationTokenArgument, aclPermission, xattrName,
         xattrValue, xattrSetFlag, snapshotName, oldSnapshotName,
         excludeDatanodes, createFlagParam, noredirect, policyName, ecpolicy,
-        namespaceQuota, storagespaceQuota, storageType);
+        namespaceQuota, storagespaceQuota, storageType, redirectByIPAddress);
   }
 
   /** Validate all required params. */
@@ -646,7 +650,9 @@ public class NamenodeWebHdfsMethods {
       @DefaultValue(StorageSpaceQuotaParam.DEFAULT)
           final StorageSpaceQuotaParam storagespaceQuota,
       @QueryParam(StorageTypeParam.NAME) @DefaultValue(StorageTypeParam.DEFAULT)
-          final StorageTypeParam storageType
+          final StorageTypeParam storageType,
+      @QueryParam(RedirectByIPAddressParam.NAME) @DefaultValue(RedirectByIPAddressParam.DEFAULT)
+          final RedirectByIPAddressParam redirectByIPAddress
       ) throws IOException, InterruptedException {
     init(ugi, delegation, username, doAsUser, path, op, destination, owner,
         group, permission, unmaskedPermission, overwrite, bufferSize,
@@ -654,7 +660,7 @@ public class NamenodeWebHdfsMethods {
         delegationTokenArgument, aclPermission, xattrName, xattrValue,
         xattrSetFlag, snapshotName, oldSnapshotName, excludeDatanodes,
         createFlagParam, noredirect, policyName, ecpolicy,
-        namespaceQuota, storagespaceQuota, storageType);
+        namespaceQuota, storagespaceQuota, storageType, redirectByIPAddress);
 
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {
       @Override
@@ -667,7 +673,8 @@ public class NamenodeWebHdfsMethods {
               aclPermission, xattrName, xattrValue, xattrSetFlag,
               snapshotName, oldSnapshotName, excludeDatanodes,
               createFlagParam, noredirect, policyName, ecpolicy,
-              namespaceQuota, storagespaceQuota, storageType);
+              namespaceQuota, storagespaceQuota, storageType,
+              redirectByIPAddress);
       }
     });
   }
@@ -706,7 +713,8 @@ public class NamenodeWebHdfsMethods {
       final ECPolicyParam ecpolicy,
       final NameSpaceQuotaParam namespaceQuota,
       final StorageSpaceQuotaParam storagespaceQuota,
-      final StorageTypeParam storageType
+      final StorageTypeParam storageType,
+      final RedirectByIPAddressParam redirectByIPAddress
       ) throws IOException, URISyntaxException {
     final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
     final ClientProtocol cp = getRpcClientProtocol();
@@ -717,9 +725,9 @@ public class NamenodeWebHdfsMethods {
       final NameNode namenode = (NameNode)context.getAttribute("name.node");
       final URI uri = redirectURI(null, namenode, ugi, delegation, username,
           doAsUser, fullpath, op.getValue(), -1L, blockSize.getValue(conf),
-          exclDatanodes.getValue(), permission, unmaskedPermission,
-          overwrite, bufferSize, replication, blockSize, createParent,
-          createFlagParam);
+          exclDatanodes.getValue(), redirectByIPAddress.getValue(), permission,
+          unmaskedPermission, overwrite, bufferSize, replication, blockSize,
+          createParent, createFlagParam);
       if(!noredirectParam.getValue()) {
         return Response.temporaryRedirect(uri)
           .type(MediaType.APPLICATION_OCTET_STREAM).build();
@@ -924,10 +932,12 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(NewLengthParam.NAME) @DefaultValue(NewLengthParam.DEFAULT)
           final NewLengthParam newLength,
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
-          final NoRedirectParam noredirect
+          final NoRedirectParam noredirect,
+      @QueryParam(RedirectByIPAddressParam.NAME) @DefaultValue(RedirectByIPAddressParam.DEFAULT)
+          final RedirectByIPAddressParam redirectByIPAddress
       ) throws IOException, InterruptedException {
     return post(ugi, delegation, username, doAsUser, ROOT, op, concatSrcs,
-        bufferSize, excludeDatanodes, newLength, noredirect);
+        bufferSize, excludeDatanodes, newLength, noredirect, redirectByIPAddress);
   }
 
   /** Handle HTTP POST request. */
@@ -956,7 +966,9 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(NewLengthParam.NAME) @DefaultValue(NewLengthParam.DEFAULT)
           final NewLengthParam newLength,
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
-          final NoRedirectParam noredirect
+          final NoRedirectParam noredirect,
+      @QueryParam(RedirectByIPAddressParam.NAME) @DefaultValue(RedirectByIPAddressParam.DEFAULT)
+          final RedirectByIPAddressParam redirectByIPAddress
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, concatSrcs, bufferSize,
@@ -967,7 +979,7 @@ public class NamenodeWebHdfsMethods {
       public Response run() throws IOException, URISyntaxException {
           return post(ugi, delegation, username, doAsUser,
               path.getAbsolutePath(), op, concatSrcs, bufferSize,
-              excludeDatanodes, newLength, noredirect);
+              excludeDatanodes, newLength, noredirect, redirectByIPAddress);
       }
     });
   }
@@ -983,7 +995,8 @@ public class NamenodeWebHdfsMethods {
       final BufferSizeParam bufferSize,
       final ExcludeDatanodesParam excludeDatanodes,
       final NewLengthParam newLength,
-      final NoRedirectParam noredirectParam
+      final NoRedirectParam noredirectParam,
+      final RedirectByIPAddressParam redirectByIPAddress
       ) throws IOException, URISyntaxException {
     final ClientProtocol cp = getRpcClientProtocol();
 
@@ -993,7 +1006,8 @@ public class NamenodeWebHdfsMethods {
       final NameNode namenode = (NameNode)context.getAttribute("name.node");
       final URI uri = redirectURI(null, namenode, ugi, delegation, username,
           doAsUser, fullpath, op.getValue(), -1L, -1L,
-          excludeDatanodes.getValue(), bufferSize);
+          excludeDatanodes.getValue(), redirectByIPAddress.getValue(),
+          bufferSize);
       if(!noredirectParam.getValue()) {
         return Response.temporaryRedirect(uri)
           .type(MediaType.APPLICATION_OCTET_STREAM).build();
@@ -1077,14 +1091,16 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(StartAfterParam.NAME) @DefaultValue(StartAfterParam.DEFAULT)
           final StartAfterParam startAfter,
       @QueryParam(AllUsersParam.NAME) @DefaultValue(AllUsersParam.DEFAULT)
-          final AllUsersParam allUsers
+          final AllUsersParam allUsers,
+      @QueryParam(RedirectByIPAddressParam.NAME) @DefaultValue(RedirectByIPAddressParam.DEFAULT)
+          final RedirectByIPAddressParam redirectByIPAddress
       ) throws IOException, InterruptedException {
     return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
         renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes,
         fsAction, snapshotName, oldSnapshotName,
         snapshotDiffStartPath, snapshotDiffIndex,
         tokenKind, tokenService,
-        noredirect, startAfter, allUsers);
+        noredirect, startAfter, allUsers, redirectByIPAddress);
   }
 
   /** Handle HTTP GET request. */
@@ -1136,12 +1152,15 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(StartAfterParam.NAME) @DefaultValue(StartAfterParam.DEFAULT)
           final StartAfterParam startAfter,
       @QueryParam(AllUsersParam.NAME) @DefaultValue(AllUsersParam.DEFAULT)
-          final AllUsersParam allUsers
+          final AllUsersParam allUsers,
+      @QueryParam(RedirectByIPAddressParam.NAME) @DefaultValue(RedirectByIPAddressParam.DEFAULT)
+          final RedirectByIPAddressParam redirectByIPAddress
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, offset, length,
         renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction,
-        snapshotName, oldSnapshotName, tokenKind, tokenService, startAfter, allUsers);
+        snapshotName, oldSnapshotName, tokenKind, tokenService, startAfter, allUsers,
+        redirectByIPAddress);
 
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {
       @Override
@@ -1185,7 +1204,8 @@ public class NamenodeWebHdfsMethods {
       final TokenServiceParam tokenService,
       final NoRedirectParam noredirectParam,
       final StartAfterParam startAfter,
-      final AllUsersParam allUsers
+      final AllUsersParam allUsers,
+      final RedirectByIPAddressParam redirectByIPAddress
       ) throws IOException, URISyntaxException {
     final Configuration conf = (Configuration) context
         .getAttribute(JspHelper.CURRENT_CONF);
@@ -1198,7 +1218,8 @@ public class NamenodeWebHdfsMethods {
       ResponseBuilder rb = Response.noContent();
       final URI uri = redirectURI(rb, namenode, ugi, delegation, username,
           doAsUser, fullpath, op.getValue(), offset.getValue(), -1L,
-          excludeDatanodes.getValue(), offset, length, bufferSize);
+          excludeDatanodes.getValue(), redirectByIPAddress.getValue(), offset,
+          length, bufferSize);
       if(!noredirectParam.getValue()) {
         return rb.status(Status.TEMPORARY_REDIRECT).location(uri)
             .type(MediaType.APPLICATION_OCTET_STREAM).build();
@@ -1260,7 +1281,8 @@ public class NamenodeWebHdfsMethods {
     {
       final NameNode namenode = (NameNode)context.getAttribute("name.node");
       final URI uri = redirectURI(null, namenode, ugi, delegation, username,
-          doAsUser, fullpath, op.getValue(), -1L, -1L, null);
+          doAsUser, fullpath, op.getValue(), -1L, -1L, null,
+          redirectByIPAddress.getValue());
       if(!noredirectParam.getValue()) {
         return Response.temporaryRedirect(uri)
           .type(MediaType.APPLICATION_OCTET_STREAM).build();
