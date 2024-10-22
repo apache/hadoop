@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.util.Time;
 
 /**
  * Describes a path-based cache directive.
@@ -237,7 +238,7 @@ public class CacheDirectiveInfo {
       if (!isRelative) {
         return ms;
       } else {
-        return new Date().getTime() + ms;
+        return Time.now() + ms;
       }
     }
 

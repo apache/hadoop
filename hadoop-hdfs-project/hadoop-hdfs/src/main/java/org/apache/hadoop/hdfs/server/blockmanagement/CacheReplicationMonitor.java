@@ -23,7 +23,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -340,7 +339,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
    */
   private void rescanCacheDirectives() {
     FSDirectory fsDir = namesystem.getFSDirectory();
-    final long now = new Date().getTime();
+    final long now = Time.now();
     for (CacheDirective directive : cacheManager.getCacheDirectives()) {
       scannedDirectives++;
       // Skip processing this entry if it has expired

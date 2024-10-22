@@ -27,6 +27,7 @@ import org.apache.hadoop.util.IntrusiveCollection;
 import org.apache.hadoop.util.IntrusiveCollection.Element;
 
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.Time;
 
 /**
  * Namenode class that tracks state related to a cached path.
@@ -118,7 +119,7 @@ public final class CacheDirective implements IntrusiveCollection.Element {
         setBytesCached(bytesCached).
         setFilesNeeded(filesNeeded).
         setFilesCached(filesCached).
-        setHasExpired(new Date().getTime() > expiryTime).
+        setHasExpired(Time.now() > expiryTime).
         build();
   }
 
