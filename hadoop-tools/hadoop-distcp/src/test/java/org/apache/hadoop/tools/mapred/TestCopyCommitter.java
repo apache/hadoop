@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools.mapred;
 
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -513,7 +514,8 @@ public class TestCopyCommitter {
 
   private void testCommitWithChecksumMismatch(boolean skipCrc)
       throws IOException {
-
+    GenericTestUtils.LogCapturer log = GenericTestUtils.LogCapturer.captureLogs(
+            LoggerFactory.getLogger(DistCpUtils.class));
     TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
     JobContext jobContext = new JobContextImpl(
         taskAttemptContext.getConfiguration(),
@@ -569,6 +571,7 @@ public class TestCopyCommitter {
                 fs, new Path(sourceBase + srcFilename), null,
                 fs, new Path(targetBase + srcFilename),
                 sourceCurrStatus.getLen()));
+        Assertions.assertThat(log.getOutput()).contains("Checksum not equal");
       } catch(IOException exception) {
         if (skipCrc) {
           LOG.error("Unexpected exception is found", exception);
