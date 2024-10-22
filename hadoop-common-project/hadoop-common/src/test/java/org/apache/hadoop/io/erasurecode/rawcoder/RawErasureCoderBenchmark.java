@@ -320,6 +320,7 @@ public final class RawErasureCoderBenchmark {
     private ByteBuffer[] decodeInputs = new ByteBuffer[NUM_ALL_UNITS];
 
     public static void configure(int dataSizeMB, int chunkSizeKB) {
+      Preconditions.checkArgument(dataSizeMB > 0);
       chunkSize = chunkSizeKB * 1024;
       // buffer size needs to be a multiple of (numDataUnits * chunkSize)
       int round = (int) Math.round(
