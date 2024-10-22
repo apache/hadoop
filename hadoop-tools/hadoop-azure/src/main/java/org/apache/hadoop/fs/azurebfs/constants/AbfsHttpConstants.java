@@ -50,7 +50,44 @@ public final class AbfsHttpConstants {
   public static final String DEFAULT_LEASE_BREAK_PERIOD = "0";
   public static final String DEFAULT_TIMEOUT = "90";
   public static final String APPEND_BLOB_TYPE = "appendblob";
-  public static final String TOKEN_VERSION = "2";
+
+  //Abfs Http Client Constants for Blob Endpoint APIs.
+
+  /**
+   * HTTP Header Value to denote resource type as container.
+   * {@value}.
+   */
+  public static final String CONTAINER = "container";
+
+  /**
+   * HTTP Header Value to denote component as metadata.
+   * {@value}.
+   */
+  public static final String METADATA = "metadata";
+
+  /**
+   * HTTP Header Value to denote component as block.
+   * {@value}.
+   */
+  public static final String BLOCK = "block";
+
+  /**
+   * HTTP Header Value to denote component as blocklist.
+   * {@value}.
+   */
+  public static final String BLOCKLIST = "blocklist";
+
+  /**
+   * HTTP Header Value to denote component as lease.
+   * {@value}.
+   */
+  public static final String LEASE = "lease";
+
+  /**
+   * HTTP Header Value to denote bock list type as committed.
+   * {@value}.
+   */
+  public static final String BLOCK_TYPE_COMMITTED = "committed";
 
   public static final String JAVA_VENDOR = "java.vendor";
   public static final String JAVA_VERSION = "java.version";
@@ -60,6 +97,10 @@ public final class AbfsHttpConstants {
 
   public static final String APN_VERSION = "APN/1.0";
   public static final String CLIENT_VERSION = "Azure Blob FS/" + VersionInfo.getVersion();
+  /**
+   * {@value}.
+   */
+  public static final String TOKEN_VERSION = "2";
 
   // Abfs Http Verb
   public static final String HTTP_METHOD_DELETE = "DELETE";
@@ -92,6 +133,7 @@ public final class AbfsHttpConstants {
   public static final String HTTP_HEADER_PREFIX = "x-ms-";
   public static final String HASH = "#";
   public static final String TRUE = "true";
+  public static final String ZERO = "0";
 
   public static final String PLUS_ENCODE = "%20";
   public static final String FORWARD_SLASH_ENCODE = "%2F";
@@ -101,6 +143,7 @@ public final class AbfsHttpConstants {
   public static final String GMT_TIMEZONE = "GMT";
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
+  public static final String APPLICATION_XML = "application/xml";
   public static final String XMS_PROPERTIES_ENCODING_ASCII = "ISO-8859-1";
   public static final String XMS_PROPERTIES_ENCODING_UNICODE = "UTF-8";
 

@@ -1457,7 +1457,7 @@ public class AzureBlobFileSystem extends FileSystem
       try {
         checkException(null, ex);
         // Because HEAD request won't contain message body,
-        // there is not way to get the storage error code
+        // there is no way to get the storage error code
         // workaround here is to check its status code.
       } catch (FileNotFoundException e) {
         statIncrement(ERROR_IGNORED);
