@@ -169,9 +169,12 @@ import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.util.IOUtilsClient;
+import org.apache.hadoop.io.ByteBufferPool;
+import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
 import org.apache.hadoop.io.retry.LossyRetryInvocationHandler;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -246,6 +249,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       new DFSHedgedReadMetrics();
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
   private static volatile ThreadPoolExecutor STRIPED_READ_THREAD_POOL;
+  private static volatile ByteBufferPool STRIPED_READ_BUFFER_POOL;
   private final long serverDefaultsValidityPeriod;
 
   /**
@@ -409,6 +413,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
     this.initThreadsNumForStripedReads(dfsClientConf.
         getStripedReadThreadpoolSize());
+    this.initBufferPoolForStripedReads(dfsClientConf.
+        getStripedReadWeakRefBufferPool());
     this.saslClient = new SaslDataTransferClient(
         conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
         TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);
@@ -3159,12 +3165,31 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
+  private void initBufferPoolForStripedReads(boolean useWeakReference) {
+    if (STRIPED_READ_BUFFER_POOL != null) {
+      return;
+    }
+    synchronized (DFSClient.class) {
+      if (STRIPED_READ_BUFFER_POOL == null) {
+        if (useWeakReference) {
+          STRIPED_READ_BUFFER_POOL = new WeakReferencedElasticByteBufferPool();
+        } else {
+          STRIPED_READ_BUFFER_POOL = new ElasticByteBufferPool();
+        }
+      }
+    }
+  }
+
   ThreadPoolExecutor getHedgedReadsThreadPool() {
     return HEDGED_READ_THREAD_POOL;
   }
 
   ThreadPoolExecutor getStripedReadsThreadPool() {
     return STRIPED_READ_THREAD_POOL;
+  }
+
+  ByteBufferPool getStripedReadBufferPool() {
+    return STRIPED_READ_BUFFER_POOL;
   }
 
   boolean isHedgedReadsEnabled() {
