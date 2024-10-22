@@ -73,6 +73,7 @@ public class NamenodeStatusReport {
   private int corruptFilesCount = -1;
   private long scheduledReplicationBlocks = -1;
   private long numberOfMissingBlocksWithReplicationFactorOne = -1;
+  private long numberOfBadlyDistributedBlocks = -1;
   private long highestPriorityLowRedundancyReplicatedBlocks = -1;
   private long highestPriorityLowRedundancyECBlocks = -1;
   private int pendingSPSPaths = -1;
@@ -401,11 +402,14 @@ public class NamenodeStatusReport {
    */
   public void setNamenodeInfo(int numCorruptFiles,
       long numOfMissingBlocksWithReplicationFactorOne,
+      long numOfBadlyDistributedBlocks,
       long highestPriorityLowRedundancyRepBlocks,
       long highPriorityLowRedundancyECBlocks) {
     this.corruptFilesCount = numCorruptFiles;
     this.numberOfMissingBlocksWithReplicationFactorOne =
         numOfMissingBlocksWithReplicationFactorOne;
+    this.numberOfBadlyDistributedBlocks =
+        numOfBadlyDistributedBlocks;
     this.highestPriorityLowRedundancyReplicatedBlocks =
         highestPriorityLowRedundancyRepBlocks;
     this.highestPriorityLowRedundancyECBlocks =
@@ -440,6 +444,16 @@ public class NamenodeStatusReport {
   public long getNumberOfMissingBlocksWithReplicationFactorOne() {
     return this.numberOfMissingBlocksWithReplicationFactorOne;
   }
+
+  /**
+   * Gets the total number of badly distributed blocks.
+   *
+   * @return the total number of badly distrubted blocks.
+   */
+  public long getNumberOfBadlyDistributedBlocks() {
+    return this.numberOfBadlyDistributedBlocks;
+  }
+
 
   /**
    * Gets the total number of replicated low redundancy blocks on the cluster

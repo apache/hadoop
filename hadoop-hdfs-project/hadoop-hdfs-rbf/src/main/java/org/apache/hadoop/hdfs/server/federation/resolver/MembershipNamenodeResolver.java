@@ -363,6 +363,8 @@ public class MembershipNamenodeResolver
           report.getScheduledReplicationBlocks());
       stats.setNumberOfMissingBlocksWithReplicationFactorOne(
           report.getNumberOfMissingBlocksWithReplicationFactorOne());
+      stats.setNumberOfBadlyDistributedBlocks(
+          report.getNumberOfBadlyDistributedBlocks());
       stats.setHighestPriorityLowRedundancyReplicatedBlocks(
           report.getHighestPriorityLowRedundancyReplicatedBlocks());
       stats.setHighestPriorityLowRedundancyECBlocks(
