@@ -52,6 +52,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
         {RSRawErasureCoderFactory.class, 6, 3, new int[]{2, 4}, new int[]{1}},
         {NativeRSRawErasureCoderFactory.class, 6, 3, new int[]{0}, new int[]{}},
         {XORRawErasureCoderFactory.class, 10, 1, new int[]{0}, new int[]{}},
+        {XORRawErasureCoderFactory.class, 10, 3, new int[]{0}, new int[]{}},
         {NativeXORRawErasureCoderFactory.class, 10, 1, new int[]{0},
             new int[]{}}
     });
