@@ -127,7 +127,7 @@ public class ContainerLogsPage extends NMView {
             appId, $(APP_OWNER));
         foundAggregatedLogs = true;
       } catch (IOException fnf) {
-        // Do Nothing
+        LOG.debug("Log aggregation error in ContainerLogsPage-render", fnf);
       }
 
       try {
