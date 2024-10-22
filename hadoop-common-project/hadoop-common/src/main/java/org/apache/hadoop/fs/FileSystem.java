@@ -1797,18 +1797,27 @@ public abstract class FileSystem extends Configured
    *   <li>Connectivity problems with a remote filesystem may delay shutdown
    *   further, and may cause the files to not be deleted.</li>
    * </ol>
-   * @param f the path to delete.
+   * @param f the path to delete; this may be unqualified.
    * @return  true if deleteOnExit is successful, otherwise false.
    * @throws IOException IO failure
    */
   public boolean deleteOnExit(Path f) throws IOException {
-    if (!exists(f)) {
+    Path path = makeQualified(f);
+    if (!exists(path)) {
       return false;
     }
-    synchronized (deleteOnExit) {
-      deleteOnExit.add(f);
-    }
+    queueForDeletion(path);
     return true;
+  }
+
+  /**
+   * Add a path to the set of paths to delete on shutdown.
+   * @param path fully qualified path.
+   */
+  protected void queueForDeletion(final Path path) {
+    synchronized (deleteOnExit) {
+      deleteOnExit.add(path);
+    }
   }
 
   /**
@@ -1818,7 +1827,7 @@ public abstract class FileSystem extends Configured
    */
   public boolean cancelDeleteOnExit(Path f) {
     synchronized (deleteOnExit) {
-      return deleteOnExit.remove(f);
+      return deleteOnExit.remove(makeQualified(f));
     }
   }
 
@@ -1835,9 +1844,7 @@ public abstract class FileSystem extends Configured
       for (Iterator<Path> iter = deleteOnExit.iterator(); iter.hasNext();) {
         Path path = iter.next();
         try {
-          if (exists(path)) {
-            delete(path, true);
-          }
+          delete(path, true);
         }
         catch (IOException e) {
           LOGGER.info("Ignoring failure to deleteOnExit for path {}", path);

@@ -3620,6 +3620,31 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * This override queues the path for deletion without
+   * checking for existence. This:
+   * <ol>
+   *   <li>
+   *     Saves HTTP requests.
+   *   </li>
+   *   <li>
+   *     Queues files before they have been materialized through
+   *     S3ABlockOutputStream.close() or similar.
+   *   </li>
+   *   <li>
+   *     Does not add 404 entries to the S3 load balancers.
+   *   </li>
+   * </ol>
+   * @param f the path to delete; this may be unqualified.
+   * @return true, always.
+   * @throws IOException
+   */
+  @Override
+  public boolean deleteOnExit(Path f) throws IOException {
+    queueForDeletion(makeQualified(f));
+    return true;
+  }
+
+  /**
    * Create a fake directory if required.
    * That is: it is not the root path and the path does not exist.
    * Retry policy: retrying; untranslated.
