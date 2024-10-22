@@ -37,8 +37,8 @@ public interface TaskInputOutputContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
        extends TaskAttemptContext {
 
   /**
-   * Advance to the next key, value pair, returning null if at end.
-   * @return the key object that was read into, or null if no more
+   * Advance to the next key, value pair, returning false if at end.
+   * @return true if the key object was read, or false if no more
    */
   public boolean nextKeyValue() throws IOException, InterruptedException;
  
@@ -60,6 +60,8 @@ public interface TaskInputOutputContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 
   /**
    * Generate an output key/value pair.
+   * @param key the key to write
+   * @param value the value to write
    */
   public void write(KEYOUT key, VALUEOUT value) 
       throws IOException, InterruptedException;
