@@ -212,14 +212,22 @@ public class TestAvailableSpaceBlockPlacementPolicy {
             HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
                     * blockSize, 0L, 0L, 0L, 0, 0);
 
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0],
-            tolerateDataNodes[1], false) == 0);
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[1],
-            tolerateDataNodes[0], false) == 0);
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0],
-            tolerateDataNodes[2], false) == -1);
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[2],
-            tolerateDataNodes[0], false) == 1);
+    assertTrue(AvailableSpaceBlockPlacementPolicyUtils.compareDataNode(tolerateDataNodes[0],
+            tolerateDataNodes[1], false,
+        toleratePlacementPolicy.getBalancedSpaceToleranceLimit(),
+        toleratePlacementPolicy.getBalancedSpaceTolerance()) == 0);
+    assertTrue(AvailableSpaceBlockPlacementPolicyUtils.compareDataNode(tolerateDataNodes[1],
+            tolerateDataNodes[0], false,
+        toleratePlacementPolicy.getBalancedSpaceToleranceLimit(),
+        toleratePlacementPolicy.getBalancedSpaceTolerance()) == 0);
+    assertTrue(AvailableSpaceBlockPlacementPolicyUtils.compareDataNode(tolerateDataNodes[0],
+            tolerateDataNodes[2], false,
+        toleratePlacementPolicy.getBalancedSpaceToleranceLimit(),
+        toleratePlacementPolicy.getBalancedSpaceTolerance()) == -1);
+    assertTrue(AvailableSpaceBlockPlacementPolicyUtils.compareDataNode(tolerateDataNodes[2],
+            tolerateDataNodes[0], false,
+        toleratePlacementPolicy.getBalancedSpaceToleranceLimit(),
+        toleratePlacementPolicy.getBalancedSpaceTolerance()) == 1);
   }
 
 
@@ -276,22 +284,38 @@ public class TestAvailableSpaceBlockPlacementPolicy {
         HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
         * blockSize, 0L, 0L, 0L, 0, 0);
 
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0],
-        tolerateDataNodes[1], false) == 1);
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[1],
-        tolerateDataNodes[0], false) == -1);
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[1],
-        tolerateDataNodes[2], false) == 1);
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[2],
-        tolerateDataNodes[1], false) == -1);
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[2],
-        tolerateDataNodes[3], false) == 0);
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[3],
-        tolerateDataNodes[2], false) == 0);
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[2],
-        tolerateDataNodes[4], false) == 1);
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[4],
-        tolerateDataNodes[2], false) == -1);
+    assertTrue(AvailableSpaceBlockPlacementPolicyUtils.compareDataNode(tolerateDataNodes[0],
+        tolerateDataNodes[1], false,
+        toleratePlacementPolicy.getBalancedSpaceToleranceLimit(),
+        toleratePlacementPolicy.getBalancedSpaceTolerance()) == 1);
+    assertTrue(AvailableSpaceBlockPlacementPolicyUtils.compareDataNode(tolerateDataNodes[1],
+        tolerateDataNodes[0], false,
+        toleratePlacementPolicy.getBalancedSpaceToleranceLimit(),
+        toleratePlacementPolicy.getBalancedSpaceTolerance()) == -1);
+    assertTrue(AvailableSpaceBlockPlacementPolicyUtils.compareDataNode(tolerateDataNodes[1],
+        tolerateDataNodes[2], false,
+        toleratePlacementPolicy.getBalancedSpaceToleranceLimit(),
+        toleratePlacementPolicy.getBalancedSpaceTolerance()) == 1);
+    assertTrue(AvailableSpaceBlockPlacementPolicyUtils.compareDataNode(tolerateDataNodes[2],
+        tolerateDataNodes[1], false,
+        toleratePlacementPolicy.getBalancedSpaceToleranceLimit(),
+        toleratePlacementPolicy.getBalancedSpaceTolerance()) == -1);
+    assertTrue(AvailableSpaceBlockPlacementPolicyUtils.compareDataNode(tolerateDataNodes[2],
+        tolerateDataNodes[3], false,
+        toleratePlacementPolicy.getBalancedSpaceToleranceLimit(),
+        toleratePlacementPolicy.getBalancedSpaceTolerance()) == 0);
+    assertTrue(AvailableSpaceBlockPlacementPolicyUtils.compareDataNode(tolerateDataNodes[3],
+        tolerateDataNodes[2], false,
+        toleratePlacementPolicy.getBalancedSpaceToleranceLimit(),
+        toleratePlacementPolicy.getBalancedSpaceTolerance()) == 0);
+    assertTrue(AvailableSpaceBlockPlacementPolicyUtils.compareDataNode(tolerateDataNodes[2],
+        tolerateDataNodes[4], false,
+        toleratePlacementPolicy.getBalancedSpaceToleranceLimit(),
+        toleratePlacementPolicy.getBalancedSpaceTolerance()) == 1);
+    assertTrue(AvailableSpaceBlockPlacementPolicyUtils.compareDataNode(tolerateDataNodes[4],
+        tolerateDataNodes[2], false,
+        toleratePlacementPolicy.getBalancedSpaceToleranceLimit(),
+        toleratePlacementPolicy.getBalancedSpaceTolerance()) == -1);
   }
 
   @AfterClass

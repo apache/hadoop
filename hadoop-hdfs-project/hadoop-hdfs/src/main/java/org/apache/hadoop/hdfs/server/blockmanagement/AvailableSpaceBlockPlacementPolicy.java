@@ -28,9 +28,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
+import org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicyUtils.AvailableSpaceContext;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 
@@ -48,7 +49,6 @@ public class AvailableSpaceBlockPlacementPolicy extends
     BlockPlacementPolicyDefault {
   private static final Logger LOG = LoggerFactory
       .getLogger(AvailableSpaceBlockPlacementPolicy.class);
-  private static final Random RAND = new Random();
   private int balancedPreference =
       (int) (100 * DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
   private int balancedSpaceTolerance =
@@ -130,7 +130,9 @@ public class AvailableSpaceBlockPlacementPolicy extends
         .chooseRandomWithStorageTypeTwoTrial(scope, excludedNode, type);
     DatanodeDescriptor b = (DatanodeDescriptor) dfsClusterMap
         .chooseRandomWithStorageTypeTwoTrial(scope, excludedNode, type);
-    return select(a, b, false);
+    return AvailableSpaceBlockPlacementPolicyUtils.select(a, b, false,
+        new AvailableSpaceContext(balancedPreference, balancedSpaceToleranceLimit,
+            balancedSpaceTolerance));
   }
 
   @Override
@@ -144,51 +146,11 @@ public class AvailableSpaceBlockPlacementPolicy extends
           maxNodesPerRack, results, avoidStaleNodes, storageTypes,
           fallbackToLocalRack);
     }
-    final EnumMap<StorageType, Integer> initialStorageTypesLocal =
-        storageTypes.clone();
-    final EnumMap<StorageType, Integer> initialStorageTypesLocalRack =
-        storageTypes.clone();
-    DatanodeStorageInfo local =
-        chooseLocalStorage(localMachine, excludedNodes, blocksize,
-            maxNodesPerRack, results, avoidStaleNodes,
-            initialStorageTypesLocal);
-    if (!fallbackToLocalRack) {
-      return local;
-    }
-    if (local != null) {
-      results.remove(local);
-    }
-    DatanodeStorageInfo localRack =
-        chooseLocalRack(localMachine, excludedNodes, blocksize, maxNodesPerRack,
-            results, avoidStaleNodes, initialStorageTypesLocalRack);
-    if (local != null && localRack != null) {
-      if (select(local.getDatanodeDescriptor(),
-          localRack.getDatanodeDescriptor(), true) == local
-          .getDatanodeDescriptor()) {
-        results.remove(localRack);
-        results.add(local);
-        swapStorageTypes(initialStorageTypesLocal, storageTypes);
-        excludedNodes.remove(localRack.getDatanodeDescriptor());
-        return local;
-      } else {
-        swapStorageTypes(initialStorageTypesLocalRack, storageTypes);
-        excludedNodes.remove(local.getDatanodeDescriptor());
-        return localRack;
-      }
-    } else if (localRack == null && local != null) {
-      results.add(local);
-      swapStorageTypes(initialStorageTypesLocal, storageTypes);
-      return local;
-    } else {
-      swapStorageTypes(initialStorageTypesLocalRack, storageTypes);
-      return localRack;
-    }
-  }
-
-  private void swapStorageTypes(EnumMap<StorageType, Integer> fromStorageTypes,
-      EnumMap<StorageType, Integer> toStorageTypes) {
-    toStorageTypes.clear();
-    toStorageTypes.putAll(fromStorageTypes);
+    return AvailableSpaceBlockPlacementPolicyUtils.chooseLocalStorage(
+        localMachine, excludedNodes, blocksize, maxNodesPerRack, results,
+        avoidStaleNodes, storageTypes, fallbackToLocalRack,
+        new AvailableSpaceContext(balancedPreference, balancedSpaceToleranceLimit,
+            balancedSpaceTolerance, this));
   }
 
   @Override
@@ -198,39 +160,23 @@ public class AvailableSpaceBlockPlacementPolicy extends
         (DatanodeDescriptor) clusterMap.chooseRandom(scope, excludedNode);
     DatanodeDescriptor b =
         (DatanodeDescriptor) clusterMap.chooseRandom(scope, excludedNode);
-    return select(a, b, false);
+    return AvailableSpaceBlockPlacementPolicyUtils.select(a, b, false,
+        new AvailableSpaceContext(balancedPreference, balancedSpaceToleranceLimit,
+            balancedSpaceTolerance));
   }
 
-  private DatanodeDescriptor select(DatanodeDescriptor a, DatanodeDescriptor b,
-      boolean isBalanceLocal) {
-    if (a != null && b != null){
-      int ret = compareDataNode(a, b, isBalanceLocal);
-      if (ret == 0) {
-        return a;
-      } else if (ret < 0) {
-        return (RAND.nextInt(100) < balancedPreference) ? a : b;
-      } else {
-        return (RAND.nextInt(100) < balancedPreference) ? b : a;
-      }
-    } else {
-      return a == null ? b : a;
-    }
+  @VisibleForTesting
+  public int getBalancedPreference() {
+    return balancedPreference;
   }
 
-  /**
-   * Compare the two data nodes.
-   */
-  protected int compareDataNode(final DatanodeDescriptor a,
-      final DatanodeDescriptor b, boolean isBalanceLocal) {
+  @VisibleForTesting
+  public int getBalancedSpaceToleranceLimit() {
+    return balancedSpaceToleranceLimit;
+  }
 
-    boolean toleranceLimit = Math.max(a.getDfsUsedPercent(), b.getDfsUsedPercent())
-        < balancedSpaceToleranceLimit;
-    if (a.equals(b)
-        || (toleranceLimit && Math.abs(a.getDfsUsedPercent() - b.getDfsUsedPercent())
-            < balancedSpaceTolerance) || ((
-        isBalanceLocal && a.getDfsUsedPercent() < 50))) {
-      return 0;
-    }
-    return a.getDfsUsedPercent() < b.getDfsUsedPercent() ? -1 : 1;
+  @VisibleForTesting
+  public int getBalancedSpaceTolerance() {
+    return balancedSpaceTolerance;
   }
 }

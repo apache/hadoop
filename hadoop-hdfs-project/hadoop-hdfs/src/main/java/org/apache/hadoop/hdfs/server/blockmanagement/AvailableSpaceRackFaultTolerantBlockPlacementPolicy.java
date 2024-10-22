@@ -18,23 +18,29 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
+import org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicyUtils.AvailableSpaceContext;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
-import java.util.Random;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Set;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_KEY;
 
 /**
  * Space balanced rack fault tolerant block placement policy.
@@ -44,11 +50,18 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
 
   private static final Logger LOG = LoggerFactory
       .getLogger(AvailableSpaceRackFaultTolerantBlockPlacementPolicy.class);
-  private static final Random RAND = new Random();
+
   private int balancedPreference = (int) (100
       * DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
+
   private int balancedSpaceTolerance =
-        DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
+      DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
+
+  private int balancedSpaceToleranceLimit =
+      DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT;
+
+  private boolean optimizeLocal;
+
   @Override
   public void initialize(Configuration conf, FSClusterStats stats,
       NetworkTopology clusterMap, Host2NodesMap host2datanodeMap) {
@@ -58,8 +71,19 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
         DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
 
     balancedSpaceTolerance = conf.getInt(
-            DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY,
-            DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT);
+        DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY,
+        DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT);
+
+    balancedSpaceToleranceLimit =
+        conf.getInt(
+            DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_KEY,
+            DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT);
+
+    optimizeLocal = conf.getBoolean(
+        DFSConfigKeys.
+            DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCE_LOCAL_NODE_KEY,
+        DFSConfigKeys.
+            DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCE_LOCAL_NODE_DEFAULT);
 
     LOG.info("Available space rack fault tolerant block placement policy "
         + "initialized: "
@@ -78,15 +102,25 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
           + " receive  more block allocations.");
     }
 
+    if (balancedSpaceToleranceLimit > 100 || balancedSpaceToleranceLimit < 0) {
+      LOG.warn("The value of "
+          + DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_KEY
+          + " is invalid, Current value is " + balancedSpaceToleranceLimit + ", Default value "
+          + DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT
+          + " will be used instead.");
+
+      balancedSpaceToleranceLimit =
+          DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_LIMIT_DEFAULT;
+    }
 
     if (balancedSpaceTolerance > 20 || balancedSpaceTolerance < 0) {
       LOG.warn("The value of "
           + DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY
           + " is invalid, Current value is " + balancedSpaceTolerance + ", Default value " +
-            DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT
+          DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT
           + " will be used instead.");
       balancedSpaceTolerance =
-            DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
+          DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
     }
 
     balancedPreference = (int) (100 * balancedPreferencePercent);
@@ -102,7 +136,27 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
         .chooseRandomWithStorageTypeTwoTrial(scope, excludedNode, type);
     DatanodeDescriptor b = (DatanodeDescriptor) dfsClusterMap
         .chooseRandomWithStorageTypeTwoTrial(scope, excludedNode, type);
-    return select(a, b);
+    return AvailableSpaceBlockPlacementPolicyUtils.select(a, b, false,
+        new AvailableSpaceContext(balancedPreference, balancedSpaceToleranceLimit,
+            balancedSpaceTolerance));
+  }
+
+  @Override
+  protected DatanodeStorageInfo chooseLocalStorage(Node localMachine,
+      Set<Node> excludedNodes, long blocksize, int maxNodesPerRack,
+      List<DatanodeStorageInfo> results, boolean avoidStaleNodes,
+      EnumMap<StorageType, Integer> storageTypes, boolean fallbackToLocalRack)
+      throws NotEnoughReplicasException {
+    if (!optimizeLocal) {
+      return super.chooseLocalStorage(localMachine, excludedNodes, blocksize,
+          maxNodesPerRack, results, avoidStaleNodes, storageTypes,
+          fallbackToLocalRack);
+    }
+    return AvailableSpaceBlockPlacementPolicyUtils.chooseLocalStorage(
+        localMachine, excludedNodes, blocksize, maxNodesPerRack, results,
+        avoidStaleNodes, storageTypes, fallbackToLocalRack,
+        new AvailableSpaceContext(balancedPreference, balancedSpaceToleranceLimit,
+            balancedSpaceTolerance, this));
   }
 
   @Override
@@ -112,34 +166,23 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
         (DatanodeDescriptor) clusterMap.chooseRandom(scope, excludedNode);
     DatanodeDescriptor b =
         (DatanodeDescriptor) clusterMap.chooseRandom(scope, excludedNode);
-    return select(a, b);
+    return AvailableSpaceBlockPlacementPolicyUtils.select(a, b, false,
+        new AvailableSpaceContext(balancedPreference, balancedSpaceToleranceLimit,
+            balancedSpaceTolerance));
   }
 
-  private DatanodeDescriptor select(DatanodeDescriptor a,
-      DatanodeDescriptor b) {
-    if (a != null && b != null) {
-      int ret = compareDataNode(a, b);
-      if (ret == 0) {
-        return a;
-      } else if (ret < 0) {
-        return (RAND.nextInt(100) < balancedPreference) ? a : b;
-      } else {
-        return (RAND.nextInt(100) < balancedPreference) ? b : a;
-      }
-    } else {
-      return a == null ? b : a;
-    }
+  @VisibleForTesting
+  public int getBalancedPreference() {
+    return balancedPreference;
   }
 
-  /**
-   * Compare the two data nodes.
-   */
-  protected int compareDataNode(final DatanodeDescriptor a,
-      final DatanodeDescriptor b) {
-    if (a.equals(b)
-        || Math.abs(a.getDfsUsedPercent() - b.getDfsUsedPercent()) < balancedSpaceTolerance) {
-      return 0;
-    }
-    return a.getDfsUsedPercent() < b.getDfsUsedPercent() ? -1 : 1;
+  @VisibleForTesting
+  public int getBalancedSpaceToleranceLimit() {
+    return balancedSpaceToleranceLimit;
+  }
+
+  @VisibleForTesting
+  public int getBalancedSpaceTolerance() {
+    return balancedSpaceTolerance;
   }
 }

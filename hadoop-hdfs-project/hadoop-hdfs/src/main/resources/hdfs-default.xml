@@ -4354,6 +4354,8 @@
   <value>org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant</value>
   <description>
     Placement policy class for striped files.
+    There are two block placement policies currently being supported:
+    BlockPlacementPolicyRackFaultTolerant.class and AvailableSpaceRackFaultTolerantBlockPlacementPolicy.class.
     Defaults to BlockPlacementPolicyRackFaultTolerant.class
   </description>
 </property>
@@ -5312,6 +5314,25 @@
     Special value between 0 and 20, inclusive. if the value is set beyond the scope,
     this value will be set as 5 by default, Increases tolerance of
     placing blocks on Datanodes with similar disk space used.
+  </description>
+</property>
+<property>
+  <name>dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy.balanced-space-tolerance-limit</name>
+  <value>100</value>
+  <description>
+    Only used when the dfs.block.replicator.classname is set to
+    org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceRackFaultTolerantBlockPlacementPolicy.
+    Special value between 0 and 100, inclusive. if the value is set beyond the scope,
+    this value will be set as 100 by default.
+  </description>
+</property>
+<property>
+  <name>dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy.balance-local-node</name>
+  <value>false</value>
+  <description>
+    Only used when the dfs.block.replicator.classname is set to
+    org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceRackFaultTolerantBlockPlacementPolicy.
+    If true, balances the local node too.
   </description>
 </property>
 <property>
