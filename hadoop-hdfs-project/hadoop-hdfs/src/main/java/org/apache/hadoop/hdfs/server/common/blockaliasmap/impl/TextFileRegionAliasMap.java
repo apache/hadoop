@@ -369,10 +369,15 @@ public class TextFileRegionAliasMap
 
     public InputStream createStream() throws IOException {
       InputStream i = fs.open(file);
-      if (codec != null) {
-        i = codec.createInputStream(i);
+      try {
+        if (codec != null) {
+          i = codec.createInputStream(i);
+        }
+        return i;
+      } catch (IOException e) {
+        i.close();
+        throw e;
       }
-      return i;
     }
 
     @Override
