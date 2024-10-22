@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
@@ -160,6 +161,10 @@ class FSNamesystemLock {
     FSNamesystem.LOG.info("Detailed lock hold time metrics enabled: " +
         this.metricsEnabled);
     this.detailedHoldTimeMetrics = detailedHoldTimeMetrics;
+    if (metricsEnabled) {
+        Preconditions.checkArgument(detailedHoldTimeMetrics != null, 
+            "Detailed lock hold time metrics enabled, detailed hold time metric should not be null!");
+    }
   }
 
   public void readLock() {
