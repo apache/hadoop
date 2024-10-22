@@ -22,7 +22,6 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockType;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
@@ -81,7 +80,7 @@ public class BlockInfoStriped extends BlockInfo {
    * Otherwise it returns the number of data units specified by erasure coding policy.
    */
   public short getRealDataBlockNum() {
-    if (isComplete() || getBlockUCState() == BlockUCState.COMMITTED) {
+    if (isCompleteOrCommitted()) {
       return (short) Math.min(getDataBlockNum(),
           (getNumBytes() - 1) / ecPolicy.getCellSize() + 1);
     } else {

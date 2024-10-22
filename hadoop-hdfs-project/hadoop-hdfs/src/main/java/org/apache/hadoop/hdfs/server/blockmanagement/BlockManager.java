@@ -94,7 +94,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
@@ -1193,13 +1192,12 @@ public class BlockManager implements BlockStatsMXBean {
    * 
    * @param bc block collection
    * @param commitBlock - contains client reported block length and generation
-   * @param iip - INodes in path to bc
    * @return true if the last block is changed to committed state.
    * @throws IOException if the block does not have at least a minimal number
    * of replicas reported from data-nodes.
    */
   public boolean commitOrCompleteLastBlock(BlockCollection bc,
-      Block commitBlock, INodesInPath iip) throws IOException {
+      Block commitBlock) throws IOException {
     if(commitBlock == null)
       return false; // not committing, this is a block allocation retry
     BlockInfo lastBlock = bc.getLastBlock();
@@ -1231,13 +1229,13 @@ public class BlockManager implements BlockStatsMXBean {
       if (committed) {
         addExpectedReplicasToPending(lastBlock);
       }
-      completeBlock(lastBlock, iip, false);
+      completeBlock(lastBlock, false);
     } else if (pendingRecoveryBlocks.isUnderRecovery(lastBlock)) {
       // We've just finished recovery for this block, complete
       // the block forcibly disregarding number of replicas.
       // This is to ignore minReplication, the block will be closed
       // and then replicated out.
-      completeBlock(lastBlock, iip, true);
+      completeBlock(lastBlock, true);
       updateNeededReconstructions(lastBlock, 1, 0);
     }
     return committed;
@@ -1276,14 +1274,12 @@ public class BlockManager implements BlockStatsMXBean {
   /**
    * Convert a specified block of the file to a complete block.
    * @param curBlock - block to be completed
-   * @param iip - INodes in path to file containing curBlock; if null,
-   *              this will be resolved internally
    * @param force - force completion of the block
    * @throws IOException if the block does not have at least a minimal number
    * of replicas reported from data-nodes.
    */
-  private void completeBlock(BlockInfo curBlock, INodesInPath iip,
-      boolean force) throws IOException {
+  private void completeBlock(BlockInfo curBlock, boolean force)
+      throws IOException {
     if (curBlock.isComplete()) {
       return;
     }
@@ -1298,7 +1294,7 @@ public class BlockManager implements BlockStatsMXBean {
           "Cannot complete block: block has not been COMMITTED by the client");
     }
 
-    convertToCompleteBlock(curBlock, iip);
+    curBlock.convertToCompleteBlock();
 
     // Since safe-mode only counts complete blocks, and we now have
     // one more complete block, we need to adjust the total up, and
@@ -1314,22 +1310,6 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   /**
-   * Convert a specified block of the file to a complete block.
-   * Skips validity checking and safe mode block total updates; use
-   * {@link BlockManager#completeBlock} to include these.
-   * @param curBlock - block to be completed
-   * @param iip - INodes in path to file containing curBlock; if null,
-   *              this will be resolved internally
-   * @throws IOException if the block does not have at least a minimal number
-   * of replicas reported from data-nodes.
-   */
-  private void convertToCompleteBlock(BlockInfo curBlock, INodesInPath iip)
-      throws IOException {
-    curBlock.convertToCompleteBlock();
-    namesystem.getFSDirectory().updateSpaceForCompleteBlock(curBlock, iip);
-  }
-
-  /**
    * Force the given block in the given file to be marked as complete,
    * regardless of whether enough replicas are present. This is necessary
    * when tailing edit logs as a Standby.
@@ -1337,7 +1317,7 @@ public class BlockManager implements BlockStatsMXBean {
   public void forceCompleteBlock(final BlockInfo block) throws IOException {
     List<ReplicaUnderConstruction> staleReplicas = block.commitBlock(block);
     removeStaleReplicas(staleReplicas, block);
-    completeBlock(block, null, true);
+    completeBlock(block, true);
   }
 
   /**
@@ -1601,13 +1581,13 @@ public class BlockManager implements BlockStatsMXBean {
       createLocatedBlockList(locatedBlocks, blocks, offset, length, mode);
       if (!inSnapshot) {
         final BlockInfo last = blocks[blocks.length - 1];
-        final long lastPos = last.isComplete()?
-            fileSizeExcludeBlocksUnderConstruction - last.getNumBytes()
-            : fileSizeExcludeBlocksUnderConstruction;
+        final long lastPos = last.isUnderConstructionOrRecovery()?
+            fileSizeExcludeBlocksUnderConstruction
+            : fileSizeExcludeBlocksUnderConstruction - last.getNumBytes();
 
         locatedBlocks
-          .lastBlock(createLocatedBlock(locatedBlocks, last, lastPos, mode))
-          .lastComplete(last.isComplete());
+            .lastBlock(createLocatedBlock(locatedBlocks, last, lastPos, mode))
+            .lastComplete(!last.isUnderConstructionOrRecovery());
       } else {
         locatedBlocks
           .lastBlock(createLocatedBlock(locatedBlocks, blocks,
@@ -3740,7 +3720,7 @@ public class BlockManager implements BlockStatsMXBean {
     int numCurrentReplica = countLiveNodes(storedBlock);
     if (storedBlock.getBlockUCState() == BlockUCState.COMMITTED
         && hasMinStorage(storedBlock, numCurrentReplica)) {
-      completeBlock(storedBlock, null, false);
+      completeBlock(storedBlock, false);
     } else if (storedBlock.isComplete() && result == AddBlockResult.ADDED) {
       // check whether safe replication is reached for the block
       // only complete blocks are counted towards that.
@@ -3820,7 +3800,7 @@ public class BlockManager implements BlockStatsMXBean {
     if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
         hasMinStorage(storedBlock, numUsableReplicas)) {
       addExpectedReplicasToPending(storedBlock);
-      completeBlock(storedBlock, null, false);
+      completeBlock(storedBlock, false);
     } else if (storedBlock.isComplete() && result == AddBlockResult.ADDED) {
       // check whether safe replication is reached for the block
       // only complete blocks are counted towards that
