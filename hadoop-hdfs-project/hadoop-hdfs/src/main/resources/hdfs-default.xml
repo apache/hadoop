@@ -6625,4 +6625,11 @@
       Enables observer reads for clients. This should only be enabled when clients are using routers.
     </description>
   </property>
+  <property>
+    <name>dfs.datanode.read.blockid.counts.metric.enabled</name>
+    <value>false</value>
+    <description>
+      The datanode records the frequency switch for reading a certain block, defaults to false.
+    </description>
+  </property>
 </configuration>

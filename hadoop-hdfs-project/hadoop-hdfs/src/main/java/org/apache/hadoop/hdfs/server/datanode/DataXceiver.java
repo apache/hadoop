@@ -587,6 +587,7 @@ class DataXceiver extends Receiver implements Runnable {
     previousOpClientName = clientName;
     long read = 0;
     updateCurrentThreadName("Sending block " + block);
+    String blockId = Long.toString(block.getBlockId());
     OutputStream baseStream = getOutputStream();
     DataOutputStream out = getBufferedOutputStream();
     checkAccess(out, true, block, blockToken, Op.READ_BLOCK,
@@ -602,6 +603,7 @@ class DataXceiver extends Receiver implements Runnable {
         dnR + " Served block " + block + " to " + remoteAddress;
 
     try {
+      datanode.incrReadBlockIdCounts(blockId);
       try {
         blockSender = new BlockSender(block, blockOffset, length,
             true, false, sendChecksum, datanode, clientTraceFmt,
@@ -668,6 +670,7 @@ class DataXceiver extends Receiver implements Runnable {
       throw ioe;
     } finally {
       IOUtils.closeStream(blockSender);
+      datanode.decrReadBlockIdCounts(blockId);
     }
 
     //update metrics

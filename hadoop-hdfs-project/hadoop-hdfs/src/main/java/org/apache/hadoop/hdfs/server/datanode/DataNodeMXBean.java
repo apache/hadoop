@@ -164,4 +164,11 @@ public interface DataNodeMXBean {
    * @return Start time of the DataNode.
    */
   long getDNStartedTimeInMillis();
+
+  /**
+   * Gets the read BlockId counts on a per-Datanode basis.
+   *
+   * @return Map of read BlockId counts, e.g. {"1073741825":390,"1073741889":555}
+   */
+  Map<String, Long> getReadBlockIdCounts();
 }
