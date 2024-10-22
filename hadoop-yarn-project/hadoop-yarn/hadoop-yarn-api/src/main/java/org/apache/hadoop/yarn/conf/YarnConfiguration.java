@@ -248,7 +248,14 @@ public class YarnConfiguration extends Configuration {
   /** Number of threads used to launch/cleanup AM.*/
   public static final String RM_AMLAUNCHER_THREAD_COUNT =
       RM_PREFIX + "amlauncher.thread-count";
+
   public static final int DEFAULT_RM_AMLAUNCHER_THREAD_COUNT = 50;
+
+  /** Number of threads used to cleanup AM.*/
+  public static final String RM_AMCLEANUP_THREAD_COUNT =
+          RM_PREFIX + "amcleanup.thread-count";
+
+  public static final int DEFAULT_RM_AMCLEANUP_THREAD_COUNT = 50;
 
   /** Retry times to connect with NM.*/
   public static final String RM_NODEMANAGER_CONNECT_RETRIES =
