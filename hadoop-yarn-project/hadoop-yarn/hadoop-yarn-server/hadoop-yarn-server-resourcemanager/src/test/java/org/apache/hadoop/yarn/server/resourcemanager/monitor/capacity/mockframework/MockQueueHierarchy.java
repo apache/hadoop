@@ -212,6 +212,15 @@ class MockQueueHierarchy {
     LOG.debug("Parent=" + (parentQueue == null ? "null" : parentQueue
         .getQueuePath()));
 
+    Boolean isLeafQueue = !isParent(queueExprArray, idx);
+    if (isLeafQueue) {
+      LeafQueue lq = (LeafQueue) queue;
+      when(lq.getTotalPendingResourcesConsideringUserLimit(isA(Resource.class),
+          isA(String.class), eq(false))).thenReturn(Resources.none());
+      when(lq.getTotalPendingResourcesConsideringUserLimit(isA(Resource.class),
+          isA(String.class), eq(true))).thenReturn(Resources.none());
+    }
+
     // Setup other fields like used resource, guaranteed resource, etc.
     String capacitySettingStr = q.substring(q.indexOf("(") + 1, q.indexOf(")"));
     for (String s : capacitySettingStr.split(",")) {
@@ -238,8 +247,6 @@ class MockQueueHierarchy {
       qc.setAbsoluteMaximumCapacity(partitionName, absMax);
       qc.setAbsoluteUsedCapacity(partitionName, absUsed);
       qc.setUsedCapacity(partitionName, used);
-      qr.setEffectiveMaxResource(parseResourceFromString(values[1].trim()));
-      qr.setEffectiveMinResource(parseResourceFromString(values[0].trim()));
       qr.setEffectiveMaxResource(partitionName,
           parseResourceFromString(values[1].trim()));
       qr.setEffectiveMinResource(partitionName,
@@ -256,12 +263,12 @@ class MockQueueHierarchy {
         reserved = parseResourceFromString(values[4].trim());
         ru.setReserved(partitionName, reserved);
       }
-      if (!isParent(queueExprArray, idx)) {
+      if (isLeafQueue) {
         LeafQueue lq = (LeafQueue) queue;
         when(lq.getTotalPendingResourcesConsideringUserLimit(isA(Resource.class),
-            isA(String.class), eq(false))).thenReturn(pending);
+            eq(partitionName), eq(false))).thenReturn(pending);
         when(lq.getTotalPendingResourcesConsideringUserLimit(isA(Resource.class),
-            isA(String.class), eq(true))).thenReturn(
+            eq(partitionName), eq(true))).thenReturn(
             Resources.subtract(pending, reserved));
       }
       ru.setUsed(partitionName, parseResourceFromString(values[2].trim()));

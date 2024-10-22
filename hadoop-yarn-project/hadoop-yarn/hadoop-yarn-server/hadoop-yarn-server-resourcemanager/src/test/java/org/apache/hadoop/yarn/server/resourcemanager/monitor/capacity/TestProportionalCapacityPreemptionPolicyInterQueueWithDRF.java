@@ -247,4 +247,58 @@ public class TestProportionalCapacityPreemptionPolicyInterQueueWithDRF
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
+
+  @Test
+  public void testResourceTypesInterQueuePreemptionWithThreePartitions() throws IOException {
+    /*
+     *            root
+     *           /  \  \
+     *        batch  a  b
+     *
+     *  Each of batch, a, b have 100:100 resources
+     *  All partitions are non-exclusive.
+     *  Total cluster resource have 300:300
+     *  app1 on batch uses mem=100, cpu=100 from batch, mem=50, cpu=50 from a, mem=50, cpu=50 from b
+     *  app2 on a uses mem=50, cpu=50 from a and requests mem=50, cpu=50 more from a
+     *  app3 on a uses mem=50, cpu=50 from b and requests mem=50, cpu=50 more from b
+     *
+     *  We expect it can preempt from app1 successfully
+     */
+    String labelsConfig = "=100:100,false;" + // default partition (100, non-exclusive)
+        "x=100:100,false;" + // x partition (100, non-exclusive)
+        "y=100:100,false;"; // y partition (100, non-exclusive)
+    String nodesConfig = "n1= res=50:50;n2= res=50:50;" + // n1~n2 are default partition
+        "x1=x res=50:50;x2=x res=50:50;" + // x1~x2 are x partition
+        "y1=y res=50:50;y2=y res=50:50;"; // y1~y2 are y partition
+    String queuesConfig =
+        // guaranteed,max,used,pending
+        "root(=[100:100 100:100 100:100 0:0],x=[100:100 100:100 100:100 50:50]," +
+            "y=[100:100 100:100 100:100 50:50]);" + //root
+            "-batch(=[100:100 100:100 100:100 0:0],x=[0:0 0:0 50:50 0:0],y=[0:0 0:0 50:50 0:0]);" + // batch queue
+            "-a(=[0:0 0:0 0:0 0:0],x=[100:100 100:100 50:50 50:50],y=[0:0 0:0 0:0 0:0]);" + // x queue
+            "-b(=[0:0 0:0 0:0 0:0],x=[0:0 0:0 0:0 0:0],y=[100:100 100:100 50:50 50:50]);";  // y queue
+    String appsConfig =
+        //queueName\t(priority,resource,host,expression,#repeat,reserved)
+        "batch\t" + // app1 in batch
+            "(1,50:50,n1,,1,false)(1,50:50,n2,,1,false)" + // 100 * default in n1~n2
+            "(1,50:50,x1,,1,false)" + // 50 * x in x1
+            "(1,50:50,y1,,1,false);" + // 50 * y in y1
+            "a\t" + // app2 in x
+            "(1,50:50,x2,x,1,false);" + // 50 * x in x2
+            "b\t" + // app3 in y
+            "(1,50:50,y2,y,1,false);";  // 50 * y in y2
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
+    policy.editSchedule();
+
+    verify(eventHandler, times(2)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(1))));
+    verify(eventHandler, times(0)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(2))));
+    verify(eventHandler, times(0)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(3))));
+  }
 }
