@@ -1246,23 +1246,8 @@ public class Dispatcher {
     assert concurrentThreads > 0 : "Number of concurrent threads is 0.";
     LOG.info("Balancer concurrent dispatcher threads = {}", concurrentThreads);
 
-    // Determine the size of each mover thread pool per target
-    int threadsPerTarget = maxMoverThreads/targets.size();
-    if (threadsPerTarget == 0) {
-      // Some scheduled moves will get ignored as some targets won't have
-      // any threads allocated.
-      moverThreadAllocator.setLotSize(1);
-      LOG.warn(DFSConfigKeys.DFS_BALANCER_MOVERTHREADS_KEY + "=" +
-          maxMoverThreads + " is too small for moving blocks to " +
-          targets.size() + " targets. Balancing may be slower.");
-    } else {
-      if  (threadsPerTarget > maxConcurrentMovesPerNode) {
-        threadsPerTarget = maxConcurrentMovesPerNode;
-        LOG.info("Limiting threads per target to the specified max.");
-      }
-      moverThreadAllocator.setLotSize(threadsPerTarget);
-      LOG.info("Allocating " + threadsPerTarget + " threads per target.");
-    }
+    // set threads per target
+    setAllocatorLotSize(targets.size());
 
     final Iterator<Source> i = sources.iterator();
     for (int j = 0; j < futures.length; j++) {
@@ -1291,6 +1276,25 @@ public class Dispatcher {
         (getBlocksMoved() - blocksLastMoved));
 
     return getBytesMoved() - bytesLastMoved;
+  }
+
+  public void setAllocatorLotSize(int targetNum) {
+    // Determine the size of each mover thread pool per target
+    int threadsPerTarget = maxMoverThreads / targetNum;
+    if (threadsPerTarget == 0) {
+      // Some scheduled moves will get ignored as some targets won't have
+      // any threads allocated.
+      moverThreadAllocator.setLotSize(1);
+      LOG.warn("maxMoverThreads = {} is too small for moving blocks to {} targets."
+          + " May be slower.", maxMoverThreads, targetNum);
+    } else {
+      if (threadsPerTarget > maxConcurrentMovesPerNode) {
+        threadsPerTarget = maxConcurrentMovesPerNode;
+        LOG.info("Limiting threads per target to the specified max.");
+      }
+      moverThreadAllocator.setLotSize(threadsPerTarget);
+      LOG.info("Allocating " + threadsPerTarget + " threads per target.");
+    }
   }
 
   /**
