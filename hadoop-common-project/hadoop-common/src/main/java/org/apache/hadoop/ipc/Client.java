@@ -372,6 +372,7 @@ public class Client implements AutoCloseable {
     private Socket socket = null;                 // connected socket
     private IpcStreams ipcStreams;
     private final int maxResponseLength;
+    private final long maxStackedCallNumber;
     private final int rpcTimeout;
     private int maxIdleTime; //connections will be culled if it was idle for 
     //maxIdleTime msecs
@@ -409,6 +410,17 @@ public class Client implements AutoCloseable {
       this.maxResponseLength = remoteId.conf.getInt(
           CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH,
           CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH_DEFAULT);
+      long tmpMaxStackedCallNumber = remoteId.conf.getLong(
+          CommonConfigurationKeys.IPC_CONNECTION_MAXIMUM_STACKED_CALL,
+          CommonConfigurationKeys.IPC_CONNECTION_MAXIMUM_STACKED_CALL_DEFAULT);
+      if (tmpMaxStackedCallNumber < 0) {
+        LOG.warn("Invalid value {} configured for {} should be greater than or equal to 0. " +
+                "Using default value of : {} instead.", tmpMaxStackedCallNumber,
+            CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH,
+            CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH_DEFAULT);
+        tmpMaxStackedCallNumber = 0;
+      }
+      this.maxStackedCallNumber = tmpMaxStackedCallNumber;
       this.rpcTimeout = remoteId.getRpcTimeout();
       this.maxIdleTime = remoteId.getMaxIdleTime();
       this.connectionRetryPolicy = remoteId.connectionRetryPolicy;
@@ -473,9 +485,14 @@ public class Client implements AutoCloseable {
      * @param call to add
      * @return true if the call was added.
      */
-    private synchronized boolean addCall(Call call) {
-      if (shouldCloseConnection.get())
+    private synchronized boolean addCall(Call call) throws IOException {
+      if (shouldCloseConnection.get()) {
         return false;
+      }
+      if (this.maxStackedCallNumber > 0 && calls.size() >= this.maxStackedCallNumber) {
+        throw new IOException("Reject this request " + call.id + " due to stacked call number "
+            + calls.size() + " is more than " + this.maxStackedCallNumber);
+      }
       calls.put(call.id, call);
       notify();
       return true;
