@@ -79,6 +79,7 @@ class CosNativeFileSystemStore implements NativeFileSystemStore {
   private COSClient cosClient;
   private String bucketName;
   private int maxRetryTimes;
+  private volatile boolean clientClosed = false;
 
   public static final Logger LOG =
       LoggerFactory.getLogger(CosNativeFileSystemStore.class);
@@ -765,8 +766,16 @@ class CosNativeFileSystemStore implements NativeFileSystemStore {
 
   @Override
   public void close() {
-    if (null != this.cosClient) {
-      this.cosClient.shutdown();
+    if(!clientClosed){
+      clientClosed = true;
+      if (null != this.cosClient) {
+        this.cosClient.shutdown();
+      }
     }
+  }
+
+  @Override
+  public boolean isClosed() {
+    return clientClosed;
   }
 }

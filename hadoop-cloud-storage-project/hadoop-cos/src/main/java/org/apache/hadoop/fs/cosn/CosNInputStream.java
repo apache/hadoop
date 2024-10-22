@@ -271,6 +271,7 @@ public class CosNInputStream extends FSInputStream {
 
   @Override
   public int read() throws IOException {
+    checkClientClose();
     if (this.closed) {
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
@@ -297,6 +298,7 @@ public class CosNInputStream extends FSInputStream {
 
   @Override
   public int read(byte[] b, int off, int len) throws IOException {
+    checkClientClose();
     if (this.closed) {
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
@@ -343,6 +345,7 @@ public class CosNInputStream extends FSInputStream {
 
   @Override
   public int available() throws IOException {
+    checkClientClose();
     if (this.closed) {
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
@@ -361,5 +364,11 @@ public class CosNInputStream extends FSInputStream {
     }
     this.closed = true;
     this.buffer = null;
+  }
+
+  private void checkClientClose() throws IOException {
+    if (store.isClosed()) {
+      throw new IOException(FSExceptionMessages.FILESYSTEM_IS_CLOSED);
+    }
   }
 }
