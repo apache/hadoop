@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -106,5 +107,16 @@ public class ITestS3ACopyFromLocalFile extends
 
     intercept(IllegalArgumentException.class,
         () -> getFileSystem().copyFromLocalFile(true, true, dest, dest));
+  }
+
+  @Test
+  public void testCopyFromLocalWithNoFileScheme() throws IOException {
+    describe("Copying from local file with no file scheme to remote s3 destination");
+    File source = createTempFile("tempData");
+    Path dest = path(getMethodName());
+
+    Path sourcePathWithOutScheme = new Path(source.toURI().getPath());
+    assertNull(sourcePathWithOutScheme.toUri().getScheme());
+    getFileSystem().copyFromLocalFile(true, true, sourcePathWithOutScheme, dest);
   }
 }
