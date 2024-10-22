@@ -343,8 +343,29 @@ public class TestCgroupsLCEResourcesHandler {
     Assert.assertEquals(500 * 1000, readIntFromFile(periodFile));
     Assert.assertEquals(1000 * 1000, readIntFromFile(quotaFile));
 
+    // 1/8 of CPU with multiplier set at 2
+    FileUtils.deleteQuietly(containerCpuDir);
+    conf.setBoolean(
+            YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE,
+        true);
+    conf.setFloat(
+            YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_CAPPED_MULTIPLIER,
+            2.0f);
+    handler.initConfig();
+    handler.preExecute(id,
+            Resource.newInstance(1024, YarnConfiguration.DEFAULT_NM_VCORES / 8));
+    Assert.assertTrue(containerCpuDir.exists());
+    Assert.assertTrue(containerCpuDir.isDirectory());
+    periodFile = new File(containerCpuDir, "cpu.cfs_period_us");
+    quotaFile = new File(containerCpuDir, "cpu.cfs_quota_us");
+    Assert.assertTrue(periodFile.exists());
+    Assert.assertTrue(quotaFile.exists());
+    Assert.assertEquals(1000 * 1000, readIntFromFile(periodFile));
+    Assert.assertEquals(1000 * 1000, readIntFromFile(quotaFile));
+
     // CGroups set to 50% of CPU, container set to 50% of YARN CPU
     FileUtils.deleteQuietly(containerCpuDir);
+    conf.unset(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_CAPPED_MULTIPLIER);
     conf.setBoolean(
         YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE,
         true);

@@ -2769,6 +2769,15 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE =
       false;
 
+  /**
+   * In case of strict resource usage provide capability to capped cpu resource
+   * usage by <code>DEFAULT_NM_LINUX_CONTAINER_CGROUPS_CAPPED_MULTIPLIER</code>
+   * times the requested one
+   */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_CAPPED_MULTIPLIER =
+      NM_PREFIX + "linux-container-executor.cgroups.capped-multiplier";
+  public static final float DEFAULT_NM_LINUX_CONTAINER_CGROUPS_CAPPED_MULTIPLIER =
+      1.0f;
 
   // Configurations for applicaiton life time monitor feature
   public static final String RM_APPLICATION_MONITOR_INTERVAL_MS =

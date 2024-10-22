@@ -96,6 +96,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
 
   private float yarnProcessors;
   private int nodeVCores;
+  private float cappedMultiplier;
 
   public CgroupsLCEResourcesHandler() {
     this.controllerPaths = new HashMap<String, String>();
@@ -136,13 +137,16 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
                 .NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE,
             YarnConfiguration
                 .DEFAULT_NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE);
+    this.cappedMultiplier = conf.getFloat(
+        YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_CAPPED_MULTIPLIER,
+        YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_CAPPED_MULTIPLIER);
 
     int len = cgroupPrefix.length();
     if (cgroupPrefix.charAt(len - 1) == '/') {
       cgroupPrefix = cgroupPrefix.substring(0, len - 1);
     }
   }
-  
+
   public void init(LinuxContainerExecutor lce) throws IOException {
     this.init(lce,
         ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, conf));
@@ -332,8 +336,8 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
           String.valueOf(cpuShares));
       if (strictResourceUsageMode) {
         if (nodeVCores != containerVCores) {
-          float containerCPU =
-              (containerVCores * yarnProcessors) / (float) nodeVCores;
+          float containerVCoresCapped = Math.min(containerVCores * cappedMultiplier, nodeVCores);
+          float containerCPU = (containerVCoresCapped * yarnProcessors) / (float) nodeVCores;
           int[] limits = getOverallLimits(containerCPU);
           updateCgroup(CONTROLLER_CPU, containerName, CPU_PERIOD_US,
               String.valueOf(limits[0]));
