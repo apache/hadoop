@@ -169,9 +169,19 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_initIDs
                       "EVP_CIPHER_CTX_set_padding");
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_test_flags, env, openssl,  \
                       "EVP_CIPHER_CTX_test_flags");
+// name changed in OpenSSL 3 ABI - see History section in EVP_EncryptInit(3)
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_block_size, env, openssl,  \
+                      "EVP_CIPHER_CTX_get_block_size");
+#else
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_block_size, env, openssl,  \
                       "EVP_CIPHER_CTX_block_size");
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#endif
+// name changed in OpenSSL 3 ABI - see History section in EVP_EncryptInit(3)
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_encrypting, env, openssl,  \
+                      "EVP_CIPHER_CTX_is_encrypting");
+#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_encrypting, env, openssl,  \
                       "EVP_CIPHER_CTX_encrypting");
 #endif
@@ -207,10 +217,22 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_initIDs
   LOAD_DYNAMIC_SYMBOL(__dlsym_EVP_CIPHER_CTX_test_flags,  \
                       dlsym_EVP_CIPHER_CTX_test_flags, env,  \
                       openssl, "EVP_CIPHER_CTX_test_flags");
+// name changed in OpenSSL 3 ABI - see History section in EVP_EncryptInit(3)
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  LOAD_DYNAMIC_SYMBOL(__dlsym_EVP_CIPHER_CTX_block_size,  \
+                      dlsym_EVP_CIPHER_CTX_block_size, env,  \
+                      openssl, "EVP_CIPHER_CTX_get_block_size");
+#else
   LOAD_DYNAMIC_SYMBOL(__dlsym_EVP_CIPHER_CTX_block_size,  \
                       dlsym_EVP_CIPHER_CTX_block_size, env,  \
                       openssl, "EVP_CIPHER_CTX_block_size");
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#endif
+// name changed in OpenSSL 3 ABI - see History section in EVP_EncryptInit(3)
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  LOAD_DYNAMIC_SYMBOL(__dlsym_EVP_CIPHER_CTX_encrypting,  \
+                      dlsym_EVP_CIPHER_CTX_encrypting, env,  \
+                      openssl, "EVP_CIPHER_CTX_is_encrypting");
+#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
   LOAD_DYNAMIC_SYMBOL(__dlsym_EVP_CIPHER_CTX_encrypting,  \
                       dlsym_EVP_CIPHER_CTX_encrypting, env,  \
                       openssl, "EVP_CIPHER_CTX_encrypting");
