@@ -640,6 +640,10 @@ public class JavaKeyStoreProvider extends KeyProvider {
   private void renameOrFail(Path src, Path dest)
       throws IOException {
     if (!fs.rename(src, dest)) {
+      if (!fs.exists(src)) {
+        throw new FileNotFoundException(src.toUri().toString());
+      }
+
       throw new IOException("Rename unsuccessful : "
           + String.format("'%s' to '%s'", src, dest));
     }
