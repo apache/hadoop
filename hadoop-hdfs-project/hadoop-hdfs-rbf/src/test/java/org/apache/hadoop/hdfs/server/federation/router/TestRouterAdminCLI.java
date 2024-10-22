@@ -469,10 +469,11 @@ public class TestRouterAdminCLI {
     // remove an invalid mount table
     String invalidPath = "/invalid";
     System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
     argv = new String[] {"-rm", invalidPath};
-    assertEquals(0, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains(
-        "Cannot remove mount point " + invalidPath));
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertEquals("DFS Router Admin should report error for failure to remove mount point",
+        "Cannot remove mount point " + invalidPath + "\n", err.toString());
   }
 
   @Test
@@ -762,8 +763,11 @@ public class TestRouterAdminCLI {
     // add new mount table with only write permission
     argv = new String[] {"-add", "/testpath2-2", "ns0", "/testdir2-2",
         "-owner", TEST_USER, "-group", TEST_USER, "-mode", "0255"};
+    System.setErr(new PrintStream(err));
     assertEquals(0, ToolRunner.run(admin, argv));
     verifyExecutionResult("/testpath2-2", false, -1, 0);
+    assertEquals("DFS Router Admin should report error for failure to add mount point",
+        "Cannot add mount point /testpath2-2\n", err.toString());
 
     // set mount table entry with read and write permission
     argv = new String[] {"-add", "/testpath2-3", "ns0", "/testdir2-3",
