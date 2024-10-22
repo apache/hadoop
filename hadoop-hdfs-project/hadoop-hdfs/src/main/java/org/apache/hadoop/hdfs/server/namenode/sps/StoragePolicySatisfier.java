@@ -402,7 +402,7 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
         }
       } else {
         expectedStorageTypes = existingStoragePolicy
-            .chooseStorageTypes(fileInfo.getReplication());
+            .chooseStorageTypes((short) blockInfo.getLocations().length);
       }
 
       List<StorageType> existing = new LinkedList<StorageType>(
