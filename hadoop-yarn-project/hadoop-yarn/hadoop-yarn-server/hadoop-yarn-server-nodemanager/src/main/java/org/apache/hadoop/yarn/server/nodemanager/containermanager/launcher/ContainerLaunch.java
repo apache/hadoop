@@ -1375,11 +1375,11 @@ public class ContainerLaunch implements Callable<Integer> {
       // find will follow symlinks outside the work dir if such sylimks exist
       // (like public/app local resources)
       line("echo \"find -L . -maxdepth 5 -ls:\" 1>>\"", output.toString(),
-          "\"");
-      line("find -L . -maxdepth 5 -ls 1>>\"", output.toString(), "\"");
+          "\" || :");
+      line("find -L . -maxdepth 5 -ls 1>>\"", output.toString(), "\" || :");
       line("echo \"broken symlinks(find -L . -maxdepth 5 -type l -ls):\" 1>>\"",
-          output.toString(), "\"");
-      line("find -L . -maxdepth 5 -type l -ls 1>>\"", output.toString(), "\"");
+          output.toString(), "\" || :");
+      line("find -L . -maxdepth 5 -type l -ls 1>>\"", output.toString(), "\" || :");
     }
 
     @Override
