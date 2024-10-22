@@ -268,11 +268,11 @@ public class LoggedTask implements DeepCompare {
       String counterName) {
     counterName = canonicalizeCounterName(counterName);
 
-    for (JhCounterGroup group : counters.groups) {
-      for (JhCounter counter : group.counts) {
+    for (JhCounterGroup group : counters.getGroups()) {
+      for (JhCounter counter : group.getCounts()) {
         if (counterName
-            .equals(canonicalizeCounterName(counter.name.toString()))) {
-          thunk.set(counter.value);
+            .equals(canonicalizeCounterName(counter.getName().toString()))) {
+          thunk.set(counter.getValue());
           return;
         }
       }
