@@ -199,9 +199,10 @@ public class DecompressorStream extends CompressionInputStream {
     checkStream();
 
     // Read 'n' bytes
-    int skipped = 0;
+    long skipped = 0;
     while (skipped < n) {
-      int len = Math.min(((int)n - skipped), skipBytes.length);
+      // len is between 0 and skipBytes.length, so downcast is safe
+      int len = (int)Math.min((n - skipped), skipBytes.length);
       len = read(skipBytes, 0, len);
       if (len == -1) {
         eof = true;
