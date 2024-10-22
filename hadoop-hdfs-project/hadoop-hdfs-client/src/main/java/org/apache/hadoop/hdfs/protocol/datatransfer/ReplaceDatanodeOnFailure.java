@@ -34,7 +34,7 @@ public class ReplaceDatanodeOnFailure {
    * DEFAULT condition:
    *   Let r be the replication number.
    *   Let n be the number of existing datanodes.
-   *   Add a new datanode only if r >= 3 and either
+   *   Add a new datanode only if r >= 2 and either
    *   (1) floor(r/2) >= n or (2) the block is hflushed/appended.
    */
   private static final Condition CONDITION_DEFAULT = new Condition() {
@@ -42,7 +42,7 @@ public class ReplaceDatanodeOnFailure {
     public boolean satisfy(final short replication,
         final DatanodeInfo[] existings, final int n, final boolean isAppend,
         final boolean isHflushed) {
-      return replication >= 3 &&
+      return replication >= 2 &&
           (n <= (replication / 2) || isAppend || isHflushed);
     }
   };
