@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.erasurecode;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +37,8 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_THREADS_KEY;
 
 /**
  * ErasureCodingWorker handles the erasure coding reconstruction work commands.
@@ -171,5 +174,20 @@ public final class ErasureCodingWorker {
 
   public float getXmitWeight() {
     return xmitWeight;
+  }
+
+  public void setStripedReconstructionPoolSize(int size) {
+    Preconditions.checkArgument(size > 0,
+        DFS_DN_EC_RECONSTRUCTION_THREADS_KEY + " should be greater than 0");
+    this.stripedReconstructionPool.setCorePoolSize(size);
+    this.stripedReconstructionPool.setMaximumPoolSize(size);
+  }
+
+  @VisibleForTesting
+  public int getStripedReconstructionPoolSize() {
+    int poolSize = this.stripedReconstructionPool.getCorePoolSize();
+    Preconditions.checkArgument(poolSize == this.stripedReconstructionPool.getMaximumPoolSize(),
+        "The maximum pool size should be equal to core pool size");
+    return poolSize;
   }
 }
