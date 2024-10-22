@@ -30,11 +30,12 @@ import org.apache.hadoop.mapred.nativetask.testutil.ResultVerifier;
 import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
 import org.apache.hadoop.mapreduce.Job;
-import org.junit.AfterClass;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,14 +45,14 @@ public class LargeKVCombinerTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(LargeKVCombinerTest.class);
 
-  @Before
+  @BeforeEach
   public void startUp() throws Exception {
-    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
-    Assume.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
+    Assumptions.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    Assumptions.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
   }
 
   @Test
-  public void testLargeValueCombiner() throws Exception {
+  void testLargeValueCombiner() throws Exception {
     final Configuration normalConf = ScenarioConfiguration.getNormalConfiguration();
     final Configuration nativeConf = ScenarioConfiguration.getNativeConfiguration();
     normalConf.addResource(TestConstants.COMBINER_CONF_PATH);
@@ -61,9 +62,9 @@ public class LargeKVCombinerTest {
         deafult_KVSize_Maximum);
     final String inputPath = TestConstants.NATIVETASK_COMBINER_TEST_INPUTDIR + "/largeKV";
     final String nativeOutputPath = TestConstants.NATIVETASK_COMBINER_TEST_NATIVE_OUTPUTDIR
-      + "/nativeLargeKV";
+        + "/nativeLargeKV";
     final String hadoopOutputPath = TestConstants.NATIVETASK_COMBINER_TEST_NORMAL_OUTPUTDIR
-      + "/normalLargeKV";
+        + "/normalLargeKV";
     final FileSystem fs = FileSystem.get(normalConf);
     for (int i = 65536; i <= KVSize_Maximum; i *= 4) {
 
@@ -78,13 +79,13 @@ public class LargeKVCombinerTest {
       nativeConf.set(TestConstants.NATIVETASK_KVSIZE_MAX, String.valueOf(max));
       fs.delete(new Path(inputPath), true);
       new TestInputFile(normalConf.getInt(TestConstants.NATIVETASK_COMBINER_WORDCOUNT_FILESIZE,
-        1000000), IntWritable.class.getName(),
-        Text.class.getName(), normalConf).createSequenceTestFile(inputPath, 1);
+              1000000), IntWritable.class.getName(),
+          Text.class.getName(), normalConf).createSequenceTestFile(inputPath, 1);
 
       final Job normaljob = CombinerTest.getJob("normalwordcount", normalConf,
-                                                inputPath, hadoopOutputPath);
+          inputPath, hadoopOutputPath);
       final Job nativejob = CombinerTest.getJob("nativewordcount", nativeConf,
-                                                inputPath, nativeOutputPath);
+          inputPath, nativeOutputPath);
 
       assertThat(nativejob.waitForCompletion(true)).isTrue();
 
@@ -93,8 +94,8 @@ public class LargeKVCombinerTest {
       final boolean compareRet = ResultVerifier.verify(nativeOutputPath, hadoopOutputPath);
 
       final String reason = "LargeKVCombinerTest failed with, min size: " + min +
-        ", max size: " + max + ", normal out: " + hadoopOutputPath +
-        ", native Out: " + nativeOutputPath;
+          ", max size: " + max + ", normal out: " + hadoopOutputPath +
+          ", native Out: " + nativeOutputPath;
 
       assertThat(compareRet).withFailMessage(reason).isTrue();
       ResultVerifier.verifyCounters(normaljob, nativejob, true);
@@ -102,7 +103,7 @@ public class LargeKVCombinerTest {
     fs.close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanUp() throws IOException {
     final FileSystem fs = FileSystem.get(new ScenarioConfiguration());
     fs.delete(new Path(TestConstants.NATIVETASK_COMBINER_TEST_DIR), true);

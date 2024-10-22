@@ -17,19 +17,22 @@
  */
 package org.apache.hadoop.mapred.nativetask.utils;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.nativetask.util.SizedWritable;
-import org.junit.Assert;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class TestSizedWritable {
 
   @Test
-  public void testSizedWritable() {
+  void testSizedWritable() {
     final SizedWritable w = new SizedWritable(BytesWritable.class);
-    Assert.assertTrue(w.length == SizedWritable.INVALID_LENGTH);
-    Assert.assertFalse(w.v == null);
+    assertTrue(w.length == SizedWritable.INVALID_LENGTH);
+    assertFalse(w.v == null);
   }
 }

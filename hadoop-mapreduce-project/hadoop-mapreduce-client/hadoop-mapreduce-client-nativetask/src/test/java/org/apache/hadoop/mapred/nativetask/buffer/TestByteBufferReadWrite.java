@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.mapred.nativetask.NativeDataTarget;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.mockito.Mockito;
 
@@ -32,15 +32,15 @@ import static org.assertj.core.api.Assertions.offset;
 
 public class TestByteBufferReadWrite {
   @Test
-  public void testReadWrite() throws IOException {
+  void testReadWrite() throws IOException {
     byte[] buff = new byte[10000];
 
     InputBuffer input = new InputBuffer(buff);
     MockDataTarget target = new MockDataTarget(buff);
     ByteBufferDataWriter writer = new ByteBufferDataWriter(target);
-    
+
     writer.write(1);
-    writer.write(new byte[] {2, 2}, 0, 2);
+    writer.write(new byte[]{2, 2}, 0, 2);
     writer.writeBoolean(true);
     writer.writeByte(4);
     writer.writeShort(5);
@@ -56,14 +56,14 @@ public class TestByteBufferReadWrite {
     int length = target.getOutputBuffer().length();
     input.rewind(0, length);
     ByteBufferDataReader reader = new ByteBufferDataReader(input);
-    
+
     assertThat(reader.read()).isOne();
     byte[] two = new byte[2];
     reader.read(two);
     assertThat(two[0]).isEqualTo(two[1]);
     assertThat(two[0]).isEqualTo((byte) 2);
-    
-    
+
+
     assertThat(reader.readBoolean()).isTrue();
     assertThat(reader.readByte()).isEqualTo((byte) 4);
     assertThat(reader.readShort()).isEqualTo((short) 5);
@@ -72,16 +72,16 @@ public class TestByteBufferReadWrite {
     assertThat(reader.readLong()).isEqualTo(8);
     assertThat(reader.readFloat()).isEqualTo(9f, offset(0.0001f));
     assertThat(reader.readDouble()).isEqualTo(10, offset(0.0001));
-    
+
     byte[] goodboy = new byte["goodboy".length()];
     reader.read(goodboy);
     assertThat(toString(goodboy)).isEqualTo("goodboy");
-    
+
     char[] hello = new char["hello".length()];
     for (int i = 0; i < hello.length; i++) {
       hello[i] = reader.readChar();
     }
-    
+
     String helloString = new String(hello);
     assertThat(helloString).isEqualTo("hello");
     assertThat(reader.readUTF()).isEqualTo("native task");
@@ -93,7 +93,7 @@ public class TestByteBufferReadWrite {
    * such as this cat face, are properly encoded.
    */
   @Test
-  public void testCatFace() throws IOException {
+  void testCatFace() throws IOException {
     byte[] buff = new byte[10];
     MockDataTarget target = new MockDataTarget(buff);
     ByteBufferDataWriter writer = new ByteBufferDataWriter(target);
@@ -112,28 +112,28 @@ public class TestByteBufferReadWrite {
   }
 
   @Test
-  public void testShortOfSpace() throws IOException {
+  void testShortOfSpace() throws IOException {
     byte[] buff = new byte[10];
     MockDataTarget target = new MockDataTarget(buff);
     ByteBufferDataWriter writer = new ByteBufferDataWriter(target);
     assertThat(writer.hasUnFlushedData()).isFalse();
-    
+
     writer.write(1);
-    writer.write(new byte[] {2, 2}, 0, 2);
+    writer.write(new byte[]{2, 2}, 0, 2);
     assertThat(writer.hasUnFlushedData()).isTrue();
-    
+
     assertThat(writer.shortOfSpace(100)).isTrue();
   }
 
 
   @Test
-  public void testFlush() throws IOException {
+  void testFlush() throws IOException {
     byte[] buff = new byte[10];
     MockDataTarget target = Mockito.spy(new MockDataTarget(buff));
 
     ByteBufferDataWriter writer = new ByteBufferDataWriter(target);
     assertThat(writer.hasUnFlushedData()).isFalse();
-    
+
     writer.write(1);
     writer.write(new byte[100]);
 

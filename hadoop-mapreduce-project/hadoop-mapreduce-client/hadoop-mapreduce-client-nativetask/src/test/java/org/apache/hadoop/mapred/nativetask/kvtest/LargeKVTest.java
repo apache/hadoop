@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.mapred.nativetask.kvtest;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -31,21 +31,22 @@ import org.apache.hadoop.mapred.nativetask.NativeRuntime;
 import org.apache.hadoop.mapred.nativetask.testutil.ResultVerifier;
 import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
-import org.junit.AfterClass;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class LargeKVTest {
   private static final Logger LOG = LoggerFactory.getLogger(LargeKVTest.class);
 
-  @Before
+  @BeforeEach
   public void startUp() throws Exception {
-    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
-    Assume.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
+    Assumptions.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    Assumptions.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
   }
 
   private static Configuration nativeConf = ScenarioConfiguration.getNativeConfiguration();
@@ -58,16 +59,16 @@ public class LargeKVTest {
   }
 
   @Test
-  public void testKeySize() throws Exception {
+  void testKeySize() throws Exception {
     runKVSizeTests(Text.class, IntWritable.class);
   }
 
   @Test
-  public void testValueSize() throws Exception {
+  void testValueSize() throws Exception {
     runKVSizeTests(IntWritable.class, Text.class);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanUp() throws IOException {
     final FileSystem fs = FileSystem.get(new ScenarioConfiguration());
     fs.delete(new Path(TestConstants.NATIVETASK_KVTEST_DIR), true);
@@ -106,7 +107,7 @@ public class LargeKVTest {
       final KVJob nativeJob = new KVJob("Test Large Value Size:"
           + String.valueOf(i), nativeConf, keyClass, valueClass, inputPath,
           nativeOutputPath);
-      assertTrue("job should complete successfully", nativeJob.runJob());
+      assertTrue(nativeJob.runJob(), "job should complete successfully");
 
       final String normalOutputPath = TestConstants.NATIVETASK_KVTEST_NORMAL_OUTPUTDIR
           + "/LargeKV/" + keyClass.getName() + "/" + valueClass.getName();
@@ -114,7 +115,7 @@ public class LargeKVTest {
       fs.delete(new Path(normalOutputPath), true);
       final KVJob normalJob = new KVJob("Test Large Key Size:" + String.valueOf(i),
           normalConf, keyClass, valueClass, inputPath, normalOutputPath);
-      assertTrue("job should complete successfully", normalJob.runJob());
+      assertTrue(normalJob.runJob(), "job should complete successfully");
 
       final boolean compareRet = ResultVerifier.verify(normalOutputPath,
           nativeOutputPath);
@@ -123,7 +124,7 @@ public class LargeKVTest {
           + (keyClass.equals(Text.class) ? "key" : "value") + ", min size: " + min
           + ", max size: " + max + ", normal out: " + normalOutputPath
           + ", native Out: " + nativeOutputPath;
-      assertEquals(reason, true, compareRet);
+      assertEquals(true, compareRet, reason);
       ResultVerifier.verifyCounters(normalJob.job, nativeJob.job);
     }
     fs.close();

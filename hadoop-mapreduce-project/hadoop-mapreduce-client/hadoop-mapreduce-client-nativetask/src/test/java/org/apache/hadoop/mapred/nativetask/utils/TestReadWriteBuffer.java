@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapred.nativetask.utils;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
 
@@ -28,7 +28,7 @@ public class TestReadWriteBuffer {
   private static byte[] bytes = new byte[] { '0', 'a', 'b', 'c', 'd', '9' };
 
   @Test
-  public void testReadWriteBuffer() {
+  void testReadWriteBuffer() {
 
     final ReadWriteBuffer buffer = new ReadWriteBuffer();
 

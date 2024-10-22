@@ -22,30 +22,32 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 
-import org.junit.Test;
-import org.junit.Assert;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestTaskContext {
 
   @Test
-  public void testTaskContext() {
+  void testTaskContext() {
     TaskContext context = new TaskContext(null, null, null, null, null, null,
         null);
-    
+
     context.setInputKeyClass(IntWritable.class);
-    Assert.assertEquals(IntWritable.class.getName(), context.getInputKeyClass
+    assertEquals(IntWritable.class.getName(), context.getInputKeyClass
         ().getName());
- 
+
     context.setInputValueClass(Text.class);
-    Assert.assertEquals(Text.class.getName(), context.getInputValueClass()
+    assertEquals(Text.class.getName(), context.getInputValueClass()
         .getName());
-   
+
     context.setOutputKeyClass(LongWritable.class);
-    Assert.assertEquals(LongWritable.class.getName(), context
+    assertEquals(LongWritable.class.getName(), context
         .getOutputKeyClass().getName());
 
     context.setOutputValueClass(FloatWritable.class);
-    Assert.assertEquals(FloatWritable.class.getName(), context
+    assertEquals(FloatWritable.class.getName(), context
         .getOutputValueClass().getName());
   }
 }
