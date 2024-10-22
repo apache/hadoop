@@ -239,8 +239,10 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getSafemode();
     } catch (IOException e) {
-      return "Failed to get safemode status. Please check router"
-          + "log for more detail.";
+      String errStr = "Failed to get safemode status. Please check router"
+          + " log for more detail.";
+      LOG.debug(errStr, e.getMessage());
+      return errStr;
     }
   }
 
