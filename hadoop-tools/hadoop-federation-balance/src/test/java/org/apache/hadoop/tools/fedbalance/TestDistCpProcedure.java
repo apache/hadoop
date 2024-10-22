@@ -18,6 +18,7 @@
 package org.apache.hadoop.tools.fedbalance;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -383,6 +384,44 @@ public class TestDistCpProcedure {
     executeProcedure(dcProcedure, Stage.FINAL_DISTCP,
         () -> dcProcedure.disableWrite(context));
     assertEquals(0, fs.getFileStatus(src).getPermission().toShort());
+    cleanup(fs, new Path(testRoot));
+  }
+
+  @Test
+  public void testPreserveOptions() throws Exception {
+    String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
+    DistributedFileSystem fs =
+        (DistributedFileSystem) FileSystem.get(URI.create(nnUri), conf);
+    createFiles(fs, testRoot, srcfiles);
+    Path src = new Path(testRoot, SRCDAT);
+    Path dst = new Path(testRoot, DSTDAT);
+
+    Path srcSubFile = new Path(src, "b/c");
+    FileStatus srcFileStatus = fs.getFileStatus(srcSubFile);
+    long srcMtime = srcFileStatus.getModificationTime();
+    long srcAtime = srcFileStatus.getAccessTime();
+
+    FedBalanceContext context = buildContext(src, dst, MOUNT);
+    DistCpProcedure dcProcedure =
+        new DistCpProcedure("distcp-procedure", null, 1000, context);
+    BalanceProcedureScheduler scheduler = new BalanceProcedureScheduler(conf);
+    scheduler.init(true);
+
+    BalanceJob balanceJob =
+        new BalanceJob.Builder<>().nextProcedure(dcProcedure).build();
+    scheduler.submit(balanceJob);
+    scheduler.waitUntilDone(balanceJob);
+    assertTrue(balanceJob.isJobDone());
+    if (balanceJob.getError() != null) {
+      throw balanceJob.getError();
+    }
+
+    Path dstSubFile = new Path(dst, "b/c");
+    assertTrue(fs.exists(dstSubFile));
+    FileStatus dstFileStatus = fs.getFileStatus(dstSubFile);
+    assertEquals(srcMtime, dstFileStatus.getModificationTime());
+    assertEquals(srcAtime, dstFileStatus.getAccessTime());
+
     cleanup(fs, new Path(testRoot));
   }
 
