@@ -964,6 +964,12 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
           LOG.info("{}: received UDP query {}", remoteAddress,
               query.getQuestion());
           response = generateReply(query, null);
+          if (response.length > output.capacity()) {
+            LOG.warn("{}: Response of UDP query {} exceeds capacity {}",
+                remoteAddress, query.getQuestion(), output.capacity());
+            query.getHeader().setFlag(Flags.TC);
+            response = query.toWire();
+          }
           if (response == null) {
             continue;
           }
