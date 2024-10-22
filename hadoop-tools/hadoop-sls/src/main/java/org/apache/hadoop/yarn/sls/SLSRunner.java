@@ -358,7 +358,7 @@ public class SLSRunner extends Configured implements Tool {
     if (!outputFile.exists() && !outputFile.mkdirs()) {
       System.err.println("ERROR: Cannot create output directory "
           + outputFile.getAbsolutePath());
-      throw new YarnException("Cannot create output directory");
+      throw new IOException("Cannot create output directory");
     }
 
     Set<String> trackedJobSet = new HashSet<>();
