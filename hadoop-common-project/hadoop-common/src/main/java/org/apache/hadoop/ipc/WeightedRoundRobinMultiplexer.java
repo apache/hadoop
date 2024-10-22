@@ -21,6 +21,7 @@ package org.apache.hadoop.ipc;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,30 +53,64 @@ public class WeightedRoundRobinMultiplexer implements RpcMultiplexer {
   private final AtomicInteger requestsLeft; // Number of requests left for this queue
 
   private int[] queueWeights; // The weights for each queue
+  private int[] sharedQueueWeights; // The weights for each shared queue
 
   public WeightedRoundRobinMultiplexer(int aNumQueues, String ns,
+      Configuration conf) {
+    this(aNumQueues, 0, ns, conf);
+  }
+
+  public WeightedRoundRobinMultiplexer(int numSharedQueues, int numReservedQueues, String ns,
     Configuration conf) {
-    if (aNumQueues <= 0) {
-      throw new IllegalArgumentException("Requested queues (" + aNumQueues +
+    if (numSharedQueues <= 0) {
+      throw new IllegalArgumentException("Requested queues (" + numSharedQueues +
         ") must be greater than zero.");
     }
-
-    this.numQueues = aNumQueues;
-    this.queueWeights = conf.getInts(ns + "." +
-      IPC_CALLQUEUE_WRRMUX_WEIGHTS_KEY);
-
-    if (this.queueWeights.length == 0) {
-      this.queueWeights = getDefaultQueueWeights(this.numQueues);
-    } else if (this.queueWeights.length != this.numQueues) {
-      throw new IllegalArgumentException(ns + "." +
-        IPC_CALLQUEUE_WRRMUX_WEIGHTS_KEY + " must specify exactly " +
-        this.numQueues + " weights: one for each priority level.");
+    if (numReservedQueues < 0) {
+      throw new IllegalArgumentException("Requested reserved queues (" + numReservedQueues +
+          ") must be equal or greater than zero.");
     }
+    // The weights for each shared queue
+    this.sharedQueueWeights = parseSharedQueueWeights(ns, conf, numSharedQueues);
+    // The weights for each reserved queue
+    int[] reservedQueueWeights =
+        parseReservedQueueWeights(ns, conf, numReservedQueues);
+
+    // Merge weights of shared and reserved queues into one
+    this.numQueues = numSharedQueues + numReservedQueues;
+    this.queueWeights = new int[numQueues];
+    System.arraycopy(sharedQueueWeights, 0, this.queueWeights, 0, numSharedQueues);
+    System.arraycopy(reservedQueueWeights, 0, this.queueWeights, numSharedQueues, numReservedQueues);
 
     this.currentQueueIndex = new AtomicInteger(0);
     this.requestsLeft = new AtomicInteger(this.queueWeights[0]);
 
     LOG.info("WeightedRoundRobinMultiplexer is being used.");
+  }
+
+  private int[] parseSharedQueueWeights(String ns, Configuration conf, int numSharedQueues) {
+    int[] sharedQueueWeights = conf.getInts(ns + "." +
+        IPC_CALLQUEUE_WRRMUX_WEIGHTS_KEY);
+    if (sharedQueueWeights.length == 0) {
+      sharedQueueWeights = getDefaultQueueWeights(numSharedQueues);
+    } else if (sharedQueueWeights.length != numSharedQueues) {
+      throw new IllegalArgumentException(ns + "." +
+          IPC_CALLQUEUE_WRRMUX_WEIGHTS_KEY + " must specify exactly " +
+          numSharedQueues + " weights: one for each priority level.");
+    }
+    return sharedQueueWeights;
+  }
+
+  private int[] parseReservedQueueWeights(String ns, Configuration conf, int numReservedQueues) {
+    int[] reservedQueueWeights = conf.getInts(ns + "." + CommonConfigurationKeys.IPC_CALLQUEUE_WRRMUX_RESERVED_WEIGHTS_KEY);
+    if (reservedQueueWeights.length == 0) {
+      reservedQueueWeights = getDefaultQueueWeights(numReservedQueues);
+    } else if (reservedQueueWeights.length != numReservedQueues) {
+      throw new IllegalArgumentException(ns + "." +
+          CommonConfigurationKeys.IPC_CALLQUEUE_WRRMUX_RESERVED_WEIGHTS_KEY + " must specify exactly " +
+          numReservedQueues + " weight(s): one for each reserved user)");
+    }
+    return reservedQueueWeights;
   }
 
   /**
