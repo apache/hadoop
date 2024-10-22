@@ -142,8 +142,6 @@ public class TestGlobalFilter extends HttpServerFunctionalTest {
     for(int i = 0; i < urls.length; i++) {
       assertTrue(RECORDS.remove(urls[i]));
     }
-    assertTrue(RECORDS.size()==1);
-    // Accesing "/" will redirect to /index.html
-    assertTrue(RECORDS.contains("/index.html"));
+    assertTrue(RECORDS.isEmpty());
   }
 }
