@@ -325,6 +325,10 @@ class FsDatasetAsyncDiskService {
       final String blockName = replicaToDelete.getBlockName();
       final long genstamp = replicaToDelete.getGenerationStamp();
       File newBlockFile = new File(trashDirectory, blockName);
+      if (newBlockFile.exists()) {
+        // The files are already copied before and can be safely deleted.
+        return deleteFiles();
+      }
       File newMetaFile = new File(trashDirectory,
           DatanodeUtil.getMetaName(blockName, genstamp));
       try {

@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs;
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeoutException;
@@ -360,6 +362,115 @@ public class TestRollingUpgrade {
 
       startRollingUpgrade(foo, bar, file, data, cluster);
       rollbackRollingUpgrade(foo, bar, file, data, cluster);
+    }
+  }
+
+  private static void startRollingUpgrade(Path foo, Path bar,
+      Path fileToTruncate, Path fileToAppend, byte[] data, int oldLength,
+      MiniDFSCluster cluster) throws IOException {
+    LOG.info("startRollingUpgrade");
+    final DistributedFileSystem dfs = cluster.getFileSystem();
+
+    //start rolling upgrade
+    dfs.setSafeMode(SafeModeAction.ENTER);
+    dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
+    dfs.setSafeMode(SafeModeAction.LEAVE);
+
+    dfs.mkdirs(bar);
+    Assert.assertTrue(dfs.exists(foo));
+    Assert.assertTrue(dfs.exists(bar));
+
+    final int newLength = ThreadLocalRandom.current().nextInt(oldLength);
+    //truncate a file
+    dfs.truncate(fileToTruncate, newLength);
+    TestFileTruncate.checkBlockRecovery(fileToTruncate, dfs);
+    AppendTestUtil.checkFullFile(dfs, fileToTruncate, newLength, data);
+
+    //append a file
+    try (FSDataOutputStream out = dfs.append(fileToAppend)) {
+      out.write(data, oldLength, newLength);
+    }
+    AppendTestUtil.checkFullFile(dfs, fileToAppend, oldLength+newLength, data);
+  }
+
+
+  private static void rollback(Path foo, Path bar,
+      Path fileToTruncate, Path fileToAppend, Path fileNotClose,
+      byte[] data, int oldLength, MiniDFSCluster cluster)
+      throws Exception {
+    LOG.info("rollbackRollingUpgrade");
+    final List<DataNodeProperties> dnProperties = new ArrayList<>();
+    for(int i = 0; i < cluster.getDataNodes().size(); i++) {
+      dnProperties.add(cluster.stopDataNode(i));
+    }
+    cluster.restartNameNode(0, false, "-rollingUpgrade", "rollback");
+    for(DataNodeProperties dn : dnProperties) {
+      cluster.restartDataNode(dn, true);
+    }
+
+    final DistributedFileSystem dfs = cluster.getFileSystem();
+    for(boolean success = false; !success; ) {
+      try {
+        Assert.assertTrue(dfs.exists(foo));
+        success = true;
+      } catch (Throwable ignored) {
+      }
+      // retry until NN is ready.
+      LOG.info("sleep 1s and then retry");
+      Thread.sleep(1000);
+    }
+    Assert.assertFalse(dfs.exists(bar));
+
+    dfs.setSafeMode(SafeModeAction.FORCE_EXIT);
+    AppendTestUtil.checkFullFile(dfs, fileToTruncate, oldLength, data);
+    AppendTestUtil.checkFullFile(dfs, fileToAppend, oldLength, data);
+    AppendTestUtil.checkFullFile(dfs, fileNotClose, oldLength, data);
+  }
+
+  @Test
+  public void testRollbackAppend() throws Exception {
+    // start a cluster
+    final Configuration conf = getHdfsConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+
+      final Path foo = new Path("/foo");
+      final Path bar = new Path("/bar");
+      dfs.mkdirs(foo);
+
+      final Path fileToTruncate = new Path(foo, "file-to-truncate");
+      final Path fileToAppend = new Path(foo, "file-to-append");
+      final Path fileNotClose = new Path(foo, "file-not-close");
+      final byte[] data = new byte[1024];
+      ThreadLocalRandom.current().nextBytes(data);
+      final int partOneLength = data.length / 3;
+      final int partTwoLength = 2 * data.length / 3;
+
+      try (FSDataOutputStream out = dfs.create(fileToTruncate)) {
+        out.write(data, 0, partOneLength);
+      }
+      try (FSDataOutputStream out = dfs.create(fileToAppend)) {
+        out.write(data, 0, partOneLength);
+      }
+
+      final FSDataOutputStream out = dfs.create(fileNotClose);
+      out.write(data, 0, partOneLength);
+      out.hsync();
+
+      waitForNullMxBean();
+      startRollingUpgrade(foo, bar, fileToTruncate, fileToAppend,
+          data, partOneLength, cluster);
+      checkMxBean();
+      dfs.rollEdits();
+      dfs.rollEdits();
+
+      out.write(data, partOneLength, partTwoLength);
+      out.close();
+
+      rollback(foo, bar, fileToTruncate, fileToAppend, fileNotClose,
+          data, partOneLength, cluster);
+      checkMxBeanIsNull();
     }
   }
 
