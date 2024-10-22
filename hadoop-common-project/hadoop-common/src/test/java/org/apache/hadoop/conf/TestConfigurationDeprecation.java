@@ -125,18 +125,20 @@ public class TestConfigurationDeprecation {
    * @throws IOException 
    */
   @Test
-  public void testDeprecation() throws IOException {
+  public void testDeprecation() throws Exception {
     addDeprecationToConfiguration();
     out=new BufferedWriter(new FileWriter(CONFIG));
-    startConfig();
-    // load an old key and a new key.
-    appendProperty("A", "a");
-    appendProperty("D", "d");
-    // load an old key with multiple new-key mappings
-    appendProperty("P", "p");
-    endConfig();
-    Path fileResource = new Path(CONFIG);
-    conf.addResource(fileResource);
+    try(AutoCloseable closeable = out::close) {
+      startConfig();
+      // load an old key and a new key.
+      appendProperty("A", "a");
+      appendProperty("D", "d");
+      // load an old key with multiple new-key mappings
+      appendProperty("P", "p");
+      endConfig();
+      Path fileResource = new Path(CONFIG);
+      conf.addResource(fileResource);
+    }
     
     // check if loading of old key with multiple new-key mappings actually loads
     // the corresponding new keys. 
@@ -150,11 +152,13 @@ public class TestConfigurationDeprecation {
     assertEquals("d", conf.get("D"));
     
     out=new BufferedWriter(new FileWriter(CONFIG2));
-    startConfig();
-    // load the old/new keys corresponding to the keys loaded before.
-    appendProperty("B", "b");
-    appendProperty("C", "c");
-    endConfig();
+    try(AutoCloseable closeable = out::close) {
+      startConfig();
+      // load the old/new keys corresponding to the keys loaded before.
+      appendProperty("B", "b");
+      appendProperty("C", "c");
+      endConfig();
+    }
     Path fileResource1 = new Path(CONFIG2);
     conf.addResource(fileResource1);
     
@@ -191,22 +195,24 @@ public class TestConfigurationDeprecation {
    * @throws IOException
    */
   @Test
-  public void testDeprecationForFinalParameters() throws IOException {
+  public void testDeprecationForFinalParameters() throws Exception {
     addDeprecationToConfiguration();
     out=new BufferedWriter(new FileWriter(CONFIG));
-    startConfig();
-    // set the following keys:
-    // 1.old key and final
-    // 2.new key whose corresponding old key is final
-    // 3.old key whose corresponding new key is final
-    // 4.new key and final
-    // 5.new key which is final and has null value.
-    appendProperty("A", "a", true);
-    appendProperty("D", "d");
-    appendProperty("E", "e");
-    appendProperty("H", "h", true);
-    appendProperty("J", "", true);
-    endConfig();
+    try(AutoCloseable closeable = out::close) {
+      startConfig();
+      // set the following keys:
+      // 1.old key and final
+      // 2.new key whose corresponding old key is final
+      // 3.old key whose corresponding new key is final
+      // 4.new key and final
+      // 5.new key which is final and has null value.
+      appendProperty("A", "a", true);
+      appendProperty("D", "d");
+      appendProperty("E", "e");
+      appendProperty("H", "h", true);
+      appendProperty("J", "", true);
+      endConfig();
+    }
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
     
@@ -222,14 +228,16 @@ public class TestConfigurationDeprecation {
     assertNull(conf.get("J"));
     
     out=new BufferedWriter(new FileWriter(CONFIG2));
-    startConfig();
-    // add the corresponding old/new keys of those added to CONFIG1
-    appendProperty("B", "b");
-    appendProperty("C", "c", true);
-    appendProperty("F", "f", true);
-    appendProperty("G", "g");
-    appendProperty("I", "i");
-    endConfig();
+    try(AutoCloseable closeable = out::close) {
+      startConfig();
+      // add the corresponding old/new keys of those added to CONFIG1
+      appendProperty("B", "b");
+      appendProperty("C", "c", true);
+      appendProperty("F", "f", true);
+      appendProperty("G", "g");
+      appendProperty("I", "i");
+      endConfig();
+    }
     Path fileResource1 = new Path(CONFIG2);
     conf.addResource(fileResource1);
     
@@ -245,20 +253,22 @@ public class TestConfigurationDeprecation {
     assertNull(conf.get("J"));
     
     out=new BufferedWriter(new FileWriter(CONFIG3));
-    startConfig();
-    // change the values of all the previously loaded 
-    // keys (both deprecated and new)
-    appendProperty("A", "a1");
-    appendProperty("B", "b1");
-    appendProperty("C", "c1");
-    appendProperty("D", "d1");
-    appendProperty("E", "e1");
-    appendProperty("F", "f1");
-    appendProperty("G", "g1");
-    appendProperty("H", "h1");
-    appendProperty("I", "i1");
-    appendProperty("J", "j1");
-    endConfig();
+    try(AutoCloseable closeable = out::close) {
+      startConfig();
+      // change the values of all the previously loaded
+      // keys (both deprecated and new)
+      appendProperty("A", "a1");
+      appendProperty("B", "b1");
+      appendProperty("C", "c1");
+      appendProperty("D", "d1");
+      appendProperty("E", "e1");
+      appendProperty("F", "f1");
+      appendProperty("G", "g1");
+      appendProperty("H", "h1");
+      appendProperty("I", "i1");
+      appendProperty("J", "j1");
+      endConfig();
+    }
     fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
     
@@ -440,17 +450,14 @@ public class TestConfigurationDeprecation {
     final String newZkAddressKey = CommonConfigurationKeys.ZK_ADDRESS;
     final String zkAddressValue = "dummyZkAddress";
 
-    try{
-      out = new BufferedWriter(new FileWriter(CONFIG4));
+    out = new BufferedWriter(new FileWriter(CONFIG4));
+    try(AutoCloseable closeable = out::close){
       startConfig();
       appendProperty(oldZkAddressKey, zkAddressValue);
       endConfig();
-
-      Path fileResource = new Path(CONFIG4);
-      conf.addResource(fileResource);
-    } finally {
-      out.close();
     }
+    Path fileResource = new Path(CONFIG4);
+    conf.addResource(fileResource);
 
     // ACT
     conf.get(oldZkAddressKey);
