@@ -397,7 +397,7 @@ struct BlockReaderImpl::AckRead : continuation::Continuation
   virtual void Run(const Next &next) override {
     LOG_TRACE(kBlockReader, << "BlockReaderImpl::AckRead::Run(" << FMT_CONT_AND_PARENT_ADDR << ") called");
 
-    if (parent_->bytes_to_read_ > 0) {
+    if (parent_->bytes_to_read_ >= 0) {
       next(Status::OK());
       return;
     }
