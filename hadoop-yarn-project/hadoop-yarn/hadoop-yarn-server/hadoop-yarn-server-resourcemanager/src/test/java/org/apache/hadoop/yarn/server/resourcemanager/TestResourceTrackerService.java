@@ -351,6 +351,65 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat3.getNodeAction());
   }
 
+  @Test (timeout = 60000)
+  public void testGracefulDecommissionRaceCondition() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
+            .getAbsolutePath());
+    conf.set(YarnConfiguration.RM_DECOMMISSIONING_NODES_WATCHER_DELAY_MS, "120000");
+
+    writeToHostsFile("");
+    rm = new MockRM(conf);
+    rm.start();
+
+    MockNM nm1 = rm.registerNode("host1:1234", 10240);
+    MockNM nm2 = rm.registerNode("host2:5678", 20480);
+    MockNM nm3 = rm.registerNode("host3:4433", 10240);
+
+    NodeId id1 = nm1.getNodeId();
+    NodeId id2 = nm2.getNodeId();
+    NodeId id3 = nm3.getNodeId();
+
+    rm.waitForState(id1, NodeState.RUNNING);
+    rm.waitForState(id2, NodeState.RUNNING);
+    rm.waitForState(id3, NodeState.RUNNING);
+
+    // Create an app and schedule AM on host1.
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
+    MockAM am = MockRM.launchAM(app, rm, nm1);
+
+    // Before sending heartbeat we gracefully decommission the node on which AM
+    // is scheduled to simulate race condition.
+    writeToHostsFile("host1", "host3");
+    rm.getNodesListManager().refreshNodesGracefully(conf, 30);
+    rm.waitForState(id1, NodeState.DECOMMISSIONING);
+    rm.waitForState(id3, NodeState.DECOMMISSIONING);
+
+    nm1.nodeHeartbeat(true);
+    nm3.nodeHeartbeat(true);
+    // host1 should stay in DECOMMISSIONING as we are waiting for am launch timeout
+    // and the there are scheduled am containers on host1.
+    // host3 should be decommissioned as there is no container scheduled on it.
+    rm.waitForState(id1, NodeState.DECOMMISSIONING);
+    rm.waitForState(id3, NodeState.DECOMMISSIONED);
+
+    ApplicationAttemptId aaid = app.getCurrentAppAttempt().getAppAttemptId();
+    nm1.nodeHeartbeat(aaid, 1, ContainerState.RUNNING);
+    nm3.nodeHeartbeat(true);
+
+    // host1 is in Decommissioning due to containers on the node, host3 should be in DECOMMISSIONED
+    // because no containers on the node
+    rm.waitForState(id1, NodeState.DECOMMISSIONING);
+    rm.waitForState(id3, NodeState.DECOMMISSIONED);
+
+    am.registerAppAttempt();
+    rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
+    MockRM.finishAMAndVerifyAppState(app, rm, nm1, am);
+    nm1.nodeHeartbeat(aaid, 1, ContainerState.COMPLETE);
+    rm.waitForState(app.getApplicationId(), RMAppState.FINISHED);
+    rm.waitForState(id1, NodeState.DECOMMISSIONED);
+  }
+
   @Test
   public void testGracefulDecommissionDefaultTimeoutResolution()
       throws Exception {

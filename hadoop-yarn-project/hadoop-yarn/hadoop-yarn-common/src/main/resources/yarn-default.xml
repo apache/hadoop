@@ -3732,6 +3732,15 @@
 
   <property>
     <description>
+      Allow Delayed Removal of Decommissioning Nodes to account for scheduled AM containers on that node.
+      No delay if set to 0. Expire interval should not be configured more than RM_AM_EXPIRY_INTERVAL_MS.
+    </description>
+    <name>yarn.resourcemanager.decommissioning-nodes-watcher.delay-ms</name>
+    <value>0</value>
+  </property>
+
+  <property>
+    <description>
     Used to specify custom web services for Resourcemanager. Value can be
     classnames separated by comma.
     Ex: org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices,

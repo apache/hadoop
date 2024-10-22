@@ -162,6 +162,80 @@ public class TestDecommissioningNodesWatcher {
         watcher.checkDecommissioningStatus(id1));
   }
 
+  @Test
+  public void testDecommissioningNodesWatcherWithScheduledAMContainers()
+          throws Exception {
+    Configuration conf = new Configuration();
+    // decommission timeout is 10 min
+    conf.set(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT, "600");
+    // watcher delay is 5min
+    conf.set(YarnConfiguration.RM_DECOMMISSIONING_NODES_WATCHER_DELAY_MS, "300000");
+
+    rm = new MockRM(conf);
+    rm.start();
+
+    DecommissioningNodesWatcher watcher =
+            new DecommissioningNodesWatcher(rm.getRMContext());
+    watcher.init(conf);
+
+    MockNM nm1 = rm.registerNode("host1:1234", 10240);
+    RMNodeImpl node1 =
+            (RMNodeImpl) rm.getRMContext().getRMNodes().get(nm1.getNodeId());
+    NodeId id1 = nm1.getNodeId();
+
+    rm.waitForState(id1, NodeState.RUNNING);
+
+    // just submit the app
+    RMApp app = MockRMAppSubmitter.submit(rm,
+            MockRMAppSubmissionData.Builder.createWithMemory(2000, rm).build());
+    MockAM am = MockRM.launchAndRegisterAM(app, rm, nm1);
+
+    // rmnode still thinks there are 0 apps because it hasn't received updated node status
+    Assert.assertEquals(0, node1.getRunningApps().size());
+
+    // Setup nm1 as DECOMMISSIONING for DecommissioningNodesWatcher. Right now
+    // there is no container running on the node.
+    rm.sendNodeGracefulDecommission(nm1,
+            YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT);
+    rm.waitForState(id1, NodeState.DECOMMISSIONING);
+
+    // we should still get WAIT_SCHEDULED_APPS as expiry time is not over
+    NodeHealthStatus status = NodeHealthStatus.newInstance(true, "",
+            System.currentTimeMillis() - 1000);
+    NodeStatus nodeStatus = NodeStatus.newInstance(id1, 0,
+            new ArrayList<>(), Collections.emptyList(), status, null, null, null);
+    watcher.update(node1, nodeStatus);
+
+    Assert.assertFalse(watcher.checkReadyToBeDecommissioned(id1));
+    Assert.assertEquals(DecommissioningNodeStatus.WAIT_SCHEDULED_APPS,
+            watcher.checkDecommissioningStatus(id1));
+
+    // update node with 3 running containers
+    nodeStatus = createNodeStatus(id1, app, 3);
+    node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus));
+    watcher.update(node1, nodeStatus);
+    Assert.assertEquals(1, node1.getRunningApps().size());
+    Assert.assertFalse(watcher.checkReadyToBeDecommissioned(id1));
+    Assert.assertEquals(DecommissioningNodeStatus.WAIT_CONTAINER,
+        watcher.checkDecommissioningStatus(id1));
+
+    // update node with 0 running containers
+    nodeStatus = createNodeStatus(id1, app, 0);
+    node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus));
+    watcher.update(node1, nodeStatus);
+    Assert.assertFalse(watcher.checkReadyToBeDecommissioned(id1));
+    // we still get status as WAIT_APP since app is still running even if
+    // containers are 0
+    Assert.assertEquals(DecommissioningNodeStatus.WAIT_APP,
+        watcher.checkDecommissioningStatus(id1));
+
+    // Set app to be FINISHED and verified DecommissioningNodeStatus is READY.
+    MockRM.finishAMAndVerifyAppState(app, rm, nm1, am);
+    rm.waitForState(app.getApplicationId(), RMAppState.FINISHED);
+    Assert.assertEquals(0, node1.getRunningApps().size());
+    watcher.update(node1, nodeStatus);
+  }
+
   @After
   public void tearDown() {
     if (rm != null) {
