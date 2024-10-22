@@ -60,7 +60,7 @@ public class TestFsShell {
   }
 
   @Test
-  public void testDFSWithInvalidCommmand() throws Throwable {
+  public void testDFSWithInvalidCommand() throws Throwable {
     FsShell shell = new FsShell(new Configuration());
     try (GenericTestUtils.SystemErrCapturer capture =
              new GenericTestUtils.SystemErrCapturer()) {

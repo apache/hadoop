@@ -1532,7 +1532,7 @@ public class ApplicationMaster {
       vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout");
       vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr");
 
-      // Get final commmand
+      // Get final command
       StringBuilder command = new StringBuilder();
       for (CharSequence str : vargs) {
         command.append(str).append(" ");
@@ -1547,7 +1547,7 @@ public class ApplicationMaster {
       // Note for tokens: Set up tokens for the container too. Today, for normal
       // shell commands, the container in distribute-shell doesn't need any
       // tokens. We are populating them mainly for NodeManagers to be able to
-      // download anyfiles in the distributed file-system. The tokens are
+      // download any files in the distributed file-system. The tokens are
       // otherwise also useful in cases, for e.g., when one is running a
       // "hadoop dfs" command inside the distributed shell.
       Map<String, String> myShellEnv = new HashMap<String, String>(shellEnv);
