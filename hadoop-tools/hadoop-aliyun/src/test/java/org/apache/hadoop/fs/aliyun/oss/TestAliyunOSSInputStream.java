@@ -33,8 +33,12 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Random;
 
+import static org.apache.hadoop.fs.aliyun.oss.Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.aliyun.oss.Constants.MULTIPART_DOWNLOAD_SIZE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -105,6 +109,31 @@ public class TestAliyunOSSInputStream {
           + instream.getPos(), instream.getPos() == pos);
       LOG.info("completed seeking at pos: " + instream.getPos());
     }
+    IOUtils.closeStream(instream);
+  }
+
+  @Test
+  public void testConfiguration() throws IOException {
+    Path configurationFile = setPath("/test/configurationFile.txt");
+    long size = 5 * 1024 * 1024;
+
+    ContractTestUtils.generateTestFile(this.fs, configurationFile, size, 256, 255);
+    LOG.info("5MB file created: configurationFile.txt");
+
+    FSDataInputStream instream = this.fs.open(configurationFile);
+    assertTrue(instream.getWrappedStream() instanceof AliyunOSSInputStream);
+    AliyunOSSInputStream wrappedStream = (AliyunOSSInputStream) instream.getWrappedStream();
+    assertEquals(
+            fs.getConf().getLong(MULTIPART_DOWNLOAD_SIZE_KEY, MULTIPART_DOWNLOAD_SIZE_DEFAULT),
+            wrappedStream.getDownloadPartSize());
+    IOUtils.closeStream(instream);
+
+    instream = this.fs.open(configurationFile, 1024);
+    assertTrue(instream.getWrappedStream() instanceof AliyunOSSInputStream);
+    wrappedStream = (AliyunOSSInputStream) instream.getWrappedStream();
+    assertEquals(
+            1024,
+            wrappedStream.getDownloadPartSize());
     IOUtils.closeStream(instream);
   }
 
