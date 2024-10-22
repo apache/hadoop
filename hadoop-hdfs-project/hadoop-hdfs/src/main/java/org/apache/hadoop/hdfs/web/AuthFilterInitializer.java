@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.web;
 
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
@@ -46,6 +47,15 @@ public class AuthFilterInitializer extends FilterInitializer {
     for (Map.Entry<String, String> entry : conf.getPropsWithPrefix(
         ProxyUsers.CONF_HADOOP_PROXYUSER).entrySet()) {
       filterConfig.put("proxyuser" + entry.getKey(), entry.getValue());
+    }
+
+    //add impersonation provider class config
+    String valueImpersonationProvider = conf.
+        get(CommonConfigurationKeysPublic.HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS);
+    if (valueImpersonationProvider != null) {
+      filterConfig.
+          put(CommonConfigurationKeysPublic.HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS,
+              valueImpersonationProvider);
     }
 
     if (filterConfig.get("type") == null) {
