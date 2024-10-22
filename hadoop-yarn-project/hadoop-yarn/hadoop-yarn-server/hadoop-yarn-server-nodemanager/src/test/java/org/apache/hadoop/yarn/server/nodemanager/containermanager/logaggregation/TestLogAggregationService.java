@@ -141,6 +141,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.Tes
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerRecoveredEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerTokenUpdatedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -2830,5 +2831,45 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     long interval = logAggregationService.getRollingMonitorInterval();
     assertEquals(1800L, interval);
+  }
+
+  @Test
+  public void testLogAggregationRecovery() throws Exception {
+    LogAggregationService logAggregationService =
+            new LogAggregationService(dispatcher, this.context, this.delSrvc,
+                    super.dirsHandler);
+    logAggregationService.init(this.conf);
+    logAggregationService.start();
+
+    ApplicationId application = BuilderUtils.newApplicationId(1234, 1);
+
+    ApplicationAttemptId appAttemptId =
+        BuilderUtils.newApplicationAttemptId(application, 1);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
+
+    File appLogDir1 =
+        new File(localLogDir, application.toString());
+    appLogDir1.mkdir();
+
+    // Simulate log-file creation
+    writeContainerLogs(appLogDir1, containerId, new String[] { "stdout",
+        "syslog" }, new String[] {});
+
+    LogAggregationContext logAggregationContext =
+        Records.newRecord(LogAggregationContext.class);
+
+    logAggregationService.handle(new LogHandlerAppStartedEvent(application,
+      this.user, null, this.acls,
+      logAggregationContext));
+
+    logAggregationService.handle(new LogHandlerContainerRecoveredEvent(containerId));
+
+    logAggregationService.handle(new LogHandlerAppFinishedEvent(application));
+    logAggregationService.stop();
+    assertEquals(0, logAggregationService.getNumAggregators());
+
+    String[] logFiles = new String[] { "stdout", "syslog" };
+    verifyContainerLogs(logAggregationService, application,
+        new ContainerId[] {containerId}, logFiles, 2, false, new String[] {});
   }
 }

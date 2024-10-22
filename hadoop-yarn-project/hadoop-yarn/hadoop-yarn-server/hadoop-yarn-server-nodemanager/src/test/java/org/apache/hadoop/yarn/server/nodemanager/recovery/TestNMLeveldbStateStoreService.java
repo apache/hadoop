@@ -89,6 +89,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.Re
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerType;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredDeletionServiceState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredLocalizationState;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredLogAggregatorState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredLogDeleterState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredNMTokensState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredUserResources;
@@ -1545,6 +1546,49 @@ public class TestNMLeveldbStateStoreService {
     restartStateStore();
     state = stateStore.loadLogDeleterState();
     assertTrue(state.getLogDeleterMap().isEmpty());
+  }
+
+  @Test
+  public void testLogAggregatorStorage() throws IOException {
+    // test empty when no state
+    RecoveredLogAggregatorState state = stateStore.loadLogAggregatorState();
+    assertTrue(state.getLogAggregators().isEmpty());
+
+    // store log deleter state
+    final ApplicationId appId1 = ApplicationId.newInstance(1, 1);
+    ApplicationAttemptId appAttemptId1 = ApplicationAttemptId.newInstance(appId1, 1);
+    final ContainerId containerId1 = ContainerId.newContainerId(appAttemptId1, 1);
+    stateStore.storeLogAggregator(containerId1);
+
+    // restart state store and verify recovered
+    restartStateStore();
+    state = stateStore.loadLogAggregatorState();
+    assertEquals(1, state.getLogAggregators().size());
+    assertEquals(containerId1, state.getLogAggregators().get(0));
+
+    // store another log aggregator
+    final ApplicationId appId2 = ApplicationId.newInstance(2, 2);
+    ApplicationAttemptId appAttemptId2 = ApplicationAttemptId.newInstance(appId2, 1);
+    final ContainerId containerId2 = ContainerId.newContainerId(appAttemptId2, 1);
+    stateStore.storeLogAggregator(containerId2);
+
+    // restart state store and verify recovered
+    restartStateStore();
+    state = stateStore.loadLogAggregatorState();
+    assertEquals(2, state.getLogAggregators().size());
+
+    // remove a deleter and verify removed after restart and recovery
+    stateStore.removeLogAggregator(containerId1);
+    restartStateStore();
+    state = stateStore.loadLogAggregatorState();
+    assertEquals(1, state.getLogAggregators().size());
+    assertEquals(containerId2, state.getLogAggregators().get(0));
+
+    // remove last deleter and verify empty after restart and recovery
+    stateStore.removeLogAggregator(containerId2);
+    restartStateStore();
+    state = stateStore.loadLogAggregatorState();
+    assertTrue(state.getLogAggregators().isEmpty());
   }
 
   @Test
