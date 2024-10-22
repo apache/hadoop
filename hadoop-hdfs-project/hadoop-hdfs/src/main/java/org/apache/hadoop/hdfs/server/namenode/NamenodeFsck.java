@@ -230,7 +230,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     this.staleInterval =
         conf.getLong(DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
           DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT);
-    this.tracer = new Tracer.Builder("NamenodeFsck").
+    this.tracer = new Tracer.Builder().
         conf(TraceUtils.wrapHadoopConf("namenode.fsck.htrace.", conf)).
         build();
 

@@ -479,7 +479,7 @@ public class DataNode extends ReconfigurableBase
   private final SocketFactory socketFactory;
 
   private static Tracer createTracer(Configuration conf) {
-    return new Tracer.Builder("DataNode").
+    return new Tracer.Builder().
         conf(TraceUtils.wrapHadoopConf(DATANODE_HTRACE_PREFIX, conf)).
         build();
   }

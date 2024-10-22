@@ -432,3 +432,13 @@ export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 # By default, Hadoop uses jsvc which needs to know to launch a
 # server jvm.
 # export HADOOP_REGISTRYDNS_SECURE_EXTRA_OPTS="-jvm server"
+
+###
+# Opentelemetry Trace Exporters Configuration
+###
+# export OPENTELEMETRY_JAVAAGENT_PATH="$(find $HADOOP_HOME/share/hadoop/tools/lib/ -name opentelemetry-javaagent*)"
+# export HADOOP_TRACE_OPTS="-javaagent:$OPENTELEMETRY_JAVAAGENT_PATH -Dotel.traces.exporter=jaeger -Dotel.metrics.exporter=none"
+# export HDFS_NAMENODE_OPTS="$HDFS_NAMENODE_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=hdfs-namenode"
+# export HDFS_DATANODE_OPTS="$HDFS_DATANODE_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=hdfs-datanode"
+# export HDFS_SECONDARYNAMENODE_OPTS="$HDFS_SECONDARYNAMENODE_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=hdfs-secondarynamenode"
+# export HADOOP_CLIENT_OPTS="$HADOOP_CLIENT_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=hadoop-client"

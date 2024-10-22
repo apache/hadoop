@@ -221,8 +221,8 @@ public class Sender implements DataTransferProtocol {
     Span span = Tracer.getCurrentSpan();
     if (span != null) {
       DataTransferTraceInfoProto.Builder traceInfoProtoBuilder =
-          DataTransferTraceInfoProto.newBuilder().setSpanContext(
-              TraceUtils.spanContextToByteString(span.getContext()));
+          DataTransferTraceInfoProto.newBuilder().putAllSpanContext(
+              TraceUtils.spanContextToMap(span.getContext()));
       builder.setTraceInfo(traceInfoProtoBuilder);
     }
     ReleaseShortCircuitAccessRequestProto proto = builder.build();
@@ -237,8 +237,8 @@ public class Sender implements DataTransferProtocol {
     Span span = Tracer.getCurrentSpan();
     if (span != null) {
       DataTransferTraceInfoProto.Builder traceInfoProtoBuilder =
-          DataTransferTraceInfoProto.newBuilder().setSpanContext(
-              TraceUtils.spanContextToByteString(span.getContext()));
+          DataTransferTraceInfoProto.newBuilder().putAllSpanContext(
+              TraceUtils.spanContextToMap(span.getContext()));
       builder.setTraceInfo(traceInfoProtoBuilder);
     }
     ShortCircuitShmRequestProto proto = builder.build();

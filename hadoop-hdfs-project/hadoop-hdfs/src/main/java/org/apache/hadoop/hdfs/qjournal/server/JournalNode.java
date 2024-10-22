@@ -190,7 +190,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
     }
 
     if (this.tracer == null) {
-      this.tracer = new Tracer.Builder("JournalNode").
+      this.tracer = new Tracer.Builder().
           conf(TraceUtils.wrapHadoopConf("journalnode.htrace", conf)).
           build();
     }
