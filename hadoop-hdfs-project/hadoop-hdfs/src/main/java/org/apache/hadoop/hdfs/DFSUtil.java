@@ -71,6 +71,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.hdfs.server.blockmanagement.HostSet;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
@@ -2002,5 +2003,33 @@ public class DFSUtil {
     durationInNS = Math.max(durationInNS, 1);
     double durationInSeconds = (double) durationInNS / TimeUnit.SECONDS.toNanos(1);
     return (long) (bytes / durationInSeconds);
+  }
+
+  /**
+   * Construct a HostSet from an array of "ip:port" strings.
+   * @param nodesHostPort ip port string array.
+   * @return HostSet of InetSocketAddress.
+   */
+  public static HostSet getHostSet(String[] nodesHostPort) {
+    HostSet retSet = new HostSet();
+    for (String hostPort : nodesHostPort) {
+      try {
+        URI uri = new URI("dummy", hostPort, null, null, null);
+        int port = uri.getPort();
+        if (port < 0) {
+          LOG.warn(String.format("The ip:port `%s` is invalid, skip this node.", hostPort));
+          continue;
+        }
+        InetSocketAddress inetSocketAddress = new InetSocketAddress(uri.getHost(), port);
+        if (inetSocketAddress.isUnresolved()) {
+          LOG.warn(String.format("Failed to resolve address `%s`", hostPort));
+          continue;
+        }
+        retSet.add(inetSocketAddress);
+      } catch (URISyntaxException e) {
+        LOG.warn(String.format("Failed to parse `%s`", hostPort));
+      }
+    }
+    return retSet;
   }
 }

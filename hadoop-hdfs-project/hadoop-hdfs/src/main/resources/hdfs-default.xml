@@ -6411,6 +6411,23 @@
   </property>
 
   <property>
+    <name>dfs.journalnode.maintenance.nodes</name>
+    <value></value>
+    <description>
+      In the case that one out of three journal nodes being down, theoretically HDFS can still
+      function. However, in reality, the unavailable journal node may not recover quickly. During
+      this period, when we need to restart an Namenode, the Namenode will try to connect to the
+      unavailable journal node through the lengthy RPC retry mechanism, resulting in a long
+      initialization time for the Namenode. By adding these unavailable journal nodes to the
+      maintenance nodes, we will skip these unavailable journal nodes during Namenode initialization
+      and thus reduce namenode startup time.
+      1-node example values: jn01:8485
+      2-node example values: jn01:8485,jn02:8485
+    </description>
+  </property>
+
+
+  <property>
     <name>dfs.namenode.lease-hard-limit-sec</name>
     <value>1200</value>
     <description>

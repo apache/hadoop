@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.qjournal.client;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_MAINTENANCE_NODES_KEY;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.FAKE_NSINFO;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.JID;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.verifyEdits;
@@ -26,7 +27,9 @@ import static org.apache.hadoop.hdfs.qjournal.client.SpyQJournalUtil.spyGetJourn
 import static org.apache.hadoop.hdfs.qjournal.client.TestQuorumJournalManagerUnit.futureThrows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.eq;
@@ -39,15 +42,20 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.server.blockmanagement.HostSet;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.net.MockDomainNameResolver;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
+
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Lists;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -1168,6 +1176,47 @@ public class TestQuorumJournalManager {
 
     for (AsyncLogger logger : spies) {
       Mockito.verify(logger, Mockito.times(1)).getEditLogManifest(1, true);
+    }
+  }
+
+  /**
+   * Tests to throw an exception when more than half of the journal nodes are in maintenance mode.
+   */
+  @Test
+  public void testJNMaintenanceListViaRpcTwoJNsError() throws Exception {
+    StringJoiner maintenanceListBuff = new StringJoiner(",");
+    for (int i = 0; i < 2; i++) {
+      maintenanceListBuff.add(
+          NetUtils.getHostPortString(cluster.getJournalNode(i).getBoundIpcAddress()));
+    }
+    this.conf.set(DFS_JOURNALNODE_MAINTENANCE_NODES_KEY, maintenanceListBuff.toString());
+    assertThrows(IllegalArgumentException.class, () -> createSpyingQJM());
+  }
+
+  /**
+   * Tests to verify maintenance journal nodes are indeed excluded.
+   */
+  @Test
+  public void testJNMaintenanceListViaRpcOneJN() throws Exception {
+    InetSocketAddress mtNodeAddr = cluster.getJournalNode(0).getBoundIpcAddress();
+    this.conf.set(DFS_JOURNALNODE_MAINTENANCE_NODES_KEY, NetUtils.getHostPortString(mtNodeAddr));
+    QuorumJournalManager quorumJournalManager = createSpyingQJM();
+
+    int remainSize = cluster.getNumNodes() - 1;
+    String[] remainHostPorts = new String[remainSize];
+    for (int i = 1; i < cluster.getNumNodes(); i++) {
+      remainHostPorts[i - 1] =
+          NetUtils.getHostPortString(cluster.getJournalNode(i).getBoundIpcAddress());
+    }
+
+    HostSet remainHostSet = DFSUtil.getHostSet(remainHostPorts);
+    AsyncLoggerSet asyncLoggerSet = quorumJournalManager.getLoggerSetForTests();
+    assertNotNull(asyncLoggerSet);
+    assertTrue(asyncLoggerSet.size() == remainSize);
+    List<AsyncLogger> asyncLoggerList = asyncLoggerSet.getLoggerListForTests();
+    for(AsyncLogger logger : asyncLoggerList) {
+      assertTrue(logger instanceof IPCLoggerChannel);
+      assertTrue(remainHostSet.match(((IPCLoggerChannel)logger).getRemoteAddress()));
     }
   }
 
