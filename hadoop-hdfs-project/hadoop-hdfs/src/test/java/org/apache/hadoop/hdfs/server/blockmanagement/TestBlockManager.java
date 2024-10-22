@@ -118,14 +118,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.SourceUnavailableDetail.CORRUPT_OR_EXCESS;
+import static org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.SourceUnavailableDetail.DECOMMISSIONED;
+import static org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.SOURCE_UNAVAILABLE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION;
-import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
-import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.test.MetricsAsserts.*;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -2328,5 +2326,50 @@ public class TestBlockManager {
     } finally {
       DataNodeFaultInjector.set(oldInjector);
     }
+  }
+
+  /**
+   * Test the reason output work as expected even in multi-thread environment.
+   * @throws InterruptedException
+   */
+  @Test(timeout = 360000)
+  public void testReconstructionSkipReason() throws InterruptedException {
+    final AtomicBoolean failure = new AtomicBoolean(false);
+    int threadNum = 5;
+    Thread[] threads = new Thread[threadNum];
+    for(int i = 0; i<threadNum;i++){
+      final int index = i;
+      threads[i] = new Thread(() -> {
+        try{
+          String storageID0 = "storageID_0_"+index;
+          String storageID1 = "storageID_1_"+index;
+          DatanodeStorageInfo sourceStorage0 = BlockManagerTestUtil
+                  .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
+                          new DatanodeStorage(storageID0));
+          DatanodeStorageInfo sourceStorage1 = BlockManagerTestUtil
+                  .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
+                          new DatanodeStorage(storageID1));
+          BlockInfo newBlk = new BlockInfoContiguous(new Block(index), (short) index);
+          ReconstructionSkipReason.start();
+          ReconstructionSkipReason.genReasonImpl(newBlk,sourceStorage0,SOURCE_UNAVAILABLE,CORRUPT_OR_EXCESS);
+          ReconstructionSkipReason.genReasonImpl(newBlk,sourceStorage1,SOURCE_UNAVAILABLE,DECOMMISSIONED);
+          String summary = ReconstructionSkipReason.summary();
+          LOG.info("Reason for " + newBlk + " in storage " + storageID0 + " storage " + storageID1 + " is : " + summary);
+          assertEquals("after summary, the reason should be cleared", "", ReconstructionSkipReason.summary());
+          assertTrue("reason content should be correct", summary.contains(SOURCE_UNAVAILABLE.toString()));
+          assertTrue("reason should contain block ID " + newBlk, summary.contains(newBlk.toString()));
+          assertTrue("reason should contain storage " + sourceStorage0, summary.contains(sourceStorage0.toString()));
+          assertTrue("reason should contain storage " + sourceStorage1, summary.contains(sourceStorage1.toString()));
+        }catch (Throwable e){
+          e.printStackTrace();
+          failure.set(true);
+        }
+      });
+    }
+    for(int i = 0;i<threadNum;i++){
+      threads[i].start();
+      threads[i].join(0);
+    }
+    assertFalse("Test case testReconstructionSkipReason has error. Check the log for the details.", failure.get());
   }
 }

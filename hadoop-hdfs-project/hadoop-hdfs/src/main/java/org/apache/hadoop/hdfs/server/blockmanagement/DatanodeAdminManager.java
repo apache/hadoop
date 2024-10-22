@@ -160,7 +160,7 @@ public class DatanodeAdminManager {
         monitor.startTrackingNode(node);
       }
     } else {
-      LOG.trace("startDecommission: Node {} in {}, nothing to do.",
+      LOG.info("startDecommission: Node {} in {}, nothing to do.",
           node, node.getAdminState());
     }
   }
