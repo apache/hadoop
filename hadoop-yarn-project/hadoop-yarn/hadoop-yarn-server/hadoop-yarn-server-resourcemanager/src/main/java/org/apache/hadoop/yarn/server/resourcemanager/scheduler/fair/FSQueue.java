@@ -79,6 +79,9 @@ public abstract class FSQueue implements Queue, Schedulable {
   // maxAMShare is a value between 0 and 1.
   protected float maxAMShare;
 
+  // maxAppShare is a value between 0 and 1.
+  protected float maxAppShare;
+
   private long fairSharePreemptionTimeout = Long.MAX_VALUE;
   private long minSharePreemptionTimeout = Long.MAX_VALUE;
   private float fairSharePreemptionThreshold = 0.5f;
@@ -217,6 +220,15 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   public void setMaxAMShare(float maxAMShare){
     this.maxAMShare = maxAMShare;
+  }
+
+  @Override
+  public float getMaxAppShare() {
+    return maxAppShare;
+  }
+
+  public void setMaxAppShare(float maxAppShare){
+    this.maxAppShare = maxAppShare;
   }
 
   @Override

@@ -280,6 +280,11 @@ public class TestSchedulingPolicy {
       }
 
       @Override
+      public float getMaxAppShare() {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
       public Priority getPriority() {
         throw new UnsupportedOperationException();
       }

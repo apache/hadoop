@@ -42,6 +42,7 @@ public class QueueProperties {
   private final Map<String, ConfigurableResource> maxChildQueueResources;
   private final Map<String, Integer> queueMaxApps;
   private final Map<String, Float> queueMaxAMShares;
+  private final Map<String, Float> queueMaxAppShares;
   private final Map<String, Float> queueWeights;
   private final Map<String, SchedulingPolicy> queuePolicies;
   private final Map<String, Long> minSharePreemptionTimeouts;
@@ -63,6 +64,7 @@ public class QueueProperties {
     this.nonPreemptableQueues = builder.nonPreemptableQueues;
     this.configuredQueues = builder.configuredQueues;
     this.queueMaxAMShares = builder.queueMaxAMShares;
+    this.queueMaxAppShares = builder.queueMaxAppShares;
     this.queuePolicies = builder.queuePolicies;
     this.fairSharePreemptionThresholds = builder.fairSharePreemptionThresholds;
     this.queueMaxApps = builder.queueMaxApps;
@@ -114,6 +116,10 @@ public class QueueProperties {
     return queueMaxAMShares;
   }
 
+  public Map<String, Float> getQueueMaxAppShares() {
+    return queueMaxAppShares;
+  }
+
   public Map<String, SchedulingPolicy> getQueuePolicies() {
     return queuePolicies;
   }
@@ -155,6 +161,7 @@ public class QueueProperties {
         new HashMap<>();
     private Map<String, Integer> queueMaxApps = new HashMap<>();
     private Map<String, Float> queueMaxAMShares = new HashMap<>();
+    private Map<String, Float> queueMaxAppShares = new HashMap<>();
     private Map<String, Resource> queueMaxContainerAllocation = new HashMap<>();
     private Map<String, Float> queueWeights = new HashMap<>();
     private Map<String, SchedulingPolicy> queuePolicies = new HashMap<>();
@@ -206,6 +213,11 @@ public class QueueProperties {
 
     public Builder queueMaxAMShares(String queueName, float value) {
       this.queueMaxAMShares.put(queueName, value);
+      return this;
+    }
+
+    public Builder queueMaxAppShares(String queueName, float value) {
+      this.queueMaxAppShares.put(queueName, value);
       return this;
     }
 

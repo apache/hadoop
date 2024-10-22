@@ -351,11 +351,23 @@ public class FSLeafQueue extends FSQueue {
       if (SchedulerAppUtils.isPlaceBlacklisted(sched, node, LOG)) {
         continue;
       }
+      if (sched.getQueue().scheduler.appResourceLimitEnabled &&
+          !Resources.fitsInMultiplyMemory(sched.getResourceUsage(),
+              sched.getQueue().getSteadyFairShare(),
+              sched.getQueue().getMaxAppShare())) {
+        LOG.debug("Skip application " + sched.getName() + " of queue "
+            + sched.getQueueName() + ", since current usage "
+            + sched.getResourceUsage() + " exceed limit ("
+            + sched.getQueue().getSteadyFairShare() + " * "
+            + sched.getQueue().getMaxAppShare() + ")");
+        continue;
+      }
+
       assigned = sched.assignContainer(node);
 
       boolean isContainerAssignedOrReserved = !assigned.equals(none());
       boolean isContainerReserved =
-                assigned.equals(FairScheduler.CONTAINER_RESERVED);
+          assigned.equals(FairScheduler.CONTAINER_RESERVED);
 
       // check if an assignment or a reservation was made.
       if (isContainerAssignedOrReserved) {

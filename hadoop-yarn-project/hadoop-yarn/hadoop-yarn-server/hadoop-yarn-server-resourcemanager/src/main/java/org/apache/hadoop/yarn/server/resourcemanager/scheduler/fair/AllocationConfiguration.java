@@ -62,6 +62,10 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   final Map<String, Float> queueMaxAMShares;
   private final float queueMaxAMShareDefault;
 
+  // Maximum resource share for each leaf queue that can be used to run Apps
+  final Map<String, Float> queueMaxAppShares;
+  private final float queueMaxAppShareDefault;
+
   // ACL's for each queue. Only specifies non-default ACL's from configuration.
   private final Map<String, Map<AccessType, AccessControlList>> queueAcls;
 
@@ -121,13 +125,16 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     this.queueMaxApps = queueProperties.getQueueMaxApps();
     this.userMaxApps = allocationFileParser.getUserMaxApps();
     this.queueMaxAMShares = queueProperties.getQueueMaxAMShares();
+    this.queueMaxAppShares = queueProperties.getQueueMaxAppShares();
     this.queueWeights = queueProperties.getQueueWeights();
     this.userMaxAppsDefault = allocationFileParser.getUserMaxAppsDefault();
     this.queueMaxResourcesDefault =
-            allocationFileParser.getQueueMaxResourcesDefault();
+        allocationFileParser.getQueueMaxResourcesDefault();
     this.queueMaxAppsDefault = allocationFileParser.getQueueMaxAppsDefault();
     this.queueMaxAMShareDefault =
         allocationFileParser.getQueueMaxAMShareDefault();
+    this.queueMaxAppShareDefault =
+        allocationFileParser.getQueueMaxAppShareDefault();
     this.defaultSchedulingPolicy =
         allocationFileParser.getDefaultSchedulingPolicy();
     this.schedulingPolicies = queueProperties.getQueuePolicies();
@@ -161,10 +168,12 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     queueMaxApps = new HashMap<>();
     userMaxApps = new HashMap<>();
     queueMaxAMShares = new HashMap<>();
+    queueMaxAppShares = new HashMap<>();
     userMaxAppsDefault = Integer.MAX_VALUE;
     queueMaxAppsDefault = Integer.MAX_VALUE;
     queueMaxResourcesDefault = new ConfigurableResource(Resources.unbounded());
     queueMaxAMShareDefault = 0.5f;
+    queueMaxAppShareDefault = 1.0f;
     queueAcls = new HashMap<>();
     resAcls = new HashMap<>();
     minSharePreemptionTimeouts = new HashMap<>();
@@ -279,6 +288,16 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
 
   public float getQueueMaxAMShareDefault() {
     return queueMaxAMShareDefault;
+  }
+
+  @VisibleForTesting
+  float getQueueMaxAppShare(String queue) {
+    Float maxAppShare = queueMaxAppShares.get(queue);
+    return (maxAppShare == null) ? queueMaxAppShareDefault : maxAppShare;
+  }
+
+  public float getQueueMaxAppShareDefault() {
+    return queueMaxAppShareDefault;
   }
 
   /**
@@ -414,6 +433,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     queue.setMaxShare(getMaxResources(name));
     queue.setMaxRunningApps(getQueueMaxApps(name));
     queue.setMaxAMShare(getQueueMaxAMShare(name));
+    queue.setMaxAppShare(getQueueMaxAppShare(name));
     queue.setMaxChildQueueResource(getMaxChildResources(name));
     queue.setMaxContainerAllocation(getQueueMaxContainerAllocation(name));
 
