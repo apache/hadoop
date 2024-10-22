@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -27,6 +28,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 
@@ -78,6 +80,15 @@ public class DatanodeDescriptor extends DatanodeInfo {
     BlockTargetPair(Block block, DatanodeStorageInfo[] targets) {
       this.block = block;
       this.targets = targets;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      BlockTargetPair that = (BlockTargetPair) o;
+      return Objects.equals(block, that.block) &&
+          Arrays.equals(targets, that.targets);
     }
   }
 
@@ -685,7 +696,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public void addBlockToBeReplicated(Block block,
       DatanodeStorageInfo[] targets) {
     assert(block != null && targets != null && targets.length > 0);
-    replicateBlocks.offer(new BlockTargetPair(block, targets));
+    BlockTargetPair blockTargetPair = new BlockTargetPair(block, targets);
+    if (!replicateBlocks.contains(blockTargetPair)) {
+      return;
+    }
+    replicateBlocks.offer(blockTargetPair);
   }
 
   /**
