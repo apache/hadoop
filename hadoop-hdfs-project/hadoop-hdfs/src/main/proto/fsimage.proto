@@ -163,6 +163,7 @@ message INodeSection {
     optional AclFeatureProto acl = 5;
     optional XAttrFeatureProto xAttrs = 6;
     optional QuotaByStorageTypeFeatureProto typeQuotas = 7;
+    optional uint64 accessTime = 8;
   }
 
   message INodeSymlink {
