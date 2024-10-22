@@ -117,6 +117,10 @@ class IncrementalBlockReportManager {
       }
       return count;
     }
+
+    ReceivedDeletedBlockInfo get(Block block) {
+      return blocks.getOrDefault(block, null);
+    }
   }
 
   /**
@@ -252,7 +256,9 @@ class IncrementalBlockReportManager {
     // Make sure another entry for the same block is first removed.
     // There may only be one such entry.
     for (PerStorageIBR perStorage : pendingIBRs.values()) {
-      if (perStorage.remove(rdbi.getBlock()) != null) {
+      ReceivedDeletedBlockInfo oldRdbi = perStorage.get(rdbi.getBlock());
+      if (oldRdbi != null && oldRdbi.getBlock().getGenerationStamp() < rdbi.getBlock().getGenerationStamp()
+          && perStorage.remove(oldRdbi.getBlock()) != null) {
         break;
       }
     }
