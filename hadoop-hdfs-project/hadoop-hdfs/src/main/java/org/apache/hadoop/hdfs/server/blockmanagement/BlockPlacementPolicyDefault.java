@@ -106,7 +106,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   protected double considerLoadFactor;
   private boolean considerLoadByVolume = false;
   private boolean preferLocalNode;
-  private boolean dataNodePeerStatsEnabled;
+  private volatile boolean dataNodePeerStatsEnabled;
   private volatile boolean excludeSlowNodesEnabled;
   protected NetworkTopology clusterMap;
   protected Host2NodesMap host2datanodeMap;
@@ -1111,7 +1111,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         return false;
       }
     }
-      
+
     // check if the target rack has chosen too many nodes
     String rackname = node.getNetworkLocation();
     int counter=1;
@@ -1381,6 +1381,15 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   @VisibleForTesting
   void setPreferLocalNode(boolean prefer) {
     this.preferLocalNode = prefer;
+  }
+  @Override
+  public void setDataNodePeerStatsEnabled(boolean enable) {
+    this.dataNodePeerStatsEnabled = enable;
+  }
+
+  @Override
+  public boolean getDataNodePeerStatsEnabled() {
+    return dataNodePeerStatsEnabled;
   }
 
   @Override
