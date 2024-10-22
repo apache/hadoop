@@ -189,6 +189,10 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   private final static long DEFAULT_DURATION = 10 * 60 * 1000;
 
+  private final static long FEDERATION_MAX_MEMORY_CAPABILITY = 10000;
+
+  private final static int FEDERATION_MAX_CPU_CAPABILITY = 8;
+
   @Override
   public void setUp() throws IOException {
     super.setUpConfig();
@@ -255,6 +259,10 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     conf.setInt("yarn.scheduler.maximum-allocation-mb", 100 * 1024);
     conf.setInt("yarn.scheduler.maximum-allocation-vcores", 100);
 
+    conf.setBoolean(YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CAPABILITY, true);
+    conf.setLong(YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB, FEDERATION_MAX_MEMORY_CAPABILITY);
+    conf.setInt(YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB, FEDERATION_MAX_CPU_CAPABILITY);
+
     conf.setBoolean("hadoop.security.authentication", true);
     return conf;
   }
@@ -274,6 +282,9 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(response.getApplicationId());
     Assert.assertEquals(response.getApplicationId().getClusterTimestamp(),
         ResourceManager.getClusterTimeStamp());
+
+    Assert.assertEquals(response.getMaximumResourceCapability().getMemorySize(), FEDERATION_MAX_MEMORY_CAPABILITY);
+    Assert.assertEquals(response.getMaximumResourceCapability().getVirtualCores(), FEDERATION_MAX_CPU_CAPABILITY);
   }
 
   /**

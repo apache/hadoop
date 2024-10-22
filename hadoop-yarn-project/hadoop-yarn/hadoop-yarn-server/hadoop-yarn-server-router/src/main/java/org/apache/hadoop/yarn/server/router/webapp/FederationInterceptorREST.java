@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -104,6 +105,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
@@ -219,6 +221,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   private int appInfosCacheCount;
   private boolean allowPartialResult;
   private long submitIntervalTime;
+  private boolean overrideMaxClusterCapability;
+  private long overrideMaxClusterMemoryCapability;
+  private int overrideMaxClusterVCoreCapability;
+
 
   private Map<SubClusterId, DefaultRequestInterceptorREST> interceptors;
   private LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> appInfosCaches;
@@ -278,6 +284,18 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     submitIntervalTime = conf.getTimeDuration(
         YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_INTERVAL_TIME,
         YarnConfiguration.DEFAULT_CLIENTRM_SUBMIT_INTERVAL_TIME, TimeUnit.MILLISECONDS);
+
+    overrideMaxClusterCapability = conf.getBoolean(
+        YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CAPABILITY,
+        YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CAPABILITY);
+
+    overrideMaxClusterMemoryCapability = conf.getLong(
+        YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB,
+        YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB);
+
+    overrideMaxClusterVCoreCapability = conf.getInt(
+        YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES,
+        YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES);
   }
 
   @VisibleForTesting
@@ -399,6 +417,17 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // If the response is not empty and the status is SC_OK,
       // this request can be returned directly.
       if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
+
+        // Since we fetch getNewApplication response from a random subcluster each time, we
+        // can consolidate on the response returned by Router here
+        if (overrideMaxClusterCapability) {
+          NewApplication appId = new NewApplication(
+              getApplicationIdFromGetNewApplicationResponse(response).toString(),
+                  new ResourceInfo(Resource.newInstance(overrideMaxClusterMemoryCapability, overrideMaxClusterVCoreCapability)));
+          return Response.status(Status.OK).entity(appId).build();
+
+        }
+
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsCreated(stopTime - startTime);
         return response;
@@ -466,6 +495,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     String msg = String.format("Unable to create a new ApplicationId in SubCluster %s.",
         subClusterId.getId());
     throw new YarnException(msg);
+  }
+
+  private ApplicationId getApplicationIdFromGetNewApplicationResponse(Response response) {
+    return ApplicationId.fromString(response.getEntity().toString());
   }
 
   /**
