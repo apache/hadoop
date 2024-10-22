@@ -40,6 +40,8 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   private boolean isFair = true;
   private final boolean openLockTrace;
   private Exception lastException;
+  private final boolean enableLockHoldInfo;
+  private final int lockHoldTheshold;
 
   /**
    * Class for maintain lockMap and is thread safe.
@@ -49,12 +51,10 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
     private final HashMap<String, AutoCloseDataSetLock> writeLockMap = new HashMap<>();
 
     public synchronized void addLock(String name, ReentrantReadWriteLock lock) {
-      AutoCloseDataSetLock readLock = new AutoCloseDataSetLock(lock.readLock());
-      AutoCloseDataSetLock writeLock = new AutoCloseDataSetLock(lock.writeLock());
-      if (openLockTrace) {
-        readLock.setDataNodeLockManager(DataSetLockManager.this);
-        writeLock.setDataNodeLockManager(DataSetLockManager.this);
-      }
+      AutoCloseDataSetLock readLock = new AutoCloseDataSetLock(lock.readLock(),
+          DataSetLockManager.this, true, enableLockHoldInfo, lockHoldTheshold);
+      AutoCloseDataSetLock writeLock = new AutoCloseDataSetLock(lock.writeLock(),
+          DataSetLockManager.this, false, enableLockHoldInfo, lockHoldTheshold);
       readlockMap.putIfAbsent(name, readLock);
       writeLockMap.putIfAbsent(name, writeLock);
     }
@@ -143,19 +143,28 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
     this.openLockTrace = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_LOCKMANAGER_TRACE,
         DFSConfigKeys.DFS_DATANODE_LOCKMANAGER_TRACE_DEFAULT);
+    this.enableLockHoldInfo = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_LOCK_HELD_INFO_ENABLE,
+        DFSConfigKeys.DFS_DATANODE_LOCK_HELD_INFO_ENABLE_DEFAULT);
+    this.lockHoldTheshold = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_LOCK_HELD_TIME_THRESHOLD,
+        DFSConfigKeys.DFS_DATANODE_LOCK_HELD_TIME_THRESHOLD_DEFAULT);
   }
 
   public DataSetLockManager() {
     this.openLockTrace = true;
+    this.enableLockHoldInfo = true;
+    this.lockHoldTheshold = DFSConfigKeys.
+        DFS_DATANODE_LOCK_HELD_TIME_THRESHOLD_DEFAULT;
   }
 
   @Override
-  public AutoCloseDataSetLock readLock(LockLevel level, String... resources) {
+  public AutoCloseDataSetLock readLock(String op, LockLevel level, String... resources) {
     if (level == LockLevel.BLOCK_POOl) {
-      return getReadLock(level, resources[0]);
+      return getReadLock(op, true, level, resources[0]);
     } else {
-      AutoCloseDataSetLock bpLock = getReadLock(LockLevel.BLOCK_POOl, resources[0]);
-      AutoCloseDataSetLock volLock = getReadLock(level, resources);
+      AutoCloseDataSetLock bpLock = getReadLock(op, true, LockLevel.BLOCK_POOl, resources[0]);
+      AutoCloseDataSetLock volLock = getReadLock(op, false, level, resources);
       volLock.setParentLock(bpLock);
       if (openLockTrace) {
         LOG.info("Sub lock " + resources[0] + resources[1] + " parent lock " +
@@ -166,15 +175,15 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   }
 
   @Override
-  public AutoCloseDataSetLock writeLock(LockLevel level, String... resources) {
+  public AutoCloseDataSetLock writeLock(String op, LockLevel level, String... resources) {
     if (level == LockLevel.BLOCK_POOl) {
-      return getWriteLock(level, resources[0]);
+      return getWriteLock(op, true, level, resources[0]);
     } else {
-      AutoCloseDataSetLock bpLock = getReadLock(LockLevel.BLOCK_POOl, resources[0]);
-      AutoCloseDataSetLock volLock = getWriteLock(level, resources);
+      AutoCloseDataSetLock bpLock = getReadLock(op, true, LockLevel.BLOCK_POOl, resources[0]);
+      AutoCloseDataSetLock volLock = getWriteLock(op, false, level,  resources);
       volLock.setParentLock(bpLock);
       if (openLockTrace) {
-        LOG.info("Sub lock " + resources[0] + resources[1] + " parent lock " +
+        LOG.info("Sub lock " + resources[0] + " " + resources[1] + " parent lock " +
             resources[0]);
       }
       return volLock;
@@ -184,7 +193,8 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   /**
    * Return a not null ReadLock.
    */
-  private AutoCloseDataSetLock getReadLock(LockLevel level, String... resources) {
+  private AutoCloseDataSetLock getReadLock(String op, boolean isBpLevel,
+      LockLevel level, String... resources) {
     String lockName = generateLockName(level, resources);
     AutoCloseDataSetLock lock = lockMap.getReadLock(lockName);
     if (lock == null) {
@@ -193,7 +203,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
       lockMap.addLock(lockName, new ReentrantReadWriteLock(isFair));
       lock = lockMap.getReadLock(lockName);
     }
-    lock.lock();
+    lock.lock(op, lockName, isBpLevel);
     if (openLockTrace) {
       putThreadName(getThreadName());
     }
@@ -203,7 +213,8 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   /**
    * Return a not null WriteLock.
    */
-  private AutoCloseDataSetLock getWriteLock(LockLevel level, String... resources) {
+  private AutoCloseDataSetLock getWriteLock(String op, boolean isBpLevel,
+      LockLevel level, String... resources) {
     String lockName = generateLockName(level, resources);
     AutoCloseDataSetLock lock = lockMap.getWriteLock(lockName);
     if (lock == null) {
@@ -212,7 +223,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
       lockMap.addLock(lockName, new ReentrantReadWriteLock(isFair));
       lock = lockMap.getWriteLock(lockName);
     }
-    lock.lock();
+    lock.lock(op, lockName, isBpLevel);
     if (openLockTrace) {
       putThreadName(getThreadName());
     }
@@ -231,9 +242,9 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   }
 
   @Override
-  public void removeLock(LockLevel level, String... resources) {
+  public void removeLock(String op, LockLevel level, String... resources) {
     String lockName = generateLockName(level, resources);
-    try (AutoCloseDataSetLock lock = writeLock(level, resources)) {
+    try (AutoCloseDataSetLock lock = writeLock(op, level, resources)) {
       lockMap.removeLock(lockName);
     }
   }
