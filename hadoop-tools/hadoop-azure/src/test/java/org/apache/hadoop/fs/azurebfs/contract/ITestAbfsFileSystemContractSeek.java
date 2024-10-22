@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_AHEAD_RANGE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
@@ -68,6 +69,7 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
   protected AbstractFSContract createContract(final Configuration conf) {
     conf.setInt(AZURE_READ_AHEAD_RANGE, MIN_BUFFER_SIZE);
     conf.setInt(AZURE_READ_BUFFER_SIZE, MIN_BUFFER_SIZE);
+    disableFilesystemCaching(conf);
     return new AbfsFileSystemContract(conf, isSecure);
   }
 
