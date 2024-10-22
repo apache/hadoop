@@ -953,7 +953,7 @@ public class NetUtils {
   }
   
   @SuppressWarnings("unchecked")
-  private static <T extends IOException> T wrapWithMessage(
+  public static <T extends IOException> T wrapWithMessage(
       T exception, String msg) throws T {
     Class<? extends Throwable> clazz = exception.getClass();
     try {

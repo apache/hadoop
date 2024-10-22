@@ -2506,6 +2506,38 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
+   * Try and resolve the provided element name as a credential provider
+   * alias from the given provider path.
+   * @param name alias of the provisioned credential
+   * @param providerURI The URI of the provider path
+   * @return password or null if not found
+   * @throws IOException when error in fetching password
+   */
+  public char[] getPasswordFromCredentialProvider(String name, URI providerUri)
+      throws IOException {
+    try {
+      CredentialProvider provider = CredentialProviderFactory.getProvider(this,
+          providerUri);
+      if (provider != null) {
+        try {
+          CredentialEntry entry = getCredentialEntry(provider, name);
+          if (entry != null) {
+            return entry.getCredential();
+          }
+        } catch (IOException ioe) {
+          String msg = String.format(
+              "Can't get key %s from key provider of type: %s.", name,
+              provider.getClass().getName());
+          throw NetUtils.wrapWithMessage(ioe, msg);
+        }
+      }
+    } catch (IOException ioe) {
+      throw new IOException("Configuration problem with provider path.", ioe);
+    }
+    return null;
+  }
+
+  /**
    * Fallback to clear text passwords in configuration.
    * @param name the property name.
    * @return clear text password or null

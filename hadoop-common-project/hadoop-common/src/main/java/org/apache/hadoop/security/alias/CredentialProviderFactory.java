@@ -110,4 +110,26 @@ public abstract class CredentialProviderFactory {
     }
     return result;
   }
+
+  /**
+   * Get the CredentialProvider for a given provider URI.
+   *
+   * @param conf The configuration object
+   * @param providerURI The URI of the provider path
+   * @return The CredentialProvider
+   * @throws IOException If an I/O error occurs
+   */
+  public static CredentialProvider getProvider(Configuration conf,
+      URI providerUri) throws IOException {
+    synchronized (serviceLoader) {
+      for (CredentialProviderFactory factory : serviceLoader) {
+        CredentialProvider kp = factory.createProvider(providerUri, conf);
+        if (kp != null) {
+          return kp;
+        }
+      }
+    }
+    throw new IOException(
+        "No CredentialProviderFactory for " + providerUri);
+  }
 }
