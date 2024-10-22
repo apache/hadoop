@@ -42,6 +42,14 @@ class BackupJournalManager implements JournalManager {
   }
 
   @Override
+  public int formatUnformattedSharedJournals(NamespaceInfo nsInfo) throws IOException {
+    // format() should only get called at startup, before any BNs
+    // can register with the NN.
+    throw new UnsupportedOperationException(
+        "BackupNode journal should never get formatted");
+  }
+
+  @Override
   public void format(NamespaceInfo nsInfo, boolean force) {
     // format() should only get called at startup, before any BNs
     // can register with the NN.
