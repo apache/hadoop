@@ -32,6 +32,7 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.server.namenode.ha.ClientHAProxyFactory;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAProxyFactory;
 import org.apache.hadoop.ipc.AlignmentContext;
+import org.apache.hadoop.ipc.Client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -371,7 +372,7 @@ public class NameNodeProxiesClient {
     ClientNamenodeProtocolPB proxy = RPC.getProtocolProxy(
         ClientNamenodeProtocolPB.class, version, address, ugi, conf,
         NetUtils.getDefaultSocketFactory(conf),
-        org.apache.hadoop.ipc.Client.getTimeout(conf), defaultPolicy,
+        Client.getRpcTimeout(conf), defaultPolicy,
         fallbackToSimpleAuth, alignmentContext).getProxy();
 
     if (withRetries) { // create the proxy with retries
