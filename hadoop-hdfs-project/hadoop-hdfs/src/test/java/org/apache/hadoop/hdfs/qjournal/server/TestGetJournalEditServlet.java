@@ -28,7 +28,9 @@ import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.security.Principal;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -65,6 +67,8 @@ public class TestGetJournalEditServlet {
    */
   @Test
   public void testWithoutUser() throws IOException {
+    CONF.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
+    UserGroupInformation.setConfiguration(CONF);
     // Test: Make a request without specifying a user
     HttpServletRequest request = mock(HttpServletRequest.class);
     boolean isValid = SERVLET.isValidRequestor(request, CONF);
@@ -80,9 +84,30 @@ public class TestGetJournalEditServlet {
    */
   @Test
   public void testRequestNameNode() throws IOException, ServletException {
+    CONF.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
+    UserGroupInformation.setConfiguration(CONF);
     // Test: Make a request from a namenode
     HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getParameter(UserParam.NAME)).thenReturn("nn/localhost@REALM.TLD");
+    boolean isValid = SERVLET.isValidRequestor(request, CONF);
+
+    assertThat(isValid).isTrue();
+  }
+
+  /**
+   * In the kerberos environment, the full name is required for adaptation.
+   *
+   * @throws IOException for unexpected validation failures
+   */
+  @Test
+  public void testSecurityRequestNameNode() throws IOException {
+    CONF.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(CONF);
+    // Test: Make a request from a namenode
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("nn/localhost@REALM.TLD");
+    when(request.getUserPrincipal()).thenReturn(principal);
     boolean isValid = SERVLET.isValidRequestor(request, CONF);
 
     assertThat(isValid).isTrue();
@@ -95,6 +120,8 @@ public class TestGetJournalEditServlet {
    */
   @Test
   public void testRequestShortName() throws IOException {
+    CONF.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
+    UserGroupInformation.setConfiguration(CONF);
     // Test: Make a request from a namenode
     HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getParameter(UserParam.NAME)).thenReturn("jn/localhost@REALM.TLD");
