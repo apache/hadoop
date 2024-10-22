@@ -110,8 +110,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       FastDateFormat.getInstance("EEE MMM dd HH:mm:ss Z yyyy");
 
   private static final long MEM_AGGREGATE_ALLOCATION_CACHE_MSECS = 3000;
-  protected long lastMemoryAggregateAllocationUpdateTime = 0;
-  private Map<String, Long> lastResourceSecondsMap = new HashMap<>();
+  protected volatile long lastMemoryAggregateAllocationUpdateTime = 0;
+  private volatile Map<String, Long> lastResourceSecondsMap = new HashMap<>();
   protected final AppSchedulingInfo appSchedulingInfo;
   protected ApplicationAttemptId attemptId;
   protected Map<ContainerId, RMContainer> liveContainers =
@@ -1132,7 +1132,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   }
 
   public ApplicationResourceUsageReport getResourceUsageReport() {
-    writeLock.lock();
+    readLock.lock();
     try {
       AggregateAppResourceUsage runningResourceUsage =
           getRunningAggregateAppResourceUsage();
@@ -1168,7 +1168,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
               runningResourceUsage.getResourceUsageSecondsMap(), queueUsagePerc,
               clusterUsagePerc, preemptedResourceSecondsMaps);
     } finally {
-      writeLock.unlock();
+      readLock.unlock();
     }
   }
 

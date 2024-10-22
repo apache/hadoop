@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppLogAggregationStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
@@ -177,6 +178,7 @@ public class TestRMAppLogAggregationStatus {
         NodeHealthStatus.newInstance(true, null, 0), null, null, null);
     node1.handle(new RMNodeStatusEvent(node1.getNodeID(), nodeStatus1,
         node1ReportForApp));
+    rmApp.handle(new RMAppLogAggregationStatusEvent(appId, nodeId1, report1));
 
     List<LogAggregationReport> node2ReportForApp =
         new ArrayList<LogAggregationReport>();
@@ -191,6 +193,7 @@ public class TestRMAppLogAggregationStatus {
         NodeHealthStatus.newInstance(true, null, 0), null, null, null);
     node2.handle(new RMNodeStatusEvent(node2.getNodeID(), nodeStatus2,
         node2ReportForApp));
+    rmApp.handle(new RMAppLogAggregationStatusEvent(appId, nodeId2, report2));
     // node1 and node2 has updated its log aggregation status
     // verify that the log aggregation status for node1, node2
     // has been changed
@@ -228,6 +231,7 @@ public class TestRMAppLogAggregationStatus {
     node1ReportForApp2.add(report1_2);
     node1.handle(new RMNodeStatusEvent(node1.getNodeID(), nodeStatus1,
         node1ReportForApp2));
+    rmApp.handle(new RMAppLogAggregationStatusEvent(appId, nodeId1, report1_2));
 
     // verify that the log aggregation status for node1
     // has been changed
@@ -283,19 +287,23 @@ public class TestRMAppLogAggregationStatus {
     // be changed from TIME_OUT to SUCCEEDED
     List<LogAggregationReport> node1ReportForApp3 =
         new ArrayList<LogAggregationReport>();
-    LogAggregationReport report1_3;
+    LogAggregationReport[] report1_3 = new LogAggregationReport[10];
     for (int i = 0; i < 10 ; i ++) {
-      report1_3 =
-          LogAggregationReport.newInstance(appId,
-            LogAggregationStatus.RUNNING, "test_message_" + i);
-      node1ReportForApp3.add(report1_3);
+      report1_3[i] = LogAggregationReport
+          .newInstance(appId, LogAggregationStatus.RUNNING, "test_message_" + i);
+      node1ReportForApp3.add(report1_3[i]);
     }
-    node1ReportForApp3.add(LogAggregationReport.newInstance(appId,
-      LogAggregationStatus.SUCCEEDED, ""));
+    LogAggregationReport report1_3_s = LogAggregationReport.newInstance(appId,
+        LogAggregationStatus.SUCCEEDED, "");
+    node1ReportForApp3.add(report1_3_s);
     // For every logAggregationReport cached in memory, we can only save at most
     // 10 diagnostic messages/failure messages
     node1.handle(new RMNodeStatusEvent(node1.getNodeID(), nodeStatus1,
         node1ReportForApp3));
+    for (int i = 0; i < 10; i++) {
+      rmApp.handle(new RMAppLogAggregationStatusEvent(appId, nodeId1, report1_3[i]));
+    }
+    rmApp.handle(new RMAppLogAggregationStatusEvent(appId, nodeId1, report1_3_s));
 
     logAggregationStatus = rmApp.getLogAggregationReportsForApp();
     Assert.assertEquals(2, logAggregationStatus.size());
@@ -340,6 +348,8 @@ public class TestRMAppLogAggregationStatus {
     node2ReportForApp2.add(report2_3);
     node2.handle(new RMNodeStatusEvent(node2.getNodeID(), nodeStatus2,
         node2ReportForApp2));
+    rmApp.handle(new RMAppLogAggregationStatusEvent(appId, nodeId2, report2_2));
+    rmApp.handle(new RMAppLogAggregationStatusEvent(appId, nodeId2, report2_3));
     Assert.assertEquals(LogAggregationStatus.FAILED,
       rmApp.getLogAggregationStatusForAppReport());
     logAggregationStatus = rmApp.getLogAggregationReportsForApp();
