@@ -147,6 +147,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.annotation.Nullable;
 import javax.management.ObjectName;
@@ -455,6 +456,7 @@ public class DataNode extends ReconfigurableBase
   SaslDataTransferClient saslClient;
   SaslDataTransferServer saslServer;
   private ObjectName dataNodeInfoBeanName;
+  private ReentrantReadWriteLock dataNodeInfoBeanLock;
   // Test verification only
   private volatile long lastDiskErrorCheck;
   private String supergroup;
@@ -1437,14 +1439,19 @@ public class DataNode extends ReconfigurableBase
     }
   }
 
-  private synchronized void setClusterId(final String nsCid, final String bpid
+  private void setClusterId(final String nsCid, final String bpid
       ) throws IOException {
-    if(clusterId != null && !clusterId.equals(nsCid)) {
-      throw new IOException ("Cluster IDs not matched: dn cid=" + clusterId 
-          + " but ns cid="+ nsCid + "; bpid=" + bpid);
+    dataNodeInfoBeanLock.writeLock().lock();
+    try {
+      if(clusterId != null && !clusterId.equals(nsCid)) {
+        throw new IOException ("Cluster IDs not matched: dn cid=" + clusterId
+                + " but ns cid="+ nsCid + "; bpid=" + bpid);
+      }
+      // else
+      clusterId = nsCid;
+    } finally {
+      dataNodeInfoBeanLock.writeLock().unlock();
     }
-    // else
-    clusterId = nsCid;
   }
 
   /**
@@ -3780,8 +3787,13 @@ public class DataNode extends ReconfigurableBase
   }
   
   @Override // DataNodeMXBean
-  public synchronized String getClusterId() {
-    return clusterId;
+  public String getClusterId() {
+    dataNodeInfoBeanLock.readLock().lock();
+    try {
+      return clusterId;
+    } finally {
+      dataNodeInfoBeanLock.readLock().unlock();
+    }
   }
 
   @Override // DataNodeMXBean
