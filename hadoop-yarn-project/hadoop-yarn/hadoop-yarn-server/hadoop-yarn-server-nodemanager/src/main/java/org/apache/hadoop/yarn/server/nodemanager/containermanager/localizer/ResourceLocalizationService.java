@@ -1270,6 +1270,7 @@ public class ResourceLocalizationService extends CompositeService
               .setAppId(context.getContainerId()
                   .getApplicationAttemptId().getApplicationId().toString())
               .setLocId(localizerId)
+              .setContainerId(context.getContainerId().toString())
               .setDirsHandler(dirsHandler)
               .build());
         } else {
