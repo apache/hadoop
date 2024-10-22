@@ -1787,8 +1787,7 @@ public class RouterRpcClient {
     final List<? extends FederationNamenodeContext> namenodes;
 
     boolean listObserverNamenodesFirst = isObserverRead
-        && isNamespaceStateIdFresh(nsId)
-        && (RouterStateIdContext.getClientStateIdFromCurrentCall(nsId) > Long.MIN_VALUE);
+        && isNamespaceStateIdFresh(nsId);
     namenodes = namenodeResolver.getNamenodesForNameserviceId(nsId, listObserverNamenodesFirst);
     if (!listObserverNamenodesFirst) {
       // Refresh time of last call to active NameNode.
