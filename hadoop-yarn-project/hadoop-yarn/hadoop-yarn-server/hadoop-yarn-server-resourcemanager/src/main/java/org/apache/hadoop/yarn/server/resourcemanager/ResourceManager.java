@@ -1259,6 +1259,8 @@ public class ResourceManager extends CompositeService
         } catch (Exception e) {
           LOG.error(FATAL, "Failed to transition RM to Standby mode.", e);
           ExitUtil.terminate(1, e);
+        } finally {
+          hasAlreadyRun.set(false);
         }
       }
     }
