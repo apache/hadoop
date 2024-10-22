@@ -19,11 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -47,6 +43,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.security.AccessControlException;
 
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_QUOTA_FEATURE;
 
 /**
  * Directory INode class.
@@ -140,8 +137,10 @@ public class INodeDirectory extends INodeWithAdditionalFields
     return getParent() != null ? getParent().getStoragePolicyID() : BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
   }
 
-  void setQuota(BlockStoragePolicySuite bsps, long nsQuota, long ssQuota, StorageType type) {
+  void setQuota(FSDirectory fsd, long nsQuota, long ssQuota, StorageType type) {
     DirectoryWithQuotaFeature quota = getDirectoryWithQuotaFeature();
+    Map<String, Set<INode>> featureInode =
+        fsd.getFSNamesystem().getFeatureInode();
     if (quota != null) {
       // already has quota; so set the quota to the new values
       if (type != null) {
@@ -151,9 +150,12 @@ public class INodeDirectory extends INodeWithAdditionalFields
       }
       if (!isQuotaSet() && !isRoot()) {
         removeFeature(quota);
+        if (!featureInode.containsKey(XATTR_QUOTA_FEATURE)){
+          featureInode.get(XATTR_QUOTA_FEATURE).remove(this);
+        }
       }
     } else {
-      final QuotaCounts c = computeQuotaUsage(bsps);
+      final QuotaCounts c = computeQuotaUsage(fsd.getBlockStoragePolicySuite());
       DirectoryWithQuotaFeature.Builder builder =
           new DirectoryWithQuotaFeature.Builder().nameSpaceQuota(nsQuota);
       if (type != null) {
@@ -162,6 +164,14 @@ public class INodeDirectory extends INodeWithAdditionalFields
         builder.storageSpaceQuota(ssQuota);
       }
       addDirectoryWithQuotaFeature(builder.build()).setSpaceConsumed(c);
+      if (!featureInode.containsKey(XATTR_QUOTA_FEATURE)){
+        Set<INode> iNodeSet = new HashSet<>();
+        iNodeSet.add(this);
+        featureInode.put(XATTR_QUOTA_FEATURE, iNodeSet);
+      }else {
+        featureInode.get(XATTR_QUOTA_FEATURE).add(this);
+      }
+
     }
   }
 

@@ -1814,6 +1814,17 @@ public interface ClientProtocol {
   QuotaUsage getQuotaUsage(String path) throws IOException;
 
   /**
+   * Get listing of all the quotaInfo for a directory.
+   *
+   * @return Information about all the quotaInfo for a directory.
+   * @throws IOException If an I/O error occurred
+   */
+  @Idempotent
+  @ReadOnly(isCoordinated = true)
+  QuotaUsage[] getQuotaListing(String QuotaRoot)
+      throws IOException;
+
+  /**
    * List open files in the system in batches. INode id is the cursor and the
    * open files returned in a batch will have their INode ids greater than
    * the cursor INode id. Open files can only be requested by super user and

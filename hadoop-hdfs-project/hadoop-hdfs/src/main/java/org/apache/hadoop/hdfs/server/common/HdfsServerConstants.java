@@ -395,6 +395,8 @@ public interface HdfsServerConstants {
 
   String XATTR_SATISFY_STORAGE_POLICY = "user.hdfs.sps";
 
+  String XATTR_QUOTA_FEATURE = "QuotaFeature";
+
   Path MOVER_ID_PATH = new Path("/system/mover.id");
 
   long BLOCK_GROUP_INDEX_MASK = 15;

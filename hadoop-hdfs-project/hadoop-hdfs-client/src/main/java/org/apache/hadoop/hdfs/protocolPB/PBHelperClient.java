@@ -1889,6 +1889,9 @@ public class PBHelperClient {
     if (qu.hasTypeQuotaInfos()) {
       addStorageTypes(qu.getTypeQuotaInfos(), builder);
     }
+    if (qu.hasPath()) {
+      builder.setPath(qu.getPath());
+    }
     return builder.build();
   }
 
@@ -1904,9 +1907,46 @@ public class PBHelperClient {
     if (qu.isTypeQuotaSet() || qu.isTypeConsumedAvailable()) {
       builder.setTypeQuotaInfos(getBuilder(qu));
     }
+    if (qu.getPath() != null) {
+      builder.setPath(qu.getPath());
+    }
     return builder.build();
   }
 
+  public static HdfsProtos.QuotaListingProto convert(QuotaUsage[] qus) {
+    if (qus == null) {
+      return null;
+    }
+    QuotaUsageProto[] protos =
+        new HdfsProtos.QuotaUsageProto[qus.length];
+    for (int i = 0; i < qus.length; i++) {
+      protos[i] = convert(qus[i]);
+    }
+    List<QuotaUsageProto> protoList =
+         Arrays.asList(protos);
+    return HdfsProtos.QuotaListingProto.newBuilder()
+        .addAllQuotaListing(protoList).build();
+  }
+
+  public static QuotaUsage[] convert(
+      HdfsProtos.QuotaListingProto qtls) {
+    if (qtls == null) {
+      return null;
+    }
+    List<HdfsProtos.QuotaUsageProto> list = qtls
+        .getQuotaListingList();
+    if (list.isEmpty()) {
+      return new QuotaUsage[0];
+    } else {
+      QuotaUsage[] result =
+          new QuotaUsage[list.size()];
+      for (int i = 0; i < list.size(); i++) {
+        result[i] = convert(list.get(i));
+      }
+      return result;
+    }
+  }
+  
   public static ReencryptActionProto convert(ReencryptAction a) {
     switch (a) {
     case CANCEL:

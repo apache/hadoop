@@ -660,6 +660,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private final RetryCache retryCache;
 
+  public Map<String, Set<INode>> getFeatureInode() {
+    return featureInode;
+  }
+
+  private final Map<String, Set<INode>> featureInode;
+
   private KeyProviderCryptoExtension provider = null;
 
   private volatile boolean imageLoaded = false;
@@ -937,7 +943,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
          throw new IOException("Invalid checksum type in "
             + DFS_CHECKSUM_TYPE_KEY + ": " + checksumTypeStr);
       }
-
+      this.featureInode = new HashMap<>();
       try {
         digest = MessageDigest.getInstance("MD5");
       } catch (NoSuchAlgorithmException e) {
@@ -3617,6 +3623,34 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       try {
         checkOperation(OperationCategory.READ);
         quotaUsage = FSDirStatAndListingOp.getQuotaUsage(dir, pc, src);
+      } finally {
+        readUnlock(operationName, getLockReportInfoSupplier(src));
+      }
+    } catch (AccessControlException ace) {
+      logAuditEvent(false, operationName, src);
+      throw ace;
+    }
+    logAuditEvent(true, operationName, src);
+    return quotaUsage;
+  }
+
+  /**
+   * Get the list of quotaUsage for a given directory.
+   *
+   * @return The list of all the quotaUsage for a directory.
+   * @throws IOException
+   */
+  QuotaUsage[] getQuotaListing(final String src) throws IOException {
+    checkOperation(OperationCategory.READ);
+    final String operationName = "getQuotaListing";
+    QuotaUsage[] quotaUsage;
+    final FSPermissionChecker pc = getPermissionChecker();
+    FSPermissionChecker.setOperationType(operationName);
+    try {
+      readLock();
+      try {
+        checkOperation(OperationCategory.READ);
+        quotaUsage = FSDirStatAndListingOp.getQuotaListing(dir, pc, src);
       } finally {
         readUnlock(operationName, getLockReportInfoSupplier(src));
       }

@@ -658,7 +658,22 @@ public class TestQuota {
     assertEquals(c.getDirectoryCount(), 6);
     assertEquals(c.getQuota(), 6);
   }
-  
+
+  @Test
+  public void testGetQuotaList() throws IOException {
+    Path testPath = new Path("/a/b/c");
+    dfs.mkdirs(testPath);
+    assertTrue(dfs.exists(testPath));
+    dfs.setQuota(new Path("/a"),1024,1024);
+    dfs.setQuota(new Path("/a/b"),1024,1024);
+    dfs.setQuota(new Path("/a/b/c"),1024,1024);
+    QuotaUsage[]  quotaUsages = dfs.getQuotaListing(new Path("/a"));
+    assertEquals(3, quotaUsages.length);
+    assertEquals(1024, quotaUsages[0].getQuota());
+    assertEquals(1024, quotaUsages[1].getQuota());
+    assertEquals(1024, quotaUsages[2].getQuota());
+  }
+
   /**
    * Test HDFS operations that change disk space consumed by a directory tree.
    * namely create, rename, delete, append, and setReplication.

@@ -47,7 +47,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.LinkedList;
+import java.util.List;
 
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_QUOTA_FEATURE;
 import static org.apache.hadoop.util.Time.now;
 
 class FSDirStatAndListingOp {
@@ -563,6 +566,30 @@ class FSDirStatAndListingOp {
       //If quota isn't set, fall back to getContentSummary.
       return getContentSummaryInt(fsd, pc, iip);
     }
+  }
+
+  static QuotaUsage[] getQuotaListing(
+      FSDirectory fsd, FSPermissionChecker pc, String src) throws IOException {
+    INodesInPath iip;
+    List<QuotaUsage> result = new LinkedList<>();
+    fsd.readLock();
+    try {
+      for (INode inode : fsd.getFSNamesystem().getFeatureInode()
+          .get(XATTR_QUOTA_FEATURE)) {
+        String inPath = inode.getFullPathName();
+        if (inPath.startsWith(src)){
+          iip = fsd.resolvePath(pc, inPath, DirOp.READ_LINK);
+          if (fsd.isPermissionEnabled()) {
+            fsd.checkPermission(pc, iip, false, null, null, null,
+                FsAction.READ_EXECUTE);
+          }
+          result.add(getQuotaUsageInt(fsd, iip).setPath(inPath));
+        }
+      }
+    } finally {
+      fsd.readUnlock();
+    }
+    return result.toArray(new QuotaUsage[result.size()]);
   }
 
   private static QuotaUsage getQuotaUsageInt(FSDirectory fsd, INodesInPath iip)

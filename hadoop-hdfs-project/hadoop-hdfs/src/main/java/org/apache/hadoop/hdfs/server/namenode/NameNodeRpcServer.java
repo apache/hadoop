@@ -1513,6 +1513,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
+  public QuotaUsage[] getQuotaListing(String QuotaRoot)
+      throws IOException {
+    return namesystem.getQuotaListing(QuotaRoot);
+  }
+
+  @Override // ClientProtocol
   public void satisfyStoragePolicy(String src) throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.WRITE);

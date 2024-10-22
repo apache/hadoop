@@ -1832,6 +1832,11 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
+  public QuotaUsage[] getQuotaListing(String QuotaRoot) throws IOException {
+    return rpcServer.getQuotaListing(QuotaRoot);
+  }
+
+  @Override
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
