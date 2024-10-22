@@ -36,6 +36,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
@@ -608,9 +609,10 @@ public class LeaseManager {
             removeLease(lastINode.getId());
             continue;
           }
-          boolean completed = false;
+          ImmutablePair<Boolean, Boolean> releaseLeasePair =
+              ImmutablePair.of(false, false);
           try {
-            completed = fsnamesystem.internalReleaseLease(
+            releaseLeasePair = fsnamesystem.internalReleaseLease(
                 leaseToCheck, p, iip, newHolder);
           } catch (IOException e) {
             LOG.warn("Cannot release the path {} in the lease {}. It will be "
@@ -618,15 +620,16 @@ public class LeaseManager {
             continue;
           }
           if (LOG.isDebugEnabled()) {
-            if (completed) {
+            if (releaseLeasePair.getLeft()) {
               LOG.debug("Lease recovery for inode {} is complete. File closed"
                   + ".", id);
             } else {
               LOG.debug("Started block recovery {} lease {}", p, leaseToCheck);
             }
           }
-          // If a lease recovery happened, we need to sync later.
-          if (!needSync && !completed) {
+          // If a lease recovery happened or file has been closed, we need to sync later.
+          boolean isNeedSync = releaseLeasePair.getRight() || releaseLeasePair.getLeft();
+          if (!needSync && isNeedSync) {
             needSync = true;
           }
         } catch (IOException e) {
@@ -641,7 +644,7 @@ public class LeaseManager {
         }
       }
 
-      for(Long id : removing) {
+      for (Long id : removing) {
         removeLease(leaseToCheck, id);
       }
     }

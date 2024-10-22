@@ -100,6 +100,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.text.CaseUtils;
 import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -2950,7 +2951,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         // close only the file src
         LOG.info("recoverLease: " + lease + ", src=" + src +
           " from client " + clientName);
-        return internalReleaseLease(lease, src, iip, holder);
+        return internalReleaseLease(lease, src, iip, holder).getLeft();
       } else {
         assert lease.getHolder().equals(clientName) :
           "Current lease holder " + lease.getHolder() +
@@ -2962,7 +2963,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         if (lease.expiredSoftLimit()) {
           LOG.info("startFile: recover " + lease + ", src=" + src + " client "
               + clientName);
-          if (internalReleaseLease(lease, src, iip, null)) {
+          if (internalReleaseLease(lease, src, iip, null).getLeft()) {
             return true;
           } else {
             throw new RecoveryInProgressException(
@@ -3712,12 +3713,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    *         replication;<br>
    *         RecoveryInProgressException if lease recovery is in progress.<br>
    *         IOException in case of an error.
-   * @return true  if file has been successfully finalized and closed or 
-   *         false if block recovery has been initiated. Since the lease owner
-   *         has been changed and logged, caller should call logSync().
+   * @return left is true if file has been successfully finalized and closed,
+   *         right is true if block recovery has been initiated. Since the lease owner
+   *         has been changed and logged or file has been successfully finalized and closed,
+   *         caller should call logSync().
    */
-  boolean internalReleaseLease(Lease lease, String src, INodesInPath iip,
-      String recoveryLeaseHolder) throws IOException {
+  ImmutablePair<Boolean, Boolean> internalReleaseLease(Lease lease,
+      String src, INodesInPath iip, String recoveryLeaseHolder)
+      throws IOException {
     LOG.info("Recovering " + lease + ", src=" + src);
     assert !isInSafeMode();
     assert hasWriteLock();
@@ -3744,7 +3747,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       NameNode.stateChangeLog.warn("BLOCK*" +
           " internalReleaseLease: All existing blocks are COMPLETE," +
           " lease removed, file " + src + " closed.");
-      return true;  // closed!
+      return ImmutablePair.of(true, true);  // closed!
     }
 
     // Only the last and the penultimate blocks may be in non COMPLETE state.
@@ -3783,7 +3786,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         NameNode.stateChangeLog.warn("BLOCK*" +
             " internalReleaseLease: Committed blocks are minimally" +
             " replicated, lease removed, file" + src + " closed.");
-        return true;  // closed!
+        return ImmutablePair.of(true, true);  // closed!
       }
       // Cannot close file right now, since some blocks 
       // are not yet minimally replicated.
@@ -3847,7 +3850,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           NameNode.stateChangeLog.warn("BLOCK* internalReleaseLease: "
               + "Removed last unrecoverable block group and closed file " + src);
         }
-        return true;
+        return ImmutablePair.of(true, true);
       }
       // Start recovery of the last block for this file
       // Only do so if there is no ongoing recovery for this block,
@@ -3877,7 +3880,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
       break;
     }
-    return false;
+    return ImmutablePair.of(false, true);
   }
 
   private Lease reassignLease(Lease lease, String src, String newHolder,
