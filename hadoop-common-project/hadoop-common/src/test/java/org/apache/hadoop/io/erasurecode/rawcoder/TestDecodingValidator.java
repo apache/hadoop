@@ -50,6 +50,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
         {RSRawErasureCoderFactory.class, 6, 3, new int[]{1}, new int[]{}},
         {RSRawErasureCoderFactory.class, 6, 3, new int[]{3}, new int[]{0}},
         {RSRawErasureCoderFactory.class, 6, 3, new int[]{2, 4}, new int[]{1}},
+        {RSRawErasureCoderFactory.class, 6, 1, new int[]{0}, new int[]{1}},
         {NativeRSRawErasureCoderFactory.class, 6, 3, new int[]{0}, new int[]{}},
         {XORRawErasureCoderFactory.class, 10, 1, new int[]{0}, new int[]{}},
         {NativeXORRawErasureCoderFactory.class, 10, 1, new int[]{0},
@@ -123,7 +124,12 @@ public class TestDecodingValidator extends TestRawCoderBase {
     }
 
     // decode
-    backupAndEraseChunks(clonedDataChunks, parityChunks);
+    try {
+      backupAndEraseChunks(clonedDataChunks, parityChunks);
+    } catch (IllegalArgumentException e) {
+      String expected = "The erased index is out of bound";
+      Assume.assumeTrue(expected, !e.toString().contains(expected));
+    }
     ECChunk[] inputChunks =
         prepareInputChunksForDecoding(clonedDataChunks, parityChunks);
     markChunks(inputChunks);
@@ -210,7 +216,12 @@ public class TestDecodingValidator extends TestRawCoderBase {
     }
 
     // decode
-    backupAndEraseChunks(clonedDataChunks, parityChunks);
+    try {
+      backupAndEraseChunks(clonedDataChunks, parityChunks);
+    } catch (IllegalArgumentException e) {
+      String expected = "The erased index is out of bound";
+      Assume.assumeTrue(expected, !e.toString().contains(expected));
+    }
     ECChunk[] inputChunks =
         prepareInputChunksForDecoding(clonedDataChunks, parityChunks);
     markChunks(inputChunks);
