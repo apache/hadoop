@@ -177,7 +177,7 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
       }
     }
 
-    // No class given, try a os specific class
+    // No class given, try an os specific class
     if (ProcfsBasedProcessTree.isAvailable()) {
       return new ProcfsBasedProcessTree(pid);
     }
