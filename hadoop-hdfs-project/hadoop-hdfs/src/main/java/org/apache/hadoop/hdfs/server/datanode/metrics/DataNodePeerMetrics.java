@@ -35,6 +35,10 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MUTABLE_ROLLING_AVERAGES_NUM_WINDOWS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MUTABLE_ROLLING_AVERAGES_NUM_WINDOWS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MUTABLE_ROLLING_AVERAGES_WINDOW_SIZE_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MUTABLE_ROLLING_AVERAGES_WINDOW_SIZE_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT;
@@ -86,9 +90,13 @@ public class DataNodePeerMetrics {
     minOutlierDetectionNodes =
         conf.getLong(DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY,
             DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT);
-    this.slowNodeDetector =
-        new OutlierDetector(minOutlierDetectionNodes, lowThresholdMs);
-    sendPacketDownstreamRollingAverages = new MutableRollingAverages("Time");
+    this.slowNodeDetector = new OutlierDetector(minOutlierDetectionNodes, lowThresholdMs);
+    int numWindows = conf.getInt(DFS_DATANODE_MUTABLE_ROLLING_AVERAGES_NUM_WINDOWS_KEY,
+        DFS_DATANODE_MUTABLE_ROLLING_AVERAGES_NUM_WINDOWS_DEFAULT);
+    long windowSizeMs = conf.getLong(DFS_DATANODE_MUTABLE_ROLLING_AVERAGES_WINDOW_SIZE_MS_KEY,
+        DFS_DATANODE_MUTABLE_ROLLING_AVERAGES_WINDOW_SIZE_MS_DEFAULT);
+    sendPacketDownstreamRollingAverages =
+        new MutableRollingAverages("Time", numWindows, windowSizeMs);
   }
 
   public String name() {
