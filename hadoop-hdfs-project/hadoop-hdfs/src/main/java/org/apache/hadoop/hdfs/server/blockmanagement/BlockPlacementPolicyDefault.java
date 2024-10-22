@@ -80,7 +80,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   private static final BlockPlacementStatus ONE_RACK_PLACEMENT =
       new BlockPlacementStatusDefault(1, 1, 1);
 
-  private enum NodeNotChosenReason {
+  protected enum NodeNotChosenReason {
     NOT_IN_SERVICE("the node is not in service"),
     NODE_STALE("the node is stale"),
     NODE_TOO_BUSY("the node is too busy"),
@@ -88,7 +88,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     TOO_MANY_NODES_ON_RACK("the rack has too many chosen nodes"),
     NOT_ENOUGH_STORAGE_SPACE("not enough storage space to place the block"),
     NO_REQUIRED_STORAGE_TYPE("required storage types are unavailable"),
-    NODE_SLOW("the node is too slow");
+    NODE_SLOW("the node is too slow"),
+    NODE_NOT_CONFORM_TO_UD("the node doesn't conform to upgrade domain policy");
 
     private final String text;
 
@@ -980,7 +981,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     logNodeIsNotChosen(node, reason, null);
   }
 
-  private static void logNodeIsNotChosen(DatanodeDescriptor node,
+  protected static void logNodeIsNotChosen(DatanodeDescriptor node,
       NodeNotChosenReason reason, String reasonDetails) {
     assert reason != null;
     if (LOG.isDebugEnabled()) {
