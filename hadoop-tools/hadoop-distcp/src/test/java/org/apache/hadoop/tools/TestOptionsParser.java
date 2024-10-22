@@ -394,6 +394,14 @@ public class TestOptionsParser {
     assertThat(options.getCopyStrategy()).isEqualTo("dynamic");
 
     options = OptionsParser.parse(new String[] {
+         "-strategy",
+         "record",
+         "-f",
+         "hdfs://localhost:8020/source/first",
+         "hdfs://localhost:8020/target/"});
+    assertThat(options.getCopyStrategy()).isEqualTo("record");
+
+    options = OptionsParser.parse(new String[] {
         "-f",
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/"});
