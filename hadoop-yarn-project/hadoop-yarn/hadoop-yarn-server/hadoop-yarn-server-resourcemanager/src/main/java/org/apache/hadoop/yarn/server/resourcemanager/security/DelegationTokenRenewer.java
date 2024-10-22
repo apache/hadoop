@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -1078,6 +1079,28 @@ public class DelegationTokenRenewer extends AbstractService {
         DelegationTokenRenewer.this.handleAppSubmitEvent(event);
         rmContext.getDispatcher().getEventHandler()
             .handle(new RMAppEvent(event.getApplicationId(), RMAppEventType.START));
+      } catch (IOException e) {
+        boolean needRetry = e instanceof InterruptedIOException || e.getCause() instanceof InterruptedIOException;
+        LOG.warn(
+                "Unable to add the application to the delegation token renewer.",
+                e);
+        try {
+          // Sending APP_REJECTED is fine, since we assume that the
+          // RMApp is in NEW state and thus we havne't yet informed the
+          // Scheduler about the existence of the application
+          rmContext.getDispatcher().getEventHandler().handle(
+                  new RMAppEvent(event.getApplicationId(),
+                          RMAppEventType.APP_REJECTED, e.getMessage()));
+        } catch (YarnRuntimeException ex) {
+          LOG.warn("Reject job {} failed, needRetry={}", event.getApplicationId(), needRetry);
+          if (needRetry) {
+            rmContext.getDispatcher().getEventHandler().handle(
+                    new RMAppEvent(event.getApplicationId(),
+                            RMAppEventType.APP_REJECTED, e.getMessage()));
+            LOG.warn("Retry  job {} success", event.getApplicationId());
+          }
+        }
+
       } catch (Throwable t) {
         LOG.warn(
             "Unable to add the application to the delegation token renewer.",
