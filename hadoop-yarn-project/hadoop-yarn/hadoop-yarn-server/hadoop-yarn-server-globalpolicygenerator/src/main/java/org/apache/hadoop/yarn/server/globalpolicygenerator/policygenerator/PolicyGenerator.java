@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -28,6 +29,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGContext;
+import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGPolicyFacade;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
@@ -38,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -56,6 +59,8 @@ public class PolicyGenerator implements Runnable, Configurable {
 
   private GPGContext gpgContext;
   private Configuration conf;
+  private GPGPolicyFacade policyFacade;
+  private FederationStateStoreFacade stateStoreFacade;
 
   // Information request map
   private Map<Class, String> pathMap = new HashMap<>();
@@ -78,6 +83,15 @@ public class PolicyGenerator implements Runnable, Configurable {
 
   private void init(GPGContext context) {
     this.gpgContext = context;
+
+    if (context != null && context.getPolicyFacade() != null) {
+      this.policyFacade = context.getPolicyFacade();
+    }
+
+    if (context != null && context.getStateStoreFacade() != null) {
+      this.stateStoreFacade = context.getStateStoreFacade();
+    }
+
     LOG.info("Initialized PolicyGenerator");
   }
 
@@ -98,6 +112,12 @@ public class PolicyGenerator implements Runnable, Configurable {
 
   @Override
   public final void run() {
+
+    if (policyFacade == null) {
+      LOG.error("policy facade cannot null.");
+      return;
+    }
+
     Map<SubClusterId, SubClusterInfo> activeSubClusters;
     try {
       activeSubClusters = gpgContext.getStateStoreFacade().getSubClusters(true);
@@ -153,6 +173,7 @@ public class PolicyGenerator implements Runnable, Configurable {
       Map<SubClusterId, SubClusterInfo> activeSubClusters) {
 
     Map<SubClusterId, Map<Class, Object>> clusterInfo = new HashMap<>();
+
     for (SubClusterInfo sci : activeSubClusters.values()) {
       for (Map.Entry<Class, String> e : this.pathMap.entrySet()) {
         if (!clusterInfo.containsKey(sci.getSubClusterId())) {
@@ -176,28 +197,34 @@ public class PolicyGenerator implements Runnable, Configurable {
   @VisibleForTesting
   protected Map<SubClusterId, SchedulerInfo> getSchedulerInfo(
       Map<SubClusterId, SubClusterInfo> activeSubClusters) {
-    Map<SubClusterId, SchedulerInfo> schedInfo =
-        new HashMap<>();
-    for (SubClusterInfo sci : activeSubClusters.values()) {
-      SchedulerTypeInfo sti = GPGUtils
-          .invokeRMWebService(sci.getRMWebServiceAddress(),
-              RMWSConsts.SCHEDULER, SchedulerTypeInfo.class, conf);
-      if(sti != null){
-        schedInfo.put(sci.getSubClusterId(), sti.getSchedulerInfo());
-      } else {
-        LOG.warn("Skipped null scheduler info from SubCluster {}.", sci.getSubClusterId());
+    Map<SubClusterId, SchedulerInfo> schedulerInfo = new HashMap<>();
+    Collection<SubClusterInfo> subClusterInfos = activeSubClusters.values();
+    // We use parallelism to get the SchedulerInfo of subCluster.
+    subClusterInfos.stream().parallel().forEach(sci -> {
+      SubClusterId subClusterId = sci.getSubClusterId();
+      try {
+        String rmWebServiceAddress = sci.getRMWebServiceAddress();
+        SchedulerTypeInfo sti = GPGUtils.invokeRMWebService(rmWebServiceAddress,
+            RMWSConsts.SCHEDULER, SchedulerTypeInfo.class, conf);
+        if (sti != null) {
+          schedulerInfo.put(sci.getSubClusterId(), sti.getSchedulerInfo());
+        } else {
+          LOG.warn("Skipped null scheduler info from SubCluster {}.", sci.getSubClusterId());
+        }
+      } catch (Exception e) {
+        LOG.error("Get scheduler info from SubCluster {} error.", subClusterId, e);
       }
-    }
-    return schedInfo;
+    });
+
+    return schedulerInfo;
   }
 
   /**
    * Helper to get a set of blacklisted SubCluster Ids from configuration.
    */
   private Set<SubClusterId> getBlackList() {
-    String blackListParam =
-        conf.get(YarnConfiguration.GPG_POLICY_GENERATOR_BLACKLIST);
-    if(blackListParam == null){
+    String blackListParam = conf.get(YarnConfiguration.GPG_POLICY_GENERATOR_BLACKLIST);
+    if (StringUtils.isBlank(blackListParam)) {
       return Collections.emptySet();
     }
     Set<SubClusterId> blackList = new HashSet<>();
