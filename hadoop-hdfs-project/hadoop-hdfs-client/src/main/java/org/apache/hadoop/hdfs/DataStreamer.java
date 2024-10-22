@@ -1237,16 +1237,6 @@ class DataStreamer extends Daemon {
             }
           }
 
-          if (slownodesFromAck.isEmpty()) {
-            if (!slowNodeMap.isEmpty()) {
-              slowNodeMap.clear();
-            }
-          } else {
-            markSlowNode(slownodesFromAck);
-            LOG.debug("SlowNodeMap content: {}.", slowNodeMap);
-          }
-
-
           assert seqno != PipelineAck.UNKOWN_SEQNO :
               "Ack for unknown seqno should be a failed ack: " + ack;
           if (seqno == DFSPacket.HEART_BEAT_SEQNO) {  // a heartbeat ack
@@ -1290,6 +1280,15 @@ class DataStreamer extends Daemon {
             dataQueue.notifyAll();
 
             one.releaseBuffer(byteArrayManager);
+            if (slownodesFromAck.isEmpty()) {
+              if (!slowNodeMap.isEmpty()) {
+                slowNodeMap.clear();
+              }
+            } else {
+              markSlowNode(slownodesFromAck);
+              // TODO remove out of synchronized.
+              LOG.debug("SlowNodeMap content: {}.", slowNodeMap);
+            }
           }
         } catch (Throwable e) {
           if (!responderClosed) {
