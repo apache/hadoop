@@ -204,7 +204,7 @@ public class FSDownload implements Callable<Path> {
   static boolean ancestorsHaveExecutePermissions(FileSystem fs,
       Path path, LoadingCache<Path,Future<FileStatus>> statCache)
       throws IOException {
-    Path current = path;
+    Path current = path.getParent();
     while (current != null) {
       //the subdirs in the path should have execute permissions for others
       if (!checkPermissionOfOther(fs, current, FsAction.EXECUTE, statCache)) {
