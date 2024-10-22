@@ -930,7 +930,7 @@
 
 <property>
   <name>io.compression.codec.lzo.buffersize</name>
-  <value>65536</value>
+  <value>262144</value>
   <description>
     Internal buffer size for Lzo compressor/decompressors.
   </description>
