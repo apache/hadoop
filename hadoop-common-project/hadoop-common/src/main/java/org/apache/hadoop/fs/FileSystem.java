@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
 import org.apache.hadoop.fs.impl.DefaultBulkDeleteOperation;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
+import org.apache.hadoop.fs.impl.FileSystemRename3Action;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -1632,97 +1633,61 @@ public abstract class FileSystem extends Configured
   public abstract boolean rename(Path src, Path dst) throws IOException;
 
   /**
-   * Renames Path src to Path dst
+   * Renames Path source to Path dest.
    * <ul>
-   *   <li>Fails if src is a file and dst is a directory.</li>
-   *   <li>Fails if src is a directory and dst is a file.</li>
-   *   <li>Fails if the parent of dst does not exist or is a file.</li>
+   *   <li>Fails if source is a file and dest is a directory.</li>
+   *   <li>Fails if source is a directory and dest is a file.</li>
+   *   <li>Fails if the parent of dest does not exist or is a file.</li>
    * </ul>
    * <p>
    * If OVERWRITE option is not passed as an argument, rename fails
-   * if the dst already exists.
+   * if the dest already exists.
    * </p>
    * <p>
    * If OVERWRITE option is passed as an argument, rename overwrites
-   * the dst if it is a file or an empty directory. Rename fails if dst is
+   * the dest if it is a file or an empty directory. Rename fails if dest is
    * a non-empty directory.
    * </p>
    * Note that atomicity of rename is dependent on the file system
    * implementation. Please refer to the file system documentation for
    * details. This default implementation is non atomic.
-   * <p>
-   * This method is deprecated since it is a temporary method added to
-   * support the transition from FileSystem to FileContext for user
-   * applications.
-   * </p>
    *
-   * @param src path to be renamed
-   * @param dst new path after rename
+   * @param source path to be renamed
+   * @param dest new path after rename
    * @param options rename options.
-   * @throws FileNotFoundException src path does not exist, or the parent
-   * path of dst does not exist.
+   * @throws FileNotFoundException source path does not exist, or the parent
+   * path of dest does not exist.
    * @throws FileAlreadyExistsException dest path exists and is a file
    * @throws ParentNotDirectoryException if the parent path of dest is not
    * a directory
    * @throws IOException on failure
    */
-  @Deprecated
-  protected void rename(final Path src, final Path dst,
+  public void rename(final Path source,
+      final Path dest,
       final Rename... options) throws IOException {
+
+    final Path sourcePath = makeQualified(source);
+    final Path destPath = makeQualified(dest);
     // Default implementation
-    final FileStatus srcStatus = getFileLinkStatus(src);
-    if (srcStatus == null) {
-      throw new FileNotFoundException("rename source " + src + " not found.");
-    }
+    new FileSystemRename3Action()
+        .apply(
+            new FileSystemRename3Action.RenameValidationBuilder()
+                .withSourcePath(sourcePath)
+                .withDestPath(destPath)
+                .withRenameCallbacks(
+                    createRenameCallbacks())
+                .withRenameOptions(options)
+                .build());
+  }
 
-    boolean overwrite = false;
-    if (null != options) {
-      for (Rename option : options) {
-        if (option == Rename.OVERWRITE) {
-          overwrite = true;
-        }
-      }
-    }
-
-    FileStatus dstStatus;
-    try {
-      dstStatus = getFileLinkStatus(dst);
-    } catch (IOException e) {
-      dstStatus = null;
-    }
-    if (dstStatus != null) {
-      if (srcStatus.isDirectory() != dstStatus.isDirectory()) {
-        throw new IOException("Source " + src + " Destination " + dst
-            + " both should be either file or directory");
-      }
-      if (!overwrite) {
-        throw new FileAlreadyExistsException("rename destination " + dst
-            + " already exists.");
-      }
-      // Delete the destination that is a file or an empty directory
-      if (dstStatus.isDirectory()) {
-        FileStatus[] list = listStatus(dst);
-        if (list != null && list.length != 0) {
-          throw new IOException(
-              "rename cannot overwrite non empty destination directory " + dst);
-        }
-      }
-      delete(dst, false);
-    } else {
-      final Path parent = dst.getParent();
-      final FileStatus parentStatus = getFileStatus(parent);
-      if (parentStatus == null) {
-        throw new FileNotFoundException("rename destination parent " + parent
-            + " not found.");
-      }
-      if (!parentStatus.isDirectory()) {
-        throw new ParentNotDirectoryException("rename destination parent " + parent
-            + " is a file.");
-      }
-    }
-    if (!rename(src, dst)) {
-      throw new IOException("rename from " + src + " to " + dst + " failed.");
-    }
+  /**
+   * Override point, create any custom rename callbacks.
+   * This only needs to be overridden if the subclass has
+   * optimized operations.
+   * @return callbacks for renaming.
+   */
+  protected FileSystemRename3Action.RenameCallbacks createRenameCallbacks() {
+    return FileSystemRename3Action.callbacksFromFileSystem(this);
   }
 
   /**
