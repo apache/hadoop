@@ -69,6 +69,7 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URLEncodedUtils;
@@ -295,6 +296,19 @@ public class WebAppProxyServlet extends HttpServlet {
       }
 
       ((HttpPut) base).setEntity(new StringEntity(sb.toString()));
+    } else if (method.equals(HTTP.POST)){
+      base = new HttpPost(link);
+
+      StringBuilder sb = new StringBuilder();
+      BufferedReader reader =
+              new BufferedReader(
+                      new InputStreamReader(req.getInputStream(), "UTF-8"));
+      String line;
+      while ((line = reader.readLine()) != null) {
+        sb.append(line);
+      }
+
+      ((HttpPost) base).setEntity(new StringEntity(sb.toString()));
     } else {
       resp.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
       return;
