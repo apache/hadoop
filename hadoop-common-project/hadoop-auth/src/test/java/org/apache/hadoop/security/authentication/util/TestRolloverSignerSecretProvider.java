@@ -13,14 +13,16 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
+import org.apache.curator.shaded.com.google.common.annotations.VisibleForTesting;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.concurrent.TimeUnit;
 
 public class TestRolloverSignerSecretProvider {
 
   @Test
   public void testGetAndRollSecrets() throws Exception {
-    long rolloverFrequency = 15 * 1000; // rollover every 15 sec
     byte[] secret1 = "doctor".getBytes();
     byte[] secret2 = "who".getBytes();
     byte[] secret3 = "tardis".getBytes();
@@ -28,7 +30,7 @@ public class TestRolloverSignerSecretProvider {
         new TRolloverSignerSecretProvider(
             new byte[][]{secret1, secret2, secret3});
     try {
-      secretProvider.init(null, null, rolloverFrequency);
+      secretProvider.init(null, null, TimeUnit.SECONDS.toMillis(2));
 
       byte[] currentSecret = secretProvider.getCurrentSecret();
       byte[][] allSecrets = secretProvider.getAllSecrets();
@@ -36,7 +38,7 @@ public class TestRolloverSignerSecretProvider {
       Assert.assertEquals(2, allSecrets.length);
       Assert.assertArrayEquals(secret1, allSecrets[0]);
       Assert.assertNull(allSecrets[1]);
-      Thread.sleep(rolloverFrequency + 2000);
+      secretProvider.waitUntilNewSecret();
 
       currentSecret = secretProvider.getCurrentSecret();
       allSecrets = secretProvider.getAllSecrets();
@@ -44,7 +46,7 @@ public class TestRolloverSignerSecretProvider {
       Assert.assertEquals(2, allSecrets.length);
       Assert.assertArrayEquals(secret2, allSecrets[0]);
       Assert.assertArrayEquals(secret1, allSecrets[1]);
-      Thread.sleep(rolloverFrequency + 2000);
+      secretProvider.waitUntilNewSecret();
 
       currentSecret = secretProvider.getCurrentSecret();
       allSecrets = secretProvider.getAllSecrets();
@@ -52,7 +54,6 @@ public class TestRolloverSignerSecretProvider {
       Assert.assertEquals(2, allSecrets.length);
       Assert.assertArrayEquals(secret3, allSecrets[0]);
       Assert.assertArrayEquals(secret2, allSecrets[1]);
-      Thread.sleep(rolloverFrequency + 2000);
     } finally {
       secretProvider.destroy();
     }
@@ -63,8 +64,12 @@ public class TestRolloverSignerSecretProvider {
     private byte[][] newSecretSequence;
     private int newSecretSequenceIndex;
 
-    public TRolloverSignerSecretProvider(byte[][] newSecretSequence)
-        throws Exception {
+    /**
+     * This monitor objects used to notify the thread waiting for new secret.
+     */
+    private final Object rolloverMonitor = new Object();
+
+    TRolloverSignerSecretProvider(byte[][] newSecretSequence) {
       super();
       this.newSecretSequence = newSecretSequence;
       this.newSecretSequenceIndex = 0;
@@ -72,8 +77,23 @@ public class TestRolloverSignerSecretProvider {
 
     @Override
     protected byte[] generateNewSecret() {
+      synchronized (rolloverMonitor) {
+        rolloverMonitor.notify();
+      }
       return newSecretSequence[newSecretSequenceIndex++];
     }
 
+    /**
+     * cause the current thread to sleep until the generateNewSecret method called
+     *
+     * @throws InterruptedException if any thread interrupted the current thread before or while the current thread
+     *                              was waiting for a notification.
+     */
+    @VisibleForTesting
+    private void waitUntilNewSecret() throws InterruptedException {
+      synchronized (rolloverMonitor) {
+        rolloverMonitor.wait();
+      }
+    }
   }
 }
