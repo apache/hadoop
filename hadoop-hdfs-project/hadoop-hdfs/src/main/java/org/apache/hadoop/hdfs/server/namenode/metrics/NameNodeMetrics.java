@@ -94,6 +94,19 @@ public class NameNodeMetrics {
   @Metric("Number of pending deletion blocks")
   MutableGaugeInt pendingDeleteBlocksCount;
 
+  @Metric("Number of avoid not in service node")
+  private MutableCounterLong avoidNotInServiceNodeCount;
+  @Metric("Number of avoid stale node")
+  private MutableCounterLong avoidStaleNodeCount;
+  @Metric("Number of avoid xceiver over load node")
+  private MutableCounterLong avoidXceiverOverLoadNodeCount;
+  @Metric("Number of avoid volume over load node")
+  private MutableCounterLong avoidVolumeOverLoadNodeCount;
+  @Metric("Number of avoid per rack over storage limit node")
+  private MutableCounterLong avoidPerRackOverStorageLimitNodeCount;
+  @Metric("Number of avoid slow node")
+  private MutableCounterLong avoidSlowNodeCount;
+
   @Metric("Number of file system operations")
   public long totalFileOps(){
     return
@@ -119,6 +132,12 @@ public class NameNodeMetrics {
       snapshotDiffReportOps.value();
   }
 
+  @Metric("Total number of avoid datanode")
+  public long totalAvoidDataNodeOps() {
+    return avoidNotInServiceNodeCount.value() + avoidStaleNodeCount.value()
+        + avoidXceiverOverLoadNodeCount.value() + avoidVolumeOverLoadNodeCount.value()
+        + avoidPerRackOverStorageLimitNodeCount.value() + avoidSlowNodeCount.value();
+  }
 
   @Metric("Journal transactions") MutableRate transactions;
   @Metric("Journal syncs") MutableRate syncs;
@@ -480,5 +499,29 @@ public class NameNodeMetrics {
     for (MutableQuantiles q : editLogTailIntervalQuantiles) {
       q.add(elapsed);
     }
+  }
+
+  public void incrAvoidNotInServiceNodeCount() {
+    avoidNotInServiceNodeCount.incr();
+  }
+
+  public void incrAvoidStaleNodeCount() {
+    avoidStaleNodeCount.incr();
+  }
+
+  public void incrAvoidXceiverOverLoadNodeCount() {
+    avoidXceiverOverLoadNodeCount.incr();
+  }
+
+  public void incrAvoidVolumeOverLoadNodeCount() {
+    avoidVolumeOverLoadNodeCount.incr();
+  }
+
+  public void incrAvoidPerRackOverStorageLimitNodeCount() {
+    avoidPerRackOverStorageLimitNodeCount.incr();
+  }
+
+  public void incrAvoidSlowNodeCount() {
+    avoidSlowNodeCount.incr();
   }
 }
