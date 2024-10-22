@@ -135,7 +135,7 @@ public class BlockCompressorStream extends CompressorStream {
 
   @Override
   public void finish() throws IOException {
-    if (!compressor.finished()) {
+    if (!compressor.finished() && compressor.getBytesRead() > 0) {
       rawWriteInt((int)compressor.getBytesRead());
       compressor.finish();
       while (!compressor.finished()) {
