@@ -93,28 +93,20 @@ public class RouterSafemodeService extends PeriodicService {
   }
 
   /**
-   * Set the flag to indicate that the safe mode for this Router is set manually
-   * via the Router admin command.
-   */
-  void setManualSafeMode(boolean mode) {
-    this.safeMode = mode;
-    this.isSafeModeSetManually = mode;
-  }
-
-  /**
    * Enter safe mode.
    */
-  private void enter() {
+  void enter(boolean manualSetmode) {
     LOG.info("Entering safe mode");
     enterSafeModeTime = monotonicNow();
     safeMode = true;
     router.updateRouterState(RouterServiceState.SAFEMODE);
+    this.isSafeModeSetManually = manualSetmode;
   }
 
   /**
    * Leave safe mode.
    */
-  private void leave() {
+  void leave() {
     // Cache recently updated, leave safemode
     long timeInSafemode = monotonicNow() - enterSafeModeTime;
     LOG.info("Leaving safe mode after {} milliseconds", timeInSafemode);
@@ -126,6 +118,7 @@ public class RouterSafemodeService extends PeriodicService {
     }
     safeMode = false;
     router.updateRouterState(RouterServiceState.RUNNING);
+    this.isSafeModeSetManually = false;
   }
 
   @Override
@@ -153,7 +146,7 @@ public class RouterSafemodeService extends PeriodicService {
     this.startupTime = monotonicNow();
 
     // Initializing the RPC server in safe mode, it will disable it later
-    enter();
+    enter(false);
 
     super.serviceInit(conf);
   }
@@ -174,7 +167,7 @@ public class RouterSafemodeService extends PeriodicService {
     // Always update to indicate our cache was updated
     if (isCacheStale) {
       if (!safeMode) {
-        enter();
+        enter(false);
       }
     } else if (safeMode && !isSafeModeSetManually) {
       // Cache recently updated, leave safe mode
