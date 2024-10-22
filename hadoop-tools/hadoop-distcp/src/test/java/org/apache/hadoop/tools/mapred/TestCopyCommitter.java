@@ -122,6 +122,128 @@ public class TestCopyCommitter {
   }
 
   @Test
+  public void testCommitWithNestedFoldersAndDifferentFileSizes() throws IOException {
+    TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
+    JobContext jobContext = new JobContextImpl(
+        taskAttemptContext.getConfiguration(),
+        taskAttemptContext.getTaskAttemptID().getJobID());
+    Configuration conf = jobContext.getConfiguration();
+
+    String sourceBase;
+    String targetBase;
+    FileSystem fs = null;
+    try {
+      fs = FileSystem.get(conf);
+      sourceBase = "/tmp1/source";
+      targetBase = "/tmp1/target";
+      int blocksPerChunk = 2;
+      int maxDepth = 5;
+      int minChunksCount = 3;
+      createSrcAndWorkFilesOfDifferentSizesWithNestedFolders(fs, blocksPerChunk, sourceBase,
+          targetBase, maxDepth, minChunksCount);
+      DistCpOptions options = new DistCpOptions.Builder(
+          Collections.singletonList(new Path(sourceBase)),
+          new Path("/out"))
+          .withBlocksPerChunk(blocksPerChunk)
+          .withSkipCRC(false)
+          .build();
+      options.appendToConf(conf);
+      conf.setBoolean(DistCpConstants.CONF_LABEL_SIMPLE_LISTING_RANDOMIZE_FILES, false);
+      DistCpContext context = new DistCpContext(options);
+      context.setTargetPathExists(false);
+
+      CopyListing listing = new GlobbedCopyListing(conf, CREDENTIALS);
+      Path listingFile = new Path("/tmp1/" + rand.nextLong());
+      listing.buildListing(listingFile, context);
+
+      conf.set(CONF_LABEL_TARGET_WORK_PATH, targetBase);
+      conf.set(CONF_LABEL_TARGET_FINAL_PATH, targetBase);
+
+      OutputCommitter committer = new CopyCommitter(null, taskAttemptContext);
+      try {
+        committer.commitJob(jobContext);
+        verifyFoldersAreInSync(fs, targetBase, sourceBase);
+      } catch(Exception exception) {
+        LOG.error("Unexpected exception is found", exception);
+        Assert.fail("Commit failed for nested folders containing files with different sizes");
+      }
+    } finally {
+      TestDistCpUtils.delete(fs, "/tmp1");
+      TestDistCpUtils.delete(fs, "/meta");
+    }
+  }
+
+  /**
+   * Creates nested folders till maxDepth. A source file is created under each folder under
+   * sourceBase and its respective distcp chunks under targetBase.
+   * <p>
+   * The folder structure looks like below:
+   * <pre>
+   *   /tmp1/source/0/file
+   *   /tmp1/source/0/1/file
+   *   /tmp1/source/0/1/2/file
+   *
+   *   /tmp1/target/0/file.____distcpSplit____0.1024
+   *   /tmp1/target/0/file.____distcpSplit____1024.1024
+   *   /tmp1/target/0/1/file.____distcpSplit____0.1024
+   *   /tmp1/target/0/1/file.____distcpSplit____1024.1024
+   *   /tmp1/target/0/1/file.____distcpSplit____2048.1024
+   *   /tmp1/target/0/1/2/file.____distcpSplit____0.1024
+   *   /tmp1/target/0/1/2/file.____distcpSplit____1024.1024
+   *   /tmp1/target/0/1/2/file.____distcpSplit____2048.1024
+   *   /tmp1/target/0/1/2/file.____distcpSplit____3072.1024
+   * </pre>
+   *
+   * @param fs the FileSystem
+   * @param blocksPerChunk the blocks per chunk config that enables copying
+   *                       blocks in parallel
+   * @param sourceBase the path to a source file
+   * @param targetBase the path to the working files
+   * @param maxDepth the maximum depth till which nested folders will be created
+   * @param minChunksCount the minimum number of chunks created for a source file
+   * @throws IOException when it fails to create files
+   */
+  private void createSrcAndWorkFilesOfDifferentSizesWithNestedFolders(FileSystem fs,
+      int blocksPerChunk, String sourceBase, String targetBase, int maxDepth, int minChunksCount)
+      throws IOException {
+    long srcSeed = System.currentTimeMillis();
+    int bufferLen = 128;
+    short replFactor = 2;
+    long chunkLength = BLOCK_SIZE * blocksPerChunk;
+    Path srcFolderPath = new Path(sourceBase);
+    Path targetFolderPath = new Path(targetBase);
+
+    for (int i = 0; i < maxDepth; i++) {
+      LinkedList<Path> srcPaths = new LinkedList<>();
+      // create nested folder
+      srcFolderPath = new Path(srcFolderPath + "/" + i);
+      targetFolderPath = new Path(targetFolderPath + "/" + i);
+      int chunkOffset = 0;
+      for (int j = 0; j < minChunksCount; j++) {
+        // src chunk
+        Path srcChunkPath = new Path(srcFolderPath + "/file" + j);
+        srcPaths.add(srcChunkPath);
+        DFSTestUtil.createFile(fs, srcChunkPath, bufferLen, chunkLength, BLOCK_SIZE, replFactor,
+            srcSeed);
+        // target chunk
+        Path destChunkPath = new Path(
+            targetFolderPath + "/file" + ".____distcpSplit____" + chunkOffset + "."
+                + chunkLength);
+        DFSTestUtil.createFile(fs, destChunkPath, bufferLen, chunkLength, BLOCK_SIZE, replFactor,
+            srcSeed);
+        chunkOffset += chunkLength;
+      }
+      minChunksCount++;
+
+      // merge chunks to create source file
+      Path firstFile = srcPaths.removeFirst();
+      Path[] restSrcPaths = new Path[srcPaths.size()];
+      fs.concat(firstFile, srcPaths.toArray(restSrcPaths));
+      fs.rename(firstFile, new Path(srcFolderPath + "/file"));
+    }
+  }
+
+  @Test
   public void testNoCommitAction() throws IOException {
     TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
     JobContext jobContext = new JobContextImpl(
