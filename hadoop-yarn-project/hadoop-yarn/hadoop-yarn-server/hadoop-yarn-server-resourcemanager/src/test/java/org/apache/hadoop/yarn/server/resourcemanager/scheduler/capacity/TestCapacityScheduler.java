@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.CapacitySchedulerPreemptionUtils;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.setMaxAllocMb;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.setMaxAllocVcores;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.setMinAllocMb;
@@ -1278,6 +1279,75 @@ public class TestCapacityScheduler {
     assertFalse("queue " + B2 + " should have been preemptable",
         queueB2.getPreemptionDisabled());
     cs.stop();
+  }
+
+  @Test
+  public void testDisableAMPreemption() throws Exception{
+    Configuration conf = new Configuration();
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 3);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+            ResourceScheduler.class);
+    int CONTAINER_MEMORY = 1024; // start RM
+    MockRM rm1 = new MockRM(conf);
+    rm1.start();
+
+    // get scheduler
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+
+    // start NM
+    MockNM nm1 =
+            new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create app and launch the AM
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(CONTAINER_MEMORY, rm1);
+    MockAM am0 = MockRM.launchAM(app0, rm1, nm1);
+    am0.registerAppAttempt();
+
+    // get scheduler app
+    FiCaSchedulerApp schedulerAppAttempt =
+            cs.getSchedulerApplications().get(app0.getApplicationId())
+                    .getCurrentAppAttempt();
+
+    // allocate some containers and launch them
+    List<Container> allocatedContainers =
+            am0.allocateAndWaitForContainers(3, CONTAINER_MEMORY, nm1);
+
+    // kill the 3 containers
+    for (Container c : allocatedContainers) {
+      cs.markContainerForPreemption(am0.getApplicationAttemptId(), schedulerAppAttempt.getRMContainer(c.getId()));    }
+
+    // check values
+    waitForAppPreemptionInfo(app0,
+            Resource.newInstance(CONTAINER_MEMORY * 3, 3), 0, 3,
+            Resource.newInstance(CONTAINER_MEMORY * 3, 3), false, 3);
+
+    // kill app0-attempt0 AM container
+    cs.markContainerForKillable(schedulerAppAttempt.getRMContainer(app0
+            .getCurrentAppAttempt().getMasterContainer().getId()));
+
+    // wait for app0 failed
+    waitForNewAttemptCreated(app0, am0.getApplicationAttemptId());
+
+    // check values
+    waitForAppPreemptionInfo(app0,
+            Resource.newInstance(CONTAINER_MEMORY * 4, 4), 1, 3,
+            Resource.newInstance(0, 0), false, 0);
+
+    CapacitySchedulerPreemptionUtils.setEnableAMPreemption(false);
+
+    // kill app0-attempt0 AM container
+    cs.markContainerForKillable(schedulerAppAttempt.getRMContainer(app0
+            .getCurrentAppAttempt().getMasterContainer().getId()));
+
+    // wait for app0 failed
+    waitForNewAttemptCreated(app0, am0.getApplicationAttemptId());
+
+    // check values
+    waitForAppPreemptionInfo(app0,
+            Resource.newInstance(CONTAINER_MEMORY * 3, 3), 0, 3,
+            Resource.newInstance(0, 0), false, 0);
+
   }
 
   private void waitContainerAllocated(MockAM am, int mem, int nContainer,
