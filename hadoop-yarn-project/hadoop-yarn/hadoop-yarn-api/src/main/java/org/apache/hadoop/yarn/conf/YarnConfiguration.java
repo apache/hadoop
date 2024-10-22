@@ -1347,7 +1347,10 @@ public class YarnConfiguration extends Configuration {
       ApplicationConstants.Environment.HADOOP_CONF_DIR.key(),
       ApplicationConstants.Environment.CLASSPATH_PREPEND_DISTCACHE.key(),
       ApplicationConstants.Environment.HADOOP_YARN_HOME.key()));
-  
+  public static final String NM_ENV_WHITELIST_EXPORT_ENABLED = NM_ENV_WHITELIST
+      + "export.enabled";
+  public static final boolean DEFAULT_NM_ENV_WHITELIST_EXPORT_ENABLED = false;
+
   /** address of node manager IPC.*/
   public static final String NM_ADDRESS = NM_PREFIX + "address";
   public static final int DEFAULT_NM_PORT = 0;

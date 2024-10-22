@@ -310,6 +310,20 @@ public class YarnClientImpl extends YarnClient {
       throw new ApplicationIdNotProvidedException(
           "ApplicationId is not provided in ApplicationSubmissionContext");
     }
+
+    if (isNMEnvWhitelistExportEnabled()) {
+      String[] whitelistVars = getConfig().get(
+          YarnConfiguration.NM_ENV_WHITELIST,
+          YarnConfiguration.DEFAULT_NM_ENV_WHITELIST).split(",");
+      for(String var : whitelistVars) {
+        String value = getNMEnvWhitelistValue(var);
+        if (value != null) {
+          appContext.getAMContainerSpec().getEnvironment()
+              .put(var, value);
+        }
+      }
+    }
+
     SubmitApplicationRequest request =
         Records.newRecord(SubmitApplicationRequest.class);
     request.setApplicationSubmissionContext(appContext);
@@ -521,6 +535,12 @@ public class YarnClientImpl extends YarnClient {
   @VisibleForTesting
   protected boolean isSecurityEnabled() {
     return UserGroupInformation.isSecurityEnabled();
+  }
+
+  protected boolean isNMEnvWhitelistExportEnabled() {
+    return getConfig().getBoolean(
+        YarnConfiguration.NM_ENV_WHITELIST_EXPORT_ENABLED,
+        YarnConfiguration.DEFAULT_NM_ENV_WHITELIST_EXPORT_ENABLED);
   }
 
   @Override
@@ -1210,5 +1230,15 @@ public class YarnClientImpl extends YarnClient {
     } catch (Throwable t) {
       LOG.error("Fail to shell to container: {}", t.getMessage());
     }
+  }
+
+  private String getNMEnvWhitelistValue(String key) {
+    if (System.getenv(key) != null && !System.getenv(key).isEmpty()) {
+      return System.getenv(key);
+    }
+    if (System.getProperty(key) != null && !System.getProperty(key).isEmpty()) {
+      return System.getProperty(key);
+    }
+    return null;
   }
 }

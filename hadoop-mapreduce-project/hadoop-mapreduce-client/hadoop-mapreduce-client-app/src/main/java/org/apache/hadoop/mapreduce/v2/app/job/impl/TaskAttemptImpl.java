@@ -1142,6 +1142,17 @@ public abstract class TaskAttemptImpl implements
     }
     MapReduceChildJVM.setVMEnv(myEnv, remoteTask);
 
+    if (conf.getBoolean(YarnConfiguration.NM_ENV_WHITELIST_EXPORT_ENABLED,
+        YarnConfiguration.DEFAULT_NM_ENV_WHITELIST_EXPORT_ENABLED)) {
+      String[] whitelistVars = conf.get(YarnConfiguration.NM_ENV_WHITELIST,
+          YarnConfiguration.DEFAULT_NM_ENV_WHITELIST).split(",");
+      for (String var : whitelistVars) {
+        if (System.getenv(var) != null && !System.getenv(var).isEmpty()) {
+          myEnv.put(var, System.getenv(var));
+        }
+      }
+    }
+
     // Set up the launch command
     List<String> commands = MapReduceChildJVM.getVMCommand(
         taskAttemptListener.getAddress(), remoteTask, jvmID);
