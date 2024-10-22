@@ -153,7 +153,12 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
     // because we always (except the last split) read one extra line in
     // next() method.
     if (start != 0) {
-      start += in.readLine(new Text(), 0, maxBytesToConsume(start));
+      try {
+        start += in.readLine(new Text(), 0, maxBytesToConsume(start));
+      } catch (Exception e) {
+        close();
+        throw e;
+      }
     }
     this.pos = start;
   }
