@@ -130,7 +130,11 @@ public class Groups {
           CommonConfigurationKeys.
               HADOOP_SECURITY_GROUPS_CACHE_BACKGROUND_RELOAD_THREADS_DEFAULT);
     parseStaticMapping(conf);
-
+    if(cacheTimeout<=0){
+    throw new IllegalArgumentException(
+       "hadoop.security.groups.cache.secs should be larger than 0",
+        new IllegalArgumentException("hadoop.security.groups.cache.secs should be larger than 0"));
+    }
     this.timer = timer;
     this.cache = CacheBuilder.newBuilder()
       .refreshAfterWrite(cacheTimeout, TimeUnit.MILLISECONDS)
