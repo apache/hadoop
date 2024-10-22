@@ -38,6 +38,7 @@ public class Lz4Compressor implements Compressor {
   private static final Logger LOG =
       LoggerFactory.getLogger(Lz4Compressor.class.getName());
   private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64 * 1024;
+  private static final int DEFAULT_HC_LEVEL = 9;
 
   private int directBufferSize;
   private Buffer compressedDirectBuf = null;
@@ -60,13 +61,13 @@ public class Lz4Compressor implements Compressor {
    * @param useLz4HC use high compression ratio version of lz4, 
    *                 which trades CPU for compression ratio.
    */
-  public Lz4Compressor(int directBufferSize, boolean useLz4HC) {
+  public Lz4Compressor(int directBufferSize, boolean useLz4HC, int compressionLevel) {
     this.directBufferSize = directBufferSize;
 
     try {
       LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
       if (useLz4HC) {
-        lz4Compressor = lz4Factory.highCompressor();
+        lz4Compressor = lz4Factory.highCompressor(compressionLevel);
       } else {
         lz4Compressor = lz4Factory.fastCompressor();
       }
@@ -93,7 +94,7 @@ public class Lz4Compressor implements Compressor {
    * @param directBufferSize size of the direct buffer to be used.
    */
   public Lz4Compressor(int directBufferSize) {
-    this(directBufferSize, false);
+    this(directBufferSize, false, DEFAULT_HC_LEVEL);
   }
 
   /**

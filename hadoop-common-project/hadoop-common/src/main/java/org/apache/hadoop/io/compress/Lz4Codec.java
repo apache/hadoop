@@ -116,7 +116,10 @@ public class Lz4Codec implements Configurable, CompressionCodec {
     boolean useLz4HC = conf.getBoolean(
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_USELZ4HC_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_USELZ4HC_DEFAULT);
-    return new Lz4Compressor(bufferSize, useLz4HC);
+    int compressionLevel = conf.getInt(
+            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_HC_LEVEL_KEY,
+            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_HC_LEVEL_DEFAULT);
+    return new Lz4Compressor(bufferSize, useLz4HC, compressionLevel);
   }
 
   /**
