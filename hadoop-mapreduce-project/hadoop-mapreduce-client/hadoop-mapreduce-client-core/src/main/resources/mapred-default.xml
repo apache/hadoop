@@ -730,6 +730,8 @@
     The valid categories are: jobjar, libjars, files, archives.
     If "disabled" is specified then the job submission code will not use
     the shared cache.
+    If "enable" is specified then the job submission code will use the shared cache
+    with all resouce, include jobjar, libjars, files and archives.
   </description>
 </property>
 
