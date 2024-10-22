@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import java.time.Duration;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -1287,6 +1288,33 @@ public final class Constants {
   @Deprecated
   public static final String AWS_SERVICE_IDENTIFIER_DDB = "DDB";
   public static final String AWS_SERVICE_IDENTIFIER_STS = "STS";
+
+  /** Prefix for S3A client-specific properties.
+   * value: {@value}
+   */
+  public static final String FS_S3A_CLIENT_PREFIX = "fs.s3a.client.";
+
+  /** Custom headers postfix.
+   * value: {@value}
+   */
+  public static final String CUSTOM_HEADERS_POSTFIX = ".custom.headers";
+
+  /**
+   * List of custom headers to be set on the service client.
+   * Multiple parameters can be used to specify custom headers.
+   * fs.s3a.client.s3.custom.headers - headers to add on all the s3 requests.
+   * fs.s3a.client.sts.custom.headers - headers to add on all the sts requests.
+   * Examples
+   * CustomHeader {@literal ->} 'Header1:Value1'
+   * CustomHeaders {@literal ->} 'Header1=Value1;Value2,Header2=Value1'
+   */
+  public static final String CUSTOM_HEADERS_STS =
+      FS_S3A_CLIENT_PREFIX + AWS_SERVICE_IDENTIFIER_STS.toLowerCase(Locale.ROOT)
+          + CUSTOM_HEADERS_POSTFIX;
+
+  public static final String CUSTOM_HEADERS_S3 =
+      FS_S3A_CLIENT_PREFIX + AWS_SERVICE_IDENTIFIER_S3.toLowerCase(Locale.ROOT)
+          + CUSTOM_HEADERS_POSTFIX;
 
   /**
    * How long to wait for the thread pool to terminate when cleaning up.
