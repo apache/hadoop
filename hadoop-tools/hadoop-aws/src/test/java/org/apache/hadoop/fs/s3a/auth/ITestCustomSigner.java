@@ -35,6 +35,7 @@ import software.amazon.awssdk.auth.signer.internal.AbstractAwsS3V4Signer;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.signer.Signer;
 import software.amazon.awssdk.http.SdkHttpFullRequest;
+import software.amazon.awssdk.http.SdkHttpMethod;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -56,6 +57,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
+import static software.amazon.awssdk.auth.signer.S3SignerExecutionAttribute.ENABLE_PAYLOAD_SIGNING;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createMagicFile;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
@@ -278,6 +280,17 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
         return realKMSSigner.sign(request, executionAttributes);
       } else {
         AwsS3V4Signer realSigner = AwsS3V4Signer.create();
+        if (request.method() == SdkHttpMethod.POST) {
+          // we need this to work, the attribute is tagged @SdkProtectedApi, this is only needed
+          // for S3Express buckets.
+          executionAttributes.putAttribute(ENABLE_PAYLOAD_SIGNING, Boolean.TRUE);
+        }
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Request Headers:");
+          for (String hd : request.headers().keySet()) {
+            LOG.debug("{}={}", hd, request.headers().get(hd));
+          }
+        }
         return realSigner.sign(request, executionAttributes);
       }
     }
