@@ -86,33 +86,33 @@ public class TestHSync {
     out.write(1);
     checkSyncMetric(cluster, 0);
     out.hsync();
-    checkSyncMetric(cluster, 1);
+    checkSyncMetric(cluster, 2);
     // avoiding repeated hsyncs is a potential future optimization
     out.hsync();
-    checkSyncMetric(cluster, 2);
+    checkSyncMetric(cluster, 4);
     out.hflush();
     // hflush still does not sync
-    checkSyncMetric(cluster, 2);
+    checkSyncMetric(cluster, 4);
     out.close();
     // close is sync'ing
-    checkSyncMetric(cluster, 3);
+    checkSyncMetric(cluster, 6);
 
     // same with a file created with out SYNC_BLOCK
     out = fs.create(p, FsPermission.getDefault(),
         EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
         4096, (short) 1, len, null);
     out.hsync();
-    checkSyncMetric(cluster, 3);
+    checkSyncMetric(cluster, 6);
     out.write(1);
-    checkSyncMetric(cluster, 3);
+    checkSyncMetric(cluster, 6);
     out.hsync();
-    checkSyncMetric(cluster, 4);
+    checkSyncMetric(cluster, 8);
     // repeated hsyncs
     out.hsync();
-    checkSyncMetric(cluster, 5);
+    checkSyncMetric(cluster, 10);
     out.close();
     // close does not sync (not opened with SYNC_BLOCK)
-    checkSyncMetric(cluster, 5);
+    checkSyncMetric(cluster, 10);
     cluster.shutdown();
   }
 
@@ -133,16 +133,16 @@ public class TestHSync {
     out.write(fileContents, 0, len);
     out.hflush();
     // the full block should have caused a sync
-    checkSyncMetric(cluster, 1);
+    checkSyncMetric(cluster, 2);
     out.hsync();
     // first on block again
-    checkSyncMetric(cluster, 1);
+    checkSyncMetric(cluster, 2);
     // write one more byte and sync again
     out.write(1);
     out.hsync();
-    checkSyncMetric(cluster, 2);
+    checkSyncMetric(cluster, 4);
     out.close();
-    checkSyncMetric(cluster, 3);
+    checkSyncMetric(cluster, 6);
     cluster.shutdown();
   }
 
@@ -166,17 +166,17 @@ public class TestHSync {
     w.hflush();
     checkSyncMetric(cluster, 0);
     w.hsync();
-    checkSyncMetric(cluster, 1);
+    checkSyncMetric(cluster, 2);
     int seed = new Random().nextInt();
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
     generator.next();
     w.append(generator.getKey(), generator.getValue());
     w.hsync();
-    checkSyncMetric(cluster, 2);
+    checkSyncMetric(cluster, 4);
     w.close();
-    checkSyncMetric(cluster, 2);
+    checkSyncMetric(cluster, 4);
     out.close();
-    checkSyncMetric(cluster, 3);
+    checkSyncMetric(cluster, 6);
     cluster.shutdown();
   }
 
@@ -198,13 +198,13 @@ public class TestHSync {
     checkSyncMetric(cluster, 1, 0);
     checkSyncMetric(cluster, 2, 0);
     out.hsync();
-    checkSyncMetric(cluster, 0, 1);
-    checkSyncMetric(cluster, 1, 1);
-    checkSyncMetric(cluster, 2, 1);
-    out.hsync();
     checkSyncMetric(cluster, 0, 2);
     checkSyncMetric(cluster, 1, 2);
     checkSyncMetric(cluster, 2, 2);
+    out.hsync();
+    checkSyncMetric(cluster, 0, 4);
+    checkSyncMetric(cluster, 1, 4);
+    checkSyncMetric(cluster, 2, 4);
     cluster.shutdown();
   }
 }

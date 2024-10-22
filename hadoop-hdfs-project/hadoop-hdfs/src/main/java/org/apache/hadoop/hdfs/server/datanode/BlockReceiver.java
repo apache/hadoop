@@ -435,6 +435,7 @@ class BlockReceiver implements Closeable {
       if (isSync) {
         streams.syncChecksumOut();
         datanode.metrics.addFsyncNanos(System.nanoTime() - flushEndNanos);
+        datanode.metrics.incrFsyncCount();
       }
       flushTotalNanos += flushEndNanos - flushStartNanos;
     }
@@ -446,6 +447,7 @@ class BlockReceiver implements Closeable {
         long fsyncStartNanos = flushEndNanos;
         streams.syncDataOut();
         datanode.metrics.addFsyncNanos(System.nanoTime() - fsyncStartNanos);
+        datanode.metrics.incrFsyncCount();
       }
       flushTotalNanos += flushEndNanos - flushStartNanos;
     }
@@ -455,9 +457,6 @@ class BlockReceiver implements Closeable {
     }
     if (checksumOut != null || streams.getDataOut() != null) {
       datanode.metrics.addFlushNanos(flushTotalNanos);
-      if (isSync) {
-        datanode.metrics.incrFsyncCount();
-      }
     }
     long duration = Time.monotonicNow() - begin;
     if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
