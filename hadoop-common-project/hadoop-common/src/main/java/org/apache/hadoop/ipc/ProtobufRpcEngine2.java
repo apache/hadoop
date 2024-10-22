@@ -52,6 +52,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * RPC Engine for for protobuf based RPCs.
@@ -646,6 +647,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
   // which uses the rpc header.  in the normal case we want to defer decoding
   // the rpc header until needed by the rpc engine.
   static class RpcProtobufRequest extends RpcWritable.Buffer {
+    private final ReentrantLock lock = new ReentrantLock();
     private volatile RequestHeaderProto requestHeader;
     private Message payload;
 
@@ -658,17 +660,28 @@ public class ProtobufRpcEngine2 implements RpcEngine {
     }
 
     RequestHeaderProto getRequestHeader() throws IOException {
-      if (getByteBuffer() != null && requestHeader == null) {
-        requestHeader = getValue(RequestHeaderProto.getDefaultInstance());
+      lock.lock();
+      try {
+        if (getByteBuffer() != null && requestHeader == null) {
+          requestHeader = getValue(RequestHeaderProto.getDefaultInstance());
+        }
+        return requestHeader;
+      } finally {
+        lock.unlock();
       }
-      return requestHeader;
     }
 
     @Override
     public void writeTo(ResponseBuffer out) throws IOException {
-      requestHeader.writeDelimitedTo(out);
-      if (payload != null) {
-        payload.writeDelimitedTo(out);
+      lock.lock();
+      try {
+        RequestHeaderProto request = getRequestHeader();
+        if (payload != null && request != null) {
+          request.writeDelimitedTo(out);
+          payload.writeDelimitedTo(out);
+        }
+      } finally {
+        lock.unlock();
       }
     }
 
@@ -677,6 +690,9 @@ public class ProtobufRpcEngine2 implements RpcEngine {
     public String toString() {
       try {
         RequestHeaderProto header = getRequestHeader();
+        if (header == null) {
+          throw new IllegalArgumentException("No request header is found");
+        }
         return header.getDeclaringClassProtocolName() + "." +
                header.getMethodName();
       } catch (IOException e) {
