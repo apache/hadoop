@@ -279,6 +279,17 @@ public abstract class ResourceCalculator {
   public abstract boolean isAnyMajorResourceZeroOrNegative(Resource resource);
 
   /**
+   * Check if resource has any available (those that have non-zero available value)
+   * major resource types (which are all NodeManagers included) a zero value or negative value.
+   *
+   * @param available available resource
+   * @param resource resource
+   * @return returns true if any resource is zero.
+   */
+  public abstract boolean isAnyRequestedResourceZeroOrNegative(
+      Resource available, Resource resource);
+
+  /**
    * Get resource <code>r</code>and normalize down using step-factor
    * <code>stepFactor</code>.
    *

@@ -224,7 +224,11 @@ public class AbstractPreemptableResourceCalculator {
 
       for (Iterator<TempQueuePerPartition> i = underserved.iterator(); i
           .hasNext();) {
-        if (!rc.isAnyMajorResourceAboveZero(unassigned)) {
+        // Exit the loop once any of the unassigned resources reach zero, except the optional
+        // ones which the queue has no guarantee on. This should ensure that extreme cases
+        // where one of the resources are significantly larger than the other (i.e: way below 1
+        // vcore per GB of memory)
+        if (rc.isAnyRequestedResourceZeroOrNegative(totGuarant, unassigned)) {
           break;
         }
 
@@ -265,7 +269,6 @@ public class AbstractPreemptableResourceCalculator {
       context.addPartitionToUnderServedQueues(q1.queueName, q1.partition);
     }
   }
-
 
   /**
    * This method is visible to allow sub-classes to override the initialization

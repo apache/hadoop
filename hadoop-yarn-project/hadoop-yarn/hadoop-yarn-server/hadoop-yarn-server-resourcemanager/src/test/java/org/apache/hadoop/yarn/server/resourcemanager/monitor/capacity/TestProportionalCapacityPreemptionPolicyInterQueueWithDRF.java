@@ -90,6 +90,56 @@ public class TestProportionalCapacityPreemptionPolicyInterQueueWithDRF
   }
 
   @Test
+  public void testInterQueuePreemptionWithMultipleResourceUnbalancedCase() throws IOException {
+    /**
+     * Queue structure is:
+     *
+     * <pre>
+     *           root
+     *           /  \
+     *          a    b
+     * </pre>
+     *
+     * Scenario: Queue B : Queue A has 90/10% capacity share.
+     * Almost all the resources are allocated to Queue A, but based on memory alone
+     * containers still can be allocated elsewhere. The app on A requests a lot more.
+     * The app on Queue B needs a little memory (still fits in the remaining  resources),
+     * but needs a lot of vcores. Enough resources must be preempted from the app on A
+     * to allow the app on B launch.
+     */
+    String labelsConfig = "=65536:50,true;"; // default partition
+    String nodesConfig = // only one node
+        "n1=";
+
+    String queuesConfig =
+        //    guaranteed, max,  used,   pending
+        "root(=[65536:50 65536:50 61440:45 132096:525]);" + // root
+            "-a(=[2048:5 65536:50 61440:45 131072:500]);" + // a
+            "-b(=[63488:45 65536:50 0:0 1024:25]);"; // b
+
+
+    String appsConfig =
+        //queueName\t(priority,resource,host,expression,#repeat,reserved)
+        "a\t(1,61440:45,n1,,20,false);" + // app1 in a
+            "b\t(1,1024:25,n1,,30,false)"; // app2 in b
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig, true);
+    Resource ul = Resource.newInstance(65536, 50);
+    when(((LeafQueue)(cs.getQueue("root.a")))
+        .getResourceLimitForAllUsers(any(), any(), any(), any())
+    ).thenReturn(ul);
+    policy.editSchedule();
+
+    // Preemption should happen in Queue a, preempt to Queue b
+    verify(eventHandler, times(1)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(1))));
+    verify(eventHandler, never()).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(2))));
+  }
+
+  @Test
   public void testInterQueuePreemptionWithNaturalTerminationFactor()
       throws Exception {
     /**
