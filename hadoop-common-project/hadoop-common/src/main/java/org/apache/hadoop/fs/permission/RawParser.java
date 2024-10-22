@@ -22,6 +22,10 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+/**
+ * Parse mode value provided as a string, either in octal or symbolic format and
+ * return it as a short value. mode values can specify sticky bit or X.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class RawParser extends PermissionParser {

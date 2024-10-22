@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * Base class for parsing either chmod permissions or umask permissions.
  * Includes common code needed by either operation as implemented in
- * UmaskParser and ChmodParser classes.
+ * UmaskParser, RawParser and ChmodParser classes.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
