@@ -268,8 +268,7 @@ public class DFSStripedInputStream extends DFSInputStream {
               + " : " + e);
           dfsClient.clearDataEncryptionKey();
           retry.refetchEncryptionKey();
-        } else if (retry.shouldRefetchToken() &&
-            tokenRefetchNeeded(e, dnInfo.addr)) {
+        } else if (retry.shouldRefetchToken()) {
           fetchBlockAt(block.getStartOffset());
           retry.refetchToken();
         } else {
