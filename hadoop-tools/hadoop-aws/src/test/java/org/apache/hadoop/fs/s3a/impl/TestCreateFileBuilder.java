@@ -37,6 +37,7 @@ import org.apache.hadoop.util.Progressable;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_NONE_MATCH;
 
 /**
  * Unit test of {@link CreateFileBuilder}.
@@ -89,11 +90,13 @@ public class TestCreateFileBuilder extends HadoopTestBase {
   public void testHeaderOptions() throws Throwable {
     final CreateFileBuilder builder = mkBuilder().create()
         .must(FS_S3A_CREATE_HEADER + ".retention", "permanent")
+        .must(FS_S3A_CREATE_HEADER + "." + IF_NONE_MATCH, "*")
         .opt(FS_S3A_CREATE_HEADER + ".owner", "engineering");
     final Map<String, String> headers = build(builder).getHeaders();
     Assertions.assertThat(headers)
         .containsEntry("retention", "permanent")
-        .containsEntry("owner", "engineering");
+        .containsEntry("owner", "engineering")
+        .containsEntry(IF_NONE_MATCH, "*");
   }
 
   @Test

@@ -77,6 +77,7 @@ import org.apache.hadoop.util.Progressable;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_NONE_MATCH;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_OCTET_STREAM;
 import static org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent.*;
 import static org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext.EMPTY_BLOCK_OUTPUT_STREAM_STATISTICS;
@@ -690,12 +691,20 @@ class S3ABlockOutputStream extends OutputStream implements
     final S3ADataBlocks.DataBlock block = getActiveBlock();
     final long size = block.dataSize();
     final S3ADataBlocks.BlockUploadData uploadData = block.startUpload();
-    final PutObjectRequest putObjectRequest =
+    PutObjectRequest putObjectRequest =
         writeOperationHelper.createPutObjectRequest(
             key,
             uploadData.getSize(),
             builder.putOptions);
     clearActiveBlock();
+
+    PutObjectRequest.Builder maybeModifiedPutIfAbsentRequest = putObjectRequest.toBuilder();
+    Map<String, String> optionHeaders = builder.putOptions.getHeaders();
+    if (builder.isConditionalPutEnabled){
+        maybeModifiedPutIfAbsentRequest.overrideConfiguration(
+            override -> override.putHeader(IF_NONE_MATCH, optionHeaders.get(IF_NONE_MATCH)));
+    }
+    final PutObjectRequest finalizedRequest = maybeModifiedPutIfAbsentRequest.build();
 
     BlockUploadProgress progressCallback =
         new BlockUploadProgress(block, progressListener, now());
@@ -703,7 +712,7 @@ class S3ABlockOutputStream extends OutputStream implements
     try {
       progressCallback.progressChanged(PUT_STARTED_EVENT);
       // the putObject call automatically closes the upload data
-      writeOperationHelper.putObject(putObjectRequest,
+      writeOperationHelper.putObject(finalizedRequest,
           builder.putOptions,
           uploadData,
           statistics);
@@ -1389,6 +1398,11 @@ class S3ABlockOutputStream extends OutputStream implements
      */
     private boolean isMultipartUploadEnabled;
 
+    /**
+     * Is conditional create enabled.
+     */
+    private boolean isConditionalPutEnabled;
+
     private BlockOutputStreamBuilder() {
     }
 
@@ -1548,6 +1562,12 @@ class S3ABlockOutputStream extends OutputStream implements
     public BlockOutputStreamBuilder withMultipartEnabled(
         final boolean value) {
       isMultipartUploadEnabled = value;
+      return this;
+    }
+
+    public BlockOutputStreamBuilder withConditionalPutEnabled(
+            final boolean value){
+      isConditionalPutEnabled = value;
       return this;
     }
   }

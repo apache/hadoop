@@ -1440,6 +1440,13 @@ public final class Constants {
   public static final String FS_S3A_CREATE_PERFORMANCE = "fs.s3a.create.performance";
 
   /**
+   * Flag for commit if none match.
+   * This can be set in the {code createFile()} builder.
+   * Value {@value}.
+   */
+  public static final String FS_S3A_CONDITIONAL_FILE_CREATE = "fs.s3a.conditional.file.create";
+
+  /**
    * Default value for create performance in an S3A FS.
    * Value {@value}.
    */
