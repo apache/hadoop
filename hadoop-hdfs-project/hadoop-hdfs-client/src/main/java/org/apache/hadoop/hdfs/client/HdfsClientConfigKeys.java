@@ -167,6 +167,8 @@ public interface HdfsClientConfigKeys {
       "dfs.client.block.reader.remote.buffer.size";
   int DFS_CLIENT_BLOCK_READER_REMOTE_BUFFER_SIZE_DEFAULT = 512;
 
+  String DFS_CLIENT_NO_LOCAL_WRITE = "dfs.client.write.no_local_write";
+  boolean DFS_CLIENT_NO_LOCAL_WRITE_DEFAULT = false;
   String DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY =
           "dfs.client.deadnode.detection.enabled";
   boolean DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_DEFAULT = false;

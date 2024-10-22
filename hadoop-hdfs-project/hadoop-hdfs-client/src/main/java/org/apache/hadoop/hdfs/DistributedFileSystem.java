@@ -513,10 +513,17 @@ public class DistributedFileSystem extends FileSystem
   public FSDataOutputStream create(Path f, FsPermission permission,
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
+    boolean noLocalWrite =dfs.getConf().getNoLocalWrite();
+    EnumSet<CreateFlag> flag = EnumSet.of(CreateFlag.CREATE);
+    if(overwrite){
+      flag.add(CreateFlag.OVERWRITE);
+    }
+    if(noLocalWrite){
+      flag.add(CreateFlag.IGNORE_CLIENT_LOCALITY);
+    }
     return this.create(f, permission,
-        overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
-            : EnumSet.of(CreateFlag.CREATE), bufferSize, replication,
-        blockSize, progress, null);
+            flag, bufferSize, replication,
+            blockSize, progress);
   }
 
   /**
