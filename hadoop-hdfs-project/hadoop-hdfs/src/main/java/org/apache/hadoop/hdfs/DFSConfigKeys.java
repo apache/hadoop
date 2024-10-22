@@ -219,6 +219,16 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.lifeline.rpc-address";
   public static final String  DFS_NAMENODE_LIFELINE_RPC_BIND_HOST_KEY =
       "dfs.namenode.lifeline.rpc-bind-host";
+  public static final String  DFS_NAMENODE_MSYNC_RPC_ADDRESS_KEY =
+      HdfsClientConfigKeys.DFS_NAMENODE_MSYNC_RPC_ADDRESS_KEY;
+  public static final String  DFS_NAMENODE_MSYNC_RPC_BIND_HOST_KEY =
+    "dfs.namenode.msync.rpc-bind-host";
+  public static final String  DFS_NAMENODE_MSYNC_HANDLER_RATIO_KEY =
+    "dfs.namenode.msync.handler.ratio";
+  public static final float   DFS_NAMENODE_MSYNC_HANDLER_RATIO_DEFAULT =
+    0.1f;
+  public static final String  DFS_NAMENODE_MSYNC_HANDLER_COUNT_KEY =
+    "dfs.namenode.msync.handler.count";
   public static final String  DFS_NAMENODE_MAX_OBJECTS_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_MAX_OBJECTS_KEY;
   public static final long    DFS_NAMENODE_MAX_OBJECTS_DEFAULT = 0;
