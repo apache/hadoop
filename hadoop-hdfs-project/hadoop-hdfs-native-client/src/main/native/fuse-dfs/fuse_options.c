@@ -18,6 +18,7 @@
 
 #include "fuse_context_handle.h"
 #include "fuse_dfs.h"
+#define __FUSE_OPTIONS_STRUCT__
 #include "fuse_options.h"
 
 #include <getopt.h>

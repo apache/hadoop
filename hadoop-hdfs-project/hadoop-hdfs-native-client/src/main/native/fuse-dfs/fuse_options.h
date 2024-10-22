@@ -20,6 +20,10 @@
 #define __FUSE_OPTIONS_H__
 
 /** options for fuse_opt.h */
+#ifndef __FUSE_OPTIONS_STRUCT__
+#define __FUSE_OPTIONS_STRUCT__
+extern
+#endif
 struct options {
   char* protected;
   char* nn_uri;
