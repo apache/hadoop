@@ -110,6 +110,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -892,13 +893,31 @@ public class RouterClientProtocol implements ClientProtocol {
     }
 
     // Add mount points at this level in the tree
-    final List<String> children = subclusterResolver.getMountPoints(src);
+    IdentityHashMap<String, String> childrenMountTableWithSrc =
+        subclusterResolver.getMountPointsWithSrc(src);
+    List<String> children = null;
+    // Sort the list as the entries from subcluster are also sorted
+    if (childrenMountTableWithSrc != null) {
+      children = new ArrayList<>(childrenMountTableWithSrc.keySet());
+    }
     if (children != null) {
       // Get the dates for each mount point
       Map<String, Long> dates = getMountPointDates(src);
 
       // Create virtual folder with the mount name
-      for (String child : children) {
+      boolean isTrashPath = MountTableResolver.isTrashPath(src);
+      for (int i = 0; i < children.size(); i++) {
+        String child = children.get(i);
+        if (isTrashPath) {
+          HdfsFileStatus dir = getFileInfo(
+              MountTableResolver.getTrashCurrentPath(src) + childrenMountTableWithSrc.get(child),
+              false);
+          if (dir == null) {
+            children.remove(child);
+            i--;
+            continue;
+          }
+        }
         long date = 0;
         if (dates != null && dates.containsKey(child)) {
           date = dates.get(child);
@@ -954,6 +973,10 @@ public class RouterClientProtocol implements ClientProtocol {
 
   @Override
   public HdfsFileStatus getFileInfo(String src) throws IOException {
+    return getFileInfo(src, true);
+  }
+
+  public HdfsFileStatus getFileInfo(String src, boolean withMountTable) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     HdfsFileStatus ret = null;
@@ -972,6 +995,10 @@ public class RouterClientProtocol implements ClientProtocol {
       }
     } catch (NoLocationException | RouterResolveException e) {
       noLocationException = e;
+    }
+
+    if (!withMountTable) {
+      return ret;
     }
 
     // If there is no real path, check mount points
