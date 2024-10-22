@@ -402,13 +402,14 @@ public class NamenodeStatusReport {
    */
   public void setNamenodeInfo(int numCorruptFiles,
       long numOfMissingBlocksWithReplicationFactorOne,
+      long numOfBadlyDistributedBlocks,
       long highestPriorityLowRedundancyRepBlocks,
       long highPriorityLowRedundancyECBlocks) {
     this.corruptFilesCount = numCorruptFiles;
     this.numberOfMissingBlocksWithReplicationFactorOne =
         numOfMissingBlocksWithReplicationFactorOne;
-    this.numberOfBadlyDistributedBlocks = 
-        numberOfBadlyDistributedBlocks;
+    this.numberOfBadlyDistributedBlocks =
+        numOfBadlyDistributedBlocks;
     this.highestPriorityLowRedundancyReplicatedBlocks =
         highestPriorityLowRedundancyRepBlocks;
     this.highestPriorityLowRedundancyECBlocks =
@@ -446,7 +447,7 @@ public class NamenodeStatusReport {
 
   /**
    * Gets the total number of badly distributed blocks.
-   * 
+   *
    * @return the total number of badly distrubted blocks.
    */
   public long getNumberOfBadlyDistributedBlocks() {

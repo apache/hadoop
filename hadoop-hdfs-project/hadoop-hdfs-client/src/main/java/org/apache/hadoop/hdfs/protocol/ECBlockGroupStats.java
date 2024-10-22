@@ -185,7 +185,7 @@ public final class ECBlockGroupStats {
           badlyDistributedBlocks, highestPriorityLowRedundancyBlocks);
     }
     return new ECBlockGroupStats(lowRedundancyBlockGroups, corruptBlockGroups,
-        missingBlockGroups, bytesInFutureBlockGroups, pendingDeletionBlocks, 
+        missingBlockGroups, bytesInFutureBlockGroups, pendingDeletionBlocks,
         badlyDistributedBlocks);
   }
 }

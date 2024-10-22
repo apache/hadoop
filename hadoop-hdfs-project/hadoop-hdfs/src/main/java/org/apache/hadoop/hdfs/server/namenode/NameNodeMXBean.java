@@ -174,7 +174,7 @@ public interface NameNodeMXBean {
 
   /**
    * Gets the total number of badly distributed blocks.
-   * 
+   *
    * @return the total number of badly distrubted blocks.
    */
   long getNumberOfBadlyDistributedBlocks();

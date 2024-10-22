@@ -170,7 +170,7 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
     return corruptReplicationOneBlocks.longValue();
   }
 
-  /** Return badly distributed block count */
+  /** Return badly distributed block count. */
   long getBadlyDistributedBlocks() {
     return badlyDistributedBlocks.longValue();
   }

@@ -228,7 +228,7 @@ public class TestLowRedundancyBlockQueues {
 
     // insert a block with too many replicas to make badly distributed
     assertAdded(queues, block_badly_distributed, 2, 0, 1);
-    assertInLevel(queues, block_badly_distributed, 
+    assertInLevel(queues, block_badly_distributed,
         LowRedundancyBlocks.QUEUE_REPLICAS_BADLY_DISTRIBUTED);
     verifyBlockStats(queues, 2, 3, 2, 0, 0, 0, 0, 2);
   }
