@@ -3409,7 +3409,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw e;
     }
     getEditLog().logSync();
-    logAuditEvent(ret, operationName, src);
+    int toRemovedBlocksNum = 0;
+    if (toRemovedBlocks != null) {
+      toRemovedBlocksNum = toRemovedBlocks.getToDeleteList().size();
+    }
+    logAuditEvent(ret, operationName + ":" + toRemovedBlocksNum, src);
     if (toRemovedBlocks != null) {
       blockManager.addBLocksToMarkedDeleteQueue(
           toRemovedBlocks.getToDeleteList());
