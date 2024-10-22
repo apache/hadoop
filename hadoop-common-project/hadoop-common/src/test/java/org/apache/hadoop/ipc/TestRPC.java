@@ -1927,8 +1927,12 @@ public class TestRPC extends TestRpcBase {
           proxy.ping(null, newEmptyRequest());
           fail(reqName + " didn't fail");
         } catch (ServiceException e) {
-          RemoteException re = (RemoteException)e.getCause();
-          assertEquals(reqName, expectedIOE, re.unwrapRemoteException());
+          if (e.getCause() instanceof RemoteException) {
+            RemoteException re = (RemoteException)e.getCause();
+            assertEquals(reqName, expectedIOE, re.unwrapRemoteException());
+          } else {
+            throw e;
+          }
         }
         // check authorizations to ensure new connection when expected,
         // then conclusively determine if connections are disconnected
