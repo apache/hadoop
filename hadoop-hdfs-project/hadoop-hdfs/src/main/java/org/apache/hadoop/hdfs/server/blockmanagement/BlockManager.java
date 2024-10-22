@@ -2096,29 +2096,41 @@ public class BlockManager implements BlockStatsMXBean {
    * The number of process blocks equals either twice the number of live
    * data-nodes or the number of low redundancy blocks whichever is less.
    *
+   * In the case the found low-redundancy blocks cannot be scheduled for reconstruction, we will
+   * immediately find more low-redundancy blocks to avoid the waste of this tick
    * @return number of blocks scheduled for reconstruction during this
    *         iteration.
    */
   int computeBlockReconstructionWork(int blocksToProcess) {
-    List<List<BlockInfo>> blocksToReconstruct = null;
-    namesystem.writeLock();
-    try {
-      boolean reset = false;
-      if (replQueueResetToHeadThreshold > 0) {
-        if (replQueueCallsSinceReset >= replQueueResetToHeadThreshold) {
-          reset = true;
-          replQueueCallsSinceReset = 0;
-        } else {
-          replQueueCallsSinceReset++;
+    List<List<BlockInfo>> blocksToReconstruct = new ArrayList<>(LowRedundancyBlocks.LEVEL);
+    int remaining = blocksToProcess;
+    int maxAttemptInATick = 100;
+    int lowRedundancyBlocksCount = neededReconstruction.getLowRedundancyBlockCount();
+    do{
+      namesystem.writeLock();
+      try {
+        boolean reset = false;
+        if (replQueueResetToHeadThreshold > 0) {
+          if (replQueueCallsSinceReset >= replQueueResetToHeadThreshold) {
+            reset = true;
+            replQueueCallsSinceReset = 0;
+          } else {
+            replQueueCallsSinceReset++;
+          }
         }
-      }
         // Choose the blocks to be reconstructed
-      blocksToReconstruct = neededReconstruction
-          .chooseLowRedundancyBlocks(blocksToProcess, reset);
-    } finally {
-      namesystem.writeUnlock("computeBlockReconstructionWork");
-    }
-    return computeReconstructionWorkForBlocks(blocksToReconstruct);
+        // Some candidates may not be actually used to construct BlockReconstructionWork,
+        // in this case, we will try another round immediately to avoid waste the tick
+        lowRedundancyBlocksCount -= neededReconstruction.chooseLowRedundancyBlocks(remaining, reset, blocksToReconstruct);
+      } finally {
+        namesystem.writeUnlock("computeBlockReconstructionWork");
+      }
+      remaining -= computeReconstructionWorkForBlocks(blocksToReconstruct);
+      // in this case that many found blocks are skipped(src or target unavailable) for BlockReconstructionWork,
+      // find more blocks immediately for reconstruction in this tick
+    }while (remaining > 0 && lowRedundancyBlocksCount > 0 && --maxAttemptInATick > 0);
+    // return the actual effective number of BlockReconstructionWork
+    return blocksToProcess - remaining;
   }
 
   /**
