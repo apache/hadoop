@@ -142,20 +142,26 @@ public abstract class LocalKeyStoreProvider extends
 
   @Override
   public void flush() throws IOException {
-    super.flush();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Resetting permissions to '" + permissions + "'");
-    }
-    if (!Shell.WINDOWS) {
-      Files.setPosixFilePermissions(Paths.get(file.getCanonicalPath()),
-          permissions);
-    } else {
-      // FsPermission expects a 10-character string because of the leading
-      // directory indicator, i.e. "drwx------". The JDK toString method returns
-      // a 9-character string, so prepend a leading character.
-      FsPermission fsPermission = FsPermission.valueOf(
-          "-" + PosixFilePermissions.toString(permissions));
-      FileUtil.setPermission(file, fsPermission);
+    super.getWriteLock().lock();
+    try {
+      file.createNewFile();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Resetting permissions to '" + permissions + "'");
+      }
+      if (!Shell.WINDOWS) {
+        Files.setPosixFilePermissions(Paths.get(file.getCanonicalPath()),
+            permissions);
+      } else {
+        // FsPermission expects a 10-character string because of the leading
+        // directory indicator, i.e. "drwx------". The JDK toString method returns
+        // a 9-character string, so prepend a leading character.
+        FsPermission fsPermission = FsPermission.valueOf(
+            "-" + PosixFilePermissions.toString(permissions));
+        FileUtil.setPermission(file, fsPermission);
+      }
+      super.flush();
+    } finally {
+      super.getWriteLock().unlock();
     }
   }
 
