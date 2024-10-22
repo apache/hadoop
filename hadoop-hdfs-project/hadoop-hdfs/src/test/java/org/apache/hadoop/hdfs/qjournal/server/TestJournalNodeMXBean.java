@@ -80,9 +80,20 @@ public class TestJournalNodeMXBean {
     assertEquals(jn.getJournalsStatus(), journalStatus);
     assertFalse(journalStatus.contains(NAMESERVICE));
 
+    // getJournalSyncerStatus
+    String journalSyncerStarted = (String) mbs.getAttribute(mxbeanName,
+        "JournalSyncerStatus");
+    assertEquals(jn.getJournalSyncerStatus(), journalSyncerStarted);
+    assertFalse(journalSyncerStarted.contains(NAMESERVICE));
+
     // format the journal ns1
     final NamespaceInfo fakeNsInfo = new NamespaceInfo(NS_ID, "mycluster", "my-bp", 0L);
     jn.getOrCreateJournal(NAMESERVICE).format(fakeNsInfo, false);
+
+    // check again after getOrCreateJournal
+    journalSyncerStarted = (String) mbs.getAttribute(mxbeanName,
+        "JournalSyncerStatus");
+    assertTrue(journalSyncerStarted.contains(NAMESERVICE));
 
     // check again after format
     // getJournalsStatus

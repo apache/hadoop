@@ -37,6 +37,17 @@ public interface JournalNodeMXBean {
   String getJournalsStatus();
 
   /**
+   * Query JournalSyncer status.
+   *
+   * @return JournalSyncer status.
+   *
+   * example: "[ns1,ns3]" string means:
+   * JournalSyncer thread for ns1 and ns3 has enter working state,
+   * but for ns2 has not enter working state yet
+   */
+  String getJournalSyncerStatus();
+
+  /**
    * Get host and port of JournalNode.
    *
    * @return colon separated host and port.
