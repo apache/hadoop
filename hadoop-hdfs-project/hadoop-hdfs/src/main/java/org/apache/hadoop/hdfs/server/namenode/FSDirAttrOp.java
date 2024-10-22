@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.InvalidPathException;
@@ -48,7 +49,7 @@ import java.util.List;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY;
 
 public class FSDirAttrOp {
-  static FileStatus setPermission(
+  static Pair<FileStatus, Boolean> setPermission(
       FSDirectory fsd, FSPermissionChecker pc, final String src,
       FsPermission permission) throws IOException {
     if (FSDirectory.isExactReservedName(src)) {
@@ -67,10 +68,10 @@ public class FSDirAttrOp {
     if (changed) {
       fsd.getEditLog().logSetPermissions(iip.getPath(), permission);
     }
-    return fsd.getAuditFileInfo(iip);
+    return Pair.of(fsd.getAuditFileInfo(iip), changed);
   }
 
-  static FileStatus setOwner(
+  static Pair<FileStatus, Boolean> setOwner(
       FSDirectory fsd, FSPermissionChecker pc, String src, String username,
       String group) throws IOException {
     if (FSDirectory.isExactReservedName(src)) {
@@ -110,13 +111,14 @@ public class FSDirAttrOp {
     if (changed) {
       fsd.getEditLog().logSetOwner(iip.getPath(), username, group);
     }
-    return fsd.getAuditFileInfo(iip);
+    return Pair.of(fsd.getAuditFileInfo(iip), changed);
   }
 
-  static FileStatus setTimes(
+  static Pair<FileStatus, Boolean> setTimes(
       FSDirectory fsd, FSPermissionChecker pc, String src, long mtime,
       long atime) throws IOException {
     INodesInPath iip;
+    boolean changed;
     fsd.writeLock();
     try {
       iip = fsd.resolvePath(pc, src, DirOp.WRITE);
@@ -124,14 +126,14 @@ public class FSDirAttrOp {
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
       }
-      boolean changed = unprotectedSetTimes(fsd, iip, mtime, atime, true);
+      changed = unprotectedSetTimes(fsd, iip, mtime, atime, true);
       if (changed) {
         fsd.getEditLog().logTimes(iip.getPath(), mtime, atime);
       }
     } finally {
       fsd.writeUnlock();
     }
-    return fsd.getAuditFileInfo(iip);
+    return Pair.of(fsd.getAuditFileInfo(iip), changed);
   }
 
   static boolean setReplication(
@@ -236,7 +238,7 @@ public class FSDirAttrOp {
    *
    * Note: This does not support ".inodes" relative path.
    */
-  static void setQuota(FSDirectory fsd, FSPermissionChecker pc, String src,
+  static boolean setQuota(FSDirectory fsd, FSPermissionChecker pc, String src,
       long nsQuota, long ssQuota, StorageType type, boolean allowOwner)
       throws IOException {
 
@@ -264,10 +266,12 @@ public class FSDirAttrOp {
           fsd.getEditLog().logSetQuotaByStorageType(
               src, q.getTypeSpaces().get(type), type);
         }
+        return true;
       }
     } finally {
       fsd.writeUnlock();
     }
+    return false;
   }
 
   static boolean unprotectedSetPermission(
