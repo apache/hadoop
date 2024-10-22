@@ -379,6 +379,11 @@ public class DefaultSpeculator extends AbstractService implements
       }
     }
 
+    if(attempts.values().stream().filter(taskAttempt -> taskAttempt.getState() == TaskAttemptState.RUNNING
+            || taskAttempt.getState() == TaskAttemptState.STARTING).count() > 1){
+      return ALREADY_SPECULATING;
+    }
+
     TaskAttemptId runningTaskAttemptID = null;
 
     int numberRunningAttempts = 0;
