@@ -137,6 +137,7 @@ public class TestFilterFileSystem {
     void setQuota(Path f, long namespaceQuota, long storagespaceQuota);
     void setQuotaByStorageType(Path f, StorageType type, long quota);
     StorageStatistics getStorageStatistics();
+    public void fastCopy(Path src, Path dst, boolean overwrite) throws IOException;
 
     /*
     Not passed through as the inner implementation will miss features

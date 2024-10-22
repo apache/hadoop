@@ -135,6 +135,18 @@ public class TestDistCpOptions {
   }
 
   @Test
+  public void testUseFastCopy() {
+    final DistCpOptions.Builder builder = new DistCpOptions.Builder(
+        Collections.singletonList(new Path("hdfs://localhost:8020/source")),
+        new Path("hdfs://localhost:8020/target/"));
+    Assert.assertFalse(builder.build().shouldUseFastCopy());
+
+    final DistCpOptions options = builder.withUseFastCopy(true)
+        .build();
+    Assert.assertTrue(options.shouldUseFastCopy());
+  }
+
+  @Test
   public void testSetAtomicCommit() {
     final DistCpOptions.Builder builder = new DistCpOptions.Builder(
         Collections.singletonList(new Path("hdfs://localhost:8020/source")),

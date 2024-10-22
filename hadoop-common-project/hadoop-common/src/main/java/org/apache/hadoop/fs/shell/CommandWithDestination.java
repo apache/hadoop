@@ -365,6 +365,14 @@ abstract class CommandWithDestination extends FsCommand {
       IOUtils.closeStream(in);
     }
   }
+
+  protected void copyFileToTargetWithFastCp(PathData src,PathData target) throws IOException {
+    final boolean preserveRawXattrs =
+        checkPathsForReservedRaw(src.path, target.path);
+    src.fs.setVerifyChecksum(verifyChecksum);
+    fastCopyToTarget(src, target);
+    preserveAttributes(src, target, preserveRawXattrs);
+  }
   
   /**
    * Check the source and target paths to ensure that they are either both in
@@ -425,6 +433,24 @@ abstract class CommandWithDestination extends FsCommand {
       PathData tempTarget = direct ? target : target.suffix("._COPYING_");
       targetFs.setWriteChecksum(writeChecksum);
       targetFs.writeStreamToFile(in, tempTarget, lazyPersist, direct);
+      if (!direct) {
+        targetFs.rename(tempTarget, target);
+      }
+    } finally {
+      targetFs.close(); // last ditch effort to ensure temp file is removed
+    }
+  }
+
+  protected void fastCopyToTarget(PathData src, PathData target)
+      throws IOException {
+    if (target.exists && (target.stat.isDirectory() || !overwrite)) {
+      throw new PathExistsException(target.toString());
+    }
+    TargetFileSystem targetFs = new TargetFileSystem(target.fs);
+    try {
+      PathData tempTarget = direct ? target : target.suffix("._COPYING_");
+      targetFs.setWriteChecksum(writeChecksum);
+      src.fs.fastCopy(src.path, tempTarget.path, overwrite);
       if (!direct) {
         targetFs.rename(tempTarget, target);
       }

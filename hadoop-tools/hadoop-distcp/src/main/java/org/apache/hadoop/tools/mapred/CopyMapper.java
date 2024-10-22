@@ -97,6 +97,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
   private boolean verboseLog = false;
   private boolean directWrite = false;
   private boolean useModTimeToUpdate;
+  private boolean useFastCopy = false;
   private EnumSet<FileAttribute> preserve = EnumSet.noneOf(FileAttribute.class);
 
   private FileSystem targetFS = null;
@@ -129,6 +130,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
     useModTimeToUpdate =
         conf.getBoolean(DistCpConstants.CONF_LABEL_UPDATE_MOD_TIME,
             CONF_LABEL_UPDATE_MOD_TIME_DEFAULT);
+    useFastCopy = conf.getBoolean(DistCpOptionSwitch.USE_FASTCOPY.getConfigLabel(), false);
 
     targetWorkPath = new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
     Path targetFinalPath = new Path(conf.get(
@@ -273,9 +275,14 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
       throws IOException, InterruptedException {
     long bytesCopied;
     try {
-      bytesCopied = (Long) new RetriableFileCopyCommand(skipCrc, description,
-          action, directWrite).execute(sourceFileStatus, target, context,
-              fileAttributes, sourceStatus);
+      if (!useFastCopy) {
+        bytesCopied =
+            (Long) new RetriableFileCopyCommand(skipCrc, description, action, directWrite).execute(
+                sourceFileStatus, target, context, fileAttributes, sourceStatus);
+      } else {
+        bytesCopied = (Long) new RetriableFileFastCopyCommand(skipCrc, description, action,
+            directWrite).execute(sourceFileStatus, target, context, fileAttributes, sourceStatus);
+      }
     } catch (Exception e) {
       context.setStatus("Copy Failure: " + sourceFileStatus.getPath());
       throw new IOException("File copy failed: " + sourceFileStatus.getPath() +
