@@ -36,5 +36,7 @@ public interface AppLogAggregator extends Runnable {
 
   boolean isAggregationEnabled();
 
+  boolean isDone();
+
   UserGroupInformation updateCredentials(Credentials cred);
 }
