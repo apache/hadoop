@@ -540,6 +540,10 @@ class DataStreamer extends Daemon {
   private final String[] favoredNodes;
   private final EnumSet<AddBlockFlag> addBlockFlags;
 
+  private volatile boolean needEndBlockInAdvance = false;
+  private volatile boolean endBlockFlag = false;
+  private volatile boolean skipHandleSlowNode = false;
+
   private DataStreamer(HdfsFileStatus stat, ExtendedBlock block,
                        DFSClient dfsClient, String src,
                        Progressable progress, DataChecksum checksum,
@@ -680,6 +684,7 @@ class DataStreamer extends Daemon {
     this.setName("DataStreamer for file " + src);
     closeResponder();
     closeStream();
+    skipHandleSlowNode = false;
     setPipeline(null, null, null);
     stage = BlockConstructionStage.PIPELINE_SETUP_CREATE;
   }
@@ -697,7 +702,7 @@ class DataStreamer extends Daemon {
     TraceScope scope = null;
     while (!streamerClosed && dfsClient.clientRunning) {
       // if the Responder encountered an error, shutdown Responder
-      if (errorState.hasError()) {
+      if (!needEndBlockInAdvance && errorState.hasError()) {
         closeResponder();
       }
 
@@ -773,6 +778,7 @@ class DataStreamer extends Daemon {
             continue;
           }
           stage = BlockConstructionStage.PIPELINE_CLOSE;
+          // shouldAdjustOffsetInBlock = false;
         }
 
         // send the packet
@@ -825,6 +831,7 @@ class DataStreamer extends Daemon {
           // wait for the close packet has been acked
           try {
             waitForAllAcks();
+            // TODO ZHB move to finally
           } catch (IOException ioe) {
             // No need to do a close recovery if the last packet was acked.
             // i.e. ackQueue is empty.  waitForAllAcks() can get an exception
@@ -1236,16 +1243,13 @@ class DataStreamer extends Daemon {
               lastCongestionBackoffTime = 0;
             }
           }
-
           if (slownodesFromAck.isEmpty()) {
             if (!slowNodeMap.isEmpty()) {
               slowNodeMap.clear();
             }
           } else {
             markSlowNode(slownodesFromAck);
-            LOG.debug("SlowNodeMap content: {}.", slowNodeMap);
           }
-
 
           assert seqno != PipelineAck.UNKOWN_SEQNO :
               "Ack for unknown seqno should be a failed ack: " + ack;
@@ -1334,10 +1338,23 @@ class DataStreamer extends Daemon {
             DatanodeInfo slowNode = entry.getKey();
             int index = getDatanodeIndex(slowNode);
             if (index >= 0) {
-              errorState.setBadNodeIndex(index);
-              throw new IOException("Receive reply from slowNode " + slowNode +
+              if (skipHandleSlowNode) {
+                return;
+              }
+              String exceptionMsg = "Receive reply from slowNode " + slowNode +
                   " for continuous " + markSlowNodeAsBadNodeThreshold +
-                  " times, treating it as badNode");
+                  " times, treating it as badNode";
+              if (!isEndBlockFlag() && getBytesCurBlock() << 1
+                  > dfsClient.getConf().getDefaultBlockSize()) {
+                LOG.warn(exceptionMsg);
+                needEndBlockInAdvance = true;
+                skipHandleSlowNode = true;
+                errorState.setInternalError();
+                errorState.setBadNodeIndex(index);
+                return;
+              } else {
+                throw new IOException(exceptionMsg);
+              }
             }
             slowNodeMap.remove(entry.getKey());
           }
@@ -1374,6 +1391,20 @@ class DataStreamer extends Daemon {
     if (!errorState.hasDatanodeError() && !shouldHandleExternalError()) {
       return false;
     }
+
+    if (needEndBlockInAdvance && !(this instanceof StripedDataStreamer)) {
+      final int badNodeIndex = errorState.getBadNodeIndex();
+      LOG.warn("End block {} in advance because written bytes are greater than half of block size" +
+              " and {} is bad. in pipeline datanode: {}. Bad datanode index is {}",
+          block, nodes[badNodeIndex], Arrays.toString(nodes), badNodeIndex);
+      excludedNodes.put(nodes[badNodeIndex], nodes[badNodeIndex]);
+      errorState.resetInternalError();
+      lastException.clear();
+      endBlockFlag = true;
+      needEndBlockInAdvance = false;
+      return false;
+    }
+    
     LOG.debug("start process datanode/external error, {}", this);
     if (response != null) {
       LOG.info("Error Recovery for " + block +
@@ -2284,5 +2315,13 @@ class DataStreamer extends Daemon {
     final ExtendedBlock extendedBlock = block.getCurrentBlock();
     return extendedBlock == null ?
         "block==null" : "" + extendedBlock.getLocalBlock();
+  }
+
+  public boolean isEndBlockFlag() {
+    return endBlockFlag;
+  }
+
+  public void setEndBlockFlag(boolean endBlockFlag) {
+    this.endBlockFlag = endBlockFlag;
   }
 }
