@@ -785,6 +785,11 @@ public class NamenodeBeanMetrics
   }
 
   @Override
+  public int getMaxDirectoryItemsAlarmNums() {
+    return 0;
+  }
+
+  @Override
   public long getTotalSyncCount() {
     return 0;
   }

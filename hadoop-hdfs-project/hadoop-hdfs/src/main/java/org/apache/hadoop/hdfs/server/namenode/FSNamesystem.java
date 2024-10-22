@@ -8976,6 +8976,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
+   * Returns total number of alarms that SubDirectoryItems
+   * of one directory have reached alarm threshold.
+   */
+  @Override
+  @Metric({"MaxDirectoryItemsAlarmNums",
+      "Total number of alarms that SubDirectoryItems more than alarm threshold"})
+  public int getMaxDirectoryItemsAlarmNums() {
+    return this.dir.getMaxDirItemsAlarmNum();
+  }
+
+  /**
    * Return total time spent doing sync operations on FSEditLog.
    */
   @Override

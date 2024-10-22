@@ -115,6 +115,26 @@ public class TestFsLimits {
   }
 
   @Test
+  public void testMaxDirItemsAlarm() throws Exception {
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY, 10);
+    mkdirs("/1", null);
+    mkdirs("/22", null);
+    mkdirs("/333", null);
+    mkdirs("/4444", null);
+    mkdirs("/55555", null);
+    mkdirs("/666666", null);
+    mkdirs("/7777777", null);
+    mkdirs("/88888888", null);
+    assertEquals(0, fs.getMaxDirectoryItemsAlarmNums());
+    mkdirs("/999999999", null);
+    assertEquals(1, fs.getMaxDirectoryItemsAlarmNums());
+    mkdirs("/1010101010", null);
+    assertEquals(2, fs.getMaxDirectoryItemsAlarmNums());
+    mkdirs("/11111111111", MaxDirectoryItemsExceededException.class);
+    assertEquals(2, fs.getMaxDirectoryItemsAlarmNums());
+  }
+
+  @Test
   public void testMaxDirItemsRename() throws Exception {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY, 2);
     
