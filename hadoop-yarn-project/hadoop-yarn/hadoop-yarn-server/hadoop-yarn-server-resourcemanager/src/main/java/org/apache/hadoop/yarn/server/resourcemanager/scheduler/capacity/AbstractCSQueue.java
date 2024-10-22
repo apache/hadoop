@@ -860,8 +860,11 @@ public abstract class AbstractCSQueue implements CSQueue {
       currentResourceLimits.setHeadroom(
           Resources.subtract(currentLimitResource, usedExceptKillable));
 
-      if (Resources.greaterThanOrEqual(resourceCalculator, clusterResource,
-          usedExceptKillable, currentLimitResource)) {
+      if (Resources.greaterThanOrEqual(
+              resourceCalculator,
+              labelManager.getResourceByLabel(nodePartition, clusterResource),
+              usedExceptKillable,
+              currentLimitResource)) {
 
         // if reservation continue looking enabled, check to see if could we
         // potentially use this node instead of a reserved node if the application
