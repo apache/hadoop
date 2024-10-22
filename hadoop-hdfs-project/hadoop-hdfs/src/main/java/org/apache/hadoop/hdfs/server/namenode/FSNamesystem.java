@@ -1946,6 +1946,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         HAServiceState.OBSERVER == haContext.getState().getServiceState();
   }
 
+  public boolean isInObserverState() {
+    if (haContext == null || haContext.getState() == null) {
+      return false;
+    }
+
+    return HAServiceState.OBSERVER == haContext.getState().getServiceState();
+  }
+
   /**
    * return a list of blocks &amp; their locations on {@code datanode} whose
    * total size is {@code size}
