@@ -3168,6 +3168,12 @@ public abstract class Server {
           startTimeNanos = Time.monotonicNowNanos();
           if (alignmentContext != null && call.isCallCoordinated() &&
               call.getClientStateId() > alignmentContext.getLastSeenStateId()) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("{}: requeue call: {}, client side state id: {}, " +
+                        "server side state id: {}, for RpcKind: {}",
+                        Thread.currentThread().getName(), call, call.getClientStateId(),
+                        alignmentContext.getLastSeenStateId(), call.rpcKind);
+            }
             /*
              * The call processing should be postponed until the client call's
              * state id is aligned (<=) with the server state id.
