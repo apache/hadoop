@@ -25,6 +25,7 @@ import java.util.Comparator;
  * priorities are:
  * <ul>
  * <li>ACTIVE
+ * <li>OBSERVER
  * <li>STANDBY
  * <li>UNAVAILABLE
  * </ul>
@@ -44,7 +45,7 @@ public class NamenodePriorityComparator
 
     if (state1 == state2) {
       // Both have the same state, use mode dates
-      return compareModDates(o1, o2);
+      return compareModDates(state1, o1, o2);
     } else {
       // Enum is ordered by priority
       return state1.compareTo(state2);
@@ -58,9 +59,13 @@ public class NamenodePriorityComparator
    * @param o2 Context 2.
    * @return Comparison between dates.
    */
-  private int compareModDates(FederationNamenodeContext o1,
-      FederationNamenodeContext o2) {
+  private int compareModDates(FederationNamenodeServiceState state,
+      FederationNamenodeContext o1, FederationNamenodeContext o2) {
     // Reverse sort, lowest position is highest priority.
-    return (int) (o2.getDateModified() - o1.getDateModified());
+    if (state == FederationNamenodeServiceState.ACTIVE
+        || state == FederationNamenodeServiceState.OBSERVER) {
+      return (int) (o2.getDateModified() - o1.getDateModified());
+    }
+    return (int) (o1.getDateModified() - o2.getDateModified());
   }
 }
