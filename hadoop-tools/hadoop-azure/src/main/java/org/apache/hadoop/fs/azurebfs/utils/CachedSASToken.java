@@ -20,10 +20,14 @@ package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalAccessor;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
@@ -39,6 +43,13 @@ import static java.time.temporal.ChronoUnit.SECONDS;
  */
 public final class CachedSASToken {
   public static final Logger LOG = LoggerFactory.getLogger(CachedSASToken.class);
+
+  private static final DateTimeFormatter ISO_DATE_MIDNIGHT = new DateTimeFormatterBuilder()
+          .append(DateTimeFormatter.ISO_DATE)
+          .parseDefaulting(ChronoField.HOUR_OF_DAY, 0)
+          .parseDefaulting(ChronoField.MINUTE_OF_HOUR, 0)
+          .toFormatter();
+
   private final long minExpirationInSeconds;
   private String sasToken;
   private OffsetDateTime sasExpiry;
@@ -114,8 +125,20 @@ public final class CachedSASToken {
     OffsetDateTime seDate = OffsetDateTime.MIN;
     try {
       seDate = OffsetDateTime.parse(seValue, DateTimeFormatter.ISO_DATE_TIME);
-    } catch (DateTimeParseException ex) {
-      LOG.error("Error parsing se query parameter ({}) from SAS.", seValue, ex);
+    } catch (DateTimeParseException dateTimeException) {
+      try {
+        TemporalAccessor dt = ISO_DATE_MIDNIGHT.parseBest(seValue, OffsetDateTime::from, LocalDateTime::from);
+        if (dt instanceof OffsetDateTime) {
+          seDate = (OffsetDateTime) dt;
+        } else if (dt instanceof LocalDateTime) {
+          seDate = ((LocalDateTime) dt).atOffset(ZoneOffset.UTC);
+        } else {
+          throw dateTimeException;
+        }
+      } catch (DateTimeParseException dateOnlyException) {
+        // log original exception
+        LOG.error("Error parsing se query parameter ({}) from SAS as ISO_DATE_TIME or ISO_DATE.", seValue, dateTimeException);
+      }
     }
 
     String signedKeyExpiry = "ske=";

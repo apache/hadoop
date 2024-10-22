@@ -79,6 +79,31 @@ public final class TestCachedSASToken {
   }
 
   @Test
+  public void testValidExpirationParsing() {
+    CachedSASToken cachedSasToken = new CachedSASToken();
+    String[] values = {
+      "2123-03-24T00:06:46Z", // sample timestamp from azure portal
+      "2124-03-30", // sample YYYY-MM-DD date format generated from az cli
+      "2125-03-30Z", // sample YYYY-MM-DD[offset] date format
+    };
+
+    for (String se : values) {
+      cachedSasToken.setForTesting(null, null);
+      String token = "se=" + se;
+
+      // set first time and ensure reference equality
+      cachedSasToken.update(token);
+      String cachedToken = cachedSasToken.get();
+      Assert.assertTrue(token == cachedToken);
+
+      // update with same token and ensure reference equality
+      cachedSasToken.update(token);
+      cachedToken = cachedSasToken.get();
+      Assert.assertTrue(token == cachedToken);
+    }
+  }
+
+  @Test
   public void testGetExpiration() throws IOException {
     CachedSASToken cachedSasToken = new CachedSASToken();
 
