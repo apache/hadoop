@@ -61,4 +61,13 @@ public abstract class MockitoUtil {
       }
     });
   }
+
+  /**
+   * Verifies that there were no interactions with the given mock objects.
+   *
+   * @param mocks the mock objects to verify
+   */
+  public static void verifyZeroInteractions(Object... mocks) {
+    Mockito.verifyNoInteractions(mocks);
+  }
 }

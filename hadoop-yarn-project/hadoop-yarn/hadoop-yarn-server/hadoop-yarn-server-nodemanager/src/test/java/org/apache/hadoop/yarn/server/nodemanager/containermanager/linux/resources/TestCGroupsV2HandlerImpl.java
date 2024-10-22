@@ -37,8 +37,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.verifyZeroInteractions;
 
 /**
  * Tests for the CGroups handler implementation.

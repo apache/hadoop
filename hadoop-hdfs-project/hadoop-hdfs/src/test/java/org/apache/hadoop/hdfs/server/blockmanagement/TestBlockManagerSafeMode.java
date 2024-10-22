@@ -365,6 +365,7 @@ public class TestBlockManagerSafeMode {
     for (long i = 1; i <= BLOCK_TOTAL; i++) {
       BlockInfoStriped blockInfo = mock(BlockInfoStriped.class);
       when(blockInfo.getRealDataBlockNum()).thenReturn(realDataBlockNum);
+      when(blockInfo.isStriped()).thenReturn(true);
 
       bmSafeMode.incrementSafeBlockCount(realDataBlockNum, blockInfo);
       bmSafeMode.decrementSafeBlockCount(blockInfo);

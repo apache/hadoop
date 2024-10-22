@@ -37,12 +37,16 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefi
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.TimelineDocument;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.entity.TimelineEntityDocument;
+
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import org.mockito.ArgumentMatchers;
-import org.powermock.api.mockito.PowerMockito;
+import org.mockito.MockedStatic;
+
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
@@ -51,6 +55,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
 /**
  * Test case for {@link DocumentStoreTimelineReaderImpl}.
@@ -76,6 +82,8 @@ public class TestDocumentStoreTimelineReaderImpl {
   public TestDocumentStoreTimelineReaderImpl() throws IOException {
   }
 
+  private MockedStatic<DocumentStoreFactory> documentStoreFactoryMockedStatic;
+
   @Before
   public void setUp() throws YarnException {
     conf.set(DocumentStoreUtils.TIMELINE_SERVICE_DOCUMENTSTORE_DATABASE_NAME,
@@ -84,10 +92,15 @@ public class TestDocumentStoreTimelineReaderImpl {
         "https://localhost:443");
     conf.set(DocumentStoreUtils.TIMELINE_SERVICE_COSMOSDB_MASTER_KEY,
         "1234567");
-    PowerMockito.mockStatic(DocumentStoreFactory.class);
-    PowerMockito.when(DocumentStoreFactory.createDocumentStoreReader(
+    documentStoreFactoryMockedStatic = mockStatic(DocumentStoreFactory.class);
+    when(DocumentStoreFactory.createDocumentStoreReader(
         ArgumentMatchers.any(Configuration.class)))
         .thenReturn(documentStoreReader);
+  }
+
+  @After
+  public void close() {
+    documentStoreFactoryMockedStatic.close();
   }
 
   @Test(expected = YarnException.class)
