@@ -253,6 +253,15 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
         fs.makeQualified(pathFromTrailingURI));
   }
 
+  @Test
+  public void testQualifyPathWithWhitespace() {
+    final S3AFileSystem fs = getFileSystem();
+    Path pathWithSpace = fs.makeQualified(new Path("path with space"));
+    Path pathWithSpaceTrailingSlash = fs.makeQualified(new Path("path with space/"));
+    // removing trailing / should not recreate the Path object in a URL encoded way
+    assertEquals(pathWithSpace, pathWithSpaceTrailingSlash);
+  }
+
   /**
    * Verify that paths with a trailing "//" are fixed up.
    */

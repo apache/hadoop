@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -1785,7 +1786,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         LOG.debug("Stripping trailing '/' from {}", q);
         // deal with an empty "/" at the end by mapping to the parent and
         // creating a new path from it
-        q = new Path(urlString.substring(0, urlString.length() - 1));
+        try {
+          q = new Path(new URI(urlString.substring(0, urlString.length() - 1)));
+        } catch (URISyntaxException e) {
+          LOG.error(String.format("Error removing trailing / from path %s", path.toString()));
+          return q;
+        }
       }
     }
     if (!q.isRoot() && q.getName().isEmpty()) {
