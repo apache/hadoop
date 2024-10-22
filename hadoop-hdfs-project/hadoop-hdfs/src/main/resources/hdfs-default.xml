@@ -907,7 +907,7 @@
 
 <property>
   <name>dfs.datanode.directoryscan.throttle.limit.ms.per.sec</name>
-  <value>1000</value>
+  <value>-1</value>
   <description>The report compilation threads are limited to only running for
   a given number of milliseconds per second, as configured by the
   property. The limit is taken per thread, not in aggregate, e.g. setting
@@ -918,9 +918,9 @@
   actual running time of the threads per second will typically be somewhat
   higher than the throttle limit, usually by no more than 20%.
 
-  Setting this limit to 1000 disables compiler thread throttling. Only
+  Setting this limit to -1 disables compiler thread throttling. Only
   values between 1 and 1000 are valid. Setting an invalid value will result
-  in the throttle being disabled and an error message being logged. 1000 is
+  in the throttle being disabled and an error message being logged. -1 is
   the default setting.
   </description>
 </property>
