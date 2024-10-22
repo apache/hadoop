@@ -726,54 +726,50 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (null != name) {
       name = name.trim();
     }
-    // Initialize the return value with requested name
-    String[] names = new String[]{name};
-    // Deprecated keys are logged once and an updated names are returned
-    DeprecatedKeyInfo keyInfo = deprecations.getDeprecatedKeyMap().get(name);
-    if (keyInfo != null) {
+
+    final DeprecatedKeyInfo keyInfo = deprecations.getDeprecatedKeyMap().get(name);
+    final String[] names;
+    if (keyInfo == null) {
+      names = new String[]{name};
+      // Handling deprecations is rare so bail out early for the common case.
+      if (deprecations.getReverseDeprecatedKeyMap().get(name) == null) {
+        return names;
+      }
+    } else {
+      names = keyInfo.newKeys;
       if (!keyInfo.getAndSetAccessed()) {
         logDeprecation(keyInfo.getWarningMessage(name));
       }
-      // Override return value for deprecated keys
-      names = keyInfo.newKeys;
     }
 
-    // Update properties with deprecated key if already loaded and new
-    // deprecation has been added
-    updatePropertiesWithDeprecatedKeys(deprecations, names);
-
-    // If there are no overlay values we can return early
-    Properties overlayProperties = getOverlay();
-    if (overlayProperties.isEmpty()) {
-      return names;
+    final Map<String, String> map = deprecations.getReverseDeprecatedKeyMap();
+    for (String nk : names) {
+      String k = map.get(nk);
+      if (k != null) {
+        getProps().computeIfAbsent(nk, (x) -> getProps().getProperty(k));
+      }
     }
-    // Update properties and overlays with reverse lookup values
-    for (String n : names) {
-      String deprecatedKey = deprecations.getReverseDeprecatedKeyMap().get(n);
-      if (deprecatedKey != null && !overlayProperties.containsKey(n)) {
-        String deprecatedValue = overlayProperties.getProperty(deprecatedKey);
-        if (deprecatedValue != null) {
-          getProps().setProperty(n, deprecatedValue);
-          overlayProperties.setProperty(n, deprecatedValue);
+
+    Properties overlayProps = getOverlay();
+    if (!overlayProps.isEmpty()) {
+      for (String nk : names) {
+        String k = map.get(nk);
+        if (k != null) {
+          overlayProps.computeIfAbsent(nk, (x) -> {
+            String v = overlayProps.getProperty(k);
+            // Update both properties and overlays.
+            if (v != null) {
+              getProps().setProperty(nk, v);
+            }
+            return v;
+          });
         }
       }
     }
+
     return names;
   }
 
-  private void updatePropertiesWithDeprecatedKeys(
-      DeprecationContext deprecations, String[] newNames) {
-    for (String newName : newNames) {
-      String deprecatedKey = deprecations.getReverseDeprecatedKeyMap().get(newName);
-      if (deprecatedKey != null && !getProps().containsKey(newName)) {
-        String deprecatedValue = getProps().getProperty(deprecatedKey);
-        if (deprecatedValue != null) {
-          getProps().setProperty(newName, deprecatedValue);
-        }
-      }
-    }
-  }
- 
   private void handleDeprecation() {
     LOG.debug("Handling deprecation for all properties in config...");
     DeprecationContext deprecations = deprecationContext.get();
