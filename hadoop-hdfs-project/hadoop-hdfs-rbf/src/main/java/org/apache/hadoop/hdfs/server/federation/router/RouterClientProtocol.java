@@ -1988,11 +1988,11 @@ public class RouterClientProtocol implements ClientProtocol {
     for (Map.Entry<RemoteLocation, BatchedEntries> entry : results.entrySet()) {
       BatchedEntries nsEntries = entry.getValue();
       hasMore |= nsEntries.hasMore();
-      for (int i = 0; i< nsEntries.size(); i++) {
+      for (int i = 0; i < nsEntries.size(); i++) {
         OpenFileEntry ofe = (OpenFileEntry) nsEntries.get(i);
         if (ofe.getId() > minOfMax) {
           hasMore = true;
-          continue;
+          break;
         }
         routerEntries.add(ofe);
       }
