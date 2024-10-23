@@ -2754,6 +2754,16 @@
         </dependencies>
       </dependencyManagement>
     </profile>
+    <!-- We added this profile to support compilation for JDK 9 and above. -->
+    <profile>
+      <id>java9</id>
+      <activation>
+        <jdk>[9,)</jdk>
+      </activation>
+      <properties>
+        <maven.compiler.release>${javac.version}</maven.compiler.release>
+      </properties>
+    </profile>
   </profiles>
 
   <repositories>
