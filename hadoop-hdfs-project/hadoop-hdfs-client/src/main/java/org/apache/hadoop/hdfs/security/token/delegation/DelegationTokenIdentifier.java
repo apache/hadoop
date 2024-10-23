@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
-import org.apache.commons.collections.map.LRUMap;
+import org.apache.commons.collections4.map.LRUMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.io.Text;
