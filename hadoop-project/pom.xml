@@ -109,7 +109,7 @@
     <dnsjava.version>3.6.1</dnsjava.version>
 
     <guava.version>27.0-jre</guava.version>
-    <guice.version>4.2.3</guice.version>
+    <guice.version>5.1.0</guice.version>
 
     <bouncycastle.version>1.78.1</bouncycastle.version>
 
@@ -2530,7 +2530,7 @@
                   <includes>
                     <!-- for JDK 8 support -->
                     <include>cglib:cglib:3.2.0</include>
-                    <include>com.google.inject:guice:4.0</include>
+                    <include>com.google.inject:guice:5.1.0</include>
                     <include>com.sun.jersey:jersey-core:1.19.4</include>
                     <include>com.sun.jersey:jersey-servlet:1.19.4</include>
                     <include>com.github.pjfanning:jersey-json:1.22.0</include>
