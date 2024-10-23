@@ -2065,8 +2065,12 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  /** Should only be used for tests to reset to any value */
-  void resetLastInodeIdWithoutChecking(long newValue) {
+  /**
+   * Should only be used for tests to reset to any value.
+   * @param newValue new value to set to
+   */
+  @VisibleForTesting
+  public void resetLastInodeIdWithoutChecking(long newValue) {
     inodeId.setCurrentValue(newValue);
   }
 

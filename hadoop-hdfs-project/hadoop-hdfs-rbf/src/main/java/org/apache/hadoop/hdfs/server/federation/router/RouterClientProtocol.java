@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERV
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.fs.BatchedRemoteIterator;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -1959,8 +1960,45 @@ public class RouterClientProtocol implements ClientProtocol {
   public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
       EnumSet<OpenFilesIterator.OpenFilesType> openFilesTypes, String path)
           throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
-    return null;
+    rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
+    List<RemoteLocation> locations = rpcServer.getLocationsForPath(path, false, false);
+    RemoteMethod method =
+        new RemoteMethod("listOpenFiles", new Class<?>[] {long.class, EnumSet.class, String.class},
+            prevId, openFilesTypes, new RemoteParam());
+    Map<RemoteLocation, BatchedEntries> results =
+        rpcClient.invokeConcurrent(locations, method, true, false, -1, BatchedEntries.class);
+
+    // Get the largest inodeIds for each namespace, and the smallest inodeId of them
+    // then ignore all entries above this id to keep a consistent prevId for the next listOpenFiles
+    long minOfMax = Long.MAX_VALUE;
+    for (BatchedEntries nsEntries : results.values()) {
+      // Only need to care about namespaces that still have more files to report
+      if (!nsEntries.hasMore()) {
+        continue;
+      }
+      long max = 0;
+      for (int i = 0; i < nsEntries.size(); i++) {
+        max = Math.max(max, ((OpenFileEntry) nsEntries.get(i)).getId());
+      }
+      minOfMax = Math.min(minOfMax, max);
+    }
+    // Concatenate all entries into one result, sorted by inodeId
+    List<OpenFileEntry> routerEntries = new ArrayList<>();
+    boolean hasMore = false;
+    for (Map.Entry<RemoteLocation, BatchedEntries> entry : results.entrySet()) {
+      BatchedEntries nsEntries = entry.getValue();
+      hasMore |= nsEntries.hasMore();
+      for (int i = 0; i < nsEntries.size(); i++) {
+        OpenFileEntry ofe = (OpenFileEntry) nsEntries.get(i);
+        if (ofe.getId() > minOfMax) {
+          hasMore = true;
+          break;
+        }
+        routerEntries.add(ofe);
+      }
+    }
+    routerEntries.sort(Comparator.comparingLong(OpenFileEntry::getId));
+    return new BatchedRemoteIterator.BatchedListEntries<>(routerEntries, hasMore);
   }
 
   @Override
