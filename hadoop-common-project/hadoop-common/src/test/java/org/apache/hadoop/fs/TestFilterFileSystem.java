@@ -78,6 +78,7 @@ public class TestFilterFileSystem {
         Progressable progress) throws IOException;
 
     public FSDataInputStream open(Path f);
+    public FSDataInputStream open(FileStatus f);
     public FSDataInputStream open(PathHandle f);
     public FSDataOutputStream create(Path f);
     public FSDataOutputStream create(Path f, boolean overwrite);
