@@ -1117,9 +1117,9 @@ public class Balancer {
           Preconditions.checkArgument(excludedNodes == null || includedNodes == null,
               "-exclude and -include options cannot be specified together.");
           Preconditions.checkArgument(excludedSourceNodes == null || sourceNodes == null,
-              "-exclude and -include options cannot be specified together.");
+              "-excludeSource and -source options cannot be specified together.");
           Preconditions.checkArgument(excludedTargetNodes == null || targetNodes == null,
-              "-exclude and -include options cannot be specified together.");
+              "-excludeTarget and -target options cannot be specified together.");
         } catch(RuntimeException e) {
           printUsage(System.err);
           throw e;
