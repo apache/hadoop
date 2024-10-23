@@ -419,10 +419,10 @@ public class Balancer {
     long overLoadedBytes = 0L, underLoadedBytes = 0L;
     for(DatanodeStorageReport r : reports) {
       final DDatanode dn = dispatcher.newDatanode(r.getDatanodeInfo());
-      final boolean isSource = Util.isIncluded(sourceNodes, dn.getDatanodeInfo());
-      final boolean isExcludedSource = Util.isIncluded(sourceNodes, dn.getDatanodeInfo());
-      final boolean isTarget = Util.isIncluded(targetNodes, dn.getDatanodeInfo());
-      final boolean isExcludedTarget = Util.isIncluded(targetNodes, dn.getDatanodeInfo());
+      final boolean isValidSource = Util.isIncluded(sourceNodes, dn.getDatanodeInfo()) &&
+          !Util.isExcluded(excludedSourceNodes, dn.getDatanodeInfo());
+      final boolean isValidTarget = Util.isIncluded(targetNodes, dn.getDatanodeInfo()) &&
+          !Util.isExcluded(excludedTargetNodes, dn.getDatanodeInfo());
       for(StorageType t : StorageType.getMovableTypes()) {
         final Double utilization = policy.getUtilization(r, t);
         if (utilization == null) { // datanode does not have such storage type
@@ -430,16 +430,14 @@ public class Balancer {
         }
         
         final double average = policy.getAvgUtilization(t);
-        if (utilization >= average && (!isSource || isExcludedSource)) {
-          LOG.info(dn + "[" + t + "] has utilization=" + utilization
-              + " >= average=" + average
-              + " but it is not specified or excluded as a source; skipping it.");
+        if (utilization >= average && !isValidSource) {
+          LOG.info("{} [{}] utilization {} >= average {}, but it's either not specified or excluded as a source; skipping.",
+              dn, t, utilization, average);
           continue;
         }
-        if (utilization <= average && (!isTarget || isExcludedTarget)) {
-          LOG.info(dn + "[" + t + "] has utilization=" + utilization
-              + " <= average=" + average
-              + " but it is not specified or excluded as a target; skipping it.");
+        if (utilization <= average && !isValidTarget) {
+          LOG.info("{} [{}] utilization {} <= average {}, but it's either not specified or excluded as a target; skipping.",
+              dn, t, utilization, average);
           continue;
         }
 
@@ -1064,7 +1062,7 @@ public class Balancer {
               b.setSourceNodes(sourceNodes);
             } else if ("-excludeSource".equalsIgnoreCase(args[i])) {
               excludedSourceNodes = new HashSet<>();
-              i = processHostList(args, i, "source", excludedSourceNodes);
+              i = processHostList(args, i, "exclude source", excludedSourceNodes);
               b.setExcludedSourceNodes(excludedSourceNodes);
             } else if ("-target".equalsIgnoreCase(args[i])) {
               targetNodes = new HashSet<>();
@@ -1072,7 +1070,7 @@ public class Balancer {
               b.setTargetNodes(targetNodes);
             } else if ("-excludeTarget".equalsIgnoreCase(args[i])) {
               excludedTargetNodes = new HashSet<>();
-              i = processHostList(args, i, "target", excludedTargetNodes);
+              i = processHostList(args, i, "exclude target", excludedTargetNodes);
               b.setExcludedTargetNodes(excludedTargetNodes);
             } else if ("-blockpools".equalsIgnoreCase(args[i])) {
               Preconditions.checkArgument(
