@@ -81,7 +81,7 @@ public class TestAbfsBackoffMetrics {
                 .isEqualTo(0);
         Assertions.assertThat(metrics.toString())
                 .describedAs("String representation of backoff metrics should be empty")
-                .contains("$TR=0");
+                .isEmpty();
     }
 
     @Test

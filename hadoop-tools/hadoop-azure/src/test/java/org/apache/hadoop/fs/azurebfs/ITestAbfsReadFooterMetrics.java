@@ -34,6 +34,8 @@ import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.READ
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.READ_LEN_REQUESTED;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.SIZE_READ_BY_FIRST_READ;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.TOTAL_FILES;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.FIRST_OFFSET_DIFF;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.SECOND_OFFSET_DIFF;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -187,9 +189,11 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
     AbfsReadFooterMetrics nonParquetMetrics = new AbfsReadFooterMetrics();
     nonParquetMetrics.incrementMetricValue(NON_PARQUET, READ_COUNT);
     nonParquetMetrics.updateMetricValue(NON_PARQUET, FILE_LENGTH, Long.parseLong("32768"));
-    nonParquetMetrics.updateMetricValue(NON_PARQUET, READ_LEN_REQUESTED, Long.parseLong("16384"));
+    nonParquetMetrics.updateMetricValue(NON_PARQUET, READ_LEN_REQUESTED, Long.parseLong("32769"));
     nonParquetMetrics.updateMetricValue(NON_PARQUET, SIZE_READ_BY_FIRST_READ, Long.parseLong("16384"));
     nonParquetMetrics.updateMetricValue(NON_PARQUET, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, 1);
+    nonParquetMetrics.updateMetricValue(NON_PARQUET, FIRST_OFFSET_DIFF, Long.parseLong("16384"));
+    nonParquetMetrics.updateMetricValue(NON_PARQUET, SECOND_OFFSET_DIFF, Long.parseLong("16384"));
     nonParquetMetrics.incrementMetricValue(NON_PARQUET, TOTAL_FILES);
     return nonParquetMetrics;
   }
@@ -199,7 +203,6 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
    */
   private AbfsReadFooterMetrics getParquetMetrics() {
     AbfsReadFooterMetrics parquetMetrics = new AbfsReadFooterMetrics();
-    parquetMetrics.incrementMetricValue(PARQUET, READ_COUNT);
     parquetMetrics.updateMetricValue(PARQUET, FILE_LENGTH, Long.parseLong("8388608"));
     parquetMetrics.updateMetricValue(PARQUET, READ_LEN_REQUESTED, Long.parseLong("8388608"));
     parquetMetrics.updateMetricValue(PARQUET, SIZE_READ_BY_FIRST_READ, Long.parseLong("1024"));

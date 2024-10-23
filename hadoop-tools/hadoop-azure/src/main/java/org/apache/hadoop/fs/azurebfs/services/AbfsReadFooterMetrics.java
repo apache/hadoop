@@ -248,6 +248,14 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         }
     }
 
+    /**
+     * Updates metrics for a specific file identified by filePathIdentifier.
+     *
+     * @param checkFileType      File metadata to know file type.
+     * @param len                The length of the read operation.
+     * @param contentLength      The total content length of the file.
+     * @param nextReadPos        The position of the next read operation.
+     */
     private void updateMetrics(CheckFileType checkFileType, int len, long contentLength, long nextReadPos) {
         synchronized (this) {
             checkFileType.incrementReadCount();
@@ -283,7 +291,7 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         }
     }
 
-    private void handleFurtherRead(CheckFileType checkFileType, int len) {
+    private synchronized void handleFurtherRead(CheckFileType checkFileType, int len) {
         if (checkFileType.getCollectLenMetrics() && checkFileType.getFileType() != null) {
             FileType fileType = checkFileType.getFileType();
             updateMetricValue(fileType, READ_LEN_REQUESTED, len);
@@ -291,7 +299,7 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         }
     }
 
-    private void updateMetricsData(CheckFileType checkFileType, int len, long contentLength) {
+    private synchronized void updateMetricsData(CheckFileType checkFileType, int len, long contentLength) {
         long sizeReadByFirstRead = Long.parseLong(checkFileType.getSizeReadByFirstRead().split("_")[0]);
         long firstOffsetDiff = Long.parseLong(checkFileType.getSizeReadByFirstRead().split("_")[1]);
         long secondOffsetDiff = Long.parseLong(checkFileType.getOffsetDiffBetweenFirstAndSecondRead().split("_")[1]);

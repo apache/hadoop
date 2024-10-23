@@ -214,6 +214,9 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
    */
   @Override
   public String toString() {
+    if (getMetricValue(TOTAL_NUMBER_OF_REQUESTS) == 0) {
+      return "";
+    }
     StringBuilder metricString = new StringBuilder();
     long totalRequestsThrottled = getMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS)
             + getMetricValue(NUMBER_OF_IOPS_THROTTLED_REQUESTS)
