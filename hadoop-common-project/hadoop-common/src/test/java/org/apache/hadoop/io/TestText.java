@@ -344,6 +344,8 @@ public class TestText {
 
   @Test
   public void testAvroReflect() throws Exception {
+    // Avro expects explicitely stated, trusted packages used for (de-)serialization
+    System.setProperty("org.apache.avro.SERIALIZABLE_PACKAGES", "org.apache.hadoop.io.Text");
     AvroTestUtil.testReflect
             (new Text("foo"),
                     "{\"type\":\"string\",\"java-class\":\"org.apache.hadoop.io.Text\"}");
