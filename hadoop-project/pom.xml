@@ -940,7 +940,7 @@
       <dependency>
           <groupId>org.ojalgo</groupId>
           <artifactId>ojalgo</artifactId>
-          <version>43.0</version>
+          <version>51.4.1</version>
       </dependency>
       <dependency>
         <groupId>com.sun.jersey</groupId>
