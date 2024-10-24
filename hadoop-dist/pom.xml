@@ -32,7 +32,7 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
-    <docker.hadoop-runner.version>jdk8</docker.hadoop-runner.version>
+    <docker.hadoop-runner.version>docker-hadoop-runner-jdk8</docker.hadoop-runner.version>
     <maven.test.skip>true</maven.test.skip>
   </properties>
 
