@@ -172,9 +172,12 @@ in `_$folder$` was considered to be a sign that a directory existed. A call to
 The S3A also has directory markers, but it just appends a "/" to the directory
 name, so `mkdir(s3a://bucket/a/b)` will create a new marker object `a/b/` .
 
-When a file is created under a path, the directory marker is deleted. And when a
-file is deleted, if it was the last file in the directory, the marker is
+In older versions of Hadoop, when a file was created under a path,
+the directory marker is deleted. And when a file is deleted,
+if it was the last file in the directory, the marker is
 recreated.
+
+This release does not delete directory markers.
 
 And, historically, when a path is listed, if a marker to that path is found, *it
 has been interpreted as an empty directory.*
@@ -247,8 +250,6 @@ directory markers when creating files under paths. This removes all scalability
 problems caused by deleting these markers -however, it is achieved at the expense
 of backwards compatibility.
 
-## <a name="marker-retention"></a> Controlling marker retention with `fs.s3a.directory.marker.retention`
-
 There is now an option `fs.s3a.directory.marker.retention` which controls how
 markers are managed when new files are created
 
@@ -264,32 +265,15 @@ The setting, `fs.s3a.directory.marker.retention = delete` is compatible with
 every shipping Hadoop release; that of `keep` compatible with
 all releases since 2021.
 
-##  <a name="s3guard"></a> Directory Markers and Authoritative paths
+### Hadoop 3.4.0: markers are not deleted by default
 
+[HADOOP-18752](https://issues.apache.org/jira/browse/HADOOP-18752)
+_Change fs.s3a.directory.marker.retention to "keep"_ changed the default
+policy.
 
-The now-deleted S3Guard feature included the concept of "authoritative paths";
-paths where all clients were required to be using S3Guard and sharing the
-same metadata store.
-In such a setup, listing authoritative paths would skip all queries of the S3
-store -potentially being much faster.
+Marker deletion can still be enabled.
 
-In production, authoritative paths were usually only ever for Hive managed
-tables, where access was strictly restricted to the Hive services.
-
-
-When the S3A client is configured to treat some directories as "Authoritative"
-then an S3A connector with a retention policy of `fs.s3a.directory.marker.retention` of
-`authoritative` will omit deleting markers in authoritative directories.
-
-```xml
-<property>
-  <name>fs.s3a.bucket.hive.authoritative.path</name>
-  <value>/tables</value>
-</property>
-```
-This an option to consider if not 100% confident that all
-applications interacting with a store are using an S3A client
-which is marker aware.
+### Hadoop 3.5.x: marker deletion is no longer supported.
 
 ## <a name="bucket-info"></a> Verifying marker policy with `s3guard bucket-info`
 
@@ -305,7 +289,6 @@ line of bucket policies via the `-marker` option
 | `-markers authoritative` | directory markers are kept in authoritative paths     |
 
 All releases of Hadoop which have been updated to be marker aware will support the `-markers aware` option.
-
 
 1. Updated releases which do not support switching marker retention policy will also support the
 `-markers delete` option.
