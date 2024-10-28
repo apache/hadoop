@@ -263,7 +263,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
 
     // A simple PUT
     final PutObjectRequest put = factory.newPutObjectRequestBuilder(path,
-        PutObjectOptions.deletingDirs(), 1024, false).build();
+        PutObjectOptions.defaultOptions(), 1024, false).build();
     assertApiTimeouts(partDuration, put);
 
     // multipart part

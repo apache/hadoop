@@ -848,6 +848,7 @@ public final class Constants {
       "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
           + ".signing-algorithm";
 
+  @Deprecated
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
   public static final String FS_S3A = "s3a";

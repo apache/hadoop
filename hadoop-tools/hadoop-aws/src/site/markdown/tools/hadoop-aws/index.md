@@ -77,7 +77,7 @@ and compatible implementations.
 
 * Directly reads and writes S3 objects.
 * Compatible with standard S3 clients.
-* Compatible with files created by the older `s3n://` client and Amazon EMR's `s3://` client.
+* Compatible with files created by Amazon EMR's `s3://` client.
 * Supports partitioned uploads for many-GB objects.
 * Offers a high-performance random IO mode for working with columnar data such
 as Apache ORC and Apache Parquet files.
