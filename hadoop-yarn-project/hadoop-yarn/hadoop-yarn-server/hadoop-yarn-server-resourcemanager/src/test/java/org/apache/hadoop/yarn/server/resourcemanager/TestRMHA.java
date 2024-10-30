@@ -23,6 +23,11 @@ import java.io.File;
 import java.nio.file.Files;
 import java.util.UUID;
 import java.util.function.Supplier;
+
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.client.WebTarget;
+import jakarta.ws.rs.core.Response;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -70,11 +75,6 @@ import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
 
 public class TestRMHA {
   private static final Logger LOG = LoggerFactory.getLogger(TestRMHA.class);
@@ -161,21 +161,21 @@ public class TestRMHA {
   private void checkActiveRMWebServices() throws JSONException {
 
     // Validate web-service
-    Client webServiceClient = Client.create(new DefaultClientConfig());
+    Client webServiceClient = ClientBuilder.newClient();
     InetSocketAddress rmWebappAddr =
         NetUtils.getConnectAddress(rm.getWebapp().getListenerAddress());
     String webappURL =
         "http://" + rmWebappAddr.getHostName() + ":" + rmWebappAddr.getPort();
-    WebResource webResource = webServiceClient.resource(webappURL);
+    WebTarget webResource = webServiceClient.target(webappURL);
     String path = app.getApplicationId().toString();
 
-    ClientResponse response =
+    Response response =
         webResource.path("ws").path("v1").path("cluster").path("apps")
-            .path(path).accept(MediaType.APPLICATION_JSON)
-            .get(ClientResponse.class);
+            .path(path).request(MediaType.APPLICATION_JSON)
+            .get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
 
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject appJson = json.getJSONObject("app");

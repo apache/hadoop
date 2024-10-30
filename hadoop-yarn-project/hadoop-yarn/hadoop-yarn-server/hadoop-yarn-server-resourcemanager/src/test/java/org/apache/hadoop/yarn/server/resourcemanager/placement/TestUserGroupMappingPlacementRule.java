@@ -84,7 +84,7 @@ public class TestUserGroupMappingPlacementRule {
     String expectedParentQueue = queueMappingTestData.expectedParentQueue;
 
     MappingRule rule = MappingRule.createLegacyRule(
-        queueMapping.getType().toString(),
+        queueMapping.getMediaType().toString(),
         queueMapping.getSource(),
         queueMapping.getFullPath());
 

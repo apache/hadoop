@@ -44,7 +44,7 @@ public class LocalResourceInfo {
     return url;
   }
 
-  public LocalResourceType getType() {
+  public LocalResourceType getMediaType() {
     return type;
   }
 

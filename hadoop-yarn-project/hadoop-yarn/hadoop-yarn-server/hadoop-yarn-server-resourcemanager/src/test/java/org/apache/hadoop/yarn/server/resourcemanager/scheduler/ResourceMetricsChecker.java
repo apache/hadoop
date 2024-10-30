@@ -134,7 +134,7 @@ final class ResourceMetricsChecker {
       return value;
     }
 
-    public ResourceMetricType getType() {
+    public ResourceMetricType getMediaType() {
       return type;
     }
   }

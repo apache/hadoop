@@ -26,8 +26,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
+import jakarta.ws.rs.client.WebTarget;
 import jakarta.ws.rs.core.MediaType;
 
+import jakarta.ws.rs.core.Response;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -51,6 +53,7 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.jersey.servlet.ServletContainer;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,10 +61,6 @@ import org.junit.Test;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
 /**
  * Tests partition resource usage per application.
@@ -101,16 +100,16 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
         Assert.fail();
       }
       bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
+      serve("/*").with(ServletContainer.class);
     }
   };
 
   public TestRMWebServiceAppsNodelabel() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-            .contextListenerClass(GuiceServletConfig.class)
-            .filterClass(com.google.inject.servlet.GuiceFilter.class)
-            .contextPath("jersey-guice-filter").servletPath("/").build());
+//    super(new WebAppDescriptor.Builder(
+//        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
+//            .contextListenerClass(GuiceServletConfig.class)
+//            .filterClass(com.google.inject.servlet.GuiceFilter.class)
+//            .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   private static void setupQueueConfiguration(
@@ -150,11 +149,11 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     amNodeManager.nodeHeartbeat(true);
     RMApp killedApp = MockRMAppSubmitter.submitWithMemory(AM_CONTAINER_MB, rm);
     rm.killApp(killedApp.getApplicationId());
-    WebResource r = resource();
-    ClientResponse response =
-        r.path("ws").path("v1").path("cluster").path("apps")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    JSONObject json = response.getEntity(JSONObject.class);
+    WebTarget webTarget = target();
+    Response response =
+        webTarget.path("ws").path("v1").path("cluster").path("apps")
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
+    JSONObject json = response.readEntity(JSONObject.class);
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
     try {
@@ -192,12 +191,12 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "X");
     nm2.nodeHeartbeat(true);
 
-    WebResource r = resource();
+    WebTarget webTarget = target();
 
-    ClientResponse response =
-        r.path("ws").path("v1").path("cluster").path("apps")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    JSONObject json = response.getEntity(JSONObject.class);
+    Response response =
+        webTarget.path("ws").path("v1").path("cluster").path("apps")
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
+    JSONObject json = response.readEntity(JSONObject.class);
 
     // Verify apps resource
     JSONObject apps = json.getJSONObject("apps");

@@ -87,7 +87,7 @@ public class TestAppNameMappingPlacementRule {
                                   String expectedQueue, boolean overwrite)
       throws IOException, YarnException {
     MappingRule rule = MappingRule.createLegacyRule(
-        queueMapping.getType().toString(),
+        queueMapping.getMediaType().toString(),
         queueMapping.getSource(),
         queueMapping.getFullPath());
 

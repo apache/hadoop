@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.server.webapp;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.UniformInterfaceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -42,7 +40,6 @@ import org.apache.hadoop.yarn.server.webapp.dao.RemoteLogPaths;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
-import org.codehaus.jettison.json.JSONException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,7 +87,7 @@ public class LogServlet extends Configured {
 
   @VisibleForTesting
   public String getNMWebAddressFromRM(String nodeId)
-      throws ClientHandlerException, UniformInterfaceException, JSONException {
+          throws Exception {
     return LogWebServiceUtils.getNMWebAddressFromRM(getConf(), nodeId);
   }
 

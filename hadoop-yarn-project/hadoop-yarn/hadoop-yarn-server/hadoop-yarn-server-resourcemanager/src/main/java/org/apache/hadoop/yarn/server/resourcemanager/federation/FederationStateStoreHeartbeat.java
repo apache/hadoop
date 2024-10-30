@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.federation;
 
 import java.io.StringWriter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import jakarta.xml.bind.JAXBException;
 
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
@@ -32,9 +34,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsIn
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONMarshaller;
 
 /**
  * Periodic heart beat from a <code>ResourceManager</code> participating in
@@ -53,8 +52,7 @@ public class FederationStateStoreHeartbeat implements Runnable {
   private final ResourceScheduler rs;
 
   private StringWriter currentClusterState;
-  private JSONJAXBContext jc;
-  private JSONMarshaller marshaller;
+  private ObjectMapper objectMapper;
   private String capability;
 
   public FederationStateStoreHeartbeat(SubClusterId subClusterId,
@@ -64,14 +62,8 @@ public class FederationStateStoreHeartbeat implements Runnable {
     this.rs = scheduler;
     // Initialize the JAXB Marshaller
     this.currentClusterState = new StringWriter();
-    try {
-      this.jc = new JSONJAXBContext(
-          JSONConfiguration.mapped().rootUnwrapping(false).build(),
-          ClusterMetricsInfo.class);
-      marshaller = jc.createJSONMarshaller();
-    } catch (JAXBException e) {
-      LOG.warn("Exception while trying to initialize JAXB context.", e);
-    }
+    this.objectMapper = new ObjectMapper();
+    this.objectMapper.registerModule(new JaxbAnnotationModule());
     LOG.info("Initialized Federation membership for cluster with timestamp:  "
         + ResourceManager.getClusterTimeStamp());
   }
@@ -85,7 +77,7 @@ public class FederationStateStoreHeartbeat implements Runnable {
       // get the current state
       currentClusterState.getBuffer().setLength(0);
       ClusterMetricsInfo clusterMetricsInfo = new ClusterMetricsInfo(rs);
-      marshaller.marshallToJSON(clusterMetricsInfo, currentClusterState);
+      objectMapper.writeValue(currentClusterState, clusterMetricsInfo);
       capability = currentClusterState.toString();
     } catch (Exception e) {
       LOG.warn("Exception while trying to generate cluster state,"

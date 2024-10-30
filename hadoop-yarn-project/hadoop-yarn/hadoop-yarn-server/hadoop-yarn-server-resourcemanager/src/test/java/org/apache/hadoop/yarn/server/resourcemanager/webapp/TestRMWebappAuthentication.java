@@ -31,6 +31,7 @@ import java.util.Collection;
 
 import jakarta.ws.rs.core.MediaType;
 
+import jakarta.ws.rs.core.Response;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -51,8 +52,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
-import com.sun.jersey.api.client.ClientResponse.Status;
 
 /* Just a simple test class to ensure that the RM handles the static web user
  * correctly for secure and un-secure modes
@@ -153,7 +152,7 @@ public class TestRMWebappAuthentication {
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     try {
       conn.getInputStream();
-      assertEquals(Status.OK.getStatusCode(), conn.getResponseCode());
+      assertEquals(Response.Status.OK.getStatusCode(), conn.getResponseCode());
     } catch (Exception e) {
       fail("Fetching url failed");
     }
@@ -187,7 +186,7 @@ public class TestRMWebappAuthentication {
       conn.getInputStream();
       fail("Anonymous users should not be allowed to get new application ids in secure mode.");
     } catch (IOException ie) {
-      assertEquals(Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
+      assertEquals(Response.Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
     }
 
     url = new URL("http://localhost:8088/ws/v1/cluster/apps");
@@ -199,7 +198,7 @@ public class TestRMWebappAuthentication {
       conn.getInputStream();
       fail("Anonymous users should not be allowed to submit apps in secure mode.");
     } catch (IOException ie) {
-      assertEquals(Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
+      assertEquals(Response.Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
     }
 
     requestBody = "{ \"state\": \"KILLED\"}";
@@ -214,7 +213,7 @@ public class TestRMWebappAuthentication {
       conn.getInputStream();
       fail("Anonymous users should not be allowed to kill apps in secure mode.");
     } catch (IOException ie) {
-      assertEquals(Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
+      assertEquals(Response.Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
     }
   }
 
@@ -234,7 +233,7 @@ public class TestRMWebappAuthentication {
       "application/xml", requestBody);
 
     conn.getInputStream();
-    assertEquals(Status.ACCEPTED.getStatusCode(), conn.getResponseCode());
+    assertEquals(Response.Status.ACCEPTED.getStatusCode(), conn.getResponseCode());
     boolean appExists =
         rm.getRMContext().getRMApps()
           .containsKey(ApplicationId.fromString(appid));

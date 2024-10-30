@@ -108,6 +108,6 @@ public class RMNMInfo implements RMNMInfoBeans {
         nodesInfo.add(info);
     }
 
-    return JSON.toString(nodesInfo);
+    return new JSON().toJSON(nodesInfo);
   }
 }

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.helper;
 
-import com.sun.jersey.api.client.WebResource;
+import jakarta.ws.rs.client.WebTarget;
 import org.apache.hadoop.http.JettyUtils;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
@@ -33,7 +33,7 @@ import static org.junit.Assert.*;
 /**
  * This class hides the implementation details of how to verify the structure of
  * JSON responses. Tests should only provide the path of the
- * {@link WebResource}, the response from the resource and
+ * {@link WebTarget}, the response from the resource and
  * the verifier Consumer to
  * {@link JsonCustomResourceTypeTestcase#verify(Consumer)}. An instance of
  * {@link JSONObject} will be passed to that consumer to be able to
@@ -43,20 +43,20 @@ public class JsonCustomResourceTypeTestcase {
   private static final Logger LOG =
       LoggerFactory.getLogger(JsonCustomResourceTypeTestcase.class);
 
-  private final WebResource path;
+  private final WebTarget path;
   private final BufferedClientResponse response;
   private final JSONObject parsedResponse;
 
-  public JsonCustomResourceTypeTestcase(WebResource path,
+  public JsonCustomResourceTypeTestcase(WebTarget path,
                                         BufferedClientResponse response) {
     this.path = path;
     verifyStatus(response);
     this.response = response;
-    this.parsedResponse = response.getEntity(JSONObject.class);
+    this.parsedResponse = response.readEntity(JSONObject.class);
   }
 
   private void verifyStatus(BufferedClientResponse response) {
-    String responseStr = response.getEntity(String.class);
+    String responseStr = response.readEntity(String.class);
     assertEquals("HTTP status should be 200, " +
                     "status info: " + response.getStatusInfo() +
             " response as string: " + responseStr,
@@ -65,11 +65,11 @@ public class JsonCustomResourceTypeTestcase {
 
   public void verify(Consumer<JSONObject> verifier) {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
+        response.getMediaType().toString());
 
     logResponse();
 
-    String responseStr = response.getEntity(String.class);
+    String responseStr = response.readEntity(String.class);
     if (responseStr == null || responseStr.isEmpty()) {
       throw new IllegalStateException("Response is null or empty!");
     }
@@ -77,7 +77,7 @@ public class JsonCustomResourceTypeTestcase {
   }
 
   private void logResponse() {
-    String responseStr = response.getEntity(String.class);
+    String responseStr = response.readEntity(String.class);
     LOG.info("Raw response from service URL {}: {}", path.toString(),
         responseStr);
     LOG.info("Parsed response from service URL {}: {}", path.toString(),

@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.dao;
 
+import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
@@ -24,6 +25,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
 import jakarta.xml.bind.annotation.XmlAccessType;
@@ -33,15 +38,11 @@ import jakarta.xml.bind.annotation.XmlRootElement;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONMarshaller;
-import com.sun.jersey.api.json.JSONUnmarshaller;
 
 /**
  * This is a DAO class for the configuration of parameters for federation
@@ -58,23 +59,17 @@ public class WeightedPolicyInfo {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(WeightedPolicyInfo.class);
-  private static JSONJAXBContext jsonjaxbContext = initContext();
+  private static final ObjectWriter writer = new ObjectMapper()
+          .writerFor(WeightedPolicyInfo.class)
+          .withDefaultPrettyPrinter();
+  private static final ObjectReader reader = new ObjectMapper()
+          .readerFor(WeightedPolicyInfo.class);
   private Map<SubClusterIdInfo, Float> routerPolicyWeights = new HashMap<>();
   private Map<SubClusterIdInfo, Float> amrmPolicyWeights = new HashMap<>();
   private float headroomAlpha;
 
   public WeightedPolicyInfo() {
     // JAXB needs this
-  }
-
-  private static JSONJAXBContext initContext() {
-    try {
-      return new JSONJAXBContext(JSONConfiguration.DEFAULT,
-          WeightedPolicyInfo.class);
-    } catch (JAXBException e) {
-      LOG.error("Error parsing the policy.", e);
-    }
-    return null;
   }
 
   /**
@@ -91,21 +86,17 @@ public class WeightedPolicyInfo {
   public static WeightedPolicyInfo fromByteBuffer(ByteBuffer bb)
       throws FederationPolicyInitializationException {
 
-    if (jsonjaxbContext == null) {
+    if (writer == null || reader == null) {
       throw new FederationPolicyInitializationException(
-          "JSONJAXBContext should" + " not be null.");
+          "ObjectWriter and ObjectReader should not be null.");
     }
 
     try {
-      JSONUnmarshaller unmarshaller = jsonjaxbContext.createJSONUnmarshaller();
       final byte[] bytes = new byte[bb.remaining()];
       bb.get(bytes);
       String params = new String(bytes, StandardCharsets.UTF_8);
-
-      WeightedPolicyInfo weightedPolicyInfo = unmarshaller.unmarshalFromJSON(
-          new StringReader(params), WeightedPolicyInfo.class);
-      return weightedPolicyInfo;
-    } catch (JAXBException j) {
+      return reader.readValue(params);
+    } catch (IOException j) {
       throw new FederationPolicyInitializationException(j);
     }
   }
@@ -158,24 +149,20 @@ public class WeightedPolicyInfo {
    */
   public ByteBuffer toByteBuffer()
       throws FederationPolicyInitializationException {
-    if (jsonjaxbContext == null) {
+    if (writer == null || reader == null) {
       throw new FederationPolicyInitializationException(
-          "JSONJAXBContext should" + " not be null.");
+              "ObjectWriter and ObjectReader should not be null.");
     }
     try {
       String s = toJSONString();
       return ByteBuffer.wrap(s.getBytes(StandardCharsets.UTF_8));
-    } catch (JAXBException j) {
+    } catch (JsonProcessingException j) {
       throw new FederationPolicyInitializationException(j);
     }
   }
 
-  private String toJSONString() throws JAXBException {
-    JSONMarshaller marshaller = jsonjaxbContext.createJSONMarshaller();
-    marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-    StringWriter sw = new StringWriter(256);
-    marshaller.marshallToJSON(this, sw);
-    return sw.toString();
+  private String toJSONString() throws JsonProcessingException {
+    return writer.writeValueAsString(this);
   }
 
   @Override
@@ -243,7 +230,7 @@ public class WeightedPolicyInfo {
   public String toString() {
     try {
       return toJSONString();
-    } catch (JAXBException e) {
+    } catch (JsonProcessingException e) {
       e.printStackTrace();
       return "Error serializing to string.";
     }

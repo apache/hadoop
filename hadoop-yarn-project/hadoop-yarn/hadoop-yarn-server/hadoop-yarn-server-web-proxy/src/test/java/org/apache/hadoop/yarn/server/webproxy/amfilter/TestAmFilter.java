@@ -327,6 +327,11 @@ public class TestAmFilter {
     }
 
     @Override
+    public void sendRedirect(String s, int i, boolean b) throws IOException {
+
+    }
+
+    @Override
     public void setDateHeader(String name, long date) {
 
     }
@@ -357,16 +362,6 @@ public class TestAmFilter {
     }
 
     @Override
-    public String encodeUrl(String url) {
-      return null;
-    }
-
-    @Override
-    public String encodeRedirectUrl(String url) {
-      return null;
-    }
-
-    @Override
     public void sendError(int sc, String msg) throws IOException {
 
     }
@@ -379,11 +374,6 @@ public class TestAmFilter {
     @Override
     public void setStatus(int status) {
       this.status = status;
-    }
-
-    @Override
-    public void setStatus(int sc, String sm) {
-
     }
 
     @Override

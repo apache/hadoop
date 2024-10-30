@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
 
+import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -131,8 +132,7 @@ public class TestTimelineWebServicesWithSSL {
     private Response resp;
 
     @Override
-    protected TimelineWriter createTimelineWriter(Configuration conf,
-        UserGroupInformation authUgi, Client client, URI resURI)
+    protected TimelineWriter createTimelineWriter(Configuration conf, UserGroupInformation authUgi, Client client, URI resURI)
             throws IOException {
       return new DirectTimelineWriter(authUgi, client, resURI) {
         @Override

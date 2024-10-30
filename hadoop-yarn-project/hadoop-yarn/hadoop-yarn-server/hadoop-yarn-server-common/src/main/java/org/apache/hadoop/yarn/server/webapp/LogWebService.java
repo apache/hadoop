@@ -18,16 +18,13 @@
 
 package org.apache.hadoop.yarn.server.webapp;
 
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.client.WebTarget;
+import jakarta.ws.rs.core.*;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import com.google.inject.Singleton;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
-import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
-import com.sun.jersey.core.util.MultivaluedMapImpl;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -44,6 +41,8 @@ import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,10 +54,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.core.Response;
+
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -104,14 +100,12 @@ public class LogWebService implements AppInfoProvider {
   }
 
   private Client createTimelineWebClient() {
-    ClientConfig cfg = new DefaultClientConfig();
+    ClientConfig cfg = new ClientConfig();
     cfg.getClasses().add(YarnJacksonJaxbJsonProvider.class);
-    Client client = new Client(
-        new URLConnectionClientHandler(new HttpURLConnectionFactory() {
-          @Override public HttpURLConnection getHttpURLConnection(URL url)
-              throws IOException {
+    cfg.connectorProvider(new HttpUrlConnectorProvider().connectionFactory(
+            url -> {
             AuthenticatedURL.Token token = new AuthenticatedURL.Token();
-            HttpURLConnection conn = null;
+            HttpURLConnection conn;
             try {
               conn = new AuthenticatedURL().openConnection(url, token);
               LOG.info("LogWeService:Connecetion created.");
@@ -119,10 +113,10 @@ public class LogWebService implements AppInfoProvider {
               throw new IOException(e);
             }
             return conn;
-          }
-        }), cfg);
+          })
+        );
 
-    return client;
+    return ClientBuilder.newClient(cfg);
   }
 
   private void initForReadableEndpoints(HttpServletResponse response) {
@@ -169,7 +163,7 @@ public class LogWebService implements AppInfoProvider {
       String appAttemptId, String containerId, String clusterId) {
     UserGroupInformation callerUGI = LogWebServiceUtils.getUser(req);
     String cId = clusterId != null ? clusterId : defaultClusterid;
-    MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+    MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
     params.add("fields", "INFO");
     String path = JOINER.join("clusters/", cId, "/apps/", appId, "/entities/",
         TimelineEntityType.YARN_CONTAINER.toString(), "/", containerId);
@@ -202,7 +196,7 @@ public class LogWebService implements AppInfoProvider {
     UserGroupInformation callerUGI = LogWebServiceUtils.getUser(req);
 
     String cId = clusterId != null ? clusterId : defaultClusterid;
-    MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+    MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
     params.add("fields", "INFO");
     String path = JOINER.join("clusters/", cId, "/apps/", appId);
     TimelineEntity appEntity = null;
@@ -298,23 +292,23 @@ public class LogWebService implements AppInfoProvider {
 
   @VisibleForTesting protected TimelineEntity getEntity(String path,
       MultivaluedMap<String, String> params) throws IOException {
-    ClientResponse resp =
-        getClient().resource(base).path(path).queryParams(params)
-            .accept(MediaType.APPLICATION_JSON).type(MediaType.APPLICATION_JSON)
-            .get(ClientResponse.class);
+    WebTarget webTarget =
+        getClient().target(base).path(path);
+    params.forEach(webTarget::queryParam);
+    Response resp = webTarget.request(MediaType.APPLICATION_JSON)
+            .get(Response.class);
     if (resp == null
-        || resp.getStatusInfo().getStatusCode() != ClientResponse.Status.OK
+        || resp.getStatusInfo().getStatusCode() != Response.Status.OK
         .getStatusCode()) {
       String msg =
           "Response from the timeline reader server is " + ((resp == null) ?
               "null" :
               "not successful," + " HTTP error code: " + resp.getStatus()
-                  + ", Server response:\n" + resp.getEntity(String.class));
+                  + ", Server response:\n" + resp.readEntity(String.class));
       LOG.error(msg);
       throw new IOException(msg);
     }
-    TimelineEntity entity = resp.getEntity(TimelineEntity.class);
-    return entity;
+      return resp.readEntity(TimelineEntity.class);
   }
 
   private Client getClient() {

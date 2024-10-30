@@ -26,7 +26,6 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTes
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.getFirstSubNodeFromJson;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfAllocations;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createRM;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -38,10 +37,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import jakarta.ws.rs.client.WebTarget;
 import jakarta.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import jakarta.ws.rs.core.Response;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.Sets;
@@ -80,8 +81,6 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 
 @RunWith(Parameterized.class)
 public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
@@ -236,55 +235,55 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   }
 
   public TestRMWebServicesForCSWithPartitions(boolean legacyQueueMode) {
-    super(createWebAppDescriptor());
+//    super(createWebAppDescriptor());
     this.legacyQueueMode = legacyQueueMode;
   }
 
   @Test
   public void testSchedulerPartitions() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response =
-        r.path("ws").path("v1").path("cluster").path("scheduler")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    WebTarget webTarget = target();
+    Response response =
+            webTarget.path("ws").path("v1").path("cluster").path("scheduler")
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     verifySchedulerInfoJson(json);
   }
 
   @Test
   public void testSchedulerPartitionsSlash() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response =
-        r.path("ws").path("v1").path("cluster").path("scheduler/")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    WebTarget webTarget = target();
+    Response response =
+        webTarget.path("ws").path("v1").path("cluster").path("scheduler/")
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     verifySchedulerInfoJson(json);
 
   }
 
   @Test
   public void testSchedulerPartitionsDefault() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler").get(ClientResponse.class);
+    WebTarget webTarget = target();
+    Response response = webTarget.path("ws").path("v1").path("cluster")
+        .path("scheduler").request().get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     verifySchedulerInfoJson(json);
   }
 
   @Test
   public void testSchedulerPartitionsXML() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response =
-        r.path("ws").path("v1").path("cluster").path("scheduler")
-            .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+    WebTarget webTarget = target();
+    Response response =
+        webTarget.path("ws").path("v1").path("cluster").path("scheduler")
+            .request(MediaType.APPLICATION_XML).get(Response.class);
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
     DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
@@ -310,7 +309,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
             .capability(Resources.createResource(2048)).numContainers(1)
             .build()), null);
 
-    WebResource sr = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+    WebTarget sr = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
         .path(RMWSConsts.SCHEDULER_ACTIVITIES);
     ActivitiesTestUtils.requestWebResource(sr, null);
 

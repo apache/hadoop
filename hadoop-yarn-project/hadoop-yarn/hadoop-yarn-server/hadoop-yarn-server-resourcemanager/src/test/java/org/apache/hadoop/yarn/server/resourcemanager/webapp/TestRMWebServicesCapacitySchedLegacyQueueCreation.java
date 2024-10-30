@@ -24,8 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 import jakarta.ws.rs.core.MediaType;
 
-import com.sun.jersey.api.client.ClientResponse;
-
+import jakarta.ws.rs.core.Response;
 import org.junit.AfterClass;
 import org.junit.Test;
 
@@ -42,12 +41,10 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.backupSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createMutableRM;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.restoreSchedulerConfigFileInTarget;
 
 @RunWith(Parameterized.class)
-public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
-    JerseyTestBase {
+public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends JerseyTestBase {
 
   private final boolean legacyQueueMode;
 
@@ -57,7 +54,7 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
   }
 
   public TestRMWebServicesCapacitySchedLegacyQueueCreation(boolean legacyQueueMode) {
-    super(createWebAppDescriptor());
+    //super(createWebAppDescriptor());
     this.legacyQueueMode = legacyQueueMode;
     backupSchedulerConfigFileInTarget();
   }
@@ -110,10 +107,10 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
     }
   }
 
-  private ClientResponse sendRequest() {
-    return resource().path("ws").path("v1").path("cluster")
-        .path("scheduler").accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
+  private Response sendRequest() {
+    return target().path("ws").path("v1").path("cluster")
+        .path("scheduler").request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
   }
 
 }

@@ -55,7 +55,7 @@ public class NodeAttributeInfo {
     return name;
   }
 
-  public String getType() {
+  public String getMediaType() {
     return type;
   }
 

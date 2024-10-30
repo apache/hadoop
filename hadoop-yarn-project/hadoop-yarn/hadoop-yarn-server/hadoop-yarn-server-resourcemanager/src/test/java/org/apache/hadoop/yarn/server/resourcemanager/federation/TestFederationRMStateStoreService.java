@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import jakarta.xml.bind.JAXBException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -79,10 +81,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONUnmarshaller;
-
 import static org.mockito.Mockito.mock;
 
 /**
@@ -100,17 +98,14 @@ public class TestFederationRMStateStoreService {
   private Configuration conf;
   private FederationStateStore stateStore;
   private long lastHearbeatTS = 0;
-  private JSONJAXBContext jc;
-  private JSONUnmarshaller unmarshaller;
+  private ObjectMapper objectMapper;
   private MockRM mockRM;
 
   @Before
   public void setUp() throws IOException, YarnException, JAXBException {
     conf = new YarnConfiguration();
-    jc = new JSONJAXBContext(
-        JSONConfiguration.mapped().rootUnwrapping(false).build(),
-        ClusterMetricsInfo.class);
-    unmarshaller = jc.createJSONUnmarshaller();
+    objectMapper = new ObjectMapper();
+    objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
 
     conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
     conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY, 10);
@@ -124,8 +119,6 @@ public class TestFederationRMStateStoreService {
 
   @After
   public void tearDown() throws Exception {
-    unmarshaller = null;
-    jc = null;
     mockRM.stop();
     mockRM = null;
   }
@@ -199,9 +192,8 @@ public class TestFederationRMStateStoreService {
     stateStore = rm.getFederationStateStoreService().getStateStoreClient();
   }
 
-  private void checkClusterMetricsInfo(String capability, int numNodes)
-      throws JAXBException {
-    ClusterMetricsInfo clusterMetricsInfo = unmarshaller.unmarshalFromJSON(
+  private void checkClusterMetricsInfo(String capability, int numNodes) throws IOException {
+    ClusterMetricsInfo clusterMetricsInfo = objectMapper.readValue(
         new StringReader(capability), ClusterMetricsInfo.class);
     Assert.assertEquals(numNodes, clusterMetricsInfo.getTotalNodes());
   }

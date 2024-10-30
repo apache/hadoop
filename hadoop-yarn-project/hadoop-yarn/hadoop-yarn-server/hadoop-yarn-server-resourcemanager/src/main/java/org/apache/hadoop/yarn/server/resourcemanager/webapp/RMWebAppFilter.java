@@ -31,7 +31,6 @@ import java.util.Set;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -49,14 +48,14 @@ import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Injector;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 
 @Singleton
-public class RMWebAppFilter extends GuiceContainer {
+public class RMWebAppFilter extends ServletContainer {
   private static final Logger LOG =
       LoggerFactory.getLogger(RMWebAppFilter.class);
 
@@ -79,7 +78,6 @@ public class RMWebAppFilter extends GuiceContainer {
 
   @Inject
   public RMWebAppFilter(Injector injector, Configuration conf) {
-    super(injector);
     this.injector=injector;
     InetSocketAddress sock = YarnConfiguration.useHttps(conf)
         ? conf.getSocketAddr(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
@@ -103,9 +101,8 @@ public class RMWebAppFilter extends GuiceContainer {
   }
 
   @Override
-  public void doFilter(HttpServletRequest request,
-      HttpServletResponse response, FilterChain chain) throws IOException,
-      ServletException {
+  public void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+          throws IOException {
     response.setCharacterEncoding("UTF-8");
     String htmlEscapedUri = HtmlQuoting.quoteHtmlChars(request.getRequestURI());
 
@@ -175,8 +172,6 @@ public class RMWebAppFilter extends GuiceContainer {
         return;
       }
     }
-
-    super.doFilter(request, response, chain);
   }
 
   private String ahsRedirectPath(String uri, RMWebApp rmWebApp) {

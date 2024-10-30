@@ -289,7 +289,7 @@ public final class RMWebAppUtil {
         .getContainerLaunchContextInfo().getResources().entrySet()) {
       LocalResourceInfo l = entry.getValue();
       LocalResource lr = LocalResource.newInstance(URL.fromURI(l.getUrl()),
-          l.getType(), l.getVisibility(), l.getSize(), l.getTimestamp());
+          l.getMediaType(), l.getVisibility(), l.getSize(), l.getTimestamp());
       hlr.put(entry.getKey(), lr);
     }
 

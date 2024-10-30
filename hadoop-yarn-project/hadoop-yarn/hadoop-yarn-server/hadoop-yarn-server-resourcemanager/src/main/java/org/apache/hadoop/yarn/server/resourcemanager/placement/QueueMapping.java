@@ -136,7 +136,7 @@ public class QueueMapping {
     return parentQueue != null;
   }
 
-  public MappingType getType() {
+  public MappingType getMediaType() {
     return type;
   }
 

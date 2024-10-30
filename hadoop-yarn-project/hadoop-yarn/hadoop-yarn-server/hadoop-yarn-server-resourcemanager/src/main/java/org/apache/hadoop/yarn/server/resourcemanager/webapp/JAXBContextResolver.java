@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +30,6 @@ import java.util.*;
 
 import jakarta.ws.rs.ext.ContextResolver;
 import jakarta.ws.rs.ext.Provider;
-import jakarta.xml.bind.JAXBContext;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -39,11 +39,11 @@ import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
 
 @Singleton
 @Provider
-public class JAXBContextResolver implements ContextResolver<JAXBContext> {
+public class JAXBContextResolver implements ContextResolver<ObjectMapper> {
 
   private static final Logger LOG = LoggerFactory.getLogger(JAXBContextResolver.class.getName());
 
-  private final Map<Class, JAXBContext> typesContextMap;
+  private final Map<Class, ObjectMapper> typesContextMap;
 
   public JAXBContextResolver() throws Exception {
     this(new Configuration());
@@ -52,8 +52,8 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
   @Inject
   public JAXBContextResolver(Configuration conf) throws Exception {
 
-    JAXBContext context;
-    JAXBContext unWrappedRootContext;
+    ObjectMapper context;
+    ObjectMapper unWrappedRootContext;
 
     // you have to specify all the dao classes here
     final Class[] cTypes =
@@ -115,13 +115,15 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
     final Class[] finalRootUnwrappedTypes = finalRootUnwrappedTypesList
         .toArray(new Class[finalRootUnwrappedTypesList.size()]);
 
-    this.typesContextMap = new HashMap<Class, JAXBContext>();
-    context =
-        new JSONJAXBContext(JSONConfiguration.natural().rootUnwrapping(false)
-          .build(), finalcTypes);
-    unWrappedRootContext =
-        new JSONJAXBContext(JSONConfiguration.natural().rootUnwrapping(true)
-          .build(), finalRootUnwrappedTypes);
+    this.typesContextMap = new HashMap<>();
+    context = new ObjectMapper();
+    context.disable(SerializationFeature.WRAP_ROOT_VALUE);
+    context.disable(DeserializationFeature.UNWRAP_ROOT_VALUE);
+
+    unWrappedRootContext = new ObjectMapper();
+    unWrappedRootContext.enable(SerializationFeature.WRAP_ROOT_VALUE);
+    unWrappedRootContext.enable(DeserializationFeature.UNWRAP_ROOT_VALUE);
+
     for (Class type : finalcTypes) {
       typesContextMap.put(type, context);
     }
@@ -131,7 +133,7 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
   }
 
   @Override
-  public JAXBContext getContext(Class<?> objectType) {
+  public ObjectMapper getContext(Class<?> objectType) {
     return typesContextMap.get(objectType);
   }
 }

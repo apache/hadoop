@@ -51,7 +51,7 @@ public class StatisticsItemInfo {
     return state;
   }
 
-  public String getType() {
+  public String getMediaType() {
     return type;
   }
 

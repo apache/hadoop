@@ -1289,7 +1289,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     AppState ret = new AppState();
     ret.setState(app.getState().toString());
 
-    return Response.status(Status.OK).entity(ret).build();
+    return Response.status(Response.Status.OK).entity(ret).build();
   }
 
   @GET
@@ -1417,7 +1417,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       throw new BadRequestException(e);
     }
 
-    return Response.status(Status.OK).build();
+    return Response.status(Response.Status.OK).build();
   }
 
   @GET
@@ -1493,7 +1493,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       throw new BadRequestException(e);
     }
 
-    return Response.status(Status.OK).build();
+    return Response.status(Response.Status.OK).build();
 
   }
 
@@ -1521,7 +1521,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       throw new BadRequestException(e);
     }
 
-    return Response.status(Status.OK).build();
+    return Response.status(Response.Status.OK).build();
   }
 
   @GET
@@ -1572,7 +1572,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           String appId = app.getApplicationId().toString();
           String msg = "Unauthorized attempt to kill appid " + appId
               + " by remote user " + userName;
-          return Response.status(Status.FORBIDDEN).entity(msg).build();
+          return Response.status(Response.Status.FORBIDDEN).entity(msg).build();
         } else {
           throw ue;
         }
@@ -1588,10 +1588,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       RMAuditLogger.logSuccess(userName, AuditConstants.KILL_APP_REQUEST,
           "RMWebService", app.getApplicationId());
     } else {
-      return Response.status(Status.ACCEPTED).entity(ret)
+      return Response.status(Response.Status.ACCEPTED).entity(ret)
           .header(HttpHeaders.LOCATION, hsr.getRequestURL()).build();
     }
-    return Response.status(Status.OK).entity(ret).build();
+    return Response.status(Response.Status.OK).entity(ret).build();
   }
 
   @GET
@@ -1657,7 +1657,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       return modifyApplicationPriority(app, callerUGI,
           targetPriority.getPriority());
     }
-    return Response.status(Status.OK).entity(targetPriority).build();
+    return Response.status(Response.Status.OK).entity(targetPriority).build();
   }
 
   private Response modifyApplicationPriority(final RMApp app,
@@ -1685,10 +1685,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           String appId = app.getApplicationId().toString();
           String msg = "Unauthorized attempt to change priority of appid "
               + appId + " by remote user " + userName;
-          return Response.status(Status.FORBIDDEN).entity(msg).build();
+          return Response.status(Response.Status.FORBIDDEN).entity(msg).build();
         } else if (ye.getMessage().startsWith("Application in")
             && ye.getMessage().endsWith("state cannot be update priority.")) {
-          return Response.status(Status.BAD_REQUEST).entity(ye.getMessage())
+          return Response.status(Response.Status.BAD_REQUEST).entity(ye.getMessage())
               .build();
         } else {
           throw ue;
@@ -1699,7 +1699,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     }
     AppPriority ret =
         new AppPriority(app.getApplicationPriority().getPriority());
-    return Response.status(Status.OK).entity(ret).build();
+    return Response.status(Response.Status.OK).entity(ret).build();
   }
 
   @GET
@@ -1765,7 +1765,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     AppQueue ret = new AppQueue();
     ret.setQueue(app.getQueue());
 
-    return Response.status(Status.OK).entity(ret).build();
+    return Response.status(Response.Status.OK).entity(ret).build();
   }
 
   protected Response moveApp(RMApp app, UserGroupInformation callerUGI,
@@ -1797,10 +1797,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           String appId = app.getApplicationId().toString();
           String msg = "Unauthorized attempt to move appid " + appId
               + " by remote user " + userName;
-          return Response.status(Status.FORBIDDEN).entity(msg).build();
+          return Response.status(Response.Status.FORBIDDEN).entity(msg).build();
         } else if (ye.getMessage().startsWith("App in")
             && ye.getMessage().endsWith("state cannot be moved.")) {
-          return Response.status(Status.BAD_REQUEST).entity(ye.getMessage())
+          return Response.status(Response.Status.BAD_REQUEST).entity(ye.getMessage())
               .build();
         } else {
           throw ue;
@@ -1812,7 +1812,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
     AppQueue ret = new AppQueue();
     ret.setQueue(app.getQueue());
-    return Response.status(Status.OK).entity(ret).build();
+    return Response.status(Response.Status.OK).entity(ret).build();
   }
 
   private RMApp getRMAppForAppId(String appId) {
@@ -1857,13 +1857,13 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       throws AuthorizationException, IOException, InterruptedException {
     if (!enableRestAppSubmissions) {
       String msg = "App submission via REST is disabled.";
-      return Response.status(Status.FORBIDDEN).entity(msg).build();
+      return Response.status(Response.Status.FORBIDDEN).entity(msg).build();
     }
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
     initForWritableEndpoints(callerUGI, false);
 
     NewApplication appId = createNewApplication();
-    return Response.status(Status.OK).entity(appId).build();
+    return Response.status(Response.Status.OK).entity(appId).build();
 
   }
 
@@ -1881,7 +1881,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       throws AuthorizationException, IOException, InterruptedException {
     if (!enableRestAppSubmissions) {
       String msg = "App submission via REST is disabled.";
-      return Response.status(Status.FORBIDDEN).entity(msg).build();
+      return Response.status(Response.Status.FORBIDDEN).entity(msg).build();
     }
 
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
@@ -1911,7 +1911,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     }
 
     String url = hsr.getRequestURL() + "/" + newApp.getApplicationId();
-    return Response.status(Status.ACCEPTED).header(HttpHeaders.LOCATION, url)
+    return Response.status(Response.Status.ACCEPTED).header(HttpHeaders.LOCATION, url)
         .build();
   }
 
@@ -1975,7 +1975,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       createKerberosUserGroupInformation(hsr, callerUGI);
       callerUGI.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
     } catch (YarnException ye) {
-      return Response.status(Status.FORBIDDEN).entity(ye.getMessage()).build();
+      return Response.status(Response.Status.FORBIDDEN).entity(ye.getMessage()).build();
     }
     return createDelegationToken(tokenData, hsr, callerUGI);
   }
@@ -1997,7 +1997,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       createKerberosUserGroupInformation(hsr, callerUGI);
       callerUGI.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
     } catch (YarnException ye) {
-      return Response.status(Status.FORBIDDEN).entity(ye.getMessage()).build();
+      return Response.status(Response.Status.FORBIDDEN).entity(ye.getMessage()).build();
     }
 
     DelegationToken requestToken = new DelegationToken();
@@ -2040,7 +2040,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     DelegationToken respToken = new DelegationToken(tk.encodeToUrlString(),
         renewer, identifier.getOwner().toString(), tk.getKind().toString(),
         currentExpiration, identifier.getMaxDate());
-    return Response.status(Status.OK).entity(respToken).build();
+    return Response.status(Response.Status.OK).entity(respToken).build();
   }
 
   private Response renewDelegationToken(DelegationToken tokenData,
@@ -2072,7 +2072,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           throw new BadRequestException(ue.getCause().getCause().getMessage());
         } else if (ue.getCause()
             .getCause() instanceof org.apache.hadoop.security.AccessControlException) {
-          return Response.status(Status.FORBIDDEN)
+          return Response.status(Response.Status.FORBIDDEN)
               .entity(ue.getCause().getCause().getMessage()).build();
         }
         LOG.info("Renew delegation token request failed", ue);
@@ -2088,7 +2088,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
     DelegationToken respToken = new DelegationToken();
     respToken.setNextExpirationTime(renewTime);
-    return Response.status(Status.OK).entity(respToken).build();
+    return Response.status(Response.Status.OK).entity(respToken).build();
   }
 
   // For cancelling tokens, the encoded token is passed as a header
@@ -2114,7 +2114,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       createKerberosUserGroupInformation(hsr, callerUGI);
       callerUGI.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
     } catch (YarnException ye) {
-      return Response.status(Status.FORBIDDEN).entity(ye.getMessage()).build();
+      return Response.status(Response.Status.FORBIDDEN).entity(ye.getMessage()).build();
     }
 
     Token<RMDelegationTokenIdentifier> token = extractToken(hsr);
@@ -2140,7 +2140,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           throw new BadRequestException(ue.getCause().getCause().getMessage());
         } else if (ue.getCause()
             .getCause() instanceof org.apache.hadoop.security.AccessControlException) {
-          return Response.status(Status.FORBIDDEN)
+          return Response.status(Response.Status.FORBIDDEN)
               .entity(ue.getCause().getCause().getMessage()).build();
         }
         LOG.info("Renew delegation token request failed", ue);
@@ -2153,7 +2153,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       throw e;
     }
 
-    return Response.status(Status.OK).build();
+    return Response.status(Response.Status.OK).build();
   }
 
   private Token<RMDelegationTokenIdentifier> extractToken(
@@ -2190,7 +2190,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     initForWritableEndpoints(callerUGI, false);
 
     NewReservation reservationId = createNewReservation();
-    return Response.status(Status.OK).entity(reservationId).build();
+    return Response.status(Response.Status.OK).entity(reservationId).build();
 
   }
 
@@ -2250,7 +2250,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       throw ue;
     }
 
-    return Response.status(Status.ACCEPTED).build();
+    return Response.status(Response.Status.ACCEPTED).build();
   }
 
   private ReservationSubmissionRequest createReservationSubmissionRequest(
@@ -2342,7 +2342,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       throw ue;
     }
 
-    return Response.status(Status.OK).entity(resRespInfo).build();
+    return Response.status(Response.Status.OK).entity(resRespInfo).build();
   }
 
   private ReservationUpdateRequest createReservationUpdateRequest(
@@ -2433,7 +2433,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       throw ue;
     }
 
-    return Response.status(Status.OK).entity(resRespInfo).build();
+    return Response.status(Response.Status.OK).entity(resRespInfo).build();
   }
 
   private ReservationDeleteRequest createReservationDeleteRequest(
@@ -2469,7 +2469,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     }
     if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
       String msg = "The default static user cannot carry out this operation.";
-      return Response.status(Status.FORBIDDEN).entity(msg).build();
+      return Response.status(Response.Status.FORBIDDEN).entity(msg).build();
     }
 
     ReservationListResponse resRespInfo;
@@ -2492,7 +2492,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
     ReservationListInfo resResponse =
         new ReservationListInfo(resRespInfo, includeResourceAllocations);
-    return Response.status(Status.OK).entity(resResponse).build();
+    return Response.status(Response.Status.OK).entity(resResponse).build();
   }
 
   @GET
@@ -2628,7 +2628,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       throws IOException, InterruptedException {
     if (appTimeout.getTimeoutType() == null
         || appTimeout.getExpireTime() == null) {
-      return Response.status(Status.BAD_REQUEST)
+      return Response.status(Response.Status.BAD_REQUEST)
           .entity("Timeout type or ExpiryTime is null.").build();
     }
 
@@ -2654,9 +2654,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           String appId = app.getApplicationId().toString();
           String msg = "Unauthorized attempt to change timeout of app " + appId
               + " by remote user " + userName;
-          return Response.status(Status.FORBIDDEN).entity(msg).build();
+          return Response.status(Response.Status.FORBIDDEN).entity(msg).build();
         } else if (ye.getCause() instanceof ParseException) {
-          return Response.status(Status.BAD_REQUEST).entity(ye.getMessage())
+          return Response.status(Response.Status.BAD_REQUEST).entity(ye.getMessage())
               .build();
         } else {
           throw ue;
@@ -2667,7 +2667,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     }
     AppTimeoutInfo timeout = constructAppTimeoutDao(appTimeout.getTimeoutType(),
         app.getApplicationTimeouts().get(appTimeout.getTimeoutType()));
-    return Response.status(Status.OK).entity(timeout).build();
+    return Response.status(Response.Status.OK).entity(timeout).build();
   }
 
   @Override
@@ -2735,15 +2735,15 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           mutableConfigurationProvider.revertToOldConfig(conf);
           throw e;
         }
-        return Response.status(Status.OK).entity("Configuration under " +
+        return Response.status(Response.Status.OK).entity("Configuration under " +
             "store successfully formatted.").build();
       } catch (Exception e) {
         LOG.error("Exception thrown when formatting configuration", e);
-        return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
+        return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage())
             .build();
       }
     } else {
-      return Response.status(Status.BAD_REQUEST)
+      return Response.status(Response.Status.BAD_REQUEST)
           .entity("Scheduler Configuration format only supported by " +
               MutableConfScheduler.class.getSimpleName()).build();
     }
@@ -2782,14 +2782,14 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         CapacitySchedulerConfigValidator.validateCSConfiguration(yarnConf,
                 newConfig, rm.getRMContext());
 
-        return Response.status(Status.OK)
+        return Response.status(Response.Status.OK)
                 .entity(new ConfInfo(newSchedulerConf))
                 .build();
       } catch (Exception e) {
         String errorMsg = "CapacityScheduler configuration validation failed:"
                   + e.toString();
         LOG.warn(errorMsg);
-        return Response.status(Status.BAD_REQUEST)
+        return Response.status(Response.Status.BAD_REQUEST)
                   .entity(errorMsg)
                   .build();
       }
@@ -2797,7 +2797,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       String errorMsg = String.format("Configuration change validation only supported by %s.",
           MutableConfScheduler.class.getSimpleName());
       LOG.warn(errorMsg);
-      return Response.status(Status.BAD_REQUEST)
+      return Response.status(Response.Status.BAD_REQUEST)
               .entity(errorMsg)
               .build();
     }
@@ -2816,10 +2816,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
     ResourceScheduler scheduler = rm.getResourceScheduler();
     if (!(scheduler instanceof MutableConfScheduler)) {
-      return Response.status(Status.BAD_REQUEST)
+      return Response.status(Response.Status.BAD_REQUEST)
           .entity("Configuration change only supported by MutableConfScheduler.").build();
     } else if (!((MutableConfScheduler) scheduler).isConfigurationMutable()) {
-      return Response.status(Status.BAD_REQUEST)
+      return Response.status(Response.Status.BAD_REQUEST)
           .entity("Configuration change only supported by mutable configuration store.").build();
     } else {
       try {
@@ -2831,9 +2831,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         });
       } catch (IOException e) {
         LOG.error("Exception thrown when modifying configuration.", e);
-        return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
+        return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
       }
-      return Response.status(Status.OK).entity("Configuration change successfully applied.")
+      return Response.status(Response.Status.OK).entity("Configuration change successfully applied.")
           .build();
     }
   }
@@ -2885,11 +2885,11 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       // this should be the conf properties used by the scheduler.
       Configuration schedulerConf = mutableConfigurationProvider
           .getConfiguration();
-      return Response.status(Status.OK)
+      return Response.status(Response.Status.OK)
           .entity(new ConfInfo(schedulerConf))
           .build();
     } else {
-      return Response.status(Status.BAD_REQUEST).entity(
+      return Response.status(Response.Status.BAD_REQUEST).entity(
               String.format("This API only supports to retrieve scheduler configuration"
                   + " from a mutable-conf scheduler, underneath scheduler %s"
                   + " is not an instance of %s",
@@ -2917,15 +2917,15 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       try {
         long configVersion = mutableConfigurationProvider
             .getConfigVersion();
-        return Response.status(Status.OK)
+        return Response.status(Response.Status.OK)
             .entity(new ConfigVersionInfo(configVersion)).build();
       } catch (Exception e) {
         LOG.error("Exception thrown when fetching configuration version.", e);
-        return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
+        return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage())
             .build();
       }
     } else {
-      return Response.status(Status.BAD_REQUEST)
+      return Response.status(Response.Status.BAD_REQUEST)
           .entity(String.format("Configuration Version only supported by %s.",
               MutableConfScheduler.class.getSimpleName())).build();
     }
@@ -2996,7 +2996,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       String errMsg =
           "Invalid command: " + command.toUpperCase() + ", valid commands are: "
               + Arrays.asList(SignalContainerCommand.values());
-      return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
+      return Response.status(Response.Status.BAD_REQUEST).entity(errMsg).build();
     }
     try {
       ContainerId containerIdObj = ContainerId.fromString(containerId);
@@ -3004,10 +3004,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           .newInstance(containerIdObj,
               SignalContainerCommand.valueOf(command.toUpperCase())));
     } catch (Exception e) {
-      return Response.status(Status.INTERNAL_SERVER_ERROR)
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
           .entity(e.getMessage()).build();
     }
-    return Response.status(Status.OK).build();
+    return Response.status(Response.Status.OK).build();
   }
 
   @GET

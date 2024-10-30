@@ -20,10 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.fairscheduler;
 
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
+import jakarta.ws.rs.client.WebTarget;
+import jakarta.ws.rs.core.Response;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -41,6 +39,7 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.jersey.servlet.ServletContainer;
 import org.junit.Before;
 import org.junit.Test;
 import jakarta.ws.rs.core.MediaType;
@@ -66,7 +65,7 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
           ResourceScheduler.class);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
+      serve("/*").with(ServletContainer.class);
     }
   }
 
@@ -84,34 +83,34 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
   }
 
   public TestRMWebServicesFairScheduler() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-            .contextListenerClass(GuiceServletConfig.class)
-            .filterClass(com.google.inject.servlet.GuiceFilter.class)
-            .contextPath("jersey-guice-filter").servletPath("/").build());
+//    super(new WebAppDescriptor.Builder(
+//        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
+//            .contextListenerClass(GuiceServletConfig.class)
+//            .filterClass(com.google.inject.servlet.GuiceFilter.class)
+//            .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   @Test
   public void testClusterScheduler() throws JSONException {
-    WebResource r = resource();
-    ClientResponse response =
-        r.path("ws").path("v1").path("cluster").path("scheduler")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    WebTarget webTarget = target();
+    Response response =
+        webTarget.path("ws").path("v1").path("cluster").path("scheduler")
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     verifyClusterScheduler(json);
   }
 
   @Test
   public void testClusterSchedulerSlash() throws JSONException {
-    WebResource r = resource();
-    ClientResponse response =
-        r.path("ws").path("v1").path("cluster").path("scheduler/")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    WebTarget webTarget = target();
+    Response response =
+        webTarget.path("ws").path("v1").path("cluster").path("scheduler/")
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     verifyClusterScheduler(json);
   }
 
@@ -124,13 +123,13 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
     queueManager.getLeafQueue("root.q.subqueue1", true);
     queueManager.getLeafQueue("root.q.subqueue2", true);
 
-    WebResource r = resource();
-    ClientResponse response =
-        r.path("ws").path("v1").path("cluster").path("scheduler")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    WebTarget webTarget = target();
+    Response response =
+        webTarget.path("ws").path("v1").path("cluster").path("scheduler")
+            .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     JSONArray subQueueInfo = json.getJSONObject("scheduler")
         .getJSONObject("schedulerInfo").getJSONObject("rootQueue")
         .getJSONObject("childQueues").getJSONArray("queue").getJSONObject(0)
@@ -160,13 +159,13 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
 
   @Test
   public void testClusterSchedulerOverviewFair() throws Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler-overview").accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
+    WebTarget webTarget = target();
+    Response response = webTarget.path("ws").path("v1").path("cluster")
+        .path("scheduler-overview").request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     TestRMWebServices.verifyClusterSchedulerOverView(json, "Fair Scheduler");
   }
 }
