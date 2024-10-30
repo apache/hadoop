@@ -27,12 +27,13 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.JerseyTest;
 import org.glassfish.jersey.test.spi.TestContainerFactory;
 
+// ToDo: technically, I can delete this class
 public abstract class JerseyTestBase extends JerseyTest {
 
-  public JerseyTestBase(TestContainerFactory factory) {
-    super(factory);
-  }
-//
+//  public JerseyTestBase() {
+//    super();
+//  }
+
 //  protected int getPort(int port) {
 //    Random rand = new Random();
 //    int jerseyPort = port + rand.nextInt(1000);

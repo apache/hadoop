@@ -34,7 +34,6 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.webapp.view.RobotsTextPage;
 
-import org.glassfish.jersey.server.ServerProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +42,6 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 import com.google.inject.Provides;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.ServletModule;
-import org.glassfish.jersey.server.filter.EncodingFilter;
 import org.glassfish.jersey.servlet.ServletContainer;
 
 /**
@@ -194,8 +192,9 @@ public abstract class WebApp extends ServletModule {
     }
   }
 
-  protected Class<? extends GuiceFilter> getWebAppFilterClass() {
-    return GuiceFilter.class;
+  // ToDo: maybe Filter¿? I'm not sure if it's needs GuiceFilter
+  protected Class<? extends ServletContainer> getWebAppFilterClass() {
+    return ServletContainer.class;
   }
 
   /**
