@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.util;
 
+import jnr.constants.platform.Signal;
+import jnr.posix.POSIX;
+import jnr.posix.POSIXFactory;
+import jnr.posix.SignalHandler;
 import org.slf4j.Logger;
-import sun.misc.Signal;
-import sun.misc.SignalHandler;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import java.util.EnumSet;
+import java.util.Set;
 
 /**
  * This class logs a message whenever we're about to exit on a UNIX signal.
@@ -35,6 +39,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public enum SignalLogger {
   INSTANCE;
+  private static final Set<Signal> SIGNALS =
+          EnumSet.of(Signal.SIGHUP, Signal.SIGINT, Signal.SIGTERM);
+  private static final POSIX POSIX_IMPL = POSIXFactory.getJavaPOSIX();
+  private static final SignalHandler DEFAULT_HANDLER = System::exit;
 
   private boolean registered = false;
 
@@ -45,9 +53,10 @@ public enum SignalLogger {
     final private Logger log;
     final private SignalHandler prevHandler;
 
-    Handler(String name, Logger log) {
+    Handler(Signal signal, Logger log) {
       this.log = log;
-      prevHandler = Signal.handle(new Signal(name), this);
+      SignalHandler handler = POSIX_IMPL.signal(signal, this);
+      prevHandler = handler != null ? handler : DEFAULT_HANDLER;
     }
 
     /**
@@ -56,9 +65,8 @@ public enum SignalLogger {
      * @param signal    The incoming signal
      */
     @Override
-    public void handle(Signal signal) {
-      log.error("RECEIVED SIGNAL " + signal.getNumber() +
-          ": SIG" + signal.getName());
+    public void handle(int signal) {
+      log.error("RECEIVED SIGNAL {}: {}", signal, Signal.valueOf(signal));
       prevHandler.handle(signal);
     }
   }
@@ -75,16 +83,15 @@ public enum SignalLogger {
     registered = true;
     StringBuilder bld = new StringBuilder();
     bld.append("registered UNIX signal handlers for [");
-    final String SIGNALS[] = { "TERM", "HUP", "INT" };
     String separator = "";
-    for (String signalName : SIGNALS) {
+    for (Signal signal : SIGNALS) {
       try {
-        new Handler(signalName, log);
+        new Handler(signal, log);
         bld.append(separator)
-            .append(signalName);
+            .append(signal.name());
         separator = ", ";
       } catch (Exception e) {
-        log.debug("Error: ", e);
+        log.info("Error installing UNIX signal handler for {}", signal, e);
       }
     }
     bld.append("]");

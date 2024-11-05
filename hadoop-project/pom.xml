@@ -238,6 +238,7 @@
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
     <jmh.version>1.20</jmh.version>
+    <jnr.posix.version>3.1.20</jnr.posix.version>
   </properties>
 
   <dependencyManagement>
@@ -2146,6 +2147,11 @@
         <groupId>javax.cache</groupId>
         <artifactId>cache-api</artifactId>
         <version>${cache.api.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.jnr</groupId>
+        <artifactId>jnr-posix</artifactId>
+        <version>${jnr.posix.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

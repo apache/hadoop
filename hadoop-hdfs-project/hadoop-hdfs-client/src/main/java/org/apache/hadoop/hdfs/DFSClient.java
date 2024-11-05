@@ -222,7 +222,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   final ClientProtocol namenode;
   /* The service used for delegation tokens */
   private Text dtService;
-
+  
   final UserGroupInformation ugi;
   volatile boolean clientRunning = true;
   volatile long lastLeaseRenewal;

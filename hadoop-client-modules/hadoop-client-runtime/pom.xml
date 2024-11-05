@@ -159,6 +159,7 @@
                       <exclude>org.xerial.snappy:*</exclude>
                       <!-- leave out kotlin classes -->
                       <exclude>org.jetbrains.kotlin:*</exclude>
+                      <exclude>com.github.jnr:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>

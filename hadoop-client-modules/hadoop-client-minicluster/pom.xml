@@ -709,6 +709,7 @@
                       <exclude>org.bouncycastle:*</exclude>
                       <!-- Leave snappy that includes native methods which cannot be relocated. -->
                       <exclude>org.xerial.snappy:*</exclude>
+                      <exclude>com.github.jnr:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>

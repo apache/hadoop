@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.service.launcher;
 
+import jnr.constants.platform.Signal;
 import org.apache.hadoop.service.BreakableService;
 import org.apache.hadoop.service.launcher.testservices.FailureTestService;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -38,8 +39,8 @@ public class TestServiceInterruptHandling
   @Test
   public void testRegisterAndRaise() throws Throwable {
     InterruptCatcher catcher = new InterruptCatcher();
-    String name = "USR2";
-    IrqHandler irqHandler = new IrqHandler(name, catcher);
+    String name = "SIGINT";
+    IrqHandler irqHandler = new IrqHandler(Signal.valueOf(name), catcher);
     irqHandler.bind();
     assertEquals(0, irqHandler.getSignalCount());
     irqHandler.raise();
@@ -61,7 +62,7 @@ public class TestServiceInterruptHandling
 
     // call the interrupt operation directly
     try {
-      escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
+      escalator.interrupted(new IrqHandler.InterruptData("SIGINT", 3));
       fail("Expected an exception to be raised in " + escalator);
     } catch (ExitUtil.ExitException e) {
       assertExceptionDetails(EXIT_INTERRUPTED, "", e);
@@ -75,7 +76,7 @@ public class TestServiceInterruptHandling
 
     // now interrupt it a second time and expect it to escalate to a halt
     try {
-      escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
+      escalator.interrupted(new IrqHandler.InterruptData("SIGINT", 3));
       fail("Expected an exception to be raised in " + escalator);
     } catch (ExitUtil.HaltException e) {
       assertExceptionDetails(EXIT_INTERRUPTED, "", e);
@@ -93,7 +94,7 @@ public class TestServiceInterruptHandling
     InterruptEscalator escalator = new InterruptEscalator(launcher, 500);
     // call the interrupt operation directly
     try {
-      escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
+      escalator.interrupted(new IrqHandler.InterruptData("SIGINT", 3));
       fail("Expected an exception to be raised from " + escalator);
     } catch (ExitUtil.ExitException e) {
       assertExceptionDetails(EXIT_INTERRUPTED, "", e);

@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import jnr.constants.platform.Signal;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -140,7 +141,7 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
    * @throws IllegalArgumentException if the registration failed
    */
   public synchronized void register(String signalName) {
-    IrqHandler handler = new IrqHandler(signalName, this);
+    IrqHandler handler = new IrqHandler(Signal.valueOf(signalName), this);
     handler.bind();
     interruptHandlers.add(handler);
   }

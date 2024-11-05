@@ -521,6 +521,11 @@ junit:junit:4.13.2
 org.jacoco:org.jacoco.agent:0.8.5
 
 
+Eclipse Public License 2.0
+--------------------------
+
+com.github.jnr:jnr-posix:3.1.20
+
 
 HSQL License
 ------------
