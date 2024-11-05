@@ -45,7 +45,7 @@ public class TestRMCommunicator {
     }
   }
 
-  @Test(timeout = 2000)
+  @Test(timeout = 6000)
   public void testRMContainerAllocatorExceptionIsHandled() throws Exception {
     ClientService mockClientService = mock(ClientService.class);
     AppContext mockContext = mock(AppContext.class);

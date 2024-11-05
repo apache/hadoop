@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import java.util.ArrayList;
 
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -40,6 +42,7 @@ import static org.apache.hadoop.fs.StorageType.SSD;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.anyByte;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 public class TestFileWithSnapshotFeature {
@@ -60,7 +63,8 @@ public class TestFileWithSnapshotFeature {
     BlockManager bm = mock(BlockManager.class);
 
     // No snapshot
-    INodeFile file = mock(INodeFile.class);
+    INodeFile inodeFileObj = createMockFile(REPL_1);
+    INodeFile file = spy(inodeFileObj);
     when(file.getFileWithSnapshotFeature()).thenReturn(sf);
     when(file.getBlocks()).thenReturn(blocks);
     when(file.getStoragePolicyID()).thenReturn((byte) 1);
@@ -97,6 +101,16 @@ public class TestFileWithSnapshotFeature {
     Assert.assertEquals(-BLOCK_SIZE, counts.getTypeSpaces().get(SSD));
   }
 
+  private INodeFile createMockFile(short replication) {
+    BlockInfo[] blocks = new BlockInfo[] {};
+    PermissionStatus perm = new PermissionStatus("foo", "bar", FsPermission
+        .createImmutable((short) 0x1ff));
+    INodeFile iNodeFile =
+        new INodeFile(1, new byte[0], perm, 0, 0, blocks, replication,
+            BLOCK_SIZE);
+    return iNodeFile;
+  }
+
   /**
    * Test update quota with same blocks.
    */
@@ -107,7 +121,8 @@ public class TestFileWithSnapshotFeature {
     BlockInfo[] blocks = new BlockInfo[] {
         new BlockInfoContiguous(new Block(1, BLOCK_SIZE, 1), REPL_3) };
 
-    INodeFile file = mock(INodeFile.class);
+    INodeFile inodeFileObj = createMockFile(REPL_1);
+    INodeFile file = spy(inodeFileObj);
     when(file.getBlocks()).thenReturn(blocks);
     when(file.getStoragePolicyID()).thenReturn((byte) 1);
     when(file.getPreferredBlockReplication()).thenReturn((short) 3);

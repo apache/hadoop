@@ -16,6 +16,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.gpu;
 
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
 import static org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider.initResourceTypes;
 import static org.junit.Assert.assertEquals;
@@ -27,7 +28,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;

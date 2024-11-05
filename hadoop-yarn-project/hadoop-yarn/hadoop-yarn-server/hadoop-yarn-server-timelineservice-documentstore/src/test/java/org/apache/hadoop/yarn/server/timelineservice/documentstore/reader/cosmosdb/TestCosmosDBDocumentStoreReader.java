@@ -31,6 +31,9 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+
 /**
  * Test case for {@link CosmosDBDocumentStoreReader}.
  */
@@ -42,13 +45,10 @@ public class TestCosmosDBDocumentStoreReader {
   public void setUp(){
     AsyncDocumentClient asyncDocumentClient =
         Mockito.mock(AsyncDocumentClient.class);
-    PowerMockito.mockStatic(DocumentStoreUtils.class);
-    PowerMockito.when(DocumentStoreUtils.getCosmosDBDatabaseName(
-        ArgumentMatchers.any(Configuration.class)))
-        .thenReturn("FooBar");
-    PowerMockito.when(DocumentStoreUtils.createCosmosDBAsyncClient(
-        ArgumentMatchers.any(Configuration.class)))
-        .thenReturn(asyncDocumentClient);
+    Configuration conf = Mockito.mock(Configuration.class);
+    mockStatic(DocumentStoreUtils.class);
+    when(DocumentStoreUtils.getCosmosDBDatabaseName(conf)).thenReturn("FooBar");
+    when(DocumentStoreUtils.createCosmosDBAsyncClient(conf)).thenReturn(asyncDocumentClient);
   }
 
   @Test(expected = IllegalArgumentException.class)
