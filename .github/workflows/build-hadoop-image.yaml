@@ -1,0 +1,67 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: build-hadoop-image
+
+# This workflow builds the Hadoop docker image.
+# For non-PR runs, it also pushes the image to the registry, tagging it based on the branch name.
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - 'docker-hadoop-**'
+      - '!docker-hadoop-runner-**'
+  push:
+    branches:
+      - 'docker-hadoop-**'
+      - '!docker-hadoop-runner-**'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate image ID
+        id: meta
+        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81
+        with:
+          images: |
+            ghcr.io/${{ github.repository_owner }}/hadoop
+          tags: |
+            type=match,pattern=docker-hadoop-(.*),value={{branch}},group=1
+          flavor: |
+            latest=false
+
+      - name: Login to ghcr.io
+        id: login
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        id: build
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75
+        with:
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
