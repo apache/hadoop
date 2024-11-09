@@ -811,6 +811,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_BALANCER_ADDRESS_DEFAULT= "0.0.0.0:0";
   public static final String  DFS_BALANCER_KEYTAB_FILE_KEY = "dfs.balancer.keytab.file";
   public static final String  DFS_BALANCER_KERBEROS_PRINCIPAL_KEY = "dfs.balancer.kerberos.principal";
+  public static final String DFS_BALANCER_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY =
+      "dfs.balancer.kerberos.internal.spnego.principal";
   public static final String  DFS_BALANCER_BLOCK_MOVE_TIMEOUT = "dfs.balancer.block-move.timeout";
   public static final int     DFS_BALANCER_BLOCK_MOVE_TIMEOUT_DEFAULT = 0;
   public static final String  DFS_BALANCER_MAX_NO_MOVE_INTERVAL_KEY = "dfs.balancer.max-no-move-interval";
@@ -821,6 +823,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long    DFS_BALANCER_SERVICE_INTERVAL_DEFAULT = TimeUnit.MINUTES.toMillis(5); //5 mins
   public static final String  DFS_BALANCER_SERVICE_RETRIES_ON_EXCEPTION = "dfs.balancer.service.retries.on.exception";
   public static final int     DFS_BALANCER_SERVICE_RETRIES_ON_EXCEPTION_DEFAULT = 5;
+  public static final String  DFS_BALANCER_HTTP_ADDRESS_KEY = "dfs.balancer.http-address";
+  public static final int     DFS_BALANCER_HTTP_PORT_DEFAULT = 8590;
+  public static final String  DFS_BALANCER_HTTP_BIND_HOST_KEY = "dfs.balancer.http-bind-host";
+  public static final String  DFS_BALANCER_HTTP_ADDRESS_DEFAULT = "0.0.0.0:" + DFS_BALANCER_HTTP_PORT_DEFAULT;
+  public static final String  DFS_BALANCER_HTTPS_ADDRESS_KEY = "dfs.balancer.https-address";
+  public static final int     DFS_BALANCER_HTTPS_PORT_DEFAULT = 8591;
+  public static final String  DFS_BALANCER_HTTPS_BIND_HOST_KEY = "dfs.balancer.https-bind-host";
+  public static final String  DFS_BALANCER_HTTPS_ADDRESS_DEFAULT = "0.0.0.0:" + DFS_BALANCER_HTTPS_PORT_DEFAULT;
 
   public static final String  DFS_MOVER_MOVEDWINWIDTH_KEY = "dfs.mover.movedWinWidth";
   public static final long    DFS_MOVER_MOVEDWINWIDTH_DEFAULT = 5400*1000L;
