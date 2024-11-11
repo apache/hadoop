@@ -296,8 +296,7 @@ io.swagger:swagger-annotations:1.5.4
 javax.inject:javax.inject:1
 net.java.dev.jna:jna:5.2.0
 net.minidev:accessors-smart:1.2
-org.apache.avro:avro:1.9.2
-org.apache.avro:avro:1.11.3
+org.apache.avro:avro:1.11.4
 org.apache.commons:commons-compress:1.26.1
 org.apache.commons:commons-configuration2:2.10.1
 org.apache.commons:commons-csv:1.9.0
