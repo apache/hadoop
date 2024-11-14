@@ -680,9 +680,9 @@ client-side and then transmit it over to S3 storage. The same encrypted data
 is then transmitted over to client while reading and then
 decrypted on the client-side.
 
-S3-CSE, uses `AmazonS3EncryptionClientV2.java`  as the AmazonS3 client. The
-encryption and decryption is done by AWS SDK. As of July 2021, Only CSE-KMS
-method is supported.
+S3-CSE, uses `S3EncryptionClient.java` (V3)  as the AmazonS3 client. The
+encryption and decryption is done by AWS SDK. Both CSE-KMS and CSE-CUSTOM
+methods are supported.
 
 A key reason this feature (HADOOP-13887) has been unavailable for a long time
 is that the AWS S3 client pads uploaded objects with a 16 byte footer. This
@@ -703,10 +703,29 @@ shorter than the length of files listed with other clients -including S3A
 clients where S3-CSE has not been enabled.
 
 ### Features
-
-- Supports client side encryption with keys managed in AWS KMS.
+- Supports client side encryption with keys managed in AWS KMS (CSE-KMS)
+- Supports client side encryption with custom keys by
+implementing custom [Keyring](https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/choose-keyring.html) (CSE-CUSTOM)
+- Backward compatible with older encryption clients
+like `AmazonS3EncryptionClient.java`(V1) and `AmazonS3EncryptionClientV2.java`(V2)
 - encryption settings propagated into jobs through any issued delegation tokens.
 - encryption information stored as headers in the uploaded object.
+
+### Compatibility Issues
+- The V1 client support reading unencrypted S3 objects, whereas the V3 client does not.
+- Unlike the V2 and V3 clients, which always append 16 bytes to a file,
+the V1 client appends extra bytes to the next multiple of 16.
+For example, if the unencrypted object size is 28 bytes,
+the V1 client pads an extra 4 bytes to make it a multiple of 16.
+
+Note: Inorder to workaround the above compatibility issues
+set `fs.s3a.encryption.cse.v1.compatibility.enabled=true`
+
+Note: The V1 client supports storing encryption metadata in a separate file with
+the suffix "fileName".instruction. However, these instruction files are not
+skipped and will lead to exceptions or unknown issues.
+Therefore, it is recommended not to use S3A client-side encryption (CSE)
+when instruction files are used to store encryption metadata.
 
 ### Limitations
 
@@ -722,11 +741,13 @@ clients where S3-CSE has not been enabled.
  NIST.
 
 ### Setup
+#### 1. CSE-KMS
 - Generate an AWS KMS Key ID from AWS console for your bucket, with same
  region as the storage bucket.
 - If already created, [view the kms key ID by these steps.](https://docs.aws.amazon.com/kms/latest/developerguide/find-cmk-id-arn.html)
 - Set `fs.s3a.encryption.algorithm=CSE-KMS`.
 - Set `fs.s3a.encryption.key=<KMS_KEY_ID>`.
+- Set `fs.s3a.encryption.cse.kms.region=<KMS_REGION>`.
 
 KMS_KEY_ID:
 
@@ -755,6 +776,34 @@ S3-CSE to work.
      <name>fs.s3a.encryption.key</name>
      <value>${KMS_KEY_ID}</value>
  </property>
+
+<property>
+     <name>fs.s3a.encryption.cse.kms.region</name>
+     <value>${KMS_REGION}</value>
+</property>
+```
+
+#### 2. CSE-CUSTOM
+- Set `fs.s3a.encryption.algorithm=CSE-CUSTOM`.
+- Set
+`fs.s3a.encryption.cse.custom.cryptographic.material.manager.class.name=<fully qualified class name>`.
+
+Example for custom keyring implementation
+```
+public class CustomKeyring implements Keyring {
+  public CustomKeyring()  {
+  }
+
+  @Override
+  public EncryptionMaterials onEncrypt(EncryptionMaterials encryptionMaterials) {
+    // custom code
+  }
+
+  @Override
+  public DecryptionMaterials onDecrypt(DecryptionMaterials decryptionMaterials,
+      List<EncryptedDataKey> list) {
+    // custom code
+  }
 ```
 
 ## <a name="troubleshooting"></a> Troubleshooting Encryption

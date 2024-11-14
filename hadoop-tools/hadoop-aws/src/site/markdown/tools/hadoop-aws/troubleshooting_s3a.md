@@ -1051,15 +1051,25 @@ file using configured SSE-C keyB into that structure.
 
 ## <a name="client-side-encryption"></a> S3 Client Side Encryption
 
+### java.lang.NoClassDefFoundError: software/amazon/encryption/s3/S3EncryptionClient
+
+With the move to the V2 AWS SDK, CSE is implemented via
+[amazon-s3-encryption-client-java](https://github.com/aws/amazon-s3-encryption-client-java/tree/v3.1.1)
+which is not packaged in AWS SDK V2 bundle jar and needs to be added separately.
+
+Fix: add amazon-s3-encryption-client-java jar version 3.1.1  to the class path.
+
 ### Instruction file not found for S3 object
 
-Reading an unencrypted file would fail when read through CSE enabled client.
+Reading an unencrypted file would fail when read through CSE enabled client by default.
 ```
-java.lang.SecurityException: Instruction file not found for S3 object with bucket name: ap-south-cse, key: unencryptedData.txt
-
+software.amazon.encryption.s3.S3EncryptionClientException: Instruction file not found!
+Please ensure the object you are attempting to decrypt has been encrypted
+using the S3 Encryption Client.
 ```
 CSE enabled client should read encrypted data only.
 
+Fix: set `fs.s3a.encryption.cse.v1.compatibility.enabled=true`
 ### CSE-KMS method requires KMS key ID
 
 KMS key ID is required for CSE-KMS to encrypt data, not providing one leads
@@ -1107,49 +1117,8 @@ Key 'arn:aws:kms:ap-south-1:152813717728:key/<KMS_KEY_ID>'
 does not exist(Service: AWSKMS; Status Code: 400; Error Code: NotFoundException;
 Request ID: 279db85d-864d-4a38-9acd-d892adb504c0; Proxy: null)
 ```
-While generating the KMS Key ID make sure to generate it in the same region
- as your bucket.
-
-### Unable to perform range get request: Range get support has been disabled
-
-If Range get is not supported for a CSE algorithm or is disabled:
-```
-java.lang.SecurityException: Unable to perform range get request: Range get support has been disabled. See https://docs.aws.amazon.com/general/latest/gr/aws_sdk_cryptography.html
-
-```
-Range gets must be enabled for CSE to work.
-
-### WARNING: Range gets do not provide authenticated encryption properties even when used with an authenticated mode (AES-GCM).
-
-The S3 Encryption Client is configured to support range get requests. This
- warning would be shown everytime S3-CSE is used.
-```
-2021-07-14 12:54:09,525 [main] WARN  s3.AmazonS3EncryptionClientV2
-(AmazonS3EncryptionClientV2.java:warnOnRangeGetsEnabled(401)) - The S3
-Encryption Client is configured to support range get requests. Range gets do
-not provide authenticated encryption properties even when used with an
-authenticated mode (AES-GCM). See https://docs.aws.amazon.com/general/latest
-/gr/aws_sdk_cryptography.html
-```
-We can Ignore this warning since, range gets must be enabled for S3-CSE to
-get data.
-
-### WARNING: If you don't have objects encrypted with these legacy modes, you should disable support for them to enhance security.
-
-The S3 Encryption Client is configured to read encrypted data with legacy
-encryption modes through the CryptoMode setting, and we would see this
-warning for all S3-CSE request.
-
-```
-2021-07-14 12:54:09,519 [main] WARN  s3.AmazonS3EncryptionClientV2
-(AmazonS3EncryptionClientV2.java:warnOnLegacyCryptoMode(409)) - The S3
-Encryption Client is configured to read encrypted data with legacy
-encryption modes through the CryptoMode setting. If you don't have objects
-encrypted with these legacy modes, you should disable support for them to
-enhance security. See https://docs.aws.amazon.com/general/latest/gr/aws_sdk_cryptography.html
-```
-We can ignore this, since this CryptoMode setting(CryptoMode.AuthenticatedEncryption)
-is required for range gets to work.
+If S3 bucket region is different from the KMS key region,
+set`fs.s3a.encryption.cse.kms.region=<KMS_REGION>`
 
 ### `software.amazon.awssdk.services.kms.mode.InvalidKeyUsageException: You cannot generate a data key with an asymmetric CMK`
 

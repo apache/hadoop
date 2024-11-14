@@ -1471,11 +1471,15 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     /**
      * Execute the request.
+     * When CSE is enabled with reading of unencrypted data, The object is checked if it is
+     * encrypted and if so, the request is made with encrypted S3 client. If the object is
+     * not encrypted, the request is made with unencrypted s3 client.
      * @param request the request
      * @return the response
+     * @throws IOException on any failure.
      */
     @Retries.OnceRaw
-    ResponseInputStream<GetObjectResponse> getObject(GetObjectRequest request);
+    ResponseInputStream<GetObjectResponse> getObject(GetObjectRequest request) throws IOException;
 
     /**
      * Submit some asynchronous work, for example, draining a stream.

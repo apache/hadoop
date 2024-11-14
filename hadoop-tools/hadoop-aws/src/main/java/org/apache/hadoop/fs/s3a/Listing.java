@@ -75,7 +75,6 @@ import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFr
 public class Listing extends AbstractStoreOperation {
 
   private static final Logger LOG = S3AFileSystem.LOG;
-  private final boolean isCSEEnabled;
 
   static final FileStatusAcceptor ACCEPT_ALL_BUT_S3N =
       new AcceptAllButS3nDirs();
@@ -86,7 +85,6 @@ public class Listing extends AbstractStoreOperation {
       StoreContext storeContext) {
     super(storeContext);
     this.listingOperationCallbacks = listingOperationCallbacks;
-    this.isCSEEnabled = storeContext.isCSEEnabled();
   }
 
   /**
@@ -446,14 +444,17 @@ public class Listing extends AbstractStoreOperation {
      * Build the next status batch from a listing.
      * @param objects the next object listing
      * @return true if this added any entries after filtering
+     * @throws IOException IO problems. This can happen only when CSE is enabled.
      */
-    private boolean buildNextStatusBatch(S3ListResult objects) {
+    private boolean buildNextStatusBatch(S3ListResult objects) throws IOException {
       // counters for debug logs
       int added = 0, ignored = 0;
       // list to fill in with results. Initial size will be list maximum.
       List<S3AFileStatus> stats = new ArrayList<>(
           objects.getS3Objects().size() +
               objects.getCommonPrefixes().size());
+      String userName = getStoreContext().getUsername();
+      long blockSize = listingOperationCallbacks.getDefaultBlockSize(null);
       // objects
       for (S3Object s3Object : objects.getS3Objects()) {
         String key = s3Object.key();
@@ -464,9 +465,9 @@ public class Listing extends AbstractStoreOperation {
         // Skip over keys that are ourselves and old S3N _$folder$ files
         if (acceptor.accept(keyPath, s3Object) && filter.accept(keyPath)) {
           S3AFileStatus status = createFileStatus(keyPath, s3Object,
-                  listingOperationCallbacks.getDefaultBlockSize(keyPath),
-                  getStoreContext().getUsername(),
-                  s3Object.eTag(), null, isCSEEnabled);
+              blockSize, userName, s3Object.eTag(),
+              null,
+              listingOperationCallbacks.getObjectSize(s3Object));
           LOG.debug("Adding: {}", status);
           stats.add(status);
           added++;

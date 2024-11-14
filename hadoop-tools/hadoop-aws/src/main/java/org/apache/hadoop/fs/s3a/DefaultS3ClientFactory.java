@@ -40,6 +40,7 @@ import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
@@ -152,11 +153,17 @@ public class DefaultS3ClientFactory extends Configured
         .thresholdInBytes(parameters.getMultiPartThreshold())
         .build();
 
-    return configureClientBuilder(S3AsyncClient.builder(), parameters, conf, bucket)
-        .httpClientBuilder(httpClientBuilder)
-        .multipartConfiguration(multipartConfiguration)
-        .multipartEnabled(parameters.isMultipartCopy())
-        .build();
+    S3AsyncClientBuilder s3AsyncClientBuilder =
+            configureClientBuilder(S3AsyncClient.builder(), parameters, conf, bucket)
+                .httpClientBuilder(httpClientBuilder);
+
+    // multipart upload pending with HADOOP-19326.
+    if (!parameters.isClientSideEncryptionEnabled()) {
+      s3AsyncClientBuilder.multipartConfiguration(multipartConfiguration)
+              .multipartEnabled(parameters.isMultipartCopy());
+    }
+
+    return s3AsyncClientBuilder.build();
   }
 
   @Override
@@ -363,7 +370,7 @@ public class DefaultS3ClientFactory extends Configured
    * @param conf config to build the URI from.
    * @return an endpoint uri
    */
-  private static URI getS3Endpoint(String endpoint, final Configuration conf) {
+  protected static URI getS3Endpoint(String endpoint, final Configuration conf) {
 
     boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS);
 

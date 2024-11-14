@@ -636,6 +636,36 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Unset encryption options.
+   * @param conf configuration
+   */
+  public static void unsetEncryption(Configuration conf) {
+    removeBaseAndBucketOverrides(conf, S3_ENCRYPTION_ALGORITHM);
+  }
+
+  /**
+   * Removes all encryption-related properties for a specific S3 bucket from given configuration.
+   *
+   * <p>This method unsets various encryption settings specific to the test bucket. It removes
+   * bucket-specific overrides for multiple encryption-related properties, including both
+   * client-side and server-side encryption settings.
+   *
+   * @param conf The Configuration object from which to remove the encryption properties.
+   *             This object will be modified by this method.
+   */
+  public static void unsetAllEncryptionPropertiesForBucket(Configuration conf) {
+    removeBucketOverrides(getTestBucketName(conf),
+        conf,
+        S3_ENCRYPTION_ALGORITHM,
+        S3_ENCRYPTION_KEY,
+        SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_KEY,
+        S3_ENCRYPTION_CSE_CUSTOM_KEYRING_CLASS_NAME,
+        S3_ENCRYPTION_CSE_V1_COMPATIBILITY_ENABLED,
+        S3_ENCRYPTION_CSE_KMS_REGION);
+  }
+
+  /**
    * Print all metrics in a list, then reset them.
    * @param log log to print the metrics to.
    * @param metrics metrics to process

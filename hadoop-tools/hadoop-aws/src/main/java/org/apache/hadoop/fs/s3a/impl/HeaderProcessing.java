@@ -325,19 +325,6 @@ public class HeaderProcessing extends AbstractStoreOperation {
         md.contentEncoding());
     maybeSetHeader(headers, XA_CONTENT_LANGUAGE,
         md.contentLanguage());
-    // If CSE is enabled, use the unencrypted content length.
-    // TODO: CSE is not supported yet, add these headers in during CSE work.
-//    if (md.getUserMetaDataOf(Headers.CRYPTO_CEK_ALGORITHM) != null
-//        && md.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH) != null) {
-//      maybeSetHeader(headers, XA_CONTENT_LENGTH,
-//          md.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH));
-//    } else {
-//      maybeSetHeader(headers, XA_CONTENT_LENGTH,
-//          md.contentLength());
-//    }
-//    maybeSetHeader(headers, XA_CONTENT_MD5,
-//        md.getContentMD5());
-    // TODO: Add back in else block during CSE work.
     maybeSetHeader(headers, XA_CONTENT_LENGTH,
         md.contentLength());
     if (md.sdkHttpResponse() != null && md.sdkHttpResponse().headers() != null

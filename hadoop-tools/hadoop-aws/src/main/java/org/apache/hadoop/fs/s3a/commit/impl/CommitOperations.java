@@ -638,17 +638,19 @@ public class CommitOperations extends AbstractStoreOperation
     for (int partNumber = 1; partNumber <= numParts; partNumber++) {
       progress.progress();
       int size = (int)Math.min(length - offset, uploadPartSize);
-      UploadPartRequest part = writeOperations.newUploadPartRequestBuilder(
+      UploadPartRequest.Builder partBuilder  = writeOperations.newUploadPartRequestBuilder(
           destKey,
           uploadId,
           partNumber,
-          size).build();
+          partNumber == numParts,
+          size);
       // Create a file content provider starting at the current offset.
       RequestBody body = RequestBody.fromContentProvider(
           UploadContentProviders.fileContentProvider(localFile, offset, size),
           size,
           CONTENT_TYPE_OCTET_STREAM);
-      UploadPartResponse response = writeOperations.uploadPart(part, body, statistics);
+      UploadPartResponse response = writeOperations.uploadPart(partBuilder.build(), body,
+          statistics);
       offset += uploadPartSize;
       parts.add(CompletedPart.builder()
           .partNumber(partNumber)

@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -42,6 +43,10 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Error;
@@ -59,11 +64,13 @@ import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.S3AStore;
+import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.UploadInfo;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
+import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
@@ -75,11 +82,13 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.extractException;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getPutRequestLength;
 import static org.apache.hadoop.fs.s3a.S3AUtils.isThrottleException;
+import static org.apache.hadoop.fs.s3a.Statistic.ACTION_HTTP_HEAD_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.IGNORED_ERRORS;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_PART_PUT;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_OBJECTS;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_METADATA_REQUESTS;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_BYTES;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_BYTES_PENDING;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_REQUESTS_ACTIVE;
@@ -90,6 +99,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_THROTTLED;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_THROTTLE_RATE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
@@ -245,6 +255,11 @@ public class S3AStoreImpl implements S3AStore {
   @Override
   public S3Client getOrCreateAsyncS3ClientUnchecked() throws UncheckedIOException {
     return clientManager.getOrCreateAsyncS3ClientUnchecked();
+  }
+
+  @Override
+  public S3Client getOrCreateUnencryptedS3Client() throws IOException {
+    return clientManager.getOrCreateUnencryptedS3Client();
   }
 
   @Override
@@ -538,6 +553,102 @@ public class S3AStoreImpl implements S3AStore {
       // convert to unchecked.
       throw new UncheckedIOException(e);
     }
+  }
+
+  /**
+   * Performs a HEAD request on an S3 object to retrieve its metadata.
+   *
+   * @param key           The S3 object key to perform the HEAD operation on
+   * @param changeTracker Tracks changes to the object's metadata across operations
+   * @param changeInvoker The invoker responsible for executing the HEAD request with retries
+   * @param fsHandler     Handler for filesystem-level operations and configurations
+   * @param operation     Description of the operation being performed for tracking purposes
+   * @return              HeadObjectResponse containing the object's metadata
+   * @throws IOException  If the HEAD request fails, object doesn't exist, or other I/O errors occur
+   */
+  @Override
+  @Retries.RetryRaw
+  public HeadObjectResponse headObject(String key,
+      ChangeTracker changeTracker,
+      Invoker changeInvoker,
+      S3AFileSystemOperations fsHandler,
+      String operation) throws IOException {
+    HeadObjectResponse response = getStoreContext().getInvoker()
+        .retryUntranslated("HEAD " + key, true,
+            () -> {
+              HeadObjectRequest.Builder requestBuilder =
+                  getRequestFactory().newHeadObjectRequestBuilder(key);
+              incrementStatistic(OBJECT_METADATA_REQUESTS);
+              DurationTracker duration =
+                  getDurationTrackerFactory().trackDuration(ACTION_HTTP_HEAD_REQUEST.getSymbol());
+              try {
+                LOG.debug("HEAD {} with change tracker {}", key, changeTracker);
+                if (changeTracker != null) {
+                  changeTracker.maybeApplyConstraint(requestBuilder);
+                }
+                HeadObjectResponse headObjectResponse =
+                    getS3Client().headObject(requestBuilder.build());
+                if (fsHandler != null) {
+                  long length =
+                      fsHandler.getS3ObjectSize(key, headObjectResponse.contentLength(), this,
+                          headObjectResponse);
+                  // overwrite the content length
+                  headObjectResponse = headObjectResponse.toBuilder().contentLength(length).build();
+                }
+                if (changeTracker != null) {
+                  changeTracker.processMetadata(headObjectResponse, operation);
+                }
+                return headObjectResponse;
+              } catch (AwsServiceException ase) {
+                if (!isObjectNotFound(ase)) {
+                  // file not found is not considered a failure of the call,
+                  // so only switch the duration tracker to update failure
+                  // metrics on other exception outcomes.
+                  duration.failed();
+                }
+                throw ase;
+              } finally {
+                // update the tracker.
+                duration.close();
+              }
+            });
+    incrementReadOperations();
+    return response;
+  }
+
+  /**
+   * Retrieves a specific byte range of an S3 object as a stream.
+   *
+   * @param key    The S3 object key to retrieve
+   * @param start  The starting byte position (inclusive) of the range to retrieve
+   * @param end    The ending byte position (inclusive) of the range to retrieve
+   * @return       A ResponseInputStream containing the requested byte range of the S3 object
+   * @throws IOException  If the object cannot be retrieved other I/O errors occur
+   * @see GetObjectResponse  For additional metadata about the retrieved object
+   */
+  @Override
+  @Retries.RetryRaw
+  public ResponseInputStream<GetObjectResponse> getRangedS3Object(String key,
+      long start,
+      long end) throws IOException {
+    final GetObjectRequest request = getRequestFactory().newGetObjectRequestBuilder(key)
+        .range(S3AUtils.formatRange(start, end))
+        .build();
+    DurationTracker duration = getDurationTrackerFactory()
+        .trackDuration(ACTION_HTTP_GET_REQUEST);
+    ResponseInputStream<GetObjectResponse> objectRange;
+    try {
+      objectRange = getStoreContext().getInvoker()
+          .retryUntranslated("GET Ranged Object " + key, true,
+              () -> getS3Client().getObject(request));
+
+    } catch (IOException ex) {
+      duration.failed();
+      throw ex;
+    } finally {
+      duration.close();
+    }
+    return objectRange;
   }
 
   /**
