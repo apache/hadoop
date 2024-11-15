@@ -733,6 +733,23 @@
 </property>
 
 <property>
+  <name>hadoop.security.sasl.mechanism</name>
+  <value>DIGEST-MD5</value>
+  <description>
+    The SASL mechanism used in Hadoop.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.sasl.CustomizedCallbackHandler.class</name>
+  <value></value>
+  <description>
+    Some security provider may define a new javax.security.auth.callback.Callback.
+    This property allows users to configure a customized callback handler.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.sensitive-config-keys</name>
   <value>
       secret$
