@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.security;
 
-import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -36,39 +35,34 @@ public final class SaslMechanismFactory {
   static final Logger LOG = LoggerFactory.getLogger(SaslMechanismFactory.class);
 
   private static final String SASL_MECHANISM_ENV = "HADOOP_SASL_MECHANISM";
-  private static final String SASL_MECHANISM;
+  private static volatile String mechanism;
 
-  static {
+  private static synchronized String getSynchronously() {
     // env
     final String envValue = System.getenv(SASL_MECHANISM_ENV);
     LOG.debug("{} = {} (env)", SASL_MECHANISM_ENV, envValue);
 
     // conf
-    final Configuration conf = new Configuration(false);
+    final Configuration conf = new Configuration();
     final String confValue = conf.get(HADOOP_SECURITY_SASL_MECHANISM_KEY,
         HADOOP_SECURITY_SASL_MECHANISM_DEFAULT);
     LOG.debug("{} = {} (conf)", HADOOP_SECURITY_SASL_MECHANISM_KEY, confValue);
 
-    if (envValue != null && confValue != null) {
-      if (!envValue.equals(confValue)) {
-        throw new HadoopIllegalArgumentException("SASL Mechanism mismatched: env "
-            + SASL_MECHANISM_ENV + " is " + envValue + " but conf "
-            + HADOOP_SECURITY_SASL_MECHANISM_KEY + " is " + confValue);
-      }
-    }
-
-    SASL_MECHANISM = envValue != null ? envValue
+    // env has a higher precedence than conf
+    mechanism = envValue != null ? envValue
         : confValue != null ? confValue
         : HADOOP_SECURITY_SASL_MECHANISM_DEFAULT;
-    LOG.debug("SASL_MECHANISM = {} (effective)", SASL_MECHANISM);
+    LOG.debug("SASL_MECHANISM = {} (effective)", mechanism);
+    return mechanism;
   }
 
   public static String getMechanism() {
-    return SASL_MECHANISM;
+    final String value = mechanism;
+    return value != null ? value : getSynchronously();
   }
 
-  public static boolean isDefaultMechanism(String mechanism) {
-    return HADOOP_SECURITY_SASL_MECHANISM_DEFAULT.equals(mechanism);
+  public static boolean isDefaultMechanism(String saslMechanism) {
+    return HADOOP_SECURITY_SASL_MECHANISM_DEFAULT.equals(saslMechanism);
   }
 
   private SaslMechanismFactory() {}

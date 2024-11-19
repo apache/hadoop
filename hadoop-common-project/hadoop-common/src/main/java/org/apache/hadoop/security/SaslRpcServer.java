@@ -27,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.security.Security;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -223,19 +224,21 @@ public class SaslRpcServer {
     SIMPLE((byte) 80, ""),
     KERBEROS((byte) 81, "GSSAPI"),
     @Deprecated
-    DIGEST((byte) 82, SaslMechanismFactory.getMechanism()),
-    TOKEN((byte) 82, SaslMechanismFactory.getMechanism()),
+    DIGEST((byte) 82, SaslMechanismFactory::getMechanism),
+    TOKEN((byte) 82, SaslMechanismFactory::getMechanism),
     PLAIN((byte) 83, "PLAIN");
 
     /** The code for this method. */
     public final byte code;
-    public final String mechanismName;
+    private final Supplier<String> mechanismName;
 
     private AuthMethod(byte code, String mechanismName) { 
+      this(code, () -> mechanismName);
+    }
+
+    AuthMethod(byte code, Supplier<String> mechanismName) {
       this.code = code;
       this.mechanismName = mechanismName;
-      LOG.info("{} {}: code={}, mechanism=\"{}\"",
-          getClass().getSimpleName(), name(), code, mechanismName);
     }
 
     private static final int FIRST_CODE = values()[0].code;
@@ -251,7 +254,7 @@ public class SaslRpcServer {
      * @return mechanismName.
      */
     public String getMechanismName() {
-      return mechanismName;
+      return mechanismName.get();
     }
 
     /**
