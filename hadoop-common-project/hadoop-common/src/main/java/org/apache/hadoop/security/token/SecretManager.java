@@ -27,8 +27,13 @@ import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 
@@ -40,6 +45,8 @@ import org.apache.hadoop.ipc.StandbyException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class SecretManager<T extends TokenIdentifier> {
+
+  public static final Logger LOG = LoggerFactory.getLogger(SecretManager.class);
   /**
    * The token was invalid and the message explains why.
    */
@@ -107,16 +114,23 @@ public abstract class SecretManager<T extends TokenIdentifier> {
   public void checkAvailableForRead() throws StandbyException {
     // Default to being available for read.
   }
-  
-  /**
-   * The name of the hashing algorithm.
-   */
-  private static final String DEFAULT_HMAC_ALGORITHM = "HmacSHA1";
 
-  /**
-   * The length of the random keys to use.
-   */
-  private static final int KEY_LENGTH = 64;
+  private static final String SELECTED_ALGORITHM;
+  private static final int SELECTED_LENGTH;
+
+  static {
+    Configuration conf = new Configuration();
+    String algorithm = conf.get(
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_KEY,
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_DEFAULT);
+    LOG.info("Selected hash algorithm: {}", algorithm);
+    SELECTED_ALGORITHM = algorithm;
+    int length = conf.getInt(
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_KEY,
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_DEFAULT);
+    LOG.info("Selected hash key length:{}", length);
+    SELECTED_LENGTH = length;
+  }
 
   /**
    * A thread local store for the Macs.
@@ -126,10 +140,9 @@ public abstract class SecretManager<T extends TokenIdentifier> {
     @Override
     protected Mac initialValue() {
       try {
-        return Mac.getInstance(DEFAULT_HMAC_ALGORITHM);
+        return Mac.getInstance(SELECTED_ALGORITHM);
       } catch (NoSuchAlgorithmException nsa) {
-        throw new IllegalArgumentException("Can't find " + DEFAULT_HMAC_ALGORITHM +
-                                           " algorithm.");
+        throw new IllegalArgumentException("Can't find " + SELECTED_ALGORITHM, nsa);
       }
     }
   };
@@ -140,11 +153,10 @@ public abstract class SecretManager<T extends TokenIdentifier> {
   private final KeyGenerator keyGen;
   {
     try {
-      keyGen = KeyGenerator.getInstance(DEFAULT_HMAC_ALGORITHM);
-      keyGen.init(KEY_LENGTH);
+      keyGen = KeyGenerator.getInstance(SELECTED_ALGORITHM);
+      keyGen.init(SELECTED_LENGTH);
     } catch (NoSuchAlgorithmException nsa) {
-      throw new IllegalArgumentException("Can't find " + DEFAULT_HMAC_ALGORITHM +
-      " algorithm.");
+      throw new IllegalArgumentException("Can't find " + SELECTED_ALGORITHM, nsa);
     }
   }
 
@@ -185,6 +197,6 @@ public abstract class SecretManager<T extends TokenIdentifier> {
    * @return the secret key
    */
   protected static SecretKey createSecretKey(byte[] key) {
-    return new SecretKeySpec(key, DEFAULT_HMAC_ALGORITHM);
+    return new SecretKeySpec(key, SELECTED_ALGORITHM);
   }
 }

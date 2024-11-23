@@ -1045,6 +1045,28 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.security.secret-manager.key-generator.algorithm</name>
+  <value>HmacSHA1</value>
+  <description>
+    The configuration key specifying the KeyGenerator algorithm used in SecretManager
+    for generating secret keys. The algorithm must be a KeyGenerator algorithm supported by
+    the Java Cryptography Architecture (JCA). Common examples include "HmacSHA1",
+    "HmacSHA256", and "HmacSHA512".
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.secret-manager.key-length</name>
+  <value>64</value>
+  <description>
+    The configuration key specifying the key length of the generated secret keys
+    in SecretManager. The key length must be appropriate for the algorithm.
+    For example, longer keys are generally more secure but may not be supported
+    by all algorithms.
+  </description>
+</property>
+
   <!-- file system properties -->
 
 <property>

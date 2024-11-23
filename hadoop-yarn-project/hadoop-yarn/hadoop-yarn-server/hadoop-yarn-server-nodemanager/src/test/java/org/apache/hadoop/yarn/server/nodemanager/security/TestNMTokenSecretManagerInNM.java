@@ -60,6 +60,8 @@ public class TestNMTokenSecretManagerInNM {
     secretMgr.setNodeId(nodeId);
     MasterKey currentKey = keygen.generateKey();
     secretMgr.setMasterKey(currentKey);
+    // check key is 64 bit long (8 byte)
+    assertEquals(8, currentKey.getBytes().array().length);
     NMTokenIdentifier attemptToken1 =
         getNMTokenId(secretMgr.createNMToken(attempt1, nodeId, "user1"));
     NMTokenIdentifier attemptToken2 =

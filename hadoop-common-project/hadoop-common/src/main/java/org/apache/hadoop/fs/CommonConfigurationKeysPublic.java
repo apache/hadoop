@@ -1005,6 +1005,15 @@ public class CommonConfigurationKeysPublic {
   public static final String  HADOOP_SECURITY_CREDENTIAL_PASSWORD_FILE_KEY =
       "hadoop.security.credstore.java-keystore-provider.password-file";
 
+  public static final String HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_KEY =
+    "hadoop.security.secret-manager.key-generator.algorithm";
+  public static final String HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_DEFAULT =
+    "HmacSHA1";
+
+  public static final String HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_KEY =
+    "hadoop.security.secret-manager.key-length";
+  public static final int HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_DEFAULT = 64;
+
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
