@@ -147,6 +147,8 @@ RUN setx PATH "%PATH%;C:\Maven\apache-maven-3.8.8\bin"
 RUN setx PATH "%PATH%;C:\CMake\cmake-3.19.0-win64-x64\bin"
 RUN setx PATH "%PATH%;C:\ZStd"
 RUN setx PATH "%PATH%;C:\Program Files\Git\usr\bin"
+RUN powershell dir 'C:\Python'
+RUN setx PATH "%PATH%;C:\Python"
 
 # We get strange Javadoc errors without this.
 RUN setx classpath ""
