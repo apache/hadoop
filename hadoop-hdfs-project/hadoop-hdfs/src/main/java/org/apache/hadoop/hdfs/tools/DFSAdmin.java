@@ -120,7 +120,7 @@ public class DFSAdmin extends FsShell {
   private static final Logger LOG = LoggerFactory.getLogger(DFSAdmin.class);
 
   /**
-   * An abstract class for the execution of a file system command
+   * An abstract class for the execution of a file system command.
    */
   abstract private static class DFSAdminCommand extends Command {
     protected DistributedFileSystem dfs;
@@ -547,6 +547,8 @@ public class DFSAdmin extends FsShell {
         replicatedBlockStats.getMissingReplicaBlocks());
     System.out.println("\tMissing blocks (with replication factor 1): " +
         replicatedBlockStats.getMissingReplicationOneBlocks());
+    System.out.println("\tBadly Distributed Blocks: " +
+        replicatedBlockStats.getBadlyDistributedBlocks());
     if (replicatedBlockStats.hasHighestPriorityLowRedundancyBlocks()) {
       System.out.println("\tLow redundancy blocks with highest priority " +
           "to recover: " +
@@ -564,6 +566,8 @@ public class DFSAdmin extends FsShell {
         ecBlockGroupStats.getCorruptBlockGroups());
     System.out.println("\tMissing block groups: " +
         ecBlockGroupStats.getMissingBlockGroups());
+    System.out.println("\tBadly Distributed Blocks: " +
+        ecBlockGroupStats.getBadlyDistributedBlocks());
     if (ecBlockGroupStats.hasHighestPriorityLowRedundancyBlocks()) {
       System.out.println("\tLow redundancy blocks with highest priority " +
           "to recover: " +

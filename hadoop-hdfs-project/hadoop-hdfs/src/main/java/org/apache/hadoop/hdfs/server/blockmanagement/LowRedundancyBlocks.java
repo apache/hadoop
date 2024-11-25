@@ -93,6 +93,7 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
   private final LongAdder corruptReplicationOneBlocks = new LongAdder();
   private final LongAdder lowRedundancyECBlockGroups = new LongAdder();
   private final LongAdder corruptECBlockGroups = new LongAdder();
+  private final LongAdder badlyDistributedBlocks = new LongAdder();
   private final LongAdder highestPriorityLowRedundancyReplicatedBlocks
       = new LongAdder();
   private final LongAdder highestPriorityLowRedundancyECBlocks
@@ -165,6 +166,11 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
 
   long getCorruptReplicationOneBlocks() {
     return corruptReplicationOneBlocks.longValue();
+  }
+
+  /** Return badly distributed block count. */
+  long getBadlyDistributedBlocks() {
+    return badlyDistributedBlocks.longValue();
   }
 
   /** Return the number of under replicated blocks
@@ -320,6 +326,9 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
       if (priLevel == QUEUE_HIGHEST_PRIORITY) {
         highestPriorityLowRedundancyECBlocks.increment();
       }
+      if (priLevel == QUEUE_REPLICAS_BADLY_DISTRIBUTED) {
+        badlyDistributedBlocks.increment();
+      }
     } else {
       lowRedundancyBlocks.increment();
       if (priLevel == QUEUE_WITH_CORRUPT_BLOCKS) {
@@ -330,6 +339,9 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
       }
       if (priLevel == QUEUE_HIGHEST_PRIORITY) {
         highestPriorityLowRedundancyReplicatedBlocks.increment();
+      }
+      if (priLevel == QUEUE_REPLICAS_BADLY_DISTRIBUTED) {
+        badlyDistributedBlocks.increment();
       }
     }
   }
@@ -407,6 +419,9 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
       if (priLevel == QUEUE_HIGHEST_PRIORITY) {
         highestPriorityLowRedundancyECBlocks.decrement();
       }
+      if (priLevel == QUEUE_REPLICAS_BADLY_DISTRIBUTED) {
+        badlyDistributedBlocks.decrement();
+      }
     } else {
       lowRedundancyBlocks.decrement();
       if (priLevel == QUEUE_WITH_CORRUPT_BLOCKS) {
@@ -420,6 +435,9 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
       }
       if (priLevel == QUEUE_HIGHEST_PRIORITY) {
         highestPriorityLowRedundancyReplicatedBlocks.decrement();
+      }
+      if (priLevel == QUEUE_REPLICAS_BADLY_DISTRIBUTED) {
+        badlyDistributedBlocks.decrement();
       }
     }
   }

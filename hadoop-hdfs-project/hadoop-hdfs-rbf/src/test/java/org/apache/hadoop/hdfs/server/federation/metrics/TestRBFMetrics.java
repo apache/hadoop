@@ -293,6 +293,7 @@ public class TestRBFMetrics extends TestMetricsBase {
     int numCorruptsFilesCount = 0;
     long scheduledReplicationBlocks = 0;
     long numberOfMissingBlocksWithReplicationFactorOne = 0;
+    long numberOfBadlyDistributedBlocks = 0;
     long highestPriorityLowRedundancyReplicatedBlocks = 0;
     long highestPriorityLowRedundancyECBlocks = 0;
     long numFiles = 0;
@@ -312,6 +313,7 @@ public class TestRBFMetrics extends TestMetricsBase {
       scheduledReplicationBlocks += stats.getScheduledReplicationBlocks();
       numberOfMissingBlocksWithReplicationFactorOne +=
           stats.getNumberOfMissingBlocksWithReplicationFactorOne();
+      numberOfBadlyDistributedBlocks += stats.getNumberOfBadlyDistributedBlocks();
       highestPriorityLowRedundancyReplicatedBlocks +=
           stats.getHighestPriorityLowRedundancyReplicatedBlocks();
       highestPriorityLowRedundancyECBlocks +=
@@ -338,6 +340,8 @@ public class TestRBFMetrics extends TestMetricsBase {
         bean.getScheduledReplicationBlocks());
     assertEquals(numberOfMissingBlocksWithReplicationFactorOne,
         bean.getNumberOfMissingBlocksWithReplicationFactorOne());
+    assertEquals(numberOfBadlyDistributedBlocks,
+        bean.getNumberOfBadlyDistributedBlocks());
     assertEquals(highestPriorityLowRedundancyReplicatedBlocks,
         bean.getHighestPriorityLowRedundancyReplicatedBlocks());
     assertEquals(highestPriorityLowRedundancyECBlocks,

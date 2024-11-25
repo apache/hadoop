@@ -73,6 +73,7 @@ public class NamenodeStatusReport {
   private int corruptFilesCount = -1;
   private long scheduledReplicationBlocks = -1;
   private long numberOfMissingBlocksWithReplicationFactorOne = -1;
+  private long numberOfBadlyDistributedBlocks = -1;
   private long highestPriorityLowRedundancyReplicatedBlocks = -1;
   private long highestPriorityLowRedundancyECBlocks = -1;
 
@@ -391,6 +392,7 @@ public class NamenodeStatusReport {
    * @param numCorruptFiles number of corrupt files.
    * @param numOfMissingBlocksWithReplicationFactorOne number of missing
    * blocks with rep one.
+   * @param numOfBadlyDistributedBlocks number of badly distributed blocks
    * @param highestPriorityLowRedundancyRepBlocks number of high priority low
    * redundancy rep blocks.
    * @param highPriorityLowRedundancyECBlocks number of high priority low
@@ -398,11 +400,14 @@ public class NamenodeStatusReport {
    */
   public void setNamenodeInfo(int numCorruptFiles,
       long numOfMissingBlocksWithReplicationFactorOne,
+      long numOfBadlyDistributedBlocks,
       long highestPriorityLowRedundancyRepBlocks,
       long highPriorityLowRedundancyECBlocks) {
     this.corruptFilesCount = numCorruptFiles;
     this.numberOfMissingBlocksWithReplicationFactorOne =
         numOfMissingBlocksWithReplicationFactorOne;
+    this.numberOfBadlyDistributedBlocks =
+        numOfBadlyDistributedBlocks;
     this.highestPriorityLowRedundancyReplicatedBlocks =
         highestPriorityLowRedundancyRepBlocks;
     this.highestPriorityLowRedundancyECBlocks =
@@ -437,6 +442,16 @@ public class NamenodeStatusReport {
   public long getNumberOfMissingBlocksWithReplicationFactorOne() {
     return this.numberOfMissingBlocksWithReplicationFactorOne;
   }
+
+  /**
+   * Gets the total number of badly distributed blocks.
+   *
+   * @return the total number of badly distrubted blocks.
+   */
+  public long getNumberOfBadlyDistributedBlocks() {
+    return this.numberOfBadlyDistributedBlocks;
+  }
+
 
   /**
    * Gets the total number of replicated low redundancy blocks on the cluster

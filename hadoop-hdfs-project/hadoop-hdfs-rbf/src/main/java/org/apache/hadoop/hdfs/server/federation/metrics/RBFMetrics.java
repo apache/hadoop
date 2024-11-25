@@ -694,6 +694,12 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
+  public long getNumberOfBadlyDistributedBlocks() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getNumberOfBadlyDistributedBlocks);
+  }
+
+  @Override
   public long getHighestPriorityLowRedundancyECBlocks() {
     return getNameserviceAggregatedLong(
         MembershipStats::getHighestPriorityLowRedundancyECBlocks);

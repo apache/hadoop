@@ -263,6 +263,11 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   /** Used by metrics. */
+  public long getBadlyDistributedBlocks() {
+    return neededReconstruction.getBadlyDistributedBlocks();
+  }
+
+  /** Used by metrics. */
   public long getPendingDeletionReplicatedBlocks() {
     return invalidateBlocks.getBlocks();
   }
@@ -714,7 +719,7 @@ public class BlockManager implements BlockStatsMXBean {
     return storagePolicySuite;
   }
 
-  /** get the BlockTokenSecretManager */
+  /** @return get the BlockTokenSecretManager */
   @VisibleForTesting
   public BlockTokenSecretManager getBlockTokenSecretManager() {
     return blockTokenSecretManager;
@@ -4875,6 +4880,11 @@ public class BlockManager implements BlockStatsMXBean {
   public long getMissingReplOneBlocksCount() {
     // not locking
     return this.neededReconstruction.getCorruptReplicationOneBlockSize();
+  }
+
+  public long getBadlyDistributedBlocksCount() {
+    // not locking
+    return this.neededReconstruction.getBadlyDistributedBlocks();
   }
 
   public long getHighestPriorityReplicatedBlockCount(){
