@@ -486,7 +486,7 @@ org.bouncycastle:bcpkix-jdk18on:1.78.1
 org.bouncycastle:bcprov-jdk18on:1.78.1
 org.bouncycastle:bcutil-jdk18on:1.78.1
 org.checkerframework:checker-qual:3.8.0
-org.codehaus.mojo:animal-sniffer-annotations:1.21
+org.codehaus.mojo:animal-sniffer-annotations:1.24
 org.jruby.jcodings:jcodings:1.0.13
 org.jruby.joni:joni:2.1.2
 org.ojalgo:ojalgo:43.0

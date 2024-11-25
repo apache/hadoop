@@ -27,7 +27,7 @@
 
     <properties>
         <grpc.version>1.67.1</grpc.version>
-        <animal-sniffer.version>1.21</animal-sniffer.version>
+        <animal-sniffer.version>1.24</animal-sniffer.version>
     </properties>
 
     <dependencies>
