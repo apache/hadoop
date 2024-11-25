@@ -213,9 +213,9 @@ public class Quota {
    * method will do some additional filtering.
    * @param path Federation path.
    * @return List of valid quota remote locations.
-   * @throws IOException
+   * @throws IOException If the location for this path cannot be determined.
    */
-  private List<RemoteLocation> getValidQuotaLocations(String path)
+  protected List<RemoteLocation> getValidQuotaLocations(String path)
       throws IOException {
     final List<RemoteLocation> locations = getQuotaRemoteLocations(path);
 
@@ -359,7 +359,7 @@ public class Quota {
    * federation path.
    * @param path Federation path.
    * @return List of quota remote locations.
-   * @throws IOException
+   * @throws IOException If the location for this path cannot be determined.
    */
   private List<RemoteLocation> getQuotaRemoteLocations(String path)
       throws IOException {
