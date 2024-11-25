@@ -41,6 +41,8 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.syncReturn;
+
 /**
  * Service to periodically update the {@link RouterQuotaUsage}
  * cached information in the {@link Router}.
@@ -99,6 +101,9 @@ public class RouterQuotaUpdateService extends PeriodicService {
         // This is because mount table does not have mtime.
         // For other mount entry get current quota usage
         HdfsFileStatus ret = this.rpcServer.getFileInfo(src);
+        if (rpcServer.isAsync()) {
+          ret = syncReturn(HdfsFileStatus.class);
+        }
         if (ret == null || ret.getModificationTime() == 0) {
           long[] zeroConsume = new long[StorageType.values().length];
           currentQuotaUsage =
@@ -113,6 +118,9 @@ public class RouterQuotaUpdateService extends PeriodicService {
             Quota quotaModule = this.rpcServer.getQuotaModule();
             Map<RemoteLocation, QuotaUsage> usageMap =
                 quotaModule.getEachQuotaUsage(src);
+            if (this.rpcServer.isAsync()) {
+              usageMap = (Map<RemoteLocation, QuotaUsage>)syncReturn(Map.class);
+            }
             currentQuotaUsage = quotaModule.aggregateQuota(src, usageMap);
             remoteQuotaUsage.putAll(usageMap);
           } catch (IOException ioe) {
@@ -136,6 +144,8 @@ public class RouterQuotaUpdateService extends PeriodicService {
       }
     } catch (IOException e) {
       LOG.error("Quota cache updated error.", e);
+    } catch (Exception e) {
+      LOG.error(e.toString());
     }
   }
 
