@@ -75,7 +75,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil;
+import org.apache.hadoop.hdfs.server.federation.router.async.AsyncQuota;
+import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncNamenodeProtocol;
 import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncRpcClient;
+import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncUserProtocol;
 import org.apache.hadoop.hdfs.server.federation.router.async.utils.ApplyFunction;
 import org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncCatchFunction;
 import org.apache.hadoop.hdfs.server.federation.router.async.utils.CatchFunction;
@@ -424,14 +427,20 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     if (this.enableAsync) {
       this.rpcClient = new RouterAsyncRpcClient(this.conf, this.router,
           this.namenodeResolver, this.rpcMonitor, routerStateIdContext);
+      this.clientProto = new RouterAsyncClientProtocol(conf, this);
+      this.nnProto = new RouterAsyncNamenodeProtocol(this);
+      this.routerProto = new RouterAsyncUserProtocol(this);
+      this.quotaCall = new AsyncQuota(this.router, this);
+      
     } else {
       this.rpcClient = new RouterRpcClient(this.conf, this.router,
           this.namenodeResolver, this.rpcMonitor, routerStateIdContext);
+      this.clientProto = new RouterClientProtocol(conf, this);
+      this.nnProto = new RouterNamenodeProtocol(this);
+      this.routerProto = new RouterUserProtocol(this);
+      this.quotaCall = new Quota(this.router, this);
     }
-    this.nnProto = new RouterNamenodeProtocol(this);
-    this.quotaCall = new Quota(this.router, this);
-    this.clientProto = new RouterClientProtocol(conf, this);
-    this.routerProto = new RouterUserProtocol(this);
+
     long dnCacheExpire = conf.getTimeDuration(
         DN_REPORT_CACHE_EXPIRE,
         DN_REPORT_CACHE_EXPIRE_MS_DEFAULT, TimeUnit.MILLISECONDS);

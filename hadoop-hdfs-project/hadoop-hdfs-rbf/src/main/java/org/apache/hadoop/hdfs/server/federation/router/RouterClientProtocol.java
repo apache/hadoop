@@ -128,33 +128,33 @@ public class RouterClientProtocol implements ClientProtocol {
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterClientProtocol.class.getName());
 
-  private final RouterRpcServer rpcServer;
-  private final RouterRpcClient rpcClient;
-  private final RouterFederationRename rbfRename;
-  private final FileSubclusterResolver subclusterResolver;
-  private final ActiveNamenodeResolver namenodeResolver;
+  protected final RouterRpcServer rpcServer;
+  protected final RouterRpcClient rpcClient;
+  protected final RouterFederationRename rbfRename;
+  protected final FileSubclusterResolver subclusterResolver;
+  protected final ActiveNamenodeResolver namenodeResolver;
 
   /**
    * Caching server defaults so as to prevent redundant calls to namenode,
    * similar to DFSClient, caching saves efforts when router connects
    * to multiple clients.
    */
-  private volatile FsServerDefaults serverDefaults;
-  private volatile long serverDefaultsLastUpdate;
-  private final long serverDefaultsValidityPeriod;
+  protected volatile FsServerDefaults serverDefaults;
+  protected volatile long serverDefaultsLastUpdate;
+  protected final long serverDefaultsValidityPeriod;
 
   /** If it requires response from all subclusters. */
-  private final boolean allowPartialList;
+  protected final boolean allowPartialList;
   /** Time out when getting the mount statistics. */
-  private long mountStatusTimeOut;
+  protected long mountStatusTimeOut;
 
   /** Default nameservice enabled. */
   private final boolean defaultNameServiceEnabled;
 
   /** Identifier for the super user. */
-  private String superUser;
+  protected String superUser;
   /** Identifier for the super group. */
-  private final String superGroup;
+  protected final String superGroup;
   /** Erasure coding calls. */
   private final ErasureCoding erasureCoding;
   /** Cache Admin calls. */
@@ -347,7 +347,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @throws IOException If this path is not fault tolerant or the exception
    *                     should not be retried (e.g., NSQuotaExceededException).
    */
-  private List<RemoteLocation> checkFaultTolerantRetry(
+  protected List<RemoteLocation> checkFaultTolerantRetry(
       final RemoteMethod method, final String src, final IOException ioe,
       final RemoteLocation excludeLoc, final List<RemoteLocation> locations)
           throws IOException {
@@ -820,7 +820,7 @@ public class RouterClientProtocol implements ClientProtocol {
   /**
    * For {@link #getListing(String,byte[],boolean) GetLisiting} to sort results.
    */
-  private static class GetListingComparator
+  protected static class GetListingComparator
       implements Comparator<byte[]>, Serializable {
     @Override
     public int compare(byte[] o1, byte[] o2) {
@@ -828,7 +828,7 @@ public class RouterClientProtocol implements ClientProtocol {
     }
   }
 
-  private static GetListingComparator comparator =
+  protected static GetListingComparator comparator =
       new GetListingComparator();
 
   @Override
@@ -1104,7 +1104,7 @@ public class RouterClientProtocol implements ClientProtocol {
     return mergeDtanodeStorageReport(dnSubcluster);
   }
 
-  private DatanodeStorageReport[] mergeDtanodeStorageReport(
+  protected DatanodeStorageReport[] mergeDtanodeStorageReport(
       Map<String, DatanodeStorageReport[]> dnSubcluster) {
     // Avoid repeating machines in multiple subclusters
     Map<String, DatanodeStorageReport> datanodesMap = new LinkedHashMap<>();
@@ -2087,7 +2087,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @param summaries Collection of individual summaries.
    * @return Aggregated content summary.
    */
-  private ContentSummary aggregateContentSummary(
+  protected ContentSummary aggregateContentSummary(
       Collection<ContentSummary> summaries) {
     if (summaries.size() == 1) {
       return summaries.iterator().next();
@@ -2142,7 +2142,7 @@ public class RouterClientProtocol implements ClientProtocol {
    *         everywhere.
    * @throws IOException If all the locations throw an exception.
    */
-  private HdfsFileStatus getFileInfoAll(final List<RemoteLocation> locations,
+  protected HdfsFileStatus getFileInfoAll(final List<RemoteLocation> locations,
       final RemoteMethod method) throws IOException {
     return getFileInfoAll(locations, method, -1);
   }
@@ -2157,7 +2157,7 @@ public class RouterClientProtocol implements ClientProtocol {
    *         everywhere.
    * @throws IOException If all the locations throw an exception.
    */
-  private HdfsFileStatus getFileInfoAll(final List<RemoteLocation> locations,
+  protected HdfsFileStatus getFileInfoAll(final List<RemoteLocation> locations,
       final RemoteMethod method, long timeOutMs) throws IOException {
 
     // Get the file info from everybody
@@ -2191,7 +2191,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @param mask The permission mask of the child.
    * @return The permission mask of the parent.
    */
-  private static FsPermission getParentPermission(final FsPermission mask) {
+  protected static FsPermission getParentPermission(final FsPermission mask) {
     FsPermission ret = new FsPermission(
         mask.getUserAction().or(FsAction.WRITE_EXECUTE),
         mask.getGroupAction(),
@@ -2300,7 +2300,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @param path Name of the path to start checking dates from.
    * @return Map with the modification dates for all sub-entries.
    */
-  private Map<String, Long> getMountPointDates(String path) {
+  protected Map<String, Long> getMountPointDates(String path) {
     Map<String, Long> ret = new TreeMap<>();
     if (subclusterResolver instanceof MountTableResolver) {
       try {
@@ -2363,7 +2363,7 @@ public class RouterClientProtocol implements ClientProtocol {
   /**
    * Get listing on remote locations.
    */
-  private List<RemoteResult<RemoteLocation, DirectoryListing>> getListingInt(
+  protected List<RemoteResult<RemoteLocation, DirectoryListing>> getListingInt(
       String src, byte[] startAfter, boolean needLocation) throws IOException {
     try {
       List<RemoteLocation> locations =
@@ -2402,7 +2402,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @param remainingEntries how many entries left from subcluster
    * @return
    */
-  private static boolean shouldAddMountPoint(
+  protected static boolean shouldAddMountPoint(
       byte[] mountPoint, byte[] lastEntry, byte[] startAfter,
       int remainingEntries) {
     if (comparator.compare(mountPoint, startAfter) > 0 &&
