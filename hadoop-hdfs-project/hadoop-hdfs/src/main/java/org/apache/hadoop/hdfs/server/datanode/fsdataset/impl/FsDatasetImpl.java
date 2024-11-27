@@ -436,7 +436,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         lockManager.addLock(LockLevel.DIR, bp, ref.getVolume().getStorageID(), dir);
         LOG.info("Added DIR lock for bpid:{}, volume storageid:{}, dir:{}",
             bp, ref.getVolume().getStorageID(), dir);
-        
       }
     }
     DatanodeStorage dnStorage = storageMap.get(sd.getStorageUuid());
@@ -1549,7 +1548,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     while (true) {
       try {
         try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.DIR,
-            b.getBlockPoolId(), getStorageUuidForLock(b), DatanodeUtil.idToBlockDirSuffixName(b.getBlockId()))) {
+            b.getBlockPoolId(), getStorageUuidForLock(b),
+            DatanodeUtil.idToBlockDirSuffixName(b.getBlockId()))) {
           ReplicaInfo replicaInfo = recoverCheck(b, newGS, expectedBlockLen);
           FsVolumeReference ref = replicaInfo.getVolume().obtainReference();
           ReplicaInPipeline replica;
@@ -1939,7 +1939,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     FsVolumeImpl v = (FsVolumeImpl) ref.getVolume();
     ReplicaInPipeline newReplicaInfo;
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.DIR,
-        b.getBlockPoolId(), v.getStorageID(), DatanodeUtil.idToBlockDirSuffixName(b.getBlockId()))) {
+        b.getBlockPoolId(), v.getStorageID(),
+        DatanodeUtil.idToBlockDirSuffixName(b.getBlockId()))) {
       try {
         newReplicaInfo = v.createTemporary(b);
         LOG.debug("creating temporary for block: {} on volume: {}",

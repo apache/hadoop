@@ -65,7 +65,8 @@ public class TestDataSetLockManager {
 
     AutoCloseDataSetLock lock6 = manager.writeLock(LockLevel.BLOCK_POOl, "BPtest");
     AutoCloseDataSetLock lock7 = manager.readLock(LockLevel.VOLUME, "BPtest", "Volumetest");
-    AutoCloseDataSetLock lock8 = manager.readLock(LockLevel.DIR, "BPtest", "Volumetest", "SubDirtest");
+    AutoCloseDataSetLock lock8 = manager.readLock(LockLevel.DIR,
+        "BPtest", "Volumetest", "SubDirtest");
     lock8.close();
     lock7.close();
     lock6.close();

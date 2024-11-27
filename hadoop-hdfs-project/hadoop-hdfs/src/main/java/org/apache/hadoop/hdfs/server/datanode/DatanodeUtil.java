@@ -130,7 +130,7 @@ public class DatanodeUtil {
   }
 
   /**
-   * Take an example: we hava a block with blockid mapping to:
+   * Take an example. We hava a block with blockid mapping to:
    * "/data1/hadoop/hdfs/datanode/current/BP-xxxx/current/finalized/subdir0/subdir0"
    * We return "subdir0/subdir0"
    * @return
@@ -141,7 +141,7 @@ public class DatanodeUtil {
     return DataStorage.BLOCK_SUBDIR_PREFIX + d1 + SEP +
         DataStorage.BLOCK_SUBDIR_PREFIX + d2;
   }
-  
+
   public static List<String> getAllSubDirNameForDataSetLock() {
     List<String> res = new ArrayList<>();
     for (int d1 = 0; d1 <= 0x1F; d1++) {
