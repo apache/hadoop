@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaHandler;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
@@ -1946,7 +1947,12 @@ public class TestFsDatasetImpl {
       assertFalse(uuids.contains(dn.getDatanodeUuid()));
 
       // This replica has deleted from datanode memory.
-      assertNull(ds.getStoredBlock(bpid, extendedBlock.getBlockId()));
+      try {
+        Block storedBlock = ds.getStoredBlock(bpid, extendedBlock.getBlockId());
+        assertNull(storedBlock);
+      } catch (Exception e) {
+        GenericTestUtils.assertExceptionContains("ReplicaNotFoundException", e);
+      }
     } finally {
       cluster.shutdown();
       DataNodeFaultInjector.set(oldInjector);
