@@ -139,7 +139,7 @@ public class Quota {
    * @return quota usage for each remote location.
    * @throws IOException If the quota system is disabled.
    */
-  Map<RemoteLocation, QuotaUsage> getEachQuotaUsage(String path)
+  protected Map<RemoteLocation, QuotaUsage> getEachQuotaUsage(String path)
       throws IOException {
     rpcServer.checkOperation(OperationCategory.READ);
     if (!router.isQuotaEnabled()) {
@@ -252,8 +252,9 @@ public class Quota {
    * @param path Federation path of the results.
    * @param results Quota query result.
    * @return Aggregated Quota.
+   * @throws IOException If the quota system is disabled.
    */
-  QuotaUsage aggregateQuota(String path,
+  protected QuotaUsage aggregateQuota(String path,
       Map<RemoteLocation, QuotaUsage> results) throws IOException {
     long nsCount = 0;
     long ssCount = 0;

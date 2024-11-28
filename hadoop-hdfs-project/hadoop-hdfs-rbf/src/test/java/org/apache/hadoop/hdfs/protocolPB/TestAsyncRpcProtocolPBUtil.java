@@ -19,7 +19,7 @@
 package org.apache.hadoop.hdfs.protocolPB;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil;
+import org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
@@ -42,7 +42,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ForkJoinPool;
 
-import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.syncReturn;
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 

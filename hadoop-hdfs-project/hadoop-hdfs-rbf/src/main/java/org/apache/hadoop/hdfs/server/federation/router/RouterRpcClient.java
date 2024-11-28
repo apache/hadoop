@@ -1940,7 +1940,7 @@ public class RouterRpcClient {
    * @return A prioritized list of NNs to use for communication.
    * @throws IOException If a NN cannot be located for the nameservice ID.
    */
-  protected List<? extends FederationNamenodeContext> getOrderedNamenodes(String nsId,
+  public List<? extends FederationNamenodeContext> getOrderedNamenodes(String nsId,
       boolean isObserverRead) throws IOException {
     final List<? extends FederationNamenodeContext> namenodes;
 
@@ -2047,39 +2047,39 @@ public class RouterRpcClient {
     private static final byte SHOULD_USE_OBSERVER_BIT = 2;
     private static final byte COMPLETE_BIT = 4;
 
-    ExecutionStatus() {
+    public ExecutionStatus() {
       this(false, false);
     }
 
-    ExecutionStatus(boolean failOver, boolean shouldUseObserver) {
+    public ExecutionStatus(boolean failOver, boolean shouldUseObserver) {
       this.flag = 0;
       setFailOver(failOver);
       setShouldUseObserver(shouldUseObserver);
       setComplete(false);
     }
 
-    private void setFailOver(boolean failOver) {
+    public void setFailOver(boolean failOver) {
       flag = (byte) (failOver ? (flag | FAIL_OVER_BIT) : (flag & ~FAIL_OVER_BIT));
     }
 
-    private void setShouldUseObserver(boolean shouldUseObserver) {
+    public void setShouldUseObserver(boolean shouldUseObserver) {
       flag = (byte) (shouldUseObserver ?
           (flag | SHOULD_USE_OBSERVER_BIT) : (flag & ~SHOULD_USE_OBSERVER_BIT));
     }
 
-    void setComplete(boolean complete) {
+    public void setComplete(boolean complete) {
       flag = (byte) (complete ? (flag | COMPLETE_BIT) : (flag & ~COMPLETE_BIT));
     }
 
-    boolean isFailOver() {
+    public boolean isFailOver() {
       return (flag & FAIL_OVER_BIT) != 0;
     }
 
-    boolean isShouldUseObserver() {
+    public boolean isShouldUseObserver() {
       return (flag &  SHOULD_USE_OBSERVER_BIT) != 0;
     }
 
-    boolean isComplete() {
+    public boolean isComplete() {
       return (flag & COMPLETE_BIT) != 0;
     }
   }
