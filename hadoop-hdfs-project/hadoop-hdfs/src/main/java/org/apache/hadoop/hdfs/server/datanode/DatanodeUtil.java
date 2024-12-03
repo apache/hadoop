@@ -133,7 +133,8 @@ public class DatanodeUtil {
    * Take an example. We hava a block with blockid mapping to:
    * "/data1/hadoop/hdfs/datanode/current/BP-xxxx/current/finalized/subdir0/subdir0"
    * We return "subdir0/subdir0"
-   * @return
+   * @param blockId blockId
+   * @return The two-level subdir name
    */
   public static String idToBlockDirSuffixName(long blockId) {
     int d1 = (int) ((blockId >> 16) & 0x1F);
