@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.util.Sets;
 import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
@@ -80,6 +81,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants._SUCCESS;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID;
 import static org.apache.hadoop.fs.s3a.commit.staging.Paths.getMultipartUploadCommitsDirectory;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.STAGING_UPLOADS;
+import static org.apache.hadoop.mapred.JobConf.MAPRED_TASK_ENV;
 
 /**
  * Test an MR Job with all the different committers.
@@ -338,6 +340,8 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   @Override
   protected void applyCustomConfigOptions(final JobConf jobConf)
       throws IOException {
+    jobConf.set(MAPRED_TASK_ENV, "AWS_REGION=" + jobConf.get(Constants.AWS_REGION));
+    jobConf.set("yarn.app.mapreduce.am.env", "AWS_REGION=" + jobConf.get(Constants.AWS_REGION));
     committerTestBinding.applyCustomConfigOptions(jobConf);
   }
 

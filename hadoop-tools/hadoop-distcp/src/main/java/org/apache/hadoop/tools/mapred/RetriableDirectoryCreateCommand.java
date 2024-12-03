@@ -18,16 +18,20 @@
 
 package org.apache.hadoop.tools.mapred;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.WithErasureCoding;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.util.RetriableCommand;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapreduce.Mapper;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.FileUtil.checkFSSupportsEC;
 import static org.apache.hadoop.tools.mapred.CopyMapper.getFileAttributeSettings;
 
 /**
@@ -35,6 +39,9 @@ import static org.apache.hadoop.tools.mapred.CopyMapper.getFileAttributeSettings
  * with retries on failure.
  */
 public class RetriableDirectoryCreateCommand extends RetriableCommand {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RetriableDirectoryCreateCommand.class);
 
   /**
    * Constructor, taking a description of the action.
@@ -53,10 +60,11 @@ public class RetriableDirectoryCreateCommand extends RetriableCommand {
    */
   @Override
   protected Object doExecute(Object... arguments) throws Exception {
-    assert arguments.length == 3 : "Unexpected argument list.";
+    assert arguments.length == 4 : "Unexpected argument list.";
     Path target = (Path)arguments[0];
     Mapper.Context context = (Mapper.Context)arguments[1];
     FileStatus sourceStatus = (FileStatus)arguments[2];
+    FileSystem sourceFs = (FileSystem)arguments[3];
 
     FileSystem targetFS = target.getFileSystem(context.getConfiguration());
     if(!targetFS.mkdirs(target)) {
@@ -66,11 +74,16 @@ public class RetriableDirectoryCreateCommand extends RetriableCommand {
     boolean preserveEC = getFileAttributeSettings(context)
         .contains(DistCpOptions.FileAttribute.ERASURECODINGPOLICY);
     if (preserveEC && sourceStatus.isErasureCoded()
-        && targetFS instanceof DistributedFileSystem) {
-      ErasureCodingPolicy ecPolicy =
-          ((HdfsFileStatus) sourceStatus).getErasureCodingPolicy();
-      DistributedFileSystem dfs = (DistributedFileSystem) targetFS;
-      dfs.setErasureCodingPolicy(target, ecPolicy.getName());
+        && checkFSSupportsEC(sourceFs, sourceStatus.getPath())
+        && checkFSSupportsEC(targetFS, target)) {
+      ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies.getByName(
+          ((WithErasureCoding) sourceFs).getErasureCodingPolicyName(
+              sourceStatus));
+      LOG.debug("EC Policy for source path is {}", ecPolicy);
+      WithErasureCoding ecFs =  (WithErasureCoding) targetFS;
+      if (ecPolicy != null) {
+        ecFs.setErasureCodingPolicy(target, ecPolicy.getName());
+      }
     }
     return true;
   }

@@ -4738,6 +4738,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // not locking
     return blockManager.getMissingReplOneBlocksCount();
   }
+
+  @Metric({"BadlyDistBlocks", "Number of Badly Distributed Blocks"})
+  public long getBadlyDistributedBlocksCount() {
+    // not locking
+    return blockManager.getBadlyDistributedBlocksCount();
+  }
   
   @Metric(value = {"ExpiredHeartbeats", "Number of expired heartbeats"},
       type = Metric.Type.COUNTER)
@@ -4816,7 +4822,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         getCorruptReplicatedBlocks(), getMissingReplicatedBlocks(),
         getMissingReplicationOneBlocks(), getBytesInFutureReplicatedBlocks(),
         getPendingDeletionReplicatedBlocks(),
-        getHighestPriorityLowRedundancyReplicatedBlocks());
+        getHighestPriorityLowRedundancyReplicatedBlocks(),
+        getBadlyDistributedBlocks());
   }
 
   /**
@@ -4829,7 +4836,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return new ECBlockGroupStats(getLowRedundancyECBlockGroups(),
         getCorruptECBlockGroups(), getMissingECBlockGroups(),
         getBytesInFutureECBlockGroups(), getPendingDeletionECBlocks(),
-        getHighestPriorityLowRedundancyECBlocks());
+        getBadlyDistributedBlocks(), getHighestPriorityLowRedundancyECBlocks());
   }
 
   @Override // FSNamesystemMBean
@@ -5493,6 +5500,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       "blocks with replication factor 1"})
   public long getMissingReplicationOneBlocks() {
     return blockManager.getMissingReplicationOneBlocks();
+  }
+
+  @Override // ReplicatedBlocksMBean
+  @Metric({"BadlyDistributedBlocks", "Number of badly distributed blocks"})
+  public long getBadlyDistributedBlocks() {
+    return blockManager.getBadlyDistributedBlocks();
   }
 
   @Override // ReplicatedBlocksMBean
@@ -6650,6 +6663,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override // NameNodeMXBean
   public long getNumberOfMissingBlocksWithReplicationFactorOne() {
     return getMissingReplOneBlocksCount();
+  }
+
+  @Override // NameNodeMXBean
+  public long getNumberOfBadlyDistributedBlocks() {
+    return getBadlyDistributedBlocks();
   }
 
   @Override // NameNodeMXBean

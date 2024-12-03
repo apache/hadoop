@@ -1014,7 +1014,7 @@ public abstract class Shell {
     BufferedReader inReader =
             new BufferedReader(new InputStreamReader(process.getInputStream(),
                 StandardCharsets.UTF_8));
-    final StringBuffer errMsg = new StringBuffer();
+    final StringBuilder errMsg = new StringBuilder();
 
     // read error and input streams as this would free up the buffers
     // free the error stream buffer
@@ -1208,7 +1208,7 @@ public abstract class Shell {
       implements CommandExecutor {
 
     private String[] command;
-    private StringBuffer output;
+    private StringBuilder output;
 
 
     public ShellCommandExecutor(String[] execString) {
@@ -1289,7 +1289,7 @@ public abstract class Shell {
 
     @Override
     protected void parseExecResult(BufferedReader lines) throws IOException {
-      output = new StringBuffer();
+      output = new StringBuilder();
       char[] buf = new char[512];
       int nRead;
       while ( (nRead = lines.read(buf, 0, buf.length)) > 0 ) {

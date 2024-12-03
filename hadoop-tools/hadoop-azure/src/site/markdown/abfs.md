@@ -878,8 +878,8 @@ ABFS Driver can use the following networking libraries:
 The networking library can be configured using the configuration `fs.azure.networking.library`
 while initializing the filesystem.
 Following are the supported values:
-- `APACHE_HTTP_CLIENT` : Use Apache HttpClient [Default]
-- `JDK_HTTP_URL_CONNECTION` : Use JDK networking library
+- `JDK_HTTP_URL_CONNECTION` : Use JDK networking library [Default]
+- `APACHE_HTTP_CLIENT` : Use Apache HttpClient
 
 #### <a href="ahc_networking_conf"></a>ApacheHttpClient networking layer configuration Options:
 

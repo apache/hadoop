@@ -84,6 +84,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapterMockitoUtil;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
@@ -201,7 +202,7 @@ public class TestFileCreation {
     cluster.waitActive();
     // Set a spy namesystem inside the namenode and return it
     FSNamesystem spyNamesystem =
-        NameNodeAdapter.spyOnNamesystem(cluster.getNameNode());
+        NameNodeAdapterMockitoUtil.spyOnNamesystem(cluster.getNameNode());
     InetSocketAddress nameNodeAddr = cluster.getNameNode().getNameNodeAddress();
     try {
       // Create a dfs client and set a long enough validity interval
@@ -252,7 +253,7 @@ public class TestFileCreation {
     cluster.waitActive();
     // Set a spy namesystem inside the namenode and return it
     FSNamesystem spyNamesystem =
-        NameNodeAdapter.spyOnNamesystem(cluster.getNameNode());
+        NameNodeAdapterMockitoUtil.spyOnNamesystem(cluster.getNameNode());
     InetSocketAddress nameNodeAddr = cluster.getNameNode().getNameNodeAddress();
     try {
       // Create a dfs client and set a minimal validity interval

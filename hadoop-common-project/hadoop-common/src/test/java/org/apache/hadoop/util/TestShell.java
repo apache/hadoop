@@ -480,7 +480,7 @@ public class TestShell extends Assert {
   @Test(timeout=120000)
   public void testDestroyAllShellProcesses() throws Throwable {
     Assume.assumeFalse(WINDOWS);
-    StringBuffer sleepCommand = new StringBuffer();
+    StringBuilder sleepCommand = new StringBuilder();
     sleepCommand.append("sleep 200");
     String[] shellCmd = {"bash", "-c", sleepCommand.toString()};
     final ShellCommandExecutor shexc1 = new ShellCommandExecutor(shellCmd);

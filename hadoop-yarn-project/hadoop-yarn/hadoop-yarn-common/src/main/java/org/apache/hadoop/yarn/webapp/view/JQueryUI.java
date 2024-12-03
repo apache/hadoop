@@ -130,7 +130,7 @@ public class JQueryUI extends HtmlBlock {
         }
         // for inserting stateSaveInit
         int pos = init.indexOf('{') + 1;  
-        init = new StringBuffer(init).insert(pos, stateSaveInit).toString(); 
+        init = new StringBuilder(init).insert(pos, stateSaveInit).toString();
         list.add(join(id, "DataTable =  $('#", id, "').dataTable(", init,
                       ").fnSetFilteringDelay(188);"));
         String postInit = $(postInitID(DATATABLES, id));
@@ -146,7 +146,7 @@ public class JQueryUI extends HtmlBlock {
         init = defaultInit;
       }      
       int pos = init.indexOf('{') + 1;  
-      init = new StringBuffer(init).insert(pos, stateSaveInit).toString();  
+      init = new StringBuilder(init).insert(pos, stateSaveInit).toString();
       list.add(join("  $('", escapeEcmaScript(selector), "').dataTable(", init,
                ").fnSetFilteringDelay(288);"));      
       

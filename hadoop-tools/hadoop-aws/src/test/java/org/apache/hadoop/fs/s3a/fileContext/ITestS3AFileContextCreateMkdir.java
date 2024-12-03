@@ -18,8 +18,7 @@ import org.apache.hadoop.fs.FileContextCreateMkdirBaseTest;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.junit.Before;
 
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 
 /**
  * Extends FileContextCreateMkdirBaseTest for a S3a FileContext.
@@ -29,10 +28,9 @@ public class ITestS3AFileContextCreateMkdir
 
   @Before
   public void setUp() throws Exception {
-    Configuration conf = new Configuration();
-    removeBaseAndBucketOverrides(
-        conf,
-        FS_S3A_CREATE_PERFORMANCE);
+    Configuration conf = setPerformanceFlags(
+        new Configuration(),
+        null);
     fc = S3ATestUtils.createTestFileContext(conf);
     super.setUp();
   }

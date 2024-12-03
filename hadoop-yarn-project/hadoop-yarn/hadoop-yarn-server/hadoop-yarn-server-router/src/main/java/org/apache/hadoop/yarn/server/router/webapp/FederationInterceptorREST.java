@@ -43,7 +43,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
@@ -1906,7 +1906,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       ClientMethod remoteMethod = new ClientMethod("addToClusterNodeLabels", argsClasses, args);
       Map<SubClusterInfo, Response> responseInfoMap =
           invokeConcurrent(subClustersActives, remoteMethod, Response.class);
-      StringBuffer buffer = new StringBuffer();
+      StringBuilder buffer = new StringBuilder();
       // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
       responseInfoMap.forEach((subClusterInfo, response) ->
           buildAppendMsg(subClusterInfo, buffer, response));
@@ -1964,7 +1964,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           new ClientMethod("removeFromClusterNodeLabels", argsClasses, args);
       Map<SubClusterInfo, Response> responseInfoMap =
           invokeConcurrent(subClustersActives, remoteMethod, Response.class);
-      StringBuffer buffer = new StringBuffer();
+      StringBuilder buffer = new StringBuilder();
       // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
       responseInfoMap.forEach((subClusterInfo, response) ->
           buildAppendMsg(subClusterInfo, buffer, response));
@@ -1993,10 +1993,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * Build Append information.
    *
    * @param subClusterInfo subCluster information.
-   * @param buffer StringBuffer.
+   * @param buffer StringBuilder.
    * @param response response message.
    */
-  private void buildAppendMsg(SubClusterInfo subClusterInfo, StringBuffer buffer,
+  private void buildAppendMsg(SubClusterInfo subClusterInfo, StringBuilder buffer,
       Response response) {
     SubClusterId subClusterId = subClusterInfo.getSubClusterId();
     String state = response != null &&

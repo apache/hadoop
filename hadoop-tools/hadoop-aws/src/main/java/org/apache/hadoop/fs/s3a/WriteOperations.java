@@ -74,13 +74,11 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @param destKey destination key
    * @param length size, if known. Use -1 for not known
    * @param options options for the request
-   * @param isFile is data to be uploaded a file
    * @return the request
    */
   PutObjectRequest createPutObjectRequest(String destKey,
       long length,
-      @Nullable PutObjectOptions options,
-      boolean isFile);
+      @Nullable PutObjectOptions options);
 
   /**
    * Callback on a successful write.
@@ -148,6 +146,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
   /**
    * Abort a multipart commit operation.
    * @param upload upload to abort.
+   * @throws FileNotFoundException if the upload is unknown
    * @throws IOException on problems.
    */
   @Retries.RetryTranslated
@@ -191,6 +190,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @param destKey destination key of ongoing operation
    * @param uploadId ID of ongoing upload
    * @param partNumber current part number of the upload
+   * @param isLastPart is this the last part of the upload?
    * @param size amount of data
    * @return the request builder.
    * @throws IllegalArgumentException if the parameters are invalid
@@ -200,6 +200,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       String destKey,
       String uploadId,
       int partNumber,
+      boolean isLastPart,
       long size) throws IOException;
 
   /**
@@ -208,15 +209,15 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * file, from the content length of the header.
    * @param putObjectRequest the request
    * @param putOptions put object options
-   * @param durationTrackerFactory factory for duration tracking
    * @param uploadData data to be uploaded
-   * @param isFile is data to be uploaded a file
+   * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
   PutObjectResponse putObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions, S3ADataBlocks.BlockUploadData uploadData, boolean isFile,
+      PutObjectOptions putOptions,
+      S3ADataBlocks.BlockUploadData uploadData,
       DurationTrackerFactory durationTrackerFactory)
       throws IOException;
 

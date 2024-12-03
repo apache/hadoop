@@ -818,26 +818,31 @@ JNIEnv* getJNIEnv(void)
       fprintf(stderr, "getJNIEnv: Unable to create ThreadLocalState\n");
       return NULL;
     }
-    if (threadLocalStorageSet(state)) {
-      mutexUnlock(&jvmMutex);
-      goto fail;
-    }
-    THREAD_LOCAL_STORAGE_SET_QUICK(state);
 
     state->env = getGlobalJNIEnv();
-    mutexUnlock(&jvmMutex);
-
     if (!state->env) {
+        mutexUnlock(&jvmMutex);
         goto fail;
     }
 
     jthrowable jthr = NULL;
     jthr = initCachedClasses(state->env);
     if (jthr) {
+      mutexUnlock(&jvmMutex);
       printExceptionAndFree(state->env, jthr, PRINT_EXC_ALL,
                             "initCachedClasses failed");
       goto fail;
     }
+
+    if (threadLocalStorageSet(state)) {
+      mutexUnlock(&jvmMutex);
+      goto fail;
+    }
+
+    // set the TLS var only when the state passes all the checks
+    THREAD_LOCAL_STORAGE_SET_QUICK(state);
+    mutexUnlock(&jvmMutex);
+
     return state->env;
 
 fail:

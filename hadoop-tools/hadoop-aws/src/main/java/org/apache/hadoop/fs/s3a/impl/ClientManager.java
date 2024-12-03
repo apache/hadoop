@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -39,9 +40,41 @@ public interface ClientManager extends Closeable {
   S3TransferManager getOrCreateTransferManager()
       throws IOException;
 
+  /**
+   * Get the S3Client, raising a failure to create as an IOException.
+   * @return the S3 client
+   * @throws IOException failure to create the client.
+   */
   S3Client getOrCreateS3Client() throws IOException;
 
+  /**
+   * Get the S3Client, raising a failure to create as an UncheckedIOException.
+   * @return the S3 client
+   * @throws UncheckedIOException failure to create the client.
+   */
+  S3Client getOrCreateS3ClientUnchecked() throws UncheckedIOException;
+
+  /**
+   * Get the Async S3Client,raising a failure to create as an IOException.
+   * @return the Async S3 client
+   * @throws IOException failure to create the client.
+   */
   S3AsyncClient getOrCreateAsyncClient() throws IOException;
+
+  /**
+   * Get or create an unencrypted S3 client.
+   * This is used for unencrypted operations when CSE is enabled with V1 compatibility.
+   * @return unencrypted S3 client
+   * @throws IOException on any failure
+   */
+  S3Client getOrCreateUnencryptedS3Client() throws IOException;
+
+  /**
+   * Get the AsyncS3Client, raising a failure to create as an UncheckedIOException.
+   * @return the S3 client
+   * @throws UncheckedIOException failure to create the client.
+   */
+  S3Client getOrCreateAsyncS3ClientUnchecked() throws UncheckedIOException;
 
   /**
    * Close operation is required to not raise exceptions.

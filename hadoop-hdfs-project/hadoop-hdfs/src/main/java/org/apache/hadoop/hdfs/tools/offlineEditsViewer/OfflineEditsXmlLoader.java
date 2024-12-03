@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.OpInstanceCache;
-import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer;
 import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
@@ -57,7 +56,7 @@ class OfflineEditsXmlLoader
   private Stanza stanza;
   private Stack<Stanza> stanzaStack;
   private FSEditLogOpCodes opCode;
-  private StringBuffer cbuf;
+  private StringBuilder cbuf;
   private long nextTxId;
   private final OpInstanceCache opCache = new OpInstanceCache();
   
@@ -119,7 +118,7 @@ class OfflineEditsXmlLoader
     stanza = null;
     stanzaStack = new Stack<Stanza>();
     opCode = null;
-    cbuf = new StringBuffer();
+    cbuf = new StringBuilder();
     nextTxId = -1;
   }
   
@@ -182,7 +181,7 @@ class OfflineEditsXmlLoader
   @Override
   public void endElement (String uri, String name, String qName) {
     String str = XMLUtils.unmangleXmlString(cbuf.toString(), false).trim();
-    cbuf = new StringBuffer();
+    cbuf = new StringBuilder();
     switch (state) {
     case EXPECT_EDITS_TAG:
       throw new InvalidXmlException("expected <EDITS/>");

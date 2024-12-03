@@ -70,7 +70,7 @@ public class TestNetworkPacketTaggingHandlerImpl {
     privilegedOperationExecutorMock = mock(PrivilegedOperationExecutor.class);
     cGroupsHandlerMock = mock(CGroupsHandler.class);
     conf = new YarnConfiguration();
-    tmpPath = new StringBuffer(System.getProperty("test.build.data"))
+    tmpPath = new StringBuilder(System.getProperty("test.build.data"))
         .append('/').append("hadoop.tmp.dir").toString();
     containerIdMock = mock(ContainerId.class);
     containerMock = mock(Container.class);

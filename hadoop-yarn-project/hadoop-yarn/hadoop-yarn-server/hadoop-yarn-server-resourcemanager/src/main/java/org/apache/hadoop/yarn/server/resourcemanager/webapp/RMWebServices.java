@@ -600,7 +600,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
    * @return The str String after escaping invalid xml characters.
    */
   public static String escapeInvalidXMLCharacters(String str) {
-    StringBuffer out = new StringBuffer();
+    StringBuilder out = new StringBuilder();
     final int strlen = str.length();
     final String substitute = "\uFFFD";
     int idx = 0;

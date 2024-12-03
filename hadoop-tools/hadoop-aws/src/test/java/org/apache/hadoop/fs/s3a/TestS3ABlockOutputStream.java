@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ClosedIOException;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.audit.AuditTestSupport;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
@@ -30,7 +31,6 @@ import org.apache.hadoop.util.Progressable;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditor;
@@ -86,7 +86,7 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
 
   @Test
   public void testFlushNoOpWhenStreamClosed() throws Exception {
-    doThrow(new IOException()).when(stream).checkOpen();
+    doThrow(new StreamClosedException()).when(stream).checkOpen();
 
     stream.flush();
   }
@@ -103,18 +103,23 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
         new EmptyS3AStatisticsContext(),
         noopAuditor(conf),
         AuditTestSupport.NOOP_SPAN,
-        new MinimalWriteOperationHelperCallbacks());
+        new MinimalWriteOperationHelperCallbacks(null)); // raises NPE if S3 client used
     // first one works
     String key = "destKey";
     woh.newUploadPartRequestBuilder(key,
-        "uploadId", 1, 1024);
+        "uploadId", 1, false, 1024);
     // but ask past the limit and a PathIOE is raised
     intercept(PathIOException.class, key,
         () -> woh.newUploadPartRequestBuilder(key,
-            "uploadId", 50000, 1024));
+            "uploadId", 50000, true, 1024));
   }
 
-  static class StreamClosedException extends IOException {}
+  static class StreamClosedException extends ClosedIOException {
+
+    StreamClosedException() {
+      super("path", "message");
+    }
+  }
 
   @Test
   public void testStreamClosedAfterAbort() throws Exception {
@@ -122,7 +127,7 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
 
     // This verification replaces testing various operations after calling
     // abort: after calling abort, stream is closed like calling close().
-    intercept(IOException.class, () -> stream.checkOpen());
+    intercept(ClosedIOException.class, () -> stream.checkOpen());
 
     // check that calling write() will call checkOpen() and throws exception
     doThrow(new StreamClosedException()).when(stream).checkOpen();

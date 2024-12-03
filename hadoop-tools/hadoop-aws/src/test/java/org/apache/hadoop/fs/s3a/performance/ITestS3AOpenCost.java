@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FOOTER_CACHE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
@@ -180,6 +181,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
             fs.openFile(testFile)
                 .must(FS_OPTION_OPENFILE_READ_POLICY,
                     FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
+                .must(FS_OPTION_OPENFILE_FOOTER_CACHE, false)
                 .mustLong(FS_OPTION_OPENFILE_LENGTH, fileLength)
                 .build()
                 .get(),

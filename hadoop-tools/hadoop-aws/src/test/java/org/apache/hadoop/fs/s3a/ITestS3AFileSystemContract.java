@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.isCreatePerformanceEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assume.*;
 import static org.junit.Assert.*;
@@ -65,7 +66,9 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
   @Before
   public void setUp() throws Exception {
     nameThread();
-    Configuration conf = new Configuration();
+    Configuration conf = setPerformanceFlags(
+        new Configuration(),
+        "");
 
     fs = S3ATestUtils.createTestFileSystem(conf);
     assumeNotNull(fs);

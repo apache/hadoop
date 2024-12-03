@@ -93,7 +93,7 @@ public class AdminACLsManager {
    *
    * @see YarnConfiguration#YARN_ACL_ENABLE
    * @see YarnConfiguration#DEFAULT_YARN_ACL_ENABLE
-   * @return <tt>true</tt> if ACLs are enabled
+   * @return <code>true</code> if ACLs are enabled
    */
   public boolean areACLsEnabled() {
     return aclsEnabled;
@@ -103,7 +103,7 @@ public class AdminACLsManager {
    * Returns whether the specified user/group is an administrator
    *
    * @param callerUGI user/group to to check
-   * @return <tt>true</tt> if the UserGroupInformation specified
+   * @return <code>true</code> if the UserGroupInformation specified
    *         is a member of the access control list for administrators
    */
   public boolean isAdmin(UserGroupInformation callerUGI) {

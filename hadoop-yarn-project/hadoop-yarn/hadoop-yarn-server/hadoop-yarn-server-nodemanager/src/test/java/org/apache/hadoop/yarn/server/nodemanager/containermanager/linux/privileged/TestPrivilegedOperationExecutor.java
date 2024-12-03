@@ -213,7 +213,7 @@ public class TestPrivilegedOperationExecutor {
     try {
       PrivilegedOperation op = PrivilegedOperationExecutor
           .squashCGroupOperations(ops);
-      String expected = new StringBuffer
+      String expected = new StringBuilder
           (PrivilegedOperation.CGROUP_ARG_PREFIX)
           .append(cGroupTasks1).append(PrivilegedOperation
               .LINUX_FILE_PATH_SEPARATOR)

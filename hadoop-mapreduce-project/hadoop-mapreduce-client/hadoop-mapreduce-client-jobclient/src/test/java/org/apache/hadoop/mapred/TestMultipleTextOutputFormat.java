@@ -106,7 +106,7 @@ public class TestMultipleTextOutputFormat {
     File expectedFile_11 = new File(new Path(workDir, file_11).toString()); 
 
     //System.out.printf("expectedFile_11: %s\n", new Path(workDir, file_11).toString());
-    StringBuffer expectedOutput = new StringBuffer();
+    StringBuilder expectedOutput = new StringBuilder();
     for (int i = 10; i < 20; i++) {
       expectedOutput.append(""+i).append('\t').append(""+i).append("\n");
     }
@@ -118,7 +118,7 @@ public class TestMultipleTextOutputFormat {
     
     File expectedFile_12 = new File(new Path(workDir, file_12).toString()); 
     //System.out.printf("expectedFile_12: %s\n", new Path(workDir, file_12).toString());
-    expectedOutput = new StringBuffer();
+    expectedOutput = new StringBuilder();
     for (int i = 20; i < 30; i++) {
       expectedOutput.append(""+i).append('\t').append(""+i).append("\n");
     }
@@ -130,7 +130,7 @@ public class TestMultipleTextOutputFormat {
     
     File expectedFile_13 = new File(new Path(workDir, file_13).toString()); 
     //System.out.printf("expectedFile_13: %s\n", new Path(workDir, file_13).toString());
-    expectedOutput = new StringBuffer();
+    expectedOutput = new StringBuilder();
     for (int i = 30; i < 40; i++) {
       expectedOutput.append(""+i).append('\t').append(""+i).append("\n");
     }
@@ -142,7 +142,7 @@ public class TestMultipleTextOutputFormat {
     
     File expectedFile_2 = new File(new Path(workDir, file_2).toString()); 
     //System.out.printf("expectedFile_2: %s\n", new Path(workDir, file_2).toString());
-    expectedOutput = new StringBuffer();
+    expectedOutput = new StringBuilder();
     for (int i = 10; i < 40; i++) {
       expectedOutput.append(""+i).append('\t').append(""+i).append("\n");
     }

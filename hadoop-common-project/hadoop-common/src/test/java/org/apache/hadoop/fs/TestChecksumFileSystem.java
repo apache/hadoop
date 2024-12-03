@@ -300,4 +300,11 @@ public class TestChecksumFileSystem {
       assertEquals(perm, rawFs.getFileStatus(crc).getPermission());
     }
   }
+
+  @Test
+  public void testOperationOnRoot() throws Exception {
+    Path p = new Path("/");
+    localFs.mkdirs(p);
+    localFs.setReplication(p, localFs.getFileStatus(p).getPermission().toShort());
+  }
 }

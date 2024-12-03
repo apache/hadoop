@@ -22,8 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 
 /**
  * Test dir operations on S3A.
@@ -32,10 +31,9 @@ public class ITestS3AContractMkdir extends AbstractContractMkdirTest {
 
   @Override
   protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    removeBaseAndBucketOverrides(conf,
-        FS_S3A_CREATE_PERFORMANCE);
-    return conf;
+    return setPerformanceFlags(
+        super.createConfiguration(),
+        "");
   }
 
   @Override

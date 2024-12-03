@@ -446,7 +446,7 @@
     <!-- This is needed by HBaseTestingUtility -->
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <artifactId>mockito-inline</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -491,6 +491,8 @@
       </plugin>
       <!-- The fork value is deliberately set to 0 to avoid VM crash while running tests
        on Jenkins, removing this leads to tests crashing silently due to VM crash -->
+      <!-- TODO: we should investigate and address the crash issue and re-enable fork,
+                 otherwise, JPMS args does not take effect -->
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>

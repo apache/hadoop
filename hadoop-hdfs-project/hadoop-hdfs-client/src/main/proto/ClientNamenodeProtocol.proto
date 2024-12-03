@@ -372,6 +372,7 @@ message GetFsReplicatedBlockStatsResponseProto {
   required uint64 blocks_in_future = 5;
   required uint64 pending_deletion_blocks = 6;
   optional uint64 highest_prio_low_redundancy_blocks = 7;
+  required uint64 badly_distributed_blocks = 8;
 
 }
 
@@ -385,6 +386,7 @@ message GetFsECBlockGroupStatsResponseProto {
   required uint64 blocks_in_future = 4;
   required uint64 pending_deletion_blocks = 5;
   optional uint64 highest_prio_low_redundancy_blocks = 6;
+  required uint64 badly_distributed_blocks = 7;
 }
 
 enum DatanodeReportTypeProto {  // type of the datanode report

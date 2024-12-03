@@ -135,6 +135,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+
+import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.After;
@@ -1879,6 +1881,22 @@ public class TestRouterRpc {
     // We should have the nodes in all the subclusters
     JSONObject jsonObject = new JSONObject(jsonString0);
     assertEquals(NUM_SUBCLUSTERS * NUM_DNS, jsonObject.names().length());
+
+    JSONObject jsonObjectNn =
+        new JSONObject(cluster.getRandomNamenode().getNamenode().getNamesystem().getLiveNodes());
+    // DN report by NN and router should be the same
+    String randomDn = (String) jsonObjectNn.names().get(0);
+    JSONObject randomReportNn = jsonObjectNn.getJSONObject(randomDn);
+    JSONObject randomReportRouter = jsonObject.getJSONObject(randomDn);
+    JSONArray keys = randomReportNn.names();
+    for (int i = 0; i < keys.length(); i++) {
+      String key = keys.getString(i);
+      // Skip the 2 keys that always return -1
+      if (key.equals("blockScheduled") || key.equals("volfails")) {
+        continue;
+      }
+      assertEquals(randomReportRouter.get(key), randomReportNn.get(key));
+    }
 
     // We should be caching this information
     String jsonString1 = metrics.getLiveNodes();

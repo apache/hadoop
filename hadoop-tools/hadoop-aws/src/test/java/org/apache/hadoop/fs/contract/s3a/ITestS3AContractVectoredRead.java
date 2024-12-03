@@ -56,6 +56,7 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_PARQUET;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_VECTOR;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.range;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
@@ -233,7 +234,8 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
           fs.openFile(path(VECTORED_READ_FILE_NAME))
               .withFileStatus(fileStatus)
               .opt(FS_OPTION_OPENFILE_READ_POLICY,
-                  FS_OPTION_OPENFILE_READ_POLICY_VECTOR)
+                  FS_OPTION_OPENFILE_READ_POLICY_PARQUET
+                      + ", " + FS_OPTION_OPENFILE_READ_POLICY_VECTOR)
               .build();
       try (FSDataInputStream in = builder.get()) {
         in.readVectored(fileRanges, getAllocate());

@@ -104,7 +104,7 @@ public class NetworkPacketTaggingHandlerImpl
     //executable.
     String tasksFile = cGroupsHandler.getPathForCGroupTasks(
         CGroupsHandler.CGroupController.NET_CLS, containerIdStr);
-    String opArg = new StringBuffer(PrivilegedOperation.CGROUP_ARG_PREFIX)
+    String opArg = new StringBuilder(PrivilegedOperation.CGROUP_ARG_PREFIX)
         .append(tasksFile).toString();
     List<PrivilegedOperation> ops = new ArrayList<>();
 

@@ -20,6 +20,7 @@ package org.apache.hadoop.util.functional;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -42,11 +43,7 @@ public final class FunctionalIO {
    * @throws UncheckedIOException if an IOE was raised.
    */
   public static <T> T uncheckIOExceptions(CallableRaisingIOE<T> call) {
-    try {
-      return call.apply();
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
+    return call.unchecked();
   }
 
   /**
@@ -56,7 +53,7 @@ public final class FunctionalIO {
    * @return a supplier which invokes the call.
    */
   public static <T> Supplier<T> toUncheckedIOExceptionSupplier(CallableRaisingIOE<T> call) {
-    return () -> uncheckIOExceptions(call);
+    return call::unchecked;
   }
 
   /**
@@ -74,5 +71,19 @@ public final class FunctionalIO {
       throw e.getCause();
     }
   }
+
+
+  /**
+   * Convert a {@link FunctionRaisingIOE} as a {@link Supplier}.
+   * @param fun function to wrap
+   * @param <T> type of input
+   * @param <R> type of return value.
+   * @return a new function which invokes the inner function and wraps
+   * exceptions.
+   */
+  public static <T, R> Function<T, R> toUncheckedFunction(FunctionRaisingIOE<T, R> fun) {
+    return fun::unchecked;
+  }
+
 
 }

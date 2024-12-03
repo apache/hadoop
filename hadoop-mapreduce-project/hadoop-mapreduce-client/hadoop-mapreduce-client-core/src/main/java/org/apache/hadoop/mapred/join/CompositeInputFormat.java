@@ -38,10 +38,10 @@ import org.apache.hadoop.mapred.Reporter;
  * and partitioned the same way.
  *
  * A user may define new join types by setting the property
- * <tt>mapred.join.define.&lt;ident&gt;</tt> to a classname. In the expression
- * <tt>mapred.join.expr</tt>, the identifier will be assumed to be a
+ * <code>mapred.join.define.&lt;ident&gt;</code> to a classname. In the expression
+ * <code>mapred.join.expr</code>, the identifier will be assumed to be a
  * ComposableRecordReader.
- * <tt>mapred.join.keycomparator</tt> can be a classname used to compare keys
+ * <code>mapred.join.keycomparator</code> can be a classname used to compare keys
  * in the join.
  * @see #setFormat
  * @see JoinRecordReader
@@ -66,9 +66,9 @@ public class CompositeInputFormat<K extends WritableComparable>
    *   class ::= @see java.lang.Class#forName(java.lang.String)
    *   path  ::= @see org.apache.hadoop.fs.Path#Path(java.lang.String)
    * }
-   * Reads expression from the <tt>mapred.join.expr</tt> property and
-   * user-supplied join types from <tt>mapred.join.define.&lt;ident&gt;</tt>
-   *  types. Paths supplied to <tt>tbl</tt> are given as input paths to the
+   * Reads expression from the <code>mapred.join.expr</code> property and
+   * user-supplied join types from <code>mapred.join.define.&lt;ident&gt;</code>
+   *  types. Paths supplied to <code>tbl</code> are given as input paths to the
    * InputFormat class listed.
    * @see #compose(java.lang.String, java.lang.Class, java.lang.String...)
    */

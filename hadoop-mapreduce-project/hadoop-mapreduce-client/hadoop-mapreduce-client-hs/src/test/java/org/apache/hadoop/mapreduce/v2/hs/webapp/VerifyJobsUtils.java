@@ -108,7 +108,7 @@ public class VerifyJobsUtils {
     String diagString = "";
     List<String> diagList = job.getDiagnostics();
     if (diagList != null && !diagList.isEmpty()) {
-      StringBuffer b = new StringBuffer();
+      StringBuilder b = new StringBuilder();
       for (String diag : diagList) {
         b.append(diag);
       }

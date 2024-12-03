@@ -19,16 +19,21 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 import software.amazon.awssdk.awscore.AwsRequest;
+import software.amazon.awssdk.awscore.AwsRequestOverrideConfiguration;
 import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Request;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
 
 import org.apache.hadoop.fs.PathIOException;
@@ -38,6 +43,7 @@ import org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PART_UPLOAD_TIMEOUT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -108,8 +114,6 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
         .describedAs("ACL of MPU")
         .isEqualTo(acl);
   }
-
-
 
   /**
    * Now add a processor and verify that it was invoked for
@@ -196,15 +200,79 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     String path = "path";
     String id = "1";
 
-    a(factory.newUploadPartRequestBuilder(path, id, 1, 0));
-    a(factory.newUploadPartRequestBuilder(path, id, 2, 128_000_000));
+    a(factory.newUploadPartRequestBuilder(path, id, 1, false, 0));
+    a(factory.newUploadPartRequestBuilder(path, id, 2, false,
+        128_000_000));
     // partNumber is past the limit
     intercept(PathIOException.class, () ->
-        factory.newUploadPartRequestBuilder(path, id, 3, 128_000_000));
+        factory.newUploadPartRequestBuilder(path, id, 3, true,
+            128_000_000));
 
     assertThat(countRequests.counter.get())
         .describedAs("request preparation count")
         .isEqualTo(requestsAnalyzed);
   }
 
+  /**
+   * Assertion for Request timeouts.
+   * @param duration expected duration.
+   * @param request request.
+   */
+  private void assertApiTimeouts(Duration duration, S3Request request) {
+    Assertions.assertThat(request.overrideConfiguration())
+        .describedAs("request %s", request)
+        .isNotEmpty();
+    final AwsRequestOverrideConfiguration override =
+        request.overrideConfiguration().get();
+    Assertions.assertThat(override.apiCallAttemptTimeout())
+        .describedAs("apiCallAttemptTimeout")
+        .hasValue(duration);
+    Assertions.assertThat(override.apiCallTimeout())
+        .describedAs("apiCallTimeout")
+        .hasValue(duration);
+  }
+
+  /**
+   * If not overridden timeouts are set to the default part upload timeout.
+   */
+  @Test
+  public void testDefaultUploadTimeouts() throws Throwable {
+
+    RequestFactory factory = RequestFactoryImpl.builder()
+        .withBucket("bucket")
+        .withMultipartPartCountLimit(2)
+        .build();
+    final UploadPartRequest upload =
+        factory.newUploadPartRequestBuilder("path", "id", 2,
+            true, 128_000_000)
+            .build();
+    assertApiTimeouts(DEFAULT_PART_UPLOAD_TIMEOUT, upload);
+  }
+
+  /**
+   * Verify that when upload request timeouts are set,
+   * they are passed down.
+   */
+  @Test
+  public void testUploadTimeouts() throws Throwable {
+    Duration partDuration = Duration.ofDays(1);
+    RequestFactory factory = RequestFactoryImpl.builder()
+        .withBucket("bucket")
+        .withPartUploadTimeout(partDuration)
+        .build();
+
+    String path = "path";
+
+    // A simple PUT
+    final PutObjectRequest put = factory.newPutObjectRequestBuilder(path,
+        PutObjectOptions.deletingDirs(), 1024, false).build();
+    assertApiTimeouts(partDuration, put);
+
+    // multipart part
+    final UploadPartRequest upload = factory.newUploadPartRequestBuilder(path,
+        "1", 3, false, 128_000_000)
+        .build();
+    assertApiTimeouts(partDuration, upload);
+
+  }
 }

@@ -636,7 +636,7 @@ public class JobStatus implements Writable, Cloneable {
   }
   
   public String toString() {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     buffer.append("job-id : " + jobid);
     buffer.append("uber-mode : " + isUber);
     buffer.append("map-progress : " + mapProgress);

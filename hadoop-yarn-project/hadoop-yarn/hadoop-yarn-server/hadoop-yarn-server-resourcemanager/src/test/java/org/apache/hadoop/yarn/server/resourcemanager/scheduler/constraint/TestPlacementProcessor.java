@@ -896,7 +896,7 @@ public class TestPlacementProcessor {
     for (MockNM nm : nodes) {
       Map<String, Long> nmTags = atm
           .getAllocationTagsWithCount(nm.getNodeId());
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       if (nmTags != null) {
         nmTags.forEach((tag, count) ->
             sb.append(tag + "(" + count + "),"));

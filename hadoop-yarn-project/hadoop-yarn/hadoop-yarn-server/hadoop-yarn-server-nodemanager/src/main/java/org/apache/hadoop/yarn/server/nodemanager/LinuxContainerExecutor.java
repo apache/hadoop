@@ -389,7 +389,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
   @Override
   public void startLocalizer(LocalizerStartContext ctx)
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, ConfigurationException {
     Path nmPrivateContainerTokensPath = ctx.getNmPrivateContainerTokens();
     InetSocketAddress nmAddr = ctx.getNmAddr();
     String user = ctx.getUser();
@@ -440,9 +440,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     localizerArgs = replaceWithContainerLogDir(localizerArgs, containerLogDir);
 
     initializeContainerOp.appendArgs(localizerArgs);
+    Configuration conf = super.getConf();
 
     try {
-      Configuration conf = super.getConf();
       PrivilegedOperationExecutor privilegedOperationExecutor =
           getPrivilegedOperationExecutor();
 
@@ -452,7 +452,26 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     } catch (PrivilegedOperationException e) {
       int exitCode = e.getExitCode();
       LOG.warn("Exit code from container {} startLocalizer is : {}",
-          locId, exitCode, e);
+            locId, exitCode, e);
+
+      if (exitCode ==
+          ExitCode.INVALID_CONTAINER_EXEC_PERMISSIONS.getExitCode() ||
+          exitCode == ExitCode.INVALID_CONFIG_FILE.getExitCode()) {
+        throw new ConfigurationException("Application " + appId + " initialization failed" +
+            " (exitCode=" + exitCode + ") with an unrecoverable config error. " +
+            "Output: " + e.getOutput(), e);
+      }
+
+      // Check if the failure was due to a missing container-executor binary
+      Throwable cause = e.getCause() != null ? e.getCause() : e;
+      if (cause instanceof IOException) {
+        IOException io = (IOException) cause;
+        if (io.getMessage().contains("No such file or directory")) {
+          throw new ConfigurationException("Application " + appId + " initialization failed" +
+              "(exitCode=" + exitCode + "). Container executor not found at "
+              + getContainerExecutorExecutablePath(conf), e);
+        }
+      }
 
       throw new IOException("Application " + appId + " initialization failed" +
           " (exitCode=" + exitCode + ") with output: " + e.getOutput(), e);

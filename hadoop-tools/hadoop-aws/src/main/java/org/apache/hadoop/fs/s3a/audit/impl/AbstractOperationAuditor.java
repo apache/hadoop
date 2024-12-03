@@ -26,6 +26,8 @@ import org.apache.hadoop.fs.s3a.audit.OperationAuditorOptions;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.service.AbstractService;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * This is a long-lived service which is created in S3A FS initialize
  * (make it fast!) which provides context for tracking operations made to S3.
@@ -85,7 +87,7 @@ public abstract class AbstractOperationAuditor extends AbstractService
   @Override
   public void init(final OperationAuditorOptions opts) {
     this.options = opts;
-    this.iostatistics = opts.getIoStatisticsStore();
+    this.iostatistics = requireNonNull(opts.getIoStatisticsStore());
     init(opts.getConfiguration());
   }
 

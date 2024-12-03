@@ -15,31 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.security;
+
+/**
+ * Implementation/testing support for wrapped IO.
+ */
+
+@InterfaceAudience.LimitedPrivate("testing")
+@InterfaceStability.Unstable
+package org.apache.hadoop.io.wrappedio.impl;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-/**
- * SASL related constants.
- */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
-@InterfaceStability.Evolving
-public class SaslConstants {
-  public static final Logger LOG = LoggerFactory.getLogger(SaslConstants.class);
-
-  private static final String SASL_MECHANISM_ENV = "HADOOP_SASL_MECHANISM";
-  public static final String SASL_MECHANISM;
-  public static final String SASL_MECHANISM_DEFAULT = "DIGEST-MD5";
-
-  static {
-    final String mechanism = System.getenv(SASL_MECHANISM_ENV);
-    LOG.debug("{} = {} (env)", SASL_MECHANISM_ENV, mechanism);
-    SASL_MECHANISM = mechanism != null? mechanism : SASL_MECHANISM_DEFAULT;
-    LOG.debug("{} = {} (effective)", SASL_MECHANISM_ENV, SASL_MECHANISM);
-  }
-
-  private SaslConstants() {}
-}

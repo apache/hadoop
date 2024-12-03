@@ -35,7 +35,7 @@ public class TestCircularIterator {
     List<String> list = Arrays.asList("a", "b", "c", "d");
     CircularIterator<String> ci =
         new CircularIterator<>(null, list.iterator(), list);
-    StringBuffer sb = new StringBuffer("");
+    StringBuilder sb = new StringBuilder("");
     while (ci.hasNext()) {
       sb.append(ci.next());
     }
@@ -44,7 +44,7 @@ public class TestCircularIterator {
     Iterator<String> lIter = list.iterator();
     lIter.next();
     lIter.next();
-    sb = new StringBuffer("");
+    sb = new StringBuilder("");
     ci = new CircularIterator<>(null, lIter, list);
     while (ci.hasNext()) {
       sb.append(ci.next());
@@ -55,7 +55,7 @@ public class TestCircularIterator {
     lIter.next();
     lIter.next();
     lIter.next();
-    sb = new StringBuffer("");
+    sb = new StringBuilder("");
     ci = new CircularIterator<>("x", lIter, list);
     while (ci.hasNext()) {
       sb.append(ci.next());
@@ -65,7 +65,7 @@ public class TestCircularIterator {
     list = Arrays.asList("a");
     lIter = list.iterator();
     lIter.next();
-    sb = new StringBuffer("");
+    sb = new StringBuilder("");
     ci = new CircularIterator<>("y", lIter, list);
     while (ci.hasNext()) {
       sb.append(ci.next());

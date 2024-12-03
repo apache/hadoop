@@ -698,4 +698,8 @@ public class AbfsRestOperation {
   public final TracingContext getLastTracingContext() {
     return lastUsedTracingContext;
   }
+
+  int getRetryCount() {
+    return retryCount;
+  }
 }

@@ -90,7 +90,6 @@ import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
     .NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -618,6 +617,60 @@ public class TestCapacitySchedulerAutoQueueCreation
     }
   }
 
+  @Test
+  public void testAutoQueueCreationWithWeightModeAndMaxAppLifetimeFirstSubmittedApp()
+      throws Exception {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
+
+    long maxRootLifetime = 20L;
+    long defaultRootLifetime = 10L;
+
+    QueuePath testQueue = new QueuePath("root.test");
+
+    CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
+    conf.setQueues(ROOT, new String[] {"test"});
+    conf.setAutoQueueCreationV2Enabled(testQueue, true);
+    conf.setCapacity(DEFAULT, "1w");
+    conf.setCapacity(testQueue, "2w");
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    conf.setMaximumLifetimePerQueue(ROOT, maxRootLifetime);
+    conf.setDefaultLifetimePerQueue(ROOT, defaultRootLifetime);
+
+    MockRM newMockRM = new MockRM(conf);
+    newMockRM.start();
+    ((CapacityScheduler) newMockRM.getResourceScheduler()).start();
+
+    CapacityScheduler newCS =
+        (CapacityScheduler) newMockRM.getResourceScheduler();
+
+    Priority appPriority = Priority.newInstance(0);
+    MockRMAppSubmissionData app = MockRMAppSubmissionData.Builder.createWithMemory(1024, newMockRM)
+              .withAppPriority(appPriority)
+              .withQueue("root.test.user")
+              .build();
+    RMApp app1 = MockRMAppSubmitter.submit(newMockRM, app);
+
+    Assert.assertEquals(newCS.getMaximumApplicationLifetime("root.test.user"), 20L);
+
+    try {
+      newMockRM.waitForState(app1.getApplicationId(), RMAppState.KILLED);
+      long totalTimeRun = app1.getFinishTime() - app1.getSubmitTime();
+
+      Assert.assertEquals(RMAppState.KILLED, app1.getState());
+      Assert.assertTrue("Application killed before default lifetime value",
+          totalTimeRun > (defaultRootLifetime * 1000));
+      Assert.assertTrue(
+          "Application killed after max lifetime value " + totalTimeRun,
+          totalTimeRun < (maxRootLifetime * 1000));
+    } finally {
+      ((CapacityScheduler) newMockRM.getResourceScheduler()).stop();
+      newMockRM.stop();
+    }
+  }
 
   /**
    * This test case checks if a mapping rule can put an application to an auto

@@ -144,7 +144,7 @@ public class TimelineEntityGroupId implements
 
   public static TimelineEntityGroupId
       fromString(String timelineEntityGroupIdStr) {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     Iterator<String> it = SPLITTER.split(timelineEntityGroupIdStr).iterator();
     if (!it.next().equals(TIMELINE_ENTITY_GROUPID_STR_PREFIX)) {
       throw new IllegalArgumentException(

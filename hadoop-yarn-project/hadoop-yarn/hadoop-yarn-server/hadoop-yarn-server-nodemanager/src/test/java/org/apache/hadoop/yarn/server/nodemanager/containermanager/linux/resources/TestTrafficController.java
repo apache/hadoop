@@ -96,7 +96,7 @@ public class TestTrafficController {
   public void setup() {
     privilegedOperationExecutorMock = mock(PrivilegedOperationExecutor.class);
     conf = new YarnConfiguration();
-    tmpPath = new StringBuffer(System.getProperty("test.build.data")).append
+    tmpPath = new StringBuilder(System.getProperty("test.build.data")).append
         ('/').append("hadoop.tmp.dir").toString();
 
     conf.set("hadoop.tmp.dir", tmpPath);

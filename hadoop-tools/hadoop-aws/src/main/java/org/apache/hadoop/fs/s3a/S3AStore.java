@@ -18,22 +18,38 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CancellationException;
 
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
+import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.impl.ClientManager;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
+import org.apache.hadoop.fs.s3a.impl.S3AFileSystemOperations;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
@@ -77,6 +93,55 @@ public interface S3AStore extends IOStatisticsSource, ClientManager {
   RequestFactory getRequestFactory();
 
   ClientManager clientManager();
+
+  /**
+   * Increment read operations.
+   */
+  void incrementReadOperations();
+
+  /**
+   * Increment the write operation counter.
+   * This is somewhat inaccurate, as it appears to be invoked more
+   * often than needed in progress callbacks.
+   */
+  void incrementWriteOperations();
+
+  /**
+   * At the start of a put/multipart upload operation, update the
+   * relevant counters.
+   *
+   * @param bytes bytes in the request.
+   */
+  void incrementPutStartStatistics(long bytes);
+
+  /**
+   * At the end of a put/multipart upload operation, update the
+   * relevant counters and gauges.
+   *
+   * @param success did the operation succeed?
+   * @param bytes bytes in the request.
+   */
+  void incrementPutCompletedStatistics(boolean success, long bytes);
+
+  /**
+   * Callback for use in progress callbacks from put/multipart upload events.
+   * Increments those statistics which are expected to be updated during
+   * the ongoing upload operation.
+   * @param key key to file that is being written (for logging)
+   * @param bytes bytes successfully uploaded.
+   */
+  void incrementPutProgressStatistics(String key, long bytes);
+
+  /**
+   * Given a possibly null duration tracker factory, return a non-null
+   * one for use in tracking durations -either that or the FS tracker
+   * itself.
+   *
+   * @param factory factory.
+   * @return a non-null factory.
+   */
+  DurationTrackerFactory nonNullDurationTrackerFactory(
+      DurationTrackerFactory factory);
 
   /**
    * Perform a bulk object delete operation against S3.
@@ -133,4 +198,108 @@ public interface S3AStore extends IOStatisticsSource, ClientManager {
   Map.Entry<Duration, Optional<DeleteObjectResponse>> deleteObject(
       DeleteObjectRequest request) throws SdkException;
 
+  /**
+   * Performs a HEAD request on an S3 object to retrieve its metadata.
+   *
+   * @param key           The S3 object key to perform the HEAD operation on
+   * @param changeTracker Tracks changes to the object's metadata across operations
+   * @param changeInvoker The invoker responsible for executing the HEAD request with retries
+   * @param fsHandler     Handler for filesystem-level operations and configurations
+   * @param operation     Description of the operation being performed for tracking purposes
+   * @return              HeadObjectResponse containing the object's metadata
+   * @throws IOException  If the HEAD request fails, object doesn't exist, or other I/O errors occur
+   */
+  @Retries.RetryRaw
+  HeadObjectResponse headObject(String key,
+      ChangeTracker changeTracker,
+      Invoker changeInvoker,
+      S3AFileSystemOperations fsHandler,
+      String operation) throws IOException;
+
+  /**
+   * Retrieves a specific byte range of an S3 object as a stream.
+   *
+   * @param key    The S3 object key to retrieve
+   * @param start  The starting byte position (inclusive) of the range to retrieve
+   * @param end    The ending byte position (inclusive) of the range to retrieve
+   * @return       A ResponseInputStream containing the requested byte range of the S3 object
+   * @throws IOException  If the object cannot be retrieved other I/O errors occur
+   * @see GetObjectResponse  For additional metadata about the retrieved object
+   */
+  @Retries.RetryRaw
+  ResponseInputStream<GetObjectResponse> getRangedS3Object(String key,
+      long start,
+      long end) throws IOException;
+
+  /**
+   * Upload part of a multi-partition file.
+   * Increments the write and put counters.
+   * <i>Important: this call does not close any input stream in the body.</i>
+   * <p>
+   * Retry Policy: none.
+   * @param durationTrackerFactory duration tracker factory for operation
+   * @param request the upload part request.
+   * @param body the request body.
+   * @return the result of the operation.
+   * @throws AwsServiceException on problems
+   * @throws UncheckedIOException failure to instantiate the s3 client
+   */
+  @Retries.OnceRaw
+  UploadPartResponse uploadPart(
+      UploadPartRequest request,
+      RequestBody body,
+      DurationTrackerFactory durationTrackerFactory)
+      throws AwsServiceException, UncheckedIOException;
+
+  /**
+   * Start a transfer-manager managed async PUT of an object,
+   * incrementing the put requests and put bytes
+   * counters.
+   * <p>
+   * It does not update the other counters,
+   * as existing code does that as progress callbacks come in.
+   * Byte length is calculated from the file length, or, if there is no
+   * file, from the content length of the header.
+   * <p>
+   * Because the operation is async, any stream supplied in the request
+   * must reference data (files, buffers) which stay valid until the upload
+   * completes.
+   * Retry policy: N/A: the transfer manager is performing the upload.
+   * Auditing: must be inside an audit span.
+   * @param putObjectRequest the request
+   * @param file the file to be uploaded
+   * @param listener the progress listener for the request
+   * @return the upload initiated
+   * @throws IOException if transfer manager creation failed.
+   */
+  @Retries.OnceRaw
+  UploadInfo putObject(
+      PutObjectRequest putObjectRequest,
+      File file,
+      ProgressableProgressListener listener) throws IOException;
+
+  /**
+   * Wait for an upload to complete.
+   * If the upload (or its result collection) failed, this is where
+   * the failure is raised as an AWS exception.
+   * Calls {@link S3AStore#incrementPutCompletedStatistics(boolean, long)}
+   * to update the statistics.
+   * @param key destination key
+   * @param uploadInfo upload to wait for
+   * @return the upload result
+   * @throws IOException IO failure
+   * @throws CancellationException if the wait() was cancelled
+   */
+  @Retries.OnceTranslated
+  CompletedFileUpload waitForUploadCompletion(String key, UploadInfo uploadInfo)
+      throws IOException;
+
+  /**
+   * Complete a multipart upload.
+   * @param request request
+   * @return the response
+   */
+  @Retries.OnceRaw
+  CompleteMultipartUploadResponse completeMultipartUpload(
+      CompleteMultipartUploadRequest request);
 }

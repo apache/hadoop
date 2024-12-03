@@ -73,7 +73,7 @@ public class TestTrafficControlBandwidthHandlerImpl {
     cGroupsHandlerMock = mock(CGroupsHandler.class);
     trafficControllerMock = mock(TrafficController.class);
     conf = new YarnConfiguration();
-    tmpPath = new StringBuffer(System.getProperty("test.build.data")).append
+    tmpPath = new StringBuilder(System.getProperty("test.build.data")).append
         ('/').append("hadoop.tmp.dir").toString();
     device = YarnConfiguration.DEFAULT_NM_NETWORK_RESOURCE_INTERFACE;
     containerIdMock = mock(ContainerId.class);

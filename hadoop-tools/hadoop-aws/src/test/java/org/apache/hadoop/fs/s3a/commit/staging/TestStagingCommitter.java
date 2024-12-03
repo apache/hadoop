@@ -203,6 +203,15 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
   }
 
   @Test
+  public void testMockFSclientWiredUp() throws Throwable {
+    final S3Client client = mockFS.getS3AInternals().getAmazonS3Client("test");
+    Assertions.assertThat(client)
+        .describedAs("S3Client from FS")
+        .isNotNull()
+        .isSameAs(mockClient);
+  }
+
+  @Test
   public void testUUIDPropagation() throws Exception {
     Configuration config = newConfig();
     String uuid = uuid();

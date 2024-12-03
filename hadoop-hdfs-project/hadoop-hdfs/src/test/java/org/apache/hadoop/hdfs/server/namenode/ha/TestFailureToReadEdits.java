@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapterMockitoUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.After;
@@ -336,7 +337,7 @@ public class TestFailureToReadEdits {
   }
   
   private LimitedEditLogAnswer causeFailureOnEditLogRead() throws IOException {
-    FSEditLog spyEditLog = NameNodeAdapter.spyOnEditLog(nn1);
+    FSEditLog spyEditLog = NameNodeAdapterMockitoUtil.spyOnEditLog(nn1);
     LimitedEditLogAnswer answer = new LimitedEditLogAnswer(); 
     doAnswer(answer).when(spyEditLog).selectInputStreams(
         anyLong(), anyLong(), any(), anyBoolean(), anyBoolean());

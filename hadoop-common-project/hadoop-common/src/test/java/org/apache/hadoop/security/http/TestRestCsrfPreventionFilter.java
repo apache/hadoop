@@ -32,6 +32,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
+
 /**
  * This class tests the behavior of the RestCsrfPreventionFilter.
  *
@@ -75,7 +77,7 @@ public class TestRestCsrfPreventionFilter {
 
     verify(mockRes, atLeastOnce()).sendError(
         HttpServletResponse.SC_BAD_REQUEST, EXPECTED_MESSAGE);
-    Mockito.verifyZeroInteractions(mockChain);
+    verifyZeroInteractions(mockChain);
   }
 
   @Test
@@ -110,7 +112,7 @@ public class TestRestCsrfPreventionFilter {
 
     verify(mockRes, atLeastOnce()).sendError(
         HttpServletResponse.SC_BAD_REQUEST, EXPECTED_MESSAGE);
-    Mockito.verifyZeroInteractions(mockChain);
+    verifyZeroInteractions(mockChain);
   }
 
   @Test
@@ -228,7 +230,7 @@ public class TestRestCsrfPreventionFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    Mockito.verifyZeroInteractions(mockChain);
+    verifyZeroInteractions(mockChain);
   }
 
   @Test
@@ -260,7 +262,7 @@ public class TestRestCsrfPreventionFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    Mockito.verifyZeroInteractions(mockChain);
+    verifyZeroInteractions(mockChain);
   }
 
   @Test
@@ -356,6 +358,6 @@ public class TestRestCsrfPreventionFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    Mockito.verifyZeroInteractions(mockChain);
+    verifyZeroInteractions(mockChain);
   }
 }

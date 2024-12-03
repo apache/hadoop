@@ -29,21 +29,21 @@ import org.slf4j.Logger;
  */
 public class ProgressableProgressListener implements TransferListener {
   private static final Logger LOG = S3AFileSystem.LOG;
-  private final S3AFileSystem fs;
+  private final S3AStore store;
   private final String key;
   private final Progressable progress;
   private long lastBytesTransferred;
 
   /**
    * Instantiate.
-   * @param fs filesystem: will be invoked with statistics updates
+   * @param store store: will be invoked with statistics updates
    * @param key key for the upload
    * @param progress optional callback for progress.
    */
-  public ProgressableProgressListener(S3AFileSystem fs,
+  public ProgressableProgressListener(S3AStore store,
       String key,
       Progressable progress) {
-    this.fs = fs;
+    this.store = store;
     this.key = key;
     this.progress = progress;
     this.lastBytesTransferred = 0;
@@ -51,12 +51,12 @@ public class ProgressableProgressListener implements TransferListener {
 
   @Override
   public void transferInitiated(TransferListener.Context.TransferInitiated context) {
-    fs.incrementWriteOperations();
+    store.incrementWriteOperations();
   }
 
   @Override
   public void transferComplete(TransferListener.Context.TransferComplete context) {
-    fs.incrementWriteOperations();
+    store.incrementWriteOperations();
   }
 
   @Override
@@ -68,7 +68,7 @@ public class ProgressableProgressListener implements TransferListener {
 
     long transferred = context.progressSnapshot().transferredBytes();
     long delta = transferred - lastBytesTransferred;
-    fs.incrementPutProgressStatistics(key, delta);
+    store.incrementPutProgressStatistics(key, delta);
     lastBytesTransferred = transferred;
   }
 
@@ -84,7 +84,7 @@ public class ProgressableProgressListener implements TransferListener {
         upload.progress().snapshot().transferredBytes() - lastBytesTransferred;
     if (delta > 0) {
       LOG.debug("S3A write delta changed after finished: {} bytes", delta);
-      fs.incrementPutProgressStatistics(key, delta);
+      store.incrementPutProgressStatistics(key, delta);
     }
     return delta;
   }

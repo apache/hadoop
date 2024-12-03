@@ -24,6 +24,57 @@
  
 #include "org_apache_hadoop_crypto_OpensslCipher.h"
 
+/*
+   # OpenSSL ABI Symbols
+
+   Available on all OpenSSL versions:
+
+   | Function                       | 1.0 | 1.1 | 3.0 |
+   |--------------------------------|-----|-----|-----|
+   | EVP_CIPHER_CTX_new             | YES | YES | YES |
+   | EVP_CIPHER_CTX_free            | YES | YES | YES |
+   | EVP_CIPHER_CTX_set_padding     | YES | YES | YES |
+   | EVP_CIPHER_CTX_test_flags      | YES | YES | YES |
+   | EVP_CipherInit_ex              | YES | YES | YES |
+   | EVP_CipherUpdate               | YES | YES | YES |
+   | EVP_CipherFinal_ex             | YES | YES | YES |
+   | ENGINE_by_id                   | YES | YES | YES |
+   | ENGINE_free                    | YES | YES | YES |
+   | EVP_aes_256_ctr                | YES | YES | YES |
+   | EVP_aes_128_ctr                | YES | YES | YES |
+
+   Available on old versions:
+
+   | Function                       | 1.0 | 1.1 | 3.0 |
+   |--------------------------------|-----|-----|-----|
+   | EVP_CIPHER_CTX_cleanup         | YES | --- | --- |
+   | EVP_CIPHER_CTX_init            | YES | --- | --- |
+   | EVP_CIPHER_CTX_block_size      | YES | YES | --- |
+   | EVP_CIPHER_CTX_encrypting      | --- | YES | --- |
+
+   Available on new versions:
+
+   | Function                       | 1.0 | 1.1 | 3.0 |
+   |--------------------------------|-----|-----|-----|
+   | OPENSSL_init_crypto            | --- | YES | YES |
+   | EVP_CIPHER_CTX_reset           | --- | YES | YES |
+   | EVP_CIPHER_CTX_get_block_size  | --- | --- | YES |
+   | EVP_CIPHER_CTX_is_encrypting   | --- | --- | YES |
+
+   Optionally available on new versions:
+
+   | Function                       | 1.0 | 1.1 | 3.0 |
+   |--------------------------------|-----|-----|-----|
+   | EVP_sm4_ctr                    | --- | opt | opt |
+
+   Name changes:
+
+   | < 3.0 name                 | >= 3.0 name                    |
+   |----------------------------|--------------------------------|
+   | EVP_CIPHER_CTX_block_size  | EVP_CIPHER_CTX_get_block_size  |
+   | EVP_CIPHER_CTX_encrypting  | EVP_CIPHER_CTX_is_encrypting   |
+ */
+
 #ifdef UNIX
 static EVP_CIPHER_CTX * (*dlsym_EVP_CIPHER_CTX_new)(void);
 static void (*dlsym_EVP_CIPHER_CTX_free)(EVP_CIPHER_CTX *);
@@ -106,6 +157,15 @@ static __dlsym_ENGINE_free dlsym_ENGINE_free;
 static HMODULE openssl;
 #endif
 
+// names changed in OpenSSL 3 ABI - see History section in EVP_EncryptInit(3)
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#define CIPHER_CTX_BLOCK_SIZE "EVP_CIPHER_CTX_get_block_size"
+#define CIPHER_CTX_ENCRYPTING "EVP_CIPHER_CTX_is_encrypting"
+#else
+#define CIPHER_CTX_BLOCK_SIZE "EVP_CIPHER_CTX_block_size"
+#define CIPHER_CTX_ENCRYPTING "EVP_CIPHER_CTX_encrypting"
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+
 static void loadAesCtr(JNIEnv *env)
 {
 #ifdef UNIX
@@ -170,10 +230,10 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_initIDs
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_test_flags, env, openssl,  \
                       "EVP_CIPHER_CTX_test_flags");
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_block_size, env, openssl,  \
-                      "EVP_CIPHER_CTX_block_size");
+                      CIPHER_CTX_BLOCK_SIZE);
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_encrypting, env, openssl,  \
-                      "EVP_CIPHER_CTX_encrypting");
+                      CIPHER_CTX_ENCRYPTING);
 #endif
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CipherInit_ex, env, openssl,  \
                       "EVP_CipherInit_ex");
@@ -209,11 +269,11 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_initIDs
                       openssl, "EVP_CIPHER_CTX_test_flags");
   LOAD_DYNAMIC_SYMBOL(__dlsym_EVP_CIPHER_CTX_block_size,  \
                       dlsym_EVP_CIPHER_CTX_block_size, env,  \
-                      openssl, "EVP_CIPHER_CTX_block_size");
+                      openssl, CIPHER_CTX_BLOCK_SIZE);
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
   LOAD_DYNAMIC_SYMBOL(__dlsym_EVP_CIPHER_CTX_encrypting,  \
                       dlsym_EVP_CIPHER_CTX_encrypting, env,  \
-                      openssl, "EVP_CIPHER_CTX_encrypting");
+                      openssl, CIPHER_CTX_ENCRYPTING);
 #endif
   LOAD_DYNAMIC_SYMBOL(__dlsym_EVP_CipherInit_ex, dlsym_EVP_CipherInit_ex,  \
                       env, openssl, "EVP_CipherInit_ex");

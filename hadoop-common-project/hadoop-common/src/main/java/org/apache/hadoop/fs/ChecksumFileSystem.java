@@ -770,7 +770,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   abstract class FsOperation {
     boolean run(Path p) throws IOException {
       boolean status = apply(p);
-      if (status) {
+      if (status && !p.isRoot()) {
         Path checkFile = getChecksumFile(p);
         if (fs.exists(checkFile)) {
           apply(checkFile);
@@ -866,7 +866,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
 
   /**
    * Set replication for an existing file.
-   * Implement the abstract <tt>setReplication</tt> of <tt>FileSystem</tt>
+   * Implement the abstract <code>setReplication</code> of <code>FileSystem</code>
    * @param src file name
    * @param replication new replication
    * @throws IOException if an I/O error occurs.

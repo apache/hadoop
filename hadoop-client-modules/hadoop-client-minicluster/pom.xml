@@ -169,6 +169,10 @@
           <artifactId>commons-collections</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.apache.commons</groupId>
+          <artifactId>commons-collections4</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>commons-io</groupId>
           <artifactId>commons-io</artifactId>
         </exclusion>
@@ -403,7 +407,7 @@
     <!-- Add back in Mockito since the hadoop-hdfs test jar needs it. -->
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <artifactId>mockito-inline</artifactId>
       <optional>true</optional>
     </dependency>
     <!-- Add back in the transitive dependencies excluded from hadoop-common in client TODO remove once we have a filter for "is in these artifacts" -->
@@ -761,7 +765,7 @@
 
                     <!-- Mockito tries to include its own unrelocated copy of hamcrest. :( -->
                     <filter>
-                      <artifact>org.mockito:mockito-core</artifact>
+                      <artifact>org.mockito:mockito-inline</artifact>
                       <excludes>
                         <exclude>asm-license.txt</exclude>
                         <exclude>cglib-license.txt</exclude>
@@ -771,6 +775,15 @@
                         <exclude>org/hamcrest/*.class</exclude>
                         <exclude>org/objenesis/**/*.class</exclude>
                         <exclude>org/objenesis/*.class</exclude>
+                      </excludes>
+                    </filter>
+                    <!-- Additional filters to exclude unexpected contents -->
+                    <filter>
+                      <artifact>*:*</artifact>
+                      <excludes>
+                        <exclude>mockito-extensions/**</exclude>
+                        <exclude>win32-x86/**</exclude>
+                        <exclude>win32-x86-64/**</exclude>
                       </excludes>
                     </filter>
                     <!-- skip grizzly internals we don't need to run. -->

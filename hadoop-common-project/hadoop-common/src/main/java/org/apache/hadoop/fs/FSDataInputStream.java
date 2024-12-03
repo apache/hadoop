@@ -262,6 +262,14 @@ public class FSDataInputStream extends DataInputStream
         "by " + in.getClass().getCanonicalName());
   }
 
+  /**
+   * Delegate to the underlying stream.
+   * @param position position within file
+   * @param buf the ByteBuffer to receive the results of the read operation.
+   * @throws IOException on a failure from the nested stream.
+   * @throws UnsupportedOperationException if the inner stream does not
+   * support this operation.
+   */
   @Override
   public void readFully(long position, ByteBuffer buf) throws IOException {
     if (in instanceof ByteBufferPositionedReadable) {

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -42,6 +41,7 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksPathCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PART_UPLOAD_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
@@ -101,15 +101,20 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   public void testPutObjectDirect() throws Throwable {
     final S3AFileSystem fs = getFileSystem();
     try (AuditSpan span = span()) {
-      RequestFactory factory = RequestFactoryImpl.builder().withBucket(fs.getBucket()).build();
+      RequestFactory factory = RequestFactoryImpl.builder()
+          .withBucket(fs.getBucket())
+          .withPartUploadTimeout(DEFAULT_PART_UPLOAD_TIMEOUT)
+          .build();
       Path path = path("putDirect");
       PutObjectRequest.Builder putObjectRequestBuilder =
           factory.newPutObjectRequestBuilder(path.toUri().getPath(), null, -1, false);
       putObjectRequestBuilder.contentLength(-1L);
       LambdaTestUtils.intercept(IllegalStateException.class,
-          () -> fs.putObjectDirect(putObjectRequestBuilder.build(), PutObjectOptions.keepingDirs(),
-              new S3ADataBlocks.BlockUploadData(new ByteArrayInputStream("PUT".getBytes())),
-              false, null));
+          () -> fs.putObjectDirect(
+              putObjectRequestBuilder.build(),
+              PutObjectOptions.keepingDirs(),
+              new S3ADataBlocks.BlockUploadData("PUT".getBytes(), null),
+              null));
       assertPathDoesNotExist("put object was created", path);
     }
   }

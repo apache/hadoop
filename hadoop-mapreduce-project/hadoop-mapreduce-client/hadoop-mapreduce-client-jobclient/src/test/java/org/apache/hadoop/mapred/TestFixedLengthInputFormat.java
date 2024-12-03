@@ -236,7 +236,7 @@ public class TestFixedLengthInputFormat {
     }
     Writer writer = new OutputStreamWriter(ostream);
     try {
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       for (int i = 0; i < numRecords; i++) {
         for (int j = 0; j < recordLen; j++) {
           sb.append(chars[charRand.nextInt(chars.length)]);

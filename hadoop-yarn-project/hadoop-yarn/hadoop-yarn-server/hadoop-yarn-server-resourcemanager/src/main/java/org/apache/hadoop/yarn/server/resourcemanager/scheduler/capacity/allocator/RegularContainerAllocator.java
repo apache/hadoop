@@ -858,12 +858,13 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       FiCaSchedulerNode node = iter.next();
 
       // Do not schedule if there are any reservations to fulfill on the node
+      RMContainer nodeReservedContainer = node.getReservedContainer();
       if (iter.hasNext() &&
-          node.getReservedContainer() != null &&
+          nodeReservedContainer != null &&
           isSkipAllocateOnNodesWithReservedContainer()) {
         LOG.debug("Skipping scheduling on node {} since it has already been"
                 + " reserved by {}", node.getNodeID(),
-            node.getReservedContainer().getContainerId());
+            nodeReservedContainer.getContainerId());
         ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
             activitiesManager, node, application, schedulerKey,
             ActivityDiagnosticConstant.NODE_HAS_BEEN_RESERVED, ActivityLevel.NODE);

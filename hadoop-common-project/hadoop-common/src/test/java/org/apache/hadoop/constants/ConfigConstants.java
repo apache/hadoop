@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,25 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.UnsupportedCallbackException;
-import java.io.IOException;
-import java.util.List;
+package org.apache.hadoop.constants;
 
-/** For handling customized {@link Callback}. */
-public interface CustomizedCallbackHandler {
-  class DefaultHandler implements CustomizedCallbackHandler{
-    @Override
-    public void handleCallback(List<Callback> callbacks, String username, char[] password)
-        throws UnsupportedCallbackException {
-      if (!callbacks.isEmpty()) {
-        throw new UnsupportedCallbackException(callbacks.get(0));
-      }
-    }
-  }
+/**
+ * Evolving config constants class used in various hadoop tests.
+ */
+public final class ConfigConstants {
 
-  void handleCallback(List<Callback> callbacks, String name, char[] password)
-      throws UnsupportedCallbackException, IOException;
+  private ConfigConstants() {}
+
+ /**
+  * System property name for the avro dependency.
+  * This property is used to configure trusted packages,
+  * which the avro dependency can use for serialization.
+  */
+  public static final String CONFIG_AVRO_SERIALIZABLE_PACKAGES =
+      "org.apache.avro.SERIALIZABLE_PACKAGES";
 }

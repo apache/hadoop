@@ -91,19 +91,19 @@ import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
  * <p>The actual compression algorithm used to compress key and/or values can be
  * specified by using the appropriate {@link CompressionCodec}.</p>
  * 
- * <p>The recommended way is to use the static <tt>createWriter</tt> methods
+ * <p>The recommended way is to use the static <code>createWriter</code> methods
  * provided by the <code>SequenceFile</code> to chose the preferred format.</p>
  *
  * <p>The {@link SequenceFile.Reader} acts as the bridge and can read any of the
  * above <code>SequenceFile</code> formats.</p>
  *
- * <h3 id="Formats">SequenceFile Formats</h3>
+ * <h2 id="Formats">SequenceFile Formats</h2>
  * 
  * <p>Essentially there are 3 different formats for <code>SequenceFile</code>s
  * depending on the <code>CompressionType</code> specified. All of them share a
  * <a href="#Header">common header</a> described below.
  * 
- * <h4 id="Header">SequenceFile Header</h4>
+ * <h3 id="Header">SequenceFile Header</h3>
  * <ul>
  *   <li>
  *   version - 3 bytes of magic header <b>SEQ</b>, followed by 1 byte of actual 
@@ -136,7 +136,7 @@ import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
  *   </li>
  * </ul>
  * 
- * <h5>Uncompressed SequenceFile Format</h5>
+ * <h4>Uncompressed SequenceFile Format</h4>
  * <ul>
  * <li>
  * <a href="#Header">Header</a>
@@ -155,7 +155,7 @@ import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
  * </li>
  * </ul>
  *
- * <h5>Record-Compressed SequenceFile Format</h5>
+ * <h4>Record-Compressed SequenceFile Format</h4>
  * <ul>
  * <li>
  * <a href="#Header">Header</a>

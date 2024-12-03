@@ -142,4 +142,9 @@
     <value>true</value>
   </property>
 
+  <property>
+    <name>fs.contract.vector-io-overlapping-ranges</name>
+    <value>true</value>
+  </property>
+
 </configuration>

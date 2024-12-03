@@ -21,8 +21,6 @@ package org.apache.hadoop.fs.s3a.commit.impl;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -62,6 +60,7 @@ import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.s3a.impl.UploadContentProviders;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -81,6 +80,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_LOAD_SINGLE_PENDING_F
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_STAGE_FILE_UPLOAD;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.XA_MAGIC_MARKER;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants._SUCCESS;
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_OCTET_STREAM;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.util.functional.RemoteIterators.cleanupRemoteIterator;
 
@@ -88,11 +88,17 @@ import static org.apache.hadoop.util.functional.RemoteIterators.cleanupRemoteIte
  * The implementation of the various actions a committer needs.
  * This doesn't implement the protocol/binding to a specific execution engine,
  * just the operations needed to to build one.
- *
+ * <p>
  * When invoking FS operations, it assumes that the underlying FS is
  * handling retries and exception translation: it does not attempt to
  * duplicate that work.
- *
+ * <p>
+ * It does use {@link UploadContentProviders} to create a content provider
+ * for the request body which is capable of restarting a failed upload.
+ * This is not currently provided by the default AWS SDK implementation
+ * of {@code RequestBody#fromFile()}.
+ * <p>
+ * See HADOOP-19221 for details.
  */
 public class CommitOperations extends AbstractStoreOperation
     implements IOStatisticsSource {
@@ -553,7 +559,6 @@ public class CommitOperations extends AbstractStoreOperation
       commitData.setText(partition != null ? "partition: " + partition : "");
       commitData.setLength(length);
 
-      long offset = 0;
       long numParts = (length / uploadPartSize +
           ((length % uploadPartSize) > 0 ? 1 : 0));
       // always write one part, even if it is just an empty one
@@ -570,31 +575,19 @@ public class CommitOperations extends AbstractStoreOperation
                 numParts, length));
       }
 
-      List<CompletedPart> parts = new ArrayList<>((int) numParts);
-
+      final int partCount = (int) numParts;
       LOG.debug("File size is {}, number of parts to upload = {}",
-          length, numParts);
+          length, partCount);
 
       // Open the file to upload.
-      try (InputStream fileStream = Files.newInputStream(localFile.toPath())) {
-        for (int partNumber = 1; partNumber <= numParts; partNumber += 1) {
-          progress.progress();
-          long size = Math.min(length - offset, uploadPartSize);
-          UploadPartRequest part = writeOperations.newUploadPartRequestBuilder(
-              destKey,
-              uploadId,
-              partNumber,
-              size).build();
-          // Read from the file input stream at current position.
-          RequestBody body = RequestBody.fromInputStream(fileStream, size);
-          UploadPartResponse response = writeOperations.uploadPart(part, body, statistics);
-          offset += uploadPartSize;
-          parts.add(CompletedPart.builder()
-              .partNumber(partNumber)
-              .eTag(response.eTag())
-              .build());
-        }
-      }
+      List<CompletedPart> parts = uploadFileData(
+          uploadId,
+          localFile,
+          destKey,
+          progress,
+          length,
+          partCount,
+          uploadPartSize);
 
       commitData.bindCommitData(parts);
       statistics.commitUploaded(length);
@@ -616,6 +609,57 @@ public class CommitOperations extends AbstractStoreOperation
       tracker.close();
     }
   }
+
+  /**
+   * Upload file data using content provider API.
+   * This a rewrite of the previous code to address HADOOP-19221;
+   * our own {@link UploadContentProviders} file content provider
+   * is used to upload each part of the file.
+   * @param uploadId upload ID
+   * @param localFile locally staged file
+   * @param destKey destination path
+   * @param progress progress callback
+   * @param length file length
+   * @param numParts number of parts to upload
+   * @param uploadPartSize max size of a part
+   * @return the ordered list of parts
+   * @throws IOException IO failure
+   */
+  private List<CompletedPart> uploadFileData(
+      final String uploadId,
+      final File localFile,
+      final String destKey,
+      final Progressable progress,
+      final long length,
+      final int numParts,
+      final long uploadPartSize) throws IOException {
+    List<CompletedPart> parts = new ArrayList<>(numParts);
+    long offset = 0;
+    for (int partNumber = 1; partNumber <= numParts; partNumber++) {
+      progress.progress();
+      int size = (int)Math.min(length - offset, uploadPartSize);
+      UploadPartRequest.Builder partBuilder  = writeOperations.newUploadPartRequestBuilder(
+          destKey,
+          uploadId,
+          partNumber,
+          partNumber == numParts,
+          size);
+      // Create a file content provider starting at the current offset.
+      RequestBody body = RequestBody.fromContentProvider(
+          UploadContentProviders.fileContentProvider(localFile, offset, size),
+          size,
+          CONTENT_TYPE_OCTET_STREAM);
+      UploadPartResponse response = writeOperations.uploadPart(partBuilder.build(), body,
+          statistics);
+      offset += uploadPartSize;
+      parts.add(CompletedPart.builder()
+          .partNumber(partNumber)
+          .eTag(response.eTag())
+          .build());
+    }
+    return parts;
+  }
+
 
   /**
    * Add the filesystem statistics to the map; overwriting anything

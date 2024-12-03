@@ -548,7 +548,7 @@ public class TestTextInputFormat {
   }
   
   private static String unquote(String in) {
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
     for(int i=0; i < in.length(); ++i) {
       char ch = in.charAt(i);
       if (ch == '\\') {

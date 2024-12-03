@@ -26,6 +26,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.awscore.AwsRequest;
+import software.amazon.awssdk.awscore.AwsRequestOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.retry.RetryMode;
@@ -43,6 +45,8 @@ import org.apache.hadoop.util.VersionInfo;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_ACQUISITION_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_STS;
+import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_EXPECT_CONTINUE;
+import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_EXPECT_CONTINUE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_IDLE_TIME;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_KEEPALIVE;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_TTL;
@@ -147,6 +151,7 @@ public final class AWSClientConfig {
             .connectionMaxIdleTime(conn.getMaxIdleTime())
             .connectionTimeout(conn.getEstablishTimeout())
             .connectionTimeToLive(conn.getConnectionTTL())
+            .expectContinueEnabled(conn.isExpectContinueEnabled())
             .maxConnections(conn.getMaxConnections())
             .socketTimeout(conn.getSocketTimeout())
             .tcpKeepAlive(conn.isKeepAlive())
@@ -489,7 +494,7 @@ public final class AWSClientConfig {
    * All the connection settings, wrapped as a class for use by
    * both the sync and async client.
    */
-  static class ConnectionSettings {
+  static final class ConnectionSettings {
     private final int maxConnections;
     private final boolean keepAlive;
     private final Duration acquisitionTimeout;
@@ -497,6 +502,7 @@ public final class AWSClientConfig {
     private final Duration establishTimeout;
     private final Duration maxIdleTime;
     private final Duration socketTimeout;
+    private final boolean expectContinueEnabled;
 
     private ConnectionSettings(
         final int maxConnections,
@@ -505,7 +511,8 @@ public final class AWSClientConfig {
         final Duration connectionTTL,
         final Duration establishTimeout,
         final Duration maxIdleTime,
-        final Duration socketTimeout) {
+        final Duration socketTimeout,
+        final boolean expectContinueEnabled) {
       this.maxConnections = maxConnections;
       this.keepAlive = keepAlive;
       this.acquisitionTimeout = acquisitionTimeout;
@@ -513,6 +520,7 @@ public final class AWSClientConfig {
       this.establishTimeout = establishTimeout;
       this.maxIdleTime = maxIdleTime;
       this.socketTimeout = socketTimeout;
+      this.expectContinueEnabled = expectContinueEnabled;
     }
 
     int getMaxConnections() {
@@ -543,6 +551,10 @@ public final class AWSClientConfig {
       return socketTimeout;
     }
 
+    boolean isExpectContinueEnabled() {
+      return expectContinueEnabled;
+    }
+
     @Override
     public String toString() {
       return "ConnectionSettings{" +
@@ -553,6 +565,7 @@ public final class AWSClientConfig {
           ", establishTimeout=" + establishTimeout +
           ", maxIdleTime=" + maxIdleTime +
           ", socketTimeout=" + socketTimeout +
+          ", expectContinueEnabled=" + expectContinueEnabled +
           '}';
     }
   }
@@ -613,6 +626,9 @@ public final class AWSClientConfig {
         DEFAULT_SOCKET_TIMEOUT_DURATION, TimeUnit.MILLISECONDS,
         minimumOperationDuration);
 
+    final boolean expectContinueEnabled = conf.getBoolean(CONNECTION_EXPECT_CONTINUE,
+        CONNECTION_EXPECT_CONTINUE_DEFAULT);
+
     return new ConnectionSettings(
         maxConnections,
         keepAlive,
@@ -620,7 +636,28 @@ public final class AWSClientConfig {
         connectionTTL,
         establishTimeout,
         maxIdleTime,
-        socketTimeout);
+        socketTimeout,
+        expectContinueEnabled);
   }
 
+  /**
+   * Set a custom ApiCallTimeout for a single request.
+   * This allows for a longer timeout to be used in data upload
+   * requests than that for all other S3 interactions;
+   * This does not happen by default in the V2 SDK
+   * (see HADOOP-19295).
+   * <p>
+   * If the timeout is zero, the request is not patched.
+   * @param builder builder to patch.
+   * @param timeout timeout
+   */
+  public static void setRequestTimeout(AwsRequest.Builder builder, Duration timeout) {
+    if (!timeout.isZero()) {
+      builder.overrideConfiguration(
+          AwsRequestOverrideConfiguration.builder()
+              .apiCallTimeout(timeout)
+              .apiCallAttemptTimeout(timeout)
+              .build());
+    }
+  }
 }

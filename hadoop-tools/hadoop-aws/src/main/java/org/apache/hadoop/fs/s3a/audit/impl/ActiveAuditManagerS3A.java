@@ -700,7 +700,8 @@ public final class ActiveAuditManagerS3A
    * span is deactivated.
    * Package-private for testing.
    */
-  private final class WrappingAuditSpan extends AbstractAuditSpanImpl {
+  @VisibleForTesting
+  final class WrappingAuditSpan extends AbstractAuditSpanImpl {
 
     /**
      * Inner span.
@@ -790,6 +791,15 @@ public final class ActiveAuditManagerS3A
     @Override
     public boolean isValidSpan() {
       return isValid && span.isValidSpan();
+    }
+
+    /**
+     * Get the inner span.
+     * @return the span.
+     */
+    @VisibleForTesting
+    AuditSpanS3A getSpan() {
+      return span;
     }
 
     /**

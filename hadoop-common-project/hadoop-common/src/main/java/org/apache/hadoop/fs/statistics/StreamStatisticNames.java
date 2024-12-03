@@ -41,6 +41,14 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class StreamStatisticNames {
 
   /**
+   * Count of Stream leaks from an application which
+   * is not cleaning up correctly.
+   * Value :{@value}.
+   */
+  public static final String STREAM_LEAKS =
+      "stream_leaks";
+
+  /**
    * Count of times the TCP stream was aborted.
    * Value: {@value}.
    */

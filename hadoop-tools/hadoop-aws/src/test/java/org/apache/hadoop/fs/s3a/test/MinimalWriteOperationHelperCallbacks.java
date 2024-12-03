@@ -18,22 +18,63 @@
 
 package org.apache.hadoop.fs.s3a.test;
 
+import java.io.UncheckedIOException;
+import java.util.function.Supplier;
+
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 
 /**
- * Stub implementation of writeOperationHelper callbacks.
+ * Minimal implementation of writeOperationHelper callbacks.
+ * Callbacks which need to talk to S3 use the s3 client resolved
+ * on demand from {@link #s3clientSupplier}.
+ * if this returns null, the operations raise NPEs.
  */
 public class MinimalWriteOperationHelperCallbacks
     implements WriteOperationHelper.WriteOperationHelperCallbacks {
 
+  /**
+   * Supplier of the s3 client.
+   */
+  private final Supplier<S3Client> s3clientSupplier;
+
+  /**
+   * Constructor.
+   * @param s3clientSupplier supplier of the S3 client.
+   */
+  public MinimalWriteOperationHelperCallbacks(
+      final Supplier<S3Client> s3clientSupplier) {
+    this.s3clientSupplier = s3clientSupplier;
+  }
+
   @Override
   public CompleteMultipartUploadResponse completeMultipartUpload(
       CompleteMultipartUploadRequest request) {
-    return null;
+    return s3clientSupplier.get().completeMultipartUpload(request);
   }
 
+  @Override
+  public UploadPartResponse uploadPart(final UploadPartRequest request,
+      final RequestBody body,
+      final DurationTrackerFactory durationTrackerFactory)
+      throws AwsServiceException, UncheckedIOException {
+    return s3clientSupplier.get().uploadPart(request, body);
+  }
+
+  @Override
+  public void finishedWrite(final String key,
+      final long length,
+      final PutObjectOptions putOptions) {
+
+  }
 }
 

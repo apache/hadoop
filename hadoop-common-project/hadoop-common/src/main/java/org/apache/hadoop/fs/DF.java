@@ -163,7 +163,7 @@ public class DF extends Shell {
   @VisibleForTesting
   protected void parseOutput() throws IOException {
     if (output.size() < 2) {
-      StringBuffer sb = new StringBuffer("Fewer lines of output than expected");
+      StringBuilder sb = new StringBuilder("Fewer lines of output than expected");
       if (output.size() > 0) {
         sb.append(": " + output.get(0));
       }

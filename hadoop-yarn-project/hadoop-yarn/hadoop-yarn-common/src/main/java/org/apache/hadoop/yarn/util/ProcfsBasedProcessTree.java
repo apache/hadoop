@@ -568,7 +568,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
    */
   @Override
   public String toString() {
-    StringBuffer pTree = new StringBuffer("[ ");
+    StringBuilder pTree = new StringBuilder("[ ");
     for (String p : processTree.keySet()) {
       pTree.append(p);
       pTree.append(" ");

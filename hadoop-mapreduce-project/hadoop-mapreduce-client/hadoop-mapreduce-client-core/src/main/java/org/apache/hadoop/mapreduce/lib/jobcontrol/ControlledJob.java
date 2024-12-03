@@ -90,7 +90,7 @@ public class ControlledJob {
 	
   @Override
   public String toString() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("job name:\t").append(this.job.getJobName()).append("\n");
     sb.append("job id:\t").append(this.controlID).append("\n");
     sb.append("job state:\t").append(this.state).append("\n");
@@ -205,7 +205,7 @@ public class ControlledJob {
    * is waiting to run, not during or afterwards.
    * 
    * @param dependingJob Job that this Job depends on.
-   * @return <tt>true</tt> if the Job was added.
+   * @return <code>true</code> if the Job was added.
    */
   public synchronized boolean addDependingJob(ControlledJob dependingJob) {
     if (this.state == State.WAITING) { //only allowed to add jobs when waiting

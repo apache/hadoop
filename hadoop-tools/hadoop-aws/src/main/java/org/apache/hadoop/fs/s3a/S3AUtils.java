@@ -24,6 +24,7 @@ import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
 import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.retry.RetryUtils;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
@@ -79,6 +80,7 @@ import static org.apache.hadoop.fs.s3a.AWSCredentialProviderList.maybeTranslateC
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.maybeTranslateAuditException;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeProcessEncryptionClientException;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.instantiationException;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isAbstract;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isNotInstanceOf;
@@ -182,6 +184,8 @@ public final class S3AUtils {
       // exceptions constructed.
       path = "/";
     }
+
+    exception = maybeProcessEncryptionClientException(exception);
 
     if (!(exception instanceof AwsServiceException)) {
       // exceptions raised client-side: connectivity, auth, network problems...
@@ -298,7 +302,7 @@ public final class S3AUtils {
       case SC_405_METHOD_NOT_ALLOWED:
       case SC_415_UNSUPPORTED_MEDIA_TYPE:
       case SC_501_NOT_IMPLEMENTED:
-        ioe = new AWSUnsupportedFeatureException(message, s3Exception);
+        ioe = new AWSUnsupportedFeatureException(message, ase);
         break;
 
       // precondition failure: the object is there, but the precondition
@@ -528,7 +532,7 @@ public final class S3AUtils {
    * @param owner owner of the file
    * @param eTag S3 object eTag or null if unavailable
    * @param versionId S3 object versionId or null if unavailable
-   * @param isCSEEnabled is client side encryption enabled?
+   * @param size s3 object size
    * @return a status entry
    */
   public static S3AFileStatus createFileStatus(Path keyPath,
@@ -537,12 +541,7 @@ public final class S3AUtils {
       String owner,
       String eTag,
       String versionId,
-      boolean isCSEEnabled) {
-    long size = s3Object.size();
-    // check if cse is enabled; strip out constant padding length.
-    if (isCSEEnabled && size >= CSE_PADDING_LENGTH) {
-      size -= CSE_PADDING_LENGTH;
-    }
+      long size) {
     return createFileStatus(keyPath,
         objectRepresentsDirectory(s3Object.key()),
         size, Date.from(s3Object.lastModified()), blockSize, owner, eTag, versionId);
@@ -1175,6 +1174,19 @@ public final class S3AUtils {
     S3AFileStatus[] statuses = RemoteIterators
         .toArray(iterator, new S3AFileStatus[0]);
     return statuses;
+  }
+
+  /**
+   * Get the length of the PUT, verifying that the length is known.
+   * @param putObjectRequest a request bound to a file or a stream.
+   * @return the request length
+   * @throws IllegalArgumentException if the length is negative
+   */
+  public static long getPutRequestLength(PutObjectRequest putObjectRequest) {
+    long len = putObjectRequest.contentLength();
+
+    Preconditions.checkState(len >= 0, "Cannot PUT object of unknown length");
+    return len;
   }
 
   /**

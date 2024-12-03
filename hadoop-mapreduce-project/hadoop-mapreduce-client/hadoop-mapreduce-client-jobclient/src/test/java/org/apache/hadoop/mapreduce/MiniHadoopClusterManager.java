@@ -112,7 +112,7 @@ public class MiniHadoopClusterManager {
                 Option.builder("writeConfig").hasArg().argName("path").desc(
                 "Save configuration to this XML file.").build())
         .addOption(
-                Option.builder("writeDetails").argName("path").desc(
+                Option.builder("writeDetails").hasArg().argName("path").desc(
                 "Write basic information to this JSON file.").build())
         .addOption(
                 Option.builder("help").desc("Prints option help.").build());

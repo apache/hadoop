@@ -336,7 +336,7 @@ public class TestLinuxContainerExecutorWithMocks {
       assertThat(result.get(23)).isEqualTo("8040");
       assertThat(result.get(24)).isEqualTo("nmPrivateCTokensPath");
 
-    } catch (InterruptedException e) {
+    } catch (ConfigurationException | InterruptedException e) {
       LOG.error("Error:"+e.getMessage(),e);
       Assert.fail();
     }
@@ -642,6 +642,61 @@ public class TestLinuxContainerExecutorWithMocks {
       assertTrue("Unexpected exception " + e,
           e.getMessage().contains("exitCode"));
     }
+
+    final int[] exitCodesToThrow = {
+        LinuxContainerExecutor.ExitCode.INVALID_CONTAINER_EXEC_PERMISSIONS.getExitCode(),
+        LinuxContainerExecutor.ExitCode.INVALID_CONFIG_FILE.getExitCode(),
+    };
+
+    for (int i = 0; i < exitCodesToThrow.length; i++) {
+      int exitCode = exitCodesToThrow[i];
+      doThrow(new PrivilegedOperationException("invalid config", exitCode, null, null))
+          .when(spyPrivilegedExecutor).executePrivilegedOperation(
+              any(), any(PrivilegedOperation.class),
+              any(), any(), anyBoolean(), anyBoolean());
+
+      try {
+        lce.startLocalizer(new LocalizerStartContext.Builder()
+            .setNmPrivateContainerTokens(nmPrivateCTokensPath)
+            .setNmAddr(address)
+            .setUser(appSubmitter)
+            .setAppId(appId.toString())
+            .setLocId("12345")
+            .setDirsHandler(dirService)
+            .build());
+        Assert.fail("startLocalizer should have thrown a ConfigurationException");
+      } catch (ConfigurationException e) {
+        assertTrue("Unexpected exception " + e,
+            e.getMessage().contains("exitCode=" + exitCode));
+      }
+    }
+
+    doThrow(new PrivilegedOperationException("IO error",
+        new IOException("No such file or directory")))
+        .when(spyPrivilegedExecutor).executePrivilegedOperation(
+            any(), any(PrivilegedOperation.class),
+            any(), any(), anyBoolean(), anyBoolean());
+
+    try {
+      lce.startLocalizer(new LocalizerStartContext.Builder()
+          .setNmPrivateContainerTokens(nmPrivateCTokensPath)
+          .setNmAddr(address)
+          .setUser(appSubmitter)
+          .setAppId(appId.toString())
+          .setLocId("12345")
+          .setDirsHandler(dirService)
+          .build());
+      Assert.fail("startLocalizer should have thrown a ConfigurationException");
+    } catch (ConfigurationException e) {
+      assertTrue("Unexpected exception " + e,
+          e.getMessage().contains("Container executor not found"));
+    }
+
+
+    doThrow(new PrivilegedOperationException("interrupted"))
+        .when(spyPrivilegedExecutor).executePrivilegedOperation(
+            any(), any(PrivilegedOperation.class),
+            any(), any(), anyBoolean(), anyBoolean());
 
     lce.activateContainer(cid, new Path(workDir, "pid.txt"));
     lce.launchContainer(new ContainerStartContext.Builder()

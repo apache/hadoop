@@ -130,7 +130,7 @@ public class TestDomainSocket {
     DomainSocket conn = DomainSocket.connect(serv.getPath());
     Thread.sleep(50);
     conn.close();
-    serv.close();
+    serv.close(true);
     future.get(2, TimeUnit.MINUTES);
   }
 
@@ -161,7 +161,7 @@ public class TestDomainSocket {
     };
     Future<Void> future = exeServ.submit(callable);
     Thread.sleep(500);
-    serv.close();
+    serv.close(true);
     future.get(2, TimeUnit.MINUTES);
   }
 
@@ -240,7 +240,7 @@ public class TestDomainSocket {
     Future<Void> clientFuture = exeServ.submit(clientCallable);
     Thread.sleep(500);
     clientConn.close();
-    serv.close();
+    serv.close(true);
     clientFuture.get(2, TimeUnit.MINUTES);
     serverFuture.get(2, TimeUnit.MINUTES);
   }
@@ -281,28 +281,39 @@ public class TestDomainSocket {
     final String TEST_PATH = new File(sockDir.getDir(),
         "test_sock_server_options").getAbsolutePath();
     DomainSocket serv = DomainSocket.bindAndListen(TEST_PATH);
-    try {
-      // Let's set a new receive buffer size
-      int bufSize = serv.getAttribute(DomainSocket.RECEIVE_BUFFER_SIZE);
-      int newBufSize = bufSize / 2;
-      serv.setAttribute(DomainSocket.RECEIVE_BUFFER_SIZE, newBufSize);
-      int nextBufSize = serv.getAttribute(DomainSocket.RECEIVE_BUFFER_SIZE);
-      Assert.assertEquals(newBufSize, nextBufSize);
-      // Let's set a server timeout
-      int newTimeout = 1000;
-      serv.setAttribute(DomainSocket.RECEIVE_TIMEOUT, newTimeout);
-      int nextTimeout = serv.getAttribute(DomainSocket.RECEIVE_TIMEOUT);
-      Assert.assertEquals(newTimeout, nextTimeout);
-      try {
-        serv.accept();
-        Assert.fail("expected the accept() to time out and fail");
-      } catch (SocketTimeoutException e) {
-        GenericTestUtils.assertExceptionContains("accept(2) error: ", e);
+    // Let's set a new receive buffer size
+    int bufSize = serv.getAttribute(DomainSocket.RECEIVE_BUFFER_SIZE);
+    int newBufSize = bufSize / 2;
+    serv.setAttribute(DomainSocket.RECEIVE_BUFFER_SIZE, newBufSize);
+    int nextBufSize = serv.getAttribute(DomainSocket.RECEIVE_BUFFER_SIZE);
+    Assert.assertEquals(newBufSize, nextBufSize);
+    // Let's set a server timeout
+    int newTimeout = 1000;
+    serv.setAttribute(DomainSocket.RECEIVE_TIMEOUT, newTimeout);
+    int nextTimeout = serv.getAttribute(DomainSocket.RECEIVE_TIMEOUT);
+    Assert.assertEquals(newTimeout, nextTimeout);
+
+    ExecutorService exeServ = Executors.newSingleThreadExecutor();
+    Callable<Void> callable = new Callable<Void>() {
+      public Void call() {
+        try {
+          serv.accept();
+          Assert.fail("expected the accept() to time out and fail");
+        } catch (SocketTimeoutException e) {
+          GenericTestUtils.assertExceptionContains("accept(2) error: ", e);
+        } catch (AsynchronousCloseException e) {
+          return null;
+        } catch (IOException e) {
+          throw new RuntimeException("unexpected IOException", e);
+        }
+        return null;
       }
-    } finally {
-      serv.close();
-      Assert.assertFalse(serv.isOpen());
-    }
+    };
+    Future<Void> future = exeServ.submit(callable);
+    Thread.sleep(500);
+    serv.close(true);
+    future.get();
+    Assert.assertFalse(serv.isOpen());
   }
   
   /**
@@ -656,7 +667,7 @@ public class TestDomainSocket {
     }
     serverThread.join(120000);
     clientThread.join(120000);
-    serv.close();
+    serv.close(true);
     for (PassedFile pf : passedFiles) {
       pf.cleanup();
     }

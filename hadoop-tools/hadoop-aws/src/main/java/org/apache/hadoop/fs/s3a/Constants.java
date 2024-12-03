@@ -95,6 +95,11 @@ public final class Constants {
       "fs.s3a.assumed.role.arn";
 
   /**
+   * external id for assume role request: {@value}.
+   */
+  public static final String ASSUMED_ROLE_EXTERNAL_ID = "fs.s3a.assumed.role.external.id";
+
+  /**
    * Session name for the assumed role, must be valid characters according
    * to the AWS APIs: {@value}.
    * If not set, one is generated from the current Hadoop/Kerberos username.
@@ -394,6 +399,21 @@ public final class Constants {
       Duration.ofSeconds(60);
 
   /**
+   * Timeout for uploading all of a small object or a single part
+   * of a larger one.
+   * {@value}.
+   * Default unit is milliseconds for consistency with other options.
+   */
+  public static final String PART_UPLOAD_TIMEOUT =
+      "fs.s3a.connection.part.upload.timeout";
+
+  /**
+   * Default part upload timeout: 15 minutes.
+   */
+  public static final Duration DEFAULT_PART_UPLOAD_TIMEOUT =
+      Duration.ofMinutes(15);
+
+  /**
    * Should TCP Keepalive be enabled on the socket?
    * This adds some network IO, but finds failures faster.
    * {@value}.
@@ -423,6 +443,20 @@ public final class Constants {
    */
   public static final Duration DEFAULT_CONNECTION_IDLE_TIME_DURATION =
       Duration.ofSeconds(60);
+
+  /**
+   * Should PUT requests await a 100 CONTINUE responses before uploading
+   * data?
+   * <p>
+   * Value: {@value}.
+   */
+  public static final String CONNECTION_EXPECT_CONTINUE =
+      "fs.s3a.connection.expect.continue";
+
+  /**
+   * Default value for {@link #CONNECTION_EXPECT_CONTINUE}.
+   */
+  public static final boolean CONNECTION_EXPECT_CONTINUE_DEFAULT = true;
 
   // socket send buffer to be used in Amazon client
   public static final String SOCKET_SEND_BUFFER = "fs.s3a.socket.send.buffer";
@@ -745,6 +779,35 @@ public final class Constants {
    */
   public static final String S3_ENCRYPTION_CONTEXT =
       "fs.s3a.encryption.context";
+
+  /**
+   * Client side encryption (CSE-CUSTOM) with custom cryptographic material manager class name.
+   * Custom keyring class name for CSE-KMS.
+   * value:{@value}
+   */
+  public static final String S3_ENCRYPTION_CSE_CUSTOM_KEYRING_CLASS_NAME =
+          "fs.s3a.encryption.cse.custom.keyring.class.name";
+
+  /**
+   * Config to provide backward compatibility with V1 encryption client.
+   * Enabling this configuration will invoke the followings
+   * 1. Unencrypted s3 objects will be read using unencrypted/base s3 client when CSE is enabled.
+   * 2. Size of encrypted object will be fetched from object header if present or
+   * calculated using ranged S3 GET calls.
+   * value:{@value}
+   */
+  public static final String S3_ENCRYPTION_CSE_V1_COMPATIBILITY_ENABLED =
+          "fs.s3a.encryption.cse.v1.compatibility.enabled";
+
+  /**
+   * Default value : {@value}.
+   */
+  public static final boolean S3_ENCRYPTION_CSE_V1_COMPATIBILITY_ENABLED_DEFAULT = false;
+
+  /**
+   * S3 CSE-KMS KMS region config.
+   */
+  public static final String S3_ENCRYPTION_CSE_KMS_REGION = "fs.s3a.encryption.cse.kms.region";
 
   /**
    * List of custom Signers. The signer class will be loaded, and the signer
@@ -1124,6 +1187,22 @@ public final class Constants {
    */
   public static final String RETRY_THROTTLE_INTERVAL_DEFAULT = "500ms";
 
+
+  /**
+   * Should S3A connector retry on all 5xx errors which don't have
+   * explicit support: {@value}?
+   * <p>
+   * This is in addition to any retries the AWS SDK itself does, which
+   * is known to retry on many of these (e.g. 500).
+   */
+  public static final String RETRY_HTTP_5XX_ERRORS =
+      "fs.s3a.retry.http.5xx.errors";
+
+  /**
+   * Default value for {@link #RETRY_HTTP_5XX_ERRORS}: {@value}.
+   */
+  public static final boolean DEFAULT_RETRY_HTTP_5XX_ERRORS = true;
+
   /**
    * Should etags be exposed as checksums?
    */
@@ -1350,6 +1429,19 @@ public final class Constants {
    * through the getXAttr APIs have the prefix: {@value}.
    */
   public static final String XA_HEADER_PREFIX = "header.";
+
+  /**
+   * S3 cross region access enabled ?
+   * Value: {@value}.
+   */
+
+  public static final String AWS_S3_CROSS_REGION_ACCESS_ENABLED =
+      "fs.s3a.cross.region.access.enabled";
+  /**
+   * Default value for S3 cross region access enabled: {@value}.
+   */
+  public static final boolean AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT = true;
+
 
   /**
    * AWS S3 region for the bucket. When set bypasses the construction of
