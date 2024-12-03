@@ -43,6 +43,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY;
 
@@ -99,6 +101,10 @@ public class DataNodeDiskMetrics {
     maxSlowDisksToExclude =
         conf.getInt(DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY,
             DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_DEFAULT);
+    if (maxSlowDisksToExclude > DataNode.getStorageLocations(conf).size()) {
+      LOG.warn("Can not set {} larger than the count of datanode data dirs. Set it to {}",
+          DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY, DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_DEFAULT);
+    }
     slowDiskDetector =
         new OutlierDetector(minOutlierDetectionDisks, lowThresholdMs);
     shouldRun = true;

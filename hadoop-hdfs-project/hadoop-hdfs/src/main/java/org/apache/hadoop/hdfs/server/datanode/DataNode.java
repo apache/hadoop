@@ -955,6 +955,11 @@ public class DataNode extends ReconfigurableBase
         checkNotNull(diskMetrics, "DataNode disk stats may be disabled.");
         int maxSlowDisksToExclude = (newVal == null ?
             DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_DEFAULT : Integer.parseInt(newVal));
+        if (maxSlowDisksToExclude > DataNode.getStorageLocations(dnConf.getConf()).size()) {
+          LOG.warn("Can not set {} larger than the count of datanode data dirs. Set it to {}",
+              DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY, DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_DEFAULT);
+          maxSlowDisksToExclude = 0;
+        }
         result = Integer.toString(maxSlowDisksToExclude);
         diskMetrics.setMaxSlowDisksToExclude(maxSlowDisksToExclude);
       }
