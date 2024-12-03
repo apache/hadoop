@@ -2774,7 +2774,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       lastDirScannerNotifyTime = startTimeMs;
     }
     String storageUuid = vol.getStorageID();
-    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME, bpid, storageUuid)) {
+    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.DIR, bpid,
+        vol.getStorageID(), DatanodeUtil.idToBlockDirSuffixName(blockId))) {
       if (!storageMap.containsKey(storageUuid)) {
         // Storage was already removed
         return;
