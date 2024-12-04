@@ -143,11 +143,12 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        * B. If config "fs.azure.enable.conditional.create.overwrite" is enabled,
        *    create overwrite=false (will fail in this case as file is indeed present)
        *    + getFileStatus to fetch the file ETag
+       *    + getFileStatus to fetch transaction id
        *    + create overwrite=true
-       *    = 3 connections and 2 send requests
+       *    = 4 connections and 2 send requests
        */
       if (this.getConfiguration().isConditionalCreateOverwriteEnabled()) {
-        expectedConnectionsMade += 3;
+        expectedConnectionsMade += 4;
         expectedRequestsSent += 2;
       } else {
         expectedConnectionsMade += 1;

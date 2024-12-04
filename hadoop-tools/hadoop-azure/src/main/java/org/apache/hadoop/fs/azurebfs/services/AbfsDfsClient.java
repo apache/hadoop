@@ -624,11 +624,10 @@ public class AbfsDfsClient extends AbfsClient {
             return new AbfsClientRenameResult(op, true,
                     isMetadataIncompleteState);
           }
-        } catch (AbfsRestOperationException ex) {
-          throw new AbfsRestOperationException(ex.getStatusCode(),
-                  SOURCE_PATH_NOT_FOUND.getErrorCode(),
-                  ex.getMessage(), ex);
+        } catch (AbfsRestOperationException ignored) {
+          // In case of get path status failure, we will throw the original exception.
         }
+        throw e;
       }
 
       // ref: HADOOP-18242. Rename failure occurring due to a rare case of

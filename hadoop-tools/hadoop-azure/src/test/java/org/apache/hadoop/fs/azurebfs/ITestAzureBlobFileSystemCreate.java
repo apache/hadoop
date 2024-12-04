@@ -367,8 +367,10 @@ public class ITestAzureBlobFileSystemCreate extends
         () -> fs.create(nonOverwriteFile, false));
     fs.registerListener(null);
 
-    // One request to server to create path should be issued
-    createRequestCount++;
+    // Two request to server to create path should be issued
+    // 1. create
+    // 2. GetFileStatus to get transaction id
+    createRequestCount += 2;
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
@@ -398,11 +400,12 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.registerListener(null);
 
     if (enableConditionalCreateOverwrite) {
-      // Three requests will be sent to server to create path,
+      // Four requests will be sent to server to create path,
       // 1. create without overwrite
       // 2. GetFileStatus to get eTag
       // 3. create with overwrite
-      createRequestCount += 3;
+      // 4. GetFileStatus to get transaction id
+      createRequestCount += 4;
     } else {
       createRequestCount++;
     }
