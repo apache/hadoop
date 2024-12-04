@@ -1557,6 +1557,7 @@ public abstract class AbfsClient implements Closeable {
    * @param requestHeaders  The list of HTTP headers for the request.
    * @return An AbfsRestOperation instance.
    */
+  @VisibleForTesting
   AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType operationType,
       final String httpMethod,
       final URL url,

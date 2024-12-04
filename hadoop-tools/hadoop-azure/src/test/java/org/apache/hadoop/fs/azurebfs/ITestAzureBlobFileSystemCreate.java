@@ -22,11 +22,15 @@ import java.io.FileNotFoundException;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -47,6 +51,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperati
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 
@@ -57,6 +63,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
@@ -271,6 +278,55 @@ public class ITestAzureBlobFileSystemCreate extends
   public void testDefaultCreateOverwriteFileTest() throws Throwable {
     testCreateFileOverwrite(true);
     testCreateFileOverwrite(false);
+  }
+
+  @Test
+  public void createPathRetryIdempotency() throws Exception {
+    final AzureBlobFileSystem currentFs = getFileSystem();
+    Configuration config = new Configuration(this.getRawConfiguration());
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(), config);
+    AbfsClient abfsClient = Mockito.spy(fs.getAbfsClient());
+    fs.getAbfsStore().setClient(abfsClient);
+    final Path nonOverwriteFile = new Path("/NonOverwriteTest_FileName_" + UUID.randomUUID());
+    final List<AbfsHttpHeader> headers = new ArrayList<>();
+    TestAbfsClient.mockAbfsOperationCreation(abfsClient, new MockIntercept<AbfsRestOperation>() {
+      int count = 0;
+      @Override
+      public void answer(final AbfsRestOperation mockedObj,
+                         final InvocationOnMock answer) throws AbfsRestOperationException {
+        if (count == 0) {
+          count = 1;
+          AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
+          Mockito.doReturn("PUT").when(op).getMethod();
+          Mockito.doReturn("").when(op).getStorageErrorMessage();
+          Mockito.doReturn(true).when(mockedObj).hasResult();
+          Mockito.doReturn(op).when(mockedObj).getResult();
+          Mockito.doReturn(HTTP_CONFLICT).when(op).getStatusCode();
+          headers.addAll(mockedObj.getRequestHeaders());
+          throw new AbfsRestOperationException(409, "409",
+                  "", null, op);
+        }
+      }
+    });
+    AbfsRestOperation getPathRestOp = Mockito.mock(AbfsRestOperation.class);
+    AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
+    Mockito.doAnswer(answer -> {
+      String requiredHeader = null;
+      for (AbfsHttpHeader httpHeader : headers) {
+        if (X_MS_CLIENT_TRANSACTION_ID.equalsIgnoreCase(httpHeader.getName())) {
+          requiredHeader = httpHeader.getValue();
+          break;
+        }
+      }
+      return requiredHeader;
+    }).when(op).getResponseHeader(X_MS_CLIENT_TRANSACTION_ID);
+    Mockito.doReturn(true).when(getPathRestOp).hasResult();
+    Mockito.doReturn(op).when(getPathRestOp).getResult();
+    Mockito.doReturn(getPathRestOp).when(abfsClient).getPathStatus
+            (nullable(String.class), nullable(Boolean.class),
+                    nullable(TracingContext.class), nullable(ContextEncryptionAdapter.class));
+
+    fs.create(nonOverwriteFile, false);
   }
 
   public void testCreateFileOverwrite(boolean enableConditionalCreateOverwrite)

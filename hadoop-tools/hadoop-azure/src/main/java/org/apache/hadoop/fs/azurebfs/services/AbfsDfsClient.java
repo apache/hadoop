@@ -99,6 +99,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_PROPOSED_LEASE_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_RANGE_GET_CONTENT_MD5;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_RENAME_SOURCE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_FS_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_BLOBTYPE;
@@ -353,6 +354,9 @@ public class AbfsDfsClient extends AbfsClient {
           permissions.getPermission()));
     }
 
+    final String clientTransactionId = UUID.randomUUID().toString();
+    requestHeaders.add(new AbfsHttpHeader(X_MS_CLIENT_TRANSACTION_ID, clientTransactionId));
+
     if (permissions.hasUmask()) {
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_UMASK,
           permissions.getUmask()));
@@ -389,6 +393,13 @@ public class AbfsDfsClient extends AbfsClient {
             op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
         if (existingResource != null && existingResource.equals(DIRECTORY)) {
           return op; //don't throw ex on mkdirs for existing directory
+        }
+      }
+      if(isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+        final AbfsHttpOperation getPathStatusOp =
+                getPathStatus(path, false, tracingContext, contextEncryptionAdapter).getResult();
+        if(clientTransactionId.equals(getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))) {
+          return op;
         }
       }
       throw ex;
@@ -576,6 +587,9 @@ public class AbfsDfsClient extends AbfsClient {
     requestHeaders.add(new AbfsHttpHeader(X_MS_RENAME_SOURCE, encodedRenameSource));
     requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, STAR));
 
+    final String clientTransactionId = UUID.randomUUID().toString();
+    requestHeaders.add(new AbfsHttpHeader(X_MS_CLIENT_TRANSACTION_ID, clientTransactionId));
+
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
     appendSASTokenToQuery(destination,
@@ -598,6 +612,23 @@ public class AbfsDfsClient extends AbfsClient {
       // If we have no HTTP response, throw the original exception.
       if (!op.hasResult()) {
         throw e;
+      }
+
+      if (SOURCE_PATH_NOT_FOUND.getErrorCode()
+              .equalsIgnoreCase(op.getResult().getStorageErrorCode())) {
+        try {
+          final AbfsHttpOperation abfsHttpOperation = getPathStatus(destination,
+                  false, tracingContext, null).getResult();
+          if (clientTransactionId.equals(
+                  abfsHttpOperation.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))) {
+            return new AbfsClientRenameResult(op, true,
+                    isMetadataIncompleteState);
+          }
+        } catch (AbfsRestOperationException ex) {
+          throw new AbfsRestOperationException(ex.getStatusCode(),
+                  SOURCE_PATH_NOT_FOUND.getErrorCode(),
+                  ex.getMessage(), ex);
+        }
       }
 
       // ref: HADOOP-18242. Rename failure occurring due to a rare case of
