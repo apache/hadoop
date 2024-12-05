@@ -680,7 +680,7 @@ client-side and then transmit it over to S3 storage. The same encrypted data
 is then transmitted over to client while reading and then
 decrypted on the client-side.
 
-S3-CSE, uses `S3EncryptionClient.java` (V3)  as the AmazonS3 client. The
+S3-CSE, uses `S3EncryptionClient.java`(V3) as the AmazonS3 client. The
 encryption and decryption is done by AWS SDK. Both CSE-KMS and CSE-CUSTOM
 methods are supported.
 
@@ -712,14 +712,25 @@ like `AmazonS3EncryptionClient.java`(V1) and `AmazonS3EncryptionClientV2.java`(V
 - encryption information stored as headers in the uploaded object.
 
 ### Compatibility Issues
-- The V1 client support reading unencrypted S3 objects, whereas the V3 client does not.
-- Unlike the V2 and V3 clients, which always append 16 bytes to a file,
-the V1 client appends extra bytes to the next multiple of 16.
-For example, if the unencrypted object size is 28 bytes,
-the V1 client pads an extra 4 bytes to make it a multiple of 16.
+- The V1 client is capable of reading unencrypted S3 objects,
+a capability not supported by the V3 client.
+- Unlike V2 and V3 clients that consistently append 16 bytes to files,
+the V1 client implements a more dynamic padding strategy by appending
+extra bytes to reach the next multiple of 16. For example
+Consider an unencrypted object with 28 bytes: the V1 client strategically
+adds 4 additional bytes to ensure the total size becomes a precise multiple of 16.
 
-Note: Inorder to workaround the above compatibility issues
-set `fs.s3a.encryption.cse.v1.compatibility.enabled=true`
+This dynamic padding strategy in V1 complicates straightforward computation of unencrypted length
+, preventing the simple subtraction of 16 bytes used in V2 and V3 clients, hence requiring additional
+S3 GET call to identify the unencrypted length of objects encrypted by V1 client.
+
+Mitigate V1 client encryption compatibility challenges by setting
+`fs.s3a.encryption.cse.v1.compatibility.enabled=true`.This configuration solution
+comes with a performance trade-off, necessitating additional S3 GET and HEAD calls.
+
+Inorder to workaround the above compatibility issues  set the configuration
+`fs.s3a.encryption.cse.v1.compatibility.enabled=true`. This will have some performance penalty
+in terms of a additional S3 GET and HEAD calls.
 
 Note: The V1 client supports storing encryption metadata in a separate file with
 the suffix "fileName".instruction. However, these instruction files are not
@@ -786,7 +797,7 @@ S3-CSE to work.
 #### 2. CSE-CUSTOM
 - Set `fs.s3a.encryption.algorithm=CSE-CUSTOM`.
 - Set
-`fs.s3a.encryption.cse.custom.cryptographic.material.manager.class.name=<fully qualified class name>`.
+`fs.s3a.encryption.cse.custom.keyring.class.name=<fully qualified class name>`.
 
 Example for custom keyring implementation
 ```
