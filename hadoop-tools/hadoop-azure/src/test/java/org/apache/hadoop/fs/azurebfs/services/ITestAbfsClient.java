@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.TestAbfsConfigurationFieldsValidation;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
@@ -160,9 +161,14 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       boolean includeSSLProvider) throws IOException, URISyntaxException {
     AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
     AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
-    // TODO: [FnsOverBlob][HADOOP-19234] Update to work with Blob Endpoint as well when Fns Over Blob is ready.
-    AbfsClient client = new AbfsDfsClient(new URL("https://azure.com"), null,
-        config, (AccessTokenProvider) null, null, abfsClientContext);
+    AbfsClient client;
+    if (AbfsServiceType.DFS.equals(config.getFsConfiguredServiceType())) {
+      client = new AbfsDfsClient(new URL("https://azure.com"), null,
+          config, (AccessTokenProvider) null, null, abfsClientContext);
+    } else {
+      client = new AbfsBlobClient(new URL("https://azure.com"), null,
+          config, (AccessTokenProvider) null, null, abfsClientContext);
+    }
     String sslProviderName = null;
     if (includeSSLProvider) {
       sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory()
@@ -364,8 +370,61 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
                                 .build();
 
     // Create test AbfsClient
-    // TODO : [FnsOverBlob][HADOOP-19234] Update to work with Blob Endpoint as well when Fns Over Blob is ready.
-    AbfsClient testClient = new AbfsDfsClient(
+    AbfsClient testClient;
+    if (AbfsServiceType.DFS.equals(abfsConfig.getFsConfiguredServiceType())) {
+      testClient = new AbfsDfsClient(
+          baseAbfsClientInstance.getBaseUrl(),
+          (currentAuthType == AuthType.SharedKey
+              ? new SharedKeyCredentials(
+              abfsConfig.getAccountName().substring(0,
+                  abfsConfig.getAccountName().indexOf(DOT)),
+              abfsConfig.getStorageAccountKey())
+              : null),
+          abfsConfig,
+          (currentAuthType == AuthType.OAuth
+              ? abfsConfig.getTokenProvider()
+              : null),
+          null,
+          abfsClientContext);
+    } else {
+      testClient = new AbfsBlobClient(
+          baseAbfsClientInstance.getBaseUrl(),
+          (currentAuthType == AuthType.SharedKey
+              ? new SharedKeyCredentials(
+              abfsConfig.getAccountName().substring(0,
+                  abfsConfig.getAccountName().indexOf(DOT)),
+              abfsConfig.getStorageAccountKey())
+              : null),
+          abfsConfig,
+          (currentAuthType == AuthType.OAuth
+              ? abfsConfig.getTokenProvider()
+              : null),
+          null,
+          abfsClientContext);
+    }
+
+    return testClient;
+  }
+
+  public static AbfsClient createBlobClientFromCurrentContext(
+      AbfsClient baseAbfsClientInstance,
+      AbfsConfiguration abfsConfig) throws IOException, URISyntaxException {
+    AuthType currentAuthType = abfsConfig.getAuthType(
+        abfsConfig.getAccountName());
+
+    AbfsPerfTracker tracker = new AbfsPerfTracker("test",
+        abfsConfig.getAccountName(),
+        abfsConfig);
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
+
+    AbfsClientContext abfsClientContext =
+        new AbfsClientContextBuilder().withAbfsPerfTracker(tracker)
+            .withExponentialRetryPolicy(
+                new ExponentialRetryPolicy(abfsConfig.getMaxIoRetries()))
+            .withAbfsCounters(abfsCounters)
+            .build();
+
+    AbfsClient testClient = new AbfsBlobClient(
         baseAbfsClientInstance.getBaseUrl(),
         (currentAuthType == AuthType.SharedKey
             ? new SharedKeyCredentials(
@@ -377,7 +436,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         (currentAuthType == AuthType.OAuth
             ? abfsConfig.getTokenProvider()
             : null),
-            null,
+        null,
         abfsClientContext);
 
     return testClient;
