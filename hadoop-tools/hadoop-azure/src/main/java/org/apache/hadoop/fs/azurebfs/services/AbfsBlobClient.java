@@ -378,7 +378,7 @@ public class AbfsBlobClient extends AbfsClient {
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
-    // TODO: [FnsOverBlob][HADOOP-19207] To be implemented as part of response handling of blob endpoint APIs.
+    // TODO: [FnsOverBlob][HADOOP-19232] To be implemented as part of ingress support.
     throw new NotImplementedException("Create Path operation on Blob endpoint yet to be implemented.");
   }
 
@@ -1145,7 +1145,7 @@ public class AbfsBlobClient extends AbfsClient {
   }
 
   /**
-   * Get the continuation token from the response from DFS Endpoint Listing.
+   * Get the continuation token from the response from BLOB Endpoint Listing.
    * Continuation Token will be present in XML List response body.
    * @param result The response from the server.
    * @return The continuation token.
@@ -1156,6 +1156,14 @@ public class AbfsBlobClient extends AbfsClient {
     return listResultSchema.getNextMarker();
   }
 
+  /**
+   * Get the User-defined metadata on a path from response headers of
+   * GetBlobProperties API on Blob Endpoint.
+   * Blob Endpoint returns each metadata as a separate header.
+   * @param result The response of GetBlobProperties call from the server.
+   * @return Hashtable containing metadata key-value pairs.
+   * @throws InvalidAbfsRestOperationException if parsing fails.
+   */
   @Override
   public Hashtable<String, String> getXMSProperties(AbfsHttpOperation result)
       throws InvalidAbfsRestOperationException {
@@ -1164,7 +1172,7 @@ public class AbfsBlobClient extends AbfsClient {
     for (Map.Entry<String, List<String>> entry : responseHeaders.entrySet()) {
       String name = entry.getKey();
       if (name != null && name.startsWith(X_MS_METADATA_PREFIX)) {
-        String value = null;
+        String value;
         try {
           value = decodeMetadataAttribute(entry.getValue().get(0));
         } catch (UnsupportedEncodingException e) {
@@ -1177,9 +1185,10 @@ public class AbfsBlobClient extends AbfsClient {
   }
 
   /**
-   * Parse the list file response
-   * @param stream InputStream contains the list results.
-   * @throws IOException
+   * Parse the XML response body returned by ListBlob API on Blob Endpoint.
+   * @param stream InputStream contains the response from server.
+   * @return BlobListResultSchema containing the list of entries.
+   * @throws IOException if parsing fails.
    */
   @Override
   public ListResultSchema parseListPathResults(final InputStream stream) throws IOException {
@@ -1199,6 +1208,12 @@ public class AbfsBlobClient extends AbfsClient {
     return removeDuplicateEntries(listResultSchema);
   }
 
+  /**
+   * Parse the XML response body returned by GetBlockList API on Blob Endpoint.
+   * @param stream InputStream contains the response from server.
+   * @return List of blockIds.
+   * @throws IOException if parsing fails.
+   */
   @Override
   public List<String> parseBlockListResponse(final InputStream stream) throws IOException {
     List<String> blockIdList = new ArrayList<>();
@@ -1235,6 +1250,12 @@ public class AbfsBlobClient extends AbfsClient {
     return blockIdList;
   }
 
+  /**
+   * Parse the XML response body returned by error stream for all blob endpoint APIs.
+   * @param stream ErrorStream contains the response from server.
+   * @return StorageErrorResponseSchema containing the error code and message.
+   * @throws IOException if parsing fails.
+   */
   @Override
   public StorageErrorResponseSchema processStorageErrorResponse(final InputStream stream) throws IOException {
     final String data = IOUtils.toString(stream, StandardCharsets.UTF_8);
@@ -1257,16 +1278,36 @@ public class AbfsBlobClient extends AbfsClient {
     return new StorageErrorResponseSchema(storageErrorCode, storageErrorMessage, expectedAppendPos);
   }
 
+  /**
+   * Encode the value of the attribute to be set as metadata.
+   * Blob Endpoint support Unicode characters in metadata values.
+   * @param value to be encoded.
+   * @return encoded value.
+   * @throws UnsupportedEncodingException if encoding fails.
+   */
   @Override
   public byte[] encodeAttribute(String value) throws UnsupportedEncodingException {
     return value.getBytes(XMS_PROPERTIES_ENCODING_UNICODE);
   }
 
+  /**
+   * Decode the value of the attribute from the metadata.
+   * Blob Endpoint support Unicode characters in metadata values.
+   * @param value to be decoded.
+   * @return decoded value.
+   * @throws UnsupportedEncodingException if decoding fails.
+   */
   @Override
   public String decodeAttribute(byte[] value) throws UnsupportedEncodingException {
     return new String(value, XMS_PROPERTIES_ENCODING_UNICODE);
   }
 
+  /**
+   * Blob Endpoint Supports Delimiter based listing where the
+   * directory path to be listed must end with a Forward Slash.
+   * @param path directory path to be listed.
+   * @return directory path with forward slash at end.
+   */
   public static String getDirectoryQueryParameter(final String path) {
     String directory = AbfsClient.getDirectoryQueryParameter(path);
     if (directory.isEmpty()) {
@@ -1295,6 +1336,14 @@ public class AbfsBlobClient extends AbfsClient {
     return true;
   }
 
+  /**
+   * Get the list of headers to be set for metadata properties.
+   * Blob Endpoint accepts each metadata as a separate header.
+   * @param properties to be set as metadata
+   * @return List of headers to be set.
+   * @throws AbfsRestOperationException if encoding fails.
+   * @throws CharacterCodingException if value is not pure ASCII.
+   */
   private List<AbfsHttpHeader> getMetadataHeadersList(final Hashtable<String, String> properties)
       throws AbfsRestOperationException, CharacterCodingException {
     List<AbfsHttpHeader> metadataRequestHeaders = new ArrayList<>();
@@ -1326,6 +1375,13 @@ public class AbfsBlobClient extends AbfsClient {
     }
   });
 
+  /**
+   * This is to handle duplicate listing entries returned by Blob Endpoint for
+   * implicit paths that also has a marker file created for them.
+   * This will retain entry corresponding to marker file and remove the BlobPrefix entry.
+   * @param listResultSchema List of entries returned by Blob Endpoint.
+   * @return List of entries after removing duplicates.
+   */
   private BlobListResultSchema removeDuplicateEntries(BlobListResultSchema listResultSchema) {
     List<BlobListResultEntrySchema> uniqueEntries = new ArrayList<>();
     TreeMap<String, BlobListResultEntrySchema> nameToEntryMap = new TreeMap<>();
@@ -1349,6 +1405,14 @@ public class AbfsBlobClient extends AbfsClient {
     return listResultSchema;
   }
 
+  /**
+   * When listing is done on a file, Blob Endpoint returns the empty listing
+   * but DFS Endpoint returns the file status as one of the entries.
+   * This is to convert file status into ListResultSchema.
+   * @param relativePath
+   * @param pathStatus
+   * @return
+   */
   private BlobListResultSchema getListResultSchemaFromPathStatus(String relativePath, AbfsRestOperation pathStatus) {
     BlobListResultSchema listResultSchema = new BlobListResultSchema();
 
@@ -1380,12 +1444,18 @@ public class AbfsBlobClient extends AbfsClient {
     return encoded == null ? null :
         java.net.URLDecoder.decode(encoded, StandardCharsets.UTF_8.name());
   }
+
   private boolean isNonEmptyListing(String path,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsRestOperation listOp = listPath(path, false, 1, null, tracingContext, false);
     return !isEmptyListResults(listOp.getResult());
   }
 
+  /**
+   * Check if the list call returned empty results without any continuation token.
+   * @param result The response of listing API from the server.
+   * @return True if empty results without continuation token.
+   */
   private boolean isEmptyListResults(AbfsHttpOperation result) {
     boolean isEmptyList = result != null && result.getStatusCode() == HTTP_OK && // List Call was successful
         result.getListResultSchema() != null && // Parsing of list response was successful

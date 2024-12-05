@@ -344,10 +344,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   byte[] encodeAttribute(String value) throws UnsupportedEncodingException {
+    // DFS Client works with ISO_8859_1 encoding, Blob Works with UTF-8.
     return getClient().encodeAttribute(value);
   }
 
   String decodeAttribute(byte[] value) throws UnsupportedEncodingException {
+    // DFS Client works with ISO_8859_1 encoding, Blob Works with UTF-8.
     return getClient().decodeAttribute(value);
   }
 
@@ -486,6 +488,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           .getFilesystemProperties(tracingContext);
       perfInfo.registerResult(op.getResult());
 
+      // Handling difference in request headers formats between DFS and Blob Clients.
       parsedXmsProperties = getClient().getXMSProperties(op.getResult());
       perfInfo.registerSuccess(true);
 
@@ -532,6 +535,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       perfInfo.registerResult(op.getResult());
       contextEncryptionAdapter.destroy();
 
+      // Handling difference in request headers formats between DFS and Blob Clients.
       parsedXmsProperties = getClient().getXMSProperties(op.getResult());
       perfInfo.registerSuccess(true);
 

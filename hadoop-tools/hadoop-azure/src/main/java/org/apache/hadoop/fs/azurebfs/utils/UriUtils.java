@@ -205,6 +205,15 @@ public final class UriUtils {
     return url;
   }
 
+  /**
+   * Replaces the oldString with newString in the baseUrl.
+   * It will extract the account url path to make sure we do not replace any
+   * matching string in blob path or any other part of url
+   * @param baseUrl the url to be updated.
+   * @param oldString the string to be replaced.
+   * @param newString the string to be replaced with.
+   * @return updated URL
+   */
   private static String replacedUrl(String baseUrl, String oldString, String newString) {
     int startIndex = baseUrl.toString().indexOf("//") + 2;
     int endIndex = baseUrl.toString().indexOf("/", startIndex);

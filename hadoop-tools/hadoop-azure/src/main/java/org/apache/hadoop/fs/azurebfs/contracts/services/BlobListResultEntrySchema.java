@@ -6,7 +6,7 @@ import java.util.Map;
 import org.apache.hadoop.fs.Path;
 
 /**
- * List Result Entry Schema for Blob Endpoint.
+ * List Result Entry Schema for Blob Endpoint List Blob API
  */
 public class BlobListResultEntrySchema implements ListResultEntrySchema {
 

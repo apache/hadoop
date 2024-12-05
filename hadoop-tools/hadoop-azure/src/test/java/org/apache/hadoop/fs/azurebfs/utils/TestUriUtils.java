@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,6 +33,8 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.message.BasicNameValuePair;
 
+import static org.apache.hadoop.fs.azurebfs.utils.UriUtils.changeUrlFromBlobToDfs;
+import static org.apache.hadoop.fs.azurebfs.utils.UriUtils.changeUrlFromDfsToBlob;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -131,5 +135,61 @@ public final class TestUriUtils {
         "abc=XXXXX&s=1&null1=&null2=", UriUtils
             .maskUrlQueryParameters(keyValueList, fullMask,
                 partialMask)); //no mask
+  }
+
+  @Test
+  public void testConvertUrlFromDfsToBlob() throws Exception{
+    List<String> inputUrls = Arrays.asList(
+        "https://accountName.dfs.core.windows.net/containerName",
+        "https://accountName.blob.core.windows.net/containerName", // Already blob will remain blob
+        "https:/accountName.dfs.core.windows.net/containerName", // Invalid URL will be returned as it is
+        "https://accountNamedfs.dfs.core.windows.net/containerName",
+        "https://accountNameblob.dfs.core.windows.net/containerName",
+        "https://accountName.dfs.core.windows.net/dfsContainer",
+        "https://accountName.dfs.core.windows.net/blobcontainerName",
+        "https://accountName.dfs.core.windows.net/dfs.Container",
+        "https://accountName.dfs.core.windows.net/blob.containerName");
+    List<String> expectedUrls = Arrays.asList(
+        "https://accountName.blob.core.windows.net/containerName",
+        "https://accountName.blob.core.windows.net/containerName", // Already blob will remain blob
+        "https:/accountName.dfs.core.windows.net/containerName", // Invalid URL will be returned as it is
+        "https://accountNamedfs.blob.core.windows.net/containerName",
+        "https://accountNameblob.blob.core.windows.net/containerName",
+        "https://accountName.blob.core.windows.net/dfsContainer",
+        "https://accountName.blob.core.windows.net/blobcontainerName",
+        "https://accountName.blob.core.windows.net/dfs.Container",
+        "https://accountName.blob.core.windows.net/blob.containerName");
+
+    for (int i = 0; i < inputUrls.size(); i++) {
+      Assertions.assertThat(changeUrlFromDfsToBlob(new URL(inputUrls.get(i))).toString())
+          .describedAs("URL conversion not as expected").isEqualTo(expectedUrls.get(i));
+    }
+  }
+
+  @Test
+  public void testConvertUrlFromBlobToDfs() throws Exception{
+    List<String> inputUrls = Arrays.asList(
+        "https://accountName.blob.core.windows.net/containerName",
+        "https://accountName.dfs.core.windows.net/containerName",
+        "https://accountNamedfs.blob.core.windows.net/containerName",
+        "https://accountNameblob.blob.core.windows.net/containerName",
+        "https://accountName.blob.core.windows.net/dfsContainer",
+        "https://accountName.blob.core.windows.net/blobcontainerName",
+        "https://accountName.blob.core.windows.net/dfs.Container",
+        "https://accountName.blob.core.windows.net/blob.containerName");
+    List<String> expectedUrls = Arrays.asList(
+        "https://accountName.dfs.core.windows.net/containerName",
+        "https://accountName.dfs.core.windows.net/containerName",
+        "https://accountNamedfs.dfs.core.windows.net/containerName",
+        "https://accountNameblob.dfs.core.windows.net/containerName",
+        "https://accountName.dfs.core.windows.net/dfsContainer",
+        "https://accountName.dfs.core.windows.net/blobcontainerName",
+        "https://accountName.dfs.core.windows.net/dfs.Container",
+        "https://accountName.dfs.core.windows.net/blob.containerName");
+
+    for (int i = 0; i < inputUrls.size(); i++) {
+      Assertions.assertThat(changeUrlFromBlobToDfs(new URL(inputUrls.get(i))).toString())
+          .describedAs("Url Conversion Not as Expected").isEqualTo(expectedUrls.get(i));
+    }
   }
 }

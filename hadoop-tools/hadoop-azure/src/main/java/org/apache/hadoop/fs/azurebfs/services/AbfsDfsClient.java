@@ -1296,6 +1296,13 @@ public class AbfsDfsClient extends AbfsClient {
     return result.getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
   }
 
+  /**
+   * Get the user defined metadata from the response from DFS Endpoint API.
+   * @param result response from server
+   * @return user defined metadata as key value pairs
+   * @throws InvalidFileSystemPropertyException if parsing fails
+   * @throws InvalidAbfsRestOperationException if decoding fails
+   */
   @Override
   public Hashtable<String, String> getXMSProperties(AbfsHttpOperation result)
       throws InvalidFileSystemPropertyException, InvalidAbfsRestOperationException {
@@ -1303,9 +1310,9 @@ public class AbfsDfsClient extends AbfsClient {
   }
 
   /**
-   * Parse the list file response
+   * Parse the list file response from DFS ListPath API in Json format
    * @param stream InputStream contains the list results.
-   * @throws IOException
+   * @throws IOException if parsing fails.
    */
   @Override
   public ListResultSchema parseListPathResults(final InputStream stream) throws IOException {
@@ -1381,17 +1388,35 @@ public class AbfsDfsClient extends AbfsClient {
     return new StorageErrorResponseSchema(storageErrorCode, storageErrorMessage, expectedAppendPos);
   }
 
+  /**
+   * Encode the value using ASCII encoding.
+   * @param value to be encoded
+   * @return encoded value
+   * @throws UnsupportedEncodingException if encoding fails
+   */
   @Override
   public byte[] encodeAttribute(String value) throws
       UnsupportedEncodingException {
     return value.getBytes(XMS_PROPERTIES_ENCODING_ASCII);
   }
 
+  /**
+   * Decode the value using ASCII encoding.
+   * @param value to be decoded
+   * @return decoded value
+   * @throws UnsupportedEncodingException if encoding fails
+   */
   @Override
   public String decodeAttribute(byte[] value) throws UnsupportedEncodingException {
     return new String(value, XMS_PROPERTIES_ENCODING_ASCII);
   }
 
+  /**
+   * Convert the properties hashtable to a comma separated string.
+   * @param properties hashtable containing the properties key value pairs
+   * @return comma separated string containing the properties key value pairs
+   * @throws CharacterCodingException if encoding fails
+   */
   private String convertXmsPropertiesToCommaSeparatedString(final Map<String,
         String> properties) throws CharacterCodingException {
     StringBuilder commaSeparatedProperties = new StringBuilder();
@@ -1422,6 +1447,14 @@ public class AbfsDfsClient extends AbfsClient {
 
     return commaSeparatedProperties.toString();
   }
+
+  /**
+   * Parse the comma separated x-ms-properties string into a hashtable.
+   * @param xMsProperties comma separated x-ms-properties string returned from server
+   * @return hashtable containing the properties key value pairs
+   * @throws InvalidFileSystemPropertyException if parsing fails
+   * @throws InvalidAbfsRestOperationException if decoding fails
+   */
   private Hashtable<String, String> parseCommaSeparatedXmsProperties(String xMsProperties) throws
       InvalidFileSystemPropertyException, InvalidAbfsRestOperationException {
     Hashtable<String, String> properties = new Hashtable<>();

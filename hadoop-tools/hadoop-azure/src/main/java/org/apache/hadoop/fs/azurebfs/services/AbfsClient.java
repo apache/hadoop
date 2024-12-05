@@ -1622,19 +1622,61 @@ public abstract class AbfsClient implements Closeable {
     return renameResilience;
   }
 
+  /**
+   * Parses response of Listing API from server based on Endpoint used.
+   * @param stream InputStream of the response
+   * @return ListResultSchema
+   * @throws IOException if parsing fails
+   */
   public abstract ListResultSchema parseListPathResults(final InputStream stream) throws IOException;
 
+  /**
+   * Parses response of Get Block List from server based on Endpoint used.
+   * @param stream InputStream of the response
+   * @return List of block IDs
+   * @throws IOException if parsing fails
+   */
   public abstract List<String> parseBlockListResponse(final InputStream stream) throws IOException;
 
+  /**
+   * Parses response from ErrorStream returned by server based on Endpoint used.
+   * @param stream InputStream of the response
+   * @return StorageErrorResponseSchema
+   * @throws IOException if parsing fails
+   */
   public abstract StorageErrorResponseSchema processStorageErrorResponse(final InputStream stream) throws IOException;
 
+  /**
+   * Returns continuation token from server response based on Endpoint used.
+   * @param result response from server
+   * @return continuation token
+   */
   public abstract String getContinuationFromResponse(AbfsHttpOperation result);
 
+  /**
+   * Returns user-defined metadata from server response based on Endpoint used.
+   * @param result response from server
+   * @return user-defined metadata key-value pairs
+   * @throws InvalidFileSystemPropertyException if parsing fails
+   * @throws InvalidAbfsRestOperationException if parsing fails
+   */
   public abstract Hashtable<String, String> getXMSProperties(AbfsHttpOperation result)
       throws InvalidFileSystemPropertyException,
       InvalidAbfsRestOperationException;
 
+  /**
+   * Encode attribute with encoding based on Endpoint used.
+   * @param value to be encoded
+   * @return encoded value
+   * @throws UnsupportedEncodingException if encoding fails
+   */
   public abstract byte[] encodeAttribute(String value) throws UnsupportedEncodingException;
 
+  /**
+   * Decode attribute with decoding based on Endpoint used.
+   * @param value to be decoded
+   * @return decoded value
+   * @throws UnsupportedEncodingException if decoding fails
+   */
   public abstract String decodeAttribute(byte[] value) throws UnsupportedEncodingException;
 }
