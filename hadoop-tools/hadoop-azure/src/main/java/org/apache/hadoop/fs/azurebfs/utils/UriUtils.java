@@ -182,7 +182,7 @@ public final class UriUtils {
    */
   public static URL changeUrlFromBlobToDfs(URL url) throws InvalidUriException {
     try {
-      url = new URL(url.toString().replace(ABFS_BLOB_DOMAIN_NAME, ABFS_DFS_DOMAIN_NAME));
+      url = new URL(replacedUrl(url.toString(), ABFS_BLOB_DOMAIN_NAME, ABFS_DFS_DOMAIN_NAME));
     } catch (MalformedURLException ex) {
       throw new InvalidUriException(url.toString());
     }
@@ -198,11 +198,27 @@ public final class UriUtils {
    */
   public static URL changeUrlFromDfsToBlob(URL url) throws InvalidUriException {
     try {
-      url = new URL(url.toString().replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME));
+      url = new URL(replacedUrl(url.toString(), ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME));
     } catch (MalformedURLException ex) {
       throw new InvalidUriException(url.toString());
     }
     return url;
+  }
+
+  private static String replacedUrl(String baseUrl, String oldString, String newString) {
+    int startIndex = baseUrl.toString().indexOf("//") + 2;
+    int endIndex = baseUrl.toString().indexOf("/", startIndex);
+    if (baseUrl == null || oldString == null || newString == null ||
+        startIndex < 0 ||endIndex > baseUrl.length() || startIndex > endIndex) {
+      throw new IllegalArgumentException("Invalid input or indices");
+    }
+    StringBuilder sb = new StringBuilder(baseUrl);
+    int targetIndex = sb.indexOf(oldString, startIndex);
+    if (targetIndex == -1 || targetIndex >= endIndex) {
+      return baseUrl; // target not found within the specified range
+    }
+    sb.replace(targetIndex, targetIndex + oldString.length(), newString);
+    return sb.toString();
   }
 
   private UriUtils() {

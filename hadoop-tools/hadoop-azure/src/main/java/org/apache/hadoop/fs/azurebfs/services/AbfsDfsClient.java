@@ -19,16 +19,25 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
@@ -40,7 +49,11 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidFileSystemPropertyException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
+import org.apache.hadoop.fs.azurebfs.contracts.services.DfsListResultSchema;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
@@ -1268,7 +1281,115 @@ public class AbfsDfsClient extends AbfsClient {
   @Override
   public boolean checkUserError(int responseStatusCode) {
     return (responseStatusCode >= HttpURLConnection.HTTP_BAD_REQUEST
-        && responseStatusCode < HttpURLConnection.HTTP_INTERNAL_ERROR);
+        && responseStatusCode < HttpURLConnection.HTTP_INTERNAL_ERROR
+        && responseStatusCode != HttpURLConnection.HTTP_CONFLICT);
+  }
+
+  /**
+   * Get the continuation token from the response from DFS Endpoint Listing.
+   * Continuation Token will be present as a response header.
+   * @param result The response from the server.
+   * @return The continuation token.
+   */
+  @Override
+  public String getContinuationFromResponse(AbfsHttpOperation result) {
+    return result.getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+  }
+
+  @Override
+  public Hashtable<String, String> getXMSProperties(AbfsHttpOperation result)
+      throws InvalidFileSystemPropertyException, InvalidAbfsRestOperationException {
+    return parseCommaSeparatedXmsProperties(result.getResponseHeader(X_MS_PROPERTIES));
+  }
+
+  /**
+   * Parse the list file response
+   * @param stream InputStream contains the list results.
+   * @throws IOException
+   */
+  @Override
+  public ListResultSchema parseListPathResults(final InputStream stream) throws IOException {
+    DfsListResultSchema listResultSchema;
+    try {
+      final ObjectMapper objectMapper = new ObjectMapper();
+      listResultSchema = objectMapper.readValue(stream, DfsListResultSchema.class);
+    } catch (IOException ex) {
+      LOG.error("Unable to deserialize list results", ex);
+      throw ex;
+    }
+    return listResultSchema;
+  }
+
+  @Override
+  public List<String> parseBlockListResponse(final InputStream stream) throws IOException {
+    return null;
+  }
+
+  /**
+   * When the request fails, this function is used to parse the responseAbfsHttpClient.LOG.debug("ExpectedError: ", ex);
+   * and extract the storageErrorCode and storageErrorMessage.  Any errors
+   * encountered while attempting to process the error response are logged,
+   * but otherwise ignored.
+   *
+   * For storage errors, the response body *usually* has the following format:
+   *
+   * {
+   *   "error":
+   *   {
+   *     "code": "string",
+   *     "message": "string"
+   *   }
+   * }
+   *
+   */
+  @Override
+  public StorageErrorResponseSchema processStorageErrorResponse(final InputStream stream) throws IOException {
+    String storageErrorCode = "", storageErrorMessage = "", expectedAppendPos = "";
+    try {
+      JsonFactory jf = new JsonFactory();
+      try (JsonParser jp = jf.createParser(stream)) {
+        String fieldName, fieldValue;
+        jp.nextToken();  // START_OBJECT - {
+        jp.nextToken();  // FIELD_NAME - "error":
+        jp.nextToken();  // START_OBJECT - {
+        jp.nextToken();
+        while (jp.hasCurrentToken()) {
+          if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
+            fieldName = jp.getCurrentName();
+            jp.nextToken();
+            fieldValue = jp.getText();
+            switch (fieldName) {
+            case "code":
+              storageErrorCode = fieldValue;
+              break;
+            case "message":
+              storageErrorMessage = fieldValue;
+              break;
+            case "ExpectedAppendPos":
+              expectedAppendPos = fieldValue;
+              break;
+            default:
+              break;
+            }
+          }
+          jp.nextToken();
+        }
+      }
+    } catch (IOException e) {
+      throw e;
+    }
+    return new StorageErrorResponseSchema(storageErrorCode, storageErrorMessage, expectedAppendPos);
+  }
+
+  @Override
+  public byte[] encodeAttribute(String value) throws
+      UnsupportedEncodingException {
+    return value.getBytes(XMS_PROPERTIES_ENCODING_ASCII);
+  }
+
+  @Override
+  public String decodeAttribute(byte[] value) throws UnsupportedEncodingException {
+    return new String(value, XMS_PROPERTIES_ENCODING_ASCII);
   }
 
   private String convertXmsPropertiesToCommaSeparatedString(final Map<String,
@@ -1300,5 +1421,42 @@ public class AbfsDfsClient extends AbfsClient {
     }
 
     return commaSeparatedProperties.toString();
+  }
+  private Hashtable<String, String> parseCommaSeparatedXmsProperties(String xMsProperties) throws
+      InvalidFileSystemPropertyException, InvalidAbfsRestOperationException {
+    Hashtable<String, String> properties = new Hashtable<>();
+
+    final CharsetDecoder decoder = Charset.forName(XMS_PROPERTIES_ENCODING_ASCII).newDecoder();
+
+    if (xMsProperties != null && !xMsProperties.isEmpty()) {
+      String[] userProperties = xMsProperties.split(AbfsHttpConstants.COMMA);
+
+      if (userProperties.length == 0) {
+        return properties;
+      }
+
+      for (String property : userProperties) {
+        if (property.isEmpty()) {
+          throw new InvalidFileSystemPropertyException(xMsProperties);
+        }
+
+        String[] nameValue = property.split(AbfsHttpConstants.EQUAL, 2);
+        if (nameValue.length != 2) {
+          throw new InvalidFileSystemPropertyException(xMsProperties);
+        }
+
+        byte[] decodedValue = Base64.decode(nameValue[1]);
+
+        final String value;
+        try {
+          value = decoder.decode(ByteBuffer.wrap(decodedValue)).toString();
+        } catch (CharacterCodingException ex) {
+          throw new InvalidAbfsRestOperationException(ex);
+        }
+        properties.put(nameValue[0], value);
+      }
+    }
+
+    return properties;
   }
 }

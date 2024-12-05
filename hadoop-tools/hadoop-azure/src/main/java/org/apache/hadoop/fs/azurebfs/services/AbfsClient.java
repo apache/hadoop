@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
@@ -48,7 +49,11 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidFileSystemPropertyException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
@@ -383,7 +388,7 @@ public abstract class AbfsClient implements Closeable {
    * @return common request headers
    */
   protected List<AbfsHttpHeader> createCommonHeaders(ApiVersion xMsVersion) {
-    final List<AbfsHttpHeader> requestHeaders = new ArrayList<AbfsHttpHeader>();
+    final List<AbfsHttpHeader> requestHeaders = new ArrayList<>();
     requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, xMsVersion.toString()));
     requestHeaders.add(new AbfsHttpHeader(ACCEPT_CHARSET, UTF_8));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, EMPTY_STRING));
@@ -624,7 +629,7 @@ public abstract class AbfsClient implements Closeable {
    * @param result executed rest operation containing response from server.
    * @return True if the path is a directory, False otherwise.
    */
-  protected abstract boolean checkIsDir(AbfsHttpOperation result);
+  public abstract boolean checkIsDir(AbfsHttpOperation result);
 
   /**
    * Creates a rest operation for rename.
@@ -1616,4 +1621,20 @@ public abstract class AbfsClient implements Closeable {
   protected boolean isRenameResilience() {
     return renameResilience;
   }
+
+  public abstract ListResultSchema parseListPathResults(final InputStream stream) throws IOException;
+
+  public abstract List<String> parseBlockListResponse(final InputStream stream) throws IOException;
+
+  public abstract StorageErrorResponseSchema processStorageErrorResponse(final InputStream stream) throws IOException;
+
+  public abstract String getContinuationFromResponse(AbfsHttpOperation result);
+
+  public abstract Hashtable<String, String> getXMSProperties(AbfsHttpOperation result)
+      throws InvalidFileSystemPropertyException,
+      InvalidAbfsRestOperationException;
+
+  public abstract byte[] encodeAttribute(String value) throws UnsupportedEncodingException;
+
+  public abstract String decodeAttribute(byte[] value) throws UnsupportedEncodingException;
 }

@@ -225,7 +225,7 @@ public class AzureBlobFileSystem extends FileSystem
      */
     try {
       abfsConfiguration.validateConfiguredServiceType(
-          tryGetIsNamespaceEnabled(new TracingContext(initFSTracingContext)));
+          tryGetIsNamespaceEnabled(initFSTracingContext));
     } catch (InvalidConfigurationValueException ex) {
       LOG.debug("File system configured with Invalid Service Type", ex);
       throw ex;
@@ -239,16 +239,19 @@ public class AzureBlobFileSystem extends FileSystem
      * Fail initialization of filesystem if the configs are provided. CPK is of
      * two types: GLOBAL_KEY, and ENCRYPTION_CONTEXT.
      */
-    if ((isEncryptionContextCPK(abfsConfiguration) || isGlobalKeyCPK(
-        abfsConfiguration))
-        && !getIsNamespaceEnabled(new TracingContext(initFSTracingContext))) {
-      /*
-       * Close the filesystem gracefully before throwing exception. Graceful close
-       * will ensure that all resources are released properly.
-       */
-      close();
-      throw new PathIOException(uri.getPath(),
-          CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE);
+    try {
+      if ((isEncryptionContextCPK(abfsConfiguration) || isGlobalKeyCPK(
+          abfsConfiguration)) && !tryGetIsNamespaceEnabled(new TracingContext(
+              initFSTracingContext))) {
+        throw new PathIOException(uri.getPath(),
+            CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE);
+      }
+    } catch (InvalidConfigurationValueException ex) {
+      LOG.debug("Non-Hierarchical Namespace Accounts Cannot Have CPK Enabled", ex);
+      throw ex;
+    } catch (AzureBlobFileSystemException ex) {
+      LOG.debug("Failed to determine account type for service type validation", ex);
+      throw new InvalidConfigurationValueException(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, ex);
     }
 
     // Create the file system if it does not exist.
@@ -703,7 +706,7 @@ public class AzureBlobFileSystem extends FileSystem
   private void trailingPeriodCheck(Path path) throws IllegalArgumentException {
     while (!path.isRoot()) {
       String pathToString = path.toString();
-      if (pathToString.length() != 0) {
+      if (!pathToString.isEmpty()) {
         if (pathToString.charAt(pathToString.length() - 1) == '.') {
           throw new IllegalArgumentException(
               "ABFS does not allow files or directories to end with a dot.");

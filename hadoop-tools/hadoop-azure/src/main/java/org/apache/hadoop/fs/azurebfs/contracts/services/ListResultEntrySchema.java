@@ -18,251 +18,75 @@
 
 package org.apache.hadoop.fs.azurebfs.contracts.services;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import org.apache.hadoop.classification.InterfaceStability;
-
 /**
  * The ListResultEntrySchema model.
  */
-@InterfaceStability.Evolving
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class ListResultEntrySchema {
-  /**
-   * The name property.
-   */
-  @JsonProperty(value = "name")
-  private String name;
-
-  /**
-   * The isDirectory property.
-   */
-  @JsonProperty(value = "isDirectory")
-  private Boolean isDirectory;
-
-  /**
-   * The lastModified property.
-   */
-  @JsonProperty(value = "lastModified")
-  private String lastModified;
-
-  /**
-   * The eTag property.
-   */
-  @JsonProperty(value = "etag")
-  private String eTag;
-
-  /**
-   * The contentLength property.
-   */
-  @JsonProperty(value = "contentLength")
-  private Long contentLength;
-
-  /**
-   * The owner property.
-   */
-  @JsonProperty(value = "owner")
-  private String owner;
-
-  /**
-   * The group property.
-   */
-  @JsonProperty(value = "group")
-  private String group;
-
-  /**
-   * The permissions property.
-   */
-  @JsonProperty(value = "permissions")
-  private String permissions;
-
-  /**
-   *  The encryption context property
-   */
-  @JsonProperty(value = "EncryptionContext")
-  private String xMsEncryptionContext;
-
-  /**
-   * The customer-provided encryption-256 value
-   * */
-  @JsonProperty(value = "CustomerProvidedKeySha256")
-  private String customerProvidedKeySha256;
+public interface ListResultEntrySchema {
 
   /**
    * Get the name value.
-   *
    * @return the name value
    */
-  public String name() {
-    return name;
-  }
+  String name();
 
   /**
    * Set the name value.
-   *
    * @param name the name value to set
-   * @return the ListEntrySchema object itself.
+   * @return the ListResultEntrySchema object itself.
    */
-  public ListResultEntrySchema withName(String name) {
-    this.name = name;
-    return this;
-  }
+  ListResultEntrySchema withName(String name);
 
   /**
    * Get the isDirectory value.
-   *
    * @return the isDirectory value
    */
-  public Boolean isDirectory() {
-    return isDirectory;
-  }
-
-  /**
-   * Set the isDirectory value.
-   *
-   * @param isDirectory the isDirectory value to set
-   * @return the ListEntrySchema object itself.
-   */
-  public ListResultEntrySchema withIsDirectory(final Boolean isDirectory) {
-    this.isDirectory = isDirectory;
-    return this;
-  }
+  Boolean isDirectory();
 
   /**
    * Get the lastModified value.
-   *
    * @return the lastModified value
    */
-  public String lastModified() {
-    return lastModified;
-  }
+  String lastModified();
 
   /**
-   * Set the lastModified value.
-   *
-   * @param lastModified the lastModified value to set
-   * @return the ListEntrySchema object itself.
+   * Get the eTag value.
+   * @return the eTag value
    */
-  public ListResultEntrySchema withLastModified(String lastModified) {
-    this.lastModified = lastModified;
-    return this;
-  }
-
-  /**
-   * Get the etag value.
-   *
-   * @return the etag value
-   */
-  public String eTag() {
-    return eTag;
-  }
-
-  /**
-   * Set the eTag value.
-   *
-   * @param eTag the eTag value to set
-   * @return the ListEntrySchema object itself.
-   */
-  public ListResultEntrySchema withETag(final String eTag) {
-    this.eTag = eTag;
-    return this;
-  }
+  String eTag();
 
   /**
    * Get the contentLength value.
-   *
    * @return the contentLength value
    */
-  public Long contentLength() {
-    return contentLength;
-  }
+  Long contentLength();
 
   /**
-   * Set the contentLength value.
-   *
-   * @param contentLength the contentLength value to set
-   * @return the ListEntrySchema object itself.
-   */
-  public ListResultEntrySchema withContentLength(final Long contentLength) {
-    this.contentLength = contentLength;
-    return this;
-  }
-
-  /**
-   *
-   Get the owner value.
-   *
+   * Get the owner value.
    * @return the owner value
    */
-  public String owner() {
-    return owner;
-  }
-
-  /**
-   * Set the owner value.
-   *
-   * @param owner the owner value to set
-   * @return the ListEntrySchema object itself.
-   */
-  public ListResultEntrySchema withOwner(final String owner) {
-    this.owner = owner;
-    return this;
-  }
+  String owner();
 
   /**
    * Get the group value.
-   *
    * @return the group value
    */
-  public String group() {
-    return group;
-  }
-
-  /**
-   * Set the group value.
-   *
-   * @param group the group value to set
-   * @return the ListEntrySchema object itself.
-   */
-  public ListResultEntrySchema withGroup(final String group) {
-    this.group = group;
-    return this;
-  }
+  String group();
 
   /**
    * Get the permissions value.
-   *
    * @return the permissions value
    */
-  public String permissions() {
-    return permissions;
-  }
+  String permissions();
 
   /**
-   * Set the permissions value.
-   *
-   * @param permissions the permissions value to set
-   * @return the ListEntrySchema object itself.
+   * Get the encryption context value.
+   * @return the encryption context value
    */
-  public ListResultEntrySchema withPermissions(final String permissions) {
-    this.permissions = permissions;
-    return this;
-  }
+  String getXMsEncryptionContext();
 
   /**
-   * Get the x-ms-encryption-context value.
-   * @return the x-ms-encryption-context value.
-   * */
-  public String getXMsEncryptionContext() {
-    return xMsEncryptionContext;
-  }
-
-  /**
-   * Get the customer-provided sha-256 key
-   * @return the x-ms-encryption-key-sha256 value used by client.
-   * */
-  public String getCustomerProvidedKeySha256() {
-    return customerProvidedKeySha256;
-  }
+   * Get the customer-provided encryption-256 value.
+   * @return the customer-provided encryption-256 value
+   */
+  String getCustomerProvidedKeySha256();
 }
