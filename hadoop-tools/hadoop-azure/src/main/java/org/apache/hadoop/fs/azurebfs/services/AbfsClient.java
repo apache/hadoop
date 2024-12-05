@@ -1628,7 +1628,7 @@ public abstract class AbfsClient implements Closeable {
    * @return ListResultSchema
    * @throws IOException if parsing fails
    */
-  public abstract ListResultSchema parseListPathResults(final InputStream stream) throws IOException;
+  public abstract ListResultSchema parseListPathResults(InputStream stream) throws IOException;
 
   /**
    * Parses response of Get Block List from server based on Endpoint used.
@@ -1636,7 +1636,7 @@ public abstract class AbfsClient implements Closeable {
    * @return List of block IDs
    * @throws IOException if parsing fails
    */
-  public abstract List<String> parseBlockListResponse(final InputStream stream) throws IOException;
+  public abstract List<String> parseBlockListResponse(InputStream stream) throws IOException;
 
   /**
    * Parses response from ErrorStream returned by server based on Endpoint used.
@@ -1644,7 +1644,7 @@ public abstract class AbfsClient implements Closeable {
    * @return StorageErrorResponseSchema
    * @throws IOException if parsing fails
    */
-  public abstract StorageErrorResponseSchema processStorageErrorResponse(final InputStream stream) throws IOException;
+  public abstract StorageErrorResponseSchema processStorageErrorResponse(InputStream stream) throws IOException;
 
   /**
    * Returns continuation token from server response based on Endpoint used.

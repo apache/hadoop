@@ -62,6 +62,7 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
    * @param requestHeaders The HTTP request headers.READ_TIMEOUT
    * @param connectionTimeout The Connection Timeout value to be used while establishing http connection
    * @param readTimeout The Read Timeout value to be used with http connection while making a request
+   * @param abfsClient The AbfsClient instance.
    * @throws IOException if an error occurs.
    */
   public AbfsJdkHttpOperation(final URL url,

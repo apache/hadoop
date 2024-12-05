@@ -90,6 +90,8 @@ public class BlobListXmlParser extends DefaultHandler {
   /**
    * Set an object of {@link BlobListResultSchema} to populate from the parsing.
    * Set the url for which GetBlobList API is called.
+   * @param listResultSchema Object to populate from the parsing.
+   * @param url URL for which GetBlobList API is called.
    */
   public BlobListXmlParser(final BlobListResultSchema listResultSchema, final String url) {
     this.listResultSchema = listResultSchema;

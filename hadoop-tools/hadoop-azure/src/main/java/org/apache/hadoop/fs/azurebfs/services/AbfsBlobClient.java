@@ -27,7 +27,6 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
@@ -1441,8 +1440,8 @@ public class AbfsBlobClient extends AbfsClient {
 
   private static String decodeMetadataAttribute(String encoded)
       throws UnsupportedEncodingException {
-    return encoded == null ? null :
-        java.net.URLDecoder.decode(encoded, StandardCharsets.UTF_8.name());
+    return encoded == null ? null
+        : java.net.URLDecoder.decode(encoded, StandardCharsets.UTF_8.name());
   }
 
   private boolean isNonEmptyListing(String path,

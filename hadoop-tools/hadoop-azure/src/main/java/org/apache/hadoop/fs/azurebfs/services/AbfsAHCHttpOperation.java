@@ -403,7 +403,7 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
       if (header.getName().equals(name)) {
         String val = header.getValue();
         val = val == null ? EMPTY_STRING : val;
-        if(EMPTY_STRING.equals(val)) {
+        if (EMPTY_STRING.equals(val)) {
           continue;
         }
         return val;

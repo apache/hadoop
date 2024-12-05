@@ -35,5 +35,5 @@ public interface ListResultSchema {
    * @param paths the paths value to set
    * @return the ListSchema object itself.
    */
-  ListResultSchema withPaths(final List<? extends ListResultEntrySchema> paths);
+  ListResultSchema withPaths(List<? extends ListResultEntrySchema> paths);
 }
