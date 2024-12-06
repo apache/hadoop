@@ -32,10 +32,10 @@ import org.apache.hadoop.fs.impl.prefetch.BlockManager;
 import org.apache.hadoop.fs.impl.prefetch.BlockManagerParameters;
 import org.apache.hadoop.fs.impl.prefetch.BufferData;
 import org.apache.hadoop.fs.impl.prefetch.FilePosition;
-import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.streams.StreamReadCallbacks;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PREFETCH_MAX_BLOCKS_COUNT;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_MAX_BLOCKS_COUNT;
@@ -75,7 +75,7 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
   public S3ACachingInputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
-      S3AInputStream.InputStreamCallbacks client,
+      StreamReadCallbacks client,
       S3AInputStreamStatistics streamStatistics,
       Configuration conf,
       LocalDirAllocator localDirAllocator) {

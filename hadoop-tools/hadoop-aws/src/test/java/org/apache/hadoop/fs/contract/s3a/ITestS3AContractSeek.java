@@ -84,7 +84,7 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
    * which S3A Supports.
    * @return a list of seek policies to test.
    */
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="policy={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL, Default_JSSE},

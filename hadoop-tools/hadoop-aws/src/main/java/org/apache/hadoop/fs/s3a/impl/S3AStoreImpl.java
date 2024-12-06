@@ -57,7 +57,10 @@ import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
 import software.amazon.awssdk.transfer.s3.model.FileUpload;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.ProgressableProgressListener;
 import org.apache.hadoop.fs.s3a.Retries;
@@ -74,11 +77,14 @@ import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
+import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.RateLimiting;
 import org.apache.hadoop.util.functional.Tuples;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
+import static org.apache.hadoop.fs.s3a.Constants.HADOOP_TMP_DIR;
 import static org.apache.hadoop.fs.s3a.S3AUtils.extractException;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getPutRequestLength;
 import static org.apache.hadoop.fs.s3a.S3AUtils.isThrottleException;
@@ -109,7 +115,8 @@ import static org.apache.hadoop.util.Preconditions.checkArgument;
  * This is where lower level storage operations are intended
  * to move.
  */
-public class S3AStoreImpl implements S3AStore {
+public class S3AStoreImpl extends CompositeService
+    implements S3AStore {
 
   private static final Logger LOG = LoggerFactory.getLogger(S3AStoreImpl.class);
 
@@ -165,6 +172,11 @@ public class S3AStoreImpl implements S3AStore {
    */
   private final FileSystem.Statistics fsStatistics;
 
+  /**
+   * Allocator of local FS storage.
+   */
+  private LocalDirAllocator directoryAllocator;
+
   /** Constructor to create S3A store. */
   S3AStoreImpl(StoreContextFactory storeContextFactory,
       ClientManager clientManager,
@@ -176,6 +188,7 @@ public class S3AStoreImpl implements S3AStore {
       RateLimiting writeRateLimiter,
       AuditSpanSource<AuditSpanS3A> auditSpanSource,
       @Nullable FileSystem.Statistics fsStatistics) {
+    super("S3AStore");
     this.storeContextFactory = requireNonNull(storeContextFactory);
     this.clientManager = requireNonNull(clientManager);
     this.durationTrackerFactory = requireNonNull(durationTrackerFactory);
@@ -193,8 +206,24 @@ public class S3AStoreImpl implements S3AStore {
   }
 
   @Override
-  public void close() {
+  protected void serviceStart() throws Exception {
+    super.serviceStart();
+    initLocalDirAllocator();
+  }
+
+  @Override
+  protected void serviceStop() throws Exception {
+    super.serviceStop();
     clientManager.close();
+  }
+
+  /**
+   * Initialize dir allocator if not already initialized.
+   */
+  private void initLocalDirAllocator() {
+    String bufferDir = getConfig().get(BUFFER_DIR) != null
+        ? BUFFER_DIR : HADOOP_TMP_DIR;
+    directoryAllocator = new LocalDirAllocator(bufferDir);
   }
 
   /** Acquire write capacity for rate limiting {@inheritDoc}. */
@@ -806,6 +835,41 @@ public class S3AStoreImpl implements S3AStore {
   public CompleteMultipartUploadResponse completeMultipartUpload(
       CompleteMultipartUploadRequest request) {
     return getS3Client().completeMultipartUpload(request);
+  }
+
+
+  /**
+   * Get the directory allocator.
+   * @return the directory allocator
+   */
+  @Override
+  public LocalDirAllocator getDirectoryAllocator() {
+    return directoryAllocator;
+  }
+
+  /**
+   * Demand create the directory allocator, then create a temporary file.
+   * This does not mark the file for deletion when a process exits.
+   * Pass in a file size of {@link LocalDirAllocator#SIZE_UNKNOWN} if the
+   * size is unknown.
+   * {@link LocalDirAllocator#createTmpFileForWrite(String, long, Configuration)}.
+   * @param pathStr prefix for the temporary file
+   * @param size the size of the file that is going to be written
+   * @param conf the Configuration object
+   * @return a unique temporary file
+   * @throws IOException IO problems
+   */
+  @Override
+  public File createTemporaryFileForWriting(String pathStr,
+      long size,
+      Configuration conf) throws IOException {
+    requireNonNull(directoryAllocator, "directory allocator not initialized");
+    Path path = directoryAllocator.getLocalPathForWrite(pathStr,
+        size, conf);
+    File dir = new File(path.getParent().toUri().getPath());
+    String prefix = path.getName();
+    // create a temp file on this directory
+    return File.createTempFile(prefix, null, dir);
   }
 
 }

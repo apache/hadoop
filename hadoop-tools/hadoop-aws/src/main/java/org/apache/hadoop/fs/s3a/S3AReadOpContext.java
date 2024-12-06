@@ -34,7 +34,7 @@ import org.apache.hadoop.util.Preconditions;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Read-specific operation context struct.
+ * Read-specific operation context structure.
  */
 public class S3AReadOpContext extends S3AOpContext {
 

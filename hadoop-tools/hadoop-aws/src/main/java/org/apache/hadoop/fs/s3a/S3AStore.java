@@ -45,6 +45,8 @@ import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.impl.ClientManager;
@@ -54,6 +56,7 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.service.Service;
 
 /**
  * Interface for the S3A Store;
@@ -63,10 +66,14 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
  * The {@link ClientManager} interface is used to create the AWS clients;
  * the base implementation forwards to the implementation of this interface
  * passed in at construction time.
+ * <p>
+ * The interface extends the Hadoop {@link Service} interface
+ * and follows its lifecycle: it MUST NOT be used until
+ * {@link Service#init(Configuration)} has been invoked.
  */
 @InterfaceAudience.LimitedPrivate("Extensions")
 @InterfaceStability.Unstable
-public interface S3AStore extends IOStatisticsSource, ClientManager {
+public interface S3AStore extends Service, IOStatisticsSource, ClientManager {
 
   /**
    * Acquire write capacity for operations.
@@ -302,4 +309,26 @@ public interface S3AStore extends IOStatisticsSource, ClientManager {
   @Retries.OnceRaw
   CompleteMultipartUploadResponse completeMultipartUpload(
       CompleteMultipartUploadRequest request);
+
+  /**
+   * Get the directory allocator.
+   * @return the directory allocator
+   */
+  LocalDirAllocator getDirectoryAllocator();
+
+  /**
+   * Demand create the directory allocator, then create a temporary file.
+   * This does not mark the file for deletion when a process exits.
+   * Pass in a file size of {@link LocalDirAllocator#SIZE_UNKNOWN} if the
+   * size is unknown.
+   * {@link LocalDirAllocator#createTmpFileForWrite(String, long, Configuration)}.
+   * @param pathStr prefix for the temporary file
+   * @param size the size of the file that is going to be written
+   * @param conf the Configuration object
+   * @return a unique temporary file
+   * @throws IOException IO problems
+   */
+  File createTemporaryFileForWriting(String pathStr,
+      long size,
+      Configuration conf) throws IOException;
 }

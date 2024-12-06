@@ -76,8 +76,4 @@ public interface ClientManager extends Closeable {
    */
   S3Client getOrCreateAsyncS3ClientUnchecked() throws UncheckedIOException;
 
-  /**
-   * Close operation is required to not raise exceptions.
-   */
-  void close();
 }

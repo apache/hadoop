@@ -52,7 +52,6 @@ import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
-import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.VectoredIOContext;
@@ -62,6 +61,7 @@ import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.statistics.impl.CountingChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.streams.StreamReadCallbacks;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -187,7 +187,7 @@ public final class S3APrefetchFakes {
         AbortableInputStream.create(new ByteArrayInputStream(buffer), () -> {}));
   }
 
-  public static S3AInputStream.InputStreamCallbacks createInputStreamCallbacks(
+  public static StreamReadCallbacks createInputStreamCallbacks(
       String bucket) {
 
     GetObjectResponse objectResponse = GetObjectResponse.builder()
@@ -197,7 +197,7 @@ public final class S3APrefetchFakes {
     ResponseInputStream<GetObjectResponse> responseInputStream =
         createS3ObjectInputStream(objectResponse, new byte[8]);
 
-    return new S3AInputStream.InputStreamCallbacks() {
+    return new StreamReadCallbacks() {
       @Override
       public ResponseInputStream<GetObjectResponse> getObject(GetObjectRequest request) {
         return responseInputStream;
@@ -238,7 +238,7 @@ public final class S3APrefetchFakes {
         prefetchBlockSize,
         prefetchBlockCount);
 
-    S3AInputStream.InputStreamCallbacks callbacks =
+    StreamReadCallbacks callbacks =
         createInputStreamCallbacks(bucket);
     S3AInputStreamStatistics stats =
         s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics();
@@ -289,7 +289,7 @@ public final class S3APrefetchFakes {
     public FakeS3AInMemoryInputStream(
         S3AReadOpContext context,
         S3ObjectAttributes s3Attributes,
-        S3AInputStream.InputStreamCallbacks client,
+        StreamReadCallbacks client,
         S3AInputStreamStatistics streamStatistics) {
       super(context, s3Attributes, client, streamStatistics);
     }
@@ -391,7 +391,7 @@ public final class S3APrefetchFakes {
     public FakeS3ACachingInputStream(
         S3AReadOpContext context,
         S3ObjectAttributes s3Attributes,
-        S3AInputStream.InputStreamCallbacks client,
+        StreamReadCallbacks client,
         S3AInputStreamStatistics streamStatistics) {
       super(context, s3Attributes, client, streamStatistics, CONF,
           new LocalDirAllocator(

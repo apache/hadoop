@@ -36,11 +36,11 @@ import org.apache.hadoop.fs.impl.prefetch.BlockData;
 import org.apache.hadoop.fs.impl.prefetch.FilePosition;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
-import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.streams.StreamReadCallbacks;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
@@ -98,7 +98,7 @@ public abstract class S3ARemoteInputStream
   private S3ObjectAttributes s3Attributes;
 
   /** Callbacks used for interacting with the underlying S3 client. */
-  private S3AInputStream.InputStreamCallbacks client;
+  private StreamReadCallbacks client;
 
   /** Used for reporting input stream access statistics. */
   private final S3AInputStreamStatistics streamStatistics;
@@ -124,7 +124,7 @@ public abstract class S3ARemoteInputStream
   public S3ARemoteInputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
-      S3AInputStream.InputStreamCallbacks client,
+      StreamReadCallbacks client,
       S3AInputStreamStatistics streamStatistics) {
 
     this.context = requireNonNull(context);
