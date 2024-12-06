@@ -127,8 +127,13 @@ class SaslParticipant {
   }
 
   byte[] createFirstMessage() throws SaslException {
-    return SaslMechanismFactory.isDefaultMechanism(MECHANISM_ARRAY[0]) ? EMPTY_BYTE_ARRAY
-        : evaluateChallengeOrResponse(EMPTY_BYTE_ARRAY);
+    if (saslClient != null) {
+      return saslClient.hasInitialResponse()
+          ? saslClient.evaluateChallenge(EMPTY_BYTE_ARRAY)
+          : EMPTY_BYTE_ARRAY;
+    }
+    throw new IllegalStateException(
+        "createFirstMessage must only be called for clients");
   }
 
   /**
