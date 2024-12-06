@@ -49,8 +49,8 @@ public final class SaslMechanismFactory {
     LOG.debug("{} = {} (conf)", HADOOP_SECURITY_SASL_MECHANISM_KEY, confValue);
 
     // conf has a higher precedence than conf
-    mechanism = confValue != null ? envValue
-        : envValue != null ? confValue
+    mechanism = confValue != null ? confValue
+        : envValue != null ? envValue
         : HADOOP_SECURITY_SASL_MECHANISM_DEFAULT;
     LOG.debug("SASL_MECHANISM = {} (effective)", mechanism);
     return mechanism;
