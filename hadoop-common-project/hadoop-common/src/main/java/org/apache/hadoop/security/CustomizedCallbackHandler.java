@@ -47,7 +47,7 @@ public interface CustomizedCallbackHandler {
 
       //cache miss
       final Class<?> clazz = conf.getClass(key, DefaultHandler.class);
-      LOG.info("{} = {}", key, clazz);
+      LOG.debug("{} = {}", key, clazz);
       if (clazz == DefaultHandler.class) {
         return DefaultHandler.INSTANCE;
       }
