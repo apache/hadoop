@@ -48,9 +48,9 @@ public final class SaslMechanismFactory {
         HADOOP_SECURITY_SASL_MECHANISM_DEFAULT);
     LOG.debug("{} = {} (conf)", HADOOP_SECURITY_SASL_MECHANISM_KEY, confValue);
 
-    // env has a higher precedence than conf
-    mechanism = envValue != null ? envValue
-        : confValue != null ? confValue
+    // conf has a higher precedence than conf
+    mechanism = confValue != null ? envValue
+        : envValue != null ? confValue
         : HADOOP_SECURITY_SASL_MECHANISM_DEFAULT;
     LOG.debug("SASL_MECHANISM = {} (effective)", mechanism);
     return mechanism;
@@ -63,6 +63,10 @@ public final class SaslMechanismFactory {
 
   public static boolean isDefaultMechanism(String saslMechanism) {
     return HADOOP_SECURITY_SASL_MECHANISM_DEFAULT.equals(saslMechanism);
+  }
+
+  public static boolean isDigestMechanism(String saslMechanism) {
+    return saslMechanism.startsWith("DIGEST-");
   }
 
   private SaslMechanismFactory() {}
