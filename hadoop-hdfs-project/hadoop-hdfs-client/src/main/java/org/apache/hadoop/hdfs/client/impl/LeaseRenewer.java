@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.client.impl;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -248,14 +249,7 @@ public class LeaseRenewer {
     //client not found, add it
     dfsclients.add(dfsc);
 
-    //update renewal time
-    final int hdfsTimeout = dfsc.getConf().getHdfsTimeout();
-    if (hdfsTimeout > 0) {
-      final long half = hdfsTimeout/2;
-      if (half < renewal) {
-        this.renewal = half;
-      }
-    }
+    renewal = getNewRenewalIntervalMs(dfsclients);
   }
 
   private synchronized void clearClients() {
@@ -378,17 +372,37 @@ public class LeaseRenewer {
       }
     }
 
-    //update renewal time
-    if (renewal == dfsc.getConf().getHdfsTimeout()/2) {
-      long min = HdfsConstants.LEASE_SOFTLIMIT_PERIOD;
-      for(DFSClient c : dfsclients) {
-        final int timeout = c.getConf().getHdfsTimeout();
-        if (timeout > 0 && timeout < min) {
-          min = timeout;
+    renewal = getNewRenewalIntervalMs(dfsclients);
+  }
+
+  @VisibleForTesting
+  static long getNewRenewalIntervalMs(Collection<DFSClient> dfsClients) {
+    // Update renewal time to the first applicable of:
+    //   1. Requested renewal time amongst all DFSClients, if requested and smaller than the default renewal interval
+    //   2. Half the HDFS timeout amongst all DFSClients, if requested and smaller than the default renewal interval
+    //   3. Default renewal time of HdfsConstants.LEASE_SOFTLIMIT_PERIOD / 2
+    // #2 exists because users with small timeouts want to find out quickly when a NameNode dies, and a small lease renewal interval will help to inform them quickly. See HDFS-278.
+    long min = HdfsConstants.LEASE_SOFTLIMIT_PERIOD / 2;
+    for (DFSClient c : dfsClients) {
+      final int newLeaseRenewalInterval = c.getConf().getLeaseRenewalIntervalMs();
+      if (newLeaseRenewalInterval > 0 && newLeaseRenewalInterval < min) {
+        min = newLeaseRenewalInterval;
+      }
+    }
+    if (min <= HdfsConstants.LEASE_SOFTLIMIT_PERIOD / 2) {
+      return min;
+    }
+
+    for (DFSClient c : dfsClients) {
+      final int hdfsTimeout = c.getConf().getHdfsTimeout();
+      if (hdfsTimeout > 0) {
+        final long half = hdfsTimeout/2;
+        if (half < min) {
+          min = half;
         }
       }
-      renewal = min/2;
     }
+    return min;
   }
 
   public void interruptAndJoin() throws InterruptedException {
