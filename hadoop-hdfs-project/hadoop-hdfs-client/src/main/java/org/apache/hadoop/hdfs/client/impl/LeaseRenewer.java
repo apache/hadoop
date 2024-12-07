@@ -378,10 +378,13 @@ public class LeaseRenewer {
   @VisibleForTesting
   static long getNewRenewalIntervalMs(Collection<DFSClient> dfsClients) {
     // Update renewal time to the first applicable of:
-    //   1. Requested renewal time amongst all DFSClients, if requested and smaller than the default renewal interval
-    //   2. Half the HDFS timeout amongst all DFSClients, if requested and smaller than the default renewal interval
+    //   1. Requested renewal time amongst all DFSClients, if requested and smaller than the default
+    //      renewal interval
+    //   2. Half the HDFS timeout amongst all DFSClients, if requested and smaller than the default
+    //      renewal interval
     //   3. Default renewal time of HdfsConstants.LEASE_SOFTLIMIT_PERIOD / 2
-    // #2 exists because users with small timeouts want to find out quickly when a NameNode dies, and a small lease renewal interval will help to inform them quickly. See HDFS-278.
+    // #2 exists because users with small timeouts want to find out quickly when a NameNode dies,
+    // and a small lease renewal interval will help to inform them quickly. See HDFS-278.
     long min = HdfsConstants.LEASE_SOFTLIMIT_PERIOD / 2;
     boolean leaseOverrideSet = false;
     for (DFSClient c : dfsClients) {
