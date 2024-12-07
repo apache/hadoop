@@ -383,13 +383,15 @@ public class LeaseRenewer {
     //   3. Default renewal time of HdfsConstants.LEASE_SOFTLIMIT_PERIOD / 2
     // #2 exists because users with small timeouts want to find out quickly when a NameNode dies, and a small lease renewal interval will help to inform them quickly. See HDFS-278.
     long min = HdfsConstants.LEASE_SOFTLIMIT_PERIOD / 2;
+    boolean leaseOverrideSet = false;
     for (DFSClient c : dfsClients) {
       final int newLeaseRenewalInterval = c.getConf().getLeaseRenewalIntervalMs();
-      if (newLeaseRenewalInterval > 0 && newLeaseRenewalInterval < min) {
+      if (newLeaseRenewalInterval > 0 && newLeaseRenewalInterval <= min) {
         min = newLeaseRenewalInterval;
+        leaseOverrideSet = true;
       }
     }
-    if (min <= HdfsConstants.LEASE_SOFTLIMIT_PERIOD / 2) {
+    if (leaseOverrideSet) {
       return min;
     }
 
