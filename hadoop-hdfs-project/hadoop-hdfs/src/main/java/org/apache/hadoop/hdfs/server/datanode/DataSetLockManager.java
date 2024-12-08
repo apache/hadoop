@@ -97,6 +97,11 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
       }
       return resources[0] + resources[1];
     } else if (resources.length == 3 && level == LockLevel.DIR) {
+      if (resources[0] == null || resources[1] == null || resources[2] == null) {
+        throw new IllegalArgumentException("acquire a null dataset lock : "
+            + resources[0] + ",volume lock :" + resources[1]
+        + ",subdir lock :" + resources[2]);
+      }
       return resources[0] + resources[1] + resources[2];
     } else {
       throw new IllegalArgumentException("lock level do not match resource");
