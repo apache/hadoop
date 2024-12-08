@@ -175,7 +175,6 @@ public class DfsClientConf {
     leaseRenewalIntervalMs = conf.getInt(
         HdfsClientConfigKeys.DFS_CLIENT_LEASE_RENEWAL_INTERVAL_KEY,
         HdfsClientConfigKeys.DFS_CLIENT_LEASE_RENEWAL_INTERVAL_DEFAULT);
-
     maxRetryAttempts = conf.getInt(
         Retry.MAX_ATTEMPTS_KEY,
         Retry.MAX_ATTEMPTS_DEFAULT);
@@ -188,7 +187,6 @@ public class DfsClientConf {
     retryIntervalForGetLastBlockLength = conf.getInt(
         Retry.INTERVAL_GET_LAST_BLOCK_LENGTH_KEY,
         Retry.INTERVAL_GET_LAST_BLOCK_LENGTH_DEFAULT);
-
     maxFailoverAttempts = conf.getInt(
         Failover.MAX_ATTEMPTS_KEY,
         Failover.MAX_ATTEMPTS_DEFAULT);
