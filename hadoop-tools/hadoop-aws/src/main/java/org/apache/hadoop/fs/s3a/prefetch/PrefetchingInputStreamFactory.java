@@ -16,13 +16,27 @@
  * limitations under the License.
  */
 
+package org.apache.hadoop.fs.s3a.prefetch;
+
+import java.io.IOException;
+
+import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStream;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStreamFactory;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectReadParameters;
+import org.apache.hadoop.service.AbstractService;
+
 /**
- * Stream factory and support.
+ * Factory for prefetching streams.
  */
+public class PrefetchingInputStreamFactory extends AbstractService
+    implements ObjectInputStreamFactory {
 
-@InterfaceAudience.LimitedPrivate("Extension Libraries")
-@InterfaceStability.Unstable
-package org.apache.hadoop.fs.s3a.streams;
+  public PrefetchingInputStreamFactory() {
+    super("PrefetchingInputStreamFactory");
+  }
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+  @Override
+  public ObjectInputStream readObject(final ObjectReadParameters parameters) throws IOException {
+    return new S3APrefetchingInputStream(parameters, getConfig());
+  }
+}

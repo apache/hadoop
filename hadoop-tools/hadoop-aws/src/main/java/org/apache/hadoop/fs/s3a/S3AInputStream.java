@@ -39,8 +39,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.impl.LeakReporter;
-import org.apache.hadoop.fs.s3a.streams.AbstractS3AInputStream;
-import org.apache.hadoop.fs.s3a.streams.FactoryStreamParameters;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStream;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectReadParameters;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -87,7 +87,7 @@ import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class S3AInputStream extends AbstractS3AInputStream implements CanSetReadahead,
+public class S3AInputStream extends ObjectInputStream implements CanSetReadahead,
         CanUnbuffer, StreamCapabilities, IOStatisticsSource {
 
   public static final String E_NEGATIVE_READAHEAD_VALUE
@@ -179,8 +179,10 @@ public class S3AInputStream extends AbstractS3AInputStream implements CanSetRead
    * Create the stream.
    * This does not attempt to open it; that is only done on the first
    * actual read() operation.
+   *
+   * @param parameters creation parameters.
    */
-  public S3AInputStream(FactoryStreamParameters parameters) {
+  public S3AInputStream(ObjectReadParameters parameters) {
 
     super(parameters);
 

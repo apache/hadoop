@@ -30,14 +30,15 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStream;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectReadParameters;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
-import org.apache.hadoop.fs.s3a.streams.StreamReadCallbacks;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStreamCallbacks;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
@@ -48,7 +49,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
  * blocks of configurable size from the underlying S3 file.
  */
 public class S3APrefetchingInputStream
-    extends FSInputStream
+    extends ObjectInputStream
     implements CanSetReadahead, StreamCapabilities, IOStatisticsSource {
 
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -74,26 +75,21 @@ public class S3APrefetchingInputStream
    */
   private S3AInputStreamStatistics inputStreamStatistics = null;
 
+
   /**
    * Initializes a new instance of the {@code S3APrefetchingInputStream} class.
    *
-   * @param context read-specific operation context.
-   * @param s3Attributes attributes of the S3 object being read.
-   * @param client callbacks used for interacting with the underlying S3 client.
-   * @param streamStatistics statistics for this stream.
+   * @param parameters creation parameters.
    * @param conf the configuration.
-   * @param localDirAllocator the local dir allocator instance retrieved from S3A FS.
-   * @throws IllegalArgumentException if context is null.
-   * @throws IllegalArgumentException if s3Attributes is null.
-   * @throws IllegalArgumentException if client is null.
+   * @throws IllegalArgumentException required parameterss are null
    */
-  public S3APrefetchingInputStream(
-      S3AReadOpContext context,
-      S3ObjectAttributes s3Attributes,
-      StreamReadCallbacks client,
-      S3AInputStreamStatistics streamStatistics,
-      Configuration conf,
-      LocalDirAllocator localDirAllocator) {
+  public S3APrefetchingInputStream(final ObjectReadParameters parameters, Configuration conf) {
+    super(parameters);
+      S3ObjectAttributes s3Attributes = parameters.getObjectAttributes();
+      ObjectInputStreamCallbacks client = parameters.getCallbacks();
+      S3AInputStreamStatistics streamStatistics = parameters.getStreamStatistics();
+    final S3AReadOpContext context = parameters.getContext();
+    LocalDirAllocator localDirAllocator = parameters.getDirectoryAllocator();
 
     Validate.checkNotNull(context, "context");
     Validate.checkNotNull(s3Attributes, "s3Attributes");
@@ -195,6 +191,21 @@ public class S3APrefetchingInputStream
       inputStream.close();
       inputStream = null;
       super.close();
+    }
+  }
+
+
+  @Override
+  protected boolean isStreamOpen() {
+    return !isClosed();
+  }
+
+  @Override
+  protected void abortInFinalizer() {
+    try {
+      close();
+    } catch (IOException ignored) {
+
     }
   }
 

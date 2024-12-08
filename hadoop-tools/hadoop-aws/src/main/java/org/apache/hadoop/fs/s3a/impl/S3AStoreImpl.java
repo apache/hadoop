@@ -837,7 +837,6 @@ public class S3AStoreImpl extends CompositeService
     return getS3Client().completeMultipartUpload(request);
   }
 
-
   /**
    * Get the directory allocator.
    * @return the directory allocator

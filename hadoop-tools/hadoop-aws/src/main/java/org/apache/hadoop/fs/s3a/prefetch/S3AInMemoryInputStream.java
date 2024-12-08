@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.impl.prefetch.FilePosition;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
-import org.apache.hadoop.fs.s3a.streams.StreamReadCallbacks;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStreamCallbacks;
 
 /**
  * Provides an {@code InputStream} that allows reading from an S3 file.
@@ -61,7 +61,7 @@ public class S3AInMemoryInputStream extends S3ARemoteInputStream {
   public S3AInMemoryInputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
-      StreamReadCallbacks client,
+      ObjectInputStreamCallbacks client,
       S3AInputStreamStatistics streamStatistics) {
     super(context, s3Attributes, client, streamStatistics);
     int fileSize = (int) s3Attributes.getLen();

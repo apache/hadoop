@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.streams;
+package org.apache.hadoop.fs.s3a.impl.model;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
@@ -45,14 +45,15 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
- * Base class for input streams returned by the factory, and therefore
- * used within S3A code.
+ * A stream of data from an S3 object.
+ * The blase class includes common methods, stores
+ * common data and incorporates leak tracking.
  */
-public abstract class AbstractS3AInputStream extends FSInputStream
+public abstract class ObjectInputStream extends FSInputStream
     implements StreamCapabilities, IOStatisticsSource {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(AbstractS3AInputStream.class);
+      LoggerFactory.getLogger(ObjectInputStream.class);
 
   /**
    * IOStatistics report.
@@ -67,7 +68,7 @@ public abstract class AbstractS3AInputStream extends FSInputStream
   /**
    * Callbacks for reading input stream data from the S3 Store.
    */
-  private final StreamReadCallbacks callbacks;
+  private final ObjectInputStreamCallbacks callbacks;
 
   /**
    * Thread pool used for vectored IO operation.
@@ -124,8 +125,8 @@ public abstract class AbstractS3AInputStream extends FSInputStream
    * Constructor.
    * @param parameters extensible parameter list.
    */
-  protected AbstractS3AInputStream(
-      FactoryStreamParameters parameters) {
+  protected ObjectInputStream(
+      ObjectReadParameters parameters) {
 
     objectAttributes = parameters.getObjectAttributes();
     Preconditions.checkArgument(isNotEmpty(objectAttributes.getBucket()),
@@ -276,7 +277,7 @@ public abstract class AbstractS3AInputStream extends FSInputStream
     return context;
   }
 
-  protected StreamReadCallbacks getCallbacks() {
+  protected ObjectInputStreamCallbacks getCallbacks() {
     return callbacks;
   }
 

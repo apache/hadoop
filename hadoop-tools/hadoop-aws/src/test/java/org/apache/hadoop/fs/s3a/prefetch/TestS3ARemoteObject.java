@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
-import org.apache.hadoop.fs.s3a.streams.StreamReadCallbacks;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStreamCallbacks;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 public class TestS3ARemoteObject extends AbstractHadoopTestBase {
@@ -40,7 +40,7 @@ public class TestS3ARemoteObject extends AbstractHadoopTestBase {
   private final ExecutorServiceFuturePool futurePool =
       new ExecutorServiceFuturePool(threadPool);
 
-  private final StreamReadCallbacks client =
+  private final ObjectInputStreamCallbacks client =
       MockS3ARemoteObject.createClient("bucket");
 
   @Test

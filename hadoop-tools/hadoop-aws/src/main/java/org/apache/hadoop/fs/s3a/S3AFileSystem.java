@@ -148,11 +148,11 @@ import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.impl.StoreContextFactory;
 import org.apache.hadoop.fs.s3a.impl.UploadContentProviders;
 import org.apache.hadoop.fs.s3a.impl.CSEUtils;
-import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
-import org.apache.hadoop.fs.s3a.streams.ClassicInputStreamFactory;
-import org.apache.hadoop.fs.s3a.streams.FactoryStreamParameters;
-import org.apache.hadoop.fs.s3a.streams.InputStreamFactory;
-import org.apache.hadoop.fs.s3a.streams.StreamReadCallbacks;
+import org.apache.hadoop.fs.s3a.prefetch.PrefetchingInputStreamFactory;
+import org.apache.hadoop.fs.s3a.impl.ClassicObjectInputStreamFactory;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectReadParameters;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStreamFactory;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStreamCallbacks;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -168,6 +168,7 @@ import org.apache.hadoop.fs.store.audit.AuditEntryPoint;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
@@ -1868,58 +1869,54 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         auditSpan);
     fileInformation.applyOptions(readContext);
     LOG.debug("Opening '{}'", readContext);
+    final SemaphoredDelegatingExecutor pool = new SemaphoredDelegatingExecutor(
+        boundedThreadPool,
+        vectoredActiveRangeReads,
+        true,
+        inputStreamStats);
+    ObjectReadParameters parameters = new ObjectReadParameters()
+        .withBoundedThreadPool(pool)
+        .withCallbacks(createInputStreamCallbacks(auditSpan))
+        .withContext(readContext.build())
+        .withDirectoryAllocator(getStore().getDirectoryAllocator())
+        .withObjectAttributes(createObjectAttributes(path, fileStatus))
+        .withStreamStatistics(inputStreamStats)
+        .build();
 
-    if (this.prefetchEnabled) {
-      Configuration configuration = getConf();
-
-      return new FSDataInputStream(
-          new S3APrefetchingInputStream(
-              readContext.build(),
-              createObjectAttributes(path, fileStatus),
-              createInputStreamCallbacks(auditSpan),
-              inputStreamStats,
-              configuration,
-              getStore().getDirectoryAllocator()));
-    } else {
-
-      // create the factory.
-      // TODO: move into S3AStore and export the factory API through
-      // the store, which will add some of the features (callbacks, stats)
-      // before invoking the real factory
-      InputStreamFactory factory = new ClassicInputStreamFactory();
+    // TODO: move into S3AStore and export the factory API through
+    // the store, which will add some of the features (callbacks, stats)
+    // before invoking the real factory
+    ObjectInputStreamFactory factory = null;
+    try {
+      // Choose factory.
+      if (prefetchEnabled) {
+        factory = new PrefetchingInputStreamFactory();
+      } else {
+        factory = new ClassicObjectInputStreamFactory();
+      }
       factory.init(getConf());
       factory.start();
-      FactoryStreamParameters parameters = new FactoryStreamParameters()
-          .withCallbacks(createInputStreamCallbacks(auditSpan))
-          .withObjectAttributes(createObjectAttributes(path, fileStatus))
-          .withContext(readContext.build())
-          .withStreamStatistics(inputStreamStats)
-          .withBoundedThreadPool(new SemaphoredDelegatingExecutor(
-              boundedThreadPool,
-              vectoredActiveRangeReads,
-              true,
-              inputStreamStats))
-          .build();
-
-      return new FSDataInputStream(
-          factory.create(parameters));
+      return new FSDataInputStream(factory.readObject(parameters));
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, factory);
     }
+
   }
 
   /**
-   * Override point: create the callbacks for S3AInputStream.
-   * @return an implementation of the InputStreamCallbacks,
+   * Override point: create the callbacks for ObjectInputStream.
+   * @return an implementation of callbacks,
    */
-  private StreamReadCallbacks createInputStreamCallbacks(
+  private ObjectInputStreamCallbacks createInputStreamCallbacks(
       final AuditSpan auditSpan) {
     return new InputStreamCallbacksImpl(auditSpan);
   }
 
   /**
-   * Operations needed by S3AInputStream to read data.
+   * Operations needed by ObjectInputStreams to read data.
    */
   private final class InputStreamCallbacksImpl implements
-      StreamReadCallbacks {
+      ObjectInputStreamCallbacks {
 
     /**
      * Audit span to activate before each call.

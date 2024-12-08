@@ -16,26 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.streams;
-
-import java.io.IOException;
-
-import org.apache.hadoop.fs.s3a.S3AInputStream;
-import org.apache.hadoop.service.AbstractService;
-
 /**
- * Factory of classic {@link S3AInputStream} instances.
+ * This describes the model of S3 for layers above to interact with, and
+ * possibly extend.
+ * <p>
+ * This intended for internal use, as a way of separating the layers
+ * above from how the store is actually interacted with.
  */
-public class ClassicInputStreamFactory extends AbstractService
-    implements InputStreamFactory {
 
-  public ClassicInputStreamFactory() {
-    super("ClassicInputStreamFactory");
-  }
+@InterfaceAudience.Private
+package org.apache.hadoop.fs.s3a.impl.model;
 
-  @Override
-  public AbstractS3AInputStream create(final FactoryStreamParameters parameters)
-      throws IOException {
-    return new S3AInputStream(parameters);
-  }
-}
+import org.apache.hadoop.classification.InterfaceAudience;

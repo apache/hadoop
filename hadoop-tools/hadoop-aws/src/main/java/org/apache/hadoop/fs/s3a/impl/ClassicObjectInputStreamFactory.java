@@ -16,34 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.streams;
+package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
 
-import org.apache.hadoop.service.Service;
+import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStream;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStreamFactory;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectReadParameters;
+import org.apache.hadoop.service.AbstractService;
 
 /**
- * A Factory for input streams.
- * <p>
- * This class is instantiated during initialization of
- * {@code S3AStore}, it then follows the same service
- * lifecycle.
- * <p>
- * Note for maintainers: do try and keep this mostly stable.
- * If new parameters need to be added, expand the
- * {@link FactoryStreamParameters} class, rather than change the
- * interface signature.
+ * Factory of classic {@link S3AInputStream} instances.
  */
-public interface InputStreamFactory extends Service {
+public class ClassicObjectInputStreamFactory extends AbstractService
+    implements ObjectInputStreamFactory {
 
-  /**
-   * Create a new input stream.
-   * @param parameters parameters.
-   * @return the input stream
-   * @throws problem creating the stream.
-   */
-  AbstractS3AInputStream create(FactoryStreamParameters parameters)
-      throws IOException;
+  public ClassicObjectInputStreamFactory() {
+    super("ClassicObjectInputStreamFactory");
+  }
 
+  @Override
+  public ObjectInputStream readObject(final ObjectReadParameters parameters)
+      throws IOException {
+    return new S3AInputStream(parameters);
+  }
 }
-

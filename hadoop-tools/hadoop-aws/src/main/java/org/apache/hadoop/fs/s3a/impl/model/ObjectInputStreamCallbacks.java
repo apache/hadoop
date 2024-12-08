@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.streams;
+package org.apache.hadoop.fs.s3a.impl.model;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -30,9 +30,9 @@ import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 /**
- * Callbacks for reading input stream data from the S3 Store.
+ * Callbacks for reading objectd data from the S3 Store.
  */
-public interface StreamReadCallbacks extends Closeable {
+public interface ObjectInputStreamCallbacks extends Closeable {
 
   /**
    * Create a GET request builder.

@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.streams;
+package org.apache.hadoop.fs.s3a.impl.model;
 
 import java.util.concurrent.ExecutorService;
 
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
@@ -27,23 +28,30 @@ import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Parameters for input streams created through
- * {@link InputStreamFactory}.
- * It is designed to be extensible; the {@link #build()}
+ * Parameters for object input streams created through
+ * {@link ObjectInputStreamFactory}.
+ * It is designed to support extra parameters added
+ * in future.
+ * <p>Note that the {@link #build()}
  * operation does not freeze the parameters -instead it simply
  * verifies that all required values are set.
  */
-public final class FactoryStreamParameters {
+public final class ObjectReadParameters {
 
   private S3AReadOpContext context;
 
   private S3ObjectAttributes objectAttributes;
 
-  private StreamReadCallbacks callbacks;
+  private ObjectInputStreamCallbacks callbacks;
 
   private S3AInputStreamStatistics streamStatistics;
 
   private ExecutorService boundedThreadPool;
+
+  /**
+   * Allocator of local FS storage.
+   */
+  private LocalDirAllocator directoryAllocator;
 
   /**
    * Read operation context.
@@ -57,7 +65,7 @@ public final class FactoryStreamParameters {
    * @param value new value
    * @return the builder
    */
-  public FactoryStreamParameters withContext(S3AReadOpContext value) {
+  public ObjectReadParameters withContext(S3AReadOpContext value) {
     context = value;
     return this;
   }
@@ -74,7 +82,7 @@ public final class FactoryStreamParameters {
    * @param value new value
    * @return the builder
    */
-  public FactoryStreamParameters withObjectAttributes(S3ObjectAttributes value) {
+  public ObjectReadParameters withObjectAttributes(S3ObjectAttributes value) {
     objectAttributes = value;
     return this;
   }
@@ -82,7 +90,7 @@ public final class FactoryStreamParameters {
   /**
    * Callbacks to the store.
    */
-  public StreamReadCallbacks getCallbacks() {
+  public ObjectInputStreamCallbacks getCallbacks() {
     return callbacks;
   }
 
@@ -91,7 +99,7 @@ public final class FactoryStreamParameters {
    * @param value new value
    * @return the builder
    */
-  public FactoryStreamParameters withCallbacks(StreamReadCallbacks value) {
+  public ObjectReadParameters withCallbacks(ObjectInputStreamCallbacks value) {
     callbacks = value;
     return this;
   }
@@ -108,7 +116,7 @@ public final class FactoryStreamParameters {
    * @param value new value
    * @return the builder
    */
-  public FactoryStreamParameters withStreamStatistics(S3AInputStreamStatistics value) {
+  public ObjectReadParameters withStreamStatistics(S3AInputStreamStatistics value) {
     streamStatistics = value;
     return this;
   }
@@ -126,8 +134,22 @@ public final class FactoryStreamParameters {
    * @param value new value
    * @return the builder
    */
-  public FactoryStreamParameters withBoundedThreadPool(ExecutorService value) {
+  public ObjectReadParameters withBoundedThreadPool(ExecutorService value) {
     boundedThreadPool = value;
+    return this;
+  }
+
+  public LocalDirAllocator getDirectoryAllocator() {
+    return directoryAllocator;
+  }
+
+  /**
+   * Set builder value.
+   * @param value new value
+   * @return the builder
+   */
+  public ObjectReadParameters withDirectoryAllocator(final LocalDirAllocator value) {
+    directoryAllocator = value;
     return this;
   }
 
@@ -136,13 +158,14 @@ public final class FactoryStreamParameters {
    * Mock tests can skip this if required.
    * @return the object.
    */
-  public FactoryStreamParameters build() {
+  public ObjectReadParameters build() {
+    // please keep in alphabetical order.
     requireNonNull(boundedThreadPool, "boundedThreadPool");
     requireNonNull(callbacks, "callbacks");
     requireNonNull(context, "context");
+    requireNonNull(directoryAllocator, "directoryAllocator");
     requireNonNull(objectAttributes, "objectAttributes");
     requireNonNull(streamStatistics, "streamStatistics");
-    requireNonNull(boundedThreadPool, "boundedThreadPool");
     return this;
   }
 }
