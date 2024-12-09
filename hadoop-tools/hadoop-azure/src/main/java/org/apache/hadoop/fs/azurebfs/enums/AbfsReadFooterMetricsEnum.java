@@ -20,20 +20,19 @@ package org.apache.hadoop.fs.azurebfs.enums;
 
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.FILE;
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_COUNTER;
-import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_GAUGE;
+import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_MEAN;
 
 /**
  * Enum representing various ABFS read footer metrics.
  */
 public enum AbfsReadFooterMetricsEnum {
     TOTAL_FILES("totalFiles", "Total files read", FILE,  TYPE_COUNTER),
-    FILE_LENGTH("fileLength", "File length", FILE, TYPE_GAUGE),
-    SIZE_READ_BY_FIRST_READ("sizeReadByFirstRead", "Size read by first read", FILE, TYPE_GAUGE),
-    OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ("offsetDiffBetweenFirstAndSecondRead", "Offset difference between first and second read", FILE, TYPE_GAUGE),
-    READ_LEN_REQUESTED("readLenRequested", "Read length requested", FILE, TYPE_GAUGE),
-    READ_COUNT("readCount", "Number of total reads", FILE, TYPE_COUNTER),
-    FIRST_OFFSET_DIFF("firstOffsetDiff", "First offset difference", FILE, TYPE_GAUGE),
-    SECOND_OFFSET_DIFF("secondOffsetDiff", "Second offset difference", FILE, TYPE_GAUGE);
+    AVG_FILE_LENGTH("avgFileLength", "Average File length", FILE, TYPE_MEAN),
+    AVG_SIZE_READ_BY_FIRST_READ("avgSizeReadByFirstRead", "Average Size read by first read", FILE, TYPE_MEAN),
+    AVG_OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ("avgOffsetDiffBetweenFirstAndSecondRead", "Average Offset difference between first and second read", FILE, TYPE_MEAN),
+    AVG_READ_LEN_REQUESTED("avgReadLenRequested", "Average Read length requested", FILE, TYPE_MEAN),
+    AVG_FIRST_OFFSET_DIFF("avgFirstOffsetDiff", "Average First offset difference", FILE, TYPE_MEAN),
+    AVG_SECOND_OFFSET_DIFF("avgSecondOffsetDiff", "Average Second offset difference", FILE, TYPE_MEAN);
 
     private final String name;
     private final String description;

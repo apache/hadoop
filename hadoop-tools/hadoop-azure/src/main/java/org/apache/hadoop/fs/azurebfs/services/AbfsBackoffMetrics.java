@@ -59,6 +59,7 @@ import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_COUNTER
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_GAUGE;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import static org.apache.hadoop.util.StringUtils.format;
+import static org.apache.hadoop.util.StringUtils.formatPercent;
 
 /**
  * This class is responsible for tracking and
@@ -240,12 +241,11 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
             + getMetricValue(NUMBER_OF_IOPS_THROTTLED_REQUESTS)
             + getMetricValue(NUMBER_OF_OTHER_THROTTLED_REQUESTS)
             + getMetricValue(NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS);
-    double percentageOfRequestsThrottled = ((double) totalRequestsThrottled / getMetricValue(TOTAL_NUMBER_OF_REQUESTS)) * HUNDRED;
 
     metricBuilder.append("$BWT=").append(getMetricValue(NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS))
             .append("$IT=").append(getMetricValue(NUMBER_OF_IOPS_THROTTLED_REQUESTS))
             .append("$OT=").append(getMetricValue(NUMBER_OF_OTHER_THROTTLED_REQUESTS))
-            .append("$RT=").append(format(DOUBLE_PRECISION_FORMAT, percentageOfRequestsThrottled))
+            .append("$RT=").append(formatPercent(totalRequestsThrottled/ (double)getMetricValue(TOTAL_NUMBER_OF_REQUESTS), 3))
             .append("$NFR=").append(getMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS))
             .append("$TRNR=").append(getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED_WITHOUT_RETRYING))
             .append("$TRF=").append(getMetricValue(NUMBER_OF_REQUESTS_FAILED))

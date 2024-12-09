@@ -58,7 +58,7 @@ public abstract class AbstractAbfsStatisticsSource implements IOStatisticsSource
      *
      * @param name the name of the counter
      */
-    public void incCounterValue(String name) {
+    protected void incCounterValue(String name) {
         incCounterValue(name, 1);
     }
 
@@ -68,7 +68,7 @@ public abstract class AbstractAbfsStatisticsSource implements IOStatisticsSource
      * @param name the name of the counter
      * @param value the value to increment by
      */
-    public void incCounterValue(String name, long value) {
+    protected void incCounterValue(String name, long value) {
         ioStatisticsStore.incrementCounter(name, value);
     }
 
@@ -78,7 +78,7 @@ public abstract class AbstractAbfsStatisticsSource implements IOStatisticsSource
      * @param name the name of the counter
      * @return the counter value
      */
-    public Long lookupCounterValue(String name) {
+    protected Long lookupCounterValue(String name) {
         return ioStatisticsStore.counters().getOrDefault(name, 0L);
     }
 
@@ -88,7 +88,7 @@ public abstract class AbstractAbfsStatisticsSource implements IOStatisticsSource
      * @param name the name of the counter
      * @param value the value to set
      */
-    public void setCounterValue(String name, long value) {
+    protected void setCounterValue(String name, long value) {
         ioStatisticsStore.setCounter(name, value);
     }
 
@@ -97,7 +97,7 @@ public abstract class AbstractAbfsStatisticsSource implements IOStatisticsSource
      *
      * @param name the name of the gauge
      */
-    public void incGaugeValue(String name) {
+    protected void incGaugeValue(String name) {
         incCounterValue(name, 1);
     }
 
@@ -107,18 +107,8 @@ public abstract class AbstractAbfsStatisticsSource implements IOStatisticsSource
      * @param name the name of the gauge
      * @return the gauge value
      */
-    public Long lookupGaugeValue(String name) {
+    protected Long lookupGaugeValue(String name) {
         return ioStatisticsStore.gauges().getOrDefault(name, 0L);
-    }
-
-    /**
-     * Updates the gauge value by adding the specified value to the current value for the given name.
-     *
-     * @param name the name of the gauge
-     * @param value the value to add
-     */
-    public void updateGaugeValue(String name, long value) {
-        ioStatisticsStore.setGauge(name, lookupGaugeValue(name) + value);
     }
 
     /**
@@ -127,8 +117,16 @@ public abstract class AbstractAbfsStatisticsSource implements IOStatisticsSource
      * @param name the name of the gauge
      * @param value the value to set
      */
-    public void setGaugeValue(String name, long value) {
+    protected void setGaugeValue(String name, long value) {
         ioStatisticsStore.setGauge(name, value);
+    }
+
+    protected void addMeanStatistic(String name, long value) {
+        ioStatisticsStore.addMeanStatisticSample(name, value);
+    }
+
+    protected double lookupMeanStatistic(String name) {
+        return ioStatisticsStore.meanStatistics().get(name).mean();
     }
 
     /**

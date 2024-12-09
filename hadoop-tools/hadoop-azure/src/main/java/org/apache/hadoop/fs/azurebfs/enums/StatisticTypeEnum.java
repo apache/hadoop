@@ -29,5 +29,9 @@ public enum StatisticTypeEnum {
     /**
      * Gauge.
      */
-    TYPE_GAUGE
+    TYPE_GAUGE,
+    /**
+     * Mean.
+     */
+    TYPE_MEAN
 }

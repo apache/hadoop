@@ -47,9 +47,6 @@ public class TestAbfsReadFooterMetrics {
         Assertions.assertThat(metrics.getTotalFiles())
                 .describedAs("Total number of files")
                 .isEqualTo(0);
-        Assertions.assertThat(metrics.getTotalReadCount())
-                .describedAs("Total number of read count")
-                .isEqualTo(0);
     }
 
     /**
@@ -62,9 +59,6 @@ public class TestAbfsReadFooterMetrics {
         Assertions.assertThat(metrics.getTotalFiles())
                 .describedAs("Total number of files")
                 .isEqualTo(1);
-        Assertions.assertThat(metrics.getTotalReadCount())
-                .describedAs("Total number of read count")
-                .isEqualTo(0);
     }
 
     /**
@@ -77,9 +71,6 @@ public class TestAbfsReadFooterMetrics {
         metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+2*LENGTH);
         Assertions.assertThat(metrics.getTotalFiles())
                 .describedAs("Total number of files")
-                .isEqualTo(1);
-        Assertions.assertThat(metrics.getTotalReadCount())
-                .describedAs("Total number of read count")
                 .isEqualTo(1);
         Assertions.assertThat(metrics.toString())
                 .describedAs("Metrics after reading 3 reads of the same file")
@@ -99,9 +90,6 @@ public class TestAbfsReadFooterMetrics {
         metrics.checkMetricUpdate(TEST_FILE2, LENGTH, CONTENT_LENGTH/2, NEXT_READ_POS+2*LENGTH);
         Assertions.assertThat(metrics.getTotalFiles())
                 .describedAs("Total number of files")
-                .isEqualTo(2);
-        Assertions.assertThat(metrics.getTotalReadCount())
-                .describedAs("Total number of read count")
                 .isEqualTo(2);
         Assertions.assertThat(metrics.toString())
                 .describedAs("Metrics after reading 3 reads of the same file")

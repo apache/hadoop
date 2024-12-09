@@ -36,17 +36,16 @@ import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.FILE;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.DOUBLE_PRECISION_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.TOTAL_FILES;
-import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.FILE_LENGTH;
-import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.SIZE_READ_BY_FIRST_READ;
-import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ;
-import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.READ_LEN_REQUESTED;
-import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.READ_COUNT;
-import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.FIRST_OFFSET_DIFF;
-import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.SECOND_OFFSET_DIFF;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.AVG_FILE_LENGTH;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.AVG_SIZE_READ_BY_FIRST_READ;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.AVG_OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.AVG_READ_LEN_REQUESTED;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.AVG_FIRST_OFFSET_DIFF;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.AVG_SECOND_OFFSET_DIFF;
 import static org.apache.hadoop.fs.azurebfs.enums.FileType.PARQUET;
 import static org.apache.hadoop.fs.azurebfs.enums.FileType.NON_PARQUET;
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_COUNTER;
-import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_GAUGE;
+import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_MEAN;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import static org.apache.hadoop.util.StringUtils.format;
 
@@ -156,12 +155,12 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
     private final Map<String, FileTypeMetrics> fileTypeMetricsMap = new HashMap<>();
 
     /**
-     * Constructor to initialize the IOStatisticsStore with counters and gauges.
+     * Constructor to initialize the IOStatisticsStore with counters and mean statistics.
      */
     public AbfsReadFooterMetrics() {
         IOStatisticsStore ioStatisticsStore = iostatisticsStore()
                 .withCounters(getMetricNames(TYPE_COUNTER))
-                .withGauges(getMetricNames(TYPE_GAUGE))
+                .withMeanStatistics(getMetricNames(TYPE_MEAN))
                 .build();
         setIOStatistics(ioStatisticsStore);
     }
@@ -176,26 +175,12 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
                 .toArray(String[]::new);
     }
 
-    private long getMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metric) {
-        switch (metric.getStatisticType()) {
-            case TYPE_COUNTER:
-                return lookupCounterValue(fileType + COLON + metric.getName());
-            case TYPE_GAUGE:
-                return lookupGaugeValue(fileType + COLON + metric.getName());
-            default:
-                return 0;
-        }
+    private long getCounterMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metric) {
+        return lookupCounterValue(fileType + COLON + metric.getName());
     }
 
-    /**
-     * Updates the value of a specific metric.
-     *
-     * @param fileType the type of the file
-     * @param metric the metric to update
-     * @param value the new value of the metric
-     */
-    public void updateMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metric, long value) {
-        updateGaugeValue(fileType + COLON + metric.getName(), value);
+    private String getMeanMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metric) {
+        return format(DOUBLE_PRECISION_FORMAT, lookupMeanStatistic(fileType + COLON + metric.getName()));
     }
 
     /**
@@ -209,21 +194,23 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
     }
 
     /**
+     * Adds a mean statistic value for a specific metric.
+     *
+     * @param fileType the type of the file
+     * @param metricName the metric to update
+     * @param value the new value of the metric
+     */
+    public void addMeanMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metricName, long value) {
+        addMeanStatistic(fileType + COLON + metricName, value);
+    }
+
+    /**
      * Returns the total number of files.
      *
      * @return the total number of files
      */
     public Long getTotalFiles() {
-        return getMetricValue(PARQUET, TOTAL_FILES) + getMetricValue(NON_PARQUET, TOTAL_FILES);
-    }
-
-    /**
-     * Returns the total read count.
-     *
-     * @return the total read count
-     */
-    public Long getTotalReadCount() {
-        return getMetricValue(PARQUET, READ_COUNT) + getMetricValue(NON_PARQUET, READ_COUNT);
+        return getCounterMetricValue(PARQUET, TOTAL_FILES) + getCounterMetricValue(NON_PARQUET, TOTAL_FILES);
     }
 
     /**
@@ -323,8 +310,7 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
     private synchronized void handleFurtherRead(FileTypeMetrics fileTypeMetrics, int len) {
         if (fileTypeMetrics.getCollectLenMetrics() && fileTypeMetrics.getFileType() != null) {
             FileType fileType = fileTypeMetrics.getFileType();
-            updateMetricValue(fileType, READ_LEN_REQUESTED, len);
-            incrementMetricValue(fileType, READ_COUNT);
+            addMeanMetricValue(fileType, AVG_READ_LEN_REQUESTED, len);
         }
     }
 
@@ -343,36 +329,35 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         long secondOffsetDiff = Long.parseLong(fileTypeMetrics.getOffsetDiffBetweenFirstAndSecondRead().split("_")[1]);
         FileType fileType = fileTypeMetrics.getFileType();
 
-        updateMetricValue(fileType, READ_LEN_REQUESTED, len + sizeReadByFirstRead);
-        updateMetricValue(fileType, FILE_LENGTH, contentLength);
-        updateMetricValue(fileType, SIZE_READ_BY_FIRST_READ, sizeReadByFirstRead);
-        updateMetricValue(fileType, OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, len);
-        updateMetricValue(fileType, FIRST_OFFSET_DIFF, firstOffsetDiff);
-        updateMetricValue(fileType, SECOND_OFFSET_DIFF, secondOffsetDiff);
+        addMeanMetricValue(fileType, AVG_READ_LEN_REQUESTED, len);
+        addMeanMetricValue(fileType, AVG_READ_LEN_REQUESTED, sizeReadByFirstRead);
+        addMeanMetricValue(fileType, AVG_FILE_LENGTH, contentLength);
+        addMeanMetricValue(fileType, AVG_SIZE_READ_BY_FIRST_READ, sizeReadByFirstRead);
+        addMeanMetricValue(fileType, AVG_OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, len);
+        addMeanMetricValue(fileType, AVG_FIRST_OFFSET_DIFF, firstOffsetDiff);
+        addMeanMetricValue(fileType, AVG_SECOND_OFFSET_DIFF, secondOffsetDiff);
         incrementMetricValue(fileType, TOTAL_FILES);
     }
 
     private void appendMetrics(StringBuilder metricBuilder, FileType fileType) {
-        long totalFiles = getMetricValue(fileType, TOTAL_FILES);
-        long readCount = getMetricValue(fileType, READ_COUNT);
-        if (totalFiles <= 0 || readCount <= 0) {
+        long totalFiles = getCounterMetricValue(fileType, TOTAL_FILES);
+        if (totalFiles <= 0) {
             return;
         }
 
-        String sizeReadByFirstRead = format(DOUBLE_PRECISION_FORMAT, getMetricValue(fileType, SIZE_READ_BY_FIRST_READ) / (double) totalFiles);
-        String offsetDiffBetweenFirstAndSecondRead = format(DOUBLE_PRECISION_FORMAT, getMetricValue(fileType,
-                OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ) / (double) totalFiles);
+        String sizeReadByFirstRead = getMeanMetricValue(fileType, AVG_SIZE_READ_BY_FIRST_READ);
+        String offsetDiffBetweenFirstAndSecondRead = getMeanMetricValue(fileType, AVG_OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ);
 
         if (NON_PARQUET.equals(fileType)) {
-            sizeReadByFirstRead += "_" + format(DOUBLE_PRECISION_FORMAT, getMetricValue(fileType, FIRST_OFFSET_DIFF) / (double) totalFiles);
-            offsetDiffBetweenFirstAndSecondRead += "_" + format(DOUBLE_PRECISION_FORMAT, getMetricValue(fileType, SECOND_OFFSET_DIFF) / (double) totalFiles);
+            sizeReadByFirstRead += "_" + getMeanMetricValue(fileType, AVG_FIRST_OFFSET_DIFF);
+            offsetDiffBetweenFirstAndSecondRead += "_" + getMeanMetricValue(fileType, AVG_SECOND_OFFSET_DIFF);
         }
 
         metricBuilder.append("$").append(fileType)
                 .append(":$FR=").append(sizeReadByFirstRead)
                 .append("$SR=").append(offsetDiffBetweenFirstAndSecondRead)
-                .append("$FL=").append(format(DOUBLE_PRECISION_FORMAT, getMetricValue(fileType, FILE_LENGTH) / (double) totalFiles))
-                .append("$RL=").append(format(DOUBLE_PRECISION_FORMAT, getMetricValue(fileType, READ_LEN_REQUESTED) / (double) readCount));
+                .append("$FL=").append(getMeanMetricValue(fileType, AVG_FILE_LENGTH))
+                .append("$RL=").append(getMeanMetricValue(fileType, AVG_READ_LEN_REQUESTED));
     }
 
     /**
