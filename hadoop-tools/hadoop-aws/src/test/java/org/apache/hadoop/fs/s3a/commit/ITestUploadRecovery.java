@@ -39,6 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.AWSClientIOException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
@@ -199,13 +200,28 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
         MAGIC_PATH_PREFIX + buffer + "/" + BASE + "/file.txt");
 
     SdkFaultInjector.setEvaluator(SdkFaultInjector::isPartUpload);
-    final FSDataOutputStream out = fs.create(path);
+    boolean isExceptionThrown = false;
+    try {
+      final FSDataOutputStream out = fs.create(path);
 
-    // set the failure count again
-    SdkFaultInjector.setRequestFailureCount(2);
+      // set the failure count again
+      SdkFaultInjector.setRequestFailureCount(2);
 
-    out.writeUTF("utfstring");
-    out.close();
+      out.writeUTF("utfstring");
+      out.close();
+    } catch (AWSClientIOException exception) {
+      if (!fs.isCSEEnabled()) {
+        throw exception;
+      }
+      isExceptionThrown = true;
+    }
+    // Retrying MPU is not supported when CSE is enabled.
+    // Hence, it is expected to throw exception in that case.
+    if (fs.isCSEEnabled()) {
+      Assertions.assertThat(isExceptionThrown)
+          .describedAs("Exception should be thrown when CSE is enabled")
+          .isTrue();
+    }
   }
 
   /**
@@ -213,6 +229,7 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
    */
   @Test
   public void testCommitOperations() throws Throwable {
+    skipIfClientSideEncryption();
     Assumptions.assumeThat(includeCommitTest)
         .describedAs("commit test excluded")
         .isTrue();

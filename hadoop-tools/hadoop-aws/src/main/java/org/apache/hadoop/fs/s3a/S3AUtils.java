@@ -80,6 +80,7 @@ import static org.apache.hadoop.fs.s3a.AWSCredentialProviderList.maybeTranslateC
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.maybeTranslateAuditException;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeProcessEncryptionClientException;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.instantiationException;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isAbstract;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isNotInstanceOf;
@@ -183,6 +184,8 @@ public final class S3AUtils {
       // exceptions constructed.
       path = "/";
     }
+
+    exception = maybeProcessEncryptionClientException(exception);
 
     if (!(exception instanceof AwsServiceException)) {
       // exceptions raised client-side: connectivity, auth, network problems...
@@ -529,7 +532,7 @@ public final class S3AUtils {
    * @param owner owner of the file
    * @param eTag S3 object eTag or null if unavailable
    * @param versionId S3 object versionId or null if unavailable
-   * @param isCSEEnabled is client side encryption enabled?
+   * @param size s3 object size
    * @return a status entry
    */
   public static S3AFileStatus createFileStatus(Path keyPath,
@@ -538,12 +541,7 @@ public final class S3AUtils {
       String owner,
       String eTag,
       String versionId,
-      boolean isCSEEnabled) {
-    long size = s3Object.size();
-    // check if cse is enabled; strip out constant padding length.
-    if (isCSEEnabled && size >= CSE_PADDING_LENGTH) {
-      size -= CSE_PADDING_LENGTH;
-    }
+      long size) {
     return createFileStatus(keyPath,
         objectRepresentsDirectory(s3Object.key()),
         size, Date.from(s3Object.lastModified()), blockSize, owner, eTag, versionId);

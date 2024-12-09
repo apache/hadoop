@@ -536,7 +536,7 @@ public class TestSaslRPC extends TestRpcBase {
   private static Pattern BadToken =
       Pattern.compile("^" + RemoteException.class.getName() +
           "\\("+ SaslException.class.getName() + "\\): " +
-          SaslConstants.SASL_MECHANISM + ": digest response format violation.*");
+          SaslMechanismFactory.getMechanism() + ": digest response format violation.*");
   private static Pattern KrbFailed =
       Pattern.compile(".*Failed on local exception:.* " +
                       "Failed to specify server's Kerberos principal name.*");

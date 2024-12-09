@@ -508,7 +508,7 @@ public class AbfsConfiguration{
    */
   public void validateConfiguredServiceType(boolean isHNSEnabled)
       throws InvalidConfigurationValueException {
-    // Todo: [FnsOverBlob] - Remove this check, Failing FS Init with Blob Endpoint Until FNS over Blob is ready.
+    // TODO: [FnsOverBlob][HADOOP-19179] Remove this check when FNS over Blob is ready.
     if (getFsConfiguredServiceType() == AbfsServiceType.BLOB) {
       throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY,
           "Blob Endpoint Support not yet available");

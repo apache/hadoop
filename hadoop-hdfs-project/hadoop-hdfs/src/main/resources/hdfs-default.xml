@@ -2642,15 +2642,6 @@
 </property>
 
 <property>
-  <name>dfs.data.transfer.sasl.CustomizedCallbackHandler.class</name>
-  <value></value>
-  <description>
-    Some security provider may define a new javax.security.auth.callback.Callback.
-    This property allows users to configure a customized callback handler.
-  </description>
-</property>
-
-<property>
   <name>dfs.journalnode.rpc-address</name>
   <value>0.0.0.0:8485</value>
   <description>

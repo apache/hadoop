@@ -32,6 +32,7 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.SdkClient;
 import software.amazon.awssdk.core.client.config.SdkClientConfiguration;
 import software.amazon.awssdk.core.client.config.SdkClientOption;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
@@ -42,6 +43,7 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.model.StsException;
+import software.amazon.encryption.s3.S3EncryptionClient;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -370,6 +372,7 @@ public class ITestS3AConfiguration {
 
     conf = new Configuration();
     skipIfCrossRegionClient(conf);
+    unsetEncryption(conf);
     conf.set(Constants.PATH_STYLE_ACCESS, Boolean.toString(true));
     assertTrue(conf.getBoolean(Constants.PATH_STYLE_ACCESS, false));
 
@@ -411,6 +414,7 @@ public class ITestS3AConfiguration {
   public void testDefaultUserAgent() throws Exception {
     conf = new Configuration();
     skipIfCrossRegionClient(conf);
+    unsetEncryption(conf);
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
     S3Client s3 = getS3Client("User Agent");
@@ -425,6 +429,7 @@ public class ITestS3AConfiguration {
   public void testCustomUserAgent() throws Exception {
     conf = new Configuration();
     skipIfCrossRegionClient(conf);
+    unsetEncryption(conf);
     conf.set(Constants.USER_AGENT_PREFIX, "MyApp");
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
@@ -446,7 +451,10 @@ public class ITestS3AConfiguration {
       Duration timeout = Duration.ofSeconds(120);
       conf.set(REQUEST_TIMEOUT, timeout.getSeconds() + "s");
       fs = S3ATestUtils.createTestFileSystem(conf);
-      S3Client s3 = getS3Client("Request timeout (ms)");
+      SdkClient s3 = getS3Client("Request timeout (ms)");
+      if (s3 instanceof S3EncryptionClient) {
+        s3 = ((S3EncryptionClient) s3).delegate();
+      }
       SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
           "clientConfiguration");
       Assertions.assertThat(clientConfiguration.option(SdkClientOption.API_CALL_ATTEMPT_TIMEOUT))

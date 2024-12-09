@@ -157,9 +157,9 @@ public class JobHistoryUtils {
   static Map<String, Long> extractCounters(JhCounters counters) {
     Map<String, Long> countersMap = new HashMap<String, Long>();
     if (counters != null) {
-      for (JhCounterGroup group : counters.groups) {
-        for (JhCounter counter : group.counts) {
-          countersMap.put(counter.name.toString(), counter.value);
+      for (JhCounterGroup group : counters.getGroups()) {
+        for (JhCounter counter : group.getCounts()) {
+          countersMap.put(counter.getName().toString(), counter.getValue());
         }
       }
     }

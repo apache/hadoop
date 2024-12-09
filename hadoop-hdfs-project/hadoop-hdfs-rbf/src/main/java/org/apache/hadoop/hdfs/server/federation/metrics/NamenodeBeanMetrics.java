@@ -385,6 +385,16 @@ public class NamenodeBeanMetrics
   }
 
   @Override
+  public long getNumberOfBadlyDistributedBlocks() {
+    try {
+      return getRBFMetrics().getNumberOfBadlyDistributedBlocks();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of badly distributed blocks", e);
+    }
+    return 0;
+  }
+
+  @Override
   public long getHighestPriorityLowRedundancyReplicatedBlocks() {
     try {
       return getRBFMetrics().getHighestPriorityLowRedundancyReplicatedBlocks();

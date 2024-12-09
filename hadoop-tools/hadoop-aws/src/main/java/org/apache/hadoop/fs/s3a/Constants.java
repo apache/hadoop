@@ -444,6 +444,20 @@ public final class Constants {
   public static final Duration DEFAULT_CONNECTION_IDLE_TIME_DURATION =
       Duration.ofSeconds(60);
 
+  /**
+   * Should PUT requests await a 100 CONTINUE responses before uploading
+   * data?
+   * <p>
+   * Value: {@value}.
+   */
+  public static final String CONNECTION_EXPECT_CONTINUE =
+      "fs.s3a.connection.expect.continue";
+
+  /**
+   * Default value for {@link #CONNECTION_EXPECT_CONTINUE}.
+   */
+  public static final boolean CONNECTION_EXPECT_CONTINUE_DEFAULT = true;
+
   // socket send buffer to be used in Amazon client
   public static final String SOCKET_SEND_BUFFER = "fs.s3a.socket.send.buffer";
   public static final int DEFAULT_SOCKET_SEND_BUFFER = 8 * 1024;
@@ -765,6 +779,35 @@ public final class Constants {
    */
   public static final String S3_ENCRYPTION_CONTEXT =
       "fs.s3a.encryption.context";
+
+  /**
+   * Client side encryption (CSE-CUSTOM) with custom cryptographic material manager class name.
+   * Custom keyring class name for CSE-KMS.
+   * value:{@value}
+   */
+  public static final String S3_ENCRYPTION_CSE_CUSTOM_KEYRING_CLASS_NAME =
+          "fs.s3a.encryption.cse.custom.keyring.class.name";
+
+  /**
+   * Config to provide backward compatibility with V1 encryption client.
+   * Enabling this configuration will invoke the followings
+   * 1. Unencrypted s3 objects will be read using unencrypted/base s3 client when CSE is enabled.
+   * 2. Size of encrypted object will be fetched from object header if present or
+   * calculated using ranged S3 GET calls.
+   * value:{@value}
+   */
+  public static final String S3_ENCRYPTION_CSE_V1_COMPATIBILITY_ENABLED =
+          "fs.s3a.encryption.cse.v1.compatibility.enabled";
+
+  /**
+   * Default value : {@value}.
+   */
+  public static final boolean S3_ENCRYPTION_CSE_V1_COMPATIBILITY_ENABLED_DEFAULT = false;
+
+  /**
+   * S3 CSE-KMS KMS region config.
+   */
+  public static final String S3_ENCRYPTION_CSE_KMS_REGION = "fs.s3a.encryption.cse.kms.region";
 
   /**
    * List of custom Signers. The signer class will be loaded, and the signer

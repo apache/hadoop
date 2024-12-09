@@ -686,7 +686,8 @@ public class Balancer {
     this.belowAvgUtilized.clear();
     this.underUtilized.clear();
     this.policy.reset();
-    dispatcher.reset(conf);
+    this.dispatcher.reset(conf);
+    DefaultMetricsSystem.removeSourceName(metrics.getName());
   }
 
   NameNodeConnector getNnc() {

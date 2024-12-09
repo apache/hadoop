@@ -160,7 +160,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       boolean includeSSLProvider) throws IOException, URISyntaxException {
     AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
     AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
-    // Todo : [FnsOverBlob] Update to work with Blob Endpoint as well when Fns Over Blob is ready.
+    // TODO: [FnsOverBlob][HADOOP-19234] Update to work with Blob Endpoint as well when Fns Over Blob is ready.
     AbfsClient client = new AbfsDfsClient(new URL("https://azure.com"), null,
         config, (AccessTokenProvider) null, null, abfsClientContext);
     String sslProviderName = null;
@@ -364,7 +364,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
                                 .build();
 
     // Create test AbfsClient
-    // Todo : [FnsOverBlob] Update to work with Blob Endpoint as well when Fns Over Blob is ready.
+    // TODO : [FnsOverBlob][HADOOP-19234] Update to work with Blob Endpoint as well when Fns Over Blob is ready.
     AbfsClient testClient = new AbfsDfsClient(
         baseAbfsClientInstance.getBaseUrl(),
         (currentAuthType == AuthType.SharedKey
@@ -393,7 +393,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         (currentAuthType == AuthType.SharedKey)
         || (currentAuthType == AuthType.OAuth));
 
-    // Todo : [FnsOverBlob] Update to work with Blob Endpoint as well when Fns Over Blob is ready.
+    // TODO : [FnsOverBlob][HADOOP-19234] Update to work with Blob Endpoint as well when Fns Over Blob is ready.
     AbfsClient client = mock(AbfsDfsClient.class);
     AbfsPerfTracker tracker = new AbfsPerfTracker(
         "test",

@@ -837,6 +837,7 @@ public class AbfsDfsClient extends AbfsClient {
       final String cachedSasToken,
       final String leaseId,
       final String eTag,
+      final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
     throw new UnsupportedOperationException(
         "Flush with blockIds not supported on DFS Endpoint");
@@ -1282,6 +1283,7 @@ public class AbfsDfsClient extends AbfsClient {
 
       Boolean canEncodeValue = encoder.canEncode(value);
       if (!canEncodeValue) {
+        LOG.error("Property value {} cannot be encoded using ASCII encoding", value);
         throw new CharacterCodingException();
       }
 

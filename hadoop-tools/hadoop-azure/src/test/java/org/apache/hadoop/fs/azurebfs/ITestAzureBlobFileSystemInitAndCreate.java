@@ -113,7 +113,7 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
         .getAclStatus(Mockito.anyString(), any(TracingContext.class));
   }
 
-  // Todo: [FnsOverBlob] Remove this test case once Blob Endpoint Support is ready and enabled.
+  // TODO: [FnsOverBlob][HADOOP-19179] Remove this test case once Blob Endpoint Support is enabled.
   @Test
   public void testFileSystemInitFailsWithBlobEndpoitUrl() throws Exception {
     Configuration configuration = getRawConfiguration();

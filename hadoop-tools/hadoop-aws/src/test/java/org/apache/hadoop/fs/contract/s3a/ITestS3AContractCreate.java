@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.contract.AbstractContractCreateTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
+import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_EXPECT_CONTINUE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 
 /**
@@ -47,8 +49,8 @@ public class ITestS3AContractCreate extends AbstractContractCreateTest {
   @Parameterized.Parameters
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {false},
-        {true}
+        {false, false},
+        {true, true}
     });
   }
 
@@ -57,8 +59,15 @@ public class ITestS3AContractCreate extends AbstractContractCreateTest {
    */
   private final boolean createPerformance;
 
-  public ITestS3AContractCreate(final boolean createPerformance) {
+  /**
+   * Expect a 100-continue response?
+   */
+  private final boolean expectContinue;
+
+  public ITestS3AContractCreate(final boolean createPerformance,
+      final boolean expectContinue) {
     this.createPerformance = createPerformance;
+    this.expectContinue = expectContinue;
   }
 
   @Override
@@ -71,6 +80,10 @@ public class ITestS3AContractCreate extends AbstractContractCreateTest {
     final Configuration conf = setPerformanceFlags(
         super.createConfiguration(),
         createPerformance ? "create" : "");
+    removeBaseAndBucketOverrides(
+        conf,
+        CONNECTION_EXPECT_CONTINUE);
+    conf.setBoolean(CONNECTION_EXPECT_CONTINUE, expectContinue);
     S3ATestUtils.disableFilesystemCaching(conf);
     return conf;
   }

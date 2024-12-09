@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntFunction;
@@ -39,6 +40,8 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.impl.LeakReporter;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -116,6 +119,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   private static final int TMP_BUFFER_MAX_SIZE = 64 * 1024;
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(S3AInputStream.class);
+
   /**
    * Atomic boolean variable to stop all ongoing vectored read operation
    * for this input stream. This will be set to true when the stream is
@@ -159,8 +165,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private final Optional<Long> fileLength;
 
   private final String uri;
-  private static final Logger LOG =
-      LoggerFactory.getLogger(S3AInputStream.class);
+
   private final S3AInputStreamStatistics streamStatistics;
   private S3AInputPolicy inputPolicy;
   private long readahead = Constants.DEFAULT_READAHEAD_RANGE;
@@ -203,6 +208,12 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private final IOStatisticsAggregator threadIOStatistics;
 
   /**
+   * Report of leaks.
+   * with report and abort unclosed streams in finalize().
+   */
+  private final LeakReporter leakReporter;
+
+  /**
    * Create the stream.
    * This does not attempt to open it; that is only done on the first
    * actual read() operation.
@@ -242,6 +253,60 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     this.boundedThreadPool = boundedThreadPool;
     this.vectoredIOContext = context.getVectoredIOContext();
     this.threadIOStatistics = requireNonNull(ctx.getIOStatisticsAggregator());
+    // build the leak reporter
+    this.leakReporter = new LeakReporter(
+        "Stream not closed while reading " + uri,
+        this::isStreamOpen,
+        () -> abortInFinalizer());
+  }
+
+  /**
+   * Finalizer.
+   * <p>
+   * Verify that the inner stream is closed.
+   * <p>
+   * If it is not, it means streams are being leaked in application code.
+   * Log a warning, including the stack trace of the caller,
+   * then abort the stream.
+   * <p>
+   * This does not attempt to invoke {@link #close()} as that is
+   * a more complex operation, and this method is being executed
+   * during a GC finalization phase.
+   * <p>
+   * Applications MUST close their streams; this is a defensive
+   * operation to return http connections and warn the end users
+   * that their applications are at risk of running out of connections.
+   *
+   * {@inheritDoc}
+   */
+  @Override
+  protected void finalize() throws Throwable {
+    leakReporter.close();
+    super.finalize();
+  }
+
+  /**
+   * Probe for stream being open.
+   * Not synchronized; the flag is volatile.
+   * @return true if the stream is still open.
+   */
+  private boolean isStreamOpen() {
+    return !closed;
+  }
+
+  /**
+   * Brute force stream close; invoked by {@link LeakReporter}.
+   * All exceptions raised are ignored.
+   */
+  private void abortInFinalizer() {
+    try {
+      // stream was leaked: update statistic
+      streamStatistics.streamLeaked();
+      // abort the stream. This merges statistics into the filesystem.
+      closeStream("finalize()", true, true).get();
+    } catch (InterruptedException | ExecutionException ignroed) {
+      /* ignore this failure shutdown */
+    }
   }
 
   /**
@@ -710,7 +775,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         forceAbort ? "abort" : "soft");
     boolean shouldAbort = forceAbort || remaining > readahead;
     CompletableFuture<Boolean> operation;
-    SDKStreamDrainer drainer = new SDKStreamDrainer(
+    SDKStreamDrainer<ResponseInputStream<GetObjectResponse>> drainer = new SDKStreamDrainer<>(
         uri,
         wrappedStream,
         shouldAbort,
@@ -1357,6 +1422,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     switch (toLowerCase(capability)) {
     case StreamCapabilities.IOSTATISTICS:
     case StreamCapabilities.IOSTATISTICS_CONTEXT:
+    case StreamStatisticNames.STREAM_LEAKS:
     case StreamCapabilities.READAHEAD:
     case StreamCapabilities.UNBUFFER:
     case StreamCapabilities.VECTOREDIO:
@@ -1405,11 +1471,15 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     /**
      * Execute the request.
+     * When CSE is enabled with reading of unencrypted data, The object is checked if it is
+     * encrypted and if so, the request is made with encrypted S3 client. If the object is
+     * not encrypted, the request is made with unencrypted s3 client.
      * @param request the request
      * @return the response
+     * @throws IOException on any failure.
      */
     @Retries.OnceRaw
-    ResponseInputStream<GetObjectResponse> getObject(GetObjectRequest request);
+    ResponseInputStream<GetObjectResponse> getObject(GetObjectRequest request) throws IOException;
 
     /**
      * Submit some asynchronous work, for example, draining a stream.
