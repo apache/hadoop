@@ -214,7 +214,7 @@ public class ProtobufRpcEngine implements RpcEngine {
         throws ServiceException {
       long startTime = 0;
       if (LOG.isDebugEnabled()) {
-        startTime = Time.now();
+        startTime = Time.monotonicNow();
       }
       
       if (args.length != 2) { // RpcController + Message
@@ -267,7 +267,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       }
 
       if (LOG.isDebugEnabled()) {
-        long callTime = Time.now() - startTime;
+        long callTime = Time.monotonicNow() - startTime;
         LOG.debug("Call: " + method.getName() + " took " + callTime + "ms");
       }
       
@@ -399,19 +399,19 @@ public class ProtobufRpcEngine implements RpcEngine {
         this.server = CURRENT_CALL_INFO.get().getServer();
         this.call = Server.getCurCall().get();
         this.methodName = CURRENT_CALL_INFO.get().getMethodName();
-        this.setupTime = Time.now();
+        this.setupTime = Time.monotonicNow();
       }
 
       @Override
       public void setResponse(Message message) {
-        long processingTime = Time.now() - setupTime;
+        long processingTime = Time.monotonicNow() - setupTime;
         call.setDeferredResponse(RpcWritable.wrap(message));
         server.updateDeferredMetrics(methodName, processingTime);
       }
 
       @Override
       public void error(Throwable t) {
-        long processingTime = Time.now() - setupTime;
+        long processingTime = Time.monotonicNow() - setupTime;
         String detailedMetricsName = t.getClass().getSimpleName();
         server.updateDeferredMetrics(detailedMetricsName, processingTime);
         call.setDeferredError(t);
