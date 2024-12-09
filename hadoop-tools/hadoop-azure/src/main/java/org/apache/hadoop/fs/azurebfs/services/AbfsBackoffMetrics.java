@@ -34,6 +34,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.H
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.THOUSAND;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.RETRY;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.COLON;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.DOUBLE_PRECISION_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.MAX_BACK_OFF;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.MIN_BACK_OFF;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.MAX_RETRY_COUNT;
@@ -56,8 +57,8 @@ import static org.apache.hadoop.fs.azurebfs.enums.RetryValue.FIFTEEN_TWENTY_FIVE
 import static org.apache.hadoop.fs.azurebfs.enums.RetryValue.TWENTY_FIVE_AND_ABOVE;
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_COUNTER;
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_GAUGE;
-import static org.apache.hadoop.fs.azurebfs.utils.StringUtils.formatWithPrecision;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
+import static org.apache.hadoop.util.StringUtils.format;
 
 /**
  * This class is responsible for tracking and
@@ -213,9 +214,9 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
 
       if (totalRequests > 0) {
         metricBuilder.append("$MMA$_").append(retryCount.getValue())
-                .append("R=").append(formatWithPrecision((double) getMetricValue(MIN_BACK_OFF, retryCount) / THOUSAND)).append("s")
-                .append(formatWithPrecision((double) getMetricValue(MAX_BACK_OFF, retryCount) / THOUSAND)).append("s")
-                .append(formatWithPrecision((double) getMetricValue(TOTAL_BACK_OFF, retryCount) / totalRequests / THOUSAND)).append("s");
+                .append("R=").append(format(DOUBLE_PRECISION_FORMAT, (double) getMetricValue(MIN_BACK_OFF, retryCount) / THOUSAND)).append("s")
+                .append(format(DOUBLE_PRECISION_FORMAT, (double) getMetricValue(MAX_BACK_OFF, retryCount) / THOUSAND)).append("s")
+                .append(format(DOUBLE_PRECISION_FORMAT, ((double) getMetricValue(TOTAL_BACK_OFF, retryCount) / totalRequests) / THOUSAND)).append("s");
       } else {
         metricBuilder.append("$MMA$_").append(retryCount.getValue()).append("R=0s");
       }
@@ -234,7 +235,7 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
   8.TR :- Total number of requests which were made
   9.MRC :- Max retry count across all requests
    */
-  private void getMmaMetrics(StringBuilder metricBuilder) {
+  private void getBaseMetrics(StringBuilder metricBuilder) {
     long totalRequestsThrottled = getMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS)
             + getMetricValue(NUMBER_OF_IOPS_THROTTLED_REQUESTS)
             + getMetricValue(NUMBER_OF_OTHER_THROTTLED_REQUESTS)
@@ -244,7 +245,7 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
     metricBuilder.append("$BWT=").append(getMetricValue(NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS))
             .append("$IT=").append(getMetricValue(NUMBER_OF_IOPS_THROTTLED_REQUESTS))
             .append("$OT=").append(getMetricValue(NUMBER_OF_OTHER_THROTTLED_REQUESTS))
-            .append("$RT=").append(formatWithPrecision(percentageOfRequestsThrottled))
+            .append("$RT=").append(format(DOUBLE_PRECISION_FORMAT, percentageOfRequestsThrottled))
             .append("$NFR=").append(getMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS))
             .append("$TRNR=").append(getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED_WITHOUT_RETRYING))
             .append("$TRF=").append(getMetricValue(NUMBER_OF_REQUESTS_FAILED))
@@ -264,7 +265,7 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
     }
     StringBuilder metricBuilder = new StringBuilder();
     getRetryMetrics(metricBuilder);
-    getMmaMetrics(metricBuilder);
+    getBaseMetrics(metricBuilder);
     return metricBuilder.toString();
   }
 

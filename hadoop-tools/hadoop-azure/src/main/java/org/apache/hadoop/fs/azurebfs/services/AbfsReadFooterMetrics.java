@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.FILE;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.COLON;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.DOUBLE_PRECISION_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.TOTAL_FILES;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.FILE_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.SIZE_READ_BY_FIRST_READ;
@@ -46,8 +47,8 @@ import static org.apache.hadoop.fs.azurebfs.enums.FileType.PARQUET;
 import static org.apache.hadoop.fs.azurebfs.enums.FileType.NON_PARQUET;
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_COUNTER;
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_GAUGE;
-import static org.apache.hadoop.fs.azurebfs.utils.StringUtils.formatWithPrecision;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
+import static org.apache.hadoop.util.StringUtils.format;
 
 /**
  * This class is responsible for tracking and updating metrics related to reading footers in files.
@@ -358,20 +359,20 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
             return;
         }
 
-        String sizeReadByFirstRead = formatWithPrecision(getMetricValue(fileType, SIZE_READ_BY_FIRST_READ) / (double) totalFiles);
-        String offsetDiffBetweenFirstAndSecondRead = formatWithPrecision(getMetricValue(fileType,
+        String sizeReadByFirstRead = format(DOUBLE_PRECISION_FORMAT, getMetricValue(fileType, SIZE_READ_BY_FIRST_READ) / (double) totalFiles);
+        String offsetDiffBetweenFirstAndSecondRead = format(DOUBLE_PRECISION_FORMAT, getMetricValue(fileType,
                 OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ) / (double) totalFiles);
 
         if (NON_PARQUET.equals(fileType)) {
-            sizeReadByFirstRead += "_" + formatWithPrecision(getMetricValue(fileType, FIRST_OFFSET_DIFF) / (double) totalFiles);
-            offsetDiffBetweenFirstAndSecondRead += "_" + formatWithPrecision(getMetricValue(fileType, SECOND_OFFSET_DIFF) / (double) totalFiles);
+            sizeReadByFirstRead += "_" + format(DOUBLE_PRECISION_FORMAT, getMetricValue(fileType, FIRST_OFFSET_DIFF) / (double) totalFiles);
+            offsetDiffBetweenFirstAndSecondRead += "_" + format(DOUBLE_PRECISION_FORMAT, getMetricValue(fileType, SECOND_OFFSET_DIFF) / (double) totalFiles);
         }
 
         metricBuilder.append("$").append(fileType)
                 .append(":$FR=").append(sizeReadByFirstRead)
                 .append("$SR=").append(offsetDiffBetweenFirstAndSecondRead)
-                .append("$FL=").append(formatWithPrecision(getMetricValue(fileType, FILE_LENGTH) / (double) totalFiles))
-                .append("$RL=").append(formatWithPrecision(getMetricValue(fileType, READ_LEN_REQUESTED) / (double) readCount));
+                .append("$FL=").append(format(DOUBLE_PRECISION_FORMAT, getMetricValue(fileType, FILE_LENGTH) / (double) totalFiles))
+                .append("$RL=").append(format(DOUBLE_PRECISION_FORMAT, getMetricValue(fileType, READ_LEN_REQUESTED) / (double) readCount));
     }
 
     /**

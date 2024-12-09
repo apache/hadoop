@@ -29,6 +29,7 @@ public final class MetricsConstants {
     public static final String RETRY = "RETRY";
     public static final String BASE = "BASE";
     public static final String FILE = "FILE";
+    public static final String DOUBLE_PRECISION_FORMAT = "%.3f";
 
     // Private constructor to prevent instantiation
     private MetricsConstants() {

@@ -54,7 +54,7 @@ public class TestAbfsBackoffMetrics {
                 .describedAs("Counter metrics should have 22 elements")
                 .isEqualTo(TOTAL_COUNTERS);
         Assertions.assertThat(gaugeMetrics.length)
-                .describedAs("Counter metrics should have 21 elements")
+                .describedAs("Gauge metrics should have 21 elements")
                 .isEqualTo(TOTAL_GAUGES);
     }
 
