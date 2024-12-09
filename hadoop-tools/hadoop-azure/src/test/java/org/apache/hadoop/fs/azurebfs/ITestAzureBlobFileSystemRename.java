@@ -25,7 +25,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -236,7 +235,7 @@ public class ITestAzureBlobFileSystemRename extends
     final List<AbfsHttpHeader> headers = new ArrayList<>();
     TestAbfsClient.mockAbfsOperationCreation(abfsClient,
             new MockIntercept<AbfsRestOperation>() {
-              int count = 0;
+              private int count = 0;
               @Override
               public void answer(final AbfsRestOperation mockedObj,
                                  final InvocationOnMock answer) throws AbfsRestOperationException {
@@ -251,7 +250,7 @@ public class ITestAzureBlobFileSystemRename extends
                   Mockito.doReturn(op).when(mockedObj).getResult();
                   Mockito.doReturn(HTTP_NOT_FOUND).when(op).getStatusCode();
                   headers.addAll(mockedObj.getRequestHeaders());
-                  throw new AbfsRestOperationException(404, "404",
+                  throw new AbfsRestOperationException(HTTP_NOT_FOUND, SOURCE_PATH_NOT_FOUND.getErrorCode(),
                           "", null, op);
                 }
               }
@@ -271,9 +270,9 @@ public class ITestAzureBlobFileSystemRename extends
     Mockito.doReturn(true).when(getPathRestOp).hasResult();
     Mockito.doReturn(op).when(getPathRestOp).getResult();
     Mockito.doReturn(DIRECTORY).when(op).getResponseHeader(X_MS_RESOURCE_TYPE);
-    Mockito.doReturn(getPathRestOp).when(abfsClient).getPathStatus
-            (nullable(String.class), nullable(Boolean.class),
-                    nullable(TracingContext.class), nullable(ContextEncryptionAdapter.class));
+    Mockito.doReturn(getPathRestOp).when(abfsClient).getPathStatus(
+            nullable(String.class), nullable(Boolean.class),
+            nullable(TracingContext.class), nullable(ContextEncryptionAdapter.class));
     fs.rename(sourceFilePath, destFilePath);
   }
 }

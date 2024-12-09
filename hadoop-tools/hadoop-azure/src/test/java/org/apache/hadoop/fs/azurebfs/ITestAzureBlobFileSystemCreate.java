@@ -27,6 +27,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -290,7 +291,7 @@ public class ITestAzureBlobFileSystemCreate extends
     final Path nonOverwriteFile = new Path("/NonOverwriteTest_FileName_" + UUID.randomUUID());
     final List<AbfsHttpHeader> headers = new ArrayList<>();
     TestAbfsClient.mockAbfsOperationCreation(abfsClient, new MockIntercept<AbfsRestOperation>() {
-      int count = 0;
+      private int count = 0;
       @Override
       public void answer(final AbfsRestOperation mockedObj,
                          final InvocationOnMock answer) throws AbfsRestOperationException {
@@ -303,7 +304,7 @@ public class ITestAzureBlobFileSystemCreate extends
           Mockito.doReturn(op).when(mockedObj).getResult();
           Mockito.doReturn(HTTP_CONFLICT).when(op).getStatusCode();
           headers.addAll(mockedObj.getRequestHeaders());
-          throw new AbfsRestOperationException(409, "409",
+          throw new AbfsRestOperationException(HTTP_CONFLICT, AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
                   "", null, op);
         }
       }
@@ -322,9 +323,9 @@ public class ITestAzureBlobFileSystemCreate extends
     }).when(op).getResponseHeader(X_MS_CLIENT_TRANSACTION_ID);
     Mockito.doReturn(true).when(getPathRestOp).hasResult();
     Mockito.doReturn(op).when(getPathRestOp).getResult();
-    Mockito.doReturn(getPathRestOp).when(abfsClient).getPathStatus
-            (nullable(String.class), nullable(Boolean.class),
-                    nullable(TracingContext.class), nullable(ContextEncryptionAdapter.class));
+    Mockito.doReturn(getPathRestOp).when(abfsClient).getPathStatus(
+            nullable(String.class), nullable(Boolean.class),
+            nullable(TracingContext.class), nullable(ContextEncryptionAdapter.class));
 
     fs.create(nonOverwriteFile, false);
   }

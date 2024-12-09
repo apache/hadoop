@@ -395,10 +395,10 @@ public class AbfsDfsClient extends AbfsClient {
           return op; //don't throw ex on mkdirs for existing directory
         }
       }
-      if(isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+      if (isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
         final AbfsHttpOperation getPathStatusOp =
                 getPathStatus(path, false, tracingContext, contextEncryptionAdapter).getResult();
-        if(clientTransactionId.equals(getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))) {
+        if (clientTransactionId.equals(getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))) {
           return op;
         }
       }
