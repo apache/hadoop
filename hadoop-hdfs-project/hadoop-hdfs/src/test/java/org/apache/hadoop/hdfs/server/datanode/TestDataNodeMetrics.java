@@ -836,7 +836,9 @@ public class TestDataNodeMetrics {
       assertCounterGt("AcquireDatasetWriteLockNumOps", (long)1, rb);
       assertCounterGt("AcquireDatasetReadLockNumOps", (long)1, rb);
     } finally {
-      if (cluster != null) {cluster.shutdown();}
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 }
