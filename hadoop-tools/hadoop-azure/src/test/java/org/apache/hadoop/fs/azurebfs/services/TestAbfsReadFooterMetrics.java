@@ -43,7 +43,7 @@ public class TestAbfsReadFooterMetrics {
      */
     @Test
     public void metricsUpdateForFirstRead() {
-        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
+        metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
         Assertions.assertThat(metrics.getTotalFiles())
                 .describedAs("Total number of files")
                 .isEqualTo(0);
@@ -54,8 +54,8 @@ public class TestAbfsReadFooterMetrics {
      */
     @Test
     public void metricsUpdateForSecondRead() {
-        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
-        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+LENGTH);
+        metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
+        metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+LENGTH);
         Assertions.assertThat(metrics.getTotalFiles())
                 .describedAs("Total number of files")
                 .isEqualTo(1);
@@ -66,9 +66,9 @@ public class TestAbfsReadFooterMetrics {
      */
     @Test
     public void metricsUpdateForOneFile() {
-        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
-        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+LENGTH);
-        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+2*LENGTH);
+        metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
+        metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+LENGTH);
+        metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+2*LENGTH);
         Assertions.assertThat(metrics.getTotalFiles())
                 .describedAs("Total number of files")
                 .isEqualTo(1);
@@ -82,12 +82,12 @@ public class TestAbfsReadFooterMetrics {
      */
     @Test
     public void metricsUpdateForMultipleFiles() {
-        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
-        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+LENGTH);
-        metrics.checkMetricUpdate(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+2*LENGTH);
-        metrics.checkMetricUpdate(TEST_FILE2, LENGTH, CONTENT_LENGTH/2, NEXT_READ_POS);
-        metrics.checkMetricUpdate(TEST_FILE2, LENGTH, CONTENT_LENGTH/2, NEXT_READ_POS+LENGTH);
-        metrics.checkMetricUpdate(TEST_FILE2, LENGTH, CONTENT_LENGTH/2, NEXT_READ_POS+2*LENGTH);
+        metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS);
+        metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+LENGTH);
+        metrics.updateReadMetrics(TEST_FILE1, LENGTH, CONTENT_LENGTH, NEXT_READ_POS+2*LENGTH);
+        metrics.updateReadMetrics(TEST_FILE2, LENGTH, CONTENT_LENGTH/2, NEXT_READ_POS);
+        metrics.updateReadMetrics(TEST_FILE2, LENGTH, CONTENT_LENGTH/2, NEXT_READ_POS+LENGTH);
+        metrics.updateReadMetrics(TEST_FILE2, LENGTH, CONTENT_LENGTH/2, NEXT_READ_POS+2*LENGTH);
         Assertions.assertThat(metrics.getTotalFiles())
                 .describedAs("Total number of files")
                 .isEqualTo(2);

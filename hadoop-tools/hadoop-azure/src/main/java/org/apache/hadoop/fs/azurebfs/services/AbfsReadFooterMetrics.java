@@ -230,7 +230,7 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
      * @param contentLength the total content length of the file
      * @param nextReadPos the position of the next read
      */
-    public void checkMetricUpdate(final String filePathIdentifier, final int len, final long contentLength, final long nextReadPos) {
+    public void updateReadMetrics(final String filePathIdentifier, final int len, final long contentLength, final long nextReadPos) {
         FileTypeMetrics fileTypeMetrics = fileTypeMetricsMap.computeIfAbsent(filePathIdentifier, key -> new FileTypeMetrics());
         if (fileTypeMetrics.getReadCount() == 0 || (fileTypeMetrics.getReadCount() >= 1 && fileTypeMetrics.getCollectMetrics())) {
             updateMetrics(fileTypeMetrics, len, contentLength, nextReadPos);
