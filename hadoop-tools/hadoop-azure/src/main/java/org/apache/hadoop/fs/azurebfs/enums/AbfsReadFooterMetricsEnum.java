@@ -29,7 +29,8 @@ public enum AbfsReadFooterMetricsEnum {
     TOTAL_FILES("totalFiles", "Total files read", FILE,  TYPE_COUNTER),
     AVG_FILE_LENGTH("avgFileLength", "Average File length", FILE, TYPE_MEAN),
     AVG_SIZE_READ_BY_FIRST_READ("avgSizeReadByFirstRead", "Average Size read by first read", FILE, TYPE_MEAN),
-    AVG_OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ("avgOffsetDiffBetweenFirstAndSecondRead", "Average Offset difference between first and second read", FILE, TYPE_MEAN),
+    AVG_OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ("avgOffsetDiffBetweenFirstAndSecondRead",
+            "Average Offset difference between first and second read", FILE, TYPE_MEAN),
     AVG_READ_LEN_REQUESTED("avgReadLenRequested", "Average Read length requested", FILE, TYPE_MEAN),
     AVG_FIRST_OFFSET_DIFF("avgFirstOffsetDiff", "Average First offset difference", FILE, TYPE_MEAN),
     AVG_SECOND_OFFSET_DIFF("avgSecondOffsetDiff", "Average Second offset difference", FILE, TYPE_MEAN);

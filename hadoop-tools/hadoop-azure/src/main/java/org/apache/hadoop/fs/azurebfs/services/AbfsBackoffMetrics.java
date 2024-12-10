@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.azurebfs.statistics.AbstractAbfsStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.THOUSAND;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.RETRY;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.COLON;
@@ -245,7 +244,7 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
     metricBuilder.append("$BWT=").append(getMetricValue(NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS))
             .append("$IT=").append(getMetricValue(NUMBER_OF_IOPS_THROTTLED_REQUESTS))
             .append("$OT=").append(getMetricValue(NUMBER_OF_OTHER_THROTTLED_REQUESTS))
-            .append("$RT=").append(formatPercent(totalRequestsThrottled/ (double)getMetricValue(TOTAL_NUMBER_OF_REQUESTS), 3))
+            .append("$RT=").append(formatPercent(totalRequestsThrottled/ (double) getMetricValue(TOTAL_NUMBER_OF_REQUESTS), 3))
             .append("$NFR=").append(getMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS))
             .append("$TRNR=").append(getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED_WITHOUT_RETRYING))
             .append("$TRF=").append(getMetricValue(NUMBER_OF_REQUESTS_FAILED))

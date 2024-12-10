@@ -201,7 +201,7 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
      * @param value the new value of the metric
      */
     public void addMeanMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metricName, long value) {
-        addMeanStatistic(fileType + COLON + metricName, value);
+        addMeanStatistic(fileType + COLON + metricName.getName(), value);
     }
 
     /**

@@ -74,7 +74,7 @@ public class TestAbfsReadFooterMetrics {
                 .isEqualTo(1);
         Assertions.assertThat(metrics.toString())
                 .describedAs("Metrics after reading 3 reads of the same file")
-                .isEqualTo("$NON_PARQUET:$FR=10000.000_20000.000$SR=10000.000_10000.000$FL=50000.000$RL=30000.000");
+                .isEqualTo("$NON_PARQUET:$FR=10000.000_20000.000$SR=10000.000_10000.000$FL=50000.000$RL=10000.000");
     }
 
     /**
@@ -93,6 +93,6 @@ public class TestAbfsReadFooterMetrics {
                 .isEqualTo(2);
         Assertions.assertThat(metrics.toString())
                 .describedAs("Metrics after reading 3 reads of the same file")
-                .isEqualTo("$NON_PARQUET:$FR=10000.000_12500.000$SR=10000.000_10000.000$FL=37500.000$RL=30000.000");
+                .isEqualTo("$NON_PARQUET:$FR=10000.000_12500.000$SR=10000.000_10000.000$FL=37500.000$RL=10000.000");
     }
 }
