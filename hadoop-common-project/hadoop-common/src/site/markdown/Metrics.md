@@ -652,6 +652,20 @@ StateStoreMetrics shows the statistics of the State Store component in Router-ba
 | `Cache`*BaseRecord*`LoadNumOps`           | Number of times store records are loaded in the State Store Cache from State Store |
 | `Cache`*BaseRecord*`LoadAvgTime`          | Average time of loading State Store Cache from State Store in milliseconds         |
 
+BalancerMetrics
+-----------------
+The metrics present statistics from the Balancer's perspective.
+
+| Name                             | Description                                                          |
+|:---------------------------------|:---------------------------------------------------------------------|
+| `IterateRunning`                 | If a balancer iterate is running, the value is 1, otherwise, it is 0 |
+| `BytesLeftToMove`                | Bytes left to move to make cluster balanced                          |
+| `BytesMovedInCurrentRun`         | Bytes that already moved in current doBalance run                    |
+| `NumOfUnderUtilizedNodes`        | Number of under utilized nodes                                       |
+| `NumOfOverUtilizedNodes`         | Number of over utilized nodes                                        |
+| `NumOfAboveAverageUtilizedNodes` | Number of above avg utilized nodes                                   |
+| `NumOfBelowAvgUtilizedNodes`     | Number of below avg utilized nodes                                   |
+
 yarn context
 ============
 

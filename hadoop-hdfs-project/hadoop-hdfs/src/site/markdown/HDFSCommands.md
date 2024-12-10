@@ -288,12 +288,16 @@ Usage:
               [-exclude [-f <hosts-file> | <comma-separated list of hosts>]]
               [-include [-f <hosts-file> | <comma-separated list of hosts>]]
               [-source [-f <hosts-file> | <comma-separated list of hosts>]]
+              [-excludeSource [-f <hosts-file> | <comma-separated list of hosts>]]
+              [-target [-f <hosts-file> | <comma-separated list of hosts>]]
+              [-excludeTarget [-f <hosts-file> | <comma-separated list of hosts>]]
               [-blockpools <comma-separated list of blockpool ids>]
               [-idleiterations <idleiterations>]
               [-runDuringUpgrade]
               [-asService]
               [-sortTopNodes]
               [-limitOverUtilizedNum <specified maximum number of overUtilized datanodes>]
+              [-limitAboveAvgUtilizedNum <specified maximum number of aboveAvgUtilized datanodes>]
               [-hotBlockTimeInterval <specified time interval>]
 
 | COMMAND\_OPTION | Description |
@@ -303,12 +307,16 @@ Usage:
 | `-exclude -f` \<hosts-file\> \| \<comma-separated list of hosts\> | Excludes the specified datanodes from being balanced by the balancer. |
 | `-include -f` \<hosts-file\> \| \<comma-separated list of hosts\> | Includes only the specified datanodes to be balanced by the balancer. |
 | `-source -f` \<hosts-file\> \| \<comma-separated list of hosts\> | Pick only the specified datanodes as source nodes. |
+| `-excludeSource -f` \<hosts-file\> \| \<comma-separated list of hosts\> | Excludes the specified datanodes to be selected as a source. |
+| `-target -f` \<hosts-file\> \| \<comma-separated list of hosts\> | Pick only the specified datanodes as target nodes. |
+| `-excludeTarget -f` \<hosts-file\> \| \<comma-separated list of hosts\> | Excludes the specified datanodes from being selected as a target. |
 | `-blockpools` \<comma-separated list of blockpool ids\> | The balancer will only run on blockpools included in this list. |
 | `-idleiterations` \<iterations\> | Maximum number of idle iterations before exit. This overwrites the default idleiterations(5). |
 | `-runDuringUpgrade` | Whether to run the balancer during an ongoing HDFS upgrade. This is usually not desired since it will not affect used space on over-utilized machines. |
 | `-asService` | Run Balancer as a long running service. |
 | `-sortTopNodes` | Sort datanodes based on the utilization so that highly utilized datanodes get scheduled first. |
 | `-limitOverUtilizedNum` | Limit the maximum number of overUtilized datanodes. |
+| `-limitAboveAvgUtilizedNum` | Limit the maximum number of aboveAvgUtilized datanodes. |
 | `-hotBlockTimeInterval` | Prefer moving cold blocks i.e blocks associated with files accessed or modified before the specified time interval. |
 | `-h`\|`--help` | Display the tool usage and help information and exit. |
 

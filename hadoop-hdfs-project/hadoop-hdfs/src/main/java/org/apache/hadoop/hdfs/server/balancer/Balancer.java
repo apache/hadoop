@@ -217,6 +217,8 @@ public class Balancer {
       + "that highly utilized datanodes get scheduled first."
       + "\n\t[-limitOverUtilizedNum <specified maximum number of overUtilized datanodes>]"
       + "\tLimit the maximum number of overUtilized datanodes."
+      + "\n\t[-limitAboveAvgUtilizedNum <specified maximum number of aboveAvgUtilized datanodes>]"
+      + "\tLimit the maximum number of aboveAvgUtilized datanodes."
       + "\n\t[-hotBlockTimeInterval]\tprefer to move cold blocks.";
 
   @VisibleForTesting
@@ -240,6 +242,7 @@ public class Balancer {
   private final long defaultBlockSize;
   private final boolean sortTopNodes;
   private final int limitOverUtilizedNum;
+  private final int limitAboveAvgUtilizedNum;
   private final BalancerMetrics metrics;
 
   // all data node lists
@@ -369,6 +372,7 @@ public class Balancer {
     this.runDuringUpgrade = p.getRunDuringUpgrade();
     this.sortTopNodes = p.getSortTopNodes();
     this.limitOverUtilizedNum = p.getLimitOverUtilizedNum();
+    this.limitAboveAvgUtilizedNum = p.getLimitAboveAvgUtilizedNum();
 
     this.maxSizeToMove = getLongBytes(conf,
         DFSConfigKeys.DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY,
@@ -488,11 +492,22 @@ public class Balancer {
       limitOverUtilizedNum();
     }
 
+    // Limit the maximum number of aboveAvgUtilized datanodes
+    // If excludedAboveAvgUtilizedNum is greater than 0, The aboveAvgUtilized nodes num is limited
+    int excludedAboveAvgUtilizedNum =
+        Math.max(aboveAvgUtilized.size() - limitAboveAvgUtilizedNum, 0);
+    if (excludedAboveAvgUtilizedNum > 0) {
+      limitAboveAvgUtilizedNum();
+    }
+
     logUtilizationCollections();
     metrics.setNumOfOverUtilizedNodes(overUtilized.size());
     metrics.setNumOfUnderUtilizedNodes(underUtilized.size());
-    
-    Preconditions.checkState(dispatcher.getStorageGroupMap().size() - excludedOverUtilizedNum
+    metrics.setNumOfAboveAvgUtilizedNodes(aboveAvgUtilized.size());
+    metrics.setNumOfBelowAvgUtilizedNodes(belowAvgUtilized.size());
+
+    Preconditions.checkState(dispatcher.getStorageGroupMap().size()
+            - excludedOverUtilizedNum - excludedAboveAvgUtilizedNum
         == overUtilized.size() + underUtilized.size() + aboveAvgUtilized.size()
            + belowAvgUtilized.size(),
         "Mismatched number of storage groups");
@@ -526,6 +541,20 @@ public class Balancer {
 
     int size = overUtilized.size();
     for (int i = 0; i < size - limitOverUtilizedNum; i++) {
+      list.removeLast();
+    }
+  }
+
+  private void limitAboveAvgUtilizedNum() {
+    Preconditions.checkState(aboveAvgUtilized instanceof LinkedList,
+        "Collection aboveAvgUtilized is not a LinkedList.");
+
+    LinkedList<Source> list = (LinkedList<Source>) aboveAvgUtilized;
+
+    LOG.info("Limiting aboveAvgUtilized nodes num");
+
+    int size = aboveAvgUtilized.size();
+    for (int i = 0; i < size - limitAboveAvgUtilizedNum; i++) {
       list.removeLast();
     }
   }
@@ -1145,6 +1174,14 @@ public class Balancer {
                   "limitOverUtilizedNum must be non-negative");
               LOG.info("Using a limitOverUtilizedNum of {}", limitNum);
               b.setLimitOverUtilizedNum(limitNum);
+            } else if ("-limitAboveAvgUtilizedNum".equalsIgnoreCase(args[i])) {
+              Preconditions.checkArgument(++i < args.length,
+                  "limitAboveAvgUtilizedNum value is missing: args = " + Arrays.toString(args));
+              int limitNum = Integer.parseInt(args[i]);
+              Preconditions.checkArgument(limitNum >= 0,
+                  "limitAboveAvgUtilizedNum must be non-negative");
+              LOG.info("Using a limitAboveAvgUtilizedNum of {}", limitNum);
+              b.setLimitAboveAvgUtilizedNum(limitNum);
             } else {
               throw new IllegalArgumentException("args = "
                   + Arrays.toString(args));

@@ -768,6 +768,62 @@ public class TestBalancerLongRunningTasks {
   }
 
   @Test(timeout = 60000)
+  public void testBalancerWithLimitAboveAvgUtilizedNum() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    // Init the config (block size to 100)
+    initConf(conf);
+    conf.setInt(DFS_HEARTBEAT_INTERVAL_KEY, 30000);
+
+    final long totalCapacity = 1000L;
+    final int diffBetweenNodes = 50;
+
+    // 5 nodes with 80%, 85%, 90%, 95%, 100% usage
+    final int numOfDn = 5;
+    final long[] capacityArray = new long[numOfDn];
+    Arrays.fill(capacityArray, totalCapacity);
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(numOfDn)
+        .simulatedCapacities(capacityArray)
+        .build()) {
+      cluster.setDataNodesDead();
+      List<DataNode> dataNodes = cluster.getDataNodes();
+      // Create top used nodes
+      for (int i = 0; i < numOfDn; i++) {
+        // Bring one node alive
+        DataNodeTestUtils.triggerHeartbeat(dataNodes.get(i));
+        DataNodeTestUtils.triggerBlockReport(dataNodes.get(i));
+        // Create nodes with: 80%, 85%, 90%, 95%, 100%
+        int nodeCapacity = (int) totalCapacity - diffBetweenNodes * (numOfDn - i - 1);
+
+        TestBalancer.createFile(cluster, new Path("test_file" + i), nodeCapacity, (short) 1, 0);
+        cluster.setDataNodesDead();
+      }
+
+      // Bring all nodes alive
+      cluster.triggerHeartbeats();
+      cluster.triggerBlockReports();
+      cluster.waitFirstBRCompleted(0, 6000);
+
+      final BalancerParameters balancerParameters = Balancer.Cli.parse(new String[] {
+          "-policy", BalancingPolicy.Node.INSTANCE.getName(),
+          "-threshold", "10",
+          "-limitAboveAvgUtilizedNum", "0"
+      });
+
+      final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
+      List<NameNodeConnector> connectors =
+          NameNodeConnector.newNameNodeConnectors(namenodes, Balancer.class.getSimpleName(),
+              Balancer.BALANCER_ID_PATH, conf, BalancerParameters.DEFAULT.getMaxIdleIteration());
+
+      final Balancer balancer = new Balancer(connectors.get(0), balancerParameters, conf);
+      Balancer.Result balancerResult = balancer.runOneIteration();
+      assertTrue("BalancerResult is not as expected. " + balancerResult,
+          (balancerResult.getBytesAlreadyMoved() == 0 && balancerResult.getBlocksMoved() == 0));
+    }
+  }
+
+  @Test(timeout = 60000)
   public void testBalancerMetricsDuplicate() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     // Init the config (block size to 100)

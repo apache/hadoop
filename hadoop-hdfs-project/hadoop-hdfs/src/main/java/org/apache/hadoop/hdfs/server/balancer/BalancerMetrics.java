@@ -43,6 +43,12 @@ final class BalancerMetrics {
   @Metric("Number of over utilized nodes")
   private MutableGaugeInt numOfOverUtilizedNodes;
 
+  @Metric("Number of above avg utilized nodes")
+  private MutableGaugeInt numOfAboveAvgUtilizedNodes;
+
+  @Metric("Number of below avg utilized nodes")
+  private MutableGaugeInt numOfBelowAvgUtilizedNodes;
+
   private BalancerMetrics(Balancer b) {
     this.balancer = b;
   }
@@ -76,5 +82,13 @@ final class BalancerMetrics {
 
   void setNumOfOverUtilizedNodes(int numOfOverUtilizedNodes) {
     this.numOfOverUtilizedNodes.set(numOfOverUtilizedNodes);
+  }
+
+  void setNumOfAboveAvgUtilizedNodes(int numOfAboveAvgUtilizedNodes) {
+    this.numOfAboveAvgUtilizedNodes.set(numOfAboveAvgUtilizedNodes);
+  }
+
+  void setNumOfBelowAvgUtilizedNodes(int numOfBelowAvgUtilizedNodes) {
+    this.numOfBelowAvgUtilizedNodes.set(numOfBelowAvgUtilizedNodes);
   }
 }
