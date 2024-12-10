@@ -206,7 +206,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
   private AbfsReadFooterMetrics getNonParquetMetrics() {
     AbfsReadFooterMetrics nonParquetMetrics = new AbfsReadFooterMetrics();
     nonParquetMetrics.addMeanMetricValue(NON_PARQUET, AVG_FILE_LENGTH, Long.parseLong("32768"));
-    nonParquetMetrics.addMeanMetricValue(NON_PARQUET, AVG_READ_LEN_REQUESTED, Long.parseLong("32769"));
+    nonParquetMetrics.addMeanMetricValue(NON_PARQUET, AVG_READ_LEN_REQUESTED, Long.parseLong("10923"));
     nonParquetMetrics.addMeanMetricValue(NON_PARQUET, AVG_SIZE_READ_BY_FIRST_READ, Long.parseLong("16384"));
     nonParquetMetrics.addMeanMetricValue(NON_PARQUET, AVG_OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, 1);
     nonParquetMetrics.addMeanMetricValue(NON_PARQUET, AVG_FIRST_OFFSET_DIFF, Long.parseLong("16384"));
@@ -221,7 +221,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
   private AbfsReadFooterMetrics getParquetMetrics() {
     AbfsReadFooterMetrics parquetMetrics = new AbfsReadFooterMetrics();
     parquetMetrics.addMeanMetricValue(PARQUET, AVG_FILE_LENGTH, Long.parseLong("8388608"));
-    parquetMetrics.addMeanMetricValue(PARQUET, AVG_READ_LEN_REQUESTED, Long.parseLong("8388608"));
+    parquetMetrics.addMeanMetricValue(PARQUET, AVG_READ_LEN_REQUESTED, Long.parseLong("2560"));
     parquetMetrics.addMeanMetricValue(PARQUET, AVG_SIZE_READ_BY_FIRST_READ, Long.parseLong("1024"));
     parquetMetrics.addMeanMetricValue(PARQUET, AVG_OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ, Long.parseLong("4096"));
     parquetMetrics.incrementMetricValue(PARQUET, TOTAL_FILES);
