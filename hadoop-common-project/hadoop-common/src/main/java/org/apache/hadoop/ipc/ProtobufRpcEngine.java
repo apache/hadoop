@@ -402,9 +402,9 @@ public class ProtobufRpcEngine implements RpcEngine {
         this.callStartNanos = Server.getCurCallStartnanos().get();
       }
 
-      private void updateProcessingDetails(Call call, long deltaNanos) {
-        ProcessingDetails details = call.getProcessingDetails();
-        call.getProcessingDetails().set(ProcessingDetails.Timing.PROCESSING, deltaNanos,
+      private void updateProcessingDetails(Call rpcCall, long deltaNanos) {
+        ProcessingDetails details = rpcCall.getProcessingDetails();
+        rpcCall.getProcessingDetails().set(ProcessingDetails.Timing.PROCESSING, deltaNanos,
             TimeUnit.NANOSECONDS);
         deltaNanos -= details.get(ProcessingDetails.Timing.LOCKWAIT, TimeUnit.NANOSECONDS);
         deltaNanos -= details.get(ProcessingDetails.Timing.LOCKSHARED, TimeUnit.NANOSECONDS);
