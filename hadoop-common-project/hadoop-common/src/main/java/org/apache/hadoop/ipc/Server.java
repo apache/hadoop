@@ -352,7 +352,7 @@ public abstract class Server {
    */
   private static final ThreadLocal<Call> CurCall = new ThreadLocal<Call>();
 
-  private static final ThreadLocal<Long> CurCallStartNanos = new ThreadLocal<Long>();
+  private static final ThreadLocal<Long> CUR_CALL_STARTNANOS = new ThreadLocal<Long>();
 
   /** @return Get the current call. */
   @VisibleForTesting
@@ -360,8 +360,8 @@ public abstract class Server {
     return CurCall;
   }
 
-  public static ThreadLocal<Long> getCurCallStartNanos() {
-    return CurCallStartNanos;
+  public static ThreadLocal<Long> getCurCallStartnanos() {
+    return CUR_CALL_STARTNANOS;
   }
 
   /**
@@ -1282,7 +1282,7 @@ public abstract class Server {
       }
 
       long startNanos = Time.monotonicNowNanos();
-      CurCallStartNanos.set(startNanos);
+      CUR_CALL_STARTNANOS.set(startNanos);
       Writable value = null;
       ResponseParams responseParams = new ResponseParams();
 
@@ -3263,7 +3263,7 @@ public abstract class Server {
           }
         } finally {
           CurCall.set(null);
-          CurCallStartNanos.set(null);
+          CUR_CALL_STARTNANOS.set(null);
           numInProcessHandler.decrementAndGet();
           IOUtils.cleanupWithLogger(LOG, traceScope);
           if (call != null) {

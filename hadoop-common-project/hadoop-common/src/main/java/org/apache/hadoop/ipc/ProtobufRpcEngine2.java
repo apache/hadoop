@@ -432,18 +432,18 @@ public class ProtobufRpcEngine2 implements RpcEngine {
         this.server = CURRENT_CALL_INFO.get().getServer();
         this.call = Server.getCurCall().get();
         this.methodName = CURRENT_CALL_INFO.get().getMethodName();
-        this.callStartNanos = Server.getCurCallStartNanos().get();
+        this.callStartNanos = Server.getCurCallStartnanos().get();
       }
 
-      private void updateProcessingDetails(Call call, long deltaNanos) {
-        ProcessingDetails details = call.getProcessingDetails();
-        call.getProcessingDetails().set(Timing.PROCESSING, deltaNanos, TimeUnit.NANOSECONDS);
+      private void updateProcessingDetails(Call rpcCall, long deltaNanos) {
+        ProcessingDetails details = rpcCall.getProcessingDetails();
+        rpcCall.getProcessingDetails().set(Timing.PROCESSING, deltaNanos, TimeUnit.NANOSECONDS);
         deltaNanos -= details.get(Timing.LOCKWAIT, TimeUnit.NANOSECONDS);
         deltaNanos -= details.get(Timing.LOCKSHARED, TimeUnit.NANOSECONDS);
         deltaNanos -= details.get(Timing.LOCKEXCLUSIVE, TimeUnit.NANOSECONDS);
         details.set(Timing.LOCKFREE, deltaNanos, TimeUnit.NANOSECONDS);
       }
-      
+
       @Override
       public void setResponse(Message message) {
         long deltaNanos = Time.monotonicNowNanos() - callStartNanos;
