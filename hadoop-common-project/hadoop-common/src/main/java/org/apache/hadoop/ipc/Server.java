@@ -351,13 +351,19 @@ public abstract class Server {
    * after the call returns.
    */
   private static final ThreadLocal<Call> CurCall = new ThreadLocal<Call>();
-  
+
+  private static final ThreadLocal<Long> CurCallStartNanos = new ThreadLocal<Long>();
+
   /** @return Get the current call. */
   @VisibleForTesting
   public static ThreadLocal<Call> getCurCall() {
     return CurCall;
   }
-  
+
+  public static ThreadLocal<Long> getCurCallStartNanos() {
+    return CurCallStartNanos;
+  }
+
   /**
    * Returns the currently active RPC call's sequential ID number.  A negative
    * call ID indicates an invalid value, such as if there is no currently active
@@ -638,7 +644,8 @@ public abstract class Server {
     rpcMetrics.addRpcQueueTime(queueTime);
 
     if (call.isResponseDeferred() || connDropped) {
-      // call was skipped; don't include it in processing metrics
+      // The call was skipped; don't include it in processing metrics.
+      // Will update metrics in method updateDeferredMetrics.
       return;
     }
 
@@ -668,9 +675,41 @@ public abstract class Server {
     }
   }
 
-  void updateDeferredMetrics(String name, long processingTime) {
+  /**
+   * Update rpc metrics for defered calls.
+   * @param call The Rpc Call
+   * @param name Rpc method name
+   * @param processingTime processing call in ms unit.
+   */
+  void updateDeferredMetrics(Call call, String name, long processingTime) {
+    long completionTimeNanos = Time.monotonicNowNanos();
+    long arrivalTimeNanos = call.timestampNanos;
+
+    ProcessingDetails details = call.getProcessingDetails();
+    long waitTime =
+        details.get(Timing.LOCKWAIT, rpcMetrics.getMetricsTimeUnit());
+    long responseTime =
+        details.get(Timing.RESPONSE, rpcMetrics.getMetricsTimeUnit());
+    rpcMetrics.addRpcLockWaitTime(waitTime);
+    rpcMetrics.addRpcProcessingTime(processingTime);
+    rpcMetrics.addRpcResponseTime(responseTime);
     rpcMetrics.addDeferredRpcProcessingTime(processingTime);
     rpcDetailedMetrics.addDeferredProcessingTime(name, processingTime);
+    // don't include lock wait for detailed metrics.
+    processingTime -= waitTime;
+    rpcDetailedMetrics.addProcessingTime(name, processingTime);
+
+    // Overall processing time is from arrival to completion.
+    long overallProcessingTime = rpcMetrics.getMetricsTimeUnit()
+        .convert(completionTimeNanos - arrivalTimeNanos, TimeUnit.NANOSECONDS);
+    rpcDetailedMetrics.addOverallProcessingTime(name, overallProcessingTime);
+    callQueue.addResponseTime(name, call, details);
+    if (isLogSlowRPC()) {
+      logSlowRpcCalls(name, call, details);
+    }
+    if (details.getReturnStatus() == RpcStatusProto.SUCCESS) {
+      rpcMetrics.incrRpcCallSuccesses();
+    }
   }
 
   /**
@@ -1243,6 +1282,7 @@ public abstract class Server {
       }
 
       long startNanos = Time.monotonicNowNanos();
+      CurCallStartNanos.set(startNanos);
       Writable value = null;
       ResponseParams responseParams = new ResponseParams();
 
@@ -1331,6 +1371,7 @@ public abstract class Server {
      * Send a deferred response, ignoring errors.
      */
     private void sendDeferedResponse() {
+      long startNanos = Time.monotonicNowNanos();
       try {
         connection.sendResponse(this);
       } catch (Exception e) {
@@ -1342,6 +1383,8 @@ public abstract class Server {
             .currentThread().getName() + ", CallId="
             + callId + ", hostname=" + getHostAddress());
       }
+      getProcessingDetails().set(Timing.RESPONSE,
+          Time.monotonicNowNanos() - startNanos, TimeUnit.NANOSECONDS);
     }
 
     @Override
@@ -3220,6 +3263,7 @@ public abstract class Server {
           }
         } finally {
           CurCall.set(null);
+          CurCallStartNanos.set(null);
           numInProcessHandler.decrementAndGet();
           IOUtils.cleanupWithLogger(LOG, traceScope);
           if (call != null) {
