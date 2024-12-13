@@ -352,16 +352,10 @@ public abstract class Server {
    */
   private static final ThreadLocal<Call> CurCall = new ThreadLocal<Call>();
 
-  private static final ThreadLocal<Long> CUR_CALL_STARTNANOS = new ThreadLocal<Long>();
-
   /** @return Get the current call. */
   @VisibleForTesting
   public static ThreadLocal<Call> getCurCall() {
     return CurCall;
-  }
-
-  public static ThreadLocal<Long> getCurCallStartnanos() {
-    return CUR_CALL_STARTNANOS;
   }
 
   /**
@@ -3273,7 +3267,6 @@ public abstract class Server {
           }
         } finally {
           CurCall.set(null);
-          CUR_CALL_STARTNANOS.set(null);
           numInProcessHandler.decrementAndGet();
           IOUtils.cleanupWithLogger(LOG, traceScope);
           if (call != null) {
