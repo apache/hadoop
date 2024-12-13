@@ -1002,6 +1002,7 @@ public abstract class Server {
     final int callId;            // the client's call id
     final int retryCount;        // the retry count of the call
     private final long timestampNanos; // time the call was received
+    protected long startHandleTimestampNanos; // time the call was run
     long responseTimestampNanos; // time the call was served
     private AtomicInteger responseWaitCount = new AtomicInteger(1);
     final RPC.RpcKind rpcKind;
@@ -1206,6 +1207,15 @@ public abstract class Server {
     public long getTimestampNanos() {
       return timestampNanos;
     }
+
+
+    public long getStartHandleTimestampNanos() {
+      return startHandleTimestampNanos;
+    }
+
+    public void setStartHandleTimestampNanos(long startHandleTimestampNanos) {
+      this.startHandleTimestampNanos = startHandleTimestampNanos;
+    }
   }
 
   /** A RPC extended call queued for handling. */
@@ -1282,7 +1292,7 @@ public abstract class Server {
       }
 
       long startNanos = Time.monotonicNowNanos();
-      CUR_CALL_STARTNANOS.set(startNanos);
+      this.setStartHandleTimestampNanos(startNanos);
       Writable value = null;
       ResponseParams responseParams = new ResponseParams();
 

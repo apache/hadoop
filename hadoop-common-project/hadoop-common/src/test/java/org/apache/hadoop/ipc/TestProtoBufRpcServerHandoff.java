@@ -76,7 +76,7 @@ public class TestProtoBufRpcServerHandoff {
     long serverStartTime = System.currentTimeMillis();
     LOG.info("Server started at: " + address + " at time: " + serverStartTime);
   }
-  
+
   @Test(timeout = 20000)
   public void test() throws Exception {
     final TestProtoBufRpcServerHandoffProtocol client = RPC.getProxy(

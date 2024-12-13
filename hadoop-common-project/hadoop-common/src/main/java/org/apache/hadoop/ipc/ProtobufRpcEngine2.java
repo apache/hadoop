@@ -426,13 +426,11 @@ public class ProtobufRpcEngine2 implements RpcEngine {
       private final RPC.Server server;
       private final Call call;
       private final String methodName;
-      private final long callStartNanos;
 
       ProtobufRpcEngineCallbackImpl() {
         this.server = CURRENT_CALL_INFO.get().getServer();
         this.call = Server.getCurCall().get();
         this.methodName = CURRENT_CALL_INFO.get().getMethodName();
-        this.callStartNanos = Server.getCurCallStartnanos().get();
       }
 
       private void updateProcessingDetails(Call rpcCall, long deltaNanos) {
@@ -446,7 +444,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
 
       @Override
       public void setResponse(Message message) {
-        long deltaNanos = Time.monotonicNowNanos() - callStartNanos;
+        long deltaNanos = Time.monotonicNowNanos() - call.getStartHandleTimestampNanos();
         updateProcessingDetails(call, deltaNanos);
         call.setDeferredResponse(RpcWritable.wrap(message));
         server.updateDeferredMetrics(call, methodName, deltaNanos);
@@ -454,7 +452,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
 
       @Override
       public void error(Throwable t) {
-        long deltaNanos = Time.monotonicNowNanos() - callStartNanos;
+        long deltaNanos = Time.monotonicNowNanos() - call.getStartHandleTimestampNanos();
         updateProcessingDetails(call, deltaNanos);
         call.setDeferredError(t);
         String detailedMetricsName = t.getClass().getSimpleName();
