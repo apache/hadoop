@@ -43,7 +43,7 @@ public final class SaslMechanismFactory {
     LOG.debug("{} = {} (env)", SASL_MECHANISM_ENV, envValue);
 
     // conf
-    final Configuration conf = new Configuration(false);
+    final Configuration conf = new Configuration();
     final String confValue = conf.get(HADOOP_SECURITY_SASL_MECHANISM_KEY,
         HADOOP_SECURITY_SASL_MECHANISM_DEFAULT);
     LOG.debug("{} = {} (conf)", HADOOP_SECURITY_SASL_MECHANISM_KEY, confValue);
