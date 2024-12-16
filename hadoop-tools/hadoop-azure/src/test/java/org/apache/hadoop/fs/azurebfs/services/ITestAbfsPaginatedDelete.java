@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.test.ReflectionUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -194,7 +195,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
 
     // Set the paginated enabled value and xMsVersion at spiedClient level.
     AbfsClient spiedClient = Mockito.spy(fs.getAbfsStore().getClient());
-    ITestAbfsClient.setAbfsClientField(spiedClient, "xMsVersion", xMsVersion);
+    ReflectionUtils.setFinalField(AbfsClient.class, spiedClient, "xMsVersion", xMsVersion);
     Mockito.doReturn(isPaginatedDeleteEnabled).when(spiedClient).getIsPaginatedDeleteEnabled();
 
     AbfsRestOperation op = spiedClient.deletePath(

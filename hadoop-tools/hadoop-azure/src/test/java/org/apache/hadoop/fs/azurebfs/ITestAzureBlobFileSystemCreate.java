@@ -21,10 +21,10 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.FileNotFoundException;
 import java.io.FilterOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.EnumSet;
 import java.util.UUID;
 
+import org.apache.hadoop.test.ReflectionUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -395,7 +395,9 @@ public class ITestAzureBlobFileSystemCreate extends
         fs.getAbfsStore().getAbfsConfiguration());
 
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
-    abfsStore = setAzureBlobSystemStoreField(abfsStore, "client", mockClient);
+
+    ReflectionUtils.setFinalField(AzureBlobFileSystemStore.class, abfsStore, "client", mockClient);
+
     boolean isNamespaceEnabled = abfsStore
         .getIsNamespaceEnabled(getTestTracingContext(fs, false));
 
@@ -484,22 +486,6 @@ public class ITestAzureBlobFileSystemCreate extends
     // 1. create overwrite=false - fail with server error
     // Create will fail with 500
     validateCreateFileException(AbfsRestOperationException.class, abfsStore);
-  }
-
-  private AzureBlobFileSystemStore setAzureBlobSystemStoreField(
-      final AzureBlobFileSystemStore abfsStore,
-      final String fieldName,
-      Object fieldObject) throws Exception {
-
-    Field abfsClientField = AzureBlobFileSystemStore.class.getDeclaredField(
-        fieldName);
-    abfsClientField.setAccessible(true);
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
-    modifiersField.setAccessible(true);
-    modifiersField.setInt(abfsClientField,
-        abfsClientField.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
-    abfsClientField.set(abfsStore, fieldObject);
-    return abfsStore;
   }
 
   private <E extends Throwable> void validateCreateFileException(final Class<E> exceptionClass, final AzureBlobFileSystemStore abfsStore)

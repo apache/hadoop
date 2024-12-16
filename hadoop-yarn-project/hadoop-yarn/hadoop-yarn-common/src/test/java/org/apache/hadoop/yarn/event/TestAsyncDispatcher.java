@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.hadoop.test.ReflectionUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -183,7 +184,7 @@ public class TestAsyncDispatcher {
 
     Field logger = AsyncDispatcher.class.getDeclaredField("LOG");
     logger.setAccessible(true);
-    Field modifiers = Field.class.getDeclaredField("modifiers");
+    Field modifiers = ReflectionUtils.getModifiersField();
     modifiers.setAccessible(true);
     modifiers.setInt(logger, logger.getModifiers() & ~Modifier.FINAL);
     Object oldLog = logger.get(null);
@@ -229,7 +230,7 @@ public class TestAsyncDispatcher {
 
     Field logger = AsyncDispatcher.class.getDeclaredField("LOG");
     logger.setAccessible(true);
-    Field modifiers = Field.class.getDeclaredField("modifiers");
+    Field modifiers = ReflectionUtils.getModifiersField();
     modifiers.setAccessible(true);
     modifiers.setInt(logger, logger.getModifiers() & ~Modifier.FINAL);
     Object oldLog = logger.get(null);
