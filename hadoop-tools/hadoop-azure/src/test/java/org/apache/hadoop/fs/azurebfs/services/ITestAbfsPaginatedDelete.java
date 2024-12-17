@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.hadoop.test.ReflectionUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -42,6 +41,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.test.ReflectionUtils;
 import org.apache.hadoop.util.Lists;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;

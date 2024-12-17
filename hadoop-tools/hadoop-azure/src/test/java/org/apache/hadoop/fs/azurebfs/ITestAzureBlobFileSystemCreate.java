@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.UUID;
 
-import org.apache.hadoop.test.ReflectionUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -40,6 +39,7 @@ import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.ReflectionUtils;
 
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;

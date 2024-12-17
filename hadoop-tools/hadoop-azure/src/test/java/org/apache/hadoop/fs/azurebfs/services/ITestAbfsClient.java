@@ -28,8 +28,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
-import org.apache.hadoop.test.ReflectionUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -37,9 +35,11 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.TestAbfsConfigurationFieldsValidation;
@@ -49,11 +49,11 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect10
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
+import org.apache.hadoop.test.ReflectionUtils;
 import org.apache.http.HttpResponse;
 
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
