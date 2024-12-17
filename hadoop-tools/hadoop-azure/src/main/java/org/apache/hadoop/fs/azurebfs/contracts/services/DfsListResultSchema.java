@@ -54,5 +54,4 @@ public class DfsListResultSchema implements ListResultSchema {
     this.paths = (List<DfsListResultEntrySchema>) paths;
     return this;
   }
-
 }
