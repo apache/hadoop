@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs.enums;
 
+/**
+ * Enum for file types.
+ * Used in {@link org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics} to store metrics based on file type.
+ */
 public enum FileType {
     /**
      * Parquet file.

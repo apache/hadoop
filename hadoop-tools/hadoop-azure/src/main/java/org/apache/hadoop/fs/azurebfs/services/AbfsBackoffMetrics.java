@@ -26,14 +26,27 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum;
 import org.apache.hadoop.fs.azurebfs.enums.RetryValue;
 import org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum;
-import org.apache.hadoop.fs.azurebfs.statistics.AbstractAbfsStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EQUAL;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.THOUSAND;
-import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.RETRY;
-import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.DOUBLE_PRECISION_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.RETRY;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.REQUEST_COUNT;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SECONDS;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.MIN_MAX_AVERAGE;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.BANDWIDTH_THROTTLED_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.IOPS_THROTTLED_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.OTHER_THROTTLED_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.PERCENTAGE_THROTTLED_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.NETWORK_ERROR_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SUCCESS_REQUESTS_WITHOUT_RETRY;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.FAILED_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.TOTAL_REQUESTS_COUNT;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.MAX_RETRY;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.MAX_BACK_OFF;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.MIN_BACK_OFF;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.MAX_RETRY_COUNT;
@@ -66,7 +79,8 @@ import static org.apache.hadoop.util.StringUtils.formatPercent;
  * retry operations in Azure Blob File System (ABFS).
  */
 public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
-  private static final List<RetryValue> RETRY_LIST = Arrays.asList(ONE, TWO, THREE, FOUR, FIVE_FIFTEEN, FIFTEEN_TWENTY_FIVE, TWENTY_FIVE_AND_ABOVE);
+  private static final List<RetryValue> RETRY_LIST = Arrays.asList(
+          ONE, TWO, THREE, FOUR, FIVE_FIFTEEN, FIFTEEN_TWENTY_FIVE, TWENTY_FIVE_AND_ABOVE);
 
   /**
    * Constructor to initialize the IOStatisticsStore with counters and gauges.
@@ -200,40 +214,40 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
     setMetricValue(metric, value, null);
   }
 
-  /*
-  Acronyms :-
-  1.RCTSI :- Request count that succeeded in x retries
-  2.MMA :- Min Max Average (This refers to the backoff or sleep time between 2 requests)
-  3.s :- seconds
+  /**
+   * Retrieves the retry metrics.
+   *
+   * @param metricBuilder the string builder to append the metrics
    */
   private void getRetryMetrics(StringBuilder metricBuilder) {
     for (RetryValue retryCount : RETRY_LIST) {
       long totalRequests = getMetricValue(TOTAL_REQUESTS, retryCount);
-      metricBuilder.append("$RCTSI$_").append(retryCount.getValue())
-              .append("R=").append(getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, retryCount));
+      metricBuilder.append(REQUEST_COUNT)
+              .append(retryCount.getValue())
+              .append(REQUESTS)
+              .append(getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, retryCount));
 
       if (totalRequests > 0) {
-        metricBuilder.append("$MMA$_").append(retryCount.getValue())
-                .append("R=").append(format(DOUBLE_PRECISION_FORMAT, (double) getMetricValue(MIN_BACK_OFF, retryCount) / THOUSAND)).append("s")
-                .append(format(DOUBLE_PRECISION_FORMAT, (double) getMetricValue(MAX_BACK_OFF, retryCount) / THOUSAND)).append("s")
-                .append(format(DOUBLE_PRECISION_FORMAT, ((double) getMetricValue(TOTAL_BACK_OFF, retryCount) / totalRequests) / THOUSAND)).append("s");
+        metricBuilder.append(MIN_MAX_AVERAGE)
+                .append(retryCount.getValue())
+                .append(REQUESTS).append(format(DOUBLE_PRECISION_FORMAT, (double) getMetricValue(MIN_BACK_OFF, retryCount) / THOUSAND))
+                .append(SECONDS)
+                .append(format(DOUBLE_PRECISION_FORMAT, (double) getMetricValue(MAX_BACK_OFF, retryCount) / THOUSAND))
+                .append(SECONDS)
+                .append(format(DOUBLE_PRECISION_FORMAT, ((double) getMetricValue(TOTAL_BACK_OFF, retryCount) / totalRequests) / THOUSAND))
+                .append(SECONDS);
       } else {
-        metricBuilder.append("$MMA$_").append(retryCount.getValue()).append("R=0s");
+        metricBuilder.append(MIN_MAX_AVERAGE)
+                .append(retryCount.getValue())
+                .append(REQUESTS + EQUAL + 0 + SECONDS);
       }
     }
   }
 
-  /*
-  Acronyms :-
-  1.BWT :- Number of Bandwidth throttled requests
-  2.IT :- Number of IOPS throttled requests
-  3.OT :- Number of Other throttled requests
-  4.NFR :- Number of requests which failed due to network errors
-  5.%RT :- Percentage of requests that are throttled
-  6.TRNR :- Total number of requests which succeeded without retrying
-  7.TRF :- Total number of requests which failed
-  8.TR :- Total number of requests which were made
-  9.MRC :- Max retry count across all requests
+  /**
+   * Retrieves the base metrics.
+   *
+   * @param metricBuilder the string builder to append the metrics
    */
   private void getBaseMetrics(StringBuilder metricBuilder) {
     long totalRequestsThrottled = getMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS)
@@ -241,15 +255,24 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
             + getMetricValue(NUMBER_OF_OTHER_THROTTLED_REQUESTS)
             + getMetricValue(NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS);
 
-    metricBuilder.append("$BWT=").append(getMetricValue(NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS))
-            .append("$IT=").append(getMetricValue(NUMBER_OF_IOPS_THROTTLED_REQUESTS))
-            .append("$OT=").append(getMetricValue(NUMBER_OF_OTHER_THROTTLED_REQUESTS))
-            .append("$RT=").append(formatPercent(totalRequestsThrottled/ (double) getMetricValue(TOTAL_NUMBER_OF_REQUESTS), 3))
-            .append("$NFR=").append(getMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS))
-            .append("$TRNR=").append(getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED_WITHOUT_RETRYING))
-            .append("$TRF=").append(getMetricValue(NUMBER_OF_REQUESTS_FAILED))
-            .append("$TR=").append(getMetricValue(TOTAL_NUMBER_OF_REQUESTS))
-            .append("$MRC=").append(getMetricValue(MAX_RETRY_COUNT));
+    metricBuilder.append(BANDWIDTH_THROTTLED_REQUESTS)
+            .append(getMetricValue(NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS))
+            .append(IOPS_THROTTLED_REQUESTS)
+            .append(getMetricValue(NUMBER_OF_IOPS_THROTTLED_REQUESTS))
+            .append(OTHER_THROTTLED_REQUESTS)
+            .append(getMetricValue(NUMBER_OF_OTHER_THROTTLED_REQUESTS))
+            .append(PERCENTAGE_THROTTLED_REQUESTS)
+            .append(formatPercent(totalRequestsThrottled/ (double) getMetricValue(TOTAL_NUMBER_OF_REQUESTS), 3))
+            .append(NETWORK_ERROR_REQUESTS)
+            .append(getMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS))
+            .append(SUCCESS_REQUESTS_WITHOUT_RETRY)
+            .append(getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED_WITHOUT_RETRYING))
+            .append(FAILED_REQUESTS)
+            .append(getMetricValue(NUMBER_OF_REQUESTS_FAILED))
+            .append(TOTAL_REQUESTS_COUNT)
+            .append(getMetricValue(TOTAL_NUMBER_OF_REQUESTS))
+            .append(MAX_RETRY)
+            .append(getMetricValue(MAX_RETRY_COUNT));
   }
 
   /**
@@ -268,6 +291,12 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
     return metricBuilder.toString();
   }
 
+  /**
+   * Retrieves the metric names based on the statistic type.
+   *
+   * @param type the type of the statistic (counter or gauge)
+   * @return an array of metric names
+   */
   @VisibleForTesting
   String[] getMetricNamesByType(StatisticTypeEnum type) {
     return getMetricNames(type);

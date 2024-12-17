@@ -28,7 +28,8 @@ import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_MEAN;
 public enum AbfsReadFooterMetricsEnum {
     TOTAL_FILES("totalFiles", "Total files read", FILE,  TYPE_COUNTER),
     AVG_FILE_LENGTH("avgFileLength", "Average File length", FILE, TYPE_MEAN),
-    AVG_SIZE_READ_BY_FIRST_READ("avgSizeReadByFirstRead", "Average Size read by first read", FILE, TYPE_MEAN),
+    AVG_SIZE_READ_BY_FIRST_READ("avgSizeReadByFirstRead",
+            "Average Size read by first read", FILE, TYPE_MEAN),
     AVG_OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ("avgOffsetDiffBetweenFirstAndSecondRead",
             "Average Offset difference between first and second read", FILE, TYPE_MEAN),
     AVG_READ_LEN_REQUESTED("avgReadLenRequested", "Average Read length requested", FILE, TYPE_MEAN),
@@ -48,7 +49,10 @@ public enum AbfsReadFooterMetricsEnum {
      * @param type the type of the metric (FILE)
      * @param statisticType the statistic type of the metric (counter or gauge)
      */
-    AbfsReadFooterMetricsEnum(String name, String description, String type, StatisticTypeEnum statisticType) {
+    AbfsReadFooterMetricsEnum(String name,
+                              String description,
+                              String type,
+                              StatisticTypeEnum statisticType) {
         this.name = name;
         this.description = description;
         this.type = type;

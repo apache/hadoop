@@ -28,13 +28,18 @@ import java.util.stream.Stream;
 import org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum;
 import org.apache.hadoop.fs.azurebfs.enums.FileType;
 import org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum;
-import org.apache.hadoop.fs.azurebfs.statistics.AbstractAbfsStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
-import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.FILE;
-import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.COLON;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.CHAR_DOLLAR;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.DOUBLE_PRECISION_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.FILE;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.FIRST_READ;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.SECOND_READ;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.FILE_LENGTH;
+import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.READ_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.TOTAL_FILES;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.AVG_FILE_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum.AVG_SIZE_READ_BY_FIRST_READ;
@@ -69,6 +74,9 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         private String sizeReadByFirstRead;
         private String offsetDiffBetweenFirstAndSecondRead;
 
+        /**
+         * Constructor to initialize the file type metrics.
+         */
         private FileTypeMetrics() {
             collectMetrics = new AtomicBoolean(false);
             collectMetricsForNextRead = new AtomicBoolean(false);
@@ -77,6 +85,9 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
             offsetOfFirstRead = new AtomicLong(0);
         }
 
+        /**
+         * Updates the file type based on the metrics collected.
+         */
         private void updateFileType() {
             if (fileType == null) {
                 fileType = collectMetrics.get() && readCount.get() >= 2
@@ -85,68 +96,147 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
             }
         }
 
+        /**
+         * Checks if the given value has equal parts.
+         *
+         * @param value the value to check
+         * @return true if the value has equal parts, false otherwise
+         */
         private boolean haveEqualValues(String value) {
             String[] parts = value.split("_");
             return parts.length == 2
                     && parts[0].equals(parts[1]);
         }
 
+        /**
+         * Increments the read count.
+         */
         private void incrementReadCount() {
             readCount.incrementAndGet();
         }
 
+        /**
+         * Returns the read count.
+         *
+         * @return the read count
+         */
         private long getReadCount() {
             return readCount.get();
         }
 
+        /**
+         * Sets the collect metrics flag.
+         *
+         * @param collect the value to set
+         */
         private void setCollectMetrics(boolean collect) {
             collectMetrics.set(collect);
         }
 
+        /**
+         * Returns the collect metrics flag.
+         *
+         * @return the collect metrics flag
+         */
         private boolean getCollectMetrics() {
             return collectMetrics.get();
         }
 
+        /**
+         * Sets the collect metrics for the next read flag.
+         *
+         * @param collect the value to set
+         */
         private void setCollectMetricsForNextRead(boolean collect) {
             collectMetricsForNextRead.set(collect);
         }
 
+        /**
+         * Returns the collect metrics for the next read flag.
+         *
+         * @return the collect metrics for the next read flag
+         */
         private boolean getCollectMetricsForNextRead() {
             return collectMetricsForNextRead.get();
         }
 
+        /**
+         * Returns the collect length metrics flag.
+         *
+         * @return the collect length metrics flag
+         */
         private boolean getCollectLenMetrics() {
             return collectLenMetrics.get();
         }
 
+        /**
+         * Sets the collect length metrics flag.
+         *
+         * @param collect the value to set
+         */
         private void setCollectLenMetrics(boolean collect) {
             collectLenMetrics.set(collect);
         }
 
+        /**
+         * Sets the offset of the first read.
+         *
+         * @param offset the value to set
+         */
         private void setOffsetOfFirstRead(long offset) {
             offsetOfFirstRead.set(offset);
         }
 
+        /**
+         * Returns the offset of the first read.
+         *
+         * @return the offset of the first read
+         */
         private long getOffsetOfFirstRead() {
             return offsetOfFirstRead.get();
         }
 
+        /**
+         * Sets the size read by the first read.
+         *
+         * @param size the value to set
+         */
         private void setSizeReadByFirstRead(String size) {
             sizeReadByFirstRead = size;
         }
 
+        /**
+         * Returns the size read by the first read.
+         *
+         * @return the size read by the first read
+         */
         private String getSizeReadByFirstRead() {
             return sizeReadByFirstRead;
         }
 
+        /**
+         * Sets the offset difference between the first and second read.
+         *
+         * @param offsetDiff the value to set
+         */
         private void setOffsetDiffBetweenFirstAndSecondRead(String offsetDiff) {
             offsetDiffBetweenFirstAndSecondRead = offsetDiff;
         }
 
+        /**
+         * Returns the offset difference between the first and second read.
+         *
+         * @return the offset difference between the first and second read
+         */
         private String getOffsetDiffBetweenFirstAndSecondRead() {
             return offsetDiffBetweenFirstAndSecondRead;
         }
 
+        /**
+         * Returns the file type.
+         *
+         * @return the file type
+         */
         private FileType getFileType() {
             return fileType;
         }
@@ -165,6 +255,12 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         setIOStatistics(ioStatisticsStore);
     }
 
+    /**
+     * Returns the metric names for a specific statistic type.
+     *
+     * @param type the statistic type
+     * @return the metric names
+     */
     private String[] getMetricNames(StatisticTypeEnum type) {
         return Arrays.stream(AbfsReadFooterMetricsEnum.values())
                 .filter(readFooterMetricsEnum -> readFooterMetricsEnum.getStatisticType().equals(type))
@@ -175,10 +271,24 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
                 .toArray(String[]::new);
     }
 
+    /**
+     * Looks up the counter value for a specific metric.
+     *
+     * @param fileType the type of the file
+     * @param metric the metric to look up
+     * @return the counter value
+     */
     private long getCounterMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metric) {
         return lookupCounterValue(fileType + COLON + metric.getName());
     }
 
+    /**
+     * Looks up the mean statistic value for a specific metric.
+     *
+     * @param fileType the type of the file
+     * @param metric the metric to look up
+     * @return the mean statistic value
+     */
     private String getMeanMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metric) {
         return format(DOUBLE_PRECISION_FORMAT, lookupMeanStatistic(fileType + COLON + metric.getName()));
     }
@@ -230,7 +340,10 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
      * @param contentLength the total content length of the file
      * @param nextReadPos the position of the next read
      */
-    public void updateReadMetrics(final String filePathIdentifier, final int len, final long contentLength, final long nextReadPos) {
+    public void updateReadMetrics(final String filePathIdentifier,
+                                  final int len,
+                                  final long contentLength,
+                                  final long nextReadPos) {
         FileTypeMetrics fileTypeMetrics = fileTypeMetricsMap.computeIfAbsent(filePathIdentifier, key -> new FileTypeMetrics());
         if (fileTypeMetrics.getReadCount() == 0 || (fileTypeMetrics.getReadCount() >= 1 && fileTypeMetrics.getCollectMetrics())) {
             updateMetrics(fileTypeMetrics, len, contentLength, nextReadPos);
@@ -245,7 +358,10 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
      * @param contentLength      The total content length of the file.
      * @param nextReadPos        The position of the next read operation.
      */
-    private void updateMetrics(FileTypeMetrics fileTypeMetrics, int len, long contentLength, long nextReadPos) {
+    private void updateMetrics(FileTypeMetrics fileTypeMetrics,
+                               int len,
+                               long contentLength,
+                               long nextReadPos) {
         synchronized (this) {
             fileTypeMetrics.incrementReadCount();
         }
@@ -271,7 +387,10 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
      * @param len The length of the current read operation.
      * @param contentLength The total length of the file content.
      */
-    private void handleFirstRead(FileTypeMetrics fileTypeMetrics, long nextReadPos, int len, long contentLength) {
+    private void handleFirstRead(FileTypeMetrics fileTypeMetrics,
+                                 long nextReadPos,
+                                 int len,
+                                 long contentLength) {
         if (nextReadPos >= contentLength - (long) Integer.parseInt(FOOTER_LENGTH) * ONE_KB) {
             fileTypeMetrics.setCollectMetrics(true);
             fileTypeMetrics.setCollectMetricsForNextRead(true);
@@ -290,7 +409,10 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
      * @param len The length of the current read operation.
      * @param contentLength The total length of the file content.
      */
-    private void handleSecondRead(FileTypeMetrics fileTypeMetrics, long nextReadPos, int len, long contentLength) {
+    private void handleSecondRead(FileTypeMetrics fileTypeMetrics,
+                                  long nextReadPos,
+                                  int len,
+                                  long contentLength) {
         if (fileTypeMetrics.getCollectMetricsForNextRead()) {
             long offsetDiff = Math.abs(nextReadPos - fileTypeMetrics.getOffsetOfFirstRead());
             fileTypeMetrics.setOffsetDiffBetweenFirstAndSecondRead(len + "_" + offsetDiff);
@@ -323,7 +445,9 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
      * @param len The length of the current read operation.
      * @param contentLength The total length of the file content.
      */
-    private synchronized void updateMetricsData(FileTypeMetrics fileTypeMetrics, int len, long contentLength) {
+    private synchronized void updateMetricsData(FileTypeMetrics fileTypeMetrics,
+                                                int len,
+                                                long contentLength) {
         long sizeReadByFirstRead = Long.parseLong(fileTypeMetrics.getSizeReadByFirstRead().split("_")[0]);
         long firstOffsetDiff = Long.parseLong(fileTypeMetrics.getSizeReadByFirstRead().split("_")[1]);
         long secondOffsetDiff = Long.parseLong(fileTypeMetrics.getOffsetDiffBetweenFirstAndSecondRead().split("_")[1]);
@@ -339,6 +463,12 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         incrementMetricValue(fileType, TOTAL_FILES);
     }
 
+    /**
+     * Appends the metrics for a specific file type to the given metric builder.
+     *
+     * @param metricBuilder the metric builder to append the metrics to
+     * @param fileType the file type to append the metrics for
+     */
     private void appendMetrics(StringBuilder metricBuilder, FileType fileType) {
         long totalFiles = getCounterMetricValue(fileType, TOTAL_FILES);
         if (totalFiles <= 0) {
@@ -349,15 +479,20 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         String offsetDiffBetweenFirstAndSecondRead = getMeanMetricValue(fileType, AVG_OFFSET_DIFF_BETWEEN_FIRST_AND_SECOND_READ);
 
         if (NON_PARQUET.equals(fileType)) {
-            sizeReadByFirstRead += "_" + getMeanMetricValue(fileType, AVG_FIRST_OFFSET_DIFF);
-            offsetDiffBetweenFirstAndSecondRead += "_" + getMeanMetricValue(fileType, AVG_SECOND_OFFSET_DIFF);
+            sizeReadByFirstRead += CHAR_UNDERSCORE + getMeanMetricValue(fileType, AVG_FIRST_OFFSET_DIFF);
+            offsetDiffBetweenFirstAndSecondRead += CHAR_UNDERSCORE + getMeanMetricValue(fileType, AVG_SECOND_OFFSET_DIFF);
         }
 
-        metricBuilder.append("$").append(fileType)
-                .append(":$FR=").append(sizeReadByFirstRead)
-                .append("$SR=").append(offsetDiffBetweenFirstAndSecondRead)
-                .append("$FL=").append(getMeanMetricValue(fileType, AVG_FILE_LENGTH))
-                .append("$RL=").append(getMeanMetricValue(fileType, AVG_READ_LEN_REQUESTED));
+        metricBuilder.append(CHAR_DOLLAR)
+                .append(fileType)
+                .append(FIRST_READ)
+                .append(sizeReadByFirstRead)
+                .append(SECOND_READ)
+                .append(offsetDiffBetweenFirstAndSecondRead)
+                .append(FILE_LENGTH)
+                .append(getMeanMetricValue(fileType, AVG_FILE_LENGTH))
+                .append(READ_LENGTH)
+                .append(getMeanMetricValue(fileType, AVG_READ_LEN_REQUESTED));
     }
 
     /**

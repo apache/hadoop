@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.enums;
 
 /**
  * Enum for retry values.
+ * Used in {@link org.apache.hadoop.fs.azurebfs.services.AbfsBackoffMetrics} to store metrics based on the retry count.
  */
 public enum RetryValue {
     ONE("1"),

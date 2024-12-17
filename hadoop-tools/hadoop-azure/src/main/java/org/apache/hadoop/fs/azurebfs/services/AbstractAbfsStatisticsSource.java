@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.statistics;
+package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
@@ -121,10 +121,22 @@ public abstract class AbstractAbfsStatisticsSource implements IOStatisticsSource
         ioStatisticsStore.setGauge(name, value);
     }
 
+    /**
+     * Add sample to mean statistics for the given name.
+     *
+     * @param name the name of the mean statistic
+     * @param value the value to set
+     */
     protected void addMeanStatistic(String name, long value) {
         ioStatisticsStore.addMeanStatisticSample(name, value);
     }
 
+    /**
+     * Looks up the mean statistics value for the given name.
+     *
+     * @param name the name of the mean statistic
+     * @return the mean value
+     */
     protected double lookupMeanStatistic(String name) {
         return ioStatisticsStore.meanStatistics().get(name).mean();
     }
