@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.enums;
 
+import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
+
 /**
  * Enum for file types.
- * Used in {@link org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics} to store metrics based on file type.
+ * Used in {@link AbfsReadFooterMetrics} to store metrics based on file type.
  */
 public enum FileType {
     /**
