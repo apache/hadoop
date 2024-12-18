@@ -222,7 +222,9 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
    * @param denominator the denominator
    * @return String metrics value with precision
    */
-  private String getPrecisionMetrics(AbfsBackoffMetricsEnum metricName, RetryValue retryCount, long denominator) {
+  private String getPrecisionMetrics(AbfsBackoffMetricsEnum metricName,
+                                     RetryValue retryCount,
+                                     long denominator) {
     return format(DOUBLE_PRECISION_FORMAT, (double) getMetricValue(metricName, retryCount) / denominator);
   }
 
