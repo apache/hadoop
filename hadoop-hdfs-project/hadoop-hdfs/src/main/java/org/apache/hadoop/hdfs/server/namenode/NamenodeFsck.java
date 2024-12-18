@@ -38,7 +38,6 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,6 +79,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
@@ -291,7 +291,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     }
 
     // TODO: Just hold the BM read lock.
-    namenode.getNamesystem().readLock(FSNamesystemLockMode.GLOBAL);
+    namenode.getNamesystem().readLock(RwLockMode.GLOBAL);
     try {
       //get blockInfo
       Block block = new Block(Block.getBlockId(blockId));
@@ -355,7 +355,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       out.print("\n\n" + errMsg);
       LOG.warn("Error in looking up block", e);
     } finally {
-      namenode.getNamesystem().readUnlock(FSNamesystemLockMode.GLOBAL, "fsck");
+      namenode.getNamesystem().readUnlock(RwLockMode.GLOBAL, "fsck");
     }
   }
 
@@ -587,7 +587,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     final String operationName = "fsckGetBlockLocations";
     FSPermissionChecker.setOperationType(operationName);
     FSPermissionChecker pc = fsn.getPermissionChecker();
-    fsn.readLock(FSNamesystemLockMode.GLOBAL);
+    fsn.readLock(RwLockMode.GLOBAL);
     try {
       blocks = FSDirStatAndListingOp.getBlockLocations(
           fsn.getFSDirectory(), pc,
@@ -596,7 +596,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     } catch (FileNotFoundException fnfe) {
       blocks = null;
     } finally {
-      fsn.readUnlock(FSNamesystemLockMode.GLOBAL, operationName);
+      fsn.readUnlock(RwLockMode.GLOBAL, operationName);
     }
     return blocks;
   }

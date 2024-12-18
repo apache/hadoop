@@ -22,8 +22,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
@@ -86,7 +86,7 @@ public class TestReplicationPolicyExcludeSlowNodes
    */
   @Test
   public void testChooseTargetExcludeSlowNodes() throws Exception {
-    namenode.getNamesystem().writeLock(FSNamesystemLockMode.BM);
+    namenode.getNamesystem().writeLock(RwLockMode.BM);
     try {
       // add nodes
       for (int i = 0; i < dataNodes.length; i++) {
@@ -136,7 +136,7 @@ public class TestReplicationPolicyExcludeSlowNodes
             .getDatanodeUuid()));
       }
     } finally {
-      namenode.getNamesystem().writeUnlock(FSNamesystemLockMode.BM,
+      namenode.getNamesystem().writeUnlock(RwLockMode.BM,
           "testChooseTargetExcludeSlowNodes");
     }
     NameNode.LOG.info("Done working on it");
@@ -144,7 +144,7 @@ public class TestReplicationPolicyExcludeSlowNodes
 
   @Test
   public void testSlowPeerTrackerEnabledClearSlowNodes() throws Exception {
-    namenode.getNamesystem().writeLock(FSNamesystemLockMode.BM);
+    namenode.getNamesystem().writeLock(RwLockMode.BM);
     try {
       // add nodes
       for (DatanodeDescriptor dataNode : dataNodes) {
@@ -174,7 +174,7 @@ public class TestReplicationPolicyExcludeSlowNodes
       assertTrue(dnManager.isSlowPeerCollectorInitialized());
       assertEquals(0, DatanodeManager.getSlowNodesUuidSet().size());
     } finally {
-      namenode.getNamesystem().writeUnlock(FSNamesystemLockMode.BM,
+      namenode.getNamesystem().writeUnlock(RwLockMode.BM,
           "testSlowPeerTrackerEnabledClearSlowNodes");
     }
   }

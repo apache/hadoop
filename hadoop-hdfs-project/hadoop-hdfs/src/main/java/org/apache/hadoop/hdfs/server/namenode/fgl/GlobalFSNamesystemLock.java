@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.fgl;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystemLock;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -33,78 +34,78 @@ public class GlobalFSNamesystemLock implements FSNLockManager {
   }
 
   @Override
-  public void readLock(FSNamesystemLockMode lockMode) {
+  public void readLock(RwLockMode lockMode) {
     this.lock.readLock();
   }
 
-  public void readLockInterruptibly(FSNamesystemLockMode lockMode) throws InterruptedException  {
+  public void readLockInterruptibly(RwLockMode lockMode) throws InterruptedException  {
     this.lock.readLockInterruptibly();
   }
 
   @Override
-  public void readUnlock(FSNamesystemLockMode lockMode, String opName) {
+  public void readUnlock(RwLockMode lockMode, String opName) {
     this.lock.readUnlock(opName);
   }
 
-  public void readUnlock(FSNamesystemLockMode lockMode, String opName,
+  public void readUnlock(RwLockMode lockMode, String opName,
       Supplier<String> lockReportInfoSupplier) {
     this.lock.readUnlock(opName, lockReportInfoSupplier);
   }
 
   @Override
-  public void writeLock(FSNamesystemLockMode lockMode) {
+  public void writeLock(RwLockMode lockMode) {
     this.lock.writeLock();
   }
 
   @Override
-  public void writeUnlock(FSNamesystemLockMode lockMode, String opName) {
+  public void writeUnlock(RwLockMode lockMode, String opName) {
     this.lock.writeUnlock(opName);
   }
 
   @Override
-  public void writeUnlock(FSNamesystemLockMode lockMode, String opName,
+  public void writeUnlock(RwLockMode lockMode, String opName,
       boolean suppressWriteLockReport) {
     this.lock.writeUnlock(opName, suppressWriteLockReport);
   }
 
-  public void writeUnlock(FSNamesystemLockMode lockMode, String opName,
+  public void writeUnlock(RwLockMode lockMode, String opName,
       Supplier<String> lockReportInfoSupplier) {
     this.lock.writeUnlock(opName, lockReportInfoSupplier);
   }
 
   @Override
-  public void writeLockInterruptibly(FSNamesystemLockMode lockMode)
+  public void writeLockInterruptibly(RwLockMode lockMode)
       throws InterruptedException {
     this.lock.writeLockInterruptibly();
   }
 
   @Override
-  public boolean hasWriteLock(FSNamesystemLockMode lockMode) {
+  public boolean hasWriteLock(RwLockMode lockMode) {
     return this.lock.isWriteLockedByCurrentThread();
   }
 
   @Override
-  public boolean hasReadLock(FSNamesystemLockMode lockMode) {
+  public boolean hasReadLock(RwLockMode lockMode) {
     return this.lock.getReadHoldCount() > 0 || hasWriteLock(lockMode);
   }
 
   @Override
-  public int getReadHoldCount(FSNamesystemLockMode lockMode) {
+  public int getReadHoldCount(RwLockMode lockMode) {
     return this.lock.getReadHoldCount();
   }
 
   @Override
-  public int getQueueLength(FSNamesystemLockMode lockMode) {
+  public int getQueueLength(RwLockMode lockMode) {
     return this.lock.getQueueLength();
   }
 
   @Override
-  public long getNumOfReadLockLongHold(FSNamesystemLockMode lockMode) {
+  public long getNumOfReadLockLongHold(RwLockMode lockMode) {
     return this.lock.getNumOfReadLockLongHold();
   }
 
   @Override
-  public long getNumOfWriteLockLongHold(FSNamesystemLockMode lockMode) {
+  public long getNumOfWriteLockLongHold(RwLockMode lockMode) {
     return this.lock.getNumOfWriteLockLongHold();
   }
 

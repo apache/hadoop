@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -27,6 +26,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.util.CyclicIteration;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
@@ -185,7 +185,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
     // Check decommission or maintenance progress.
     // dnAdmin.stopMaintenance(dn) needs FSReadLock
     // since processExtraRedundancyBlock involves storage policy and isSufficient involves bc.
-    namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
+    namesystem.writeLock(RwLockMode.GLOBAL);
     try {
       processCancelledNodes();
       processPendingNodes();
@@ -194,7 +194,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
       LOG.warn("DatanodeAdminMonitor caught exception when processing node.",
           e);
     } finally {
-      namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "DatanodeAdminMonitorThread");
+      namesystem.writeUnlock(RwLockMode.GLOBAL, "DatanodeAdminMonitorThread");
     }
     if (numBlocksChecked + numNodesChecked > 0) {
       LOG.info("Checked {} blocks and {} nodes this tick. {} nodes are now " +
@@ -429,7 +429,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         // lock.
         // Yielding is required in case of block number is greater than the
         // configured per-iteration-limit.
-        namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "processBlocksInternal");
+        namesystem.writeUnlock(RwLockMode.GLOBAL, "processBlocksInternal");
         try {
           LOG.debug("Yielded lock during decommission/maintenance check");
           Thread.sleep(0, 500);
@@ -438,7 +438,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         }
         // reset
         numBlocksCheckedPerLock = 0;
-        namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
+        namesystem.writeLock(RwLockMode.GLOBAL);
       }
       numBlocksChecked++;
       numBlocksCheckedPerLock++;

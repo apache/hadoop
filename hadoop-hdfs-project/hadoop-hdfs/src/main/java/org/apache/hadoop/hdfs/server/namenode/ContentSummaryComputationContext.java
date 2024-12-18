@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.XAttr;
@@ -119,8 +119,8 @@ public class ContentSummaryComputationContext {
 
     boolean hadDirReadLock = dir.hasReadLock();
     boolean hadDirWriteLock = dir.hasWriteLock();
-    boolean hadFsnReadLock = fsn.hasReadLock(FSNamesystemLockMode.GLOBAL);
-    boolean hadFsnWriteLock = fsn.hasWriteLock(FSNamesystemLockMode.GLOBAL);
+    boolean hadFsnReadLock = fsn.hasReadLock(RwLockMode.GLOBAL);
+    boolean hadFsnWriteLock = fsn.hasWriteLock(RwLockMode.GLOBAL);
 
     // sanity check.
     if (!hadDirReadLock || !hadFsnReadLock || hadDirWriteLock ||
@@ -131,14 +131,14 @@ public class ContentSummaryComputationContext {
 
     // unlock
     dir.readUnlock();
-    fsn.readUnlock(FSNamesystemLockMode.GLOBAL, "contentSummary");
+    fsn.readUnlock(RwLockMode.GLOBAL, "contentSummary");
 
     try {
       Thread.sleep(sleepMilliSec, sleepNanoSec);
     } catch (InterruptedException ie) {
     } finally {
       // reacquire
-      fsn.readLock(FSNamesystemLockMode.GLOBAL);
+      fsn.readLock(RwLockMode.GLOBAL);
       dir.readLock();
     }
     yieldCount++;
