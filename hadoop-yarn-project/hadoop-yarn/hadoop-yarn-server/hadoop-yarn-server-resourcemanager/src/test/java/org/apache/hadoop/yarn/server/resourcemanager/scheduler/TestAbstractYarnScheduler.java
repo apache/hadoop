@@ -1229,12 +1229,16 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
         node.getContainersToKill());
   }
 
+  private static long LAST_TIMESTAMP = 0L;
   private static RMContainer newMockRMContainer(boolean isAMContainer,
       ExecutionType executionType, String name) {
+    long now = Time.now();
+    while (now <= LAST_TIMESTAMP) { now = Time.now(); }
+    LAST_TIMESTAMP = now;
     RMContainer container = mock(RMContainer.class);
     when(container.isAMContainer()).thenReturn(isAMContainer);
     when(container.getExecutionType()).thenReturn(executionType);
-    when(container.getCreationTime()).thenReturn(Time.now());
+    when(container.getCreationTime()).thenReturn(now);
     when(container.toString()).thenReturn(name);
     return container;
   }
@@ -1242,7 +1246,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
   /**
    * SchedulerNode mock to test launching containers.
    */
-  class MockSchedulerNode extends SchedulerNode {
+  static class MockSchedulerNode extends SchedulerNode {
     private final List<RMContainer> containers = new ArrayList<>();
 
     MockSchedulerNode() {
