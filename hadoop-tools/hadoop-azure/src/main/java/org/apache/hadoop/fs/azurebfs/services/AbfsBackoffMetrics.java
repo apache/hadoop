@@ -215,6 +215,18 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
   }
 
   /**
+   * Get the precision metrics.
+   *
+   * @param metricName the metric name
+   * @param retryCount the retry count
+   * @param denominator the denominator
+   * @return String metrics value with precision
+   */
+  private String getPrecisionMetrics(AbfsBackoffMetricsEnum metricName, RetryValue retryCount, long denominator) {
+    return format(DOUBLE_PRECISION_FORMAT, (double) getMetricValue(metricName, retryCount) / denominator);
+  }
+
+  /**
    * Retrieves the retry metrics.
    *
    * @param metricBuilder the string builder to append the metrics
@@ -230,11 +242,12 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
       if (totalRequests > 0) {
         metricBuilder.append(MIN_MAX_AVERAGE)
                 .append(retryCount.getValue())
-                .append(REQUESTS).append(format(DOUBLE_PRECISION_FORMAT, (double) getMetricValue(MIN_BACK_OFF, retryCount) / THOUSAND))
+                .append(REQUESTS)
+                .append(getPrecisionMetrics(MIN_BACK_OFF, retryCount, THOUSAND))
                 .append(SECONDS)
-                .append(format(DOUBLE_PRECISION_FORMAT, (double) getMetricValue(MAX_BACK_OFF, retryCount) / THOUSAND))
+                .append(getPrecisionMetrics(MAX_BACK_OFF, retryCount, THOUSAND))
                 .append(SECONDS)
-                .append(format(DOUBLE_PRECISION_FORMAT, ((double) getMetricValue(TOTAL_BACK_OFF, retryCount) / totalRequests) / THOUSAND))
+                .append(getPrecisionMetrics(TOTAL_BACK_OFF, retryCount, totalRequests * THOUSAND))
                 .append(SECONDS);
       } else {
         metricBuilder.append(MIN_MAX_AVERAGE)

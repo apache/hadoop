@@ -193,6 +193,7 @@
     <value>READER_RBAC_USER_CLIENT_ID</value>
   </property>
 
+  <!-- METRIC SETTINGS -->
   <property>
     <name>fs.azure.metric.account.name</name>
     <value>METRIC_ACCOUNT_NAME.dfs.core.windows.net</value>
