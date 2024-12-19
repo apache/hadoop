@@ -821,13 +821,12 @@ public class TestDataNodeMetrics {
   @Test
   public void testDataNodeDatasetLockMetrics() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    try {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
       FileSystem fs = cluster.getFileSystem();
       // Create and read a 1 byte file
       Path tmpfile = new Path("/tmp.txt");
       DFSTestUtil.createFile(fs, tmpfile,
-          (long)1, (short)1, 1L);
+              (long)1, (short)1, 1L);
       DFSTestUtil.readFile(fs, tmpfile);
       List<DataNode> datanodes = cluster.getDataNodes();
       assertEquals(datanodes.size(), 1);
@@ -835,10 +834,6 @@ public class TestDataNodeMetrics {
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
       assertCounterGt("AcquireDatasetWriteLockNumOps", (long)1, rb);
       assertCounterGt("AcquireDatasetReadLockNumOps", (long)1, rb);
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
     }
   }
 }
