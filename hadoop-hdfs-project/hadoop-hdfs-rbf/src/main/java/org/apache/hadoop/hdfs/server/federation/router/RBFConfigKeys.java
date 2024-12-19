@@ -375,6 +375,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_ENABLE_GET_DN_USAGE_KEY =
       FEDERATION_ROUTER_PREFIX + "enable.get.dn.usage";
   public static final boolean DFS_ROUTER_ENABLE_GET_DN_USAGE_DEFAULT = true;
+  public static final String DFS_ROUTER_DN_REPORT_ENABLE_KEY =
+          FEDERATION_ROUTER_PREFIX + "dn.report.enable";
+  public static final boolean DFS_ROUTER_DN_REPORT_ENABLE_DEFAULT = true;
 
   // HDFS Router-based federation quota
   public static final String DFS_ROUTER_QUOTA_ENABLE =

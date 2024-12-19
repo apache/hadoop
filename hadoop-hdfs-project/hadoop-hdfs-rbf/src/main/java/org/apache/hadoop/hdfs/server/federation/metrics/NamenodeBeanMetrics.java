@@ -93,7 +93,8 @@ public class NamenodeBeanMetrics
   /** Timeout to get the DN report. */
   private final long dnReportTimeOut;
   /** DN type -> full DN report in JSON. */
-  private final LoadingCache<DatanodeReportType, String> dnCache;
+  private LoadingCache<DatanodeReportType, String> dnCache = null;
+  private final boolean dnReportEnable;
 
 
   public NamenodeBeanMetrics(Router router) {
@@ -139,18 +140,23 @@ public class NamenodeBeanMetrics
     this.dnReportTimeOut = conf.getTimeDuration(
         RBFConfigKeys.DN_REPORT_TIME_OUT,
         RBFConfigKeys.DN_REPORT_TIME_OUT_MS_DEFAULT, TimeUnit.MILLISECONDS);
-    long dnCacheExpire = conf.getTimeDuration(
-        RBFConfigKeys.DN_REPORT_CACHE_EXPIRE,
-        RBFConfigKeys.DN_REPORT_CACHE_EXPIRE_MS_DEFAULT, TimeUnit.MILLISECONDS);
-    this.dnCache = CacheBuilder.newBuilder()
-        .expireAfterWrite(dnCacheExpire, TimeUnit.MILLISECONDS)
-        .build(
-            new CacheLoader<DatanodeReportType, String>() {
-              @Override
-              public String load(DatanodeReportType type) throws Exception {
-                return getNodesImpl(type);
-              }
-            });
+    this.dnReportEnable = conf.getBoolean(RBFConfigKeys.DFS_ROUTER_DN_REPORT_ENABLE_KEY,
+            RBFConfigKeys.DFS_ROUTER_DN_REPORT_ENABLE_DEFAULT);
+    if (dnReportEnable) {
+      long dnCacheExpire = conf.getTimeDuration(
+              RBFConfigKeys.DN_REPORT_CACHE_EXPIRE,
+              RBFConfigKeys.DN_REPORT_CACHE_EXPIRE_MS_DEFAULT, TimeUnit.MILLISECONDS);
+      this.dnCache = CacheBuilder.newBuilder()
+              .expireAfterWrite(dnCacheExpire, TimeUnit.MILLISECONDS)
+              .build(
+                      new CacheLoader<DatanodeReportType, String>() {
+                        @Override
+                        public String load(DatanodeReportType type) throws Exception {
+                          return getNodesImpl(type);
+                        }
+                      });
+    }
+
   }
 
   /**
@@ -458,6 +464,9 @@ public class NamenodeBeanMetrics
    * @return JSON with the nodes.
    */
   private String getNodes(final DatanodeReportType type) {
+    if (!dnReportEnable) {
+      return "N/A";
+    }
     try {
       return this.dnCache.get(type);
     } catch (ExecutionException e) {

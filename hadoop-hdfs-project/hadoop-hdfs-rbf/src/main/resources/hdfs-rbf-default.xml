@@ -206,6 +206,15 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.dn.report.enable</name>
+    <value>true</value>
+    <description>
+      If false, the getLiveNodes|getDeadNodes|getDecomNodes methods in NamenodeBeanMetrics will
+      return "N/A", else will return the cached result collecting from downstream nameservices.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.metrics.class</name>
     <value>org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor</value>
     <description>
