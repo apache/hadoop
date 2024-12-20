@@ -1893,8 +1893,10 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   /**
    * Get RPC metrics info.
+   * May return null if `dfs.federation.router.metrics.enable` is false.
    * @return The instance of FederationRPCMetrics.
    */
+  @VisibleForTesting
   public FederationRPCMetrics getRPCMetrics() {
     return this.rpcMonitor.getRPCMetrics();
   }
