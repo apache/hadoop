@@ -1580,6 +1580,11 @@ public final class Constants {
    */
   public static final String AWS_AUTH_CLASS_PREFIX = "com.amazonaws.auth";
 
+
+  public static final String INPUT_STREAM_TYPE = "fs.s3a.input.stream.type";
+
+  public static final String INPUT_STREAM_TYPE_DEFAULT = "classic";
+
   /**
    * Controls whether the prefetching input stream is enabled.
    */

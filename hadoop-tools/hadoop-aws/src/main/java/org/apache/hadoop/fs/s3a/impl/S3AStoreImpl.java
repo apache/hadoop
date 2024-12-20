@@ -58,9 +58,11 @@ import software.amazon.awssdk.transfer.s3.model.FileUpload;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.InputStreamType;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.ProgressableProgressListener;
 import org.apache.hadoop.fs.s3a.Retries;
@@ -72,6 +74,10 @@ import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.UploadInfo;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStream;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStreamFactory;
+import org.apache.hadoop.fs.s3a.impl.model.ObjectReadParameters;
+import org.apache.hadoop.fs.s3a.prefetch.PrefetchingInputStreamFactory;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
@@ -85,6 +91,8 @@ import org.apache.hadoop.util.functional.Tuples;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
 import static org.apache.hadoop.fs.s3a.Constants.HADOOP_TMP_DIR;
+import static org.apache.hadoop.fs.s3a.Constants.INPUT_STREAM_TYPE;
+import static org.apache.hadoop.fs.s3a.Constants.INPUT_STREAM_TYPE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.S3AUtils.extractException;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getPutRequestLength;
 import static org.apache.hadoop.fs.s3a.S3AUtils.isThrottleException;
@@ -108,6 +116,7 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
@@ -116,7 +125,7 @@ import static org.apache.hadoop.util.Preconditions.checkArgument;
  * to move.
  */
 public class S3AStoreImpl extends CompositeService
-    implements S3AStore {
+    implements S3AStore, ObjectInputStreamFactory {
 
   private static final Logger LOG = LoggerFactory.getLogger(S3AStoreImpl.class);
 
@@ -177,6 +186,8 @@ public class S3AStoreImpl extends CompositeService
    */
   private LocalDirAllocator directoryAllocator;
 
+  private ObjectInputStreamFactory objectInputStreamFactory;
+
   /** Constructor to create S3A store. */
   S3AStoreImpl(StoreContextFactory storeContextFactory,
       ClientManager clientManager,
@@ -209,12 +220,14 @@ public class S3AStoreImpl extends CompositeService
   protected void serviceStart() throws Exception {
     super.serviceStart();
     initLocalDirAllocator();
+    initInputStreamFactory();
   }
 
   @Override
   protected void serviceStop() throws Exception {
     super.serviceStop();
     clientManager.close();
+    cleanupWithLogger(LOG, objectInputStreamFactory);
   }
 
   /**
@@ -224,6 +237,20 @@ public class S3AStoreImpl extends CompositeService
     String bufferDir = getConfig().get(BUFFER_DIR) != null
         ? BUFFER_DIR : HADOOP_TMP_DIR;
     directoryAllocator = new LocalDirAllocator(bufferDir);
+  }
+
+  private void initInputStreamFactory() {
+    InputStreamType inputStreamType = InputStreamType.fromString(getConfig().get(INPUT_STREAM_TYPE, INPUT_STREAM_TYPE_DEFAULT));
+    switch (inputStreamType) {
+    case PREFETCH:
+      this.objectInputStreamFactory = new PrefetchingInputStreamFactory();
+      break;
+    default:
+      this.objectInputStreamFactory = new ClassicObjectInputStreamFactory();
+    }
+
+    this.objectInputStreamFactory.init(getConfig());
+    this.objectInputStreamFactory.start();
   }
 
   /** Acquire write capacity for rate limiting {@inheritDoc}. */
@@ -869,6 +896,17 @@ public class S3AStoreImpl extends CompositeService
     String prefix = path.getName();
     // create a temp file on this directory
     return File.createTempFile(prefix, null, dir);
+  }
+
+  @Override
+  public ObjectInputStream readObject(ObjectReadParameters parameters)
+      throws IOException {
+       if (objectInputStreamFactory != null) {
+          return objectInputStreamFactory.readObject(parameters);
+        } else {
+          // TODO: Find the right exception to throw if factory has not yet been initialised, or closed.
+          throw new IOException("Factory not initialized!");
+        }
   }
 
 }

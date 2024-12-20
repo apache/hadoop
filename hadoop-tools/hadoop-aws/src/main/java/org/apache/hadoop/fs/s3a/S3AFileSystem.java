@@ -125,6 +125,7 @@ import org.apache.hadoop.fs.s3a.impl.ConfigurationHelper;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyFromLocalOperation;
 import org.apache.hadoop.fs.s3a.impl.CreateFileBuilder;
+import org.apache.hadoop.fs.s3a.impl.InputStreamCallbacksImpl;
 import org.apache.hadoop.fs.s3a.impl.S3AFileSystemOperations;
 import org.apache.hadoop.fs.s3a.impl.CSEV1CompatibleS3AFileSystemOperations;
 import org.apache.hadoop.fs.s3a.impl.CSEMaterials;
@@ -1869,6 +1870,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         auditSpan);
     fileInformation.applyOptions(readContext);
     LOG.debug("Opening '{}'", readContext);
+    // QUESTION: why are we creating a new executor on each open?
     final SemaphoredDelegatingExecutor pool = new SemaphoredDelegatingExecutor(
         boundedThreadPool,
         vectoredActiveRangeReads,
@@ -1886,21 +1888,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // TODO: move into S3AStore and export the factory API through
     // the store, which will add some of the features (callbacks, stats)
     // before invoking the real factory
-    ObjectInputStreamFactory factory = null;
-    try {
-      // Choose factory.
-      if (prefetchEnabled) {
-        factory = new PrefetchingInputStreamFactory();
-      } else {
-        factory = new ClassicObjectInputStreamFactory();
-      }
-      factory.init(getConf());
-      factory.start();
-      return new FSDataInputStream(factory.readObject(parameters));
-    } finally {
-      IOUtils.cleanupWithLogger(LOG, factory);
-    }
-
+    return new FSDataInputStream(getStore().readObject(parameters));
   }
 
   /**
@@ -1909,68 +1897,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private ObjectInputStreamCallbacks createInputStreamCallbacks(
       final AuditSpan auditSpan) {
-    return new InputStreamCallbacksImpl(auditSpan);
+    return new InputStreamCallbacksImpl(auditSpan, getStore(), fsHandler, unboundedThreadPool);
   }
 
-  /**
-   * Operations needed by ObjectInputStreams to read data.
-   */
-  private final class InputStreamCallbacksImpl implements
-      ObjectInputStreamCallbacks {
-
-    /**
-     * Audit span to activate before each call.
-     */
-    private final AuditSpan auditSpan;
-
-    /**
-     * Create.
-     * @param auditSpan Audit span to activate before each call.
-     */
-    private InputStreamCallbacksImpl(final AuditSpan auditSpan) {
-      this.auditSpan = requireNonNull(auditSpan);
-    }
-
-    /**
-     * Closes the audit span.
-     */
-    @Override
-    public void close()  {
-      auditSpan.close();
-    }
-
-    @Override
-    public GetObjectRequest.Builder newGetRequestBuilder(final String key) {
-      // active the audit span used for the operation
-      try (AuditSpan span = auditSpan.activate()) {
-        return getRequestFactory().newGetObjectRequestBuilder(key);
-      }
-    }
-
-    @Override
-    public ResponseInputStream<GetObjectResponse> getObject(GetObjectRequest request) throws
-        IOException {
-      // active the audit span used for the operation
-      try (AuditSpan span = auditSpan.activate()) {
-        return fsHandler.getObject(getStore(), request, getRequestFactory());
-      }
-    }
-
-    @Override
-    public <T> CompletableFuture<T> submit(final CallableRaisingIOE<T> operation) {
-      CompletableFuture<T> result = new CompletableFuture<>();
-      unboundedThreadPool.submit(() ->
-          LambdaUtils.eval(result, () -> {
-            LOG.debug("Starting submitted operation in {}", auditSpan.getSpanId());
-            try (AuditSpan span = auditSpan.activate()) {
-              return operation.apply();
-            } finally {
-              LOG.debug("Completed submitted operation in {}", auditSpan.getSpanId());
-            }
-          }));
-      return result;
-    }
-  }
 
   /**
    * Callbacks for WriteOperationHelper.
