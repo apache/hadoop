@@ -658,9 +658,9 @@ public class TestCapacitySchedulerMultiNodes {
     };
     // try to assign four containers.
     Resource nm1AllocatedResource = Resource.newInstance(GB, 1),
-      nm2AllocatedResource = Resource.newInstance(2*GB, 2),
-      nm3AllocatedResource = Resource.newInstance(3*GB, 3),
-      nm4AllocatedResource = Resource.newInstance(4*GB, 4);
+        nm2AllocatedResource = Resource.newInstance(2 * GB, 2),
+        nm3AllocatedResource = Resource.newInstance(3 * GB, 3),
+        nm4AllocatedResource = Resource.newInstance(4 * GB, 4);
     launchAndRegisterAM.apply(defaultQueueName, nm1AllocatedResource);
     launchAndRegisterAM.apply(defaultQueueName, nm2AllocatedResource);
     launchAndRegisterAM.apply(defaultQueueName, nm3AllocatedResource);

@@ -101,6 +101,10 @@ public class MultiNodeSortingManager<N extends SchedulerNode>
     this.rmContext = context;
   }
 
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
+
   public void registerMultiNodePolicyNames(
       boolean isMultiNodePlacementEnabled,
       Set<MultiNodePolicySpec> multiNodePlacementPolicies) {

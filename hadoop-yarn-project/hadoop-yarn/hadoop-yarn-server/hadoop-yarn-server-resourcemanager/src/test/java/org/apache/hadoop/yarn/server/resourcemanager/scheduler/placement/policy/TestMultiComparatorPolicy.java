@@ -18,27 +18,54 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.policy;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.MetricsJsonBuilder;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.lib.MutableMetric;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.mockito.Mockito.when;
 
 public class TestMultiComparatorPolicy {
-  private final int GB = 1024;
+  private static final Log LOG =
+      LogFactory.getLog(TestMultiComparatorPolicy.class);
+  public static final int GB = 1024;
+
+  @Before
+  public void setup() {
+    Logger rootLogger = LogManager.getRootLogger();
+    rootLogger.setLevel(Level.DEBUG);
+  }
 
   @Test
   public void testSetConf() {
@@ -232,6 +259,15 @@ public class TestMultiComparatorPolicy {
             new ArrayList<>(policy.getNodesPerPartition(partitionName));
         assertNodes("Case: comparatorsConf=" + testCase.comparatorsConf,
             testCase.expectedNodes, sortedNodes);
+        // get nodes from iterator
+        sortedNodes.clear();
+        Iterator<SchedulerNode>
+            it = policy.getPreferredNodeIterator(null, partitionName);
+        while (it.hasNext()) {
+          sortedNodes.add(it.next());
+        }
+        assertNodes("Case: comparatorsConf=" + testCase.comparatorsConf,
+            testCase.expectedNodes, sortedNodes);
       }
     }
   }
@@ -283,6 +319,308 @@ public class TestMultiComparatorPolicy {
         Arrays.asList(node3, node4), partition2SortedNodes);
   }
 
+  @Test
+  public void testGetNodeIteratorInMultiThreads()
+      throws ExecutionException, InterruptedException {
+    MultiComparatorPolicy<SchedulerNode> policy =
+        new MultiComparatorPolicy<>();
+    String policyName = "policy1", partitionName = "partition1";
+    Configuration conf = new Configuration();
+    conf.set(
+        CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_CURRENT_NAME,
+        policyName);
+    conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
+            + policyName + DOT + MultiComparatorPolicy.COMPARATORS_CONF_KEY,
+        "DOMINANT_ALLOCATED_RATIO:ASC,NODE_ID:ASC");
+    conf.setFloat(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
+            + policyName + DOT + MultiComparatorPolicy.PREFER_RATIO_CONF_KEY,
+        0.2f);
+    conf.setFloat(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
+            + policyName + DOT + MultiComparatorPolicy.IGNORE_RATIO_CONF_KEY,
+        0.25f);
+    policy.setConf(conf);
+
+    // mock nodes
+    // node1 ~ node1999: total=<5GB, 5>, used=<GB, 1>,  dominant ratio: 0.2
+    // node2000 ~ node3999: total=<5GB, 5>, used=<2GB, 1>,  dominant ratio: 0.4
+    // node4000 ~ node5999: total=<20GB, 20>, used=<GB, 3>,  dominant ratio: 0.15
+    List<SchedulerNode> nodes = new ArrayList<>();
+    for (int i = 0; i < 2000; i++) {
+      SchedulerNode node = createMockNode("node" + i,
+          Resource.newInstance(GB, 1),
+          Resource.newInstance(5 * GB, 5));
+      nodes.add(node);
+    }
+    for (int i = 2000; i < 4000; i++) {
+      SchedulerNode node = createMockNode("node" + i,
+          Resource.newInstance(2*GB, 1),
+          Resource.newInstance(5 * GB, 5));
+      nodes.add(node);
+    }
+    for (int i = 4000; i < 6000; i++) {
+      SchedulerNode node = createMockNode("node" + i,
+          Resource.newInstance(GB, 3),
+          Resource.newInstance(20 * GB, 20));
+      nodes.add(node);
+    }
+    /*
+     * add and refresh nodes
+     */
+    policy.addAndRefreshNodesSet(nodes, partitionName);
+    /*
+     * call getPreferredNodeIterator in multi-threads
+     */
+    ExecutorService executorService = Executors.newFixedThreadPool(10);
+    checkConcurrentGet(executorService, policy, partitionName,
+        2000, 4000, 5999);
+    // print metrics
+    Map<String, MutableMetric> metrics = new LinkedHashMap<>();
+    metrics.put("refreshDelay", PolicyMetrics.getMetrics().refreshDelay);
+    metrics.put("getDelay", PolicyMetrics.getMetrics().getDelay);
+    PrintMetrics(metrics);
+
+    /*
+     * add preferred nodes and then refresh nodes
+     * node6000 ~ node7999: total=<10GB, 10>, used=<GB, 1>,  dominant ratio: 0.1
+     */
+    for (int i = 6000; i < 8000; i++) {
+      SchedulerNode node = createMockNode("node" + i,
+          Resource.newInstance(GB, 1),
+          Resource.newInstance(10 * GB, 10));
+      nodes.add(node);
+    }
+    policy.addAndRefreshNodesSet(nodes, partitionName);
+    // check thread local caches are updated
+    checkConcurrentGet(executorService, policy, partitionName,
+        2000, 6000, 7999);
+    PrintMetrics(metrics);
+    executorService.shutdown();
+
+    /*
+     * check single iterator: should be reinitialized after it has not next element.
+     * for each round, ranges should be: [6000, 7999], [4000, 5999], [0, 1999]
+     * ignored range: [2000, 3999]
+     */
+    executorService = Executors.newFixedThreadPool(1);
+    for(int i=0;i<3;i++){
+      checkConcurrentGet(executorService, policy, partitionName,
+          2000, 6000, 7999);
+      checkConcurrentGet(executorService, policy, partitionName,
+          2000, 4000, 5999);
+      checkConcurrentGet(executorService, policy, partitionName,
+          2000, 0, 1999);
+    }
+    executorService.shutdown();
+  }
+
+  @Test
+  public void testGetNodeIteratorWithMultiPartitionsInMultiThreads()
+      throws ExecutionException, InterruptedException {
+    PolicyMetrics.reset();
+    MultiComparatorPolicy<SchedulerNode> policy =
+        Mockito.spy(new MultiComparatorPolicy<>());
+    String policyName = "policy1", partitionName1 = "partition1",
+        partitionName2 = "partition2";
+    Configuration conf = new Configuration();
+    conf.set(
+        CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_CURRENT_NAME,
+        policyName);
+    conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
+            + policyName + DOT + MultiComparatorPolicy.COMPARATORS_CONF_KEY,
+        "DOMINANT_ALLOCATED_RATIO:ASC,NODE_ID:ASC");
+    conf.setFloat(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
+            + policyName + DOT + MultiComparatorPolicy.PREFER_RATIO_CONF_KEY,
+        0.2f);
+    conf.setFloat(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
+            + policyName + DOT + MultiComparatorPolicy.IGNORE_RATIO_CONF_KEY,
+        0.25f);
+    policy.setConf(conf);
+
+    // mock nodes for partition1
+    // node1 ~ node1999: total=<5GB, 5>, used=<GB, 1>,  dominant ratio: 0.2
+    // node2000 ~ node3999: total=<5GB, 5>, used=<2GB, 1>,  dominant ratio: 0.4
+    List<SchedulerNode> nodesForP1 = new ArrayList<>();
+    for (int i = 0; i < 2000; i++) {
+      SchedulerNode node = createMockNode("node" + i,
+          Resource.newInstance(GB, 1),
+          Resource.newInstance(5 * GB, 5));
+      nodesForP1.add(node);
+    }
+    for (int i = 2000; i < 4000; i++) {
+      SchedulerNode node = createMockNode("node" + i,
+          Resource.newInstance(2*GB, 1),
+          Resource.newInstance(5 * GB, 5));
+      nodesForP1.add(node);
+    }
+    // mock nodes for partition2
+    // node4000 ~ node4099: total=<10GB, 10>, used=<5GB, 1>,  dominant ratio: 0.5
+    // node4100 ~ node4199: total=<10GB, 10>, used=<GB, 3>,  dominant ratio: 0.3
+    List<SchedulerNode> nodesForP2 = new ArrayList<>();
+    for (int i = 4000; i < 4100; i++) {
+      SchedulerNode node = createMockNode("node" + i,
+          Resource.newInstance(5 * GB, 1),
+          Resource.newInstance(10 * GB, 10));
+      nodesForP2.add(node);
+    }
+    for (int i = 4100; i < 4200; i++) {
+      SchedulerNode node = createMockNode("node" + i,
+          Resource.newInstance( GB, 3),
+          Resource.newInstance( 10 * GB, 10));
+      nodesForP2.add(node);
+    }
+
+    /*
+     * add and refresh nodes
+     */
+    policy.addAndRefreshNodesSet(nodesForP1, partitionName1);
+    policy.addAndRefreshNodesSet(nodesForP2, partitionName2);
+
+    // partition test cases
+    List<PartitionTestCase> cases =
+        Arrays.asList(new PartitionTestCase(partitionName1, 2000, 0, 1999),
+            new PartitionTestCase(partitionName2, 100, 4100, 4199));
+
+    /*
+     * call getPreferredNodeIterator in multi-threads
+     */
+    ExecutorService executorService = Executors.newFixedThreadPool(10);
+    checkConcurrentGetForPartitions(executorService, policy, cases);
+    // print metrics
+    Map<String, MutableMetric> metrics = new LinkedHashMap<>();
+    metrics.put("iteratorRefreshed",
+        PolicyMetrics.getMetrics().iteratorCacheRefreshed);
+    metrics.put("refreshDelay", PolicyMetrics.getMetrics().refreshDelay);
+    metrics.put("getDelay", PolicyMetrics.getMetrics().getDelay);
+    PrintMetrics(metrics);
+    // check iterator refreshed num must be in range [2, 20]
+    long refreshedNum = PolicyMetrics.getMetrics().iteratorCacheRefreshed.value();
+    Assert.assertTrue(refreshedNum >= 2 && refreshedNum <= 20);
+
+    executorService.shutdown();
+  }
+
+  private void checkConcurrentGet(ExecutorService executorService,
+      MultiComparatorPolicy<SchedulerNode> policy, String partitionName,
+      int getNum, int expectedMinNodeID, int expectedMaxNodeID)
+      throws ExecutionException, InterruptedException {
+    List<Future<String>> futures = new ArrayList<>();
+    for (int i = 0; i < getNum; i++) {
+      futures.add(executorService.submit(() -> {
+        Iterator<SchedulerNode> it =
+            policy.getPreferredNodeIterator(null, partitionName);
+        // return flag: <thread_name>_<node_host>
+        return Thread.currentThread().getName() + "_" + it.next().getNodeID()
+            .getHost();
+      }));
+    }
+    List<String> flags = new ArrayList<>();
+    Set<String> flagSet = new HashSet<>();
+    int maxNodeID = Integer.MIN_VALUE, minNodeID = Integer.MAX_VALUE;
+    for (Future<String> future : futures) {
+      String flag = future.get();
+      flags.add(flag);
+      flagSet.add(flag);
+      int nodeID = Integer.parseInt(flag.split("node")[1]);
+      if (nodeID > maxNodeID) {
+        maxNodeID = nodeID;
+      }
+      if (nodeID < minNodeID) {
+        minNodeID = nodeID;
+      }
+    }
+    LOG.info("Check flags: totalNum=" + flags.size() + ", deduplicatedNum="
+        + flagSet.size() + ", minNodeID=" + minNodeID + "," + " maxNodeID="
+        + maxNodeID);
+    // check chosen nodeID are in range [expectedMinNodeID, expectedMaxNodeID]
+    Assert.assertTrue(
+        minNodeID >= expectedMinNodeID && maxNodeID <= expectedMaxNodeID);
+    // check there are no duplicated flags(no duplicated node in the same thread)
+    Assert.assertEquals(flags.size(), flagSet.size());
+  }
+
+  private static class PartitionTestCase {
+    String partitionName;
+    int submitNum;
+    int expectedMinNodeID;
+    int expectedMaxNodeID;
+    PartitionTestCase(String partitionName, int submitNum, int expectedMinNodeID,
+        int expectedMaxNodeID) {
+      this.partitionName = partitionName;
+      this.submitNum = submitNum;
+      this.expectedMinNodeID = expectedMinNodeID;
+      this.expectedMaxNodeID = expectedMaxNodeID;
+    }
+    public int getSubmitNum() {
+      return submitNum;
+    }
+  }
+
+  private void checkConcurrentGetForPartitions(ExecutorService executorService,
+      MultiComparatorPolicy<SchedulerNode> policy,
+      List<PartitionTestCase> partitionTestCases)
+      throws ExecutionException, InterruptedException {
+    int maxSubmitNum = partitionTestCases.stream()
+        .mapToInt(PartitionTestCase::getSubmitNum).max().getAsInt();
+    List<Future<String>> futures = new ArrayList<>();
+    for (int i = 0; i < maxSubmitNum; i++) {
+      for (PartitionTestCase partitionTestCase: partitionTestCases) {
+        String partitionName = partitionTestCase.partitionName;
+        if (i < partitionTestCase.getSubmitNum()) {
+          futures.add(executorService.submit(() -> {
+            Iterator<SchedulerNode> it =
+                policy.getPreferredNodeIterator(null, partitionName);
+            // return flag: <thread_name>_<partition>_<node_host>
+            return Thread.currentThread().getName() + "_" + partitionName +
+                "_" + it.next().getNodeID().getHost();
+          }));
+        }
+      }
+    }
+    Map<String, Set<String>> nodeFlags = new HashMap<>();
+    for (Future<String> future : futures) {
+      String flag = future.get();
+      String partitionName = flag.split("_")[1];
+      Set<String> nodeFlagsForPartition =
+          nodeFlags.computeIfAbsent(partitionName, k -> new HashSet<>());
+      nodeFlagsForPartition.add(flag);
+    }
+    for (PartitionTestCase partitionTestCase : partitionTestCases) {
+      Set<String> nodeIDsForPartition =
+          nodeFlags.get(partitionTestCase.partitionName);
+      List<String> flags = new ArrayList<>();
+      Set<String> flagSet = new HashSet<>();
+      int maxNodeID = Integer.MIN_VALUE, minNodeID = Integer.MAX_VALUE;
+      for (String nodeFlag : nodeIDsForPartition) {
+        flags.add(nodeFlag);
+        flagSet.add(nodeFlag);
+        int nodeID = Integer.parseInt(nodeFlag.split("node")[1]);
+        if (nodeID > maxNodeID) {
+          maxNodeID = nodeID;
+        }
+        if (nodeID < minNodeID) {
+          minNodeID = nodeID;
+        }
+      }
+      LOG.info("Check flags: partition=" + partitionTestCase.partitionName
+          + ", totalNum=" + flags.size() + ", deduplicatedNum="
+          + flagSet.size() + ", minNodeID="
+          + minNodeID + "," + " maxNodeID=" + maxNodeID);
+      // check chosen nodeID are in range [expectedMinNodeID, expectedMaxNodeID]
+      Assert.assertTrue(minNodeID >= partitionTestCase.expectedMinNodeID
+          && maxNodeID <= partitionTestCase.expectedMaxNodeID);
+      // check there are no duplicated flags(no duplicated node in the same thread)
+      Assert.assertEquals(flags.size(), flagSet.size());
+    }
+  }
+
+  private void PrintMetrics(Map<String, MutableMetric> metrics) {
+    for (Map.Entry<String, MutableMetric> entry : metrics.entrySet()) {
+      MetricsRecordBuilder builder = new MetricsJsonBuilder( null);
+      entry.getValue().snapshot(builder, true);
+      LOG.info("Print " + entry.getKey() + " metric: " + builder);
+    }
+  }
+
   private SchedulerNode createMockNode(String nodeId,
       Resource allocatedResource, Resource totalResource) {
     SchedulerNode node = Mockito.mock(SchedulerNode.class);
@@ -314,9 +652,9 @@ public class TestMultiComparatorPolicy {
   }
 
   private static class TestCase {
-    String comparatorsConf;
-    List<List<SchedulerNode>> nodes;
-    List<SchedulerNode> expectedNodes;
+    private String comparatorsConf;
+    private List<List<SchedulerNode>> nodes;
+    private List<SchedulerNode> expectedNodes;
 
     TestCase(String comparatorsConf, List<List<SchedulerNode>> nodes,
         List<SchedulerNode> expectedNodes) {

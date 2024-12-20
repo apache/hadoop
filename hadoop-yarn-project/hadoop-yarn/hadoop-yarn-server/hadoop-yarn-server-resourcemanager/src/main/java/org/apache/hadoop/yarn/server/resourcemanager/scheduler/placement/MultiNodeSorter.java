@@ -76,12 +76,12 @@ public class MultiNodeSorter<N extends SchedulerNode> extends AbstractService {
 
   public void serviceInit(Configuration conf) throws Exception {
     LOG.info("Initializing MultiNodeSorter with {}", policySpec);
-    initPolicy(policySpec);
+    initPolicy();
     super.serviceInit(conf);
   }
 
   @SuppressWarnings("unchecked")
-  void initPolicy(MultiNodePolicySpec policySpec) throws YarnException {
+  void initPolicy() throws YarnException {
     String policyName = policySpec.getPolicyName();
     String policyClassName = policySpec.getPolicyClassName();
     Class<?> policyClass;

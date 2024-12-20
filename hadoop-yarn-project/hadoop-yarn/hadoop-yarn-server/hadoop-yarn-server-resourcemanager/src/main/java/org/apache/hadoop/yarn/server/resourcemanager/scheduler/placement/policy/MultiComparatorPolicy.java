@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.policy;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -40,6 +41,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -88,11 +90,10 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
             SchedulerNode::getAllocatedResource);
         put(ComparatorKey.UNALLOCATED_RESOURCE,
             SchedulerNode::getUnallocatedResource);
-        put(ComparatorKey.TOTAL_RESOURCE,
-            SchedulerNode::getTotalResource);
+        put(ComparatorKey.TOTAL_RESOURCE, SchedulerNode::getTotalResource);
         // for dominant ratio
-        put(ComparatorKey.DOMINANT_ALLOCATED_RATIO, obj -> Resources
-            .ratio(DOMINANT_RC, obj.getAllocatedResource(),
+        put(ComparatorKey.DOMINANT_ALLOCATED_RATIO,
+            obj -> Resources.ratio(DOMINANT_RC, obj.getAllocatedResource(),
                 obj.getTotalResource()));
         // for node ID
         put(ComparatorKey.NODE_ID, SchedulerNode::getNodeID);
@@ -101,12 +102,16 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
   /*
    * Configuration key for specifying comparators in a MultiComparatorPolicy instance.
    * Use this key to define comparators for a policy instance as follows:
-   *   yarn.scheduler.capacity.multi-node-sorting-policy.<policy-name>.comparators=<comparators-config-value>
+   *   yarn.scheduler.capacity.multi-node-sorting-policy.<policy_name>.comparators=<conf_value>
    * The value should be a comma-separated list of comparator keys with optional
    *  order directions (ASC by default).
    *  Example: DOMINANT_ALLOCATED_RATIO,NODE_ID:DESC
    */
   public static final String COMPARATORS_CONF_KEY = "comparators";
+
+  public static final String PREFER_RATIO_CONF_KEY = "prefer-ratio";
+
+  public static final String IGNORE_RATIO_CONF_KEY = "ignore-ratio";
 
   /*
    * Default comparators for MultiComparatorPolicy:
@@ -122,9 +127,14 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
           new Comparator(ComparatorKey.NODE_ID, OrderDirection.ASC,
               COMPARATOR_CALCULATORS.get(ComparatorKey.NODE_ID))));
 
-  protected Map<String, Set<N>> nodesPerPartition = new ConcurrentHashMap<>();
-  protected List<Comparator> comparators;
+  final private Map<String, SortedNodesWrapper<N>> nodeIteratorPerPartition =
+      new ConcurrentHashMap<>();
+  List<Comparator> comparators;
   private Configuration conf;
+  private ThreadLocal<Map<String, IteratorWrapper<N>>> localNodeIterators =
+      ThreadLocal.withInitial(HashMap::new);
+  private float preferRatio, ignoreRatio;
+  private String policyName;
 
   public MultiComparatorPolicy() {
   }
@@ -137,7 +147,7 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
       return;
     }
     this.conf = conf;
-    String policyName = conf.get(
+    policyName = conf.get(
         CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_CURRENT_NAME);
     if (policyName != null && !policyName.isEmpty()) {
       String comparatorsConfV = conf.get(
@@ -151,9 +161,15 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
               + comparatorsConfV, e);
         }
       }
+      preferRatio = conf.getFloat(
+          CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
+              + policyName + DOT + PREFER_RATIO_CONF_KEY, 0f);
+      ignoreRatio = conf.getFloat(
+          CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
+              + policyName + DOT + IGNORE_RATIO_CONF_KEY, 0f);
     }
-    LOG.info("Initialized comparators for policy {}: {}", policyName,
-        this.comparators);
+    LOG.info("Initialized policy {}: comparators={}, prefer/ignore ratios={},{}",
+        policyName, this.comparators, preferRatio, ignoreRatio);
   }
 
   /*
@@ -163,7 +179,7 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
     *    DOMINANT_ALLOCATED_RATIO,NODE_ID:DESC
    */
   private List<Comparator> parseComparators(String comparatorsConfV) throws ConfigurationException {
-    List<Comparator> comparators = new ArrayList<>();
+    List<Comparator> newComparators = new ArrayList<>();
 
     String[] comparatorParts = comparatorsConfV.split(",");
     for (String part : comparatorParts) {
@@ -195,15 +211,15 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
       }
 
       // add comparator
-      comparators.add(new Comparator(key, direction, calculator));
+      newComparators.add(new Comparator(key, direction, calculator));
     }
 
     // validate not empty
-    if (comparators.isEmpty()) {
+    if (newComparators.isEmpty()) {
       throw new ConfigurationException("no comparators found");
     }
 
-    return comparators;
+    return newComparators;
   }
 
   @Override
@@ -214,12 +230,43 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
   @Override
   public Iterator<N> getPreferredNodeIterator(Collection<N> nodes,
       String partition) {
-    return getNodesPerPartition(partition).iterator();
+    long startTime = System.nanoTime();
+    SortedNodesWrapper<N> nodesWrapper = nodeIteratorPerPartition.get(partition);
+    if (nodesWrapper == null) {
+      return Collections.emptyIterator();
+    }
+    // get iterator-wrapper from local thread
+    Map<String, IteratorWrapper<N>> nodeIterators =
+        localNodeIterators.get();
+    IteratorWrapper<N> iteratorWrapper =
+        nodeIterators.computeIfAbsent(partition,
+            k -> IteratorWrapper.emptyIteratorWrapper());
+    String oldVersion = iteratorWrapper.getVersion();
+    // reinitialize if the cached iterator has no next element,
+    // or if the cache version has changed.
+    if (!iteratorWrapper.hasNext() ||
+        !StringUtils.equals(oldVersion, nodesWrapper.getVersion())) {
+      PreferredIterator<N> nodeIterator = new PreferredIterator<>(
+          preferRatio, ignoreRatio, nodesWrapper.getNodes());
+      iteratorWrapper.reinitialize(nodeIterator, nodesWrapper.getVersion());
+      PolicyMetrics.getMetrics().incIteratorCacheRefreshed();
+      LOG.info("Reinitialize nodeIterator of {} partition, thread={}, "
+              + "oldVersion={}, newVersion={}, elapsedNs={}",
+          partition.isEmpty() ? "default" : partition,
+          Thread.currentThread().getName(), oldVersion,
+          nodesWrapper.getVersion(), System.nanoTime() - startTime);
+    }
+    // update add delay metric
+    PolicyMetrics.getMetrics().addGetDelay(
+        policyName, System.nanoTime() - startTime);
+    return iteratorWrapper;
   }
 
   @Override
   public void addAndRefreshNodesSet(Collection<N> nodes,
       String partition) {
+    long startTime = System.nanoTime();
+    // prepare then sort nodes
     List<LookupNode<N>> lookupNodes = new ArrayList<>(nodes.size());
     for (N node : nodes) {
       List<Comparable> values = this.comparators.stream()
@@ -230,18 +277,40 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
     CompositeComparator<N> compositeComparator =
         new CompositeComparator<>(this.comparators);
     lookupNodes.sort(compositeComparator);
-    nodesPerPartition.put(partition, Collections.unmodifiableSet(
-        new LinkedHashSet<>(lookupNodes.stream().map(LookupNode::getNode)
-            .collect(Collectors.toList()))));
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Sorted nodes: policyName={}, comparators={}", this.policyName,
+          this.comparators);
+      for (LookupNode<N> lookupNode : lookupNodes) {
+        LOG.trace(lookupNode.toString());
+      }
+    }
+    // update cache
+    UUID uuid = UUID.randomUUID();
+    SortedNodesWrapper<N> sortedNodesWrapper = new SortedNodesWrapper<>(
+        lookupNodes.stream().map(LookupNode::getNode)
+            .collect(Collectors.toList()), uuid.toString());
+    long elapsedNs = System.nanoTime() - startTime;
+    nodeIteratorPerPartition.put(partition, sortedNodesWrapper);
+    LOG.info("Refreshed nodes of partition {}, num={}, thread={}, version={}, "
+            + "comparators={}, prefer/ignore ratios={},{}, elapsedNs={}",
+        partition, lookupNodes.size(), Thread.currentThread().getName(), uuid,
+        this.comparators, preferRatio, ignoreRatio, elapsedNs);
+    // update refresh delay metric
+    PolicyMetrics.getMetrics().addRefreshDelay(policyName, elapsedNs);
   }
 
   @Override
   public Set<N> getNodesPerPartition(String partition) {
-    return nodesPerPartition.getOrDefault(partition, Collections.emptySet());
+    Set<N> nodes = new LinkedHashSet<>();
+    SortedNodesWrapper<N> nodesWrapper = nodeIteratorPerPartition.get(partition);
+    if (nodesWrapper != null) {
+      nodes.addAll(nodesWrapper.getNodes());
+    }
+    return nodes;
   }
 
   @VisibleForTesting
-  public List<ComparatorKey> getComparatorKeys() {
+  protected List<ComparatorKey> getComparatorKeys() {
     return this.comparators.stream().map(Comparator::getKey)
         .collect(Collectors.toList());
   }
@@ -254,11 +323,11 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
 }
 
 class Comparator {
-  protected ComparatorKey key;
-  OrderDirection direction;
-  Function<SchedulerNode, Comparable> calculator;
+  final ComparatorKey key;
+  final OrderDirection direction;
+  final Function<SchedulerNode, Comparable> calculator;
 
-  public Comparator(ComparatorKey key, OrderDirection direction,
+  Comparator(ComparatorKey key, OrderDirection direction,
       Function<SchedulerNode, Comparable> calculator) {
     this.key = key;
     this.direction = direction;
@@ -313,17 +382,21 @@ enum OrderDirection {
  */
 class LookupNode<N extends SchedulerNode> {
 
-  protected List<Comparable> comparableValues;
+  final List<Comparable> comparableValues;
 
   private N node;
 
-  public LookupNode(List<Comparable> comparableValues, N node) {
+  LookupNode(List<Comparable> comparableValues, N node) {
     this.comparableValues = comparableValues;
     this.node = node;
   }
 
   public N getNode() {
     return node;
+  }
+
+  public String toString() {
+    return node.toString() + ", comparableValues=" + comparableValues;
   }
 }
 
@@ -333,9 +406,9 @@ class LookupNode<N extends SchedulerNode> {
 class CompositeComparator<N extends SchedulerNode> implements
     java.util.Comparator<LookupNode<N>> {
 
-  private List<Comparator> comparators;
+  private final List<Comparator> comparators;
 
-  public CompositeComparator(List<Comparator> comparators) {
+  CompositeComparator(List<Comparator> comparators) {
     this.comparators = comparators;
   }
 
@@ -356,5 +429,56 @@ class CompositeComparator<N extends SchedulerNode> implements
 
   public List<Comparator> getComparators() {
     return comparators;
+  }
+}
+
+class SortedNodesWrapper<N> {
+  private List<N> nodes;
+  private String version;
+
+  public SortedNodesWrapper(List<N> nodes, String version) {
+    this.nodes = nodes;
+    this.version = version;
+  }
+
+  public List<N> getNodes() {
+    return nodes;
+  }
+
+  public String getVersion() {
+    return version;
+  }
+}
+
+class IteratorWrapper<N> implements Iterator<N> {
+
+  private Iterator<N> iterator;
+  private String version;
+
+  public IteratorWrapper() {
+    this.iterator = Collections.emptyIterator();
+  }
+
+  public static <N> IteratorWrapper<N> emptyIteratorWrapper() {
+    return new IteratorWrapper<>();
+  }
+
+  public void reinitialize(Iterator<N> iterator, String version) {
+    this.iterator = iterator;
+    this.version = version;
+  }
+
+  @Override
+  public boolean hasNext() {
+    return iterator.hasNext();
+  }
+
+  @Override
+  public N next() {
+    return iterator.next();
+  }
+
+  public String getVersion() {
+    return version;
   }
 }

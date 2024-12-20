@@ -1,0 +1,98 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.policy;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.metrics2.MetricsInfo;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.annotation.Metric;
+import org.apache.hadoop.metrics2.annotation.Metrics;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableCounter;
+import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.apache.hadoop.metrics2.lib.Interns.info;
+
+@InterfaceAudience.Private
+@Metrics(context="yarn")
+public class PolicyMetrics {
+
+  private static AtomicBoolean isInitialized = new AtomicBoolean(false);
+
+  @Metric("refreshed number of iterator cache")
+  MutableCounterLong iteratorCacheRefreshed;
+
+  @Metric("get node-iterator delay in nanoseconds")
+  MutableRatesWithAggregation getDelay;
+
+  @Metric("refresh delay in nanoseconds for sorted nodes")
+  MutableRatesWithAggregation refreshDelay;
+
+  private static final MetricsInfo RECORD_INFO = info(
+      "MultiNodeLookupPolicyMetrics",
+      "Metrics for the MultiNodeLookupPolicy");
+
+  private static volatile PolicyMetrics INSTANCE = null;
+  private static MetricsRegistry registry;
+
+  public static PolicyMetrics getMetrics() {
+    if(!isInitialized.get()){
+      synchronized (PolicyMetrics.class) {
+        if(INSTANCE == null){
+          INSTANCE = new PolicyMetrics();
+          registerMetrics();
+          isInitialized.set(true);
+        }
+      }
+    }
+    return INSTANCE;
+  }
+
+  private static void registerMetrics() {
+    registry = new MetricsRegistry(RECORD_INFO);
+    registry.tag(RECORD_INFO, "ResourceManager");
+    MetricsSystem ms = DefaultMetricsSystem.instance();
+    if (ms != null) {
+      ms.register(RECORD_INFO.name(), RECORD_INFO.description(), INSTANCE);
+    }
+  }
+
+  @VisibleForTesting
+  synchronized static void reset() {
+    isInitialized.set(false);
+    INSTANCE = null;
+  }
+
+  public void addRefreshDelay(String policyName, long processingTime) {
+    refreshDelay.add(policyName, processingTime);
+  }
+
+  public void addGetDelay(String policyName, long processingTime) {
+    getDelay.add(policyName, processingTime);
+  }
+
+  public void incIteratorCacheRefreshed() {
+    iteratorCacheRefreshed.incr();
+  }
+}
