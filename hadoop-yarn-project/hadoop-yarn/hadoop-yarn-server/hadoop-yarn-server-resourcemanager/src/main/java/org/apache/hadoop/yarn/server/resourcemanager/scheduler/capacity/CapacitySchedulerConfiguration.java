@@ -2919,10 +2919,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * Common suffix for the MultiNodeSortingPolicy configuration item.
    * For example, you can use the following configuration item to
    * set the default policy:
-   * yarn.scheduler.capacity.multi-node-sorting.policy=<default-policy-name>
+   * yarn.scheduler.capacity.multi-node-sorting.policy=&lt;default-policy-name&gt;
    * You can also use the following configuration items to set
    * specific policies for individual queues:
-   * yarn.scheduler.capacity.<queue-path>.multi-node-sorting.policy=<policy-name>
+   * yarn.scheduler.capacity.&lt;queue-path&gt;.multi-node-sorting.policy=&lt;policy-name&gt;
    */
   public static final String MULTI_NODE_SORTING_POLICY_SUFFIX =
       "multi-node-sorting.policy";

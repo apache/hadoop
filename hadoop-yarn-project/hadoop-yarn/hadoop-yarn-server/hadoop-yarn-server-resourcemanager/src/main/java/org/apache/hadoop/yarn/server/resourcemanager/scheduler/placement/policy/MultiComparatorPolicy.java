@@ -327,10 +327,10 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
   }
 }
 
-class Comparator {
+class Comparator implements java.io.Serializable {
   private final ComparatorKey key;
   private final OrderDirection direction;
-  private final Function<SchedulerNode, Comparable> calculator;
+  private transient final Function<SchedulerNode, Comparable> calculator;
 
   Comparator(ComparatorKey key, OrderDirection direction,
       Function<SchedulerNode, Comparable> calculator) {
@@ -417,7 +417,7 @@ class LookupNode<N extends SchedulerNode> {
  * Composite comparator that compares multiple values in order.
  */
 class CompositeComparator<N extends SchedulerNode> implements
-    java.util.Comparator<LookupNode<N>> {
+    java.util.Comparator<LookupNode<N>>, java.io.Serializable {
 
   private final List<Comparator> comparators;
 
