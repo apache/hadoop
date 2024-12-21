@@ -477,12 +477,12 @@ public class TestMultiComparatorPolicy {
     // print metrics
     Map<String, MutableMetric> metrics = new LinkedHashMap<>();
     metrics.put("iteratorRefreshed",
-        PolicyMetrics.getMetrics().iteratorCacheRefreshed);
-    metrics.put("refreshDelay", PolicyMetrics.getMetrics().refreshDelay);
-    metrics.put("getDelay", PolicyMetrics.getMetrics().getDelay);
+        PolicyMetrics.getMetrics().getIteratorCacheRefreshed());
+    metrics.put("refreshDelay", PolicyMetrics.getMetrics().getRefreshDelay());
+    metrics.put("getDelay", PolicyMetrics.getMetrics().getGetDelay());
     printMetrics(metrics);
     // check iterator refreshed num must be in range [2, 20]
-    long refreshedNum = PolicyMetrics.getMetrics().iteratorCacheRefreshed.value();
+    long refreshedNum = PolicyMetrics.getMetrics().getIteratorCacheRefreshed().value();
     Assert.assertTrue(refreshedNum >= 2 && refreshedNum <= 20);
 
     executorService.shutdown();

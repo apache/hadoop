@@ -91,6 +91,10 @@ public class PolicyMetrics {
     return getDelay;
   }
 
+  public MutableCounterLong getIteratorCacheRefreshed() {
+    return iteratorCacheRefreshed;
+  }
+
   public void addRefreshDelay(String policyName, long processingTime) {
     refreshDelay.add(policyName, processingTime);
   }
