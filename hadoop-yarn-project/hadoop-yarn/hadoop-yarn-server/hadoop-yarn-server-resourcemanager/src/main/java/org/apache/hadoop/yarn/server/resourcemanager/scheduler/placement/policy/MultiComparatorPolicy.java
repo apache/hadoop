@@ -274,9 +274,19 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
           .collect(Collectors.toList());
       lookupNodes.add(new LookupNode<>(values, node));
     }
-    CompositeComparator<N> compositeComparator =
-        new CompositeComparator<>(this.comparators);
-    lookupNodes.sort(compositeComparator);
+    lookupNodes.sort((o1, o2) -> {
+      for (int i = 0; i < comparators.size(); i++) {
+        Comparable o1Value = o1.getComparableValues().get(i);
+        Comparable o2Value = o2.getComparableValues().get(i);
+        int compare = comparators.get(i).getDirection() == OrderDirection.ASC ?
+            o1Value.compareTo(o2Value) :
+            o2Value.compareTo(o1Value);
+        if (compare != 0) {
+          return compare;
+        }
+      }
+      return 0;
+    });
     if (LOG.isTraceEnabled()) {
       LOG.trace("Sorted nodes: policyName={}, comparators={}", this.policyName,
           this.comparators);
@@ -327,10 +337,10 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
   }
 }
 
-class Comparator implements java.io.Serializable {
+class Comparator {
   private final ComparatorKey key;
   private final OrderDirection direction;
-  private transient final Function<SchedulerNode, Comparable> calculator;
+  private final Function<SchedulerNode, Comparable> calculator;
 
   Comparator(ComparatorKey key, OrderDirection direction,
       Function<SchedulerNode, Comparable> calculator) {
@@ -410,38 +420,6 @@ class LookupNode<N extends SchedulerNode> {
 
   public String toString() {
     return node.toString() + ", comparableValues=" + comparableValues;
-  }
-}
-
-/**
- * Composite comparator that compares multiple values in order.
- */
-class CompositeComparator<N extends SchedulerNode> implements
-    java.util.Comparator<LookupNode<N>>, java.io.Serializable {
-
-  private final List<Comparator> comparators;
-
-  CompositeComparator(List<Comparator> comparators) {
-    this.comparators = comparators;
-  }
-
-  @Override
-  public int compare(LookupNode<N> o1, LookupNode<N> o2) {
-    for (int i = 0; i < comparators.size(); i++) {
-      Comparable o1Value = o1.getComparableValues().get(i);
-      Comparable o2Value = o2.getComparableValues().get(i);
-      int compare = comparators.get(i).getDirection() == OrderDirection.ASC ?
-          o1Value.compareTo(o2Value) :
-          o2Value.compareTo(o1Value);
-      if (compare != 0) {
-        return compare;
-      }
-    }
-    return 0;
-  }
-
-  public List<Comparator> getComparators() {
-    return comparators;
   }
 }
 
