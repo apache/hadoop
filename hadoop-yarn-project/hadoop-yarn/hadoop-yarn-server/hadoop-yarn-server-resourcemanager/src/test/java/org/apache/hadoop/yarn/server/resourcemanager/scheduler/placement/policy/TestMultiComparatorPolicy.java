@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.policy;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsJsonBuilder;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -29,13 +27,11 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,15 +53,9 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.mockito.Mockito.when;
 
 public class TestMultiComparatorPolicy {
-  private static final Log LOG =
-      LogFactory.getLog(TestMultiComparatorPolicy.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMultiComparatorPolicy.class);
   public static final int GB = 1024;
-
-  @Before
-  public void setup() {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
-  }
 
   @Test
   public void testSetConf() {
@@ -76,12 +66,12 @@ public class TestMultiComparatorPolicy {
     // null conf
     policy.setConf(null);
     Assert.assertSame("use default comparators for null conf",
-        policy.comparators, MultiComparatorPolicy.DEFAULT_COMPARATORS);
+        policy.getComparators(), MultiComparatorPolicy.DEFAULT_COMPARATORS);
     // empty conf
     Configuration conf = new Configuration();
     policy.setConf(conf);
     Assert.assertSame("use default comparators for empty conf",
-        policy.comparators, MultiComparatorPolicy.DEFAULT_COMPARATORS);
+        policy.getComparators(), MultiComparatorPolicy.DEFAULT_COMPARATORS);
     // conf with current-name of policy but no configured comparators
     String policyName = "policy1";
     conf.set(
@@ -89,28 +79,28 @@ public class TestMultiComparatorPolicy {
         policyName);
     policy.setConf(conf);
     Assert.assertSame("use default comparators for empty conf",
-        policy.comparators, MultiComparatorPolicy.DEFAULT_COMPARATORS);
+        policy.getComparators(), MultiComparatorPolicy.DEFAULT_COMPARATORS);
     // conf with current-name of policy and empty comparators conf
     conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
             + policyName + DOT + MultiComparatorPolicy.COMPARATORS_CONF_KEY,
         ",,,");
     policy.setConf(conf);
     Assert.assertSame("use default comparators for empty conf",
-        policy.comparators, MultiComparatorPolicy.DEFAULT_COMPARATORS);
+        policy.getComparators(), MultiComparatorPolicy.DEFAULT_COMPARATORS);
     // conf with current-name of policy and comparators conf with invalid comparator-key
     conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
             + policyName + DOT + MultiComparatorPolicy.COMPARATORS_CONF_KEY,
         "INVALID");
     policy.setConf(conf);
     Assert.assertSame("use default comparators for empty conf",
-        policy.comparators, MultiComparatorPolicy.DEFAULT_COMPARATORS);
+        policy.getComparators(), MultiComparatorPolicy.DEFAULT_COMPARATORS);
     // conf with current-name of policy and comparators conf with invalid order-direction
     conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
             + policyName + DOT + MultiComparatorPolicy.COMPARATORS_CONF_KEY,
         "NODE_ID:INVALID");
     policy.setConf(conf);
     Assert.assertSame("use default comparators for empty conf",
-        policy.comparators, MultiComparatorPolicy.DEFAULT_COMPARATORS);
+        policy.getComparators(), MultiComparatorPolicy.DEFAULT_COMPARATORS);
     /*
      * use configured comparators for valid comparators conf
      */
@@ -375,9 +365,9 @@ public class TestMultiComparatorPolicy {
         2000, 4000, 5999);
     // print metrics
     Map<String, MutableMetric> metrics = new LinkedHashMap<>();
-    metrics.put("refreshDelay", PolicyMetrics.getMetrics().refreshDelay);
-    metrics.put("getDelay", PolicyMetrics.getMetrics().getDelay);
-    PrintMetrics(metrics);
+    metrics.put("refreshDelay", PolicyMetrics.getMetrics().getRefreshDelay());
+    metrics.put("getDelay", PolicyMetrics.getMetrics().getGetDelay());
+    printMetrics(metrics);
 
     /*
      * add preferred nodes and then refresh nodes
@@ -393,7 +383,7 @@ public class TestMultiComparatorPolicy {
     // check thread local caches are updated
     checkConcurrentGet(executorService, policy, partitionName,
         2000, 6000, 7999);
-    PrintMetrics(metrics);
+    printMetrics(metrics);
     executorService.shutdown();
 
     /*
@@ -402,7 +392,7 @@ public class TestMultiComparatorPolicy {
      * ignored range: [2000, 3999]
      */
     executorService = Executors.newFixedThreadPool(1);
-    for(int i=0;i<3;i++){
+    for (int i = 0; i < 3; i++) {
       checkConcurrentGet(executorService, policy, partitionName,
           2000, 6000, 7999);
       checkConcurrentGet(executorService, policy, partitionName,
@@ -464,8 +454,7 @@ public class TestMultiComparatorPolicy {
     }
     for (int i = 4100; i < 4200; i++) {
       SchedulerNode node = createMockNode("node" + i,
-          Resource.newInstance( GB, 3),
-          Resource.newInstance( 10 * GB, 10));
+          Resource.newInstance(GB, 3), Resource.newInstance(10 * GB, 10));
       nodesForP2.add(node);
     }
 
@@ -491,7 +480,7 @@ public class TestMultiComparatorPolicy {
         PolicyMetrics.getMetrics().iteratorCacheRefreshed);
     metrics.put("refreshDelay", PolicyMetrics.getMetrics().refreshDelay);
     metrics.put("getDelay", PolicyMetrics.getMetrics().getDelay);
-    PrintMetrics(metrics);
+    printMetrics(metrics);
     // check iterator refreshed num must be in range [2, 20]
     long refreshedNum = PolicyMetrics.getMetrics().iteratorCacheRefreshed.value();
     Assert.assertTrue(refreshedNum >= 2 && refreshedNum <= 20);
@@ -539,10 +528,10 @@ public class TestMultiComparatorPolicy {
   }
 
   private static class PartitionTestCase {
-    String partitionName;
-    int submitNum;
-    int expectedMinNodeID;
-    int expectedMaxNodeID;
+    private String partitionName;
+    private int submitNum;
+    private int expectedMinNodeID;
+    private int expectedMaxNodeID;
     PartitionTestCase(String partitionName, int submitNum, int expectedMinNodeID,
         int expectedMaxNodeID) {
       this.partitionName = partitionName;
@@ -613,9 +602,9 @@ public class TestMultiComparatorPolicy {
     }
   }
 
-  private void PrintMetrics(Map<String, MutableMetric> metrics) {
+  private void printMetrics(Map<String, MutableMetric> metrics) {
     for (Map.Entry<String, MutableMetric> entry : metrics.entrySet()) {
-      MetricsRecordBuilder builder = new MetricsJsonBuilder( null);
+      MetricsRecordBuilder builder = new MetricsJsonBuilder(null);
       entry.getValue().snapshot(builder, true);
       LOG.info("Print " + entry.getKey() + " metric: " + builder);
     }

@@ -71,33 +71,33 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
   private static final Map<ComparatorKey, Function<SchedulerNode, Comparable>>
       COMPARATOR_CALCULATORS = Collections.unmodifiableMap(
       new HashMap<ComparatorKey, Function<SchedulerNode, Comparable>>() {{
-        // for vcores
-        put(ComparatorKey.ALLOCATED_VCORES,
-            obj -> obj.getAllocatedResource().getVirtualCores());
-        put(ComparatorKey.UNALLOCATED_VCORES,
-            obj -> obj.getUnallocatedResource().getVirtualCores());
-        put(ComparatorKey.TOTAL_VCORES,
-            obj -> obj.getTotalResource().getVirtualCores());
-        // for memory
-        put(ComparatorKey.ALLOCATED_MEMORY,
-            obj -> obj.getAllocatedResource().getMemorySize());
-        put(ComparatorKey.UNALLOCATED_MEMORY,
-            obj -> obj.getUnallocatedResource().getMemorySize());
-        put(ComparatorKey.TOTAL_MEMORY,
-            obj -> obj.getTotalResource().getMemorySize());
-        // for resource
-        put(ComparatorKey.ALLOCATED_RESOURCE,
-            SchedulerNode::getAllocatedResource);
-        put(ComparatorKey.UNALLOCATED_RESOURCE,
-            SchedulerNode::getUnallocatedResource);
-        put(ComparatorKey.TOTAL_RESOURCE, SchedulerNode::getTotalResource);
-        // for dominant ratio
-        put(ComparatorKey.DOMINANT_ALLOCATED_RATIO,
-            obj -> Resources.ratio(DOMINANT_RC, obj.getAllocatedResource(),
-                obj.getTotalResource()));
-        // for node ID
-        put(ComparatorKey.NODE_ID, SchedulerNode::getNodeID);
-      }});
+            // for vcores
+            put(ComparatorKey.ALLOCATED_VCORES,
+                obj -> obj.getAllocatedResource().getVirtualCores());
+            put(ComparatorKey.UNALLOCATED_VCORES,
+                obj -> obj.getUnallocatedResource().getVirtualCores());
+            put(ComparatorKey.TOTAL_VCORES,
+                obj -> obj.getTotalResource().getVirtualCores());
+            // for memory
+            put(ComparatorKey.ALLOCATED_MEMORY,
+                obj -> obj.getAllocatedResource().getMemorySize());
+            put(ComparatorKey.UNALLOCATED_MEMORY,
+                obj -> obj.getUnallocatedResource().getMemorySize());
+            put(ComparatorKey.TOTAL_MEMORY,
+                obj -> obj.getTotalResource().getMemorySize());
+            // for resource
+            put(ComparatorKey.ALLOCATED_RESOURCE,
+                SchedulerNode::getAllocatedResource);
+            put(ComparatorKey.UNALLOCATED_RESOURCE,
+                SchedulerNode::getUnallocatedResource);
+            put(ComparatorKey.TOTAL_RESOURCE, SchedulerNode::getTotalResource);
+            // for dominant ratio
+            put(ComparatorKey.DOMINANT_ALLOCATED_RATIO,
+                obj -> Resources.ratio(DOMINANT_RC, obj.getAllocatedResource(),
+                    obj.getTotalResource()));
+            // for node ID
+            put(ComparatorKey.NODE_ID, SchedulerNode::getNodeID);
+          }});
 
   /*
    * Configuration key for specifying comparators in a MultiComparatorPolicy instance.
@@ -129,14 +129,14 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
 
   final private Map<String, SortedNodesWrapper<N>> nodeIteratorPerPartition =
       new ConcurrentHashMap<>();
-  List<Comparator> comparators;
+  private List<Comparator> comparators;
   private Configuration conf;
   private ThreadLocal<Map<String, IteratorWrapper<N>>> localNodeIterators =
       ThreadLocal.withInitial(HashMap::new);
   private float preferRatio, ignoreRatio;
   private String policyName;
 
-  public MultiComparatorPolicy() {
+  MultiComparatorPolicy() {
   }
 
   @Override
@@ -270,7 +270,7 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
     List<LookupNode<N>> lookupNodes = new ArrayList<>(nodes.size());
     for (N node : nodes) {
       List<Comparable> values = this.comparators.stream()
-          .map(comparator -> comparator.calculator.apply(node))
+          .map(comparator -> comparator.getCalculator().apply(node))
           .collect(Collectors.toList());
       lookupNodes.add(new LookupNode<>(values, node));
     }
@@ -320,12 +320,17 @@ public class MultiComparatorPolicy<N extends SchedulerNode>
     return comparators.stream().map(Comparator::getDirection)
         .collect(Collectors.toList());
   }
+
+  @VisibleForTesting
+  public List<Comparator> getComparators() {
+    return comparators;
+  }
 }
 
 class Comparator {
-  final ComparatorKey key;
-  final OrderDirection direction;
-  final Function<SchedulerNode, Comparable> calculator;
+  private final ComparatorKey key;
+  private final OrderDirection direction;
+  private final Function<SchedulerNode, Comparable> calculator;
 
   Comparator(ComparatorKey key, OrderDirection direction,
       Function<SchedulerNode, Comparable> calculator) {
@@ -340,6 +345,10 @@ class Comparator {
 
   public OrderDirection getDirection() {
     return direction;
+  }
+
+  public Function<SchedulerNode, Comparable> getCalculator() {
+    return calculator;
   }
 
   public String toString() {
@@ -382,7 +391,7 @@ enum OrderDirection {
  */
 class LookupNode<N extends SchedulerNode> {
 
-  final List<Comparable> comparableValues;
+  private final List<Comparable> comparableValues;
 
   private N node;
 
@@ -393,6 +402,10 @@ class LookupNode<N extends SchedulerNode> {
 
   public N getNode() {
     return node;
+  }
+
+  public List<Comparable> getComparableValues() {
+    return comparableValues;
   }
 
   public String toString() {
@@ -415,9 +428,9 @@ class CompositeComparator<N extends SchedulerNode> implements
   @Override
   public int compare(LookupNode<N> o1, LookupNode<N> o2) {
     for (int i = 0; i < comparators.size(); i++) {
-      Comparable o1Value = o1.comparableValues.get(i);
-      Comparable o2Value = o2.comparableValues.get(i);
-      int compare = comparators.get(i).direction == OrderDirection.ASC ?
+      Comparable o1Value = o1.getComparableValues().get(i);
+      Comparable o2Value = o2.getComparableValues().get(i);
+      int compare = comparators.get(i).getDirection() == OrderDirection.ASC ?
           o1Value.compareTo(o2Value) :
           o2Value.compareTo(o1Value);
       if (compare != 0) {
@@ -436,7 +449,7 @@ class SortedNodesWrapper<N> {
   private List<N> nodes;
   private String version;
 
-  public SortedNodesWrapper(List<N> nodes, String version) {
+  SortedNodesWrapper(List<N> nodes, String version) {
     this.nodes = nodes;
     this.version = version;
   }
@@ -455,7 +468,7 @@ class IteratorWrapper<N> implements Iterator<N> {
   private Iterator<N> iterator;
   private String version;
 
-  public IteratorWrapper() {
+  IteratorWrapper() {
     this.iterator = Collections.emptyIterator();
   }
 
@@ -463,9 +476,9 @@ class IteratorWrapper<N> implements Iterator<N> {
     return new IteratorWrapper<>();
   }
 
-  public void reinitialize(Iterator<N> iterator, String version) {
-    this.iterator = iterator;
-    this.version = version;
+  public void reinitialize(Iterator<N> newIt, String newVersion) {
+    this.iterator = newIt;
+    this.version = newVersion;
   }
 
   @Override

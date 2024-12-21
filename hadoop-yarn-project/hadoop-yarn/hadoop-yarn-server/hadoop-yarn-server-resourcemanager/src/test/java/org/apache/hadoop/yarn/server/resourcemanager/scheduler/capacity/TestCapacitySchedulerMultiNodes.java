@@ -586,48 +586,48 @@ public class TestCapacitySchedulerMultiNodes {
     String defaultQueueName = "default", defaultPolicyName = "default",
         testQueueName = "test", testPolicyName = "test",
         enhancedPolicyClass = MultiComparatorPolicy.class.getName();
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    CapacitySchedulerConfiguration newConf = new CapacitySchedulerConfiguration();
     // init queues
-    conf.setQueues(ROOT, new String[]{defaultQueueName, testQueueName});
+    newConf.setQueues(ROOT, new String[]{defaultQueueName, testQueueName});
     QueuePath defaultQueuePath =
         QueuePath.createFromQueues(ROOT.getFullPath(), defaultQueueName);
     QueuePath testQueuePath =
         QueuePath.createFromQueues(ROOT.getFullPath(), testQueueName);
-    conf.setCapacity(defaultQueuePath, 50.0f);
-    conf.setCapacity(testQueuePath, 50.0f);
-    conf.setMaximumApplicationMasterResourcePercent(1.0f);
-    conf.set(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
+    newConf.setCapacity(defaultQueuePath, 50.0f);
+    newConf.setCapacity(testQueuePath, 50.0f);
+    newConf.setMaximumApplicationMasterResourcePercent(1.0f);
+    newConf.set(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
         DominantResourceCalculator.class.getName());
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+    newConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
-    conf.setBoolean(CapacitySchedulerConfiguration.MULTI_NODE_PLACEMENT_ENABLED,
+    newConf.setBoolean(CapacitySchedulerConfiguration.MULTI_NODE_PLACEMENT_ENABLED,
         true);
-    conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICIES,
+    newConf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICIES,
         defaultPolicyName + "," + testPolicyName);
-    conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
+    newConf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
         + defaultPolicyName + ".class", enhancedPolicyClass);
-    conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
+    newConf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
         + defaultPolicyName + DOT
         + CapacitySchedulerConfiguration.SORTING_INTERVAL_MS_SUFFIX, "0");
-    conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
+    newConf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
         + testPolicyName + DOT
         + CapacitySchedulerConfiguration.SORTING_INTERVAL_MS_SUFFIX, "0");
-    conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
+    newConf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
         + testPolicyName + ".class", enhancedPolicyClass);
-    conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
+    newConf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + DOT
             + testPolicyName + DOT
             + MultiComparatorPolicy.COMPARATORS_CONF_KEY,
         "ALLOCATED_RESOURCE:ASC,NODE_ID");
-    conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME,
+    newConf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME,
         defaultPolicyName);
-    conf.set(getQueuePrefix(testQueuePath)
+    newConf.set(getQueuePrefix(testQueuePath)
             + CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_SUFFIX,
         testPolicyName);
-    conf.set(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, "600000");
+    newConf.set(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, "600000");
     // mock RM and 4 NMs
     // nm1, nm2, nm3 have 10 GB memory and 10 vcores each
     // nm4 has 100 GB memory and 100 vcores.
-    MockRM rm = new MockRM(conf);
+    MockRM rm = new MockRM(newConf);
     rm.start();
     MockNM nm1 = rm.registerNode("host1:1234", 10 * GB, 10);
     MockNM nm2 = rm.registerNode("host2:1234", 10 * GB, 10);

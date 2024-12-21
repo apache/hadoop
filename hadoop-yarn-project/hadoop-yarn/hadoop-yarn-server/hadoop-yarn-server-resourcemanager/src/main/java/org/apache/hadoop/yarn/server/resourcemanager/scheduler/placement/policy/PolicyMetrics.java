@@ -19,16 +19,15 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.policy;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
-import org.apache.hadoop.metrics2.lib.MutableCounter;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -41,32 +40,32 @@ public class PolicyMetrics {
   private static AtomicBoolean isInitialized = new AtomicBoolean(false);
 
   @Metric("refreshed number of iterator cache")
-  MutableCounterLong iteratorCacheRefreshed;
+  private MutableCounterLong iteratorCacheRefreshed;
 
   @Metric("get node-iterator delay in nanoseconds")
-  MutableRatesWithAggregation getDelay;
+  private MutableRatesWithAggregation getDelay;
 
   @Metric("refresh delay in nanoseconds for sorted nodes")
-  MutableRatesWithAggregation refreshDelay;
+  private MutableRatesWithAggregation refreshDelay;
 
   private static final MetricsInfo RECORD_INFO = info(
       "MultiNodeLookupPolicyMetrics",
       "Metrics for the MultiNodeLookupPolicy");
 
-  private static volatile PolicyMetrics INSTANCE = null;
+  private static volatile PolicyMetrics instance = null;
   private static MetricsRegistry registry;
 
   public static PolicyMetrics getMetrics() {
     if(!isInitialized.get()){
       synchronized (PolicyMetrics.class) {
-        if(INSTANCE == null){
-          INSTANCE = new PolicyMetrics();
+        if(instance == null){
+          instance = new PolicyMetrics();
           registerMetrics();
           isInitialized.set(true);
         }
       }
     }
-    return INSTANCE;
+    return instance;
   }
 
   private static void registerMetrics() {
@@ -74,14 +73,22 @@ public class PolicyMetrics {
     registry.tag(RECORD_INFO, "ResourceManager");
     MetricsSystem ms = DefaultMetricsSystem.instance();
     if (ms != null) {
-      ms.register(RECORD_INFO.name(), RECORD_INFO.description(), INSTANCE);
+      ms.register(RECORD_INFO.name(), RECORD_INFO.description(), instance);
     }
   }
 
   @VisibleForTesting
   synchronized static void reset() {
     isInitialized.set(false);
-    INSTANCE = null;
+    instance = null;
+  }
+
+  public MutableRatesWithAggregation getRefreshDelay() {
+    return refreshDelay;
+  }
+
+  public MutableRatesWithAggregation getGetDelay() {
+    return getDelay;
   }
 
   public void addRefreshDelay(String policyName, long processingTime) {

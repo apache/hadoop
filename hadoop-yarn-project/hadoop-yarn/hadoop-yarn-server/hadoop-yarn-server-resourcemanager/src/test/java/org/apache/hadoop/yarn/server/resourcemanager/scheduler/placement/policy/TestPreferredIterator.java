@@ -40,8 +40,8 @@ public class TestPreferredIterator {
 
   @Test
   public void testPreferredIterator() {
-    List<String> examples = Arrays.asList("a", "b", "c", "d", "e",
-        "f", "g","h", "i", "j");
+    List<String> examples =
+        Arrays.asList("a", "b", "c", "d", "e", "f", "g", "h", "i", "j");
     PreferredIterator<String> iterator;
     // preferRatio=0, dropRatio=0
     iterator = new PreferredIterator<>(0, 0, examples);
