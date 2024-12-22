@@ -33,14 +33,12 @@ public class BalancerHttpServer {
   private static final String BALANCER_ATTRIBUTE_KEY = "current.balancer";
 
   private final Configuration conf;
-  private final Balancer balancer;
   private InetSocketAddress httpAddress;
   private InetSocketAddress httpsAddress;
   private HttpServer2 httpServer;
 
-  public BalancerHttpServer(Configuration conf, Balancer balancer) {
+  public BalancerHttpServer(Configuration conf) {
     this.conf = conf;
-    this.balancer = balancer;
   }
 
   public void start() throws IOException {
@@ -71,7 +69,6 @@ public class BalancerHttpServer {
     builder.configureXFrame(xFrameEnabled).setXFrameOption(xFrameOptionValue);
 
     httpServer = builder.build();
-    httpServer.setAttribute(BALANCER_ATTRIBUTE_KEY, balancer);
     httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     httpServer.start();
 
@@ -91,6 +88,10 @@ public class BalancerHttpServer {
             NetUtils.getHostPortString(httpsAddress));
       }
     }
+  }
+
+  public void setBalancerAttribute(Balancer balancer) {
+    httpServer.setAttribute(BALANCER_ATTRIBUTE_KEY, balancer);
   }
 
   public void stop() throws IOException {

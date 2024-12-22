@@ -69,7 +69,7 @@ public class TestBalancerHttpServer {
   public void testHttpServer() throws Exception {
     BalancerHttpServer server = null;
     try {
-      server = new BalancerHttpServer(conf, null);
+      server = new BalancerHttpServer(conf);
       server.start();
       Assertions.assertTrue(checkConnection("http", server.getHttpAddress()));
       Assertions.assertTrue(checkConnection("https", server.getHttpsAddress()));

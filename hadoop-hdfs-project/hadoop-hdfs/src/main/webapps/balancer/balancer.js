@@ -56,7 +56,7 @@
         for (var balancer of balancers) {
             var str = balancer['modelerType'];
             var index = str.indexOf("-");
-            balancer['BlockPool'] = str.substring(index + 1);
+            balancer['BlockPoolID'] = str.substring(index + 1);
         }
         return balancers;
     }
@@ -66,7 +66,7 @@
         var index = str.indexOf("_");
         if (index !== -1) {
             data['balancer']['HostName'] = str.substring(0, index);
-            data['balancer']['BalancerStartedTimeInMillis'] = str.substring(index+1);
+            data['balancer']['BalancerStartedTimeInMillis'] = str.substring(index + 1);
         } else {
             data['balancer']['HostName'] = "invalid data";
             data['balancer']['BalancerStartedTimeInMillis'] = "invalid data";
@@ -74,7 +74,7 @@
     }
 
     var HELPERS = {
-        'helper_date_tostring' : function (chunk, ctx, bodies, params) {
+        'helper_date_tostring': function (chunk, ctx, bodies, params) {
             var value = dust.helpers.tap(params.value, chunk, ctx);
             return chunk.write('' + moment(Number(value)).format('ddd MMM DD HH:mm:ss ZZ YYYY'));
         }
@@ -82,7 +82,7 @@
 
     function render() {
         var base = dust.makeBase(HELPERS);
-        dust.render('balancer', base.push(data), function(err, out) {
+        dust.render('balancer', base.push(data), function (err, out) {
             $('#tab-overview').html(out);
             $('#tab-overview').addClass('active');
         });

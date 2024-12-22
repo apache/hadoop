@@ -894,10 +894,13 @@ public class Balancer implements BalancerMXBean {
         + "  NameNode");
     
     List<NameNodeConnector> connectors = Collections.emptyList();
+    BalancerHttpServer balancerHttpServer = null;
     try {
       connectors = NameNodeConnector.newNameNodeConnectors(namenodes, nsIds,
           Balancer.class.getSimpleName(), BALANCER_ID_PATH, conf,
           p.getMaxIdleIteration());
+      balancerHttpServer = new BalancerHttpServer(conf);
+      balancerHttpServer.start();
       boolean done = false;
       for(int iteration = 0; !done; iteration++) {
         done = true;
@@ -906,14 +909,12 @@ public class Balancer implements BalancerMXBean {
           if (p.getBlockPools().size() == 0
               || p.getBlockPools().contains(nnc.getBlockpoolID())) {
             final Balancer b = new Balancer(nnc, p, conf);
-            BalancerHttpServer balancerHttpServer = new BalancerHttpServer(conf, b);
-            balancerHttpServer.start();
+            balancerHttpServer.setBalancerAttribute(b);
             final Result r = b.runOneIteration();
             r.print(iteration, nnc, System.out);
 
             // clean all lists
             b.resetData(conf);
-            balancerHttpServer.stop();
             if (r.exitStatus == ExitStatus.IN_PROGRESS) {
               done = false;
             } else if (r.exitStatus != ExitStatus.SUCCESS) {
@@ -935,6 +936,7 @@ public class Balancer implements BalancerMXBean {
       for(NameNodeConnector nnc : connectors) {
         IOUtils.cleanupWithLogger(LOG, nnc);
       }
+      balancerHttpServer.stop();
     }
     return ExitStatus.SUCCESS.getExitCode();
   }

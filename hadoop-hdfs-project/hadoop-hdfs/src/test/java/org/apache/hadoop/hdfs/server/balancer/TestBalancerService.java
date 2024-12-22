@@ -33,9 +33,15 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.VersionInfo;
+
 import org.junit.Test;
 
+import java.lang.management.ManagementFactory;
 import java.util.concurrent.TimeUnit;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -204,6 +210,51 @@ public class TestBalancerService {
 
       // reset to 0 once the balancer finished without exception
       assertEquals(Balancer.getExceptionsSinceLastBalance(), 0);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testBalancerServiceMetrics() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setTimeDuration(DFSConfigKeys.DFS_BALANCER_SERVICE_INTERVAL_KEY, 5, TimeUnit.SECONDS);
+    TestBalancer.initConf(conf);
+    try {
+      setupCluster(conf);
+      TestBalancerWithHANameNodes.waitStoragesNoStale(cluster, client, 0);
+      long totalCapacity = addOneDataNode(conf); // make cluster imbalanced
+
+      Thread balancerThread = newBalancerService(conf, new String[] {"-asService"});
+      balancerThread.start();
+
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      GenericTestUtils.waitFor(() -> {
+        try {
+          ObjectName mxbeanName = new ObjectName("Hadoop:service=Balancer,name=BalancerInfo");
+          String version = (String) mbs.getAttribute(mxbeanName, "Version");
+          return version.contains(VersionInfo.getVersion()) &&
+              version.contains(VersionInfo.getRevision());
+        } catch (Exception e) {
+          return false;
+        }
+      }, 100, 10000);
+
+      TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client, cluster,
+          BalancerParameters.DEFAULT);
+
+      cluster.triggerHeartbeats();
+      cluster.triggerBlockReports();
+
+      // add another empty datanode, wait for cluster become balance again
+      totalCapacity = addOneDataNode(conf);
+      TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client, cluster,
+          BalancerParameters.DEFAULT);
+
+      Balancer.stop();
+      balancerThread.join();
     } finally {
       if (cluster != null) {
         cluster.shutdown();
