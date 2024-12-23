@@ -38,8 +38,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
 import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.DEFAULT_HEARTBEAT_INTERVAL_MS;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ASYNC_HANDLER_COUNT;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ASYNC_RESPONDER_COUNT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -80,8 +80,8 @@ public class RouterAsyncProtocolTestBase {
 
     // Reduce the number of RPC clients threads to overload the Router easy
     routerConf.setInt(RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE, 1);
-    routerConf.setInt(DFS_ROUTER_RPC_ASYNC_HANDLER_COUNT, 1);
-    routerConf.setInt(DFS_ROUTER_RPC_ASYNC_RESPONDER_COUNT, 1);
+    routerConf.setInt(DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY, 1);
+    routerConf.setInt(DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY, 1);
     // We decrease the DN cache times to make the test faster
     routerConf.setTimeDuration(
         RBFConfigKeys.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
@@ -108,12 +108,11 @@ public class RouterAsyncProtocolTestBase {
     router = cluster.getRandomRouter();
     routerFs = router.getFileSystem();
     routerRpcServer = router.getRouterRpcServer();
-    routerRpcServer.initAsyncThreadPool();
+    routerRpcServer.initAsyncThreadPools(routerConf);
     RouterAsyncRpcClient asyncRpcClient = new RouterAsyncRpcClient(
         routerConf, router.getRouter(), routerRpcServer.getNamenodeResolver(),
         routerRpcServer.getRPCMonitor(),
-        routerRpcServer.getRouterStateIdContext(),
-        routerRpcServer.getAsyncRouterHandler());
+        routerRpcServer.getRouterStateIdContext());
     routerAsyncRpcServer = Mockito.spy(routerRpcServer);
     Mockito.when(routerAsyncRpcServer.getRPCClient()).thenReturn(asyncRpcClient);
     Mockito.when(routerAsyncRpcServer.isAsync()).thenReturn(true);
