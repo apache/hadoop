@@ -540,7 +540,7 @@ public class DFSOutputStream extends FSOutputSummer
       if (blockSize == getStreamer().getBytesCurBlock()) {
         psize = writePacketSize;
       } else if (blockSize - getStreamer().getBytesCurBlock() + PacketHeader.PKT_MAX_HEADER_LEN
-          < writePacketSize) { 
+          < writePacketSize) {
         psize = (int)(blockSize - getStreamer().getBytesCurBlock()) +
             PacketHeader.PKT_MAX_HEADER_LEN;
       } else {
