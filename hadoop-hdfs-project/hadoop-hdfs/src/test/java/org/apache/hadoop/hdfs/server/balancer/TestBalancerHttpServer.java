@@ -25,7 +25,6 @@ import java.net.URLConnection;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -35,6 +34,8 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class TestBalancerHttpServer {
   private static final String BASEDIR =
@@ -47,7 +48,7 @@ public class TestBalancerHttpServer {
   @BeforeClass
   public static void setUp() throws Exception {
     conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTP_AND_HTTPS.name());
+    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTP_ONLY.name());
     conf.set(DFSConfigKeys.DFS_BALANCER_HTTP_ADDRESS_KEY, "localhost:0");
     conf.set(DFSConfigKeys.DFS_BALANCER_HTTPS_ADDRESS_KEY, "localhost:0");
     File base = new File(BASEDIR);
@@ -71,8 +72,8 @@ public class TestBalancerHttpServer {
     try {
       server = new BalancerHttpServer(conf);
       server.start();
-      Assertions.assertTrue(checkConnection("http", server.getHttpAddress()));
-      Assertions.assertTrue(checkConnection("https", server.getHttpsAddress()));
+      assertThat(checkConnection("http", server.getHttpAddress())).isTrue();
+      assertThat(checkConnection("https", server.getHttpsAddress())).isFalse();
     } finally {
       if (server != null) {
         server.stop();
@@ -81,16 +82,19 @@ public class TestBalancerHttpServer {
   }
 
   private boolean checkConnection(String scheme, InetSocketAddress address) {
-    if (address == null)
+    if (address == null) {
       return false;
+    }
     try {
       URL url = new URL(scheme + "://" + NetUtils.getHostPortString(address));
       URLConnection conn = connectionFactory.openConnection(url);
+      conn.setConnectTimeout(5 * 1000);
+      conn.setReadTimeout(5 * 1000);
       conn.connect();
       conn.getContent();
+      return true;
     } catch (Exception e) {
       return false;
     }
-    return true;
   }
 }

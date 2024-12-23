@@ -688,7 +688,7 @@ public class Balancer implements BalancerMXBean {
   }
 
   /**
-   * Register BalancerMXBean
+   * Register BalancerMXBean.
    */
   private void registerBalancerMXBean() {
     balancerInfoBeanName = MBeans.register("Balancer", "BalancerInfo", this);
@@ -894,13 +894,11 @@ public class Balancer implements BalancerMXBean {
         + "  NameNode");
     
     List<NameNodeConnector> connectors = Collections.emptyList();
-    BalancerHttpServer balancerHttpServer = null;
+    BalancerHttpServer balancerHttpServer = startBalancerHttpServer(conf);
     try {
       connectors = NameNodeConnector.newNameNodeConnectors(namenodes, nsIds,
           Balancer.class.getSimpleName(), BALANCER_ID_PATH, conf,
           p.getMaxIdleIteration());
-      balancerHttpServer = new BalancerHttpServer(conf);
-      balancerHttpServer.start();
       boolean done = false;
       for(int iteration = 0; !done; iteration++) {
         done = true;
@@ -909,7 +907,9 @@ public class Balancer implements BalancerMXBean {
           if (p.getBlockPools().size() == 0
               || p.getBlockPools().contains(nnc.getBlockpoolID())) {
             final Balancer b = new Balancer(nnc, p, conf);
-            balancerHttpServer.setBalancerAttribute(b);
+            if (balancerHttpServer != null) {
+              balancerHttpServer.setBalancerAttribute(b);
+            }
             final Result r = b.runOneIteration();
             r.print(iteration, nnc, System.out);
 
@@ -936,7 +936,9 @@ public class Balancer implements BalancerMXBean {
       for(NameNodeConnector nnc : connectors) {
         IOUtils.cleanupWithLogger(LOG, nnc);
       }
-      balancerHttpServer.stop();
+      if (balancerHttpServer != null) {
+        balancerHttpServer.stop();
+      }
     }
     return ExitStatus.SUCCESS.getExitCode();
   }
@@ -1006,6 +1008,18 @@ public class Balancer implements BalancerMXBean {
 
   static void stop() {
     serviceRunning = false;
+  }
+
+  private static BalancerHttpServer startBalancerHttpServer(Configuration conf) throws IOException {
+    boolean httpServerEnabled = conf.getBoolean(DFSConfigKeys.DFS_BALANCER_HTTPSERVER_ENABLED_KEY,
+        DFSConfigKeys.DFS_BALANCER_HTTPSERVER_ENABLED_DEFAULT);
+    if (httpServerEnabled) {
+      BalancerHttpServer balancerHttpServer = new BalancerHttpServer(conf);
+      balancerHttpServer.start();
+      return balancerHttpServer;
+    } else {
+      return null;
+    }
   }
 
   private static void checkKeytabAndInit(Configuration conf)
