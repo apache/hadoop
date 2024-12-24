@@ -44,10 +44,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -339,13 +339,13 @@ public class TestReconstructStripedBlocks {
       boolean reconstructed = false;
       for (int i = 0; i < 5; i++) {
         NumberReplicas num = null;
-        fsn.readLock(FSNamesystemLockMode.GLOBAL);
+        fsn.readLock(RwLockMode.GLOBAL);
         try {
           BlockInfo blockInfo = cluster.getNamesystem().getFSDirectory()
               .getINode4Write(filePath.toString()).asFile().getLastBlock();
           num = bm.countNodes(blockInfo);
         } finally {
-          fsn.readUnlock(FSNamesystemLockMode.GLOBAL, "testCountLiveReplicas");
+          fsn.readUnlock(RwLockMode.GLOBAL, "testCountLiveReplicas");
         }
         if (num.liveReplicas() >= groupSize) {
           reconstructed = true;

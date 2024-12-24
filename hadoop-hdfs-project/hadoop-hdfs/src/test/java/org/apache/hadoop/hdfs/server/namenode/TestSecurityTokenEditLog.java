@@ -35,7 +35,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -197,8 +197,8 @@ public class TestSecurityTokenEditLog {
         @Override
         public Void answer(InvocationOnMock invocation) throws Throwable {
           // fsn claims read lock if either read or write locked.
-          Assert.assertTrue(fsnRef.get().hasReadLock(FSNamesystemLockMode.FS));
-          Assert.assertFalse(fsnRef.get().hasWriteLock(FSNamesystemLockMode.FS));
+          Assert.assertTrue(fsnRef.get().hasReadLock(RwLockMode.FS));
+          Assert.assertFalse(fsnRef.get().hasWriteLock(RwLockMode.FS));
           return null;
         }
       }

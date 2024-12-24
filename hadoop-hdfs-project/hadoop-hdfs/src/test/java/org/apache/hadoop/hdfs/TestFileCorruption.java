@@ -51,9 +51,9 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.junit.Test;
@@ -160,13 +160,13 @@ public class TestFileCorruption {
       DatanodeRegistration dnR = InternalDataNodeTestUtils.
         getDNRegistrationForBP(dataNode, blk.getBlockPoolId());
       FSNamesystem ns = cluster.getNamesystem();
-      ns.writeLock(FSNamesystemLockMode.BM);
+      ns.writeLock(RwLockMode.BM);
       try {
         cluster.getNamesystem().getBlockManager().findAndMarkBlockAsCorrupt(blk,
             new DatanodeInfoBuilder().setNodeID(dnR).build(), "TEST",
             "STORAGE_ID");
       } finally {
-        ns.writeUnlock(FSNamesystemLockMode.BM, "testArrayOutOfBoundsException");
+        ns.writeUnlock(RwLockMode.BM, "testArrayOutOfBoundsException");
       }
       
       // open the file
@@ -211,16 +211,16 @@ public class TestFileCorruption {
       FSNamesystem ns = cluster.getNamesystem();
       //fail the storage on that node which has the block
       try {
-        ns.writeLock(FSNamesystemLockMode.BM);
+        ns.writeLock(RwLockMode.BM);
         updateAllStorages(bm);
       } finally {
-        ns.writeUnlock(FSNamesystemLockMode.BM, "testCorruptionWithDiskFailure");
+        ns.writeUnlock(RwLockMode.BM, "testCorruptionWithDiskFailure");
       }
-      ns.writeLock(FSNamesystemLockMode.BM);
+      ns.writeLock(RwLockMode.BM);
       try {
         markAllBlocksAsCorrupt(bm, blk);
       } finally {
-        ns.writeUnlock(FSNamesystemLockMode.BM, "testCorruptionWithDiskFailure");
+        ns.writeUnlock(RwLockMode.BM, "testCorruptionWithDiskFailure");
       }
 
       // open the file

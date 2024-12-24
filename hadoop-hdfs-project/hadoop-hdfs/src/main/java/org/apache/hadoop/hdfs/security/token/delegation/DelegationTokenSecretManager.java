@@ -27,7 +27,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
@@ -373,7 +373,7 @@ public class DelegationTokenSecretManager
       // closes the edit log files. Doing this inside the
       // fsn lock will prevent being interrupted when stopping
       // the secret manager.
-      namesystem.readLockInterruptibly(FSNamesystemLockMode.FS);
+      namesystem.readLockInterruptibly(RwLockMode.FS);
       try {
         // this monitor isn't necessary if stopped while holding write lock
         // but for safety, guard against a stop with read lock.
@@ -384,7 +384,7 @@ public class DelegationTokenSecretManager
           namesystem.logUpdateMasterKey(key);
         }
       } finally {
-        namesystem.readUnlock(FSNamesystemLockMode.FS, "logUpdateMasterKey");
+        namesystem.readUnlock(RwLockMode.FS, "logUpdateMasterKey");
       }
     } catch (InterruptedException ie) {
       // AbstractDelegationTokenManager may crash if an exception is thrown.
@@ -402,7 +402,7 @@ public class DelegationTokenSecretManager
       // closes the edit log files. Doing this inside the
       // fsn lock will prevent being interrupted when stopping
       // the secret manager.
-      namesystem.readLockInterruptibly(FSNamesystemLockMode.FS);
+      namesystem.readLockInterruptibly(RwLockMode.FS);
       try {
         // this monitor isn't necessary if stopped while holding write lock
         // but for safety, guard against a stop with read lock.
@@ -413,7 +413,7 @@ public class DelegationTokenSecretManager
           namesystem.logExpireDelegationToken(dtId);
         }
       } finally {
-        namesystem.readUnlock(FSNamesystemLockMode.FS, "logExpireToken");
+        namesystem.readUnlock(RwLockMode.FS, "logExpireToken");
       }
     } catch (InterruptedException ie) {
       // AbstractDelegationTokenManager may crash if an exception is thrown.

@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -73,14 +73,14 @@ public class TestGetBlockLocations {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         if(!deleted[0]) {
-          fsn.writeLock(FSNamesystemLockMode.GLOBAL);
+          fsn.writeLock(RwLockMode.GLOBAL);
           try {
             INodesInPath iip = fsd.getINodesInPath(FILE_PATH, DirOp.READ);
             FSDirDeleteOp.delete(fsd, iip, new INode.BlocksMapUpdateInfo(),
                                  new ArrayList<INode>(), new ArrayList<Long>(),
                                  now());
           } finally {
-            fsn.writeUnlock(FSNamesystemLockMode.GLOBAL,
+            fsn.writeUnlock(RwLockMode.GLOBAL,
                 "testGetBlockLocationsRacingWithDelete");
           }
           deleted[0] = true;
@@ -108,14 +108,14 @@ public class TestGetBlockLocations {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         if (!renamed[0]) {
-          fsn.writeLock(FSNamesystemLockMode.FS);
+          fsn.writeLock(RwLockMode.FS);
           try {
             FSDirRenameOp.renameTo(fsd, fsd.getPermissionChecker(), FILE_PATH,
                                    DST_PATH, new INode.BlocksMapUpdateInfo(),
                                    false);
             renamed[0] = true;
           } finally {
-            fsn.writeUnlock(FSNamesystemLockMode.FS, "testGetBlockLocationsRacingWithRename");
+            fsn.writeUnlock(RwLockMode.FS, "testGetBlockLocationsRacingWithRename");
           }
         }
         invocation.callRealMethod();
@@ -144,13 +144,13 @@ public class TestGetBlockLocations {
         perm, 1, 1, new BlockInfo[] {}, (short) 1,
         DFS_BLOCK_SIZE_DEFAULT);
 
-    fsn.writeLock(FSNamesystemLockMode.FS);
+    fsn.writeLock(RwLockMode.FS);
     try {
       final FSDirectory fsd = fsn.getFSDirectory();
       INodesInPath iip = fsd.getINodesInPath("/", DirOp.READ);
       fsd.addINode(iip, file, null);
     } finally {
-      fsn.writeUnlock(FSNamesystemLockMode.FS, "setupFileSystem");
+      fsn.writeUnlock(RwLockMode.FS, "setupFileSystem");
     }
     return fsn;
   }

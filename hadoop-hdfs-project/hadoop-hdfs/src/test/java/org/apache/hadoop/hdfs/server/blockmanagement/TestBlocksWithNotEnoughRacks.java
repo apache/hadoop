@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 import org.slf4j.event.Level;
@@ -603,11 +603,11 @@ public class TestBlocksWithNotEnoughRacks {
 
   static BlockReconstructionWork scheduleReconstruction(
       FSNamesystem fsn, BlockInfo block, int priority) {
-    fsn.writeLock(FSNamesystemLockMode.BM);
+    fsn.writeLock(RwLockMode.BM);
     try {
       return fsn.getBlockManager().scheduleReconstruction(block, priority);
     } finally {
-      fsn.writeUnlock(FSNamesystemLockMode.BM, "scheduleReconstruction");
+      fsn.writeUnlock(RwLockMode.BM, "scheduleReconstruction");
     }
   }
 

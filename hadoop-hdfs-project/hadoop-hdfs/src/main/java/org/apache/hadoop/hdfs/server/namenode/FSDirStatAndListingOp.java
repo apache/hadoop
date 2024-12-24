@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.fs.ContentSummary;
@@ -42,6 +41,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.security.AccessControlException;
 
 import java.io.FileNotFoundException;
@@ -447,7 +447,7 @@ class FSDirStatAndListingOp {
       }
       // ComputeFileSize and needLocation need BM lock.
       if (needLocation) {
-        fsd.getFSNamesystem().readLock(FSNamesystemLockMode.BM);
+        fsd.getFSNamesystem().readLock(RwLockMode.BM);
         try {
           final boolean inSnapshot = snapshot != Snapshot.CURRENT_STATE_ID;
           final boolean isUc = !inSnapshot && fileNode.isUnderConstruction();
@@ -460,7 +460,7 @@ class FSDirStatAndListingOp {
             loc = new LocatedBlocks();
           }
         } finally {
-          fsd.getFSNamesystem().readUnlock(FSNamesystemLockMode.BM, "createFileStatus");
+          fsd.getFSNamesystem().readUnlock(RwLockMode.BM, "createFileStatus");
         }
       }
     } else if (node.isDirectory()) {
