@@ -39,7 +39,7 @@ public class ModDataSetSubLockStrategy implements DataSetSubLockStrategy {
 
   @Override
   public String blockIdToSubLock(long blockid) {
-    return LOCK_NAME_PERFIX + String.valueOf(blockid % modFactor);
+    return LOCK_NAME_PERFIX + (blockid % modFactor);
   }
 
   @Override
