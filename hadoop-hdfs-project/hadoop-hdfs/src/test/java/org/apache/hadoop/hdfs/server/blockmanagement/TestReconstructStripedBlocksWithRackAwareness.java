@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
@@ -197,11 +197,11 @@ public class TestReconstructStripedBlocksWithRackAwareness {
       DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
     }
 
-    fsn.writeLock(FSNamesystemLockMode.BM);
+    fsn.writeLock(RwLockMode.BM);
     try {
       bm.processMisReplicatedBlocks();
     } finally {
-      fsn.writeUnlock(FSNamesystemLockMode.BM, "testReconstructForNotEnoughRacks");
+      fsn.writeUnlock(RwLockMode.BM, "testReconstructForNotEnoughRacks");
     }
 
     // check if redundancy monitor correctly schedule the reconstruction work.
@@ -343,12 +343,12 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     final DatanodeAdminManager decomManager =
         (DatanodeAdminManager) Whitebox.getInternalState(
             dm, "datanodeAdminManager");
-    cluster.getNamesystem().writeLock(FSNamesystemLockMode.BM);
+    cluster.getNamesystem().writeLock(RwLockMode.BM);
     try {
       dn9.stopDecommission();
       decomManager.startDecommission(dn9);
     } finally {
-      cluster.getNamesystem().writeUnlock(FSNamesystemLockMode.BM,
+      cluster.getNamesystem().writeUnlock(RwLockMode.BM,
           "testReconstructionWithDecommission");
     }
 

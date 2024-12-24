@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.fgl;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystemLock;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -40,19 +41,19 @@ public class FineGrainedFSNamesystemLock implements FSNLockManager {
   }
 
   @Override
-  public void readLock(FSNamesystemLockMode lockMode) {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
+  public void readLock(RwLockMode lockMode) {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
       this.fsLock.readLock();
       this.bmLock.readLock();
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       this.fsLock.readLock();
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       this.bmLock.readLock();
     }
   }
 
-  public void readLockInterruptibly(FSNamesystemLockMode lockMode) throws InterruptedException  {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
+  public void readLockInterruptibly(RwLockMode lockMode) throws InterruptedException  {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
       this.fsLock.readLockInterruptibly();
       try {
         this.bmLock.readLockInterruptibly();
@@ -62,90 +63,90 @@ public class FineGrainedFSNamesystemLock implements FSNLockManager {
         this.fsLock.readUnlock("BMReadLockInterruptiblyFailed");
         throw e;
       }
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       this.fsLock.readLockInterruptibly();
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       this.bmLock.readLockInterruptibly();
     }
   }
 
   @Override
-  public void readUnlock(FSNamesystemLockMode lockMode, String opName) {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
+  public void readUnlock(RwLockMode lockMode, String opName) {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
       this.bmLock.readUnlock(opName);
       this.fsLock.readUnlock(opName);
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       this.fsLock.readUnlock(opName);
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       this.bmLock.readUnlock(opName);
     }
   }
 
-  public void readUnlock(FSNamesystemLockMode lockMode, String opName,
+  public void readUnlock(RwLockMode lockMode, String opName,
       Supplier<String> lockReportInfoSupplier) {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
       this.bmLock.readUnlock(opName, lockReportInfoSupplier);
       this.fsLock.readUnlock(opName, lockReportInfoSupplier);
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       this.fsLock.readUnlock(opName, lockReportInfoSupplier);
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       this.bmLock.readUnlock(opName, lockReportInfoSupplier);
     }
   }
 
   @Override
-  public void writeLock(FSNamesystemLockMode lockMode) {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
+  public void writeLock(RwLockMode lockMode) {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
       this.fsLock.writeLock();
       this.bmLock.writeLock();
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       this.fsLock.writeLock();
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       this.bmLock.writeLock();
     }
   }
 
   @Override
-  public void writeUnlock(FSNamesystemLockMode lockMode, String opName) {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
+  public void writeUnlock(RwLockMode lockMode, String opName) {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
       this.bmLock.writeUnlock(opName);
       this.fsLock.writeUnlock(opName);
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       this.fsLock.writeUnlock(opName);
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       this.bmLock.writeUnlock(opName);
     }
   }
 
   @Override
-  public void writeUnlock(FSNamesystemLockMode lockMode, String opName,
+  public void writeUnlock(RwLockMode lockMode, String opName,
       boolean suppressWriteLockReport) {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
       this.bmLock.writeUnlock(opName, suppressWriteLockReport);
       this.fsLock.writeUnlock(opName, suppressWriteLockReport);
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       this.fsLock.writeUnlock(opName, suppressWriteLockReport);
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       this.bmLock.writeUnlock(opName, suppressWriteLockReport);
     }
   }
 
-  public void writeUnlock(FSNamesystemLockMode lockMode, String opName,
+  public void writeUnlock(RwLockMode lockMode, String opName,
       Supplier<String> lockReportInfoSupplier) {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
       this.bmLock.writeUnlock(opName, lockReportInfoSupplier);
       this.fsLock.writeUnlock(opName, lockReportInfoSupplier);
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       this.fsLock.writeUnlock(opName, lockReportInfoSupplier);
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       this.bmLock.writeUnlock(opName, lockReportInfoSupplier);
     }
   }
 
   @Override
-  public void writeLockInterruptibly(FSNamesystemLockMode lockMode)
+  public void writeLockInterruptibly(RwLockMode lockMode)
       throws InterruptedException {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
       this.fsLock.writeLockInterruptibly();
       try {
         this.bmLock.writeLockInterruptibly();
@@ -155,16 +156,16 @@ public class FineGrainedFSNamesystemLock implements FSNLockManager {
         this.fsLock.writeUnlock("BMWriteLockInterruptiblyFailed");
         throw e;
       }
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       this.fsLock.writeLockInterruptibly();
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       this.bmLock.writeLockInterruptibly();
     }
   }
 
   @Override
-  public boolean hasWriteLock(FSNamesystemLockMode lockMode) {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
+  public boolean hasWriteLock(RwLockMode lockMode) {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
       if (this.fsLock.isWriteLockedByCurrentThread()) {
         // The bm writeLock should be held by the current thread.
         assert this.bmLock.isWriteLockedByCurrentThread();
@@ -174,18 +175,18 @@ public class FineGrainedFSNamesystemLock implements FSNLockManager {
         assert !this.bmLock.isWriteLockedByCurrentThread();
         return false;
       }
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       return this.fsLock.isWriteLockedByCurrentThread();
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       return this.bmLock.isWriteLockedByCurrentThread();
     }
     return false;
   }
 
   @Override
-  public boolean hasReadLock(FSNamesystemLockMode lockMode) {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
-      if (hasWriteLock(FSNamesystemLockMode.GLOBAL)) {
+  public boolean hasReadLock(RwLockMode lockMode) {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
+      if (hasWriteLock(RwLockMode.GLOBAL)) {
         return true;
       } else if (this.fsLock.getReadHoldCount() > 0) {
         // The bm readLock should be held by the current thread.
@@ -196,9 +197,9 @@ public class FineGrainedFSNamesystemLock implements FSNLockManager {
         assert this.bmLock.getReadHoldCount() <= 0;
         return false;
       }
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       return this.fsLock.getReadHoldCount() > 0 || this.fsLock.isWriteLockedByCurrentThread();
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       return this.bmLock.getReadHoldCount() > 0 || this.bmLock.isWriteLockedByCurrentThread();
     }
     return false;
@@ -209,48 +210,48 @@ public class FineGrainedFSNamesystemLock implements FSNLockManager {
    * This method is only used for ComputeDirectoryContentSummary.
    * For the GLOBAL mode, just return the FSLock's ReadHoldCount.
    */
-  public int getReadHoldCount(FSNamesystemLockMode lockMode) {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
+  public int getReadHoldCount(RwLockMode lockMode) {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
       return this.fsLock.getReadHoldCount();
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       return this.fsLock.getReadHoldCount();
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       return this.bmLock.getReadHoldCount();
     }
     return -1;
   }
 
   @Override
-  public int getQueueLength(FSNamesystemLockMode lockMode) {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
+  public int getQueueLength(RwLockMode lockMode) {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
       return -1;
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       return this.fsLock.getQueueLength();
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       return this.bmLock.getQueueLength();
     }
     return -1;
   }
 
   @Override
-  public long getNumOfReadLockLongHold(FSNamesystemLockMode lockMode) {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
+  public long getNumOfReadLockLongHold(RwLockMode lockMode) {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
       return -1;
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       return this.fsLock.getNumOfReadLockLongHold();
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       return this.bmLock.getNumOfReadLockLongHold();
     }
     return -1;
   }
 
   @Override
-  public long getNumOfWriteLockLongHold(FSNamesystemLockMode lockMode) {
-    if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
+  public long getNumOfWriteLockLongHold(RwLockMode lockMode) {
+    if (lockMode.equals(RwLockMode.GLOBAL)) {
       return -1;
-    } else if (lockMode.equals(FSNamesystemLockMode.FS)) {
+    } else if (lockMode.equals(RwLockMode.FS)) {
       return this.fsLock.getNumOfWriteLockLongHold();
-    } else if (lockMode.equals(FSNamesystemLockMode.BM)) {
+    } else if (lockMode.equals(RwLockMode.BM)) {
       return this.bmLock.getNumOfWriteLockLongHold();
     }
     return -1;

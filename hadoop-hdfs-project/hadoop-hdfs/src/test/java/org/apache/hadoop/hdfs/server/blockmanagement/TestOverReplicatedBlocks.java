@@ -39,8 +39,8 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.junit.Test;
 
 public class TestOverReplicatedBlocks {
@@ -96,7 +96,7 @@ public class TestOverReplicatedBlocks {
       final BlockManager bm = namesystem.getBlockManager();
       final HeartbeatManager hm = bm.getDatanodeManager().getHeartbeatManager();
       try {
-        namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
+        namesystem.writeLock(RwLockMode.GLOBAL);
         synchronized(hm) {
           // set live datanode's remaining space to be 0 
           // so they will be chosen to be deleted when over-replication occurs
@@ -119,7 +119,7 @@ public class TestOverReplicatedBlocks {
               bm.getStoredBlock(block.getLocalBlock())).liveReplicas());
         }
       } finally {
-        namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "testProcesOverReplicateBlock");
+        namesystem.writeUnlock(RwLockMode.GLOBAL, "testProcesOverReplicateBlock");
       }
       
     } finally {
@@ -182,11 +182,11 @@ public class TestOverReplicatedBlocks {
 
       // All replicas for deletion should be scheduled on lastDN.
       // And should not actually be deleted, because lastDN does not heartbeat.
-      namesystem.readLock(FSNamesystemLockMode.BM);
+      namesystem.readLock(RwLockMode.BM);
       final int dnBlocks = bm.getExcessSize4Testing(dnReg.getDatanodeUuid());
       assertEquals("Replicas on node " + lastDNid + " should have been deleted",
           SMALL_FILE_LENGTH / SMALL_BLOCK_SIZE, dnBlocks);
-      namesystem.readUnlock(FSNamesystemLockMode.BM, "excessSize4Testing");
+      namesystem.readUnlock(RwLockMode.BM, "excessSize4Testing");
       for(BlockLocation location : locs)
         assertEquals("Block should still have 4 replicas",
             4, location.getNames().length);

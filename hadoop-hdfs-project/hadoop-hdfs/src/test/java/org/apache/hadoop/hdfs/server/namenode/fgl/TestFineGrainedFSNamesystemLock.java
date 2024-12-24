@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.fgl;
 
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.Test;
@@ -63,7 +64,7 @@ public class TestFineGrainedFSNamesystemLock {
       if (index == 0) { // Test the global write lock via multiple threads.
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            writeLock(fsn, FSNamesystemLockMode.GLOBAL, opName, globalCount);
+            writeLock(fsn, RwLockMode.GLOBAL, opName, globalCount);
             globalNumber.incrementAndGet();
           }
           return true;
@@ -71,7 +72,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 1) { // Test the fs write lock via multiple threads.
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            writeLock(fsn, FSNamesystemLockMode.FS, opName, fsCount);
+            writeLock(fsn, RwLockMode.FS, opName, fsCount);
             fsNumber.incrementAndGet();
           }
           return true;
@@ -79,7 +80,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 2) { // Test the bm write lock via multiple threads.
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            writeLock(fsn, FSNamesystemLockMode.BM, opName, bmCount);
+            writeLock(fsn, RwLockMode.BM, opName, bmCount);
             bmNumber.incrementAndGet();
           }
           return true;
@@ -87,7 +88,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 3) { // Test the bm read lock via multiple threads.
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            readLock(fsn, FSNamesystemLockMode.BM, opName, bmCount);
+            readLock(fsn, RwLockMode.BM, opName, bmCount);
             bmNumber.incrementAndGet();
           }
           return true;
@@ -95,7 +96,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 4) { // Test the fs read lock via multiple threads.
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            readLock(fsn, FSNamesystemLockMode.FS, opName, fsCount);
+            readLock(fsn, RwLockMode.FS, opName, fsCount);
             fsNumber.incrementAndGet();
           }
           return true;
@@ -103,7 +104,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 5) { // Test the global read lock via multiple threads.
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            readLock(fsn, FSNamesystemLockMode.GLOBAL, opName, globalCount);
+            readLock(fsn, RwLockMode.GLOBAL, opName, globalCount);
             globalNumber.incrementAndGet();
           }
           return true;
@@ -111,7 +112,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 6) { // Test the global interruptable write lock via multiple threads.
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            writeLockInterruptibly(fsn, FSNamesystemLockMode.GLOBAL, opName, globalCount);
+            writeLockInterruptibly(fsn, RwLockMode.GLOBAL, opName, globalCount);
             globalNumber.incrementAndGet();
           }
           return true;
@@ -119,7 +120,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 7) { // Test the fs interruptable write lock via multiple threads.
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            writeLockInterruptibly(fsn, FSNamesystemLockMode.FS, opName, fsCount);
+            writeLockInterruptibly(fsn, RwLockMode.FS, opName, fsCount);
             fsNumber.incrementAndGet();
           }
           return true;
@@ -127,7 +128,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 8) { // Test the bm interruptable write lock via multiple threads.
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            writeLockInterruptibly(fsn, FSNamesystemLockMode.BM, opName, bmCount);
+            writeLockInterruptibly(fsn, RwLockMode.BM, opName, bmCount);
             bmNumber.incrementAndGet();
           }
           return true;
@@ -135,7 +136,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 9) { // Test the bm interruptable read lock via multiple threads.
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            readLockInterruptibly(fsn, FSNamesystemLockMode.BM, opName, bmCount);
+            readLockInterruptibly(fsn, RwLockMode.BM, opName, bmCount);
             bmNumber.incrementAndGet();
           }
           return true;
@@ -143,7 +144,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 10) { // Test the fs interruptable read lock via multiple threads.
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            readLockInterruptibly(fsn, FSNamesystemLockMode.FS, opName, fsCount);
+            readLockInterruptibly(fsn, RwLockMode.FS, opName, fsCount);
             fsNumber.incrementAndGet();
           }
           return true;
@@ -151,7 +152,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else { // Test the global interruptable read lock via multiple threads.
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            readLockInterruptibly(fsn, FSNamesystemLockMode.GLOBAL, opName, globalCount);
+            readLockInterruptibly(fsn, RwLockMode.GLOBAL, opName, globalCount);
             globalNumber.incrementAndGet();
           }
           return true;
@@ -177,7 +178,7 @@ public class TestFineGrainedFSNamesystemLock {
    * @param opName operation name
    * @param counter counter to trace this lock mode
    */
-  private void writeLock(FSNLockManager fsn, FSNamesystemLockMode mode,
+  private void writeLock(FSNLockManager fsn, RwLockMode mode,
       String opName, AtomicLong counter)  {
     fsn.writeLock(mode);
     try {
@@ -200,7 +201,7 @@ public class TestFineGrainedFSNamesystemLock {
    * @param opName operation name
    * @param counter counter to trace this lock mode
    */
-  private void readLock(FSNLockManager fsn, FSNamesystemLockMode mode,
+  private void readLock(FSNLockManager fsn, RwLockMode mode,
       String opName, AtomicLong counter)  {
     fsn.readLock(mode);
     try {
@@ -217,7 +218,7 @@ public class TestFineGrainedFSNamesystemLock {
    * @param opName operation name
    * @param counter counter to trace this lock mode
    */
-  private void writeLockInterruptibly(FSNLockManager fsn, FSNamesystemLockMode mode,
+  private void writeLockInterruptibly(FSNLockManager fsn, RwLockMode mode,
       String opName, AtomicLong counter)  {
     boolean success = false;
     try {
@@ -257,7 +258,7 @@ public class TestFineGrainedFSNamesystemLock {
    * @param opName operation name
    * @param counter counter to trace this lock mode
    */
-  private void readLockInterruptibly(FSNLockManager fsn, FSNamesystemLockMode mode,
+  private void readLockInterruptibly(FSNLockManager fsn, RwLockMode mode,
       String opName, AtomicLong counter)  {
     try {
       fsn.readLockInterruptibly(mode);

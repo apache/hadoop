@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.util.StringUtils;
 
@@ -64,6 +63,7 @@ import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
@@ -263,31 +263,31 @@ public class FSDirectory implements Closeable {
    * remain as placeholders only
    */
   void readLock() {
-    assert namesystem.hasReadLock(FSNamesystemLockMode.FS) :
+    assert namesystem.hasReadLock(RwLockMode.FS) :
         "Should hold read lock of namesystem FSLock";
   }
 
   void readUnlock() {
-    assert namesystem.hasReadLock(FSNamesystemLockMode.FS) :
+    assert namesystem.hasReadLock(RwLockMode.FS) :
         "Should hold read lock of namesystem FSLock";
   }
 
   void writeLock() {
-    assert namesystem.hasWriteLock(FSNamesystemLockMode.FS) :
+    assert namesystem.hasWriteLock(RwLockMode.FS) :
         "Should hold write lock of namesystem FSLock";
   }
 
   void writeUnlock() {
-    assert namesystem.hasWriteLock(FSNamesystemLockMode.FS) :
+    assert namesystem.hasWriteLock(RwLockMode.FS) :
         "Should hold write lock of namesystem FSLock";
   }
 
   boolean hasWriteLock() {
-    return namesystem.hasWriteLock(FSNamesystemLockMode.FS);
+    return namesystem.hasWriteLock(RwLockMode.FS);
   }
 
   boolean hasReadLock() {
-    return namesystem.hasReadLock(FSNamesystemLockMode.FS);
+    return namesystem.hasReadLock(RwLockMode.FS);
   }
 
   public int getListLimit() {
@@ -1106,7 +1106,7 @@ public class FSDirectory implements Closeable {
    */
   public void updateSpaceForCompleteBlock(BlockInfo completeBlk,
       INodesInPath inodes) throws IOException {
-    assert namesystem.hasWriteLock(FSNamesystemLockMode.GLOBAL);
+    assert namesystem.hasWriteLock(RwLockMode.GLOBAL);
     INodesInPath iip = inodes != null ? inodes :
         INodesInPath.fromINode(namesystem.getBlockCollection(completeBlk));
     INodeFile fileINode = iip.getLastINode().asFile();

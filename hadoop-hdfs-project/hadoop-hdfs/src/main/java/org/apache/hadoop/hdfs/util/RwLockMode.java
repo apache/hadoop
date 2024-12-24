@@ -15,9 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode.fgl;
+package org.apache.hadoop.hdfs.util;
 
-public enum FSNamesystemLockMode {
+/**
+ * This lock mode is used for FGL.
+ */
+public enum RwLockMode {
   GLOBAL,
   FS,
   BM

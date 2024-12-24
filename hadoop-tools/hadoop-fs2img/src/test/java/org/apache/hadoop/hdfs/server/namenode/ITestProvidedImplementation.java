@@ -84,9 +84,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
@@ -1095,26 +1095,26 @@ public class ITestProvidedImplementation {
 
   private void startDecommission(FSNamesystem namesystem, DatanodeManager dnm,
       int dnIndex) throws Exception {
-    namesystem.writeLock(FSNamesystemLockMode.BM);
+    namesystem.writeLock(RwLockMode.BM);
     DatanodeDescriptor dnDesc = getDatanodeDescriptor(dnm, dnIndex);
     dnm.getDatanodeAdminManager().startDecommission(dnDesc);
-    namesystem.writeUnlock(FSNamesystemLockMode.BM, "startDecommission");
+    namesystem.writeUnlock(RwLockMode.BM, "startDecommission");
   }
 
   private void startMaintenance(FSNamesystem namesystem, DatanodeManager dnm,
       int dnIndex) throws Exception {
-    namesystem.writeLock(FSNamesystemLockMode.BM);
+    namesystem.writeLock(RwLockMode.BM);
     DatanodeDescriptor dnDesc = getDatanodeDescriptor(dnm, dnIndex);
     dnm.getDatanodeAdminManager().startMaintenance(dnDesc, Long.MAX_VALUE);
-    namesystem.writeUnlock(FSNamesystemLockMode.BM, "startMaintenance");
+    namesystem.writeUnlock(RwLockMode.BM, "startMaintenance");
   }
 
   private void stopMaintenance(FSNamesystem namesystem, DatanodeManager dnm,
       int dnIndex) throws Exception {
-    namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
+    namesystem.writeLock(RwLockMode.GLOBAL);
     DatanodeDescriptor dnDesc = getDatanodeDescriptor(dnm, dnIndex);
     dnm.getDatanodeAdminManager().stopMaintenance(dnDesc);
-    namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "stopMaintenance");
+    namesystem.writeUnlock(RwLockMode.GLOBAL, "stopMaintenance");
   }
 
   @Test

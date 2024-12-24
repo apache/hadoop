@@ -52,7 +52,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
@@ -569,13 +569,13 @@ public class TestDNFencing {
   }
 
   private void doMetasave(NameNode nn2) {
-    nn2.getNamesystem().writeLock(FSNamesystemLockMode.BM);
+    nn2.getNamesystem().writeLock(RwLockMode.BM);
     try {
       PrintWriter pw = new PrintWriter(System.err);
       nn2.getNamesystem().getBlockManager().metaSave(pw);
       pw.flush();
     } finally {
-      nn2.getNamesystem().writeUnlock(FSNamesystemLockMode.BM, "metaSave");
+      nn2.getNamesystem().writeUnlock(RwLockMode.BM, "metaSave");
     }
   }
 

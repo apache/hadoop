@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import java.util.function.Supplier;
@@ -96,13 +96,13 @@ public class TestNameNodeMetadataConsistency {
 
     // Simulate Namenode forgetting a Block
     cluster.restartNameNode(true);
-    cluster.getNameNode().getNamesystem().writeLock(FSNamesystemLockMode.BM);
+    cluster.getNameNode().getNamesystem().writeLock(RwLockMode.BM);
     BlockInfo bInfo = cluster.getNameNode().getNamesystem().getBlockManager()
         .getStoredBlock(block.getLocalBlock());
     bInfo.delete();
     cluster.getNameNode().getNamesystem().getBlockManager()
         .removeBlock(bInfo);
-    cluster.getNameNode().getNamesystem().writeUnlock(FSNamesystemLockMode.BM,
+    cluster.getNameNode().getNamesystem().writeUnlock(RwLockMode.BM,
         "testGenerationStampInFuture");
 
     // we also need to tell block manager that we are in the startup path
@@ -147,11 +147,11 @@ public class TestNameNodeMetadataConsistency {
     cluster.restartNameNode(true);
     BlockInfo bInfo = cluster.getNameNode().getNamesystem().getBlockManager
         ().getStoredBlock(block.getLocalBlock());
-    cluster.getNameNode().getNamesystem().writeLock(FSNamesystemLockMode.BM);
+    cluster.getNameNode().getNamesystem().writeLock(RwLockMode.BM);
     bInfo.delete();
     cluster.getNameNode().getNamesystem().getBlockManager()
         .removeBlock(bInfo);
-    cluster.getNameNode().getNamesystem().writeUnlock(FSNamesystemLockMode.BM,
+    cluster.getNameNode().getNamesystem().writeUnlock(RwLockMode.BM,
         "testEnsureGenStampsIsStartupOnly");
 
     cluster.restartDataNode(dnProps);

@@ -24,7 +24,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INode.ReclaimContext;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.util.ChunkedArrayList;
 
 import java.io.IOException;
@@ -172,7 +172,7 @@ class FSDirDeleteOp {
       FSNamesystem fsn, INodesInPath iip, boolean logRetryCache)
       throws IOException {
     // Delete INode and modify BlockInfo
-    assert fsn.hasWriteLock(FSNamesystemLockMode.GLOBAL);
+    assert fsn.hasWriteLock(RwLockMode.GLOBAL);
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + iip.getPath());
     }

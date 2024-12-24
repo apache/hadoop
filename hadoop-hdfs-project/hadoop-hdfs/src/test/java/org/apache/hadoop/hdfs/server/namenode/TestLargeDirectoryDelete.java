@@ -21,12 +21,12 @@ import java.io.IOException;
 import java.util.Random;
 
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -121,11 +121,11 @@ public class TestLargeDirectoryDelete {
           try {
             int blockcount = getBlockCount();
             if (blockcount < TOTAL_BLOCKS && blockcount > 0) {
-              mc.getNamesystem().writeLock(FSNamesystemLockMode.GLOBAL);
+              mc.getNamesystem().writeLock(RwLockMode.GLOBAL);
               try {
                 lockOps++;
               } finally {
-                mc.getNamesystem().writeUnlock(FSNamesystemLockMode.GLOBAL, "runThreads");
+                mc.getNamesystem().writeUnlock(RwLockMode.GLOBAL, "runThreads");
               }
               Thread.sleep(1);
             }
