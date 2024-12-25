@@ -88,9 +88,9 @@ public class TestDataNodeMetrics {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       FileSystem fs = cluster.getFileSystem();
-      final long LONG_FILE_LEN = Integer.MAX_VALUE + 1L;
+      final long LONG_FILE_LEN = Integer.MAX_VALUE+1L; 
       DFSTestUtil.createFile(fs, new Path("/tmp.txt"),
-          LONG_FILE_LEN, (short) 1, 1L);
+          LONG_FILE_LEN, (short)1, 1L);
       List<DataNode> datanodes = cluster.getDataNodes();
       assertEquals(datanodes.size(), 1);
       DataNode datanode = datanodes.get(0);
@@ -99,9 +99,7 @@ public class TestDataNodeMetrics {
       assertTrue("Expected non-zero number of incremental block reports",
           getLongCounter("IncrementalBlockReportsNumOps", rb) > 0);
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      if (cluster != null) {cluster.shutdown();}
     }
   }
 
@@ -116,7 +114,7 @@ public class TestDataNodeMetrics {
       // Create and read a 1 byte file
       Path tmpfile = new Path("/tmp.txt");
       DFSTestUtil.createFile(fs, tmpfile,
-          (long) 1, (short) 1, 1L);
+          (long)1, (short)1, 1L);
       DFSTestUtil.readFile(fs, tmpfile);
       List<DataNode> datanodes = cluster.getDataNodes();
       assertEquals(datanodes.size(), 1);
@@ -124,8 +122,8 @@ public class TestDataNodeMetrics {
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
       // Expect 2 packets, 1 for the 1 byte read, 1 for the empty packet
       // signaling the end of the block
-      assertCounter("SendDataPacketTransferNanosNumOps", (long) 2, rb);
-      assertCounter("SendDataPacketBlockedOnNetworkNanosNumOps", (long) 2, rb);
+      assertCounter("SendDataPacketTransferNanosNumOps", (long)2, rb);
+      assertCounter("SendDataPacketBlockedOnNetworkNanosNumOps", (long)2, rb);
       // Wait for at least 1 rollover
       Thread.sleep((interval + 1) * 1000);
       // Check that the sendPacket percentiles rolled to non-zero values
@@ -133,9 +131,7 @@ public class TestDataNodeMetrics {
       assertQuantileGauges("SendDataPacketBlockedOnNetworkNanos" + sec, rb);
       assertQuantileGauges("SendDataPacketTransferNanos" + sec, rb);
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      if (cluster != null) {cluster.shutdown();}
     }
   }
 
@@ -169,9 +165,7 @@ public class TestDataNodeMetrics {
       assertQuantileGauges("FlushNanos" + sec, dnMetrics);
       assertQuantileGauges("FsyncNanos" + sec, dnMetrics);
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      if (cluster != null) {cluster.shutdown();}
     }
   }
 
@@ -276,8 +270,8 @@ public class TestDataNodeMetrics {
   }
 
   /**
-   * Tests that round-trip acks in a datanode write pipeline are correctly
-   * measured.
+   * Tests that round-trip acks in a datanode write pipeline are correctly 
+   * measured. 
    */
   @Test
   public void testRoundTripAckMetric() throws Exception {
@@ -315,14 +309,14 @@ public class TestDataNodeMetrics {
           break;
         }
       }
-      assertNotNull("Could not find the head of the datanode write pipeline",
+      assertNotNull("Could not find the head of the datanode write pipeline", 
           headNode);
       // Close the file and wait for the metrics to rollover
       Thread.sleep((interval + 1) * 1000);
       // Check the ack was received
       MetricsRecordBuilder dnMetrics = getMetrics(headNode.getMetrics()
           .name());
-      assertTrue("Expected non-zero number of acks",
+      assertTrue("Expected non-zero number of acks", 
           getLongCounter("PacketAckRoundTripTimeNanosNumOps", dnMetrics) > 0);
       assertQuantileGauges("PacketAckRoundTripTimeNanos" + interval
           + "s", dnMetrics);
@@ -333,7 +327,7 @@ public class TestDataNodeMetrics {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout=60000)
   public void testTimeoutMetric() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     final Path path = new Path("/test");
@@ -384,10 +378,9 @@ public class TestDataNodeMetrics {
   /**
    * This function ensures that writing causes TotalWritetime to increment
    * and reading causes totalReadTime to move.
-   *
    * @throws Exception
    */
-  @Test(timeout = 120000)
+  @Test(timeout=120000)
   public void testDataNodeTimeSpend() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, "" + 60);
@@ -477,16 +470,16 @@ public class TestDataNodeMetrics {
 
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
       long dataNodeActiveXceiversCount = MetricsAsserts.getIntGauge(
-          "DataNodeActiveXceiversCount", rb);
+              "DataNodeActiveXceiversCount", rb);
       assertEquals(dataNodeActiveXceiversCount, 0);
 
       Path path = new Path("/counter.txt");
       DFSTestUtil.createFile(fs, path, 204800000, (short) 3, Time
-          .monotonicNow());
+              .monotonicNow());
 
       MetricsRecordBuilder rbNew = getMetrics(datanode.getMetrics().name());
       dataNodeActiveXceiversCount = MetricsAsserts.getIntGauge(
-          "DataNodeActiveXceiversCount", rbNew);
+              "DataNodeActiveXceiversCount", rbNew);
       assertTrue(dataNodeActiveXceiversCount >= 0);
     } finally {
       if (cluster != null) {
@@ -573,12 +566,12 @@ public class TestDataNodeMetrics {
           fs.getClient().getLocatedBlocks(p.toString(), 0).get(0).getBlock();
       try {
         new BlockSender(b, 0, -1, false, true, true,
-            cluster.getDataNodes().get(0), null,
-            CachingStrategy.newDefaultStrategy());
+                cluster.getDataNodes().get(0), null,
+                CachingStrategy.newDefaultStrategy());
         fail("Must throw FileNotFoundException");
       } catch (FileNotFoundException fe) {
         assertTrue("Should throw too many open files",
-            fe.getMessage().contains("Too many open files"));
+                fe.getMessage().contains("Too many open files"));
       }
       cluster.triggerHeartbeats(); // IBR delete ack
       //After DN throws too many open files
@@ -593,7 +586,7 @@ public class TestDataNodeMetrics {
   }
 
   private void verifyBlockLocations(DistributedFileSystem fs, Path p,
-                                    int expected) throws IOException, TimeoutException, InterruptedException {
+      int expected) throws IOException, TimeoutException, InterruptedException {
     final LocatedBlock lb =
         fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -617,12 +610,10 @@ public class TestDataNodeMetrics {
     MetricsRecordBuilder rb = getMetrics(dn.getMetrics().name());
     assertCounter("HeartbeatsNumOps", 1L, rb);
   }
-
   @Test(timeout = 60000)
   public void testSlowMetrics() throws Exception {
     DataNodeFaultInjector dnFaultInjector = new DataNodeFaultInjector() {
-      @Override
-      public void delay() {
+      @Override public void delay() {
         try {
           Thread.sleep(310);
         } catch (InterruptedException e) {
@@ -649,8 +640,7 @@ public class TestDataNodeMetrics {
       final AtomicInteger x = new AtomicInteger(0);
 
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
+        @Override public Boolean get() {
           x.getAndIncrement();
           try {
             DFSTestUtil
@@ -745,7 +735,7 @@ public class TestDataNodeMetrics {
       cluster.waitActive();
       FileSystem fs = cluster.getFileSystem();
       Path testFile = new Path("/testNodeLocalMetrics.txt");
-      DFSTestUtil.createFile(fs, testFile, 10L, (short) 1, 1L);
+      DFSTestUtil.createFile(fs, testFile, 10L, (short)1, 1L);
       DFSTestUtil.readFile(fs, testFile);
       List<DataNode> datanodes = cluster.getDataNodes();
       assertEquals(1, datanodes.size());
@@ -827,4 +817,3 @@ public class TestDataNodeMetrics {
     }
   }
 }
-
