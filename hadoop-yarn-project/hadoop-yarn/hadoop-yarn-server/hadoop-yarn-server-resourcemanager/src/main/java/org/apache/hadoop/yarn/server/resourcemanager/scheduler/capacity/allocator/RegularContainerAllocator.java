@@ -100,7 +100,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
    * We will consider stuffs like exclusivity, pending resource, node partition,
    * headroom, etc.
    */
-  private ContainerAllocation preCheckForNodeCandidateSet(FiCaSchedulerNode node,
+  private ContainerAllocation preCheckForApp(FiCaSchedulerNode node,
       SchedulingMode schedulingMode, ResourceLimits resourceLimits,
       SchedulerRequestKey schedulerKey) {
     PendingAsk offswitchPendingAsk = application.getPendingAsk(schedulerKey,
@@ -141,21 +141,6 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
             ActivityLevel.REQUEST);
         return ContainerAllocation.APP_SKIPPED;
       }
-    }
-
-    // Is the nodePartition of pending request matches the node's partition
-    // If not match, jump to next priority.
-    Optional<DiagnosticsCollector> dcOpt = activitiesManager == null ?
-        Optional.empty() :
-        activitiesManager.getOptionalDiagnosticsCollector();
-    if (!appInfo.precheckNode(schedulerKey, node, schedulingMode, dcOpt)) {
-      ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
-          activitiesManager, node, application, schedulerKey,
-          ActivityDiagnosticConstant.
-              NODE_DO_NOT_MATCH_PARTITION_OR_PLACEMENT_CONSTRAINTS
-              + ActivitiesManager.getDiagnostics(dcOpt),
-          ActivityLevel.NODE);
-      return ContainerAllocation.PRIORITY_SKIPPED;
     }
 
     if (!application.getCSLeafQueue().isReservationsContinueLooking()) {
@@ -872,9 +857,24 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       }
 
       if (reservedContainer == null) {
-        result = preCheckForNodeCandidateSet(node,
-            schedulingMode, resourceLimits, schedulerKey);
-        if (null != result) {
+        // If there is no need of resources for app's resource request, fast skip the loop
+        if (null != preCheckForApp(node, schedulingMode, resourceLimits, schedulerKey)) {
+          break;
+        }
+
+        // Is pending request matches the node's partition or placement constraint
+        // If not match, jump to next node.
+        Optional<DiagnosticsCollector> dcOpt = activitiesManager == null ?
+                Optional.empty() :
+                activitiesManager.getOptionalDiagnosticsCollector();
+        if (!appInfo.precheckNode(schedulerKey, node, schedulingMode, dcOpt)) {
+          ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
+                  activitiesManager, node, application, schedulerKey,
+                  ActivityDiagnosticConstant.
+                          NODE_DO_NOT_MATCH_PARTITION_OR_PLACEMENT_CONSTRAINTS
+                          + ActivitiesManager.getDiagnostics(dcOpt),
+                  ActivityLevel.NODE);
+          result = ContainerAllocation.PRIORITY_SKIPPED;
           continue;
         }
       } else {
