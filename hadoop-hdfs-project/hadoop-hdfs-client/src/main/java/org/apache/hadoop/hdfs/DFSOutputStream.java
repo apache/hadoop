@@ -539,13 +539,14 @@ public class DFSOutputStream extends FSOutputSummer
       int psize = 0;
       if (blockSize == getStreamer().getBytesCurBlock()) {
         psize = writePacketSize;
-      } else if (blockSize - getStreamer().getBytesCurBlock() + PacketHeader.PKT_MAX_HEADER_LEN
-          < writePacketSize) {
-        psize = (int)(blockSize - getStreamer().getBytesCurBlock()) +
-            PacketHeader.PKT_MAX_HEADER_LEN;
       } else {
         psize = (int) Math
             .min(blockSize - getStreamer().getBytesCurBlock(), writePacketSize);
+        if (psize < writePacketSize) {
+          final int chunkSize = bytesPerChecksum + getChecksumSize();
+          int numPackets = (psize + bytesPerChecksum - 1) / bytesPerChecksum;
+          psize = PacketHeader.PKT_MAX_HEADER_LEN + numPackets * chunkSize;
+        }
       }
       computePacketChunkSize(psize, bytesPerChecksum);
     }
