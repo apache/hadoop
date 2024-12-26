@@ -59,13 +59,16 @@ public interface RwLock {
    */
   void readUnlock(RwLockMode lockMode, String opName);
 
-  /** Check if the current thread holds read lock. */
+  /** Check if the current thread holds read lock.
+   * @return true if the read lock is held by the current thread, else false
+   */
   default boolean hasReadLock() {
     return hasReadLock(RwLockMode.GLOBAL);
   }
 
   /** Check if the current thread holds read lock.
    * @param lockMode The lock type used to check whether a read lock is held
+   * @return true if the read lock is held by the current thread, else false
    */
   boolean hasReadLock(RwLockMode lockMode);
 
@@ -109,13 +112,16 @@ public interface RwLock {
    */
   void writeUnlock(RwLockMode lockMode, String opName);
 
-  /** Check if the current thread holds write lock. */
+  /** Check if the current thread holds write lock.
+   * @return true if the write lock is held by the current thread, else false
+   */
   default boolean hasWriteLock() {
     return hasWriteLock(RwLockMode.GLOBAL);
   }
 
   /** Check if the current thread holds write lock.
    * @param lockMode The lock type used to check whether a write lock is held
+   * @return true if the write lock is held by the current thread, else false.
    */
   boolean hasWriteLock(RwLockMode lockMode);
 }
