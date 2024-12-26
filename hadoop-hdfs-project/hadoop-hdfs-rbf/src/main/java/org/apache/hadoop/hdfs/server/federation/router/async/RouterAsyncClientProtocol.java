@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.federation.router;
+package org.apache.hadoop.hdfs.server.federation.router.async;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -58,10 +58,16 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RouterResolveException;
-import org.apache.hadoop.hdfs.server.federation.router.async.AsyncErasureCoding;
-import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncCacheAdmin;
-import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncSnapshot;
-import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncStoragePolicy;
+import org.apache.hadoop.hdfs.server.federation.router.ErasureCoding;
+import org.apache.hadoop.hdfs.server.federation.router.NoLocationException;
+import org.apache.hadoop.hdfs.server.federation.router.RemoteMethod;
+import org.apache.hadoop.hdfs.server.federation.router.RemoteParam;
+import org.apache.hadoop.hdfs.server.federation.router.RemoteResult;
+import org.apache.hadoop.hdfs.server.federation.router.RouterCacheAdmin;
+import org.apache.hadoop.hdfs.server.federation.router.RouterClientProtocol;
+import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
+import org.apache.hadoop.hdfs.server.federation.router.RouterSnapshot;
+import org.apache.hadoop.hdfs.server.federation.router.RouterStoragePolicy;
 import org.apache.hadoop.hdfs.server.federation.router.async.utils.ApplyFunction;
 import org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncApplyFunction;
 import org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncCatchFunction;
@@ -81,16 +87,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.EnumSet;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
@@ -112,7 +113,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   private volatile FsServerDefaults serverDefaults;
   private final RouterStoragePolicy asyncstoragePolicy;
 
-  RouterAsyncClientProtocol(Configuration conf, RouterRpcServer rpcServer) {
+  public RouterAsyncClientProtocol(Configuration conf, RouterRpcServer rpcServer) {
     super(conf, rpcServer);
     asyncSnapshotProto = new RouterAsyncSnapshot(rpcServer);
     asyncErasureCoding = new AsyncErasureCoding(rpcServer);
@@ -219,10 +220,9 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
 
   @Override
   public LocatedBlock getAdditionalDatanode(final String src, final long fileId,
-                                            final ExtendedBlock blk, final DatanodeInfo[] existings,
-                                            final String[] existingStorageIDs, final DatanodeInfo[] excludes,
-                                            final int numAdditionalNodes, final String clientName)
-      throws IOException {
+      final ExtendedBlock blk, final DatanodeInfo[] existings,
+      final String[] existingStorageIDs, final DatanodeInfo[] excludes,
+      final int numAdditionalNodes, final String clientName) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     RemoteMethod method = new RemoteMethod("getAdditionalDatanode",
@@ -270,7 +270,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
             return true;
           }
           return false;
-        } );
+        });
       });
 
       asyncCatch((ret, ex) -> {
@@ -336,7 +336,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   }
 
   @Override
-  HdfsFileStatus getMountPointStatus(
+  public HdfsFileStatus getMountPointStatus(
       String name, int childrenNum, long date, boolean setPath) {
     long modTime = date;
     long accessTime = date;
@@ -419,7 +419,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
 
   @Override
   protected HdfsFileStatus getFileInfoAll(final List<RemoteLocation> locations,
-                                          final RemoteMethod method, long timeOutMs) throws IOException {
+      final RemoteMethod method, long timeOutMs) throws IOException {
 
     asyncComplete(null);
     // Get the file info from everybody
@@ -540,7 +540,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
 
   @Override
   public ECTopologyVerifierResult getECTopologyResultForPolicies(
-      String... policyNames) throws IOException { ;
+      String... policyNames) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED, true);
     return asyncErasureCoding.getECTopologyResultForPolicies(policyNames);
   }
@@ -579,9 +579,8 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
 
     rpcServer.getDatanodeStorageReportMapAsync(type);
-    asyncApply((ApplyFunction< Map<String, DatanodeStorageReport[]>, DatanodeStorageReport[]>) dnSubcluster -> {
-      return mergeDtanodeStorageReport(dnSubcluster);
-    });
+    asyncApply((ApplyFunction< Map<String, DatanodeStorageReport[]>, DatanodeStorageReport[]>)
+        dnSubcluster -> mergeDtanodeStorageReport(dnSubcluster));
     return asyncReturn(DatanodeStorageReport[].class);
   }
 
@@ -591,9 +590,8 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
 
     rpcServer.getDatanodeStorageReportMapAsync(type, requireResponse, timeOutMs);
-    asyncApply((ApplyFunction< Map<String, DatanodeStorageReport[]>, DatanodeStorageReport[]>) dnSubcluster -> {
-      return mergeDtanodeStorageReport(dnSubcluster);
-    });
+    asyncApply((ApplyFunction< Map<String, DatanodeStorageReport[]>, DatanodeStorageReport[]>)
+        dnSubcluster -> mergeDtanodeStorageReport(dnSubcluster));
     return asyncReturn(DatanodeStorageReport[].class);
   }
 

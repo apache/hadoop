@@ -166,7 +166,7 @@ public class RouterClientProtocol implements ClientProtocol {
   /** Router security manager to handle token operations. */
   private RouterSecurityManager securityManager = null;
 
-  RouterClientProtocol(Configuration conf, RouterRpcServer rpcServer) {
+  protected RouterClientProtocol(Configuration conf, RouterRpcServer rpcServer) {
     this.rpcServer = rpcServer;
     this.rpcClient = rpcServer.getRPCClient();
     this.subclusterResolver = rpcServer.getSubclusterResolver();
@@ -1348,7 +1348,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @throws IOException
    */
   @VisibleForTesting
-  List<RemoteLocation> getLocationsForContentSummary(String path) throws IOException {
+  protected List<RemoteLocation> getLocationsForContentSummary(String path) throws IOException {
     // Try to get all the locations of the path.
     final Map<String, List<RemoteLocation>> ns2Locations = getAllLocations(path);
     if (ns2Locations.isEmpty()) {
@@ -2223,7 +2223,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @return New HDFS file status representing a mount point.
    */
   @VisibleForTesting
-  HdfsFileStatus getMountPointStatus(
+  protected HdfsFileStatus getMountPointStatus(
       String name, int childrenNum, long date, boolean setPath) {
     long modTime = date;
     long accessTime = date;

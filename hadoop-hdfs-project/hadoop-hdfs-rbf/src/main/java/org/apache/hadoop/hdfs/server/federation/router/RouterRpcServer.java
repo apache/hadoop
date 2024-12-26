@@ -76,6 +76,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil;
 import org.apache.hadoop.hdfs.server.federation.router.async.AsyncQuota;
+import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncClientProtocol;
 import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncNamenodeProtocol;
 import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncRpcClient;
 import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncUserProtocol;
@@ -291,8 +292,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @param fileResolver File resolver to resolve file paths to subclusters.
    * @throws IOException If the RPC server could not be created.
    */
+  @SuppressWarnings("checkstyle:MethodLength")
   public RouterRpcServer(Configuration conf, Router router,
-      ActiveNamenodeResolver nnResolver, FileSubclusterResolver fileResolver)
+                         ActiveNamenodeResolver nnResolver, FileSubclusterResolver fileResolver)
           throws IOException {
     super(RouterRpcServer.class.getName());
 
@@ -431,7 +433,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       this.nnProto = new RouterAsyncNamenodeProtocol(this);
       this.routerProto = new RouterAsyncUserProtocol(this);
       this.quotaCall = new AsyncQuota(this.router, this);
-      
     } else {
       this.rpcClient = new RouterRpcClient(this.conf, this.router,
           this.namenodeResolver, this.rpcMonitor, routerStateIdContext);
@@ -2202,7 +2203,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @param path Path to check.
    * @return If a path should be in all subclusters.
    */
-  boolean isPathAll(final String path) {
+  public boolean isPathAll(final String path) {
     MountTable entry = getMountTable(path);
     return entry != null && entry.isAll();
   }
