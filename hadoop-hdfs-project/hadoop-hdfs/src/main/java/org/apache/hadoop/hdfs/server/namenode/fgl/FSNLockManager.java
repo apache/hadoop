@@ -35,6 +35,7 @@ public interface FSNLockManager {
   /**
    * Acquire read lock according to the lock mode, unless interrupted while waiting.
    * @param lockMode locking mode
+   * @throws InterruptedException If the thread is interrupted, an InterruptedException is thrown.
    */
   void readLockInterruptibly(RwLockMode lockMode) throws InterruptedException;
 

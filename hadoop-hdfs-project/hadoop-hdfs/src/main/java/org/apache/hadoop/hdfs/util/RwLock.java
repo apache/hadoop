@@ -24,7 +24,9 @@ public interface RwLock {
     readLock(RwLockMode.GLOBAL);
   }
 
-  /** Acquire read lock. */
+  /** Acquire read lock.
+   * @param lockMode The lock type for acquiring a read lock
+   */
   void readLock(RwLockMode lockMode);
 
   /** Acquire read lock, unless interrupted while waiting.  */
@@ -32,7 +34,9 @@ public interface RwLock {
     readLockInterruptibly(RwLockMode.GLOBAL);
   }
 
-  /** Acquire read lock, unless interrupted while waiting.  */
+  /** Acquire read lock, unless interrupted while waiting.
+   * @param lockMode The lock type for acquiring a read lock
+   */
   void readLockInterruptibly(RwLockMode lockMode) throws InterruptedException;
 
   /** Release read lock. */
@@ -50,6 +54,7 @@ public interface RwLock {
 
   /**
    * Release read lock with operation name.
+   * @param lockMode The lock type for releasing the read lock
    * @param opName Option name.
    */
   void readUnlock(RwLockMode lockMode, String opName);
@@ -59,7 +64,9 @@ public interface RwLock {
     return hasReadLock(RwLockMode.GLOBAL);
   }
 
-  /** Check if the current thread holds read lock. */
+  /** Check if the current thread holds read lock.
+   * @param lockMode The lock type used to check whether a read lock is held
+   */
   boolean hasReadLock(RwLockMode lockMode);
 
   /** Acquire write lock. */
@@ -67,7 +74,9 @@ public interface RwLock {
     writeLock(RwLockMode.GLOBAL);
   }
 
-  /** Acquire write lock. */
+  /** Acquire write lock.
+   * @param lockMode The lock type for acquiring a write lock
+   */
   void writeLock(RwLockMode lockMode);
   
   /** Acquire write lock, unless interrupted while waiting.  */
@@ -75,7 +84,9 @@ public interface RwLock {
     writeLockInterruptibly(RwLockMode.GLOBAL);
   }
 
-  /** Acquire write lock, unless interrupted while waiting.  */
+  /** Acquire write lock, unless interrupted while waiting.
+   * @param lockMode The lock type for acquiring a write lock
+   */
   void writeLockInterruptibly(RwLockMode lockMode) throws InterruptedException;
 
   /** Release write lock. */
@@ -93,6 +104,7 @@ public interface RwLock {
 
   /**
    * Release write lock with operation name.
+   * @param lockMode The lock type for releasing the write lock
    * @param opName Option name.
    */
   void writeUnlock(RwLockMode lockMode, String opName);
@@ -102,6 +114,8 @@ public interface RwLock {
     return hasWriteLock(RwLockMode.GLOBAL);
   }
 
-  /** Check if the current thread holds write lock. */
+  /** Check if the current thread holds write lock.
+   * @param lockMode The lock type used to check whether a write lock is held
+   */
   boolean hasWriteLock(RwLockMode lockMode);
 }
