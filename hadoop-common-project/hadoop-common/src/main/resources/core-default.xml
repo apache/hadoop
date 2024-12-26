@@ -4468,4 +4468,11 @@ The switch to turn S3A auditing on or off.
     <description>The AbstractFileSystem for Ozone FileSystem o3fs uri</description>
   </property>
 
+  <property>
+    <name>fs.$SCHEME.impl.disable.cache</name>
+    <value>false</value>
+    <description>Whether create a new FileSystem instance for schema specified by $SCHEME or not.
+      </description>
+  </property>
+
 </configuration>
