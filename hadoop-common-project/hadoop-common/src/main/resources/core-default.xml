@@ -4469,9 +4469,9 @@ The switch to turn S3A auditing on or off.
   </property>
 
   <property>
-    <name>fs.$SCHEME.impl.disable.cache</name>
+    <name>fs.$SCHEMA.impl.disable.cache</name>
     <value>false</value>
-    <description>Whether create a new FileSystem instance for schema specified by $SCHEME or not.
+    <description>Whether create a new FileSystem instance for schema specified by $SCHEMA or not.
       </description>
   </property>
 
