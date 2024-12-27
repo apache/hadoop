@@ -122,6 +122,12 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   private String superUser;
   /** Identifier for the super group. */
   private final String superGroup;
+  /**
+   * Caching server defaults so as to prevent redundant calls to namenode,
+   * similar to DFSClient, caching saves efforts when router connects
+   * to multiple clients.
+   */
+  private volatile FsServerDefaults serverDefaults;
   private final RouterSnapshot asyncSnapshotProto;
   private final ErasureCoding asyncErasureCoding;
   private final RouterCacheAdmin routerAsyncCacheAdmin;
@@ -147,17 +153,17 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   public FsServerDefaults getServerDefaults() throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
     long now = Time.monotonicNow();
-    if ((getServerDefaults() == null) || (now - getServerDefaultsLastUpdate()
+    if ((serverDefaults == null) || (now - getServerDefaultsLastUpdate()
         > getServerDefaultsValidityPeriod())) {
       RemoteMethod method = new RemoteMethod("getServerDefaults");
       rpcServer.invokeAtAvailableNsAsync(method, FsServerDefaults.class);
       asyncApply(o -> {
-        setServerDefaults((FsServerDefaults) o);
+        serverDefaults = (FsServerDefaults) o;
         setServerDefaultsLastUpdate(now);
-        return getServerDefaults();
+        return serverDefaults;
       });
     } else {
-      asyncComplete(getServerDefaults());
+      asyncComplete(serverDefaults);
     }
     return asyncReturn(FsServerDefaults.class);
   }
@@ -778,22 +784,19 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
           return;
         }
         // If there is no real path, check mount points
-        if (ret == null) {
-          List<String> children = subclusterResolver.getMountPoints(src);
-          if (children != null && !children.isEmpty()) {
-            Map<String, Long> dates = getMountPointDates(src);
-            long date = 0;
-            if (dates != null && dates.containsKey(src)) {
-              date = dates.get(src);
-            }
-            getMountPointStatus(src, children.size(), date, false);
-          } else if (children != null) {
-            // The src is a mount point, but there are no files or directories
-            getMountPointStatus(src, 0, 0, false);
-          } else {
-            asyncComplete(null);
-            return;
+        List<String> children = subclusterResolver.getMountPoints(src);
+        if (children != null && !children.isEmpty()) {
+          Map<String, Long> dates = getMountPointDates(src);
+          long date = 0;
+          if (dates != null && dates.containsKey(src)) {
+            date = dates.get(src);
           }
+          getMountPointStatus(src, children.size(), date, false);
+        } else if (children != null) {
+          // The src is a mount point, but there are no files or directories
+          getMountPointStatus(src, 0, 0, false);
+        } else {
+          asyncComplete(null);
         }
       });
 
@@ -803,7 +806,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
         }
         // Can't find mount point for path and the path didn't contain any sub monit points,
         // throw the NoLocationException to client.
-        if (ret == null && noLocationException[0] != null) {
+        if (noLocationException[0] != null) {
           throw noLocationException[0];
         }
         return null;

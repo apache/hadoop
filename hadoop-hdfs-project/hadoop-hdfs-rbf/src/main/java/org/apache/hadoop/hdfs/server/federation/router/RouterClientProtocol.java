@@ -1338,9 +1338,9 @@ public class RouterClientProtocol implements ClientProtocol {
    * Get all the locations of the path for {@link RouterClientProtocol#getContentSummary(String)}.
    * For example, there are some mount points:
    * <p>
-   *   /a -> ns0 -> /a
-   *   /a/b -> ns0 -> /a/b
-   *   /a/b/c -> ns1 -> /a/b/c
+   *   /a -&gt ns0 -&gt /a
+   *   /a/b -&gt ns0 -&gt /a/b
+   *   /a/b/c -&gt ns1 -&gt /a/b/c
    * </p>
    * When the path is '/a', the result of locations should be
    * [RemoteLocation('/a', ns0, '/a'), RemoteLocation('/a/b/c', ns1, '/a/b/c')]
@@ -2363,7 +2363,13 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   /**
-   * Get listing on remote locations.
+   * Get a partial listing of the indicated directory.
+   *
+   * @param src the directory name
+   * @param startAfter the name to start after
+   * @param needLocation if blockLocations need to be returned
+   * @return a partial listing starting after startAfter
+   * @throws IOException if other I/O error occurred
    */
   protected List<RemoteResult<RemoteLocation, DirectoryListing>> getListingInt(
       String src, byte[] startAfter, boolean needLocation) throws IOException {
@@ -2402,7 +2408,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @param startAfter starting listing from client, used to define listing
    *                   start boundary
    * @param remainingEntries how many entries left from subcluster
-   * @return
+   * @return true if should add mount point, otherwise false;
    */
   protected static boolean shouldAddMountPoint(
       byte[] mountPoint, byte[] lastEntry, byte[] startAfter,
