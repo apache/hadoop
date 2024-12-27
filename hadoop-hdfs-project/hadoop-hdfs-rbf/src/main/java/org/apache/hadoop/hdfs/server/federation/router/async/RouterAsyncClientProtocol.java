@@ -568,7 +568,6 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
     }, IOException.class);
 
     asyncApply((AsyncApplyFunction<HdfsFileStatus, Object>) ret -> {
-      asyncComplete(null);
       // If there is no real path, check mount points
       if (ret == null) {
         List<String> children = subclusterResolver.getMountPoints(src);
@@ -582,17 +581,21 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
         } else if (children != null) {
           // The src is a mount point, but there are no files or directories
           getMountPointStatus(src, 0, 0, false);
+        } else {
+          asyncComplete(null);
         }
-      }
-      asyncApply((ApplyFunction<HdfsFileStatus, HdfsFileStatus>) result -> {
-        // Can't find mount point for path and the path didn't contain any sub monit points,
-        // throw the NoLocationException to client.
-        if (result == null && noLocationException[0] != null) {
-          throw noLocationException[0];
-        }
+        asyncApply((ApplyFunction<HdfsFileStatus, HdfsFileStatus>) result -> {
+          // Can't find mount point for path and the path didn't contain any sub monit points,
+          // throw the NoLocationException to client.
+          if (result == null && noLocationException[0] != null) {
+            throw noLocationException[0];
+          }
 
-        return result;
-      });
+          return result;
+        });
+      } else {
+        asyncComplete(ret);
+      }
     });
 
     return asyncReturn(HdfsFileStatus.class);

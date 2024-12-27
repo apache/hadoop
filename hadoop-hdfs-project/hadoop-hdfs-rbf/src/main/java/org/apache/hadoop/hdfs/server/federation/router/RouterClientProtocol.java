@@ -170,7 +170,7 @@ public class RouterClientProtocol implements ClientProtocol {
   /** Router security manager to handle token operations. */
   private RouterSecurityManager securityManager = null;
 
-  protected RouterClientProtocol(Configuration conf, RouterRpcServer rpcServer) {
+  public RouterClientProtocol(Configuration conf, RouterRpcServer rpcServer) {
     this.rpcServer = rpcServer;
     this.rpcClient = rpcServer.getRPCClient();
     this.subclusterResolver = rpcServer.getSubclusterResolver();
