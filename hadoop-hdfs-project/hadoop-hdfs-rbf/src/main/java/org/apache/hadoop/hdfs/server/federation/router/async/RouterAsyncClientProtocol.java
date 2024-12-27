@@ -54,7 +54,9 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
+import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RouterResolveException;
@@ -65,6 +67,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RemoteParam;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteResult;
 import org.apache.hadoop.hdfs.server.federation.router.RouterCacheAdmin;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClientProtocol;
+import org.apache.hadoop.hdfs.server.federation.router.RouterRpcClient;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.router.RouterSnapshot;
 import org.apache.hadoop.hdfs.server.federation.router.RouterStoragePolicy;
@@ -107,46 +110,64 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterAsyncClientProtocol.class.getName());
 
+  private final RouterRpcServer rpcServer;
+  private final RouterRpcClient rpcClient;
+  private final FileSubclusterResolver subclusterResolver;
+  private final ActiveNamenodeResolver namenodeResolver;
+  /** If it requires response from all subclusters. */
+  private final boolean allowPartialList;
+  /** Time out when getting the mount statistics. */
+  private long mountStatusTimeOut;
+  /** Identifier for the super user. */
+  private String superUser;
+  /** Identifier for the super group. */
+  private final String superGroup;
   private final RouterSnapshot asyncSnapshotProto;
   private final ErasureCoding asyncErasureCoding;
   private final RouterCacheAdmin routerAsyncCacheAdmin;
-  private volatile FsServerDefaults serverDefaults;
   private final RouterStoragePolicy asyncstoragePolicy;
 
   public RouterAsyncClientProtocol(Configuration conf, RouterRpcServer rpcServer) {
     super(conf, rpcServer);
-    asyncSnapshotProto = new RouterAsyncSnapshot(rpcServer);
-    asyncErasureCoding = new AsyncErasureCoding(rpcServer);
-    routerAsyncCacheAdmin = new RouterAsyncCacheAdmin(rpcServer);
-    asyncstoragePolicy = new RouterAsyncStoragePolicy(rpcServer);
+    this.rpcServer = rpcServer;
+    this.rpcClient = rpcServer.getRPCClient();
+    this.subclusterResolver = getSubclusterResolver();
+    this.namenodeResolver = getNamenodeResolver();
+    this.allowPartialList = isAllowPartialList();
+    this.mountStatusTimeOut = getMountStatusTimeOut();
+    this.superUser = getSuperUser();
+    this.superGroup = getSuperGroup();
+    this.asyncSnapshotProto = new RouterAsyncSnapshot(rpcServer);
+    this.asyncErasureCoding = new AsyncErasureCoding(rpcServer);
+    this.routerAsyncCacheAdmin = new RouterAsyncCacheAdmin(rpcServer);
+    this.asyncstoragePolicy = new RouterAsyncStoragePolicy(rpcServer);
   }
 
   @Override
   public FsServerDefaults getServerDefaults() throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
     long now = Time.monotonicNow();
-    if ((serverDefaults == null) || (now - serverDefaultsLastUpdate
-        > serverDefaultsValidityPeriod)) {
+    if ((getServerDefaults() == null) || (now - getServerDefaultsLastUpdate()
+        > getServerDefaultsValidityPeriod())) {
       RemoteMethod method = new RemoteMethod("getServerDefaults");
       rpcServer.invokeAtAvailableNsAsync(method, FsServerDefaults.class);
       asyncApply(o -> {
-        serverDefaults = (FsServerDefaults) o;
-        serverDefaultsLastUpdate = now;
-        return serverDefaults;
+        setServerDefaults((FsServerDefaults) o);
+        setServerDefaultsLastUpdate(now);
+        return getServerDefaults();
       });
     } else {
-      asyncComplete(serverDefaults);
+      asyncComplete(getServerDefaults());
     }
     return asyncReturn(FsServerDefaults.class);
   }
 
   @Override
   public HdfsFileStatus create(String src, FsPermission masked,
-                               String clientName, EnumSetWritable<CreateFlag> flag,
-                               boolean createParent, short replication, long blockSize,
-                               CryptoProtocolVersion[] supportedVersions, String ecPolicyName,
-                               String storagePolicy)
-      throws IOException {
+      String clientName, EnumSetWritable<CreateFlag> flag,
+      boolean createParent, short replication, long blockSize,
+      CryptoProtocolVersion[] supportedVersions, String ecPolicyName,
+      String storagePolicy) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
     asyncComplete(false);
@@ -347,7 +368,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
     final EnumSet<HdfsFileStatus.Flags>[] flags =
         new EnumSet[]{EnumSet.noneOf(HdfsFileStatus.Flags.class)};
     asyncComplete(null);
-    if (subclusterResolver instanceof MountTableResolver) {
+    if (getSubclusterResolver() instanceof MountTableResolver) {
       asyncTry(() -> {
         String mName = name.startsWith("/") ? name : "/" + name;
         MountTableResolver mountTable = (MountTableResolver) subclusterResolver;

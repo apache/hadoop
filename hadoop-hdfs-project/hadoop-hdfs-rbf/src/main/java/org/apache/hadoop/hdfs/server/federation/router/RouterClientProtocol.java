@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -128,33 +129,33 @@ public class RouterClientProtocol implements ClientProtocol {
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterClientProtocol.class.getName());
 
-  protected final RouterRpcServer rpcServer;
-  protected final RouterRpcClient rpcClient;
-  protected final RouterFederationRename rbfRename;
-  protected final FileSubclusterResolver subclusterResolver;
-  protected final ActiveNamenodeResolver namenodeResolver;
+  private final RouterRpcServer rpcServer;
+  private final RouterRpcClient rpcClient;
+  private final RouterFederationRename rbfRename;
+  private final FileSubclusterResolver subclusterResolver;
+  private final ActiveNamenodeResolver namenodeResolver;
 
   /**
    * Caching server defaults so as to prevent redundant calls to namenode,
    * similar to DFSClient, caching saves efforts when router connects
    * to multiple clients.
    */
-  protected volatile FsServerDefaults serverDefaults;
-  protected volatile long serverDefaultsLastUpdate;
-  protected final long serverDefaultsValidityPeriod;
+  private volatile FsServerDefaults serverDefaults;
+  private volatile long serverDefaultsLastUpdate;
+  private final long serverDefaultsValidityPeriod;
 
   /** If it requires response from all subclusters. */
-  protected final boolean allowPartialList;
+  private final boolean allowPartialList;
   /** Time out when getting the mount statistics. */
-  protected long mountStatusTimeOut;
+  private long mountStatusTimeOut;
 
   /** Default nameservice enabled. */
   private final boolean defaultNameServiceEnabled;
 
   /** Identifier for the super user. */
-  protected String superUser;
+  private String superUser;
   /** Identifier for the super group. */
-  protected final String superGroup;
+  private final String superGroup;
   /** Erasure coding calls. */
   private final ErasureCoding erasureCoding;
   /** Cache Admin calls. */
@@ -828,7 +829,7 @@ public class RouterClientProtocol implements ClientProtocol {
     }
   }
 
-  protected static GetListingComparator comparator =
+  private static GetListingComparator comparator =
       new GetListingComparator();
 
   @Override
@@ -1335,17 +1336,20 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   /**
-   * Get all the locations of the path for {@link this#getContentSummary(String)}.
+   * Get all the locations of the path for {@link RouterClientProtocol#getContentSummary(String)}.
    * For example, there are some mount points:
+   * <p>
    *   /a -> ns0 -> /a
    *   /a/b -> ns0 -> /a/b
    *   /a/b/c -> ns1 -> /a/b/c
+   * </p>
    * When the path is '/a', the result of locations should be
    * [RemoteLocation('/a', ns0, '/a'), RemoteLocation('/a/b/c', ns1, '/a/b/c')]
    * When the path is '/b', will throw NoLocationException.
+   *
    * @param path the path to get content summary
    * @return one list contains all the remote location
-   * @throws IOException
+   * @throws IOException if an I/O error occurs
    */
   @VisibleForTesting
   protected List<RemoteLocation> getLocationsForContentSummary(String path) throws IOException {
@@ -2186,8 +2190,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
   /**
    * Get the permissions for the parent of a child with given permissions.
-   * Add implicit u+wx permission for parent. This is based on
-   * @{FSDirMkdirOp#addImplicitUwx}.
+   * Add implicit u+wx permission for parent. This is based on FSDirMkdirOp#addImplicitUwx.
    * @param mask The permission mask of the child.
    * @return The permission mask of the parent.
    */
@@ -2448,5 +2451,57 @@ public class RouterClientProtocol implements ClientProtocol {
 
   public int getRouterFederationRenameCount() {
     return rbfRename.getRouterFederationRenameCount();
+  }
+
+  public RouterRpcServer getRpcServer() {
+    return rpcServer;
+  }
+
+  public RouterRpcClient getRpcClient() {
+    return rpcClient;
+  }
+
+  public FileSubclusterResolver getSubclusterResolver() {
+    return subclusterResolver;
+  }
+
+  public ActiveNamenodeResolver getNamenodeResolver() {
+    return namenodeResolver;
+  }
+
+  public long getServerDefaultsLastUpdate() {
+    return serverDefaultsLastUpdate;
+  }
+
+  public long getServerDefaultsValidityPeriod() {
+    return serverDefaultsValidityPeriod;
+  }
+
+  public boolean isAllowPartialList() {
+    return allowPartialList;
+  }
+
+  public long getMountStatusTimeOut() {
+    return mountStatusTimeOut;
+  }
+
+  public String getSuperUser() {
+    return superUser;
+  }
+
+  public String getSuperGroup() {
+    return superGroup;
+  }
+
+  public RouterStoragePolicy getStoragePolicy() {
+    return storagePolicy;
+  }
+
+  public void setServerDefaults(FsServerDefaults serverDefaults) {
+    this.serverDefaults = serverDefaults;
+  }
+
+  public void setServerDefaultsLastUpdate(long serverDefaultsLastUpdate) {
+    this.serverDefaultsLastUpdate = serverDefaultsLastUpdate;
   }
 }
