@@ -93,9 +93,9 @@ public class RouterFederationRename {
    * @throws IOException if rename fails.
    * @return true if rename succeeds.
    */
-  boolean routerFedRename(final String src, final String dst,
-      final List<RemoteLocation> srcLocations,
-      final List<RemoteLocation> dstLocations) throws IOException {
+  public boolean routerFedRename(final String src, final String dst,
+                                 final List<RemoteLocation> srcLocations,
+                                 final List<RemoteLocation> dstLocations) throws IOException {
     if (!rpcServer.isEnableRenameAcrossNamespace()) {
       throw new IOException("Rename of " + src + " to " + dst
           + " is not allowed, no eligible destination in the same namespace was"

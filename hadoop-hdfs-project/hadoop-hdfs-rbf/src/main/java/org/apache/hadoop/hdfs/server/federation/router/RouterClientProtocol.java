@@ -85,6 +85,10 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RouterResolveException;
+import org.apache.hadoop.hdfs.server.federation.router.async.AsyncErasureCoding;
+import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncCacheAdmin;
+import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncSnapshot;
+import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncStoragePolicy;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -194,10 +198,17 @@ public class RouterClientProtocol implements ClientProtocol {
     this.superGroup = conf.get(
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY,
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
-    this.erasureCoding = new ErasureCoding(rpcServer);
-    this.storagePolicy = new RouterStoragePolicy(rpcServer);
-    this.snapshotProto = new RouterSnapshot(rpcServer);
-    this.routerCacheAdmin = new RouterCacheAdmin(rpcServer);
+    if (rpcServer.isAsync()) {
+      this.erasureCoding = new AsyncErasureCoding(rpcServer);
+      this.storagePolicy = new RouterAsyncStoragePolicy(rpcServer);
+      this.snapshotProto = new RouterAsyncSnapshot(rpcServer);
+      this.routerCacheAdmin = new RouterAsyncCacheAdmin(rpcServer);
+    } else {
+      this.erasureCoding = new ErasureCoding(rpcServer);
+      this.storagePolicy = new RouterStoragePolicy(rpcServer);
+      this.snapshotProto = new RouterSnapshot(rpcServer);
+      this.routerCacheAdmin = new RouterCacheAdmin(rpcServer);
+    }
     this.securityManager = rpcServer.getRouterSecurityManager();
     this.rbfRename = new RouterFederationRename(rpcServer, conf);
     this.defaultNameServiceEnabled = conf.getBoolean(
@@ -831,6 +842,10 @@ public class RouterClientProtocol implements ClientProtocol {
   private static GetListingComparator comparator =
       new GetListingComparator();
 
+  public static GetListingComparator getComparator() {
+    return comparator;
+  }
+
   @Override
   public DirectoryListing getListing(String src, byte[] startAfter,
       boolean needLocation) throws IOException {
@@ -1338,9 +1353,9 @@ public class RouterClientProtocol implements ClientProtocol {
    * Get all the locations of the path for {@link RouterClientProtocol#getContentSummary(String)}.
    * For example, there are some mount points:
    * <p>
-   *   /a -&gt ns0 -&gt /a
-   *   /a/b -&gt ns0 -&gt /a/b
-   *   /a/b/c -&gt ns1 -&gt /a/b/c
+   *   /a - &gt ns0 - &gt /a
+   *   /a/b - &gt ns0 - &gt /a/b
+   *   /a/b/c - &gt ns1 - &gt /a/b/c
    * </p>
    * When the path is '/a', the result of locations should be
    * [RemoteLocation('/a', ns0, '/a'), RemoteLocation('/a/b/c', ns1, '/a/b/c')]
@@ -2042,7 +2057,7 @@ public class RouterClientProtocol implements ClientProtocol {
    *         replacement value.
    * @throws IOException If the dst paths could not be determined.
    */
-  private RemoteParam getRenameDestinations(
+  protected RemoteParam getRenameDestinations(
       final List<RemoteLocation> srcLocations,
       final List<RemoteLocation> dstLocations) throws IOException {
 
@@ -2210,7 +2225,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @return New HDFS file status representing a mount point.
    */
   @VisibleForTesting
-  HdfsFileStatus getMountPointStatus(
+  protected HdfsFileStatus getMountPointStatus(
       String name, int childrenNum, long date) {
     return getMountPointStatus(name, childrenNum, date, true);
   }
@@ -2433,7 +2448,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @throws IOException if unable to get the file status.
    */
   @VisibleForTesting
-  boolean isMultiDestDirectory(String src) throws IOException {
+  protected boolean isMultiDestDirectory(String src) throws IOException {
     try {
       if (rpcServer.isPathAll(src)) {
         List<RemoteLocation> locations;
@@ -2502,11 +2517,11 @@ public class RouterClientProtocol implements ClientProtocol {
     return storagePolicy;
   }
 
-  public void setServerDefaults(FsServerDefaults serverDefaults) {
-    this.serverDefaults = serverDefaults;
-  }
-
   public void setServerDefaultsLastUpdate(long serverDefaultsLastUpdate) {
     this.serverDefaultsLastUpdate = serverDefaultsLastUpdate;
+  }
+
+  public RouterFederationRename getRbfRename() {
+    return rbfRename;
   }
 }
