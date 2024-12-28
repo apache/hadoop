@@ -204,6 +204,8 @@ public class Client implements AutoCloseable {
   private final byte[] clientId;
   private final int maxAsyncCalls;
   private final AtomicInteger asyncCallCounter = new AtomicInteger(0);
+  private final ConcurrentMap<ConnectionId, Semaphore> asyncCallCounters =
+      new ConcurrentHashMap<>();
 
   /**
    * set the ping interval value in configuration
@@ -1246,6 +1248,7 @@ public class Client implements AutoCloseable {
         if (status == RpcStatusProto.SUCCESS) {
           Writable value = packet.newInstance(valueClass, conf);
           final Call call = calls.remove(callId);
+          releaseAsyncCallPermit();
           if (call.alignmentContext != null) {
             call.alignmentContext.receiveResponseState(header);
           }
@@ -1269,6 +1272,7 @@ public class Client implements AutoCloseable {
           RemoteException re = new RemoteException(exceptionClassName, errorMsg, erCode);
           if (status == RpcStatusProto.ERROR) {
             final Call call = calls.remove(callId);
+            releaseAsyncCallPermit();
             call.setException(re);
           } else if (status == RpcStatusProto.FATAL) {
             // Close the connection
@@ -1342,6 +1346,13 @@ public class Client implements AutoCloseable {
         Call c = itor.next().getValue(); 
         itor.remove();
         c.setException(closeException); // local exception
+      }
+    }
+
+    private void releaseAsyncCallPermit() {
+      Semaphore asyncCallPermits = asyncCallCounters.get(remoteId);
+      if (asyncCallPermits != null) {
+        asyncCallPermits.release(1);
       }
     }
   }
@@ -1459,16 +1470,28 @@ public class Client implements AutoCloseable {
         fallbackToSimpleAuth, alignmentContext);
   }
 
-  private void checkAsyncCall() throws IOException {
+  private void checkAsyncCall(ConnectionId remoteId) throws IOException {
     if (isAsynchronousMode()) {
-      if (asyncCallCounter.incrementAndGet() > maxAsyncCalls) {
-        asyncCallCounter.decrementAndGet();
-        String errMsg = String.format(
-            "Exceeded limit of max asynchronous calls: %d, " +
-            "please configure %s to adjust it.",
-            maxAsyncCalls,
-            CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY);
-        throw new AsyncCallLimitExceededException(errMsg);
+      Semaphore asyncPermits = asyncCallCounters.computeIfAbsent(remoteId,
+          id -> new Semaphore(maxAsyncCalls));
+      try {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Acquiring lock for connectionId {}", remoteId);
+        }
+        // TODO timeout param configurable.
+        boolean isAcquired = asyncPermits.tryAcquire(1000, TimeUnit.MILLISECONDS);
+        if (!isAcquired) {
+          String errMsg = String.format(
+              "Exceeded limit of max asynchronous calls: %d, " +
+                  "please configure %s to adjust it.",
+              maxAsyncCalls,
+              CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY);
+          throw new AsyncCallLimitExceededException(errMsg);
+        }
+      } catch (InterruptedException e) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Cannot acquire a permit for connectionId {}", remoteId);
+        }
       }
     }
   }
@@ -1502,11 +1525,12 @@ public class Client implements AutoCloseable {
       throws IOException {
     final Call call = createCall(rpcKind, rpcRequest);
     call.setAlignmentContext(alignmentContext);
-    final Connection connection = getConnection(remoteId, call, serviceClass,
-        fallbackToSimpleAuth);
+    final Connection connection;
 
     try {
-      checkAsyncCall();
+      checkAsyncCall(remoteId);
+      connection = getConnection(remoteId, call, serviceClass,
+          fallbackToSimpleAuth);
       try {
         connection.sendRpcRequest(call);                 // send the rpc request
       } catch (RejectedExecutionException e) {
@@ -1518,7 +1542,7 @@ public class Client implements AutoCloseable {
         ioe.initCause(ie);
         throw ioe;
       }
-    } catch(Exception e) {
+    } catch (Exception e) {
       if (isAsynchronousMode()) {
         releaseAsyncCall();
       }
