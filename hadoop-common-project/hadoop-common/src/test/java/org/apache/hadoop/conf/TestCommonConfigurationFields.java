@@ -250,6 +250,6 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("io.seqfile.local.dir");
 
     xmlPropsToSkipCompare.add("hadoop.http.sni.host.check.enabled");
-    xmlPropsToSkipCompare.add("fs.$SCHEMA.impl.disable.cache");
+    xmlPropsToSkipCompare.add("fs.$SCHEME.impl.disable.cache");
   }
 }
