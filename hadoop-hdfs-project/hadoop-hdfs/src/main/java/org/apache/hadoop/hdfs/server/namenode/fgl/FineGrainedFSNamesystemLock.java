@@ -166,15 +166,8 @@ public class FineGrainedFSNamesystemLock implements FSNLockManager {
   @Override
   public boolean hasWriteLock(RwLockMode lockMode) {
     if (lockMode.equals(RwLockMode.GLOBAL)) {
-      if (this.fsLock.isWriteLockedByCurrentThread()) {
-        // The bm writeLock should be held by the current thread.
-        assert this.bmLock.isWriteLockedByCurrentThread();
-        return true;
-      } else {
-        // The bm writeLock should not be held by the current thread.
-        assert !this.bmLock.isWriteLockedByCurrentThread();
-        return false;
-      }
+      return this.fsLock.isWriteLockedByCurrentThread()
+          && this.bmLock.isWriteLockedByCurrentThread();
     } else if (lockMode.equals(RwLockMode.FS)) {
       return this.fsLock.isWriteLockedByCurrentThread();
     } else if (lockMode.equals(RwLockMode.BM)) {
@@ -186,17 +179,8 @@ public class FineGrainedFSNamesystemLock implements FSNLockManager {
   @Override
   public boolean hasReadLock(RwLockMode lockMode) {
     if (lockMode.equals(RwLockMode.GLOBAL)) {
-      if (hasWriteLock(RwLockMode.GLOBAL)) {
-        return true;
-      } else if (this.fsLock.getReadHoldCount() > 0) {
-        // The bm readLock should be held by the current thread.
-        assert this.bmLock.getReadHoldCount() > 0;
-        return true;
-      } else {
-        // The bm readLock should not be held by the current thread.
-        assert this.bmLock.getReadHoldCount() <= 0;
-        return false;
-      }
+      return hasWriteLock(RwLockMode.GLOBAL) ||
+          (this.fsLock.getReadHoldCount() > 0 && this.bmLock.getReadHoldCount() > 0);
     } else if (lockMode.equals(RwLockMode.FS)) {
       return this.fsLock.getReadHoldCount() > 0 || this.fsLock.isWriteLockedByCurrentThread();
     } else if (lockMode.equals(RwLockMode.BM)) {
@@ -205,11 +189,11 @@ public class FineGrainedFSNamesystemLock implements FSNLockManager {
     return false;
   }
 
-  @Override
   /**
    * This method is only used for ComputeDirectoryContentSummary.
    * For the GLOBAL mode, just return the FSLock's ReadHoldCount.
    */
+  @Override
   public int getReadHoldCount(RwLockMode lockMode) {
     if (lockMode.equals(RwLockMode.GLOBAL)) {
       return this.fsLock.getReadHoldCount();
