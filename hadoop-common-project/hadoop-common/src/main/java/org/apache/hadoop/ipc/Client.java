@@ -1472,6 +1472,7 @@ public class Client implements AutoCloseable {
 
   private void checkAsyncCall(ConnectionId remoteId) throws IOException {
     if (isAsynchronousMode()) {
+      asyncCallCounter.incrementAndGet();
       Semaphore asyncPermits = asyncCallCounters.computeIfAbsent(remoteId,
           id -> new Semaphore(maxAsyncCalls));
       try {
