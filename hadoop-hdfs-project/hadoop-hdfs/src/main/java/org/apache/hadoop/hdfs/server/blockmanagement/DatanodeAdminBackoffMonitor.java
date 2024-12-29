@@ -761,20 +761,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
     boolean isMaintenance = datanode.isEnteringMaintenance();
 
     if (scheduleReconStruction) {
-      boolean neededReconstruction = isDecommission ?
-          blockManager.isNeededReconstruction(block, num) :
-          blockManager.isNeededReconstructionForMaintenance(block, num);
-      if (neededReconstruction) {
-        if (!blockManager.neededReconstruction.contains(block) &&
-            blockManager.pendingReconstruction.getNumReplicas(block) == 0 &&
-            blockManager.isPopulatingReplQueues()) {
-          // Process these blocks only when active NN is out of safe mode.
-          blockManager.neededReconstruction.add(block,
-              liveReplicas, num.readOnlyReplicas(),
-              num.outOfServiceReplicas(),
-              blockManager.getExpectedRedundancyNum(block));
-        }
-      }
+      addReconstructionBlockIfNeeded(isDecommission, block, num, liveReplicas);
     }
 
     if (suspectBlocks != null) {

@@ -464,20 +464,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
       // if not already pending.
       boolean isDecommission = datanode.isDecommissionInProgress();
       boolean isMaintenance = datanode.isEnteringMaintenance();
-      boolean neededReconstruction = isDecommission ?
-          blockManager.isNeededReconstruction(block, num) :
-          blockManager.isNeededReconstructionForMaintenance(block, num);
-      if (neededReconstruction) {
-        if (!blockManager.neededReconstruction.contains(block) &&
-            blockManager.pendingReconstruction.getNumReplicas(block) == 0 &&
-            blockManager.isPopulatingReplQueues()) {
-          // Process these blocks only when active NN is out of safe mode.
-          blockManager.neededReconstruction.add(block,
-              liveReplicas, num.readOnlyReplicas(),
-              num.outOfServiceReplicas(),
-              blockManager.getExpectedRedundancyNum(block));
-        }
-      }
+      addReconstructionBlockIfNeeded(isDecommission, block, num, liveReplicas);
 
       // Even if the block is without sufficient redundancy,
       // it might not block decommission/maintenance if it
