@@ -204,6 +204,7 @@ public class Client implements AutoCloseable {
   private final byte[] clientId;
   private final int maxAsyncCalls;
   private final AtomicInteger asyncCallCounter = new AtomicInteger(0);
+  private final int asyncCalllPermitsTimeoutMs;
   private final ConcurrentMap<ConnectionId, Semaphore> asyncCallCounters =
       new ConcurrentHashMap<>();
 
@@ -1382,6 +1383,9 @@ public class Client implements AutoCloseable {
     this.maxAsyncCalls = conf.getInt(
         CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY,
         CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_DEFAULT);
+    this.asyncCalllPermitsTimeoutMs = conf.getInt(
+        CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_PERMITS_ACQUIRE_TIMEOUT_MS_KEY,
+        CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_PERMITS_ACQUIRE_TIMEOUT_MS_DEFAULT);
   }
 
   /**
@@ -1479,8 +1483,8 @@ public class Client implements AutoCloseable {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Acquiring lock for connectionId {}", remoteId);
         }
-        // TODO timeout param configurable.
-        boolean isAcquired = asyncPermits.tryAcquire(1000, TimeUnit.MILLISECONDS);
+        boolean isAcquired = asyncPermits.tryAcquire(asyncCalllPermitsTimeoutMs,
+            TimeUnit.MILLISECONDS);
         if (!isAcquired) {
           String errMsg = String.format(
               "Exceeded limit of max asynchronous calls: %d, " +
