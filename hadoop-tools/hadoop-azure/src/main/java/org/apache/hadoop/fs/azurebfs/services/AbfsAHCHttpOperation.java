@@ -58,6 +58,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MET
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_POST;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
 import static org.apache.http.entity.ContentType.TEXT_PLAIN;
 
 /**
@@ -95,8 +96,9 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
       final List<AbfsHttpHeader> requestHeaders,
       final Duration connectionTimeout,
       final Duration readTimeout,
-      final AbfsApacheHttpClient abfsApacheHttpClient) throws IOException {
-    super(LOG, url, method, requestHeaders, connectionTimeout, readTimeout);
+      final AbfsApacheHttpClient abfsApacheHttpClient,
+      final AbfsClient abfsClient) throws IOException {
+    super(LOG, url, method, requestHeaders, connectionTimeout, readTimeout, abfsClient);
     this.isPayloadRequest = HTTP_METHOD_PUT.equals(method)
         || HTTP_METHOD_PATCH.equals(method)
         || HTTP_METHOD_POST.equals(method);
@@ -312,6 +314,20 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
 
   /**{@inheritDoc}*/
   @Override
+  public Map<String, List<String>> getResponseHeaders() {
+    Map<String, List<String>> headers = new HashMap<>();
+    if (httpResponse == null) {
+      return headers;
+    }
+    for (Header header : httpResponse.getAllHeaders()) {
+      headers.computeIfAbsent(header.getName(), k -> new ArrayList<>())
+          .add(header.getValue());
+    }
+    return headers;
+  }
+
+  /**{@inheritDoc}*/
+  @Override
   protected InputStream getContentInputStream()
       throws IOException {
     if (httpResponse == null || httpResponse.getEntity() == null) {
@@ -370,7 +386,12 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
    * Sets the header on the request.
    */
   private void prepareRequest() {
+    final boolean isEntityBasedRequest
+        = httpRequestBase instanceof HttpEntityEnclosingRequestBase;
     for (AbfsHttpHeader header : getRequestHeaders()) {
+      if (CONTENT_LENGTH.equals(header.getName()) && isEntityBasedRequest) {
+        continue;
+      }
       httpRequestBase.setHeader(header.getName(), header.getValue());
     }
   }
@@ -380,7 +401,12 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   public String getRequestProperty(String name) {
     for (AbfsHttpHeader header : getRequestHeaders()) {
       if (header.getName().equals(name)) {
-        return header.getValue();
+        String val = header.getValue();
+        val = val == null ? EMPTY_STRING : val;
+        if (EMPTY_STRING.equals(val)) {
+          continue;
+        }
+        return val;
       }
     }
     return EMPTY_STRING;

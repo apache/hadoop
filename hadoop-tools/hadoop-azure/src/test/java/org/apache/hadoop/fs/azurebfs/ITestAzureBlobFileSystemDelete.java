@@ -35,18 +35,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsPerfTracker;
-import org.apache.hadoop.fs.azurebfs.utils.TestMockHelpers;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.ReflectionUtils;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
@@ -250,9 +251,9 @@ public class ITestAzureBlobFileSystemDelete extends
         fs.getAbfsStore().getClient(),
         this.getConfiguration());
     AzureBlobFileSystemStore mockStore = mock(AzureBlobFileSystemStore.class);
-    mockStore = TestMockHelpers.setClassField(AzureBlobFileSystemStore.class, mockStore,
+    ReflectionUtils.setFinalField(AzureBlobFileSystemStore.class, mockStore,
         "client", mockClient);
-    mockStore = TestMockHelpers.setClassField(AzureBlobFileSystemStore.class,
+    ReflectionUtils.setFinalField(AzureBlobFileSystemStore.class,
         mockStore,
         "abfsPerfTracker",
         TestAbfsPerfTracker.getAPerfTrackerInstance(this.getConfiguration()));
@@ -261,6 +262,9 @@ public class ITestAzureBlobFileSystemDelete extends
 
     // Case 2: Mimic retried case
     // Idempotency check on Delete always returns success
+    StorageErrorResponseSchema storageErrorResponse = new StorageErrorResponseSchema(
+        "NotFound", "NotFound", "NotFound");
+    Mockito.doReturn(storageErrorResponse).when(mockClient).processStorageErrorResponse(any());
     AbfsRestOperation idempotencyRetOp = Mockito.spy(ITestAbfsClient.getRestOp(
         DeletePath, mockClient, HTTP_METHOD_DELETE,
         ITestAbfsClient.getTestUrl(mockClient, "/NonExistingPath"),

@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
@@ -47,6 +48,7 @@ import java.util.Map;
 import org.apache.hadoop.fs.azurebfs.AbfsBackoffMetrics;
 import org.apache.http.impl.execchain.RequestAbortedException;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.PUT_BLOCK_LIST;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
 import static org.apache.hadoop.util.Time.now;
 
@@ -128,6 +130,25 @@ public class AbfsRestOperation {
   public void hardSetResult(int httpStatus) {
     result = AbfsHttpOperation.getAbfsHttpOperationWithFixedResult(this.url,
         this.method, httpStatus);
+  }
+
+  /**
+   * For setting dummy result of getFileStatus for implicit paths.
+   * @param httpStatus http status code to be set.
+   */
+  public void hardSetGetFileStatusResult(int httpStatus) {
+    result = new AbfsHttpOperation.AbfsHttpOperationWithFixedResultForGetFileStatus(this.url,
+        this.method, httpStatus);
+  }
+
+  /**
+   * For setting dummy result of listPathStatus for file paths.
+   * @param httpStatus http status code to be set.
+   * @param listResultSchema list result schema to be set.
+   */
+  public void hardSetGetListStatusResult(int httpStatus, final ListResultSchema listResultSchema) {
+    result = new AbfsHttpOperation.AbfsHttpOperationWithFixedResultForGetListStatus(this.url,
+        this.method, httpStatus, listResultSchema);
   }
 
   public URL getUrl() {
@@ -217,7 +238,7 @@ public class AbfsRestOperation {
    * @param requestHeaders The HTTP request headers.
    * @param buffer For uploads, this is the request entity body.  For downloads,
    * this will hold the response entity body.
-   * @param bufferOffset An offset into the buffer where the data beings.
+   * @param bufferOffset An offset into the buffer where the data begins.
    * @param bufferLength The length of the data in the buffer.
    * @param sasToken A sasToken for optional re-use by AbfsInputStream/AbfsOutputStream.
    */
@@ -387,7 +408,9 @@ public class AbfsRestOperation {
       if (hasRequestBody) {
         httpOperation.sendPayload(buffer, bufferOffset, bufferLength);
         incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
-        incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
+        if (!(operationType.name().equals(PUT_BLOCK_LIST))) {
+          incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
+        }
       }
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
       if (!isThrottledRequest && httpOperation.getStatusCode()
@@ -573,7 +596,7 @@ public class AbfsRestOperation {
   AbfsJdkHttpOperation createAbfsHttpOperation() throws IOException {
     return new AbfsJdkHttpOperation(url, method, requestHeaders,
         Duration.ofMillis(client.getAbfsConfiguration().getHttpConnectionTimeout()),
-        Duration.ofMillis(client.getAbfsConfiguration().getHttpReadTimeout()));
+        Duration.ofMillis(client.getAbfsConfiguration().getHttpReadTimeout()), client);
   }
 
   @VisibleForTesting
@@ -581,7 +604,7 @@ public class AbfsRestOperation {
     return new AbfsAHCHttpOperation(url, method, requestHeaders,
         Duration.ofMillis(client.getAbfsConfiguration().getHttpConnectionTimeout()),
         Duration.ofMillis(client.getAbfsConfiguration().getHttpReadTimeout()),
-        client.getAbfsApacheHttpClient());
+        client.getAbfsApacheHttpClient(), client);
   }
 
   /**

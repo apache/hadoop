@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -133,6 +134,57 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
 
     rm1.stop();
     rm2.stop();
+  }
+
+  @Test(timeout = 30000)
+  public void testAsyncScheduleThreadExit() throws Exception {
+    // start two RMs, and transit rm1 to active, rm2 to standby
+    startRMs();
+    // register NM
+    rm1.registerNode("192.1.1.1:1234", 8192, 8);
+    rm1.drainEvents();
+
+    // make sure async-scheduling thread is correct at beginning
+    checkAsyncSchedulerThreads(Thread.currentThread());
+
+    // test async-scheduling thread exit
+    try{
+      // set resource calculator to be null to simulate
+      // NPE in async-scheduling thread
+      CapacityScheduler cs =
+          (CapacityScheduler) rm1.getRMContext().getScheduler();
+      cs.setResourceCalculator(null);
+
+      // wait for rm1 to be transitioned to standby
+      GenericTestUtils.waitFor(() -> rm1.getRMContext().getHAServiceState()
+          == HAServiceProtocol.HAServiceState.STANDBY, 100, 5000);
+
+      // failover rm2 to rm1
+      HAServiceProtocol.StateChangeRequestInfo requestInfo =
+          new HAServiceProtocol.StateChangeRequestInfo(
+              HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+      rm2.adminService.transitionToStandby(requestInfo);
+      GenericTestUtils.waitFor(() -> {
+        try {
+          // this call may fail when rm1 is still initializing
+          // in StandByTransitionRunnable thread
+          rm1.adminService.transitionToActive(requestInfo);
+          return true;
+        } catch (Exception e) {
+          return false;
+        }
+      }, 100, 3000);
+
+      // wait for rm1 to be transitioned to active again
+      GenericTestUtils.waitFor(() -> rm1.getRMContext().getHAServiceState()
+          == HAServiceProtocol.HAServiceState.ACTIVE, 100, 5000);
+
+      // make sure async-scheduling thread is correct after failover
+      checkAsyncSchedulerThreads(Thread.currentThread());
+    } finally {
+      rm1.stop();
+      rm2.stop();
+    }
   }
 
   private RMApp submitAppAndCheckLaunched(MockRM rm) throws Exception {

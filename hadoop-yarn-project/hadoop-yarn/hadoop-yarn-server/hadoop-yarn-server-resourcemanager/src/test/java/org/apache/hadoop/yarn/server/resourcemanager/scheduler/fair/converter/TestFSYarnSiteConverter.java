@@ -60,7 +60,7 @@ public class TestFSYarnSiteConverter {
         FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_SLEEP_MS, 666);
 
     converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
-        false, false, null);
+        true, false, null);
 
     assertTrue("Cont. scheduling", yarnConvertedConfig.getBoolean(
         CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE, false));
@@ -224,7 +224,7 @@ public class TestFSYarnSiteConverter {
 
     assertFalse("Asynchronous scheduling", yarnConvertedConfig.getBoolean(
             CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE,
-            CapacitySchedulerConfiguration.DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE));
+            false));
   }
 
   @Test

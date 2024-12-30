@@ -46,8 +46,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
@@ -90,6 +88,7 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
@@ -715,7 +714,7 @@ public class TestFileCreation {
    */
   @Test
   public void testFileCreationNamenodeRestart()
-      throws IOException, NoSuchFieldException, IllegalAccessException {
+      throws IOException, ReflectiveOperationException {
     Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
@@ -812,20 +811,13 @@ public class TestFileCreation {
 
       // instruct the dfsclient to use a new filename when it requests
       // new blocks for files that were renamed.
-      DFSOutputStream dfstream = (DFSOutputStream)
-                                                 (stm.getWrappedStream());
+      DFSOutputStream dfstream = (DFSOutputStream) (stm.getWrappedStream());
 
-      Field f = DFSOutputStream.class.getDeclaredField("src");
-      Field modifiersField = Field.class.getDeclaredField("modifiers");
-      modifiersField.setAccessible(true);
-      modifiersField.setInt(f, f.getModifiers() & ~Modifier.FINAL);
-      f.setAccessible(true);
-
-      f.set(dfstream, file1.toString());
+      ReflectionUtils.setFinalField(DFSOutputStream.class, dfstream, "src", file1.toString());
       dfstream = (DFSOutputStream) (stm3.getWrappedStream());
-      f.set(dfstream, file3new.toString());
+      ReflectionUtils.setFinalField(DFSOutputStream.class, dfstream, "src", file3new.toString());
       dfstream = (DFSOutputStream) (stm4.getWrappedStream());
-      f.set(dfstream, file4new.toString());
+      ReflectionUtils.setFinalField(DFSOutputStream.class, dfstream, "src", file4new.toString());
 
       // write 1 byte to file.  This should succeed because the 
       // namenode should have persisted leases.

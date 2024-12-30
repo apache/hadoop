@@ -108,7 +108,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
           directory.toString(), false, getListMaxResults(), null,
           getTestTracingContext(getFileSystem(), true));
 
-      List<ListResultEntrySchema> list = op.getResult().getListResultSchema().paths();
+      List<? extends ListResultEntrySchema> list = op.getResult().getListResultSchema().paths();
       String continuationToken = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
 
       if (continuationToken == null) {
@@ -143,7 +143,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         directory.toString(), false, getListMaxResults(), null,
         getTestTracingContext(getFileSystem(), true));
 
-    List<ListResultEntrySchema> list = op.getResult().getListResultSchema().paths();
+    List<? extends ListResultEntrySchema> list = op.getResult().getListResultSchema().paths();
     String continuationToken = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
 
     if (continuationToken == null) {
@@ -175,7 +175,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     }
   }
 
-  private List<ListResultEntrySchema> listPath(String directory)
+  private List<? extends ListResultEntrySchema> listPath(String directory)
       throws IOException {
     return getFileSystem().getAbfsClient()
         .listPath(directory, false, getListMaxResults(), null,

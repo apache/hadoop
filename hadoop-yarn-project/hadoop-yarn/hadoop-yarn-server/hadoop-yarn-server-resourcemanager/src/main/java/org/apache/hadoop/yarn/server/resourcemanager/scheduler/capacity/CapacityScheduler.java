@@ -36,6 +36,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.CSMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory;
@@ -3543,7 +3544,10 @@ public class CapacityScheduler extends
 
         this.asyncSchedulerThreads = new ArrayList<>();
         for (int i = 0; i < maxAsyncSchedulingThreads; i++) {
-          asyncSchedulerThreads.add(new AsyncScheduleThread(cs));
+          AsyncScheduleThread ast = new AsyncScheduleThread(cs);
+          ast.setUncaughtExceptionHandler(
+              new RMCriticalThreadUncaughtExceptionHandler(cs.rmContext));
+          asyncSchedulerThreads.add(ast);
         }
         this.resourceCommitterService = new ResourceCommitterService(cs);
       }

@@ -66,7 +66,7 @@ public class TestWeightToPercentageConverter
     FSQueue root = createFSQueues();
     converter.convertWeightsForChildQueues(root, csConfig);
 
-    assertEquals("Converted items", 19,
+    assertEquals("Converted items", 20,
         csConfig.getPropsWithPrefix(PREFIX).size());
   }
 
@@ -76,7 +76,7 @@ public class TestWeightToPercentageConverter
 
     converter.convertWeightsForChildQueues(root, csConfig);
 
-    assertEquals("Number of properties", 22,
+    assertEquals("Number of properties", 23,
         csConfig.getPropsWithPrefix(PREFIX).size());
     // this is no fixing - it's the result of BigDecimal rounding
     assertEquals("root.a capacity", 16.667f,
@@ -95,7 +95,7 @@ public class TestWeightToPercentageConverter
 
     assertFalse("Capacity zerosum allowed",
         csConfig.getAllowZeroCapacitySum(ROOT));
-    assertEquals("Number of properties", 22,
+    assertEquals("Number of properties", 23,
         csConfig.getPropsWithPrefix(PREFIX).size());
     assertEquals("root.a capacity", 0.000f,
         csConfig.getNonLabeledQueueCapacity(ROOT_A), 0.0f);
@@ -111,7 +111,7 @@ public class TestWeightToPercentageConverter
 
     converter.convertWeightsForChildQueues(root, csConfig);
 
-    assertEquals("Number of properties", 23,
+    assertEquals("Number of properties", 24,
         csConfig.getPropsWithPrefix(PREFIX).size());
     assertTrue("Capacity zerosum allowed",
         csConfig.getAllowZeroCapacitySum(ROOT));
@@ -129,7 +129,7 @@ public class TestWeightToPercentageConverter
 
     converter.convertWeightsForChildQueues(root, csConfig);
 
-    assertEquals("Number of properties", 22,
+    assertEquals("Number of properties", 23,
         csConfig.getPropsWithPrefix(PREFIX).size());
     assertEquals("root.a capacity", 33.334f,
         csConfig.getNonLabeledQueueCapacity(ROOT_A), 0.0f);
