@@ -29,13 +29,16 @@ public interface RwLock {
    */
   void readLock(RwLockMode lockMode);
 
-  /** Acquire read lock, unless interrupted while waiting.  */
+  /** Acquire read lock, unless interrupted while waiting.
+   * @throws InterruptedException if the thread is interrupted
+   */
   default void readLockInterruptibly() throws InterruptedException {
     readLockInterruptibly(RwLockMode.GLOBAL);
   }
 
   /** Acquire read lock, unless interrupted while waiting.
    * @param lockMode The lock type for acquiring a read lock
+   * @throws InterruptedException if the thread is interrupted
    */
   void readLockInterruptibly(RwLockMode lockMode) throws InterruptedException;
 
@@ -82,13 +85,16 @@ public interface RwLock {
    */
   void writeLock(RwLockMode lockMode);
   
-  /** Acquire write lock, unless interrupted while waiting.  */
+  /** Acquire write lock, unless interrupted while waiting.
+   * @throws InterruptedException if the thread is interrupted
+   */
   default void writeLockInterruptibly() throws InterruptedException {
     writeLockInterruptibly(RwLockMode.GLOBAL);
   }
 
   /** Acquire write lock, unless interrupted while waiting.
    * @param lockMode The lock type for acquiring a write lock
+   * @throws InterruptedException if the thread is interrupted
    */
   void writeLockInterruptibly(RwLockMode lockMode) throws InterruptedException;
 
