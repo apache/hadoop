@@ -4469,11 +4469,11 @@ The switch to turn S3A auditing on or off.
   </property>
 
   <property>
-    <name>fs.$SCHEME.impl.disable.cache</name>
+    <name>fs.hdfs.impl.disable.cache</name>
     <value>false</value>
-    <description>Whether create a new FileSystem instance for scheme specified by $SCHEME or not.
-      If false and there is a cached FileSystem instance matching the same scheme of the URI,
-      it will be returned. Otherwise,a new FileSystem instance will be created,
+    <description>Whether cache hdfs filesystem instances or not.
+      If false, there will be a cached hdfs fileSystem instance and return it to the caller,
+      Otherwise, a new hdfs fileSystem instance will be created,
       initialized with the configuration and URI, cached and returned to the caller.
       </description>
   </property>

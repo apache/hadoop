@@ -227,6 +227,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("hadoop.common.configuration.version");
     // - org.apache.hadoop.fs.FileSystem
     xmlPropsToSkipCompare.add("fs.har.impl.disable.cache");
+    xmlPropsToSkipCompare.add("fs.hdfs.impl.disable.cache");
 
     // - package org.apache.hadoop.tracing.TraceUtils ?
     xmlPropsToSkipCompare.add("hadoop.htrace.span.receiver.classes");
@@ -250,6 +251,5 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("io.seqfile.local.dir");
 
     xmlPropsToSkipCompare.add("hadoop.http.sni.host.check.enabled");
-    xmlPropsToSkipCompare.add("fs.$SCHEME.impl.disable.cache");
   }
 }
