@@ -294,7 +294,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    */
   @SuppressWarnings("checkstyle:MethodLength")
   public RouterRpcServer(Configuration conf, Router router,
-                         ActiveNamenodeResolver nnResolver, FileSubclusterResolver fileResolver)
+      ActiveNamenodeResolver nnResolver, FileSubclusterResolver fileResolver)
           throws IOException {
     super(RouterRpcServer.class.getName());
 
