@@ -87,6 +87,7 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.eclipse.jetty.util.ajax.JSON;
@@ -725,6 +726,12 @@ public class RouterRpcClient {
       return null;
     } catch (InvocationTargetException e) {
       Throwable cause = e.getCause();
+      if (cause instanceof ServiceException) {
+        Throwable innerEx = cause.getCause();
+        if (innerEx!= null && innerEx instanceof IOException) {
+          cause = innerEx;
+        }
+      }
       if (cause instanceof IOException) {
         IOException ioe = (IOException) cause;
 
