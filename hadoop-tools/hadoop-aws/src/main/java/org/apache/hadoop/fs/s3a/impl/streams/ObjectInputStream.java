@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.model;
+package org.apache.hadoop.fs.s3a.impl.streams;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
@@ -38,10 +38,10 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
-import org.apache.hadoop.util.Preconditions;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
@@ -58,7 +58,7 @@ public abstract class ObjectInputStream extends FSInputStream
   /**
    * IOStatistics report.
    */
-  protected final IOStatistics ioStatistics;
+  private final IOStatistics ioStatistics;
 
   /**
    * Read-specific operation context structure.
@@ -129,11 +129,11 @@ public abstract class ObjectInputStream extends FSInputStream
       ObjectReadParameters parameters) {
 
     objectAttributes = parameters.getObjectAttributes();
-    Preconditions.checkArgument(isNotEmpty(objectAttributes.getBucket()),
+    checkArgument(isNotEmpty(objectAttributes.getBucket()),
         "No Bucket");
-    Preconditions.checkArgument(isNotEmpty(objectAttributes.getKey()), "No Key");
+    checkArgument(isNotEmpty(objectAttributes.getKey()), "No Key");
     long l = objectAttributes.getLen();
-    Preconditions.checkArgument(l >= 0, "Negative content length");
+    checkArgument(l >= 0, "Negative content length");
     this.context = parameters.getContext();
     this.contentLength = l;
 
@@ -152,7 +152,7 @@ public abstract class ObjectInputStream extends FSInputStream
     this.leakReporter = new LeakReporter(
         "Stream not closed while reading " + uri,
         this::isStreamOpen,
-        () -> abortInFinalizer());
+        this::abortInFinalizer);
   }
 
   /**
@@ -257,63 +257,64 @@ public abstract class ObjectInputStream extends FSInputStream
     return ioStatistics;
   }
 
+  /**
+   * Declare the base capabilities implemented by this class and so by
+   * all subclasses.
+   * <p>
+   * Subclasses MUST override this if they add more capabilities,
+   * or actually remove any of these.
+   * @param capability string to query the stream support for.
+   * @return true if all implementations are known to have the specific
+   * capability.
+   */
   @Override
   public boolean hasCapability(String capability) {
     switch (toLowerCase(capability)) {
     case StreamCapabilities.IOSTATISTICS:
-    case StreamCapabilities.IOSTATISTICS_CONTEXT:
     case StreamStatisticNames.STREAM_LEAKS:
-    case StreamCapabilities.READAHEAD:
-    case StreamCapabilities.UNBUFFER:
-    case StreamCapabilities.VECTOREDIO:
       return true;
     default:
       return false;
     }
   }
 
-
-  protected S3AReadOpContext getContext() {
+  protected final S3AReadOpContext getContext() {
     return context;
   }
 
-  protected ObjectInputStreamCallbacks getCallbacks() {
+  protected final ObjectInputStreamCallbacks getCallbacks() {
     return callbacks;
   }
 
-  protected ExecutorService getBoundedThreadPool() {
+  protected final ExecutorService getBoundedThreadPool() {
     return boundedThreadPool;
   }
 
-  protected String getUri() {
+  protected final String getUri() {
     return uri;
   }
 
-  protected String getBucket() {
+  protected final String getBucket() {
     return bucket;
   }
 
-  protected String getKey() {
+  protected final String getKey() {
     return key;
   }
 
-  protected String getPathStr() {
+  protected final String getPathStr() {
     return pathStr;
   }
 
-  protected long getContentLength() {
+  protected final long getContentLength() {
     return contentLength;
   }
 
-  protected S3AInputStreamStatistics getStreamStatistics() {
-    return streamStatistics;
-  }
-
-  protected IOStatisticsAggregator getThreadIOStatistics() {
+  protected final IOStatisticsAggregator getThreadIOStatistics() {
     return threadIOStatistics;
   }
 
-  protected S3ObjectAttributes getObjectAttributes() {
+  protected final S3ObjectAttributes getObjectAttributes() {
     return objectAttributes;
   }
 }

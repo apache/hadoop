@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.impl.SDKStreamDrainer;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
-import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStreamCallbacks;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 
 

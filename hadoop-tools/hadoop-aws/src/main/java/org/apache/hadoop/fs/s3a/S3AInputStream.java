@@ -39,9 +39,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.impl.LeakReporter;
-import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStream;
-import org.apache.hadoop.fs.s3a.impl.model.ObjectReadParameters;
-import org.apache.hadoop.fs.statistics.StreamStatisticNames;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStream;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -191,7 +190,7 @@ public class S3AInputStream extends ObjectInputStream implements CanSetReadahead
     S3AReadOpContext context = getContext();
     this.changeTracker = new ChangeTracker(getUri(),
         context.getChangeDetectionPolicy(),
-        getStreamStatistics().getChangeTrackerStatistics(),
+        getS3AStreamStatistics().getChangeTrackerStatistics(),
         getObjectAttributes());
     setReadahead(context.getReadahead());
     this.asyncDrainThreshold = context.getAsyncDrainThreshold();
@@ -873,7 +872,8 @@ public class S3AInputStream extends ObjectInputStream implements CanSetReadahead
 
     if (isOrderedDisjoint(sortedRanges, 1, minSeekForVectorReads())) {
       LOG.debug("Not merging the ranges as they are disjoint");
-      getS3AStreamStatistics().readVectoredOperationStarted(sortedRanges.size(), sortedRanges.size());
+      getS3AStreamStatistics().readVectoredOperationStarted(sortedRanges.size(),
+          sortedRanges.size());
       for (FileRange range: sortedRanges) {
         ByteBuffer buffer = allocate.apply(range.getLength());
         getBoundedThreadPool().submit(() -> readSingleRange(range, buffer));
@@ -883,7 +883,8 @@ public class S3AInputStream extends ObjectInputStream implements CanSetReadahead
       List<CombinedFileRange> combinedFileRanges = mergeSortedRanges(sortedRanges,
               1, minSeekForVectorReads(),
               maxReadSizeForVectorReads());
-      getS3AStreamStatistics().readVectoredOperationStarted(sortedRanges.size(), combinedFileRanges.size());
+      getS3AStreamStatistics().readVectoredOperationStarted(sortedRanges.size(),
+          combinedFileRanges.size());
       LOG.debug("Number of original ranges size {} , Number of combined ranges {} ",
               ranges.size(), combinedFileRanges.size());
       for (CombinedFileRange combinedFileRange: combinedFileRanges) {
@@ -1289,9 +1290,9 @@ public class S3AInputStream extends ObjectInputStream implements CanSetReadahead
   @Override
   public boolean hasCapability(String capability) {
     switch (toLowerCase(capability)) {
-    case StreamCapabilities.IOSTATISTICS:
     case StreamCapabilities.IOSTATISTICS_CONTEXT:
-    case StreamStatisticNames.STREAM_LEAKS:
+    case StreamCapabilities.READAHEAD:
+    case StreamCapabilities.UNBUFFER:
       return true;
     default:
       return super.hasCapability(capability);

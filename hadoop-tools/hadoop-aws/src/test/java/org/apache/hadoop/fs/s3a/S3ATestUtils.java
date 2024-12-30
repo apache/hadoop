@@ -104,6 +104,8 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.impl.FlagSet.createFlagSet;
+import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.DEFAULT_STREAM_TYPE;
+import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Prefetch;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
@@ -1780,9 +1782,36 @@ public final class S3ATestUtils {
   /**
    * Disable Prefetching streams from S3AFileSystem in tests.
    * @param conf Configuration to remove the prefetch property from.
+   * @return patched config
    */
-  public static void disablePrefetching(Configuration conf) {
-    removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+  public static Configuration disablePrefetching(Configuration conf) {
+    removeBaseAndBucketOverrides(conf,
+        PREFETCH_ENABLED_KEY,
+        INPUT_STREAM_TYPE);
+    return conf;
+  }
+
+
+  /**
+   *Enable Prefetching streams from S3AFileSystem in tests.
+   * @param conf Configuration to update
+   * @return patched config
+   */
+  public static Configuration enablePrefetching(Configuration conf) {
+    removeBaseAndBucketOverrides(conf,
+        PREFETCH_ENABLED_KEY,
+        INPUT_STREAM_TYPE);
+    conf.setEnum(INPUT_STREAM_TYPE, Prefetch);
+    return conf;
+  }
+
+  /**
+   * Probe the configuration for supporting prefetching.
+   * @return true if the config has prefetching enabled.
+   */
+  public static boolean isPrefetchingEnabled(Configuration conf) {
+    return conf.getBoolean(PREFETCH_ENABLED_KEY, PREFETCH_ENABLED_DEFAULT)
+        || conf.getEnum(INPUT_STREAM_TYPE, DEFAULT_STREAM_TYPE) == Prefetch;
   }
 
   /**

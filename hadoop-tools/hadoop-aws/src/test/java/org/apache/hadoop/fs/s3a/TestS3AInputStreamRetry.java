@@ -40,8 +40,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopSpan;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
-import org.apache.hadoop.fs.s3a.impl.model.ObjectReadParameters;
-import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStreamCallbacks;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.http.NoHttpResponseException;
 
@@ -193,7 +193,8 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
         .withCallbacks(streamCallback)
         .withObjectAttributes(s3ObjectAttributes)
         .withContext(s3AReadOpContext)
-        .withStreamStatistics( s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics())
+        .withStreamStatistics(
+            s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics())
         .withBoundedThreadPool(null);
 
     return new S3AInputStream(parameters);

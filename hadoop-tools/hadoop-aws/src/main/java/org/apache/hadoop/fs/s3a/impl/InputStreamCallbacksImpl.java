@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
@@ -11,38 +29,56 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import org.apache.hadoop.fs.s3a.S3AStore;
-import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStreamCallbacks;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
-import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.util.LambdaUtils.eval;
 
+/**
+ * Callbacks for object stream operations.
+ */
 public class InputStreamCallbacksImpl implements ObjectInputStreamCallbacks {
+
+  private static final Logger LOG = LoggerFactory.getLogger(InputStreamCallbacksImpl.class);
 
   /**
    * Audit span to activate before each call.
    */
   private final AuditSpan auditSpan;
 
+  /**
+   * store operations.
+   */
   private final S3AStore store;
 
-  private final S3AFileSystemOperations fsHandler;
+  /**
+   * crypto FS operations.
+   */
+  private final S3AFileSystemOperations fsOperations;
 
-  private static final Logger LOG = LoggerFactory.getLogger(InputStreamCallbacksImpl.class);
-
-  private final ThreadPoolExecutor unboundedThreadPool;
+  /**
+   * A (restricted) thread pool for asynchronous operations.
+   */
+  private final ThreadPoolExecutor threadPool;
 
   /**
    * Create.
    * @param auditSpan Audit span to activate before each call.
+   * @param store store operations
+   * @param fsOperations crypto FS operations.
+   * @param threadPool thread pool for async operations.
    */
-  public InputStreamCallbacksImpl(final AuditSpan auditSpan, final S3AStore store,
-      S3AFileSystemOperations fsHandler, ThreadPoolExecutor unboundedThreadPool) {
+  public InputStreamCallbacksImpl(
+      final AuditSpan auditSpan,
+      final S3AStore store,
+      final S3AFileSystemOperations fsOperations,
+      final ThreadPoolExecutor threadPool) {
     this.auditSpan = requireNonNull(auditSpan);
     this.store = requireNonNull(store);
-    this.fsHandler = requireNonNull(fsHandler);
-    this.unboundedThreadPool = requireNonNull(unboundedThreadPool);
+    this.fsOperations = requireNonNull(fsOperations);
+    this.threadPool = requireNonNull(threadPool);
   }
 
   /**
@@ -66,15 +102,15 @@ public class InputStreamCallbacksImpl implements ObjectInputStreamCallbacks {
       IOException {
     // active the audit span used for the operation
     try (AuditSpan span = auditSpan.activate()) {
-      return fsHandler.getObject(store, request, store.getRequestFactory());
+      return fsOperations.getObject(store, request, store.getRequestFactory());
     }
   }
 
   @Override
   public <T> CompletableFuture<T> submit(final CallableRaisingIOE<T> operation) {
     CompletableFuture<T> result = new CompletableFuture<>();
-    unboundedThreadPool.submit(() ->
-        LambdaUtils.eval(result, () -> {
+    threadPool.submit(() ->
+        eval(result, () -> {
           LOG.debug("Starting submitted operation in {}", auditSpan.getSpanId());
           try (AuditSpan span = auditSpan.activate()) {
             return operation.apply();

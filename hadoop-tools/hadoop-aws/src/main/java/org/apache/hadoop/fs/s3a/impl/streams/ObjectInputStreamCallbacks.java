@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.model;
+package org.apache.hadoop.fs.s3a.impl.streams;
 
 import java.io.Closeable;
 import java.io.IOException;

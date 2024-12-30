@@ -31,9 +31,8 @@ import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
 import static org.apache.hadoop.fs.s3a.Constants.ALLOW_REQUESTER_PAYS;
-import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_DEFAULT;
-import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.isPrefetchingEnabled;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -80,7 +79,7 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
       inputStream.seek(0);
       inputStream.readByte();
 
-      if (conf.getBoolean(PREFETCH_ENABLED_KEY, PREFETCH_ENABLED_DEFAULT)) {
+      if (isPrefetchingEnabled(conf)) {
         // For S3APrefetchingInputStream, verify a call was made
         IOStatisticAssertions.assertThatStatisticCounter(inputStream.getIOStatistics(),
             StreamStatisticNames.STREAM_READ_OPENED).isEqualTo(1);

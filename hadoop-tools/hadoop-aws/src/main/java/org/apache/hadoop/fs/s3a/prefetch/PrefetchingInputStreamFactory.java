@@ -20,23 +20,72 @@ package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStream;
-import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStreamFactory;
-import org.apache.hadoop.fs.s3a.impl.model.ObjectReadParameters;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStream;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
 import org.apache.hadoop.service.AbstractService;
+
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_COUNT_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_COUNT;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
+import static org.apache.hadoop.fs.s3a.S3AUtils.intOption;
+import static org.apache.hadoop.fs.s3a.S3AUtils.longBytesOption;
+import static org.apache.hadoop.util.Preconditions.checkState;
 
 /**
  * Factory for prefetching streams.
+ * <p>
+ * Reads and validates prefetch configuration options during service init.
  */
 public class PrefetchingInputStreamFactory extends AbstractService
     implements ObjectInputStreamFactory {
+
+  /** Size in bytes of a single prefetch block. */
+  private int prefetchBlockSize;
+
+  /** Size of prefetch queue (in number of blocks). */
+  private int prefetchBlockCount;
+
+  /**
+   * Shared prefetch options.
+   */
+  private PrefetchOptions prefetchOptions;
 
   public PrefetchingInputStreamFactory() {
     super("PrefetchingInputStreamFactory");
   }
 
   @Override
+  protected void serviceInit(final Configuration conf) throws Exception {
+    super.serviceInit(conf);
+    long prefetchBlockSizeLong =
+        longBytesOption(conf, PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE, 1);
+    checkState(prefetchBlockSizeLong < Integer.MAX_VALUE,
+        "S3A prefatch block size exceeds int limit");
+    prefetchBlockSize = (int) prefetchBlockSizeLong;
+    prefetchBlockCount =
+        intOption(conf, PREFETCH_BLOCK_COUNT_KEY, PREFETCH_BLOCK_DEFAULT_COUNT, 1);
+
+    prefetchOptions = new PrefetchOptions(
+        prefetchBlockSize,
+        prefetchBlockCount);
+  }
+
+  @Override
   public ObjectInputStream readObject(final ObjectReadParameters parameters) throws IOException {
-    return new S3APrefetchingInputStream(parameters, getConfig());
+    return new S3APrefetchingInputStream(parameters,
+        getConfig(),
+        prefetchOptions);
+  }
+
+  /**
+   * The thread count is calculated from the configuration.
+   * @return a positive thread count.
+   */
+  @Override
+  public ThreadOptions prefetchThreadRequirements() {
+    return new ThreadOptions(prefetchBlockCount, true);
   }
 }

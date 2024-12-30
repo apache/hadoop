@@ -17,14 +17,13 @@
  */
 
 /**
- * This describes the model of S3 for layers above to interact with, and
- * possibly extend.
+ * Input and Output stream support.
  * <p>
- * This intended for internal use, as a way of separating the layers
- * above from how the store is actually interacted with.
+ * A lot of the existing stream work is elsewhere,
+ * this module is where ongoing work should take place.
  */
 
 @InterfaceAudience.Private
-package org.apache.hadoop.fs.s3a.impl.model;
+package org.apache.hadoop.fs.s3a.impl.streams;
 
 import org.apache.hadoop.classification.InterfaceAudience;

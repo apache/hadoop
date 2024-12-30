@@ -58,6 +58,7 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disablePrefetching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getInputStreamStatistics;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getS3AInputStream;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
@@ -99,15 +100,12 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
 
   @Override
   protected Configuration createScaleConfiguration() {
-    Configuration conf = super.createScaleConfiguration();
-    S3ATestUtils.removeBaseAndBucketOverrides(conf,
-        PREFETCH_ENABLED_KEY);
+    Configuration conf = disablePrefetching(super.createScaleConfiguration());
     if (isUsingDefaultExternalDataFile(conf)) {
       S3ATestUtils.removeBaseAndBucketOverrides(
           conf,
           ENDPOINT);
     }
-    conf.setBoolean(PREFETCH_ENABLED_KEY, false);
     return conf;
   }
 

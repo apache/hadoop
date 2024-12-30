@@ -21,9 +21,9 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.s3a.S3AInputStream;
-import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStream;
-import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStreamFactory;
-import org.apache.hadoop.fs.s3a.impl.model.ObjectReadParameters;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStream;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
 import org.apache.hadoop.service.AbstractService;
 
 /**

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.model;
+package org.apache.hadoop.fs.s3a.impl.streams;
 
 import java.util.concurrent.ExecutorService;
 
@@ -38,14 +38,30 @@ import static java.util.Objects.requireNonNull;
  */
 public final class ObjectReadParameters {
 
+  /**
+   *  Read operation context.
+   */
   private S3AReadOpContext context;
 
+  /**
+   * Attributes of the object.
+   */
   private S3ObjectAttributes objectAttributes;
 
+  /**
+   * Callbacks to the store.
+   */
   private ObjectInputStreamCallbacks callbacks;
 
+  /**
+   * Stream statistics.
+   */
   private S3AInputStreamStatistics streamStatistics;
 
+  /**
+   * Bounded thread pool for submitting asynchronous
+   * work.
+   */
   private ExecutorService boundedThreadPool;
 
   /**
@@ -54,7 +70,7 @@ public final class ObjectReadParameters {
   private LocalDirAllocator directoryAllocator;
 
   /**
-   * Read operation context.
+   * @return Read operation context.
    */
   public S3AReadOpContext getContext() {
     return context;
@@ -71,7 +87,7 @@ public final class ObjectReadParameters {
   }
 
   /**
-   * Attributes of the object.
+   * @return Attributes of the object.
    */
   public S3ObjectAttributes getObjectAttributes() {
     return objectAttributes;
@@ -88,7 +104,7 @@ public final class ObjectReadParameters {
   }
 
   /**
-   * Callbacks to the store.
+   * @return callbacks to the store.
    */
   public ObjectInputStreamCallbacks getCallbacks() {
     return callbacks;
@@ -105,7 +121,7 @@ public final class ObjectReadParameters {
   }
 
   /**
-   * Stream statistics.
+   * @return Stream statistics.
    */
   public S3AInputStreamStatistics getStreamStatistics() {
     return streamStatistics;
@@ -122,8 +138,7 @@ public final class ObjectReadParameters {
   }
 
   /**
-   * Bounded thread pool for submitting asynchronous
-   * work.
+   * @return Bounded thread pool for submitting asynchronous work.
    */
   public ExecutorService getBoundedThreadPool() {
     return boundedThreadPool;

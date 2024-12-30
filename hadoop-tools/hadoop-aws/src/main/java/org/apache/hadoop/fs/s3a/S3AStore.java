@@ -46,7 +46,6 @@ import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
@@ -54,8 +53,7 @@ import org.apache.hadoop.fs.s3a.impl.ClientManager;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
 import org.apache.hadoop.fs.s3a.impl.S3AFileSystemOperations;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
-import org.apache.hadoop.fs.s3a.impl.model.ObjectInputStreamFactory;
-import org.apache.hadoop.fs.s3a.impl.model.ObjectReadParameters;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
@@ -76,7 +74,11 @@ import org.apache.hadoop.service.Service;
  */
 @InterfaceAudience.LimitedPrivate("Extensions")
 @InterfaceStability.Unstable
-public interface S3AStore extends Service, IOStatisticsSource, ClientManager, ObjectInputStreamFactory {
+public interface S3AStore extends
+    ClientManager,
+    IOStatisticsSource,
+    ObjectInputStreamFactory,
+    Service {
 
   /**
    * Acquire write capacity for operations.
