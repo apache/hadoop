@@ -31,7 +31,7 @@ import static org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil.asyncRout
 
 public class RouterRefreshUserMappingsProtocolServerSideTranslatorPB
     extends RefreshUserMappingsProtocolServerSideTranslatorPB {
-  
+
   private final RouterRpcServer server;
   private final boolean isAsyncRpc;
 

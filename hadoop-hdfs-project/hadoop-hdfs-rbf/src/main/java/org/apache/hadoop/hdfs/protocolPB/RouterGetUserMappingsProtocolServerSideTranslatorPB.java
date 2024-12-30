@@ -46,7 +46,7 @@ public class RouterGetUserMappingsProtocolServerSideTranslatorPB
       return super.getGroupsForUser(controller, request);
     }
     asyncRouterServer(() -> server.getGroupsForUser(request.getUser()), groups -> {
-      GetGroupsForUserResponseProto.Builder builder = 
+      GetGroupsForUserResponseProto.Builder builder =
           GetGroupsForUserResponseProto
           .newBuilder();
       for (String g : groups) {
