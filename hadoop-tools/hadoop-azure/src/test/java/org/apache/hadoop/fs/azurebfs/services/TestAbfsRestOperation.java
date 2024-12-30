@@ -24,8 +24,11 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.junit.Test;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.DeletePath;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_URI;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.DeletePath;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import java.util.ArrayList;
@@ -39,6 +42,12 @@ public class TestAbfsRestOperation extends
   public TestAbfsRestOperation() throws Exception {
   }
 
+  private void checkPrerequisites() {
+    assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_METRIC_ACCOUNT_NAME);
+    assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_METRIC_ACCOUNT_KEY);
+    assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_METRIC_URI);
+  }
+
   /**
    * Test for backoff retry metrics.
    *
@@ -49,6 +58,7 @@ public class TestAbfsRestOperation extends
    */
   @Test
   public void testBackoffRetryMetrics() throws Exception {
+    checkPrerequisites();
     // Create an AzureBlobFileSystem instance.
     final Configuration configuration = getRawConfiguration();
     configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_BACKOFF_METRIC_FORMAT));

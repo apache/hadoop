@@ -244,7 +244,7 @@ com.microsoft.azure:azure-storage:7.0.0
 com.nimbusds:nimbus-jose-jwt:9.37.2
 com.zaxxer:HikariCP:4.0.3
 commons-beanutils:commons-beanutils:1.9.4
-commons-cli:commons-cli:1.5.0
+commons-cli:commons-cli:1.9.0
 commons-codec:commons-codec:1.15
 org.apache.commons:commons-collections4:4.4
 commons-daemon:commons-daemon:1.0.13
@@ -297,7 +297,7 @@ io.swagger:swagger-annotations:1.5.4
 javax.inject:javax.inject:1
 net.java.dev.jna:jna:5.2.0
 net.minidev:accessors-smart:1.2
-org.apache.avro:avro:1.9.2
+org.apache.avro:avro:1.11.4
 org.apache.avro:avro:1.11.3
 org.apache.commons:commons-compress:1.26.1
 org.apache.commons:commons-configuration2:2.10.1

@@ -130,7 +130,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
     this.callbacks = callbacks;
     this.deleteSource = deleteSource;
     this.overwrite = overwrite;
-    this.source = source;
+    this.source = source.toUri().getScheme() == null ? new Path("file://", source) : source;
     this.destination = destination;
 
     // Capacity of 1 is a safe default for now since transfer manager can also

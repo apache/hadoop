@@ -63,6 +63,11 @@ public class ClientManagerImpl implements ClientManager {
   private final S3ClientFactory clientFactory;
 
   /**
+   * Client factory to invoke for unencrypted client.
+   */
+  private final S3ClientFactory unencryptedClientFactory;
+
+  /**
    * Closed flag.
    */
   private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -85,6 +90,12 @@ public class ClientManagerImpl implements ClientManager {
   /** Async client is used for transfer manager. */
   private final LazyAutoCloseableReference<S3AsyncClient> s3AsyncClient;
 
+  /**
+   * Unencrypted S3 client.
+   * This is used for unencrypted operations when CSE is enabled with V1 compatibility.
+   */
+  private final LazyAutoCloseableReference<S3Client> unencryptedS3Client;
+
   /** Transfer manager. */
   private final LazyAutoCloseableReference<S3TransferManager> transferManager;
 
@@ -95,18 +106,22 @@ public class ClientManagerImpl implements ClientManager {
    * <p>
    * It does disable noisy logging from the S3 Transfer Manager.
    * @param clientFactory client factory to invoke
+   * @param unencryptedClientFactory client factory to invoke
    * @param clientCreationParameters creation parameters.
    * @param durationTrackerFactory duration tracker.
    */
   public ClientManagerImpl(
       final S3ClientFactory clientFactory,
+      final S3ClientFactory unencryptedClientFactory,
       final S3ClientFactory.S3ClientCreationParameters clientCreationParameters,
       final DurationTrackerFactory durationTrackerFactory) {
     this.clientFactory = requireNonNull(clientFactory);
+    this.unencryptedClientFactory = unencryptedClientFactory;
     this.clientCreationParameters = requireNonNull(clientCreationParameters);
     this.durationTrackerFactory = requireNonNull(durationTrackerFactory);
     this.s3Client = new LazyAutoCloseableReference<>(createS3Client());
     this.s3AsyncClient = new LazyAutoCloseableReference<>(createAyncClient());
+    this.unencryptedS3Client = new LazyAutoCloseableReference<>(createUnencryptedS3Client());
     this.transferManager = new LazyAutoCloseableReference<>(createTransferManager());
 
     // fix up SDK logging.
@@ -133,6 +148,17 @@ public class ClientManagerImpl implements ClientManager {
         durationTrackerFactory,
         STORE_CLIENT_CREATION.getSymbol(),
         () -> clientFactory.createS3AsyncClient(getUri(), clientCreationParameters));
+  }
+
+  /**
+   * Create the function to create the unencrypted S3 client.
+   * @return a callable which will create the client.
+   */
+  private CallableRaisingIOE<S3Client> createUnencryptedS3Client() {
+    return trackDurationOfOperation(
+        durationTrackerFactory,
+        STORE_CLIENT_CREATION.getSymbol(),
+        () -> unencryptedClientFactory.createS3Client(getUri(), clientCreationParameters));
   }
 
   /**
@@ -182,6 +208,18 @@ public class ClientManagerImpl implements ClientManager {
     return s3Client.get();
   }
 
+  /**
+   * Get or create an unencrypted S3 client.
+   * This is used for unencrypted operations when CSE is enabled with V1 compatibility.
+   * @return unencrypted S3 client
+   * @throws IOException on any failure
+   */
+  @Override
+  public synchronized S3Client getOrCreateUnencryptedS3Client() throws IOException {
+    checkNotClosed();
+    return unencryptedS3Client.eval();
+  }
+
   @Override
   public synchronized S3TransferManager getOrCreateTransferManager() throws IOException {
     checkNotClosed();
@@ -213,6 +251,7 @@ public class ClientManagerImpl implements ClientManager {
     l.add(closeAsync(transferManager));
     l.add(closeAsync(s3AsyncClient));
     l.add(closeAsync(s3Client));
+    l.add(closeAsync(unencryptedS3Client));
 
     // once all are queued, await their completion
     // and swallow any exception.
@@ -261,6 +300,7 @@ public class ClientManagerImpl implements ClientManager {
         "closed=" + closed.get() +
         ", s3Client=" + s3Client +
         ", s3AsyncClient=" + s3AsyncClient +
+        ", unencryptedS3Client=" + unencryptedS3Client +
         ", transferManager=" + transferManager +
         '}';
   }

@@ -44,6 +44,7 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.accountProperty;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -286,12 +287,15 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         this.getAccountName()));
     String testAccountName = "testAccount.dfs.core.windows.net";
     String otherAccountName = "otherAccount.dfs.core.windows.net";
+    String dummyAcountKey = "dummyKey";
     String defaultUri = this.getTestUrl().replace(this.getAccountName(), testAccountName);
     String otherUri = this.getTestUrl().replace(this.getAccountName(), otherAccountName);
 
     // Set both account specific and account agnostic config for test account
     rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, testAccountName), FALSE_STR);
     rawConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, TRUE_STR);
+    rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_KEY, testAccountName), dummyAcountKey);
+    rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_KEY, otherAccountName), dummyAcountKey);
     // Assert that account specific config takes precedence
     rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri);
     assertFileSystemInitWithExpectedHNSSettings(rawConfig, false);

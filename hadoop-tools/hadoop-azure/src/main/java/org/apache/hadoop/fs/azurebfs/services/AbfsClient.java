@@ -41,6 +41,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
@@ -242,21 +243,24 @@ public abstract class AbfsClient implements Closeable {
     this.isMetricCollectionStopped = new AtomicBoolean(false);
     this.metricAnalysisPeriod = abfsConfiguration.getMetricAnalysisTimeout();
     this.metricIdlePeriod = abfsConfiguration.getMetricIdleTimeout();
-    if (!metricFormat.toString().equals("")) {
-      isMetricCollectionEnabled = true;
-      abfsCounters.initializeMetrics(metricFormat);
+    if (StringUtils.isNotEmpty(metricFormat.toString())) {
       String metricAccountName = abfsConfiguration.getMetricAccount();
-      int dotIndex = metricAccountName.indexOf(AbfsHttpConstants.DOT);
-      if (dotIndex <= 0) {
-        throw new InvalidUriException(
-                metricAccountName + " - account name is not fully qualified.");
-      }
       String metricAccountKey = abfsConfiguration.getMetricAccountKey();
-      try {
-        metricSharedkeyCredentials = new SharedKeyCredentials(metricAccountName.substring(0, dotIndex),
-                metricAccountKey);
-      } catch (IllegalArgumentException e) {
-        throw new IOException("Exception while initializing metric credentials " + e);
+      if (StringUtils.isNotEmpty(metricAccountName) && StringUtils.isNotEmpty(metricAccountKey)) {
+        isMetricCollectionEnabled = true;
+        abfsCounters.initializeMetrics(metricFormat);
+        int dotIndex = metricAccountName.indexOf(AbfsHttpConstants.DOT);
+        if (dotIndex <= 0) {
+          throw new InvalidUriException(
+              metricAccountName + " - account name is not fully qualified.");
+        }
+        try {
+          metricSharedkeyCredentials = new SharedKeyCredentials(
+              metricAccountName.substring(0, dotIndex),
+              metricAccountKey);
+        } catch (IllegalArgumentException e) {
+          throw new IOException("Exception while initializing metric credentials ", e);
+        }
       }
     }
     if (isMetricCollectionEnabled) {
@@ -790,6 +794,7 @@ public abstract class AbfsClient implements Closeable {
    * @param cachedSasToken to be used for the authenticating operation.
    * @param leaseId if there is an active lease on the path.
    * @param eTag to specify conditional headers.
+   * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the server calls.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
@@ -800,6 +805,7 @@ public abstract class AbfsClient implements Closeable {
       String cachedSasToken,
       String leaseId,
       String eTag,
+      ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**

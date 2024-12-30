@@ -25,6 +25,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.HashMap;
@@ -68,7 +69,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.FieldSetter;
 
 /**
  * The administrator interface of the {@link Router} implemented by
@@ -118,18 +118,25 @@ public class TestRouterAdmin {
    * @throws IOException
    * @throws NoSuchFieldException
    */
-  private static void setUpMocks() throws IOException, NoSuchFieldException {
+  public static void setField(Object target, String fieldName, Object value)
+      throws NoSuchFieldException, IllegalAccessException {
+    Field field = target.getClass().getDeclaredField(fieldName);
+    field.setAccessible(true);
+    field.set(target, value);
+  }
+
+  private static void setUpMocks()
+      throws IOException, NoSuchFieldException, IllegalAccessException {
     RouterRpcServer spyRpcServer =
         Mockito.spy(routerContext.getRouter().createRpcServer());
-    FieldSetter.setField(routerContext.getRouter(),
-        Router.class.getDeclaredField("rpcServer"), spyRpcServer);
+    //Used reflection to set the 'rpcServer field'
+    setField(routerContext.getRouter(), "rpcServer", spyRpcServer);
     Mockito.doReturn(null).when(spyRpcServer).getFileInfo(Mockito.anyString());
 
     // mock rpc client for destination check when editing mount tables.
+    //spy RPC client and used reflection to set the 'rpcClient' field
     mockRpcClient = Mockito.spy(spyRpcServer.getRPCClient());
-    FieldSetter.setField(spyRpcServer,
-        RouterRpcServer.class.getDeclaredField("rpcClient"),
-        mockRpcClient);
+    setField(spyRpcServer, "rpcClient", mockRpcClient);
     RemoteLocation remoteLocation0 =
         new RemoteLocation("ns0", "/testdir", null);
     RemoteLocation remoteLocation1 =

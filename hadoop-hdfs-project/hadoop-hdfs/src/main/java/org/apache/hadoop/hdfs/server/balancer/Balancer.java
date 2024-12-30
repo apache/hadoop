@@ -195,6 +195,12 @@ public class Balancer {
       + "\tIncludes only the specified datanodes."
       + "\n\t[-source [-f <hosts-file> | <comma-separated list of hosts>]]"
       + "\tPick only the specified datanodes as source nodes."
+      + "\n\t[-excludeSource [-f <hosts-file> | <comma-separated list of hosts>]]"
+      + "\tExcludes the specified datanodes to be selected as a source."
+      + "\n\t[-target [-f <hosts-file> | <comma-separated list of hosts>]]"
+      + "\tPick only the specified datanodes as target nodes."
+      + "\n\t[-excludeTarget [-f <hosts-file> | <comma-separated list of hosts>]]"
+      + "\tExcludes the specified datanodes from being selected as a target."
       + "\n\t[-blockpools <comma-separated list of blockpool ids>]"
       + "\tThe balancer will only run on blockpools included in this list."
       + "\n\t[-idleiterations <idleiterations>]"
@@ -208,6 +214,8 @@ public class Balancer {
       + "\n\t[-sortTopNodes]"
       + "\tSort datanodes based on the utilization so "
       + "that highly utilized datanodes get scheduled first."
+      + "\n\t[-limitOverUtilizedNum <specified maximum number of overUtilized datanodes>]"
+      + "\tLimit the maximum number of overUtilized datanodes."
       + "\n\t[-hotBlockTimeInterval]\tprefer to move cold blocks.";
 
   @VisibleForTesting
@@ -222,11 +230,15 @@ public class Balancer {
   private final NameNodeConnector nnc;
   private final BalancingPolicy policy;
   private final Set<String> sourceNodes;
+  private final Set<String> excludedSourceNodes;
+  private final Set<String> targetNodes;
+  private final Set<String> excludedTargetNodes;
   private final boolean runDuringUpgrade;
   private final double threshold;
   private final long maxSizeToMove;
   private final long defaultBlockSize;
   private final boolean sortTopNodes;
+  private final int limitOverUtilizedNum;
   private final BalancerMetrics metrics;
 
   // all data node lists
@@ -350,8 +362,12 @@ public class Balancer {
     this.threshold = p.getThreshold();
     this.policy = p.getBalancingPolicy();
     this.sourceNodes = p.getSourceNodes();
+    this.excludedSourceNodes = p.getExcludedSourceNodes();
+    this.targetNodes = p.getTargetNodes();
+    this.excludedTargetNodes = p.getExcludedTargetNodes();
     this.runDuringUpgrade = p.getRunDuringUpgrade();
     this.sortTopNodes = p.getSortTopNodes();
+    this.limitOverUtilizedNum = p.getLimitOverUtilizedNum();
 
     this.maxSizeToMove = getLongBytes(conf,
         DFSConfigKeys.DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY,
@@ -407,7 +423,10 @@ public class Balancer {
     long overLoadedBytes = 0L, underLoadedBytes = 0L;
     for(DatanodeStorageReport r : reports) {
       final DDatanode dn = dispatcher.newDatanode(r.getDatanodeInfo());
-      final boolean isSource = Util.isIncluded(sourceNodes, dn.getDatanodeInfo());
+      final boolean isValidSource = Util.isIncluded(sourceNodes, dn.getDatanodeInfo()) &&
+          !Util.isExcluded(excludedSourceNodes, dn.getDatanodeInfo());
+      final boolean isValidTarget = Util.isIncluded(targetNodes, dn.getDatanodeInfo()) &&
+          !Util.isExcluded(excludedTargetNodes, dn.getDatanodeInfo());
       for(StorageType t : StorageType.getMovableTypes()) {
         final Double utilization = policy.getUtilization(r, t);
         if (utilization == null) { // datanode does not have such storage type
@@ -415,10 +434,15 @@ public class Balancer {
         }
         
         final double average = policy.getAvgUtilization(t);
-        if (utilization >= average && !isSource) {
-          LOG.info(dn + "[" + t + "] has utilization=" + utilization
-              + " >= average=" + average
-              + " but it is not specified as a source; skipping it.");
+        if (utilization >= average && !isValidSource) {
+          LOG.info("{} [{}] utilization {} >= average {}, but it's either not specified"
+                  + " or excluded as a source; skipping.", dn, t, utilization, average);
+          continue;
+        }
+        if (utilization <= average && !isValidTarget) {
+          LOG.info("{} [{}] utilization {} <= average {}, but it's either not specified"
+                  + " or excluded as a target; skipping.",
+              dn, t, utilization, average);
           continue;
         }
 
@@ -456,11 +480,18 @@ public class Balancer {
       sortOverUtilized(overUtilizedPercentage);
     }
 
+    // Limit the maximum number of overUtilized datanodes
+    // If excludedOverUtilizedNum is greater than 0, The overUtilized nodes num is limited
+    int excludedOverUtilizedNum = Math.max(overUtilized.size() - limitOverUtilizedNum, 0);
+    if (excludedOverUtilizedNum > 0) {
+      limitOverUtilizedNum();
+    }
+
     logUtilizationCollections();
     metrics.setNumOfOverUtilizedNodes(overUtilized.size());
     metrics.setNumOfUnderUtilizedNodes(underUtilized.size());
     
-    Preconditions.checkState(dispatcher.getStorageGroupMap().size()
+    Preconditions.checkState(dispatcher.getStorageGroupMap().size() - excludedOverUtilizedNum
         == overUtilized.size() + underUtilized.size() + aboveAvgUtilized.size()
            + belowAvgUtilized.size(),
         "Mismatched number of storage groups");
@@ -482,6 +513,20 @@ public class Balancer {
             (Double.compare(overUtilizedPercentage.get(source2),
                 overUtilizedPercentage.get(source1)))
     );
+  }
+
+  private void limitOverUtilizedNum() {
+    Preconditions.checkState(overUtilized instanceof LinkedList,
+        "Collection overUtilized is not a LinkedList.");
+    LinkedList<Source> list = (LinkedList<Source>) overUtilized;
+
+    LOG.info("Limiting over-utilized nodes num, if using the '-sortTopNodes' param," +
+        " the overUtilized nodes of top will be retained");
+
+    int size = overUtilized.size();
+    for (int i = 0; i < size - limitOverUtilizedNum; i++) {
+      list.removeLast();
+    }
   }
 
   private static long computeMaxSize2Move(final long capacity, final long remaining,
@@ -804,6 +849,9 @@ public class Balancer {
     LOG.info("included nodes = " + p.getIncludedNodes());
     LOG.info("excluded nodes = " + p.getExcludedNodes());
     LOG.info("source nodes = " + p.getSourceNodes());
+    LOG.info("excluded source nodes = " + p.getExcludedSourceNodes());
+    LOG.info("target nodes = " + p.getTargetNodes());
+    LOG.info("excluded target nodes = " + p.getExcludedTargetNodes());
     checkKeytabAndInit(conf);
     System.out.println("Time Stamp               Iteration#"
         + "  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved"
@@ -991,6 +1039,10 @@ public class Balancer {
     static BalancerParameters parse(String[] args) {
       Set<String> excludedNodes = null;
       Set<String> includedNodes = null;
+      Set<String> sourceNodes = null;
+      Set<String> excludedSourceNodes = null;
+      Set<String> targetNodes = null;
+      Set<String> excludedTargetNodes = null;
       BalancerParameters.Builder b = new BalancerParameters.Builder();
 
       if (args != null) {
@@ -1031,9 +1083,21 @@ public class Balancer {
               i = processHostList(args, i, "include", includedNodes);
               b.setIncludedNodes(includedNodes);
             } else if ("-source".equalsIgnoreCase(args[i])) {
-              Set<String> sourceNodes = new HashSet<>();
+              sourceNodes = new HashSet<>();
               i = processHostList(args, i, "source", sourceNodes);
               b.setSourceNodes(sourceNodes);
+            } else if ("-excludeSource".equalsIgnoreCase(args[i])) {
+              excludedSourceNodes = new HashSet<>();
+              i = processHostList(args, i, "exclude source", excludedSourceNodes);
+              b.setExcludedSourceNodes(excludedSourceNodes);
+            } else if ("-target".equalsIgnoreCase(args[i])) {
+              targetNodes = new HashSet<>();
+              i = processHostList(args, i, "target", targetNodes);
+              b.setTargetNodes(targetNodes);
+            } else if ("-excludeTarget".equalsIgnoreCase(args[i])) {
+              excludedTargetNodes = new HashSet<>();
+              i = processHostList(args, i, "exclude target", excludedTargetNodes);
+              b.setExcludedTargetNodes(excludedTargetNodes);
             } else if ("-blockpools".equalsIgnoreCase(args[i])) {
               Preconditions.checkArgument(
                   ++i < args.length,
@@ -1071,6 +1135,14 @@ public class Balancer {
               b.setSortTopNodes(true);
               LOG.info("Balancer will sort nodes by" +
                   " capacity usage percentage to prioritize top used nodes");
+            } else if ("-limitOverUtilizedNum".equalsIgnoreCase(args[i])) {
+              Preconditions.checkArgument(++i < args.length,
+                  "limitOverUtilizedNum value is missing: args = " + Arrays.toString(args));
+              int limitNum = Integer.parseInt(args[i]);
+              Preconditions.checkArgument(limitNum >= 0,
+                  "limitOverUtilizedNum must be non-negative");
+              LOG.info("Using a limitOverUtilizedNum of {}", limitNum);
+              b.setLimitOverUtilizedNum(limitNum);
             } else {
               throw new IllegalArgumentException("args = "
                   + Arrays.toString(args));
@@ -1078,6 +1150,10 @@ public class Balancer {
           }
           Preconditions.checkArgument(excludedNodes == null || includedNodes == null,
               "-exclude and -include options cannot be specified together.");
+          Preconditions.checkArgument(excludedSourceNodes == null || sourceNodes == null,
+              "-excludeSource and -source options cannot be specified together.");
+          Preconditions.checkArgument(excludedTargetNodes == null || targetNodes == null,
+              "-excludeTarget and -target options cannot be specified together.");
         } catch(RuntimeException e) {
           printUsage(System.err);
           throw e;

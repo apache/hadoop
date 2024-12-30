@@ -21,7 +21,10 @@ package org.apache.hadoop.fs.azurebfs;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_WRITE_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_URI;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
@@ -30,6 +33,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
+
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -47,6 +52,20 @@ import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
 
   public ITestAbfsReadFooterMetrics() throws Exception {
+    checkPrerequisites();
+  }
+
+  private void checkPrerequisites(){
+    checkIfConfigIsSet(FS_AZURE_METRIC_ACCOUNT_NAME);
+    checkIfConfigIsSet(FS_AZURE_METRIC_ACCOUNT_KEY);
+    checkIfConfigIsSet(FS_AZURE_METRIC_URI);
+  }
+
+  private void checkIfConfigIsSet(String configKey){
+    AbfsConfiguration conf = getConfiguration();
+    String value = conf.get(configKey);
+    Assume.assumeTrue(configKey + " config is mandatory for the test to run",
+        value != null && value.trim().length() > 1);
   }
 
   private static final String TEST_PATH = "/testfile";

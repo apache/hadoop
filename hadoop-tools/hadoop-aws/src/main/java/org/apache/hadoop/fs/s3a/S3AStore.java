@@ -27,6 +27,7 @@ import java.util.Optional;
 import java.util.concurrent.CancellationException;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
@@ -35,6 +36,8 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
@@ -43,8 +46,10 @@ import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.impl.ClientManager;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
+import org.apache.hadoop.fs.s3a.impl.S3AFileSystemOperations;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
@@ -192,6 +197,39 @@ public interface S3AStore extends IOStatisticsSource, ClientManager {
   @Retries.RetryRaw
   Map.Entry<Duration, Optional<DeleteObjectResponse>> deleteObject(
       DeleteObjectRequest request) throws SdkException;
+
+  /**
+   * Performs a HEAD request on an S3 object to retrieve its metadata.
+   *
+   * @param key           The S3 object key to perform the HEAD operation on
+   * @param changeTracker Tracks changes to the object's metadata across operations
+   * @param changeInvoker The invoker responsible for executing the HEAD request with retries
+   * @param fsHandler     Handler for filesystem-level operations and configurations
+   * @param operation     Description of the operation being performed for tracking purposes
+   * @return              HeadObjectResponse containing the object's metadata
+   * @throws IOException  If the HEAD request fails, object doesn't exist, or other I/O errors occur
+   */
+  @Retries.RetryRaw
+  HeadObjectResponse headObject(String key,
+      ChangeTracker changeTracker,
+      Invoker changeInvoker,
+      S3AFileSystemOperations fsHandler,
+      String operation) throws IOException;
+
+  /**
+   * Retrieves a specific byte range of an S3 object as a stream.
+   *
+   * @param key    The S3 object key to retrieve
+   * @param start  The starting byte position (inclusive) of the range to retrieve
+   * @param end    The ending byte position (inclusive) of the range to retrieve
+   * @return       A ResponseInputStream containing the requested byte range of the S3 object
+   * @throws IOException  If the object cannot be retrieved other I/O errors occur
+   * @see GetObjectResponse  For additional metadata about the retrieved object
+   */
+  @Retries.RetryRaw
+  ResponseInputStream<GetObjectResponse> getRangedS3Object(String key,
+      long start,
+      long end) throws IOException;
 
   /**
    * Upload part of a multi-partition file.

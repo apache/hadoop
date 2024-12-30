@@ -90,6 +90,7 @@ public class ITestAwsSdkWorkarounds extends AbstractS3ATestBase {
    */
   @Test
   public void testNoisyLogging() throws Throwable {
+    skipIfClientSideEncryption();
     try (S3AFileSystem newFs = newFileSystem()) {
       noisyLogging();
       String output = createAndLogTransferManager(newFs);

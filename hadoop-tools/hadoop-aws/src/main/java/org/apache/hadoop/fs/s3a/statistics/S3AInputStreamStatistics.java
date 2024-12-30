@@ -210,4 +210,8 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
    */
   DurationTracker initiateInnerStreamClose(boolean abort);
 
+  /**
+   * Stream was leaked.
+   */
+  default void streamLeaked() {};
 }

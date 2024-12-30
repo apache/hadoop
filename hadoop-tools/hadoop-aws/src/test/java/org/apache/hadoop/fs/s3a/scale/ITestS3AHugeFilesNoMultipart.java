@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Constants;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.IO_CHUNK_BUFFER_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_EXPECT_CONTINUE;
 import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
@@ -69,18 +70,23 @@ public class ITestS3AHugeFilesNoMultipart extends AbstractSTestS3AHugeFiles {
    * Create a configuration without multipart upload,
    * and a long request timeout to allow for a very slow
    * PUT in close.
+   * <p>
+   * 100-continue is disabled so as to verify the behavior
+   * on a large PUT.
    * @return the configuration to create the test FS with.
    */
   @Override
   protected Configuration createScaleConfiguration() {
     Configuration conf = super.createScaleConfiguration();
     removeBaseAndBucketOverrides(conf,
+        CONNECTION_EXPECT_CONTINUE,
         IO_CHUNK_BUFFER_SIZE,
         MIN_MULTIPART_THRESHOLD,
         MULTIPART_UPLOADS_ENABLED,
         MULTIPART_SIZE,
         PART_UPLOAD_TIMEOUT,
         REQUEST_TIMEOUT);
+    conf.setBoolean(CONNECTION_EXPECT_CONTINUE, false);
     conf.setInt(IO_CHUNK_BUFFER_SIZE, 655360);
     conf.setInt(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
     conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
