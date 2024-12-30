@@ -1353,9 +1353,9 @@ public class RouterClientProtocol implements ClientProtocol {
    * Get all the locations of the path for {@link RouterClientProtocol#getContentSummary(String)}.
    * For example, there are some mount points:
    * <p>
-   *   /a - &gt ns0 - &gt /a
-   *   /a/b - &gt ns0 - &gt /a/b
-   *   /a/b/c - &gt ns1 - &gt /a/b/c
+   *   /a - [ns0 - /a]
+   *   /a/b - [ns0 - /a/b]
+   *   /a/b/c - [ns1 - /a/b/c]
    * </p>
    * When the path is '/a', the result of locations should be
    * [RemoteLocation('/a', ns0, '/a'), RemoteLocation('/a/b/c', ns1, '/a/b/c')]

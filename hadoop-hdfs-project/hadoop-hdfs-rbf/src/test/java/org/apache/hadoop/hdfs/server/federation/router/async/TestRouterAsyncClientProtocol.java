@@ -1,3 +1,20 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hdfs.server.federation.router.async;
 
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -9,6 +26,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClientProtocol;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.util.Lists;
@@ -29,6 +47,7 @@ import static org.apache.hadoop.fs.permission.FsAction.READ_WRITE;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -84,11 +103,18 @@ public class TestRouterAsyncClientProtocol extends RouterAsyncProtocolTestBase {
     asyncClientProtocol.create(testPath + "/testCreate.file",
         new FsPermission(ALL, ALL, ALL), "testAsyncClient",
         new EnumSetWritable<>(EnumSet.of(CreateFlag.CREATE)),
-        false, (short) 1, 128 * 1024 * 1024L, new CryptoProtocolVersion[]{ENCRYPTION_ZONES},
+        false, (short) 1, 128 * 1024 * 1024L,
+        new CryptoProtocolVersion[]{ENCRYPTION_ZONES},
         null, null);
     hdfsFileStatus = syncReturn(HdfsFileStatus.class);
     assertTrue(hdfsFileStatus.isFile());
     assertEquals(128 * 1024 * 1024, hdfsFileStatus.getBlockSize());
+
+    asyncClientProtocol.getFileRemoteLocation(testPath);
+    RemoteLocation remoteLocation = syncReturn(RemoteLocation.class);
+    assertNotNull(remoteLocation);
+    assertEquals(getNs0(), remoteLocation.getNameserviceId());
+    assertEquals(testPath, remoteLocation.getSrc());
 
     asyncClientProtocol.getListing(testPath, new byte[1], true);
     DirectoryListing directoryListing = syncReturn(DirectoryListing.class);
