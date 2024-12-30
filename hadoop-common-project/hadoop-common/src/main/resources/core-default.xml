@@ -4471,10 +4471,11 @@ The switch to turn S3A auditing on or off.
   <property>
     <name>fs.hdfs.impl.disable.cache</name>
     <value>false</value>
-    <description>Whether cache hdfs filesystem instances or not.
-      If false, there will be a cached hdfs fileSystem instance and return it to the caller,
-      Otherwise, a new hdfs fileSystem instance will be created,
-      initialized with the configuration and URI, cached and returned to the caller.
+    <description>Whether disable cached hdfs filesystem instances or not.
+      If false, return a cached hdfs fileSystem instance to the caller if exists.
+      If true, a new hdfs fileSystem instance will be created,
+      initialized with the configuration and URI, cached and returned to the caller,
+      it is slower than using cached hdfs filesystme instances.
       </description>
   </property>
 
