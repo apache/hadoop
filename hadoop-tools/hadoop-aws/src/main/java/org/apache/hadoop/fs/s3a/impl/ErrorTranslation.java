@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.net.SocketTimeoutException;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -268,6 +269,17 @@ public final class ErrorTranslation {
       return new HttpChannelEOFException(path, message, thrown);
     }
     return null;
+  }
+
+  /**
+   * Is the exception to be considered as an unrecoverable channel failure
+   * -and that the stream should be aborted if so.
+   * @param t caught exception.
+   * @return true if the stream must not be returned to the pool.
+   */
+  public static boolean shouldInputStreamBeAborted(Throwable t) {
+    return (t instanceof HttpChannelEOFException)
+        || (t instanceof SocketTimeoutException);
   }
 
   /**

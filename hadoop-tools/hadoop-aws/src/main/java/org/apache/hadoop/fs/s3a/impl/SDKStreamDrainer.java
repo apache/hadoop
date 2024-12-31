@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.InputStream;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.annotation.Nullable;
+
 import software.amazon.awssdk.http.Abortable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +40,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTra
  * Drains/aborts s3 or other AWS SDK streams.
  * It is callable so can be passed directly to a submitter
  * for async invocation.
+ * @param <TStream> type of stream to drain/abort.
  */
 public class SDKStreamDrainer<TStream extends InputStream & Abortable>
     implements CallableRaisingIOE<Boolean> {
@@ -299,5 +302,32 @@ public class SDKStreamDrainer<TStream extends InputStream & Abortable>
         ", inner=" + sdkStream +
         ", thrown=" + thrown +
         '}';
+  }
+
+  /**
+   * Abort a stream, always.
+   * @param <TStream> type of stream to drain/abort.
+   * @param uri URI for messages
+   * @param sdkStream stream to close. Can be null.
+   * @param streamStatistics stats to update
+   * @param reason reason for stream being closed; used in messages
+   * @return true if the abort was successful.
+   */
+  public static <TStream extends InputStream & Abortable> boolean abortSdkStream(
+      final String uri,
+      @Nullable final TStream sdkStream,
+      final S3AInputStreamStatistics streamStatistics,
+      final String reason) {
+    if (sdkStream == null) {
+      return false;
+    }
+    return new SDKStreamDrainer<>(
+        uri,
+        sdkStream,
+        true,
+        0,
+        streamStatistics,
+        reason)
+        .apply();
   }
 }

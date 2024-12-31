@@ -196,6 +196,8 @@ public final class VectoredReadUtils {
    * @param range file range
    * @param buffer destination buffer
    * @throws IOException IO problems.
+   * @throws EOFException the end of the data was reached before
+   * the read operation completed
    */
   private static void readNonByteBufferPositionedReadable(
       PositionedReadable stream,
