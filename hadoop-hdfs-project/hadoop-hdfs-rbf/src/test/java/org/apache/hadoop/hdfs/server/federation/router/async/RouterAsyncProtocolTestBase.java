@@ -56,6 +56,7 @@ public class RouterAsyncProtocolTestBase {
   private FileSystem routerFs;
   private RouterRpcServer routerRpcServer;
   private RouterRpcServer routerAsyncRpcServer;
+  protected static final String TEST_DIR_PATH = "/testdir";
 
   @BeforeClass
   public static void setUpCluster() throws Exception {
@@ -114,19 +115,20 @@ public class RouterAsyncProtocolTestBase {
         routerRpcServer.getRouterStateIdContext());
     routerAsyncRpcServer = Mockito.spy(routerRpcServer);
     Mockito.when(routerAsyncRpcServer.getRPCClient()).thenReturn(asyncRpcClient);
+    Mockito.when(routerAsyncRpcServer.isAsync()).thenReturn(true);
 
     // Create mock locations
     MockResolver resolver = (MockResolver) router.getRouter().getSubclusterResolver();
     resolver.addLocation("/", ns0, "/");
     FsPermission permission = new FsPermission("705");
-    routerFs.mkdirs(new Path("/testdir"), permission);
+    routerFs.mkdirs(new Path(TEST_DIR_PATH), permission);
   }
 
   @After
   public void tearDown() throws IOException {
     // clear client context
     CallerContext.setCurrent(null);
-    boolean delete = routerFs.delete(new Path("/testdir"));
+    boolean delete = routerFs.delete(new Path(TEST_DIR_PATH));
     assertTrue(delete);
     if (routerFs != null) {
       routerFs.close();

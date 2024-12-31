@@ -1969,7 +1969,7 @@ public class RouterRpcClient {
    * @param nsId namespaceID
    * @return whether the 'namespace' has observer reads enabled.
    */
-  boolean isNamespaceObserverReadEligible(String nsId) {
+  public boolean isNamespaceObserverReadEligible(String nsId) {
     return observerReadEnabledDefault != observerReadEnabledOverrides.contains(nsId);
   }
 
