@@ -2463,16 +2463,19 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     //    deleted local block file here may lead to missing-block
     //    when it with only 1 replication left now.
     // So remove if from volume map notify namenode is ok.
-    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
-        bpid)) {
+    ReplicaInfo replica;
+    try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
       // Check if this block is on the volume map.
-      ReplicaInfo replica = volumeMap.get(bpid, block);
+      replica = volumeMap.get(bpid, block);
       // Double-check block or meta file existence when checkFiles as true.
       if (replica != null && (!checkFiles ||
           (!replica.blockDataExists() || !replica.metadataExists()))) {
         volumeMap.remove(bpid, block);
-        invalidate(bpid, replica);
       }
+    }
+    // Call invalidate method outside the lock
+    if (replica != null) {
+      invalidate(bpid, replica);
     }
   }
 

@@ -685,6 +685,57 @@ public class TestFsDatasetImpl {
     }
   }
 
+  @Test(timeout = 30000)
+  public void testInvalidateMissingBlockConcurrent() throws Exception {
+    // Feed FsDataset with block metadata.
+    final int numBlocks = 1000;
+    final int threadCount = 10;
+
+    ExecutorService pool = Executors.newFixedThreadPool(threadCount);
+    List<Future<?>> futureList = new ArrayList<>();
+
+    // Random write block and use invalidateMissingBlock() method half of them.
+    Random random = new Random();
+    for (int i = 0; i < threadCount; i++) {
+      class BlockProcessor implements Runnable {
+        @Override
+        public void run() {
+          try {
+            String bpid = BLOCK_POOL_IDS[random.nextInt(BLOCK_POOL_IDS.length)];
+            for (int blockId = 0; blockId < numBlocks; blockId++) {
+              ExtendedBlock eb = new ExtendedBlock(bpid, blockId);
+              ReplicaHandler replica = null;
+              try {
+                replica = dataset.createRbw(StorageType.DEFAULT, null, eb, false);
+                if (blockId % 2 > 0) {
+                  dataset.invalidateMissingBlock(bpid, eb.getLocalBlock());
+                }
+              } finally {
+                if (replica != null) {
+                  replica.close();
+                }
+              }
+            }
+          } catch (Exception ignore) {
+            // ignore
+          }
+        }
+      }
+      futureList.add(pool.submit(new BlockProcessor()));
+    }
+
+    // Wait for data generation
+    for (Future<?> f : futureList) {
+      f.get();
+    }
+    // Wait for the async deletion task finish.
+    GenericTestUtils.waitFor(() -> dataset.asyncDiskService.countPendingDeletions() == 0,
+        100, 10000);
+    for (String bpid : dataset.volumeMap.getBlockPoolList()) {
+      assertEquals(numBlocks / 2, dataset.volumeMap.size(bpid));
+    }
+  }
+
   @Test(timeout = 5000)
   public void testRemoveNewlyAddedVolume() throws IOException {
     final int numExistingVolumes = getNumVolumes();
