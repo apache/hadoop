@@ -43,6 +43,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncU
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncForEach;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncReturn;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncTry;
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.SCHEDULER_JOURNAL_URI;
 
 import java.io.FileNotFoundException;
@@ -445,7 +446,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     // Create the client
     if (this.enableAsync) {
       this.rpcClient = new RouterAsyncRpcClient(this.conf, this.router,
-          this.namenodeResolver, this.rpcMonitor, routerStateIdContext);
+          this.namenodeResolver, this.rpcMonitor,
+          routerStateIdContext, asyncRouterHandler);
       this.clientProto = new RouterAsyncClientProtocol(conf, this);
       this.nnProto = new RouterAsyncNamenodeProtocol(this);
       this.routerProto = new RouterAsyncUserProtocol(this);
@@ -1353,8 +1355,13 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     try {
       DatanodeInfo[] dns = clientProto.getDatanodeReport(type);
+      if (router.getRpcServer().isAsync()) {
+        dns = syncReturn(DatanodeInfo[].class);
+      }
       LOG.debug("Refresh cached DN report with {} datanodes", dns.length);
       return dns;
+    } catch (Exception e) {
+      throw new IOException(e);
     } finally {
       // Reset ugi to remote user for remaining operations.
       RouterRpcServer.resetCurrentUser();

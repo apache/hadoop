@@ -126,7 +126,8 @@ public class TestRouterAsyncErasureCoding {
     RouterAsyncRpcClient asyncRpcClient = new RouterAsyncRpcClient(
         routerConf, router.getRouter(), routerRpcServer.getNamenodeResolver(),
         routerRpcServer.getRPCMonitor(),
-        routerRpcServer.getRouterStateIdContext());
+        routerRpcServer.getRouterStateIdContext(),
+        routerRpcServer.getAsyncRouterHandler());
     RouterRpcServer spy = Mockito.spy(routerRpcServer);
     Mockito.when(spy.getRPCClient()).thenReturn(asyncRpcClient);
     asyncErasureCoding = new AsyncErasureCoding(spy);

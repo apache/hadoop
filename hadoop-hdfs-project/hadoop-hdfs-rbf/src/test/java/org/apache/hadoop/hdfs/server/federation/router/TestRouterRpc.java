@@ -163,12 +163,12 @@ public class TestRouterRpc {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRouterRpc.class);
 
-  private static final int NUM_SUBCLUSTERS = 2;
+  protected static final int NUM_SUBCLUSTERS = 2;
   // We need at least 6 DNs to test Erasure Coding with RS-6-3-64k
-  private static final int NUM_DNS = 6;
+  protected static final int NUM_DNS = 6;
 
 
-  private static final Comparator<ErasureCodingPolicyInfo> EC_POLICY_CMP =
+  protected static final Comparator<ErasureCodingPolicyInfo> EC_POLICY_CMP =
       new Comparator<ErasureCodingPolicyInfo>() {
         public int compare(
             ErasureCodingPolicyInfo ec0,
@@ -348,6 +348,10 @@ public class TestRouterRpc {
     this.routerFS = r.getFileSystem();
     this.routerNamenodeProtocol = NameNodeProxies.createProxy(router.getConf(),
         router.getFileSystem().getUri(), NamenodeProtocol.class).getProxy();
+  }
+
+  protected static void setCluster(MiniRouterDFSCluster cluster) {
+    TestRouterRpc.cluster = cluster;
   }
 
   protected FileSystem getRouterFileSystem() {
@@ -1260,8 +1264,8 @@ public class TestRouterRpc {
     createFile(routerFS, targetFile, existingFileSize);
     // Concat in same namespaces, succeeds
     testConcat(srcEmptyFile, targetFile, true, true,
-        "org.apache.hadoop.ipc.RemoteException(org.apache.hadoop.HadoopIllegalArgumentException): concat: source file "
-            + srcEmptyFile + " is invalid or empty or underConstruction");
+        "org.apache.hadoop.ipc.RemoteException(org.apache.hadoop.HadoopIllegalArgumentException): "
+            + "concat: source file " + srcEmptyFile + " is invalid or empty or underConstruction");
   }
 
   @Test
@@ -2023,7 +2027,7 @@ public class TestRouterRpc {
   }
 
   @Test
-  public void testgetGroupsForUser() throws IOException {
+  public void testgetGroupsForUser() throws Exception {
     String[] group = new String[] {"bar", "group2"};
     UserGroupInformation.createUserForTesting("user",
         new String[] {"bar", "group2"});

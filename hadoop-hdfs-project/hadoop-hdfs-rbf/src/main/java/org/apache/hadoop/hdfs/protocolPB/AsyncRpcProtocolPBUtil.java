@@ -128,7 +128,7 @@ public final class AsyncRpcProtocolPBUtil {
         Message value = null;
         try {
           value = res.res(result);
-        } catch (RuntimeException re) {
+        } catch (Exception re) {
           callback.error(re);
           return null;
         }
@@ -157,6 +157,6 @@ public final class AsyncRpcProtocolPBUtil {
 
   @FunctionalInterface
   interface ServerRes<T> {
-    Message res(T result) throws RuntimeException;
+    Message res(T result) throws Exception;
   }
 }
