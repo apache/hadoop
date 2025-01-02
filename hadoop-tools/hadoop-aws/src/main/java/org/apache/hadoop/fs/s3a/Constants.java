@@ -26,6 +26,9 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.io.Sizes.S_128K;
+import static org.apache.hadoop.io.Sizes.S_2M;
+
 /**
  * Constants used with the {@link S3AFileSystem}.
  *
@@ -1545,14 +1548,14 @@ public final class Constants {
           "fs.s3a.vectored.read.max.merged.size";
 
   /**
-   * Default minimum seek in bytes during vectored reads : {@value}.
+   * Default minimum seek in bytes during vectored reads: {@value}.
    */
-  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = 4096; // 4K
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE =  S_128K;
 
   /**
    * Default maximum read size in bytes during vectored reads : {@value}.
    */
-  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1048576; //1M
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = S_2M;
 
   /**
    * Maximum number of range reads a single input stream can have

@@ -26,6 +26,9 @@ import java.util.function.IntFunction;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import static org.apache.hadoop.io.Sizes.S_16K;
+import static org.apache.hadoop.io.Sizes.S_1M;
+
 /**
  * Stream that permits positional reading.
  *
@@ -95,7 +98,7 @@ public interface PositionedReadable {
    * @return the minimum number of bytes
    */
   default int minSeekForVectorReads() {
-    return 4 * 1024;
+    return S_16K;
   }
 
   /**
@@ -103,7 +106,7 @@ public interface PositionedReadable {
    * @return the number of bytes to read at once
    */
   default int maxReadSizeForVectorReads() {
-    return 1024 * 1024;
+    return S_1M;
   }
 
   /**

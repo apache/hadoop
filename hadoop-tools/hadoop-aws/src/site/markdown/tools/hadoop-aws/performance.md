@@ -67,7 +67,7 @@ on the client requirements.
 ```xml
 <property>
   <name>fs.s3a.vectored.read.min.seek.size</name>
-  <value>4K</value>
+  <value>128K</value>
   <description>
      What is the smallest reasonable seek in bytes such
      that we group ranges together during vectored
@@ -76,7 +76,7 @@ on the client requirements.
 </property>
 <property>
    <name>fs.s3a.vectored.read.max.merged.size</name>
-   <value>1M</value>
+   <value>4M</value>
    <description>
       What is the largest merged read size in bytes such
       that we group ranges together during vectored read.
@@ -282,7 +282,7 @@ Fix: Use one of the dedicated [S3A Committers](committers.md).
 
 ## <a name="tuning"></a> Options to Tune
 
-### <a name="flags"></a> Performance Flags: `fs.s3a.performance.flag`
+### <a name="flags"></a> Performance Flags: `fs.s3a.performance.flags`
 
 This option takes a comma separated list of performance flags.
 View it as the equivalent of the `-O` compiler optimization list C/C++ compilers offer.

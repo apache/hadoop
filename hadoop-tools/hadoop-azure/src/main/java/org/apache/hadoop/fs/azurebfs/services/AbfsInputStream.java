@@ -26,6 +26,7 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 
@@ -53,6 +54,8 @@ import static java.lang.Math.min;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
+import static org.apache.hadoop.io.Sizes.S_128K;
+import static org.apache.hadoop.io.Sizes.S_2M;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
@@ -891,4 +894,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   BackReference getFsBackRef() {
     return fsBackRef;
   }
+
+  @Override
+  public int minSeekForVectorReads() {
+    return S_128K;
+  }
+
+  @Override
+  public int maxReadSizeForVectorReads() {
+    return S_2M;
+  }
+
 }
