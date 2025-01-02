@@ -561,7 +561,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
       if (this.enableGetDNUsage) {
         RouterRpcServer rpcServer = this.router.getRpcServer();
         if (rpcServer.isAsync()) {
-          rpcServer.getDatanodeReport(DatanodeReportType.LIVE, false, timeOut);
+          rpcServer.getDatanodeReportAsync(DatanodeReportType.LIVE, false, timeOut);
           live = syncReturn(DatanodeInfo[].class);
         } else {
           live = rpcServer.getDatanodeReport(DatanodeReportType.LIVE, false, timeOut);
