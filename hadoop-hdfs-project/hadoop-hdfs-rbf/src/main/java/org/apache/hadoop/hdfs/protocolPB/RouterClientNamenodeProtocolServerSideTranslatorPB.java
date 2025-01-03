@@ -333,12 +333,12 @@ public class RouterClientNamenodeProtocolServerSideTranslatorPB
               req.getCryptoProtocolVersionList()),
           req.getEcPolicyName(), req.getStoragePolicy());
     }, result -> {
-      if (result != null) {
-        return CreateResponseProto.newBuilder().setFs(PBHelperClient.convert(result))
-            .build();
-      }
-      return VOID_CREATE_RESPONSE;
-    });
+        if (result != null) {
+          return CreateResponseProto.newBuilder().setFs(PBHelperClient.convert(result))
+              .build();
+        }
+        return VOID_CREATE_RESPONSE;
+      });
     return null;
   }
 
@@ -352,17 +352,17 @@ public class RouterClientNamenodeProtocolServerSideTranslatorPB
       return server.append(req.getSrc(),
           req.getClientName(), flags);
     }, result -> {
-      AppendResponseProto.Builder builder =
-          AppendResponseProto.newBuilder();
-      if (result.getLastBlock() != null) {
-        builder.setBlock(PBHelperClient.convertLocatedBlock(
-            result.getLastBlock()));
-      }
-      if (result.getFileStatus() != null) {
-        builder.setStat(PBHelperClient.convert(result.getFileStatus()));
-      }
-      return builder.build();
-    });
+        AppendResponseProto.Builder builder =
+            AppendResponseProto.newBuilder();
+        if (result.getLastBlock() != null) {
+          builder.setBlock(PBHelperClient.convertLocatedBlock(
+              result.getLastBlock()));
+        }
+        if (result.getFileStatus() != null) {
+          builder.setStat(PBHelperClient.convert(result.getFileStatus()));
+        }
+        return builder.build();
+      });
     return null;
   }
 
@@ -578,13 +578,13 @@ public class RouterClientNamenodeProtocolServerSideTranslatorPB
           req.getNeedLocation());
       return result;
     }, result -> {
-      if (result != null) {
-        return GetListingResponseProto.newBuilder().setDirList(
-                PBHelperClient.convert(result)).build();
-      } else {
-        return VOID_GETLISTING_RESPONSE;
-      }
-    });
+        if (result != null) {
+          return GetListingResponseProto.newBuilder().setDirList(
+                  PBHelperClient.convert(result)).build();
+        } else {
+          return VOID_GETLISTING_RESPONSE;
+        }
+      });
     return null;
   }
 
@@ -599,36 +599,36 @@ public class RouterClientNamenodeProtocolServerSideTranslatorPB
           request.getNeedLocation());
       return result;
     }, result -> {
-      if (result != null) {
-        GetBatchedListingResponseProto.Builder builder =
-            GetBatchedListingResponseProto.newBuilder();
-        for (HdfsPartialListing partialListing : result.getListings()) {
-          HdfsProtos.BatchedDirectoryListingProto.Builder listingBuilder =
-              HdfsProtos.BatchedDirectoryListingProto.newBuilder();
-          if (partialListing.getException() != null) {
-            RemoteException ex = partialListing.getException();
-            HdfsProtos.RemoteExceptionProto.Builder rexBuilder =
-                HdfsProtos.RemoteExceptionProto.newBuilder();
-            rexBuilder.setClassName(ex.getClassName());
-            if (ex.getMessage() != null) {
-              rexBuilder.setMessage(ex.getMessage());
+        if (result != null) {
+          GetBatchedListingResponseProto.Builder builder =
+              GetBatchedListingResponseProto.newBuilder();
+          for (HdfsPartialListing partialListing : result.getListings()) {
+            HdfsProtos.BatchedDirectoryListingProto.Builder listingBuilder =
+                HdfsProtos.BatchedDirectoryListingProto.newBuilder();
+            if (partialListing.getException() != null) {
+              RemoteException ex = partialListing.getException();
+              HdfsProtos.RemoteExceptionProto.Builder rexBuilder =
+                  HdfsProtos.RemoteExceptionProto.newBuilder();
+              rexBuilder.setClassName(ex.getClassName());
+              if (ex.getMessage() != null) {
+                rexBuilder.setMessage(ex.getMessage());
+              }
+              listingBuilder.setException(rexBuilder.build());
+            } else {
+              for (HdfsFileStatus f : partialListing.getPartialListing()) {
+                listingBuilder.addPartialListing(PBHelperClient.convert(f));
+              }
             }
-            listingBuilder.setException(rexBuilder.build());
-          } else {
-            for (HdfsFileStatus f : partialListing.getPartialListing()) {
-              listingBuilder.addPartialListing(PBHelperClient.convert(f));
-            }
+            listingBuilder.setParentIdx(partialListing.getParentIdx());
+            builder.addListings(listingBuilder);
           }
-          listingBuilder.setParentIdx(partialListing.getParentIdx());
-          builder.addListings(listingBuilder);
+          builder.setHasMore(result.hasMore());
+          builder.setStartAfter(ByteString.copyFrom(result.getStartAfter()));
+          return builder.build();
+        } else {
+          return VOID_GETBATCHEDLISTING_RESPONSE;
         }
-        builder.setHasMore(result.hasMore());
-        builder.setStartAfter(ByteString.copyFrom(result.getStartAfter()));
-        return builder.build();
-      } else {
-        return VOID_GETBATCHEDLISTING_RESPONSE;
-      }
-    });
+      });
     return null;
   }
 
@@ -1210,14 +1210,14 @@ public class RouterClientNamenodeProtocolServerSideTranslatorPB
           PBHelperClient.convert(request.getFilter());
       return  server.listCacheDirectives(request.getPrevId(), filter);
     }, entries -> {
-      ListCacheDirectivesResponseProto.Builder builder =
-          ListCacheDirectivesResponseProto.newBuilder();
-      builder.setHasMore(entries.hasMore());
-      for (int i=0, n=entries.size(); i<n; i++) {
-        builder.addElements(PBHelperClient.convert(entries.get(i)));
-      }
-      return builder.build();
-    });
+        ListCacheDirectivesResponseProto.Builder builder =
+            ListCacheDirectivesResponseProto.newBuilder();
+        builder.setHasMore(entries.hasMore());
+        for (int i=0, n=entries.size(); i<n; i++) {
+          builder.addElements(PBHelperClient.convert(entries.get(i)));
+        }
+        return builder.build();
+      });
     return null;
   }
 
@@ -1430,12 +1430,12 @@ public class RouterClientNamenodeProtocolServerSideTranslatorPB
       return server.getECTopologyResultForPolicies(
           policies.toArray(policies.toArray(new String[policies.size()])));
     }, result -> {
-      GetECTopologyResultForPoliciesResponseProto.Builder builder =
-          GetECTopologyResultForPoliciesResponseProto.newBuilder();
-      builder
-          .setResponse(PBHelperClient.convertECTopologyVerifierResult(result));
-      return builder.build();
-    });
+        GetECTopologyResultForPoliciesResponseProto.Builder builder =
+            GetECTopologyResultForPoliciesResponseProto.newBuilder();
+        builder
+            .setResponse(PBHelperClient.convertECTopologyVerifierResult(result));
+        return builder.build();
+      });
     return null;
   }
 
@@ -1605,15 +1605,15 @@ public class RouterClientNamenodeProtocolServerSideTranslatorPB
       return server
           .addErasureCodingPolicies(policies);
     }, result -> {
-      List<HdfsProtos.AddErasureCodingPolicyResponseProto> responseProtos =
-          Arrays.stream(result)
-              .map(PBHelperClient::convertAddErasureCodingPolicyResponse)
-              .collect(Collectors.toList());
-      AddErasureCodingPoliciesResponseProto response =
-          AddErasureCodingPoliciesResponseProto.newBuilder()
-              .addAllResponses(responseProtos).build();
-      return response;
-    });
+        List<HdfsProtos.AddErasureCodingPolicyResponseProto> responseProtos =
+            Arrays.stream(result)
+                .map(PBHelperClient::convertAddErasureCodingPolicyResponse)
+                .collect(Collectors.toList());
+        AddErasureCodingPoliciesResponseProto response =
+            AddErasureCodingPoliciesResponseProto.newBuilder()
+                .addAllResponses(responseProtos).build();
+        return response;
+      });
     return null;
   }
 
@@ -1682,15 +1682,15 @@ public class RouterClientNamenodeProtocolServerSideTranslatorPB
       return server.listOpenFiles(req.getId(),
           openFilesTypes, req.getPath());
     }, entries -> {
-      ListOpenFilesResponseProto.Builder builder =
-          ListOpenFilesResponseProto.newBuilder();
-      builder.setHasMore(entries.hasMore());
-      for (int i = 0; i < entries.size(); i++) {
-        builder.addEntries(PBHelperClient.convert(entries.get(i)));
-      }
-      builder.addAllTypes(req.getTypesList());
-      return builder.build();
-    });
+        ListOpenFilesResponseProto.Builder builder =
+            ListOpenFilesResponseProto.newBuilder();
+        builder.setHasMore(entries.hasMore());
+        for (int i = 0; i < entries.size(); i++) {
+          builder.addEntries(PBHelperClient.convert(entries.get(i)));
+        }
+        builder.addAllTypes(req.getTypesList());
+        return builder.build();
+      });
     return null;
   }
 

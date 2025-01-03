@@ -108,6 +108,7 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
    * @param resolver A NN resolver to determine the currently active NN in HA.
    * @param monitor Optional performance monitor.
    * @param routerStateIdContext the router state context object to hold the state ids for all
+   * @param asyncRouterHandler async router handler
    * namespaces.
    */
   public RouterAsyncRpcClient(Configuration conf,
