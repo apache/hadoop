@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
@@ -98,7 +97,7 @@ public class BlobRenameHandler extends ListActionTaker {
 
     @Override
     int getMaxConsumptionParallelism() {
-        return abfsClient.getAbfsConfiguration()
+        return getAbfsBlobClient().getAbfsConfiguration()
                 .getBlobRenameDirConsumptionParallelism();
     }
 
@@ -174,13 +173,13 @@ public class BlobRenameHandler extends ListActionTaker {
                 new Path(src.getParent(), src.getName() + RenameAtomicity.SUFFIX),
                 tracingContext,
                 pathInformation.getETag(),
-                abfsClient);
+                getAbfsBlobClient());
     }
 
     private AbfsLease takeLease(final Path path, final String eTag)
             throws AzureBlobFileSystemException {
-        AbfsLease lease = new AbfsLease(abfsClient, path.toUri().getPath(), false,
-                abfsClient.getAbfsConfiguration()
+        AbfsLease lease = new AbfsLease(getAbfsBlobClient(), path.toUri().getPath(), false,
+                getAbfsBlobClient().getAbfsConfiguration()
                         .getAtomicRenameLeaseRefreshDuration(),
                 eTag, tracingContext);
         leases.add(lease);
@@ -371,7 +370,7 @@ public class BlobRenameHandler extends ListActionTaker {
         boolean operated = false;
         try {
             copyPath(path, destinationPathForBlobPartOfRenameSrcDir, leaseId);
-            abfsClient.deleteBlobPath(path, leaseId, tracingContext);
+            getAbfsBlobClient().deleteBlobPath(path, leaseId, tracingContext);
             operated = true;
         } finally {
             if (abfsLease != null) {
@@ -392,7 +391,7 @@ public class BlobRenameHandler extends ListActionTaker {
             throws AzureBlobFileSystemException {
         String copyId;
         try {
-            AbfsRestOperation copyPathOp = abfsClient.copyBlob(src, dst, leaseId,
+            AbfsRestOperation copyPathOp = getAbfsBlobClient().copyBlob(src, dst, leaseId,
                     tracingContext);
             final String progress = copyPathOp.getResult()
                     .getResponseHeader(X_MS_COPY_STATUS);
@@ -403,10 +402,10 @@ public class BlobRenameHandler extends ListActionTaker {
                     .getResponseHeader(X_MS_COPY_ID);
         } catch (AbfsRestOperationException ex) {
             if (ex.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
-                AbfsRestOperation dstPathStatus = abfsClient.getPathStatus(
+                AbfsRestOperation dstPathStatus = getAbfsBlobClient().getPathStatus(
                         dst.toUri().getPath(),
                         tracingContext, null, false);
-                final String srcCopyPath = ROOT_PATH + abfsClient.getFileSystem()
+                final String srcCopyPath = ROOT_PATH + getAbfsBlobClient().getFileSystem()
                         + src.toUri().getPath();
                 if (dstPathStatus.getResult() != null && (srcCopyPath.equals(
                         getDstSource(dstPathStatus)))) {
@@ -415,7 +414,7 @@ public class BlobRenameHandler extends ListActionTaker {
             }
             throw ex;
         }
-        final long pollWait = abfsClient.getAbfsConfiguration()
+        final long pollWait = getAbfsBlobClient().getAbfsConfiguration()
                 .getBlobCopyProgressPollWaitMillis();
         while (handleCopyInProgress(dst, tracingContext, copyId)
                 == BlobCopyProgress.PENDING) {
@@ -459,7 +458,7 @@ public class BlobRenameHandler extends ListActionTaker {
     public BlobCopyProgress handleCopyInProgress(final Path dstPath,
                                                  final TracingContext tracingContext,
                                                  final String copyId) throws AzureBlobFileSystemException {
-        AbfsRestOperation op = abfsClient.getPathStatus(dstPath.toUri().getPath(),
+        AbfsRestOperation op = getAbfsBlobClient().getPathStatus(dstPath.toUri().getPath(),
                 tracingContext, null, false);
 
         if (op.getResult() != null && copyId.equals(
@@ -514,11 +513,11 @@ public class BlobRenameHandler extends ListActionTaker {
                                                TracingContext tracingContext)
             throws AzureBlobFileSystemException {
         try {
-            AbfsRestOperation op = abfsClient.getPathStatus(path.toString(),
+            AbfsRestOperation op = getAbfsBlobClient().getPathStatus(path.toString(),
                     tracingContext, null, true);
 
             return new PathInformation(true,
-                    abfsClient.checkIsDir(op.getResult()),
+                    getAbfsBlobClient().checkIsDir(op.getResult()),
                     extractEtagHeader(op.getResult()));
         } catch (AzureBlobFileSystemException e) {
             if (e instanceof AbfsRestOperationException) {

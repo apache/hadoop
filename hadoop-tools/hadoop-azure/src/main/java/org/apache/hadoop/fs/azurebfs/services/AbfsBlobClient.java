@@ -1069,8 +1069,7 @@ public class AbfsBlobClient extends AbfsClient {
      * Crashed HBase log-folder rename can be recovered by FileSystem#getFileStatus
      * and FileSystem#listStatus calls.
      */
-    if (tracingContext != null
-            && tracingContext.getOpType() == FSOperationType.GET_FILESTATUS
+    if (tracingContext.getOpType() == FSOperationType.GET_FILESTATUS
             && op.getResult() != null && checkIsDir(op.getResult())) {
       takeGetPathStatusAtomicRenameKeyAction(new Path(path), tracingContext);
     }

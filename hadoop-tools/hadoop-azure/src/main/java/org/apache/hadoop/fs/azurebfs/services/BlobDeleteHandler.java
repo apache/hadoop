@@ -68,13 +68,13 @@ public class BlobDeleteHandler extends ListActionTaker {
 
     @Override
     int getMaxConsumptionParallelism() {
-        return abfsClient.getAbfsConfiguration()
+        return getAbfsBlobClient().getAbfsConfiguration()
                 .getBlobDeleteDirConsumptionParallelism();
     }
 
     private boolean deleteInternal(final Path path)
             throws AzureBlobFileSystemException {
-        abfsClient.deleteBlobPath(path, null, tracingContext);
+        getAbfsBlobClient().deleteBlobPath(path, null, tracingContext);
         deleteCount.incrementAndGet();
         return true;
     }
@@ -83,7 +83,7 @@ public class BlobDeleteHandler extends ListActionTaker {
      * Orchestrate the delete operation.
      *
      * @return true if the delete operation is successful.
-     * @throws IOException if deletion fails due to server error or path doesn't exist.
+     * @throws AzureBlobFileSystemException if deletion fails due to server error or path doesn't exist.
      */
     public boolean execute() throws AzureBlobFileSystemException {
         /*
@@ -138,7 +138,7 @@ public class BlobDeleteHandler extends ListActionTaker {
             throws AzureBlobFileSystemException {
         if (!path.isRoot() && !path.getParent().isRoot()) {
             try {
-                abfsClient.createPath(path.getParent().toUri().getPath(), false, false,
+                getAbfsBlobClient().createPath(path.getParent().toUri().getPath(), false, false,
                         null,
                         false, null, null, tracingContext);
             } catch (AbfsRestOperationException ex) {

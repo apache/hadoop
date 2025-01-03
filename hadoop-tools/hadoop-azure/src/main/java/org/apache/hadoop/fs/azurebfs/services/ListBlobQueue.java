@@ -102,7 +102,7 @@ public class ListBlobQueue {
             pathListForConsumption.add(pathQueue.poll());
             counter++;
         }
-        if(counter > 0) {
+        if (counter > 0) {
             notify();
         }
         return pathListForConsumption;
@@ -121,8 +121,8 @@ public class ListBlobQueue {
      * @return the available size of the queue
      */
     synchronized int availableSize() {
-        while(maxSize - size() <= 0) {
-            if(isConsumptionFailed) {
+        while (maxSize - size() <= 0) {
+            if (isConsumptionFailed) {
                 return 0;
             }
             try {

@@ -50,11 +50,11 @@ public abstract class ListActionTaker {
 
     private static final Logger LOG = LoggerFactory.getLogger(ListActionTaker.class);
 
-    protected final Path path;
+    private final Path path;
 
-    protected final AbfsBlobClient abfsClient;
+    private final AbfsBlobClient abfsBlobClient;
 
-    protected final TracingContext tracingContext;
+    private final TracingContext tracingContext;
 
     private final ExecutorService executorService;
 
@@ -62,13 +62,17 @@ public abstract class ListActionTaker {
             false);
 
     public ListActionTaker(Path path,
-                           AbfsBlobClient abfsClient,
+                           AbfsBlobClient abfsBlobClient,
                            TracingContext tracingContext) {
         this.path = path;
-        this.abfsClient = abfsClient;
+        this.abfsBlobClient = abfsBlobClient;
         this.tracingContext = tracingContext;
         executorService = Executors.newFixedThreadPool(
                 getMaxConsumptionParallelism());
+    }
+
+    public AbfsBlobClient getAbfsBlobClient() {
+        return abfsBlobClient;
     }
 
     abstract int getMaxConsumptionParallelism();
@@ -112,7 +116,7 @@ public abstract class ListActionTaker {
      * in {@link #takeAction(Path)}.
      */
     public boolean listRecursiveAndTakeAction() throws AzureBlobFileSystemException {
-        AbfsConfiguration configuration = abfsClient.getAbfsConfiguration();
+        AbfsConfiguration configuration = abfsBlobClient.getAbfsConfiguration();
         Thread producerThread = null;
         try {
             ListBlobQueue listBlobQueue = new ListBlobQueue(
@@ -161,7 +165,7 @@ public abstract class ListActionTaker {
             }
             final AbfsRestOperation op;
             try {
-                op = abfsClient.listPath(path.toUri().getPath(),
+                op = abfsBlobClient.listPath(path.toUri().getPath(),
                         true,
                         queueAvailableSize, continuationToken,
                         tracingContext);

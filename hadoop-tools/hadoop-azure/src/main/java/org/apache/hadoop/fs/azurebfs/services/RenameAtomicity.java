@@ -21,8 +21,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-
-import java.util.Collections;
 import java.util.Random;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -44,7 +42,6 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_ID_LENGTH;
-//TODO: Do we need AzureIngressHandler?
 //import static org.apache.hadoop.fs.azurebfs.services.AzureIngressHandler.generateBlockListXml;
 
 /**
@@ -75,7 +72,9 @@ public class RenameAtomicity {
 
     private int renamePendingJsonLen;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private static final Random RANDOM = new Random();
 
     /**
      * Performs pre-rename operations. Creates a file with -RenamePending.json
@@ -166,22 +165,24 @@ public class RenameAtomicity {
         return bytes;
     }
 
+    public static String generateBlockId() {
+        // PutBlock on the path.
+        byte[] blockIdByteArray = new byte[BLOCK_ID_LENGTH];
+        RANDOM.nextBytes(blockIdByteArray);
+        return new String(Base64.encodeBase64(blockIdByteArray),
+                StandardCharsets.UTF_8);
+    }
+
     @VisibleForTesting
     void createRenamePendingJson(Path path, byte[] bytes)
             throws AzureBlobFileSystemException {
         // PutBlob on the path.
-        // TODO: Do we need isNameSpaceEnabled in createPath Arguments?
         AbfsRestOperation putBlobOp = abfsClient.createPath(path.toUri().getPath(),
                 true,
                 true, null, false, null, null, tracingContext);
         String eTag = extractEtagHeader(putBlobOp.getResult());
 
-        // PutBlock on the path.
-        byte[] blockIdByteArray = new byte[BLOCK_ID_LENGTH];
-        new Random().nextBytes(blockIdByteArray);
-        String blockId = new String(Base64.encodeBase64(blockIdByteArray),
-                StandardCharsets.UTF_8);
-        // TODO: Created Block object, different in wasb
+        String blockId = generateBlockId();
         AppendRequestParameters appendRequestParameters
                 = new AppendRequestParameters(0, 0,
                 bytes.length, AppendRequestParameters.Mode.APPEND_MODE, false, null,
