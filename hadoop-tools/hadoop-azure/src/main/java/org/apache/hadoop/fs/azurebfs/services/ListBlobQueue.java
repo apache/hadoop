@@ -49,36 +49,60 @@ public class ListBlobQueue {
 
     private volatile AzureBlobFileSystemException failureFromProducer;
 
+    /** Constructor.
+     *
+     * @param maxSize maximum size of the queue
+     * @param consumeSetSize number of paths to be consumed at a time
+     */
     ListBlobQueue(int maxSize, int consumeSetSize) {
         this.maxSize = maxSize;
         this.consumeSetSize = consumeSetSize;
     }
 
+    /** Mark the queue as failed.*/
     void markProducerFailure(AzureBlobFileSystemException failure) {
         failureFromProducer = failure;
     }
 
+    /** Mark the queue as completed.*/
     void complete() {
         isCompleted = true;
     }
 
+    /** Mark the consumption as failed.*/
     synchronized void markConsumptionFailed() {
         isConsumptionFailed = true;
         notify();
     }
 
+    /** Check if the consumption has failed.
+     *
+     * @return true if the consumption has failed
+     */
     boolean getConsumptionFailed() {
         return isConsumptionFailed;
     }
 
+    /** Check if the queue is completed.
+     *
+     * @return true if the queue is completed
+     */
     boolean getIsCompleted() {
         return isCompleted && size() == 0;
     }
 
+    /** Get the exception from producer.
+     *
+     * @return exception from producer
+     */
     private AzureBlobFileSystemException getException() {
         return failureFromProducer;
     }
 
+    /** Enqueue the paths.
+     *
+     * @param pathList list of paths to be enqueued
+     */
     synchronized void enqueue(List<Path> pathList) {
         if (isCompleted) {
             throw new IllegalStateException(
@@ -87,6 +111,11 @@ public class ListBlobQueue {
         pathQueue.addAll(pathList);
     }
 
+    /** Consume the paths.
+     *
+     * @return list of paths to be consumed
+     * @throws AzureBlobFileSystemException if the consumption fails
+     */
     synchronized List<Path> consume() throws AzureBlobFileSystemException {
         AzureBlobFileSystemException exception = getException();
         if (exception != null) {
@@ -95,6 +124,10 @@ public class ListBlobQueue {
         return dequeue();
     }
 
+    /** Dequeue the paths.
+     *
+     * @return list of paths to be consumed
+     */
     private List<Path> dequeue() {
         List<Path> pathListForConsumption = new ArrayList<>();
         int counter = 0;

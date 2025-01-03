@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -56,6 +55,13 @@ public class BlobDeleteHandler extends ListActionTaker {
 
     private final AtomicInteger deleteCount = new AtomicInteger(0);
 
+    /** Constructor
+     *
+     * @param path path to delete.
+     * @param recursive if true, delete the path recursively.
+     * @param abfsBlobClient client to use for blob operations.
+     * @param tracingContext tracing context.
+     */
     public BlobDeleteHandler(final Path path,
                              final boolean recursive,
                              final AbfsBlobClient abfsBlobClient,
@@ -66,12 +72,22 @@ public class BlobDeleteHandler extends ListActionTaker {
         this.tracingContext = tracingContext;
     }
 
+    /**{@inheritDoc}
+     *
+     * @return the maximum number of parallelism for delete operation.
+     */
     @Override
     int getMaxConsumptionParallelism() {
         return getAbfsBlobClient().getAbfsConfiguration()
                 .getBlobDeleteDirConsumptionParallelism();
     }
 
+    /** Delete the path.
+     *
+     * @param path path to delete.
+     * @return true if the path is deleted.
+     * @throws AzureBlobFileSystemException server error.
+     */
     private boolean deleteInternal(final Path path)
             throws AzureBlobFileSystemException {
         getAbfsBlobClient().deleteBlobPath(path, null, tracingContext);
@@ -134,6 +150,10 @@ public class BlobDeleteHandler extends ListActionTaker {
         return deleted;
     }
 
+    /** Ensure that the parent path exists.
+     *
+     * @throws AzureBlobFileSystemException server error.
+     */
     private void ensurePathParentExist()
             throws AzureBlobFileSystemException {
         if (!path.isRoot() && !path.getParent().isRoot()) {

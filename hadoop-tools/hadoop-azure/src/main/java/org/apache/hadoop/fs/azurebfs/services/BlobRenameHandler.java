@@ -79,6 +79,16 @@ public class BlobRenameHandler extends ListActionTaker {
 
     private final AtomicInteger operatedBlobCount = new AtomicInteger(0);
 
+    /** Constructor.
+     *
+     * @param src source path
+     * @param dst destination path
+     * @param abfsClient AbfsBlobClient to use for the rename operation
+     * @param srcEtag eTag of the source path
+     * @param isAtomicRename true if the rename operation is atomic
+     * @param isAtomicRenameRecovery true if the rename operation is a recovery of a previous failed atomic rename operation
+     * @param tracingContext object of tracingContext used for the tracing of the server calls.
+     */
     public BlobRenameHandler(final String src,
                              final String dst,
                              final AbfsBlobClient abfsClient,
@@ -95,6 +105,10 @@ public class BlobRenameHandler extends ListActionTaker {
         this.isAtomicRenameRecovery = isAtomicRenameRecovery;
     }
 
+    /** {@inheritDoc}
+     *
+     * @return max parallelism for the rename operation
+     * */
     @Override
     int getMaxConsumptionParallelism() {
         return getAbfsBlobClient().getAbfsConfiguration()
@@ -103,6 +117,9 @@ public class BlobRenameHandler extends ListActionTaker {
 
     /**
      * Orchestrates the rename operation.
+     *
+     * @return AbfsClientRenameResult containing the result of the rename operation
+     * @throws AzureBlobFileSystemException if server call fails
      */
     public AbfsClientRenameResult execute() throws AzureBlobFileSystemException {
         PathInformation pathInformation = new PathInformation();
@@ -157,6 +174,11 @@ public class BlobRenameHandler extends ListActionTaker {
         }
     }
 
+    /** Final rename operation after all the blobs have been copied.
+     *
+     * @return true if rename is successful
+     * @throws AzureBlobFileSystemException if server call fails
+     */
     private boolean finalSrcRename() throws AzureBlobFileSystemException {
         tracingContext.setOperatedBlobCount(operatedBlobCount.get() + 1);
         try {
@@ -166,6 +188,12 @@ public class BlobRenameHandler extends ListActionTaker {
         }
     }
 
+    /** Gets the rename atomicity object.
+     *
+     * @param pathInformation object containing the path information of the source path
+     *
+     * @return RenameAtomicity object
+     */
     @VisibleForTesting
     public RenameAtomicity getRenameAtomicity(final PathInformation pathInformation) {
         return new RenameAtomicity(src,
@@ -176,6 +204,14 @@ public class BlobRenameHandler extends ListActionTaker {
                 getAbfsBlobClient());
     }
 
+    /** Takes a lease on the path.
+     *
+     * @param path path on which the lease is to be taken
+     * @param eTag eTag of the path
+     *
+     * @return object containing the lease information
+     * @throws AzureBlobFileSystemException if server call fails
+     */
     private AbfsLease takeLease(final Path path, final String eTag)
             throws AzureBlobFileSystemException {
         AbfsLease lease = new AbfsLease(getAbfsBlobClient(), path.toUri().getPath(), false,
@@ -186,6 +222,12 @@ public class BlobRenameHandler extends ListActionTaker {
         return lease;
     }
 
+    /** Checks if the path contains a colon.
+     *
+     * @param p path to check
+     *
+     * @return true if the path contains a colon
+     */
     private boolean containsColon(Path p) {
         return p.toUri().getPath().contains(":");
     }
@@ -259,6 +301,13 @@ public class BlobRenameHandler extends ListActionTaker {
         }
     }
 
+    /** Set the path information of the source path.
+     *
+     * @param src source path
+     * @param pathInformation object containing the path information of the source path
+     *
+     * @throws AzureBlobFileSystemException if server call fails
+     */
     private void setSrcPathInformation(final Path src,
                                        final PathInformation pathInformation)
             throws AzureBlobFileSystemException {
@@ -292,6 +341,14 @@ public class BlobRenameHandler extends ListActionTaker {
         }
     }
 
+    /** Validate if the destination path does not exist.
+     *
+     * @param src source path
+     * @param dst destination path
+     * @param pathInformation object containing the path information of the source path
+     *
+     * @throws AbfsRestOperationException if the destination path already exists
+     */
     private void validateDestinationPathNotExist(final Path src,
                                                  final Path dst,
                                                  final PathInformation pathInformation)
@@ -320,6 +377,14 @@ public class BlobRenameHandler extends ListActionTaker {
         }
     }
 
+    /** Validate if the parent of the destination path exists.
+     *
+     * @param src source path
+     * @param dst destination path
+     * @param pathInformation object containing the path information of the source path
+     *
+     * @throws AbfsRestOperationException if the parent of the destination path does not exist
+     */
     private void validateDestinationParentExist(final Path src,
                                                 final Path dst,
                                                 final PathInformation pathInformation)
@@ -342,12 +407,21 @@ public class BlobRenameHandler extends ListActionTaker {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     boolean takeAction(final Path path) throws AzureBlobFileSystemException {
         return renameInternal(path,
                 createDestinationPathForBlobPartOfRenameSrcDir(dst, path, src));
     }
 
+    /** Renames the source path to the destination path.
+     *
+     * @param path source path
+     * @param destinationPathForBlobPartOfRenameSrcDir destination path
+     *
+     * @return true if rename is successful
+     * @throws AzureBlobFileSystemException if server call fails
+     */
     private boolean renameInternal(final Path path,
                                    final Path destinationPathForBlobPartOfRenameSrcDir)
             throws AzureBlobFileSystemException {
@@ -387,6 +461,14 @@ public class BlobRenameHandler extends ListActionTaker {
         return true;
     }
 
+    /** Copies the source path to the destination path.
+     *
+     * @param src source path
+     * @param dst destination path
+     * @param leaseId lease id for the source path
+     *
+     * @throws AzureBlobFileSystemException if server call fails
+     */
     private void copyPath(final Path src, final Path dst, final String leaseId)
             throws AzureBlobFileSystemException {
         String copyId;
@@ -420,12 +502,20 @@ public class BlobRenameHandler extends ListActionTaker {
                 == BlobCopyProgress.PENDING) {
             try {
                 Thread.sleep(pollWait);
-            } catch (InterruptedException ignored) {
-
+            } catch (InterruptedException interruptedException) {
+                // To be ignored
+                LOG.debug("Interrupted while waiting for copy to complete", interruptedException);
             }
         }
     }
 
+    /** Gets the source path of the copy operation.
+     *
+     * @param dstPathStatus server response for the GetBlobProperties API on the
+     * destination path.
+     *
+     * @return source path of the copy operation
+     */
     private String getDstSource(final AbfsRestOperation dstPathStatus) {
         try {
             String responseHeader = dstPathStatus.getResult()
@@ -448,7 +538,7 @@ public class BlobRenameHandler extends ListActionTaker {
      * @param copyId id returned by server on the copy server-call. This id gets
      * attached to blob and is returned by GetBlobProperties API on the destination.
      *
-     * @return true if copying is success, false if it is still in progress.
+     * @return BlobCopyProgress indicating the status of the copy operation
      *
      * @throws AzureBlobFileSystemException exception returned in making server call
      * for GetBlobProperties on the path. It can be thrown if the copyStatus is failure
@@ -509,6 +599,15 @@ public class BlobRenameHandler extends ListActionTaker {
                         sourcePathStr.length()));
     }
 
+    /** Get information of the path.
+     *
+     * @param path path for which the path information is to be fetched
+     * @param tracingContext object of tracingContext used for the tracing of the
+     * server calls.
+     *
+     * @return object containing the path information
+     * @throws AzureBlobFileSystemException if server call fails
+     */
     private PathInformation getPathInformation(Path path,
                                                TracingContext tracingContext)
             throws AzureBlobFileSystemException {
@@ -528,10 +627,5 @@ public class BlobRenameHandler extends ListActionTaker {
             }
             throw e;
         }
-    }
-
-    @VisibleForTesting
-    public List<AbfsLease> getLeases() {
-        return leases;
     }
 }

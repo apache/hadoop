@@ -30,6 +30,7 @@ public class RenamePendingJsonFormat {
     @JsonProperty(value = "ETag")
     private String eTag;
 
+    /** Getters and Setters */
     String getOldFolderName() {
         return oldFolderName;
     }

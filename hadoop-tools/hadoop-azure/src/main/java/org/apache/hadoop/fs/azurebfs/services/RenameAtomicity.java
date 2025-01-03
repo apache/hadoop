@@ -105,6 +105,7 @@ public class RenameAtomicity {
      * Resumes the rename operation from the JSON file.
      *
      * @param renameJsonPath Path of the JSON file
+     * @param renamePendingJsonFileLen Length of the JSON file
      * @param tracingContext Tracing context
      * @param srcEtag ETag of the source directory
      * @param abfsClient AbfsClient instance
@@ -123,6 +124,8 @@ public class RenameAtomicity {
 
     /**
      * Redo the rename operation from the JSON file.
+     *
+     * @throws AzureBlobFileSystemException If the redo operation fails.
      */
     public void redo() throws AzureBlobFileSystemException {
         byte[] buffer = readRenamePendingJson(renameJsonPath, renamePendingJsonLen);
@@ -155,6 +158,13 @@ public class RenameAtomicity {
         }
     }
 
+    /** Read the JSON file.
+     *
+     * @param path Path of the JSON file
+     * @param len Length of the JSON file
+     * @return Contents of the JSON file
+     * @throws AzureBlobFileSystemException If the read operation fails.
+     */
     @VisibleForTesting
     byte[] readRenamePendingJson(Path path, int len)
             throws AzureBlobFileSystemException {
@@ -165,6 +175,10 @@ public class RenameAtomicity {
         return bytes;
     }
 
+    /** Generate a random block ID.
+     *
+     * @return Random block ID
+     */
     public static String generateBlockId() {
         // PutBlock on the path.
         byte[] blockIdByteArray = new byte[BLOCK_ID_LENGTH];
@@ -173,6 +187,12 @@ public class RenameAtomicity {
                 StandardCharsets.UTF_8);
     }
 
+    /** Create the JSON file with the contents.
+     *
+     * @param path Path of the JSON file
+     * @param bytes Contents of the JSON file
+     * @throws AzureBlobFileSystemException If the create operation fails.
+     */
     @VisibleForTesting
     void createRenamePendingJson(Path path, byte[] bytes)
             throws AzureBlobFileSystemException {
@@ -199,14 +219,14 @@ public class RenameAtomicity {
     }
 
     /**
-     * Before starting the attomic rename, create a file with -RenamePending.json
+     * Before starting the atomic rename, create a file with -RenamePending.json
      * suffix in the source parent directory. This file contains the states
      * required source, destination, and source-eTag for the rename operation.
-     *
      * If the path that is getting renamed is a /sourcePath, then the JSON file
      * will be /sourcePath-RenamePending.json.
      *
      * @return Length of the JSON file.
+     * @throws AzureBlobFileSystemException If the pre-rename operation fails.
      */
     @VisibleForTesting
     public int preRename() throws AzureBlobFileSystemException {
@@ -229,7 +249,7 @@ public class RenameAtomicity {
              * if-match header. If file is not there, the conditional header will fail,
              * the server will return 412.
              */
-            if (isPreRenameRetriableException(e)) {
+            if (isPreRenameRetryableException(e)) {
                 preRenameRetryCount++;
                 if (preRenameRetryCount == 1) {
                     return preRename();
@@ -239,7 +259,12 @@ public class RenameAtomicity {
         }
     }
 
-    private boolean isPreRenameRetriableException(IOException e) {
+    /** Check if the exception is retryable for pre-rename operation.
+     *
+     * @param e Exception to be checked
+     * @return true if the exception is retryable, false otherwise
+     */
+    private boolean isPreRenameRetryableException(IOException e) {
         AbfsRestOperationException ex;
         while (e != null) {
             if (e instanceof AbfsRestOperationException) {
@@ -252,10 +277,17 @@ public class RenameAtomicity {
         return false;
     }
 
+    /** Delete the JSON file after rename is done.
+     * @throws AzureBlobFileSystemException If the delete operation fails.
+     */
     public void postRename() throws AzureBlobFileSystemException {
         deleteRenamePendingJson();
     }
 
+    /** Delete the JSON file.
+     *
+     * @throws AzureBlobFileSystemException If the delete operation fails.
+     */
     private void deleteRenamePendingJson() throws AzureBlobFileSystemException {
         try {
             abfsClient.deleteBlobPath(renameJsonPath, null,
@@ -269,7 +301,6 @@ public class RenameAtomicity {
             throw e;
         }
     }
-
 
     /**
      * Return the contents of the JSON file to represent the operations
@@ -290,69 +321,4 @@ public class RenameAtomicity {
             throw new AbfsDriverException(e);
         }
     }
-
-    /**
-     * This is an exact copy of org.codehaus.jettison.json.JSONObject.quote
-     * method.
-     *
-     * Produce a string in double quotes with backslash sequences in all the
-     * right places. A backslash will be inserted within </, allowing JSON
-     * text to be delivered in HTML. In JSON text, a string cannot contain a
-     * control character or an unescaped quote or backslash.
-     * @param string A String
-     * @return A String correctly formatted for insertion in a JSON text.
-     */
-    private String quote(String string) {
-        if (string == null || string.length() == 0) {
-            return "\"\"";
-        }
-
-        char c = 0;
-        int i;
-        int len = string.length();
-        StringBuilder sb = new StringBuilder(len + 4);
-        String t;
-
-        sb.append('"');
-        for (i = 0; i < len; i += 1) {
-            c = string.charAt(i);
-            switch (c) {
-                case '\\':
-                case '"':
-                    sb.append('\\');
-                    sb.append(c);
-                    break;
-                case '/':
-                    sb.append('\\');
-                    sb.append(c);
-                    break;
-                case '\b':
-                    sb.append("\\b");
-                    break;
-                case '\t':
-                    sb.append("\\t");
-                    break;
-                case '\n':
-                    sb.append("\\n");
-                    break;
-                case '\f':
-                    sb.append("\\f");
-                    break;
-                case '\r':
-                    sb.append("\\r");
-                    break;
-                default:
-                    if (c < ' ') {
-                        t = "000" + Integer.toHexString(c);
-                        sb.append("\\u" + t.substring(t.length() - 4));
-                    } else {
-                        sb.append(c);
-                    }
-            }
-        }
-        sb.append('"');
-        return sb.toString();
-    }
-
-
 }
