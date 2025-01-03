@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.webapp;
 
+import javax.inject.Singleton;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -26,7 +27,6 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import com.google.inject.Singleton;
 
 import org.apache.hadoop.http.JettyUtils;
 

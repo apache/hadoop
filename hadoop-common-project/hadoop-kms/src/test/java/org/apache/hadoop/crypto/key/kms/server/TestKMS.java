@@ -344,7 +344,7 @@ public class TestKMS {
 
     @Override
     public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-      Map<String, String> options = new HashMap<String, String>();
+      Map<String, String> options = new HashMap<>();
       options.put("keyTab", keytab);
       options.put("principal", principal);
       options.put("useKeyTab", "true");
@@ -2106,13 +2106,11 @@ public class TestKMS {
 
     conf = createBaseKMSConf(testDir, conf);
     conf.set("hadoop.kms.authentication.type", "kerberos");
-    conf.set("hadoop.kms.authentication.kerberos.keytab",
-            keytab.getAbsolutePath());
+    conf.set("hadoop.kms.authentication.kerberos.keytab", keytab.getAbsolutePath());
     conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
     conf.set("hadoop.kms.proxyuser.client.users", "foo/localhost");
     conf.set("hadoop.kms.proxyuser.client.hosts", "localhost");
-    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kcc.ALL",
-        "foo/localhost");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kcc.ALL", "foo/localhost");
 
     writeConf(testDir, conf);
 

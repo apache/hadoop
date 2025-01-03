@@ -26,7 +26,12 @@ import java.util.List;
 import java.util.Map;
 import java.security.PrivilegedExceptionAction;
 
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
 import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
@@ -58,14 +63,11 @@ import org.apache.hadoop.yarn.service.conf.RestApiConstants;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.util.RMHAUtils;
 import org.eclipse.jetty.util.UrlEncoded;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.ClientProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource.Builder;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
 
 import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.*;
 
@@ -112,8 +114,8 @@ public class ApiServiceClient extends AppAdminClient {
       StringBuilder diagnosticsMsg = new StringBuilder();
       for (String host : rmServers) {
         try {
-          Client client = Client.create();
-          client.setFollowRedirects(false);
+          Client client = ClientBuilder.newClient();
+          client.property(ClientProperties.FOLLOW_REDIRECTS, false);
           StringBuilder sb = new StringBuilder();
           sb.append(scheme)
               .append(host)
@@ -128,8 +130,8 @@ public class ApiServiceClient extends AppAdminClient {
               LOG.debug("Fail to resolve username: {}", e);
             }
           }
-          Builder builder = client
-              .resource(sb.toString()).type(MediaType.APPLICATION_JSON);
+          Invocation.Builder builder = client
+              .target(sb.toString()).request(MediaType.APPLICATION_JSON);
           if (useKerberos) {
             String[] server = host.split(":");
             String challenge = YarnClientUtils.generateToken(server[0]);
@@ -137,12 +139,12 @@ public class ApiServiceClient extends AppAdminClient {
                 challenge);
             LOG.debug("Authorization: Negotiate {}", challenge);
           }
-          ClientResponse test = builder.get(ClientResponse.class);
+          Response test = builder.get(Response.class);
           if (test.getStatus() == 200) {
             return scheme + host;
           }
         } catch (Exception e) {
-          LOG.info("Fail to connect to: " + host);
+          LOG.info("Fail to connect to: {}" + host);
           LOG.debug("Root cause: ", e);
           diagnosticsMsg.append("Error connecting to " + host
               + " due to " + e.getMessage() + "\n");
@@ -229,7 +231,7 @@ public class ApiServiceClient extends AppAdminClient {
     }
   }
 
-  public Builder getApiClient() throws IOException {
+  public Invocation.Builder getApiClient() throws IOException {
     return getApiClient(getServicePath(null));
   }
 
@@ -240,12 +242,11 @@ public class ApiServiceClient extends AppAdminClient {
    * @return
    * @throws IOException
    */
-  public Builder getApiClient(String requestPath)
+  public Invocation.Builder getApiClient(String requestPath)
       throws IOException {
-    Client client = Client.create(getClientConfig());
-    client.setChunkedEncodingSize(null);
-    Builder builder = client
-        .resource(requestPath).type(MediaType.APPLICATION_JSON);
+    Client client = ClientBuilder.newClient(getClientConfig());
+    Invocation.Builder builder = client
+        .target(requestPath).request(MediaType.APPLICATION_JSON);
     if (UserGroupInformation.isSecurityEnabled()) {
       try {
         URI url = new URI(requestPath);
@@ -260,15 +261,12 @@ public class ApiServiceClient extends AppAdminClient {
   }
 
   private ClientConfig getClientConfig() {
-    ClientConfig config = new DefaultClientConfig();
-    config.getProperties().put(
-        ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, 0);
-    config.getProperties().put(
-        ClientConfig.PROPERTY_BUFFER_RESPONSE_ENTITY_ON_EXCEPTION, true);
+    ClientConfig config = new ClientConfig();
+    config.property(ClientProperties.CHUNKED_ENCODING_SIZE, 0);
     return config;
   }
 
-  private int processResponse(ClientResponse response) {
+  private int processResponse(Response response) {
     response.bufferEntity();
     String output;
     if (response.getStatus() == 401) {
@@ -280,13 +278,13 @@ public class ApiServiceClient extends AppAdminClient {
       return EXIT_EXCEPTION_THROWN;
     }
     try {
-      ServiceStatus ss = response.getEntity(ServiceStatus.class);
+      ServiceStatus ss = response.readEntity(ServiceStatus.class);
       output = ss.getDiagnostics();
     } catch (Throwable t) {
-      output = response.getEntity(String.class);
+      output = response.readEntity(String.class);
     }
     if (output==null) {
-      output = response.getEntity(String.class);
+      output = response.readEntity(String.class);
     }
     if (response.getStatus() <= 299) {
       LOG.info(output);
@@ -375,8 +373,8 @@ public class ApiServiceClient extends AppAdminClient {
       Service service =
           loadAppJsonFromLocalFS(fileName, appName, lifetime, queue);
       String buffer = jsonSerDeser.toJson(service);
-      ClientResponse response = getApiClient()
-          .post(ClientResponse.class, buffer);
+      Response response = getApiClient()
+          .post(Entity.entity(buffer, MediaType.APPLICATION_JSON));
       result = processResponse(response);
     } catch (Exception e) {
       LOG.error("Fail to launch application: ", e);
@@ -398,8 +396,8 @@ public class ApiServiceClient extends AppAdminClient {
       service.setName(appName);
       service.setState(ServiceState.STOPPED);
       String buffer = jsonSerDeser.toJson(service);
-      ClientResponse response = getApiClient(getServicePath(appName))
-          .put(ClientResponse.class, buffer);
+      Response response = getApiClient(getServicePath(appName))
+          .put(Entity.entity(buffer, MediaType.APPLICATION_JSON));
       result = processResponse(response);
     } catch (Exception e) {
       LOG.error("Fail to stop application: ", e);
@@ -421,8 +419,8 @@ public class ApiServiceClient extends AppAdminClient {
       service.setName(appName);
       service.setState(ServiceState.STARTED);
       String buffer = jsonSerDeser.toJson(service);
-      ClientResponse response = getApiClient(getServicePath(appName))
-          .put(ClientResponse.class, buffer);
+      Response response = getApiClient(getServicePath(appName))
+          .put(Entity.entity(buffer, MediaType.APPLICATION_JSON));
       result = processResponse(response);
     } catch (Exception e) {
       LOG.error("Fail to start application: ", e);
@@ -448,8 +446,8 @@ public class ApiServiceClient extends AppAdminClient {
           loadAppJsonFromLocalFS(fileName, appName, lifetime, queue);
       service.setState(ServiceState.STOPPED);
       String buffer = jsonSerDeser.toJson(service);
-      ClientResponse response = getApiClient()
-          .post(ClientResponse.class, buffer);
+      Response response = getApiClient()
+          .post(Entity.entity(buffer, MediaType.APPLICATION_JSON));
       result = processResponse(response);
     } catch (Exception e) {
       LOG.error("Fail to save application: ", e);
@@ -467,8 +465,8 @@ public class ApiServiceClient extends AppAdminClient {
   public int actionDestroy(String appName) throws IOException, YarnException {
     int result = EXIT_SUCCESS;
     try {
-      ClientResponse response = getApiClient(getServicePath(appName))
-          .delete(ClientResponse.class);
+      Response response = getApiClient(getServicePath(appName))
+          .delete(Response.class);
       result = processResponse(response);
     } catch (Exception e) {
       LOG.error("Fail to destroy application: ", e);
@@ -499,8 +497,8 @@ public class ApiServiceClient extends AppAdminClient {
         service.addComponent(component);
       }
       String buffer = jsonSerDeser.toJson(service);
-      ClientResponse response = getApiClient(getServicePath(appName))
-          .put(ClientResponse.class, buffer);
+      Response response = getApiClient(getServicePath(appName))
+          .put(Entity.entity(buffer, MediaType.APPLICATION_JSON));
       result = processResponse(response);
     } catch (Exception e) {
       LOG.error("Fail to flex application: ", e);
@@ -540,8 +538,8 @@ public class ApiServiceClient extends AppAdminClient {
       ServiceApiUtil.validateNameFormat(appName, getConfig());
     }
     try {
-      ClientResponse response = getApiClient(getServicePath(appName))
-          .get(ClientResponse.class);
+      Response response = getApiClient(getServicePath(appName))
+          .get(Response.class);
       if (response.getStatus() == 404) {
         StringBuilder sb = new StringBuilder();
         sb.append(" Service ")
@@ -556,7 +554,7 @@ public class ApiServiceClient extends AppAdminClient {
             .append(response.getStatus());
         return sb.toString();
       }
-      output = response.getEntity(String.class);
+      output = response.readEntity(String.class);
     } catch (Exception e) {
       LOG.error("Fail to check application status: ", e);
     }
@@ -573,8 +571,8 @@ public class ApiServiceClient extends AppAdminClient {
       service.setState(ServiceState.EXPRESS_UPGRADING);
       String buffer = jsonSerDeser.toJson(service);
       LOG.info("Upgrade in progress. Please wait..");
-      ClientResponse response = getApiClient(getServicePath(appName))
-          .put(ClientResponse.class, buffer);
+      Response response = getApiClient(getServicePath(appName))
+          .put(Entity.entity(buffer, MediaType.APPLICATION_JSON));
       result = processResponse(response);
     } catch (Exception e) {
       LOG.error("Failed to upgrade application: ", e);
@@ -596,8 +594,8 @@ public class ApiServiceClient extends AppAdminClient {
         service.setState(ServiceState.UPGRADING);
       }
       String buffer = jsonSerDeser.toJson(service);
-      ClientResponse response = getApiClient(getServicePath(appName))
-          .put(ClientResponse.class, buffer);
+      Response response = getApiClient(getServicePath(appName))
+          .put(Entity.entity(buffer, MediaType.APPLICATION_JSON));
       result = processResponse(response);
     } catch (Exception e) {
       LOG.error("Failed to upgrade application: ", e);
@@ -620,8 +618,8 @@ public class ApiServiceClient extends AppAdminClient {
         toUpgrade[idx++] = container;
       }
       String buffer = ServiceApiUtil.CONTAINER_JSON_SERDE.toJson(toUpgrade);
-      ClientResponse response = getApiClient(getInstancesPath(appName))
-          .put(ClientResponse.class, buffer);
+      Response response = getApiClient(getInstancesPath(appName))
+          .put(Entity.entity(buffer, MediaType.APPLICATION_JSON));
       result = processResponse(response);
     } catch (Exception e) {
       LOG.error("Failed to upgrade component instance: ", e);
@@ -644,8 +642,8 @@ public class ApiServiceClient extends AppAdminClient {
         toUpgrade[idx++] = component;
       }
       String buffer = ServiceApiUtil.COMP_JSON_SERDE.toJson(toUpgrade);
-      ClientResponse response = getApiClient(getComponentsPath(appName))
-          .put(ClientResponse.class, buffer);
+      Response response = getApiClient(getComponentsPath(appName))
+          .put(Entity.entity(buffer, MediaType.APPLICATION_JSON));
       result = processResponse(response);
     } catch (Exception e) {
       LOG.error("Failed to upgrade components: ", e);
@@ -685,15 +683,15 @@ public class ApiServiceClient extends AppAdminClient {
     try {
       String uri = getInstancePath(appName, components, version,
           containerStates);
-      ClientResponse response = getApiClient(uri).get(ClientResponse.class);
+      Response response = getApiClient(uri).get(Response.class);
       if (response.getStatus() != 200) {
         StringBuilder sb = new StringBuilder();
         sb.append("Failed: HTTP error code: ")
             .append(response.getStatus())
-            .append(" ErrorMsg: ").append(response.getEntity(String.class));
+            .append(" ErrorMsg: ").append(response.readEntity(String.class));
         return sb.toString();
       }
-      return response.getEntity(String.class);
+      return response.readEntity(String.class);
     } catch (Exception e) {
       LOG.error("Fail to get containers {}", e);
     }
@@ -710,8 +708,8 @@ public class ApiServiceClient extends AppAdminClient {
       service.setState(ServiceState.CANCEL_UPGRADING);
       String buffer = jsonSerDeser.toJson(service);
       LOG.info("Cancel upgrade in progress. Please wait..");
-      ClientResponse response = getApiClient(getServicePath(appName))
-          .put(ClientResponse.class, buffer);
+      Response response = getApiClient(getServicePath(appName))
+          .put(Entity.entity(buffer, MediaType.APPLICATION_JSON));
       result = processResponse(response);
     } catch (Exception e) {
       LOG.error("Failed to cancel upgrade: ", e);
@@ -738,8 +736,8 @@ public class ApiServiceClient extends AppAdminClient {
         component.addDecommissionedInstance(instance);
       }
       String buffer = jsonSerDeser.toJson(service);
-      ClientResponse response = getApiClient(getServicePath(appName))
-          .put(ClientResponse.class, buffer);
+      Response response = getApiClient(getServicePath(appName))
+          .put(Entity.entity(buffer, MediaType.APPLICATION_JSON));
       result = processResponse(response);
     } catch (Exception e) {
       LOG.error("Fail to decommission instance: ", e);

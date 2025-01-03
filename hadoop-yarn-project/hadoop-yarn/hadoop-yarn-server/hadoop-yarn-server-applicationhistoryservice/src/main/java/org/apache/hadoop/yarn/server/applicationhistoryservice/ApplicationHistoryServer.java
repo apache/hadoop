@@ -39,9 +39,14 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
+import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
+import org.apache.hadoop.yarn.api.records.reader.TimelineDomainReader;
+import org.apache.hadoop.yarn.api.records.reader.TimelineEntitiesReader;
+import org.apache.hadoop.yarn.api.records.writer.TimelineEntitiesWriter;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebServices;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timeline.LeveldbTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
@@ -49,14 +54,20 @@ import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineV1DelegationTokenSecretManagerService;
 import org.apache.hadoop.yarn.server.timeline.webapp.CrossOriginFilterInitializer;
+import org.apache.hadoop.yarn.server.timeline.webapp.TimelineWebServices;
 import org.apache.hadoop.yarn.server.util.timeline.TimelineServerUtils;
+import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
+import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.webapp.WebAppContext;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -242,7 +253,7 @@ public class ApplicationHistoryServer extends CompositeService {
     // the customized filter will be loaded by the timeline server to do Kerberos
     // + DT authentication.
     String initializers = conf.get("hadoop.http.filter.initializers", "");
-    Set<String> defaultInitializers = new LinkedHashSet<String>();
+    Set<String> defaultInitializers = new LinkedHashSet<>();
     // Add CORS filter
     if (!initializers.contains(CrossOriginFilterInitializer.class.getName())) {
       if(conf.getBoolean(YarnConfiguration.
@@ -272,12 +283,13 @@ public class ApplicationHistoryServer extends CompositeService {
       webApp =
           WebApps
             .$for("applicationhistory", ApplicationHistoryClientService.class,
-                ahsClientService, "ws")
+                ahsClientService, "app-hs-ws")
              .with(conf)
               .withAttribute(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
                  conf.get(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS))
               .withCSRFProtection(YarnConfiguration.TIMELINE_CSRF_PREFIX)
               .withXFSProtection(YarnConfiguration.TIMELINE_XFS_PREFIX)
+              .withResourceConfig(configure())
               .at(bindAddress).build(ahsWebApp);
        HttpServer2 httpServer = webApp.httpServer();
 
@@ -307,7 +319,7 @@ public class ApplicationHistoryServer extends CompositeService {
                 ALL_URLS);
           }
         }
-        LOG.info("Hosting " + name + " from " + onDiskPath + " at " + webPath);
+        LOG.info("Hosting {} from {} at {}.", name, onDiskPath, webPath);
         httpServer.addHandlerAtFront(uiWebAppContext);
       }
        httpServer.start();
@@ -315,7 +327,7 @@ public class ApplicationHistoryServer extends CompositeService {
         YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS,
         this.getListenerAddress());
-       LOG.info("Instantiating AHSWebApp at " + getPort());
+      LOG.info("Instantiating AHSWebApp at {}.", getPort());
     } catch (Exception e) {
       String msg = "AHSWebApp failed to start.";
       LOG.error(msg, e);
@@ -339,5 +351,30 @@ public class ApplicationHistoryServer extends CompositeService {
     return conf.getSocketAddr(YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ADDRESS,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_PORT);
+  }
+
+  protected ResourceConfig configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.packages("org.apache.hadoop.yarn.server.timeline.webapp");
+    config.packages("org.apache.hadoop.yarn.server.applicationhistoryservice.webapp");
+    config.packages("org.apache.hadoop.yarn.api.records.writer");
+    config.register(TimelineWebServices.class);
+    config.register(AHSWebServices.class);
+    config.register(TimelineEntitiesWriter.class);
+    config.register(TimelineEntitiesReader.class);
+    config.register(TimelineDomainReader.class);
+    config.register(new JerseyBinder());
+    config.register(GenericExceptionHandler.class);
+    config.register(new JettisonFeature()).register(YarnJacksonJaxbJsonProvider.class);
+    return config;
+  }
+
+  private class JerseyBinder extends AbstractBinder {
+    @Override
+    protected void configure() {
+      bind(timelineDataManager).to(TimelineDataManager.class).named("manager");
+      bind(getConfig()).to(Configuration.class).named("conf");
+      bind(ahsClientService).to(ApplicationBaseProtocol.class).named("appBaseProt");
+    }
   }
 }

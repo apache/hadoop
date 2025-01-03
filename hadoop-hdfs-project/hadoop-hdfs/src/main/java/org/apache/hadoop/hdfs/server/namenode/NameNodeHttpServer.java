@@ -39,16 +39,17 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.TokenVerifier;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
+import org.apache.hadoop.hdfs.web.ParamFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
-import org.apache.hadoop.hdfs.web.resources.AclPermissionParam;
-import org.apache.hadoop.hdfs.web.resources.Param;
-import org.apache.hadoop.hdfs.web.resources.UserParam;
+import org.apache.hadoop.hdfs.web.resources.*;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.server.ResourceConfig;
 
-import com.sun.jersey.api.core.ResourceConfig;
 
 /**
  * Encapsulates the HTTP server started by the NameNode. 
@@ -99,12 +100,24 @@ public class NameNodeHttpServer {
           new String[] {pathSpec});
     }
 
+    // add a filter to change parameter names to lower cases
+    HttpServer2.defineFilter(httpServer2.getWebAppContext(),
+        ParamFilter.class.getName(), ParamFilter.class.getName(), null,
+        new String[] {pathSpec});
+
     // add webhdfs packages
     final Map<String, String> params = new HashMap<>();
-    params.put(ResourceConfig.FEATURE_MATCH_MATRIX_PARAMS, "true");
-    httpServer2.addJerseyResourcePackage(
-        jerseyResourcePackage + ";" + Param.class.getPackage().getName(),
-        pathSpec, params);
+    ResourceConfig config = new ResourceConfig();
+    config.register(ExceptionHandler.class);
+    config.packages(jerseyResourcePackage, Param.class.getPackage().getName());
+    config.register(new AbstractBinder() {
+      // add a factory to generate UserGroupInformation
+      @Override
+      protected void configure() {
+        bindFactory(UserProvider.class).to(UserGroupInformation.class);
+      }
+    });
+    httpServer2.addJerseyResourceConfig(config, pathSpec, params);
   }
 
   /**

@@ -74,14 +74,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
+import org.glassfish.jersey.jettison.JettisonUnmarshaller;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONUnmarshaller;
 
 import static org.mockito.Mockito.mock;
 
@@ -100,18 +98,15 @@ public class TestFederationRMStateStoreService {
   private Configuration conf;
   private FederationStateStore stateStore;
   private long lastHearbeatTS = 0;
-  private JSONJAXBContext jc;
-  private JSONUnmarshaller unmarshaller;
+  private JettisonJaxbContext jettisonJaxbContext;
+  private JettisonUnmarshaller jsonUnmarshaller;
   private MockRM mockRM;
 
   @Before
   public void setUp() throws IOException, YarnException, JAXBException {
     conf = new YarnConfiguration();
-    jc = new JSONJAXBContext(
-        JSONConfiguration.mapped().rootUnwrapping(false).build(),
-        ClusterMetricsInfo.class);
-    unmarshaller = jc.createJSONUnmarshaller();
-
+    this.jettisonJaxbContext = new JettisonJaxbContext(ClusterMetricsInfo.class);
+    this.jsonUnmarshaller = jettisonJaxbContext.createJsonUnmarshaller();
     conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
     conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY, 10);
     conf.set(YarnConfiguration.RM_CLUSTER_ID, subClusterId.getId());
@@ -124,8 +119,8 @@ public class TestFederationRMStateStoreService {
 
   @After
   public void tearDown() throws Exception {
-    unmarshaller = null;
-    jc = null;
+    jettisonJaxbContext = null;
+    jsonUnmarshaller = null;
     mockRM.stop();
     mockRM = null;
   }
@@ -201,7 +196,7 @@ public class TestFederationRMStateStoreService {
 
   private void checkClusterMetricsInfo(String capability, int numNodes)
       throws JAXBException {
-    ClusterMetricsInfo clusterMetricsInfo = unmarshaller.unmarshalFromJSON(
+    ClusterMetricsInfo clusterMetricsInfo = jsonUnmarshaller.unmarshalFromJSON(
         new StringReader(capability), ClusterMetricsInfo.class);
     Assert.assertEquals(numNodes, clusterMetricsInfo.getTotalNodes());
   }

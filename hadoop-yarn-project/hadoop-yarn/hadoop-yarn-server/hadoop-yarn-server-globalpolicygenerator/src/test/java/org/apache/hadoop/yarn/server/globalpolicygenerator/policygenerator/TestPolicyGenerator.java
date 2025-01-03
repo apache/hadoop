@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator;
 
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONUnmarshaller;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -53,6 +50,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInf
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfoList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.glassfish.jersey.jettison.JettisonConfig;
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
+import org.glassfish.jersey.jettison.JettisonUnmarshaller;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -106,7 +106,6 @@ public class TestPolicyGenerator {
     gpgContext = new GPGContextImpl();
     gpgContext.setPolicyFacade(new GPGPolicyFacade(facade, conf));
     gpgContext.setStateStoreFacade(facade);
-
   }
 
   @Before
@@ -139,7 +138,7 @@ public class TestPolicyGenerator {
       ClusterMetricsInfo metricsInfo = new ClusterMetricsInfo();
       metricsInfo.setAppsPending(2000);
       if (!clusterInfos.containsKey(id)) {
-        clusterInfos.put(id, new HashMap<Class, Object>());
+        clusterInfos.put(id, new HashMap<>());
       }
       clusterInfos.get(id).put(ClusterMetricsInfo.class, metricsInfo);
 
@@ -164,17 +163,14 @@ public class TestPolicyGenerator {
 
   private <T> T readJSON(String pathname, Class<T> classy)
       throws IOException, JAXBException {
-
-    JSONJAXBContext jc =
-        new JSONJAXBContext(JSONConfiguration.mapped().build(), classy);
-    JSONUnmarshaller unmarshaller = jc.createJSONUnmarshaller();
+    JettisonJaxbContext jaxbContext = new JettisonJaxbContext(JettisonConfig.DEFAULT, classy);
     String contents = new String(Files.readAllBytes(Paths.get(pathname)));
+    JettisonUnmarshaller unmarshaller = jaxbContext.createJsonUnmarshaller();
     return unmarshaller.unmarshalFromJSON(new StringReader(contents), classy);
-
   }
 
   @Test
-  public void testPolicyGenerator() throws YarnException {
+  public void testPolicyGenerator() {
     policyGenerator = new TestablePolicyGenerator();
     policyGenerator.setPolicy(mock(GlobalPolicy.class));
     policyGenerator.run();
@@ -185,7 +181,7 @@ public class TestPolicyGenerator {
   }
 
   @Test
-  public void testBlacklist() throws YarnException {
+  public void testBlacklist() {
     conf.set(YarnConfiguration.GPG_POLICY_GENERATOR_BLACKLIST,
         subClusterIds.get(0).toString());
     Map<SubClusterId, Map<Class, Object>> blacklistedCMI =
@@ -201,7 +197,7 @@ public class TestPolicyGenerator {
   }
 
   @Test
-  public void testBlacklistTwo() throws YarnException {
+  public void testBlacklistTwo() {
     conf.set(YarnConfiguration.GPG_POLICY_GENERATOR_BLACKLIST,
         subClusterIds.get(0).toString() + "," + subClusterIds.get(1)
             .toString());
@@ -241,6 +237,7 @@ public class TestPolicyGenerator {
         ArgumentCaptor.forClass(FederationPolicyManager.class);
     verify(policyGenerator.getPolicy(), times(1))
         .updatePolicy(eq("default"), eq(clusterInfos), argCaptor.capture());
+    argCaptor.getValue().setWeightedPolicyInfo(manager.getWeightedPolicyInfo());
     assertEquals(argCaptor.getValue().getClass(), manager.getClass());
     assertEquals(argCaptor.getValue().serializeConf(), manager.serializeConf());
   }

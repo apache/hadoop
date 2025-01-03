@@ -58,7 +58,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
@@ -253,7 +252,7 @@ public class ServiceTestUtils {
     zkCluster.start();
     conf.set(YarnConfiguration.RM_ZK_ADDRESS, zkCluster.getConnectString());
     conf.set(KEY_REGISTRY_ZK_QUORUM, zkCluster.getConnectString());
-    LOG.info("ZK cluster: " + zkCluster.getConnectString());
+    LOG.info("ZK cluster: {}.", zkCluster.getConnectString());
 
     curatorService = new CuratorService("testCuratorService");
     curatorService.init(conf);
@@ -270,9 +269,8 @@ public class ServiceTestUtils {
     conf.set(YARN_SERVICE_BASE_PATH, basedir.getAbsolutePath());
 
     if (yarnCluster == null) {
-      yarnCluster =
-          new MiniYARNCluster(this.getClass().getSimpleName(), 1,
-              numNodeManager, 1, 1);
+      yarnCluster = new MiniYARNCluster(this.getClass().getSimpleName(), 1,
+          numNodeManager, 1, 1);
       yarnCluster.init(conf);
       yarnCluster.start();
 
@@ -293,10 +291,10 @@ public class ServiceTestUtils {
       yarnClusterConfig.writeXml(bytesOut);
       bytesOut.close();
       //write the bytes to the file in the classpath
-      OutputStream os = new FileOutputStream(new File(url.getPath()));
+      OutputStream os = Files.newOutputStream(new File(url.getPath()).toPath());
       os.write(bytesOut.toByteArray());
       os.close();
-      LOG.info("Write yarn-site.xml configs to: " + url);
+      LOG.info("Write yarn-site.xml configs to: {}.", url);
     }
     if (hdfsCluster == null) {
       HdfsConfiguration hdfsConfig = new HdfsConfiguration();
@@ -307,7 +305,7 @@ public class ServiceTestUtils {
     try {
       Thread.sleep(2000);
     } catch (InterruptedException e) {
-      LOG.info("setup thread sleep interrupted. message=" + e.getMessage());
+      LOG.error("setup thread sleep interrupted.", e);
     }
   }
 
@@ -478,13 +476,12 @@ public class ServiceTestUtils {
             if (component.getContainers().size() == exampleApp
                 .getComponent(component.getName()).getNumberOfContainers()) {
               for (Container container : component.getContainers()) {
-                LOG.info(
-                    "Container state " + container.getState() + ", component "
-                        + component.getName());
+                LOG.info("Container state {}, component {}.",
+                    container.getState(), component.getName());
                 if (container.getState() == ContainerState.READY) {
                   totalReadyContainers++;
                   allContainers.put(component.getName(), container.getId());
-                  LOG.info("Found 1 ready container " + container.getId());
+                  LOG.info("Found 1 ready container {}.", container.getId());
                 }
               }
             } else {

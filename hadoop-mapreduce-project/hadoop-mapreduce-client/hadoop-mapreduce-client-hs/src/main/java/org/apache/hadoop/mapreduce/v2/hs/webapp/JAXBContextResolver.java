@@ -19,8 +19,6 @@
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import com.google.inject.Singleton;
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -50,6 +48,7 @@ import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.HistoryInfo;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
 import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
 
 @Singleton
 @Provider
@@ -69,9 +68,8 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
       RemoteExceptionData.class };
 
   public JAXBContextResolver() throws Exception {
-    this.types = new HashSet<Class>(Arrays.asList(cTypes));
-    this.context = new JSONJAXBContext(JSONConfiguration.natural()
-        .rootUnwrapping(false).build(), cTypes);
+    this.types = new HashSet<>(Arrays.asList(cTypes));
+    this.context = new JettisonJaxbContext(cTypes);
   }
 
   @Override

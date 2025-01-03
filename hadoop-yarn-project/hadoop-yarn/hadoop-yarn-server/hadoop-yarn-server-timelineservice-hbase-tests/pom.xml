@@ -44,7 +44,7 @@
     <!-- Since hbase 1.0.1 requires an older version of hadoop we enforce an
          older version of hadoop just for the hbase unit tests. We also need to
          exclude hadoop-common and hadoop-hdfs on each dependency that has
-         transitive depedencies on them.
+         transitive dependencies on them.
     -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -54,6 +54,10 @@
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-client</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -107,6 +111,27 @@
       </exclusions>
     </dependency>
 
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <scope>test</scope>
+    </dependency>
+
     <!-- 'mvn dependency:analyze' fails to detect use of this direct
          dependency -->
     <dependency>
@@ -155,6 +180,14 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdfs-client</artifactId>
         </exclusion>
+        <exclusion>
+          <artifactId>jersey-common</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-server</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -168,6 +201,30 @@
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-common</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-client</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-hk2</artifactId>
+          <groupId>org.glassfish.jersey.inject</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-media-json-jettison</artifactId>
+          <groupId>org.glassfish.jersey.media</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
+          <groupId>org.glassfish.jersey.test-framework.providers</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-test-framework-core</artifactId>
+          <groupId>org.glassfish.jersey.test-framework</groupId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -188,6 +245,7 @@
     <dependency>
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-client</artifactId>
+      <version>1.19.4</version>
       <scope>test</scope>
     </dependency>
 

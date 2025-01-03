@@ -26,6 +26,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
@@ -36,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
 @Evolving
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TimelineEntities {
 
   private List<TimelineEntity> entities =

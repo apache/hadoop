@@ -15,28 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.resourceestimator.service;
+package org.apache.hadoop.yarn.webapp;
 
-import com.google.inject.Injector;
-import com.google.inject.servlet.GuiceServletContextListener;
+import org.apache.hadoop.classification.InterfaceAudience;
 
-/**
- * GuiceServletConfig is a wrapper class to have a static Injector instance
- * instead of having the instance inside test classes. This allow us to use
- * Jersey test framework after 1.13.
- * Please check test cases to know how to use this class:
- * e.g. TestRMWithCSRFFilter.java
- */
-public class GuiceServletConfig extends GuiceServletContextListener {
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
 
-  private static Injector internalInjector = null;
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
+public class ConflictException extends WebApplicationException {
+  private static final long serialVersionUID = 1L;
 
-  @Override protected Injector getInjector() {
-    return internalInjector;
+  public ConflictException() {
+    super(Response.Status.CONFLICT);
   }
 
-  public static Injector setInjector(Injector in) {
-    internalInjector = in;
-    return internalInjector;
+  public ConflictException(java.lang.Throwable cause) {
+    super(cause, Response.Status.CONFLICT);
+  }
+
+  public ConflictException(String msg) {
+    super(new Exception(msg), Response.Status.CONFLICT);
   }
 }

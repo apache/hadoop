@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.router.subcluster;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -48,9 +45,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewReservation;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.router.webapp.HTTPMethods;
 import org.apache.hadoop.yarn.server.router.webapp.JavaProcess;
+import org.glassfish.jersey.client.ClientProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation.Builder;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -62,7 +66,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static javax.servlet.http.HttpServletResponse.SC_OK;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.APPLICATION_XML;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.RM_WEB_SERVICE_PATH;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.NODES;
@@ -206,60 +209,57 @@ public class TestFederationSubCluster {
        final Class<T> returnType, final String queryName,
        final String queryValue) throws IOException, InterruptedException {
 
-    Client clientToRouter = Client.create();
-    clientToRouter.setReadTimeout(5000);
-    clientToRouter.setConnectTimeout(5000);
-    WebResource toRouter = clientToRouter.resource(routerAddress).path(path);
+    Client clientToRouter = ClientBuilder.newClient();
+    clientToRouter.property(ClientProperties.READ_TIMEOUT, 5000);
+    clientToRouter.property(ClientProperties.CONNECT_TIMEOUT, 5000);
+    WebTarget toRouter = clientToRouter.target(routerAddress).path(path);
 
-    final WebResource.Builder toRouterBuilder;
-
+    Builder toRouterBuilder;
     if (queryValue != null && queryName != null) {
-      toRouterBuilder = toRouter.queryParam(queryName, queryValue).accept(APPLICATION_XML);
+      toRouterBuilder = toRouter.
+          queryParam(queryName, queryValue).
+          queryParam("groupBy", "1").
+          request(APPLICATION_XML);
     } else {
-      toRouterBuilder = toRouter.accept(APPLICATION_XML);
+      toRouterBuilder = toRouter.request(APPLICATION_XML);
     }
 
+    Builder finalToRouterBuilder = toRouterBuilder;
     return UserGroupInformation.createRemoteUser(userName).doAs(
         (PrivilegedExceptionAction<T>) () -> {
-          ClientResponse response = toRouterBuilder.get(ClientResponse.class);
+          Response response = finalToRouterBuilder.get(Response.class);
           assertEquals(SC_OK, response.getStatus());
-          return response.getEntity(returnType);
+          return response.readEntity(returnType);
         });
   }
 
-  public static ClientResponse performCall(final String routerAddress, final String webAddress,
+  public static Response performCall(final String routerAddress, final String webAddress,
       final String queryKey, final String queryValue, final Object context,
       final HTTPMethods method) throws IOException, InterruptedException {
 
     return UserGroupInformation.createRemoteUser(userName).doAs(
-        (PrivilegedExceptionAction<ClientResponse>) () -> {
-          Client clientToRouter = Client.create();
-          WebResource toRouter = clientToRouter.resource(routerAddress).path(webAddress);
+        (PrivilegedExceptionAction<Response>) () -> {
+          Client clientToRouter = ClientBuilder.newClient();
+          WebTarget toRouter = clientToRouter.target(routerAddress).path(webAddress);
 
-          WebResource toRouterWR = toRouter;
+          WebTarget toRouterWR = toRouter;
           if (queryKey != null && queryValue != null) {
             toRouterWR = toRouterWR.queryParam(queryKey, queryValue);
           }
 
-          WebResource.Builder builder;
-          if (context != null) {
-            builder = toRouterWR.entity(context, APPLICATION_JSON);
-            builder = builder.accept(APPLICATION_JSON);
-          } else {
-            builder = toRouterWR.accept(APPLICATION_JSON);
-          }
+          Builder builder = toRouterWR.request(APPLICATION_XML);
 
-          ClientResponse response = null;
+          Response response = null;
 
           switch (method) {
             case DELETE:
-              response = builder.delete(ClientResponse.class);
+              response = builder.delete(Response.class);
               break;
             case POST:
-              response = builder.post(ClientResponse.class);
+              response = builder.post(Entity.xml(context), Response.class);
               break;
             case PUT:
-              response = builder.put(ClientResponse.class);
+              response = builder.put(Entity.xml(context), Response.class);
               break;
             default:
               break;
@@ -270,70 +270,71 @@ public class TestFederationSubCluster {
   }
 
   public String getNodeId(String rmAddress) {
-    Client clientToRM = Client.create();
-    clientToRM.setConnectTimeout(3000);
-    clientToRM.setReadTimeout(3000);
-    WebResource toRM = clientToRM.resource(rmAddress).path(RM_WEB_SERVICE_PATH + NODES);
-    ClientResponse response =
-        toRM.accept(APPLICATION_XML).get(ClientResponse.class);
-    NodesInfo ci = response.getEntity(NodesInfo.class);
+    Client clientToRM = ClientBuilder.newClient();
+    clientToRM.property(ClientProperties.CONNECT_TIMEOUT, 3000);
+    clientToRM.property(ClientProperties.READ_TIMEOUT, 3000);
+    WebTarget toRM = clientToRM.target(rmAddress).path(RM_WEB_SERVICE_PATH + NODES);
+    Response response =
+        toRM.request(APPLICATION_XML).get(Response.class);
+    NodesInfo ci = response.readEntity(NodesInfo.class);
     List<NodeInfo> nodes = ci.getNodes();
     if (nodes.isEmpty()) {
       return null;
     }
-    clientToRM.destroy();
+    clientToRM.close();
     return nodes.get(0).getNodeId();
   }
 
   public NewApplication getNewApplicationId(String routerAddress) {
-    Client clientToRM = Client.create();
-    clientToRM.setConnectTimeout(3000);
-    clientToRM.setReadTimeout(3000);
-    WebResource toRM = clientToRM.resource(routerAddress).path(
+    Client clientToRM = ClientBuilder.newClient();
+    clientToRM.property(ClientProperties.CONNECT_TIMEOUT, 3000);
+    clientToRM.property(ClientProperties.READ_TIMEOUT, 3000);
+    WebTarget toRM = clientToRM.target(routerAddress).path(
         RM_WEB_SERVICE_PATH + APPS_NEW_APPLICATION);
-    ClientResponse response = toRM.accept(APPLICATION_XML).post(ClientResponse.class);
-    clientToRM.destroy();
-    return response.getEntity(NewApplication.class);
+    Response response = toRM.request(APPLICATION_XML).post(null, Response.class);
+    return response.readEntity(NewApplication.class);
   }
 
   public String submitApplication(String routerAddress) {
     ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
     String appId = getNewApplicationId(routerAddress).getApplicationId();
     context.setApplicationId(appId);
-    Client clientToRouter = Client.create();
-    clientToRouter.setConnectTimeout(3000);
-    clientToRouter.setReadTimeout(3000);
-    WebResource toRM = clientToRouter.resource(routerAddress).path(
+    Client clientToRouter = ClientBuilder.newClient();
+    clientToRouter.property(ClientProperties.CONNECT_TIMEOUT, 3000);
+    clientToRouter.property(ClientProperties.READ_TIMEOUT, 3000);
+    WebTarget toRM = clientToRouter.target(routerAddress).path(
         RM_WEB_SERVICE_PATH + APPS);
-    toRM.entity(context, APPLICATION_XML).accept(APPLICATION_XML).post(ClientResponse.class);
-    clientToRouter.destroy();
+    Response post = toRM.
+        request(APPLICATION_XML).
+        post(Entity.entity(context, APPLICATION_XML), Response.class);
+    System.out.println("submitApplication:" + post.getStatus());
+    clientToRouter.close();
     return appId;
   }
 
   public NewReservation getNewReservationId(String routerAddress) {
-    Client clientToRM = Client.create();
-    clientToRM.setConnectTimeout(3000);
-    clientToRM.setReadTimeout(3000);
-    WebResource toRM = clientToRM.resource(routerAddress).
+    Client clientToRM = ClientBuilder.newClient();
+    clientToRM.property(ClientProperties.CONNECT_TIMEOUT, 3000);
+    clientToRM.property(ClientProperties.READ_TIMEOUT, 3000);
+    WebTarget toRM = clientToRM.target(routerAddress).
         path(RM_WEB_SERVICE_PATH + RESERVATION_NEW);
-    ClientResponse response = toRM.accept(APPLICATION_XML).post(ClientResponse.class);
-    return response.getEntity(NewReservation.class);
+    Response response = toRM.request(APPLICATION_XML).post(null, Response.class);
+    return response.readEntity(NewReservation.class);
   }
 
   public String addNodeLabel(String routerAddress) {
-    Client clientToRM = Client.create();
-    clientToRM.setConnectTimeout(3000);
-    clientToRM.setReadTimeout(3000);
-    WebResource toRM = clientToRM.resource(routerAddress)
+    Client clientToRM = ClientBuilder.newClient();
+    clientToRM.property(ClientProperties.CONNECT_TIMEOUT, 3000);
+    clientToRM.property(ClientProperties.READ_TIMEOUT, 3000);
+    WebTarget toRM = clientToRM.target(routerAddress)
         .path(RM_WEB_SERVICE_PATH + ADD_NODE_LABELS);
     List<NodeLabel> nodeLabels = new ArrayList<>();
     nodeLabels.add(NodeLabel.newInstance("default"));
     NodeLabelsInfo context = new NodeLabelsInfo(nodeLabels);
-    ClientResponse response = toRM
-        .entity(context, APPLICATION_XML)
-        .accept(APPLICATION_XML)
-        .post(ClientResponse.class);
-    return response.getEntity(String.class);
+    Response response = toRM
+        .request(APPLICATION_XML)
+        .post(Entity.xml(context), Response.class);
+    return response.readEntity(String.class);
   }
 
   public static String format(String format, Object... args) {

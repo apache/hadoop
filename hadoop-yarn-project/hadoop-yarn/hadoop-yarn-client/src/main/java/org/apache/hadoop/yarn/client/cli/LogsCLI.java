@@ -20,21 +20,14 @@ package org.apache.hadoop.yarn.client.cli;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.client.WebResource.Builder;
-import com.sun.jersey.api.client.filter.ClientFilter;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
-import java.net.ConnectException;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -48,7 +41,11 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.client.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -131,9 +128,9 @@ public class LogsCLI extends Configured implements Tool {
   private long logSizeLeft = LOG_SIZE_LIMIT_DEFAULT * 1024 * 1024;
   private long specifedLogLimits = LOG_SIZE_LIMIT_DEFAULT;
 
-  @Private
-  @VisibleForTesting
-  ClientConnectionRetry connectionRetry;
+  // We define the timeout to set the
+  // read and connect times for the URL connection.
+  private static final int TIME_OUT = 5000;
 
   @Override
   public int run(String[] args) throws Exception {
@@ -145,7 +142,7 @@ public class LogsCLI extends Configured implements Tool {
         yarnClient.close();
       }
       if (webServiceClient != null) {
-        webServiceClient.destroy();
+        webServiceClient.close();
       }
     }
   }
@@ -325,9 +322,8 @@ public class LogsCLI extends Configured implements Tool {
     }
 
     // Set up Retry WebService Client
-    connectionRetry = new ClientConnectionRetry(maxRetries, retryInterval);
-    ClientJerseyRetryFilter retryFilter = new ClientJerseyRetryFilter();
-    webServiceClient.addFilter(retryFilter);
+    ClientJerseyRetryFilter retryFilter = new ClientJerseyRetryFilter(maxRetries, retryInterval);
+    webServiceClient.register(retryFilter);
 
     LogCLIHelpers logCliHelper = new LogCLIHelpers();
     logCliHelper.setConf(getConf());
@@ -450,44 +446,40 @@ public class LogsCLI extends Configured implements Tool {
   }
 
   private List<JSONObject> getAMContainerInfoFromRM(
-      String webAppAddress, String appId) throws ClientHandlerException,
-      UniformInterfaceException, JSONException {
+      String webAppAddress, String appId) throws ProcessingException,
+      IllegalStateException, JSONException {
     List<JSONObject> amContainersList = new ArrayList<JSONObject>();
-    ClientResponse response = null;
-    try {
-      Builder builder = webServiceClient.resource(webAppAddress)
-          .path("ws").path("v1").path("cluster")
-          .path("apps").path(appId).path("appattempts")
-          .accept(MediaType.APPLICATION_JSON);
-      response = builder.get(ClientResponse.class);
-      JSONObject json = response.getEntity(JSONObject.class)
+    final WebTarget target = webServiceClient.target(webAppAddress)
+        .path("ws").path("v1").path("cluster")
+        .path("apps").path(appId).path("appattempts");
+    try (Response response = target.request(MediaType.APPLICATION_JSON)
+          .get(Response.class)) {
+      String entity = response.readEntity(String.class);
+      JSONObject json = new JSONObject(entity)
           .getJSONObject("appAttempts");
       JSONArray requests = json.getJSONArray("appAttempt");
       for (int j = 0; j < requests.length(); j++) {
         amContainersList.add(requests.getJSONObject(j));
       }
       return amContainersList;
-    } finally {
-      if (response != null) {
-        response.close();
-      }
     }
   }
 
   private List<JSONObject> getAMContainerInfoForAHSWebService(
-      Configuration conf, String appId) throws ClientHandlerException,
-      UniformInterfaceException, JSONException {
+      Configuration conf, String appId) throws ProcessingException,
+      IllegalStateException, JSONException {
     String webAppAddress =
         WebAppUtils.getHttpSchemePrefix(conf)
             + WebAppUtils.getAHSWebAppURLWithoutScheme(conf);
-    WebResource webResource = webServiceClient.resource(webAppAddress);
+    final WebTarget target = webServiceClient.target(webAppAddress);
 
-    ClientResponse response =
-        webResource.path("ws").path("v1").path("applicationhistory")
+    Response response =
+        target.path("ws").path("v1").path("applicationhistory")
           .path("apps").path(appId).path("appattempts")
-          .accept(MediaType.APPLICATION_JSON)
-          .get(ClientResponse.class);
-    JSONObject json = response.getEntity(JSONObject.class);
+          .request(MediaType.APPLICATION_JSON)
+          .get(Response.class);
+    String entity = response.readEntity(String.class);
+    JSONObject json = new JSONObject(entity);
     JSONArray requests = json.getJSONArray("appAttempt");
     List<JSONObject> amContainersList = new ArrayList<JSONObject>();
     for (int i = 0; i < requests.length(); i++) {
@@ -530,24 +522,25 @@ public class LogsCLI extends Configured implements Tool {
     List<Pair<ContainerLogFileInfo, String>> logFileInfos
         = new ArrayList<>();
     try {
-      WebResource webResource = webServiceClient
-          .resource(WebAppUtils.getHttpSchemePrefix(conf) + nodeHttpAddress);
-      ClientResponse response =
-          webResource.path("ws").path("v1").path("node").path("containers")
+      WebTarget target = webServiceClient
+          .target(WebAppUtils.getHttpSchemePrefix(conf) + nodeHttpAddress);
+      Response response =
+          target.path("ws").path("v1").path("node").path("containers")
               .path(containerIdStr).path("logs")
-              .accept(MediaType.APPLICATION_JSON)
-              .get(ClientResponse.class);
+              .request(MediaType.APPLICATION_JSON)
+              .get(Response.class);
       if (response.getStatusInfo().getStatusCode() ==
-          ClientResponse.Status.OK.getStatusCode()) {
+          Response.Status.OK.getStatusCode()) {
         try {
           JSONArray array = new JSONArray();
-          JSONObject json = response.getEntity(JSONObject.class);
+          String entity = response.readEntity(String.class);
+          JSONObject json = new JSONObject(entity);
           if (!json.has("containerLogsInfo")) {
             return logFileInfos;
           }
           Object logsInfoObj = json.get("containerLogsInfo");
           if (logsInfoObj instanceof JSONObject) {
-            array.put((JSONObject)logsInfoObj);
+            array.put(logsInfoObj);
           } else if (logsInfoObj instanceof JSONArray) {
             JSONArray logsArray = (JSONArray)logsInfoObj;
             for (int i=0; i < logsArray.length(); i++) {
@@ -582,7 +575,7 @@ public class LogsCLI extends Configured implements Tool {
         }
       }
 
-    } catch (ClientHandlerException | UniformInterfaceException ex) {
+    } catch (ProcessingException | IllegalStateException ex) {
       System.err.println("Unable to fetch log files list");
       throw new IOException(ex);
     }
@@ -617,11 +610,12 @@ public class LogsCLI extends Configured implements Tool {
       for (String logFile : request.getLogTypes()) {
         InputStream is = null;
         try {
-          ClientResponse response = getResponseFromNMWebService(conf,
+          Response response = getResponseFromNMWebService(conf,
               webServiceClient, request, logFile);
           if (response != null && response.getStatusInfo().getStatusCode() ==
-              ClientResponse.Status.OK.getStatusCode()) {
-            is = response.getEntityInputStream();
+              Response.Status.OK.getStatusCode()) {
+
+            is = response.readEntity(InputStream.class);
             int len = 0;
             while((len = is.read(buffer)) != -1) {
               out.write(buffer, 0, len);
@@ -633,12 +627,12 @@ public class LogsCLI extends Configured implements Tool {
                 " WebService is " + ((response == null) ? "null":
                 "not successful," + " HTTP error code: " +
                 response.getStatus() + ", Server response:\n" +
-                response.getEntity(String.class));
+                response.readEntity(String.class));
             out.println(msg);
           }
           out.flush();
           foundAnyLogs = true;
-        } catch (ClientHandlerException | UniformInterfaceException ex) {
+        } catch (ProcessingException | IllegalStateException ex) {
           System.err.println("Can not find the log file:" + logFile
               + " for the container:" + containerIdStr + " in NodeManager:"
               + nodeId);
@@ -811,11 +805,11 @@ public class LogsCLI extends Configured implements Tool {
 
   private List<JSONObject> getAMContainerInfoFromTimelineReader(
       Configuration conf, String appId)
-      throws IOException, ClientHandlerException, UniformInterfaceException,
+      throws IOException, ProcessingException, IllegalStateException,
       JSONException {
-    ClientResponse response = getClientResponseFromTimelineReader(conf, appId);
-
-    JSONArray appAttemptEntities = response.getEntity(JSONArray.class);
+    final Response response = getClientResponseFromTimelineReader(conf, appId);
+    String entity = response.readEntity(String.class);
+    JSONArray appAttemptEntities = new JSONArray(entity);
     List<JSONObject> amContainersList = new ArrayList<JSONObject>();
     for (int i = 0; i < appAttemptEntities.length(); i++) {
       JSONObject appAttemptEntity = appAttemptEntities.getJSONObject(i);
@@ -826,28 +820,28 @@ public class LogsCLI extends Configured implements Tool {
     return amContainersList;
   }
 
-  protected ClientResponse getClientResponseFromTimelineReader(
+  protected Response getClientResponseFromTimelineReader(
       Configuration conf, String appId) throws IOException {
     String webAppAddress = WebAppUtils.getHttpSchemePrefix(conf) + WebAppUtils
         .getTimelineReaderWebAppURLWithoutScheme(conf);
-    WebResource webResource = webServiceClient.resource(webAppAddress);
+    final WebTarget target = webServiceClient.target(webAppAddress);
 
-    ClientResponse response =
-        webResource.path("ws").path("v2").path("timeline").path("clusters")
+    final Response response =
+        target.path("ws").path("v2").path("timeline").path("clusters")
             .path(conf.get(YarnConfiguration.RM_CLUSTER_ID)).path("apps")
             .path(appId).path("entities")
             .path(TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString())
-            .queryParam("fields", "INFO").accept(MediaType.APPLICATION_JSON)
-            .get(ClientResponse.class);
+            .queryParam("fields", "INFO").request(MediaType.APPLICATION_JSON)
+            .get(Response.class);
 
     if (response == null
-        || response.getStatusInfo().getStatusCode() != ClientResponse.Status.OK
+        || response.getStatusInfo().getStatusCode() != Response.Status.OK
         .getStatusCode()) {
       String msg =
           "Response from the timeline reader server is " + ((response == null) ?
               "null" :
               "not successful," + " HTTP error code: " + response.getStatus()
-                  + ", Server response:\n" + response.getEntity(String.class));
+                  + ", Server response:\n" + response.readEntity(String.class));
       System.out.println(msg);
       throw new IOException(msg);
     }
@@ -884,7 +878,7 @@ public class LogsCLI extends Configured implements Tool {
 
   private int showContainerLogInfo(ContainerLogsRequest request,
       LogCLIHelpers logCliHelper) throws IOException, YarnException,
-      ClientHandlerException, UniformInterfaceException, JSONException {
+      ProcessingException, IllegalStateException, JSONException {
     if (!request.isAppFinished()) {
       return printContainerInfoFromRunningApplication(request, logCliHelper);
     } else {
@@ -1105,7 +1099,7 @@ public class LogsCLI extends Configured implements Tool {
 
   private int fetchContainerLogs(ContainerLogsRequest request,
       LogCLIHelpers logCliHelper, boolean useRegex, boolean ignoreSizeLimit)
-      throws IOException, ClientHandlerException, UniformInterfaceException,
+      throws IOException, ProcessingException, IllegalStateException,
       JSONException {
     String appIdStr = request.getAppId().toString();
     String containerIdStr = request.getContainerId();
@@ -1400,8 +1394,8 @@ public class LogsCLI extends Configured implements Tool {
 
   private int printContainerInfoFromRunningApplication(
       ContainerLogsRequest options, LogCLIHelpers logCliHelper)
-      throws YarnException, IOException, ClientHandlerException,
-      UniformInterfaceException, JSONException {
+      throws YarnException, IOException, ProcessingException,
+      IllegalStateException, JSONException {
     String containerIdStr = options.getContainerId();
     String nodeIdStr = options.getNodeId();
     List<ContainerReport> reports =
@@ -1485,7 +1479,7 @@ public class LogsCLI extends Configured implements Tool {
   }
 
   @VisibleForTesting
-  public ClientResponse getResponseFromNMWebService(Configuration conf,
+  public Response getResponseFromNMWebService(Configuration conf,
       Client webServiceClient, ContainerLogsRequest request, String logFile) {
     return LogToolUtils.getResponseFromNMWebService(
         conf, webServiceClient, request, logFile);
@@ -1493,7 +1487,7 @@ public class LogsCLI extends Configured implements Tool {
 
   @VisibleForTesting
   public String getNodeHttpAddressFromRMWebString(ContainerLogsRequest request)
-      throws ClientHandlerException, UniformInterfaceException, JSONException {
+      throws ProcessingException, IllegalStateException, JSONException {
     if (request.getNodeId() == null || request.getNodeId().isEmpty()) {
       return null;
     }
@@ -1505,9 +1499,9 @@ public class LogsCLI extends Configured implements Tool {
   }
 
   // Class to handle retry
-  static class ClientConnectionRetry {
 
-    // maxRetries < 0 means keep trying
+  private static final class ClientJerseyRetryFilter implements ClientRequestFilter {
+
     @Private
     @VisibleForTesting
     public int maxRetries;
@@ -1516,108 +1510,67 @@ public class LogsCLI extends Configured implements Tool {
     @VisibleForTesting
     public long retryInterval;
 
-    // Indicates if retries happened last time. Only tests should read it.
-    // In unit tests, retryOn() calls should _not_ be concurrent.
-    private boolean retried = false;
-
-    @Private
-    @VisibleForTesting
-    boolean getRetired() {
-      return retried;
-    }
-
-    // Constructor with default retry settings
-    public ClientConnectionRetry(int inputMaxRetries,
+    private ClientJerseyRetryFilter(int inputMaxRetries,
         long inputRetryInterval) {
       this.maxRetries = inputMaxRetries;
       this.retryInterval = inputRetryInterval;
     }
 
-    public Object retryOn(ClientRetryOp op)
-        throws RuntimeException, IOException {
+    @Override
+    public void filter(ClientRequestContext requestContext) throws IOException {
+      URI uri = requestContext.getUri();
       int leftRetries = maxRetries;
-      retried = false;
-
-      // keep trying
       while (true) {
         try {
-          // try perform the op, if fail, keep retrying
-          return op.run();
-        } catch (IOException | RuntimeException e) {
-          // break if there's no retries left
+          // If there are no more times left, jump out of the loop directly.
           if (leftRetries == 0) {
             break;
           }
-          if (op.shouldRetryOn(e)) {
-            logException(e, leftRetries);
-          } else {
-            throw e;
+          // check if a URL is reachable
+          checkUrlConnectivity(uri);
+        } catch (Exception e) {
+          leftRetries--;
+          if (leftRetries <= 0) {
+            throw new RuntimeException("Connection retries limit exceeded.");
+          }
+          logException(e, leftRetries);
+          try {
+            // sleep for the given time interval
+            Thread.sleep(retryInterval);
+          } catch (InterruptedException ie) {
+            System.out.println("Client retry sleep interrupted! ");
           }
         }
-        if (leftRetries > 0) {
-          leftRetries--;
-        }
-        retried = true;
-        try {
-          // sleep for the given time interval
-          Thread.sleep(retryInterval);
-        } catch (InterruptedException ie) {
-          System.out.println("Client retry sleep interrupted! ");
-        }
       }
-      throw new RuntimeException("Connection retries limit exceeded.");
-    };
+    }
+
+    private void checkUrlConnectivity(URI uri) throws IOException {
+      URL url = uri.toURL();
+
+      HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+      connection.setRequestMethod("HEAD");
+      connection.setConnectTimeout(TIME_OUT);
+      connection.setReadTimeout(TIME_OUT);
+
+      // The purpose of getting the `responseCode` here is to check if the service is online.
+      int responseCode = connection.getResponseCode();
+      if (responseCode >= 400) {
+        throw new IOException("URL connectivity check failed with HTTP code " + responseCode);
+      }
+    }
 
     private void logException(Exception e, int leftRetries) {
       if (leftRetries > 0) {
-        System.out.println("Exception caught by ClientConnectionRetry,"
-              + " will try " + leftRetries + " more time(s).\nMessage: "
-              + e.getMessage());
+        System.out.println("Exception caught by ClientConnectionRetry," +
+            " will try " + leftRetries + " more time(s).\nMessage: " +
+            e.getMessage());
       } else {
         // note that maxRetries may be -1 at the very beginning
-        System.out.println("ConnectionException caught by ClientConnectionRetry,"
-            + " will keep retrying.\nMessage: "
-            + e.getMessage());
+        System.out.println("ConnectionException caught by ClientConnectionRetry," +
+            " will keep retrying.\nMessage: " +
+            e.getMessage());
       }
     }
-  }
-
-  private class ClientJerseyRetryFilter extends ClientFilter {
-    @Override
-    public ClientResponse handle(final ClientRequest cr)
-        throws ClientHandlerException {
-      // Set up the retry operation
-      ClientRetryOp jerseyRetryOp = new ClientRetryOp() {
-        @Override
-        public Object run() {
-          // Try pass the request, if fail, keep retrying
-          return getNext().handle(cr);
-        }
-
-        @Override
-        public boolean shouldRetryOn(Exception e) {
-          // Only retry on connection exceptions
-          return (e instanceof ClientHandlerException)
-              && (e.getCause() instanceof ConnectException ||
-                  e.getCause() instanceof SocketTimeoutException ||
-                  e.getCause() instanceof SocketException);
-        }
-      };
-      try {
-        return (ClientResponse) connectionRetry.retryOn(jerseyRetryOp);
-      } catch (IOException e) {
-        throw new ClientHandlerException("Jersey retry failed!\nMessage: "
-              + e.getMessage());
-      }
-    }
-  }
-
-  // Abstract class for an operation that should be retried by client
-  private static abstract class ClientRetryOp {
-    // The operation that should be retried
-    public abstract Object run() throws IOException;
-    // The method to indicate if we should retry given the incoming exception
-    public abstract boolean shouldRetryOn(Exception e);
   }
 
   private long getLogSizeLimitLeft() {

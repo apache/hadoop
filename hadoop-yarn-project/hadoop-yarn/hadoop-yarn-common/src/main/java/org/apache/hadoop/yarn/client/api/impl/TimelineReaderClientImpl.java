@@ -18,7 +18,7 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.sun.jersey.core.util.MultivaluedMapImpl;
+import net.jodah.failsafe.Failsafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -31,12 +31,15 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.TimelineReaderClient;
-import com.sun.jersey.api.client.ClientResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -49,6 +52,7 @@ import java.util.Map;
 import static org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType.YARN_APPLICATION_ATTEMPT;
 import static org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType.YARN_CONTAINER;
 import static org.apache.hadoop.yarn.util.StringHelper.PATH_JOINER;
+import static javax.ws.rs.core.Response.Status.OK;
 
 /**
  * Implementation of TimelineReaderClient interface.
@@ -97,8 +101,7 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
         conf, timelineReaderWebAppAddress, RESOURCE_URI_STR_V2);
     clusterId = conf.get(YarnConfiguration.RM_CLUSTER_ID,
         YarnConfiguration.DEFAULT_RM_CLUSTER_ID);
-    LOG.info("Initialized TimelineReader URI=" + baseUri + ", clusterId="
-        + clusterId);
+    LOG.info("Initialized TimelineReader URI = {} , clusterId = {}.", baseUri, clusterId);
     super.serviceInit(conf);
   }
 
@@ -111,12 +114,13 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     if (fields == null || fields.isEmpty()) {
       fields = "INFO";
     }
-    MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+    MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
     params.add("fields", fields);
     mergeFilters(params, filters);
 
-    ClientResponse response = doGetUri(baseUri, path, params);
-    TimelineEntity entity = response.getEntity(TimelineEntity.class);
+    Response response = doGetUri(baseUri, path, params);
+    // TODO:
+    TimelineEntity entity = response.readEntity(TimelineEntity.class);
     return entity;
   }
 
@@ -131,12 +135,12 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     if (fields == null || fields.isEmpty()) {
       fields = "INFO";
     }
-    MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+    MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
     params.add("fields", fields);
     mergeFilters(params, filters);
 
-    ClientResponse response = doGetUri(baseUri, path, params);
-    TimelineEntity entity = response.getEntity(TimelineEntity.class);
+    Response response = doGetUri(baseUri, path, params);
+    TimelineEntity entity = response.readEntity(TimelineEntity.class);
     return entity;
   }
 
@@ -150,7 +154,7 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     if (fields == null || fields.isEmpty()) {
       fields = "INFO";
     }
-    MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+    MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
     params.add("fields", fields);
     if (limit > 0) {
       params.add("limit", Long.toString(limit));
@@ -160,8 +164,8 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     }
     mergeFilters(params, filters);
 
-    ClientResponse response = doGetUri(baseUri, path, params);
-    TimelineEntity[] entities = response.getEntity(TimelineEntity[].class);
+    Response response = doGetUri(baseUri, path, params);
+    TimelineEntity[] entities = response.readEntity(TimelineEntity[].class);
     return Arrays.asList(entities);
   }
 
@@ -176,12 +180,12 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     if (fields == null || fields.isEmpty()) {
       fields = "INFO";
     }
-    MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+    MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
     params.add("fields", fields);
     mergeFilters(params, filters);
 
-    ClientResponse response = doGetUri(baseUri, path, params);
-    TimelineEntity entity = response.getEntity(TimelineEntity.class);
+    Response response = doGetUri(baseUri, path, params);
+    TimelineEntity entity = response.readEntity(TimelineEntity.class);
     return entity;
   }
 
@@ -196,7 +200,7 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     if (fields == null || fields.isEmpty()) {
       fields = "INFO";
     }
-    MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+    MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
     params.add("fields", fields);
     if (limit > 0) {
       params.add("limit", Long.toString(limit));
@@ -206,8 +210,8 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     }
     mergeFilters(params, filters);
 
-    ClientResponse response = doGetUri(baseUri, path, params);
-    TimelineEntity[] entity = response.getEntity(TimelineEntity[].class);
+    Response response = doGetUri(baseUri, path, params);
+    TimelineEntity[] entity = response.readEntity(TimelineEntity[].class);
     return Arrays.asList(entity);
   }
 
@@ -232,19 +236,32 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
   }
 
   @VisibleForTesting
-  protected ClientResponse doGetUri(URI base, String path,
-      MultivaluedMap<String, String> params) throws IOException {
-    ClientResponse resp = connector.getClient().resource(base).path(path)
-        .queryParams(params).accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
-    if (resp == null ||
-        resp.getStatusInfo().getStatusCode() != ClientResponse.Status.OK
-        .getStatusCode()) {
-      String msg =
-          "Response from the timeline reader server is " +
-              ((resp == null) ? "null" : "not successful," +
-                  " HTTP error code: " + resp.getStatus() +
-                  ", Server response:\n" + resp.getEntity(String.class));
+  protected Response doGetUri(URI base, String path, MultivaluedMap<String, String> params)
+      throws IOException {
+    WebTarget target = connector.getClient().target(base).path(path);
+
+    // To set query parameters where the value of a `MultivaluedMap` is a `List`,
+    // we need to iterate through each value to configure them.
+    for (Map.Entry<String, List<String>> param : params.entrySet()) {
+      for (String paramItem : param.getValue()) {
+        target = target.queryParam(param.getKey(), paramItem);
+      }
+    }
+
+    Invocation.Builder builder = target.request(MediaType.APPLICATION_JSON);
+    Response resp;
+
+    try {
+      resp = Failsafe.with(connector.getRetryPolicy()).get(() -> builder.get(Response.class));
+    } catch (Exception e) {
+      LOG.error("base = {}, path = {}, params = {} doGet error.", base, path, params, e);
+      throw new IOException(e);
+    }
+
+    if (resp == null || resp.getStatusInfo().getStatusCode() != OK.getStatusCode()) {
+      String msg = "Response from the timeline reader server is " +
+          ((resp == null) ? "null" : "not successful, HTTP error code: " +
+          resp.getStatus() + ", Server response:\n" + resp.readEntity(String.class));
       LOG.error(msg);
       throw new IOException(msg);
     }

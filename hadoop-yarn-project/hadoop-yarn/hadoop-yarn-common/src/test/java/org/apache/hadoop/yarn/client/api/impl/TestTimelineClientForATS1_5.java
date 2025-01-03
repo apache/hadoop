@@ -22,8 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
+import net.jodah.failsafe.RetryPolicy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +39,9 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Response;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -252,14 +254,14 @@ public class TestTimelineClientForATS1_5 {
     TimelineClientImpl client = new TimelineClientImpl() {
       @Override
       protected TimelineWriter createTimelineWriter(Configuration conf,
-          UserGroupInformation authUgi, Client client, URI resURI)
+          UserGroupInformation uAuthUgi, Client paramClient, URI resURI,
+          RetryPolicy<Object> retryPolicy)
           throws IOException {
         TimelineWriter timelineWriter =
-            new FileSystemTimelineWriter(conf, authUgi, client, resURI) {
-              public ClientResponse doPostingObject(Object object, String path) {
-                ClientResponse response = mock(ClientResponse.class);
-                when(response.getStatusInfo()).thenReturn(
-                    ClientResponse.Status.OK);
+            new FileSystemTimelineWriter(conf, uAuthUgi, paramClient, resURI, retryPolicy) {
+              public Response doPostingObject(Object object, String path) {
+                Response response = mock(Response.class);
+                when(response.getStatusInfo()).thenReturn(Response.Status.OK);
                 return response;
               }
             };

@@ -25,6 +25,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -49,6 +50,7 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.container.ContainerRequestContext;
 
 @Private
 @Evolving
@@ -593,6 +595,20 @@ public class WebAppUtils {
       List<NameValuePair> params = URLEncodedUtils.parse(queryString,
           encoding);
       return params;
+    }
+    return null;
+  }
+
+  /**
+   * Get a query string.
+   * @param request ContainerRequestContext with the request details
+   * @return the query parameter string
+   */
+  public static List<NameValuePair> getURLEncodedQueryParam(
+      ContainerRequestContext request) {
+    String queryString = request.getUriInfo().getPath();
+    if (queryString != null && !queryString.isEmpty()) {
+      return URLEncodedUtils.parse(queryString, StandardCharsets.ISO_8859_1);
     }
     return null;
   }

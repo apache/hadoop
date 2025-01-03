@@ -452,9 +452,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       Response response = interceptor.createNewApplication(hsr);
       if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
-        ApplicationId applicationId = ApplicationId.fromString(response.getEntity().toString());
-        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_NEW_APP,
-            TARGET_WEB_SERVICE, applicationId, subClusterId);
+        // NewApplication entity = response.readEntity(NewApplication.class);
+        // ApplicationId applicationId = ApplicationId.fromString(entity.getApplicationId());
+        // RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_NEW_APP,
+        //    TARGET_WEB_SERVICE, applicationId, subClusterId);
         return response;
       }
     } catch (Exception e) {
@@ -638,10 +639,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Response response = getOrCreateInterceptorForSubCluster(subClusterId,
           subClusterInfo.getRMWebServiceAddress()).submitApplication(submissionContext, hsr);
       if (response != null && response.getStatus() == HttpServletResponse.SC_ACCEPTED) {
-        LOG.info("Application {} with appId {} submitted on {}.",
+        /*LOG.info("Application {} with appId {} submitted on {}.",
             context.getApplicationName(), applicationId, subClusterId);
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), SUBMIT_NEW_APP,
-            TARGET_WEB_SERVICE, applicationId, subClusterId);
+            TARGET_WEB_SERVICE, applicationId, subClusterId);*/
         return response;
       }
       String msg = String.format("application %s failed to be submitted.", applicationId);
@@ -1383,8 +1384,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       String groupBy) {
     try {
       // Check the parameters to ensure that the parameters are not empty
-      Validate.checkNotNullAndNotEmpty(nodeId, "nodeId");
-      Validate.checkNotNullAndNotEmpty(groupBy, "groupBy");
+      // Validate.checkNotNullAndNotEmpty(nodeId, "nodeId");
+      // Validate.checkNotNullAndNotEmpty(groupBy, "groupBy");
 
       // Query SubClusterInfo according to id,
       // if the nodeId cannot get SubClusterInfo, an exception will be thrown directly.

@@ -16,8 +16,6 @@
  */
 package org.apache.hadoop.yarn.server.globalpolicygenerator.webapp;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.webapp.dao.GpgInfo;
@@ -25,6 +23,9 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -40,7 +41,8 @@ public class GPGWebServices {
   private WebApp webapp;
 
   @Inject
-  public GPGWebServices(final GlobalPolicyGenerator gpg, final WebApp webapp) {
+  public GPGWebServices(final @Named("gpg") GlobalPolicyGenerator gpg,
+      final @Named("webapp") WebApp webapp) {
     this.gpgGenerator = gpg;
     this.webapp = webapp;
   }
