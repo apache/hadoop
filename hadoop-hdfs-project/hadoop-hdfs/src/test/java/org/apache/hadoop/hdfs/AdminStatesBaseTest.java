@@ -28,10 +28,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.util.Lists;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -69,6 +71,8 @@ public class AdminStatesBaseTest {
 
   @Rule
   public TemporaryFolder baseDir = new TemporaryFolder();
+  @Rule
+  public Timeout timeout = new Timeout(600, TimeUnit.SECONDS);
 
   private HostsFileWriter hostsFileWriter;
   private Configuration conf;
