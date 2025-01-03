@@ -214,6 +214,18 @@ public class TestRouterRpc {
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
+    // Start routers with only an RPC service
+    Configuration routerConf = new RouterConfigBuilder()
+        .metrics()
+        .rpc()
+        .build();
+    // We decrease the DN cache times to make the test faster
+    routerConf.setTimeDuration(
+        RBFConfigKeys.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
+    setUp(routerConf);
+  }
+
+  public static void setUp(Configuration routerConf) throws Exception {
     Configuration namenodeConf = new Configuration();
     namenodeConf.setBoolean(DFSConfigKeys.HADOOP_CALLER_CONTEXT_ENABLED_KEY,
         true);
@@ -242,14 +254,6 @@ public class TestRouterRpc {
     // Start NNs and DNs and wait until ready
     cluster.startCluster();
 
-    // Start routers with only an RPC service
-    Configuration routerConf = new RouterConfigBuilder()
-        .metrics()
-        .rpc()
-        .build();
-    // We decrease the DN cache times to make the test faster
-    routerConf.setTimeDuration(
-        RBFConfigKeys.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
     cluster.addRouterOverrides(routerConf);
     cluster.startRouters();
 
