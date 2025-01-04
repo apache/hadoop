@@ -118,7 +118,7 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
   // TODO: [FnsOverBlob][HADOOP-19179] Remove this test case once Blob Endpoint Support is enabled.
   @Test
   public void testFileSystemInitFailsWithBlobEndpointUrl() throws Exception {
-    Configuration configuration = getRawConfiguration();
+    Configuration configuration = new Configuration(getRawConfiguration());
     String defaultUri = configuration.get(FS_DEFAULT_NAME_KEY);
     String accountKey = configuration.get(
         accountProperty(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, getAccountName()),
