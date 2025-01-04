@@ -442,8 +442,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       List<String> allSubDirNameForDataSetLock = datasetSubLockStrategy.getAllSubLockName();
       for (String dir : allSubDirNameForDataSetLock) {
         lockManager.addLock(LockLevel.DIR, bp, ref.getVolume().getStorageID(), dir);
-        LOG.info("Added DIR lock for bpid:{}, volume storageid:{}, dir:{}",
-            bp, ref.getVolume().getStorageID(), dir);
       }
     }
     DatanodeStorage dnStorage = storageMap.get(sd.getStorageUuid());
@@ -647,8 +645,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           List<String> allSubDirNameForDataSetLock = datasetSubLockStrategy.getAllSubLockName();
           for (String dir : allSubDirNameForDataSetLock) {
             lockManager.removeLock(LockLevel.DIR, bp, storageUuid, dir);
-            LOG.info("Removed DIR lock for bpid:{}, volume storageid:{}, dir:{}",
-                bp, storageUuid, dir);
           }
           lockManager.removeLock(LockLevel.VOLUME, bp, storageUuid);
         }
@@ -3300,8 +3296,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         List<String> allSubDirNameForDataSetLock = datasetSubLockStrategy.getAllSubLockName();
         for (String dir : allSubDirNameForDataSetLock) {
           lockManager.addLock(LockLevel.DIR, bpid, v, dir);
-          LOG.info("Added DIR lock for bpid:{}, volume storageid:{}, dir:{}",
-              bpid, v, dir);
         }
       }
     }

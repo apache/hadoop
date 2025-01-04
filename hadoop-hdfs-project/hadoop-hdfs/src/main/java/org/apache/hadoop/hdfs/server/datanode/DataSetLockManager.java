@@ -176,7 +176,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
       AutoCloseDataSetLock dirLock = getReadLock(level, resources);
       dirLock.setParentLock(volLock);
       if (openLockTrace) {
-        LOG.debug("Sub lock " + resources[0] + resources[1] + resources[2] + " parent lock " +
+        LOG.info("Sub lock " + resources[0] + resources[1] + resources[2] + " parent lock " +
             resources[0] + resources[1]);
       }
       return dirLock;
@@ -203,7 +203,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
       AutoCloseDataSetLock dirLock = getWriteLock(level, resources);
       dirLock.setParentLock(volLock);
       if (openLockTrace) {
-        LOG.debug("Sub lock " + resources[0] + resources[1] + resources[2] + " parent lock " +
+        LOG.info("Sub lock " + resources[0] + resources[1] + resources[2] + " parent lock " +
             resources[0] + resources[1]);
       }
       return dirLock;
@@ -262,6 +262,9 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
           new ReentrantReadWriteLock(isFair));
       lockMap.addLock(lockName, new ReentrantReadWriteLock(isFair));
     }
+    if (openLockTrace) {
+      LOG.info("Added {} lock, lock name: {}", level.name(), lockName);
+    }
   }
 
   @Override
@@ -269,6 +272,9 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
     String lockName = generateLockName(level, resources);
     try (AutoCloseDataSetLock lock = writeLock(level, resources)) {
       lockMap.removeLock(lockName);
+    }
+    if (openLockTrace) {
+      LOG.info("Removed {} lock, lock name: {}", level.name(), lockName);
     }
   }
 
