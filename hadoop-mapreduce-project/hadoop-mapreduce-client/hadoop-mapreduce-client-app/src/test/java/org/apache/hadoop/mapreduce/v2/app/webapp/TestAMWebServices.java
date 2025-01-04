@@ -18,6 +18,26 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+
+import java.io.StringReader;
+import java.util.Set;
+
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.NotFoundException;
+import javax.ws.rs.ServiceUnavailableException;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Application;
+import javax.ws.rs.core.Response;
+import static javax.ws.rs.core.Response.Status.NOT_FOUND;
+import static javax.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -30,9 +50,7 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
+
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -40,24 +58,10 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.NotFoundException;
-import javax.ws.rs.ServiceUnavailableException;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.Application;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.StringReader;
-import java.util.Set;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 
-import static javax.ws.rs.core.Response.Status.NOT_FOUND;
-import static javax.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE;
-import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.Mockito.mock;
 
 /**
  * Test the MapReduce Application master info web services api's. Also test
@@ -77,7 +81,8 @@ public class TestAMWebServices extends JerseyTestBase {
     config.register(new JerseyBinder());
     config.register(AMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(new JettisonFeature());
+    config.register(JAXBContextResolver.class);
     return config;
   }
 
@@ -96,46 +101,43 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  public void testAM() throws Exception {
-    WebTarget r = target();
+  public void testAM() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Response response = r.path("ws").path("v1").path("mapreduce")
         .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     verifyAMInfo(json.getJSONObject("info"), appContext);
   }
 
   @Test
-  public void testAMSlash() throws Exception {
-    WebTarget r = target();
+  public void testAMSlash() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Response response = r.path("ws").path("v1").path("mapreduce/")
         .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     verifyAMInfo(json.getJSONObject("info"), appContext);
   }
 
   @Test
-  public void testAMDefault() throws Exception {
-    WebTarget r = target();
+  public void testAMDefault() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Response response = r.path("ws").path("v1").path("mapreduce/").request()
         .get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     verifyAMInfo(json.getJSONObject("info"), appContext);
   }
 
   @Test
-  public void testAMXML() throws Exception {
+  public void testAMXML() throws JSONException, Exception {
     WebTarget r = target();
     Response response = r.path("ws").path("v1").path("mapreduce")
         .request(MediaType.APPLICATION_XML).get(Response.class);
@@ -146,42 +148,39 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  public void testInfo() throws Exception {
-    WebTarget r = target();
+  public void testInfo() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Response response = r.path("ws").path("v1").path("mapreduce")
         .path("info").request(MediaType.APPLICATION_JSON)
         .get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     verifyAMInfo(json.getJSONObject("info"), appContext);
   }
 
   @Test
-  public void testInfoSlash() throws Exception {
-    WebTarget r = target();
+  public void testInfoSlash() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Response response = r.path("ws").path("v1").path("mapreduce")
         .path("info/").request(MediaType.APPLICATION_JSON)
         .get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     verifyAMInfo(json.getJSONObject("info"), appContext);
   }
 
   @Test
-  public void testInfoDefault() throws Exception {
-    WebTarget r = target();
+  public void testInfoDefault() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Response response = r.path("ws").path("v1").path("mapreduce")
         .path("info/").request().get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     verifyAMInfo(json.getJSONObject("info"), appContext);
   }
@@ -199,7 +198,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  public void testInvalidUri() {
+  public void testInvalidUri() throws JSONException, Exception {
     WebTarget r = target();
     String responseStr = "";
     try {
@@ -215,7 +214,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  public void testInvalidUri2() {
+  public void testInvalidUri2() throws JSONException, Exception {
     WebTarget r = target();
     String responseStr = "";
     try {
@@ -231,7 +230,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  public void testInvalidAccept() {
+  public void testInvalidAccept() throws JSONException, Exception {
     WebTarget r = target();
     String responseStr = "";
     try {
@@ -247,15 +246,14 @@ public class TestAMWebServices extends JerseyTestBase {
   }
   
   @Test
-  public void testBlacklistedNodes() throws Exception {
-    WebTarget r = target();
+  public void testBlacklistedNodes() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Response response = r.path("ws").path("v1").path("mapreduce")
         .path("blacklistednodes").request(MediaType.APPLICATION_JSON)
         .get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     verifyBlacklistedNodesInfo(json, appContext);
   }
@@ -281,7 +279,8 @@ public class TestAMWebServices extends JerseyTestBase {
         info.getLong("elapsedTime"));
   }
 
-  public void verifyAMInfoXML(String xml, AppContext ctx) throws Exception {
+  public void verifyAMInfoXML(String xml, AppContext ctx)
+      throws JSONException, Exception {
     DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
@@ -326,7 +325,8 @@ public class TestAMWebServices extends JerseyTestBase {
     }
   }
   
-  public void verifyBlacklistedNodesInfoXML(String xml, AppContext ctx) throws Exception {
+  public void verifyBlacklistedNodesInfoXML(String xml, AppContext ctx)
+      throws JSONException, Exception {
     DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();

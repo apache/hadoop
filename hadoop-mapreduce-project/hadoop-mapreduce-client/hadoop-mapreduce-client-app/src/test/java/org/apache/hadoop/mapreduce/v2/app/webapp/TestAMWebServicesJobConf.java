@@ -57,9 +57,6 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -67,6 +64,9 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 /**
  * Test the app master web service Rest API for getting the job conf. This
  * requires created a temporary configuration file.
@@ -77,6 +77,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
 
   private static Configuration conf = new Configuration();
   private static AppContext appContext;
+
   private static File testConfDir = new File("target",
       TestAMWebServicesJobConf.class.getSimpleName() + "confDir");
 
@@ -86,14 +87,14 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
     config.register(new JerseyBinder());
     config.register(AMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JAXBContextResolver.class);
+    config.register(new JettisonFeature());
     return config;
   }
 
   private static class JerseyBinder extends AbstractBinder {
     @Override
     protected void configure() {
-      testConfDir.mkdir();
 
       Path confPath = new Path(testConfDir.toString(), MRJobConfig.JOB_CONF_FILE);
       Configuration config = new Configuration();
@@ -129,6 +130,12 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
     }
   }
 
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
+    testConfDir.mkdir();
+  }
+
   @AfterClass
   static public void stop() {
     FileUtil.fullyDelete(testConfDir);
@@ -136,7 +143,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
 
   @Test
   public void testJobConf() throws Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
@@ -146,8 +153,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
           .request(MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject json = new JSONObject(entity);
+      JSONObject json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("conf");
       verifyAMJobConf(info, jobsMap.get(id));
@@ -156,7 +162,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
 
   @Test
   public void testJobConfSlash() throws Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
@@ -165,8 +171,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
           .request(MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject json = new JSONObject(entity);
+      JSONObject json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("conf");
       verifyAMJobConf(info, jobsMap.get(id));
@@ -175,7 +180,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
 
   @Test
   public void testJobConfDefault() throws Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
@@ -184,8 +189,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
           .path("jobs").path(jobId).path("conf").request().get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject json = new JSONObject(entity);
+      JSONObject json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("conf");
       verifyAMJobConf(info, jobsMap.get(id));

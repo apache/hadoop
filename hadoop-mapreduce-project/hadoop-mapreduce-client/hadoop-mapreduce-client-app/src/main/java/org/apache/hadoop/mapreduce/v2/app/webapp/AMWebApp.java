@@ -39,8 +39,6 @@ public class AMWebApp extends WebApp implements AMParams {
 
   @Override
   public void setup() {
-    bind(JAXBContextResolver.class);
-    bind(GenericExceptionHandler.class);
     bind(AppContext.class).toInstance(appContext);
     route("/", AppController.class);
     route("/app", AppController.class);

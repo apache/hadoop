@@ -66,18 +66,19 @@ public class ParametersProvider {
     }
     if (str == null) {
       throw new IllegalArgumentException(
-          MessageFormat.format("Missing Operation parameter [{0}]", driverParam));
+        MessageFormat.format("Missing Operation parameter [{0}]",
+                             driverParam));
     }
     Enum op;
     try {
       op = Enum.valueOf(enumClass, StringUtils.toUpperCase(str));
     } catch (IllegalArgumentException ex) {
       throw new IllegalArgumentException(
-          MessageFormat.format("Invalid Operation [{0}]", str));
+        MessageFormat.format("Invalid Operation [{0}]", str));
     }
     if (!paramsDef.containsKey(op)) {
       throw new IllegalArgumentException(
-          MessageFormat.format("Unsupported Operation [{0}]", op));
+        MessageFormat.format("Unsupported Operation [{0}]", op));
     }
     for (Class<Param<?>> paramClass : paramsDef.get(op)) {
       Param<?> param = newParam(paramClass);
@@ -97,6 +98,7 @@ public class ParametersProvider {
       } else {
         paramList.add(param);
       }
+
       map.put(param.getName(), paramList);
     }
     return new Parameters(map);

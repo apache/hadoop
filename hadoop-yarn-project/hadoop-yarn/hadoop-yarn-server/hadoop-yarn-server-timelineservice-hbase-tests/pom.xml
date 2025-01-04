@@ -203,28 +203,28 @@
           <artifactId>hadoop-common</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.glassfish.jersey.core</groupId>
           <artifactId>jersey-common</artifactId>
-          <groupId>org.glassfish.jersey.core</groupId>
         </exclusion>
         <exclusion>
+          <groupId>org.glassfish.jersey.core</groupId>
           <artifactId>jersey-client</artifactId>
-          <groupId>org.glassfish.jersey.core</groupId>
         </exclusion>
         <exclusion>
-          <artifactId>jersey-hk2</artifactId>
           <groupId>org.glassfish.jersey.inject</groupId>
+          <artifactId>jersey-hk2</artifactId>
         </exclusion>
         <exclusion>
-          <artifactId>jersey-media-json-jettison</artifactId>
           <groupId>org.glassfish.jersey.media</groupId>
+          <artifactId>jersey-media-json-jettison</artifactId>
         </exclusion>
         <exclusion>
-          <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
           <groupId>org.glassfish.jersey.test-framework.providers</groupId>
+          <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
         </exclusion>
         <exclusion>
-          <artifactId>jersey-test-framework-core</artifactId>
           <groupId>org.glassfish.jersey.test-framework</groupId>
+          <artifactId>jersey-test-framework-core</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

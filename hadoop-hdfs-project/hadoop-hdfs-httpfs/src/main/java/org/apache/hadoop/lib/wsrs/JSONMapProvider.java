@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.lib.wsrs;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.http.JettyUtils;
 import org.json.simple.JSONObject;
 
@@ -37,7 +37,7 @@ import java.util.Map;
 
 @Provider
 @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
-@Private
+@InterfaceAudience.Private
 public class JSONMapProvider implements MessageBodyWriter<Map> {
   private static final String ENTER = System.getProperty("line.separator");
 

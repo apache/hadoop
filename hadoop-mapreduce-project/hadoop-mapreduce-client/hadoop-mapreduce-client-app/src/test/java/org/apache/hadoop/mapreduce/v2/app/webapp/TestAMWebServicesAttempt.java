@@ -18,6 +18,27 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.StringReader;
+import java.util.Enumeration;
+import java.util.Map;
+import java.util.Properties;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Application;
+import javax.ws.rs.core.Response;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -36,9 +57,6 @@ import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -46,33 +64,14 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import javax.inject.Singleton;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.container.ContainerRequestContext;
-import javax.ws.rs.container.ContainerRequestFilter;
-import javax.ws.rs.core.Application;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.IOException;
-import java.io.StringReader;
-import java.util.Enumeration;
-import java.util.Map;
-import java.util.Properties;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 
 /**
  * Test the app master web service Rest API for getting task attempts, a
  * specific task attempt, and task attempt counters
+ *
  * /ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/state
  */
 public class TestAMWebServicesAttempt extends JerseyTestBase {
@@ -87,7 +86,8 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
     config.register(new JerseyBinder());
     config.register(AMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(new JettisonFeature());
+    config.register(JAXBContextResolver.class);
     config.register(new TestRMCustomAuthFilter());
     return config;
   }
@@ -109,8 +109,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
   }
 
   @Singleton
-  public static class TestRMCustomAuthFilter extends AuthenticationFilter
-      implements ContainerRequestFilter {
+  public static class TestRMCustomAuthFilter extends AuthenticationFilter {
     @Override
     protected Properties getConfiguration(String configPrefix,
         FilterConfig filterConfig) throws ServletException {
@@ -127,10 +126,11 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
       props.put(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "false");
       return props;
     }
+  }
 
-    @Override
-    public void filter(ContainerRequestContext containerRequestContext) throws IOException {
-    }
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
   }
 
   public TestAMWebServicesAttempt() {
@@ -138,7 +138,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
 
   @Test
   public void testGetTaskAttemptIdState() throws Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
     for (JobId id : jobsMap.keySet()) {
@@ -158,10 +158,9 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
               .request(MediaType.APPLICATION_JSON).get(Response.class);
           assertEquals(MediaType.APPLICATION_JSON_TYPE + ";"
               + JettyUtils.UTF_8, response.getMediaType().toString());
-          String entity = response.readEntity(String.class);
-          JSONObject json = new JSONObject(entity);
+          JSONObject json = response.readEntity(JSONObject.class);
           JSONObject jobState = json.getJSONObject("jobTaskAttemptState");
-          assertEquals(1, json.length(), "incorrect number of elements");
+          assertEquals("incorrect number of elements", 1, json.length());
           assertEquals(att.getState().toString(), jobState.get("state"));
         }
       }
@@ -207,7 +206,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
 
   @Test
   public void testPutTaskAttemptIdState() throws Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
     for (JobId id : jobsMap.keySet()) {
@@ -228,10 +227,9 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
               .put(Entity.json("{\"jobTaskAttemptState\":{\"state\":\"KILLED\"}}"), Response.class);
           assertEquals(MediaType.APPLICATION_JSON_TYPE + ";"
               + JettyUtils.UTF_8, response.getMediaType().toString());
-          String entity = response.readEntity(String.class);
-          JSONObject json = new JSONObject(entity);
+          JSONObject json = response.readEntity(JSONObject.class);
           JSONObject jobState = json.getJSONObject("jobTaskAttemptState");
-          assertEquals(1, json.length(), "incorrect number of elements");
+          assertEquals("incorrect number of elements", 1, json.length());
           assertEquals(TaskAttemptState.KILLED.toString(), jobState.get("state"));
         }
       }

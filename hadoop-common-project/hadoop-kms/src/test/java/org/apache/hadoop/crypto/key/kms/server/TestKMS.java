@@ -344,7 +344,7 @@ public class TestKMS {
 
     @Override
     public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-      Map<String, String> options = new HashMap<>();
+      Map<String, String> options = new HashMap<String, String>();
       options.put("keyTab", keytab);
       options.put("principal", principal);
       options.put("useKeyTab", "true");
@@ -583,9 +583,9 @@ public class TestKMS {
   @Test
   public void testStartStopHttpPseudo() throws Exception {
     // Make sure bogus errors don't get emitted.
+    // Jersey2 does not have a method similar to AbstractWadlGeneratorGrammarGenerator.
     GenericTestUtils.LogCapturer logs =
-        GenericTestUtils.LogCapturer.captureLogs(LoggerFactory.getLogger(
-            "com.sun.jersey.server.wadl.generators.AbstractWadlGeneratorGrammarGenerator"));
+        GenericTestUtils.LogCapturer.captureLogs(LOG);
     try {
       testStartStop(false, false);
     } finally {
@@ -2106,11 +2106,13 @@ public class TestKMS {
 
     conf = createBaseKMSConf(testDir, conf);
     conf.set("hadoop.kms.authentication.type", "kerberos");
-    conf.set("hadoop.kms.authentication.kerberos.keytab", keytab.getAbsolutePath());
+    conf.set("hadoop.kms.authentication.kerberos.keytab",
+            keytab.getAbsolutePath());
     conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
     conf.set("hadoop.kms.proxyuser.client.users", "foo/localhost");
     conf.set("hadoop.kms.proxyuser.client.hosts", "localhost");
-    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kcc.ALL", "foo/localhost");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kcc.ALL",
+        "foo/localhost");
 
     writeConf(testDir, conf);
 

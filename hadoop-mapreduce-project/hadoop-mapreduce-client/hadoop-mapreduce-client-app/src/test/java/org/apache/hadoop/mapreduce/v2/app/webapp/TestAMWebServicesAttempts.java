@@ -24,12 +24,20 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 
 import java.io.StringReader;
 import java.util.List;
 import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Application;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.NotFoundException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -51,24 +59,15 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.NotFoundException;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.Application;
-import javax.ws.rs.core.Response;
-
-import static javax.ws.rs.core.Response.Status.NOT_FOUND;
-import static org.mockito.Mockito.mock;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 
 /**
  * Test the app master web service Rest API for getting task attempts, a
@@ -89,14 +88,15 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
     config.register(new JerseyBinder());
     config.register(AMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(new JettisonFeature());
+    config.register(JAXBContextResolver.class);
     return config;
   }
 
   private static class JerseyBinder extends AbstractBinder {
     @Override
     protected void configure() {
-      appContext = new MockAppContext(0, 1, 1, 1);
+      appContext = new MockAppContext(0, 1, 2, 1);
       App app = new App(appContext);
       bind(appContext).to(AppContext.class).named("am");
       bind(app).to(App.class).named("app");
@@ -109,8 +109,8 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  public void testTaskAttempts() throws Exception {
-    WebTarget r = target();
+  public void testTaskAttempts() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
@@ -122,16 +122,15 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
             .request(MediaType.APPLICATION_JSON).get(Response.class);
         assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
             response.getMediaType().toString());
-        String entity = response.readEntity(String.class);
-        JSONObject json = new JSONObject(entity);
+        JSONObject json = response.readEntity(JSONObject.class);
         verifyAMTaskAttempts(json, task);
       }
     }
   }
 
   @Test
-  public void testTaskAttemptsSlash() throws Exception {
-    WebTarget r = target();
+  public void testTaskAttemptsSlash() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
@@ -143,16 +142,15 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
             .request(MediaType.APPLICATION_JSON).get(Response.class);
         assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
             response.getMediaType().toString());
-        String entity = response.readEntity(String.class);
-        JSONObject json = new JSONObject(entity);
+        JSONObject json = response.readEntity(JSONObject.class);
         verifyAMTaskAttempts(json, task);
       }
     }
   }
 
   @Test
-  public void testTaskAttemptsDefault() throws Exception {
-    WebTarget r = target();
+  public void testTaskAttemptsDefault() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
@@ -164,15 +162,14 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
             .request(MediaType.APPLICATION_JSON).get(Response.class);
         assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
             response.getMediaType().toString());
-        String entity = response.readEntity(String.class);
-        JSONObject json = new JSONObject(entity);
+        JSONObject json = response.readEntity(JSONObject.class);
         verifyAMTaskAttempts(json, task);
       }
     }
   }
 
   @Test
-  public void testTaskAttemptsXML() throws Exception {
+  public void testTaskAttemptsXML() throws JSONException, Exception {
     WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -202,8 +199,8 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  public void testTaskAttemptId() throws Exception {
-    WebTarget r = target();
+  public void testTaskAttemptId() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
     for (JobId id : jobsMap.keySet()) {
@@ -222,8 +219,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
               .get(Response.class);
           assertEquals(MediaType.APPLICATION_JSON_TYPE + ";"
               + JettyUtils.UTF_8, response.getMediaType().toString());
-          String entity = response.readEntity(String.class);
-          JSONObject json = new JSONObject(entity);
+          JSONObject json = response.readEntity(JSONObject.class);
           assertEquals("incorrect number of elements", 1, json.length());
           JSONObject info = json.getJSONObject("taskAttempt");
           verifyAMTaskAttempt(info, att, task.getType());
@@ -233,8 +229,8 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  public void testTaskAttemptIdSlash() throws Exception {
-    WebTarget r = target();
+  public void testTaskAttemptIdSlash() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
     for (JobId id : jobsMap.keySet()) {
@@ -253,8 +249,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
               .request(MediaType.APPLICATION_JSON).get(Response.class);
           assertEquals(MediaType.APPLICATION_JSON_TYPE + ";"
               + JettyUtils.UTF_8, response.getMediaType().toString());
-          String entity = response.readEntity(String.class);
-          JSONObject json = new JSONObject(entity);
+          JSONObject json = response.readEntity(JSONObject.class);
           assertEquals("incorrect number of elements", 1, json.length());
           JSONObject info = json.getJSONObject("taskAttempt");
           verifyAMTaskAttempt(info, att, task.getType());
@@ -265,7 +260,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
 
   @Test
   public void testTaskAttemptIdDefault() throws Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
     for (JobId id : jobsMap.keySet()) {
@@ -284,8 +279,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
               .request(MediaType.APPLICATION_JSON).get(Response.class);
           assertEquals(MediaType.APPLICATION_JSON_TYPE + ";"
               + JettyUtils.UTF_8, response.getMediaType().toString());
-          String entity = response.readEntity(String.class);
-          JSONObject json = new JSONObject(entity);
+          JSONObject json = response.readEntity(JSONObject.class);
           assertEquals("incorrect number of elements", 1, json.length());
           JSONObject info = json.getJSONObject("taskAttempt");
           verifyAMTaskAttempt(info, att, task.getType());
@@ -331,39 +325,44 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  public void testTaskAttemptIdBogus() throws Exception {
+  public void testTaskAttemptIdBogus() throws JSONException, Exception {
+
     testTaskAttemptIdErrorGeneric("bogusid",
         "TaskAttemptId string : bogusid is not properly formed");
   }
 
   @Test
-  public void testTaskAttemptIdNonExist() throws Exception {
-    testTaskAttemptIdErrorGeneric("attempt_0_12345_m_000000_0",
+  public void testTaskAttemptIdNonExist() throws JSONException, Exception {
+
+    testTaskAttemptIdErrorGeneric(
+        "attempt_0_12345_m_000000_0",
         "Error getting info on task attempt id attempt_0_12345_m_000000_0");
   }
 
   @Test
-  public void testTaskAttemptIdInvalid() throws Exception {
+  public void testTaskAttemptIdInvalid() throws JSONException, Exception {
+
     testTaskAttemptIdErrorGeneric("attempt_0_12345_d_000000_0",
-        "Bad TaskType identifier. " +
-         "TaskAttemptId string : attempt_0_12345_d_000000_0 is not properly formed.");
+        "Bad TaskType identifier. TaskAttemptId string : attempt_0_12345_d_000000_0 is not properly formed.");
   }
 
   @Test
-  public void testTaskAttemptIdInvalid2() throws Exception {
+  public void testTaskAttemptIdInvalid2() throws JSONException, Exception {
+
     testTaskAttemptIdErrorGeneric("attempt_12345_m_000000_0",
         "TaskAttemptId string : attempt_12345_m_000000_0 is not properly formed");
   }
 
   @Test
-  public void testTaskAttemptIdInvalid3() throws Exception {
+  public void testTaskAttemptIdInvalid3() throws JSONException, Exception {
 
     testTaskAttemptIdErrorGeneric("attempt_0_12345_m_000000",
         "TaskAttemptId string : attempt_0_12345_m_000000 is not properly formed");
   }
 
-  private void testTaskAttemptIdErrorGeneric(String attid, String error) throws Exception {
-    WebTarget r = target();
+  private void testTaskAttemptIdErrorGeneric(String attid, String error)
+      throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
     for (JobId id : jobsMap.keySet()) {
@@ -545,8 +544,8 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  public void testTaskAttemptIdCounters() throws Exception {
-    WebTarget r = target();
+  public void testTaskAttemptIdCounters() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
     for (JobId id : jobsMap.keySet()) {
@@ -565,8 +564,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
               .request(MediaType.APPLICATION_JSON).get(Response.class);
           assertEquals(MediaType.APPLICATION_JSON_TYPE + ";"
               + JettyUtils.UTF_8, response.getMediaType().toString());
-          String entity = response.readEntity(String.class);
-          JSONObject json = new JSONObject(entity);
+          JSONObject json = response.readEntity(JSONObject.class);
           assertEquals("incorrect number of elements", 1, json.length());
           JSONObject info = json.getJSONObject("jobTaskAttemptCounters");
           verifyAMJobTaskAttemptCounters(info, att);

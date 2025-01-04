@@ -211,10 +211,6 @@
           <artifactId>guice-servlet</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.github.pjfanning</groupId>
-          <artifactId>jersey-json</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>org.codehaus.jettison</groupId>
           <artifactId>jettison</artifactId>
         </exclusion>

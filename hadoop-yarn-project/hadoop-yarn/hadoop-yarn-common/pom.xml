@@ -160,10 +160,6 @@
           <artifactId>jakarta.servlet-api</artifactId>
           <groupId>jakarta.servlet</groupId>
         </exclusion>
-        <exclusion>
-          <groupId>javax.servlet</groupId>
-          <artifactId>javax.servlet-api</artifactId>
-        </exclusion>
       </exclusions>
     </dependency>
     <dependency>

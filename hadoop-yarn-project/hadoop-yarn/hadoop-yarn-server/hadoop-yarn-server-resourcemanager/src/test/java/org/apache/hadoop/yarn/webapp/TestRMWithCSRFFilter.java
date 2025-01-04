@@ -71,10 +71,10 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
   @Override
   protected Application configure() {
     ResourceConfig config = new ResourceConfig();
+    config.register(TestJerseyRestCsrfPreventionFilter.class);
     config.register(new JerseyBinder());
     config.register(RMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(RestCsrfPreventionFilter.class);
     config.register(new JettisonFeature()).register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
@@ -98,7 +98,7 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
       initParams.put(RestCsrfPreventionFilter.CUSTOM_METHODS_TO_IGNORE_PARAM,
           "OPTIONS,HEAD,TRACE");
 
-      bind(csrfFilter).to(RestCsrfPreventionFilter.class);
+      // bind(csrfFilter).to(RestCsrfPreventionFilter.class);
       final HttpServletRequest request = mock(HttpServletRequest.class);
       when(request.getScheme()).thenReturn("http");
       final HttpServletResponse response = mock(HttpServletResponse.class);
