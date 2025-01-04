@@ -276,7 +276,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil.LOG;
 import static org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil.asyncRouterServer;
 
 public class RouterClientNamenodeProtocolServerSideTranslatorPB
@@ -831,7 +830,6 @@ public class RouterClientNamenodeProtocolServerSideTranslatorPB
   public GetFileInfoResponseProto getFileInfo(
       RpcController controller,
       GetFileInfoRequestProto req) {
-    LOG.info("[ZHB]RouterClientNamenodeProtocolServerSideTranslatorPB#getFileInfo");
     asyncRouterServer(() -> server.getFileInfo(req.getSrc()),
         result -> {
           if (result != null) {
@@ -1705,14 +1703,12 @@ public class RouterClientNamenodeProtocolServerSideTranslatorPB
 
   @Override
   public SatisfyStoragePolicyResponseProto satisfyStoragePolicy(
-      RpcController controller, SatisfyStoragePolicyRequestProto request)
-      throws ServiceException {
-    try {
+      RpcController controller, SatisfyStoragePolicyRequestProto request) {
+    asyncRouterServer(() -> {
       server.satisfyStoragePolicy(request.getSrc());
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-    return VOID_SATISFYSTORAGEPOLICY_RESPONSE;
+      return null;
+    }, vo -> VOID_SATISFYSTORAGEPOLICY_RESPONSE);
+    return null;
   }
 
   @Override
