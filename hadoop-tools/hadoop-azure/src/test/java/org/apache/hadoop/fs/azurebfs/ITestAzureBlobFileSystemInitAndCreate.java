@@ -42,6 +42,8 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.accountProperty;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -115,9 +117,14 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
 
   // TODO: [FnsOverBlob][HADOOP-19179] Remove this test case once Blob Endpoint Support is enabled.
   @Test
-  public void testFileSystemInitFailsWithBlobEndpoitUrl() throws Exception {
+  public void testFileSystemInitFailsWithBlobEndpointUrl() throws Exception {
     Configuration configuration = getRawConfiguration();
     String defaultUri = configuration.get(FS_DEFAULT_NAME_KEY);
+    String accountKey = configuration.get(
+        accountProperty(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, getAccountName()),
+        configuration.get(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME));
+    configuration.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME,
+        accountKey.replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME));
     String blobUri = defaultUri.replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME);
     intercept(InvalidConfigurationValueException.class,
         "Blob Endpoint Support not yet available", () ->
