@@ -50,18 +50,15 @@ public class TestRouterAsyncRpc extends TestRouterRpc {
     // We decrease the DN cache times to make the test faster
     routerConf.setTimeDuration(
         RBFConfigKeys.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
+    // use async router.
     routerConf.setBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC, true);
     setUp(routerConf);
-    setCluster(cluster);
-  }
-
-  public static void tearDown() {
-    cluster.shutdown();
   }
 
   @Before
   public void testSetup() throws Exception {
     super.testSetup();
+    cluster = super.getCluster();
     // Random router for this test
     rndRouter = cluster.getRandomRouter();
   }

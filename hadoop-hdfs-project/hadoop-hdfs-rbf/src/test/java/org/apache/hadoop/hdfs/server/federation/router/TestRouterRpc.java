@@ -354,10 +354,6 @@ public class TestRouterRpc {
         router.getFileSystem().getUri(), NamenodeProtocol.class).getProxy();
   }
 
-  protected static void setCluster(MiniRouterDFSCluster cluster) {
-    TestRouterRpc.cluster = cluster;
-  }
-
   protected FileSystem getRouterFileSystem() {
     return this.routerFS;
   }

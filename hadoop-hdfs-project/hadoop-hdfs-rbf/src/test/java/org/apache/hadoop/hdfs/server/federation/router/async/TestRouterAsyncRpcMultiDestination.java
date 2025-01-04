@@ -23,7 +23,6 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.TestRouterRpcMultiDestination;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -37,8 +36,6 @@ import static org.junit.Assert.assertArrayEquals;
  * Testing the asynchronous RPC functionality of the router with multiple mounts.
  */
 public class TestRouterAsyncRpcMultiDestination extends TestRouterRpcMultiDestination {
-  private static MiniRouterDFSCluster cluster;
-  private MiniRouterDFSCluster.RouterContext rndRouter;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
@@ -50,25 +47,15 @@ public class TestRouterAsyncRpcMultiDestination extends TestRouterRpcMultiDestin
     // We decrease the DN cache times to make the test faster
     routerConf.setTimeDuration(
         RBFConfigKeys.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
+    // use async router.
     routerConf.setBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC, true);
     setUp(routerConf);
-    setCluster(cluster);
-  }
-
-  public static void tearDown() {
-    cluster.shutdown();
-  }
-
-  @Before
-  public void testSetup() throws Exception {
-    super.testSetup();
-    // Random router for this test
-    rndRouter = cluster.getRandomRouter();
   }
 
   @Test
   @Override
   public void testgetGroupsForUser() throws Exception {
+    MiniRouterDFSCluster.RouterContext rndRouter = super.getRouterContext();
     String[] group = new String[] {"bar", "group2"};
     UserGroupInformation.createUserForTesting("user",
         new String[] {"bar", "group2"});
