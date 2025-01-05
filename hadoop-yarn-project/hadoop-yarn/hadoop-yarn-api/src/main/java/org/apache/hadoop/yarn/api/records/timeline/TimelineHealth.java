@@ -18,8 +18,8 @@
 package org.apache.hadoop.yarn.api.records.timeline;
 
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -31,8 +31,8 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name = "health")
 @XmlAccessorType(XmlAccessType.NONE)
-@Public
-@Unstable
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class TimelineHealth {
 
   /**
@@ -56,6 +56,7 @@ public class TimelineHealth {
   }
 
   public TimelineHealth() {
+
   }
 
   @XmlElement(name = "healthStatus")
@@ -76,4 +77,6 @@ public class TimelineHealth {
   public void setDiagnosticsInfo(String diagnosticsInfo) {
     this.diagnosticsInfo = diagnosticsInfo;
   }
+
+
 }

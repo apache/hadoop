@@ -61,9 +61,6 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -71,6 +68,9 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 /**
  * Test the history server Rest API for getting the job conf. This
  * requires created a temporary configuration file.
@@ -103,7 +103,7 @@ public class TestHsWebServicesJobConf extends JerseyTestBase {
       testConfDir.mkdir();
 
       Path confPath = new Path(testConfDir.toString(),
-              MRJobConfig.JOB_CONF_FILE);
+          MRJobConfig.JOB_CONF_FILE);
       Configuration config = new Configuration();
 
       FileSystem localFs;
@@ -151,8 +151,8 @@ public class TestHsWebServicesJobConf extends JerseyTestBase {
   }
 
   @Test
-  public void testJobConf() throws Exception {
-    WebTarget r = target();
+  public void testJobConf() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
@@ -163,8 +163,7 @@ public class TestHsWebServicesJobConf extends JerseyTestBase {
           .request(MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject json = new JSONObject(entity);
+      JSONObject json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("conf");
       verifyHsJobConf(info, jobsMap.get(id));
@@ -172,8 +171,8 @@ public class TestHsWebServicesJobConf extends JerseyTestBase {
   }
 
   @Test
-  public void testJobConfSlash() throws Exception {
-    WebTarget r = target();
+  public void testJobConfSlash() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
@@ -182,8 +181,7 @@ public class TestHsWebServicesJobConf extends JerseyTestBase {
           .request(MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject json = new JSONObject(entity);
+      JSONObject json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("conf");
       verifyHsJobConf(info, jobsMap.get(id));
@@ -191,8 +189,8 @@ public class TestHsWebServicesJobConf extends JerseyTestBase {
   }
 
   @Test
-  public void testJobConfDefault() throws Exception {
-    WebTarget r = target();
+  public void testJobConfDefault() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
@@ -201,8 +199,7 @@ public class TestHsWebServicesJobConf extends JerseyTestBase {
           .path("jobs").path(jobId).path("conf").request().get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject json = new JSONObject(entity);
+      JSONObject json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("conf");
       verifyHsJobConf(info, jobsMap.get(id));
@@ -210,7 +207,7 @@ public class TestHsWebServicesJobConf extends JerseyTestBase {
   }
 
   @Test
-  public void testJobConfXML() throws Exception {
+  public void testJobConfXML() throws JSONException, Exception {
     WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {

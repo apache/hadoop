@@ -30,6 +30,8 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.BadRequestException;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
@@ -58,14 +60,15 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 
 /**
  * Test the history server Rest API for getting tasks, a specific task,
@@ -112,56 +115,18 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
   }
 
   @Test
-  public void testTasks() throws Exception {
-    WebTarget r = target();
+  public void testTasks() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
-
-      Response response = r
-          .path("ws")
-          .path("v1")
-          .path("history")
-          .path("mapreduce")
-          .path("jobs")
-          .path(jobId)
-          .path("tasks")
-          .request(MediaType.APPLICATION_JSON)
-          .get(Response.class);
+      Response response = r.path("ws").path("v1").path("history")
+          .path("mapreduce").path("jobs").path(jobId).path("tasks")
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
 
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject json = new JSONObject(entity);
-      assertEquals("incorrect number of elements", 1, json.length());
-      JSONObject tasks = json.getJSONObject("tasks");
-      JSONArray arr = tasks.getJSONArray("task");
-      assertEquals("incorrect number of elements", 2, arr.length());
-      verifyHsTask(arr, jobsMap.get(id), null);
-    }
-  }
-
-  @Test
-  public void testTasksDefault() throws Exception {
-    WebTarget r = target();
-    Map<JobId, Job> jobsMap = appContext.getAllJobs();
-
-    for (JobId id : jobsMap.keySet()) {
-      String jobId = MRApps.toString(id);
-      Response response = r
-          .path("ws")
-          .path("v1")
-          .path("history")
-          .path("mapreduce")
-          .path("jobs")
-          .path(jobId)
-          .path("tasks")
-          .request()
-          .get(Response.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
-          response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject json = new JSONObject(entity);
+      JSONObject json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject tasks = json.getJSONObject("tasks");
       JSONArray arr = tasks.getJSONArray("task");
@@ -172,50 +137,57 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
   }
 
   @Test
-  public void testTasksSlash() throws Exception {
-    WebTarget r = target();
-
+  public void testTasksDefault() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
-      Response response = r
-          .path("ws")
-          .path("v1")
-          .path("history")
-          .path("mapreduce")
-          .path("jobs")
-          .path(jobId)
-          .path("tasks/")
-          .request(MediaType.APPLICATION_JSON)
-          .get(Response.class);
+      Response response = r.path("ws").path("v1").path("history")
+          .path("mapreduce").path("jobs").path(jobId).path("tasks")
+          .request().get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject json = new JSONObject(entity);
+      JSONObject json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject tasks = json.getJSONObject("tasks");
       JSONArray arr = tasks.getJSONArray("task");
       assertEquals("incorrect number of elements", 2, arr.length());
+
       verifyHsTask(arr, jobsMap.get(id), null);
     }
   }
 
   @Test
-  public void testTasksXML() throws Exception {
+  public void testTasksSlash() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
+    Map<JobId, Job> jobsMap = appContext.getAllJobs();
+    for (JobId id : jobsMap.keySet()) {
+      String jobId = MRApps.toString(id);
+      Response response = r.path("ws").path("v1").path("history")
+          .path("mapreduce").path("jobs").path(jobId).path("tasks/")
+          .request(MediaType.APPLICATION_JSON).get(Response.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject json =response.readEntity(JSONObject.class);
+      assertEquals("incorrect number of elements", 1, json.length());
+      JSONObject tasks = json.getJSONObject("tasks");
+      JSONArray arr = tasks.getJSONArray("task");
+      assertEquals("incorrect number of elements", 2, arr.length());
+
+      verifyHsTask(arr, jobsMap.get(id), null);
+    }
+  }
+
+  @Test
+  public void testTasksXML() throws JSONException, Exception {
+
     WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
-      Response response = r
-          .path("ws")
-          .path("v1")
-          .path("history")
-          .path("mapreduce")
-          .path("jobs")
-          .path(jobId)
-          .path("tasks")
-          .request(MediaType.APPLICATION_XML)
-          .get(Response.class);
+      Response response = r.path("ws").path("v1").path("history")
+          .path("mapreduce").path("jobs").path(jobId).path("tasks")
+          .request(MediaType.APPLICATION_XML).get(Response.class);
       assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
       String xml = response.readEntity(String.class);
@@ -232,27 +204,19 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
   }
 
   @Test
-  public void testTasksQueryMap() throws Exception {
-    WebTarget r = target();
+  public void testTasksQueryMap() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
       String type = "m";
-      Response response = r
-          .path("ws")
-          .path("v1")
-          .path("history")
-          .path("mapreduce")
-          .path("jobs")
-          .path(jobId)
-          .path("tasks")
-          .queryParam("type", type)
-          .request(MediaType.APPLICATION_JSON)
+      Response response = r.path("ws").path("v1").path("history")
+          .path("mapreduce").path("jobs").path(jobId).path("tasks")
+          .queryParam("type", type).request(MediaType.APPLICATION_JSON)
           .get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject json = new JSONObject(entity);
+      JSONObject json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject tasks = json.getJSONObject("tasks");
       JSONObject task = tasks.getJSONObject("task");
@@ -264,27 +228,19 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
   }
 
   @Test
-  public void testTasksQueryReduce() throws Exception {
-    WebTarget r = target();
+  public void testTasksQueryReduce() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
       String type = "r";
-      Response response = r
-          .path("ws")
-          .path("v1")
-          .path("history")
-          .path("mapreduce")
-          .path("jobs")
-          .path(jobId)
-          .path("tasks")
-          .queryParam("type", type)
-          .request(MediaType.APPLICATION_JSON)
+      Response response = r.path("ws").path("v1").path("history")
+          .path("mapreduce").path("jobs").path(jobId).path("tasks")
+          .queryParam("type", type).request(MediaType.APPLICATION_JSON)
           .get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject json = new JSONObject(entity);
+      JSONObject json = response.readEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject tasks = json.getJSONObject("tasks");
       JSONObject task = tasks.getJSONObject("task");
@@ -296,66 +252,56 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
   }
 
   @Test
-  public void testTasksQueryInvalid() throws Exception {
-    WebTarget r = target();
+  public void testTasksQueryInvalid() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
       // tasktype must be exactly either "m" or "r"
       String tasktype = "reduce";
-      Response response = r
-          .path("ws")
-          .path("v1")
-          .path("history")
-          .path("mapreduce")
-          .path("jobs")
-          .path(jobId).path("tasks")
-          .queryParam("type", tasktype)
-          .request(MediaType.APPLICATION_JSON)
-          .get();
-      assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
-          response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject msg = new JSONObject(entity);
-      JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
-      String message = exception.getString("message");
-      String type = exception.getString("exception");
-      String classname = exception.getString("javaClassName");
-      WebServicesTestUtils.checkStringMatch("exception message",
-          "tasktype must be either m or r", message);
-      WebServicesTestUtils.checkStringMatch("exception type",
-          "BadRequestException", type);
-      WebServicesTestUtils.checkStringMatch("exception classname",
-          "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
+
+      try {
+        Response response = r.path("ws").path("v1").path("history").path("mapreduce").path("jobs")
+            .path(jobId).path("tasks").queryParam("type", tasktype)
+            .request(MediaType.APPLICATION_JSON).get();
+        throw new BadRequestException(response);
+      } catch (BadRequestException ue) {
+        Response response = ue.getResponse();
+        assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
+        assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+            response.getMediaType().toString());
+        JSONObject msg = response.readEntity(JSONObject.class);
+        JSONObject exception = msg.getJSONObject("RemoteException");
+        assertEquals("incorrect number of elements", 3, exception.length());
+        String message = exception.getString("message");
+        String type = exception.getString("exception");
+        String classname = exception.getString("javaClassName");
+        WebServicesTestUtils.checkStringMatch("exception message",
+            "tasktype must be either m or r", message);
+        WebServicesTestUtils.checkStringMatch("exception type",
+            "BadRequestException", type);
+        WebServicesTestUtils.checkStringMatch("exception classname",
+            "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
+      }
     }
   }
 
   @Test
-  public void testTaskId() throws Exception {
-    WebTarget r = target();
+  public void testTaskId() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
       for (Task task : jobsMap.get(id).getTasks().values()) {
 
         String tid = MRApps.toString(task.getID());
-        Response response = r
-            .path("ws")
-            .path("v1")
-            .path("history")
-            .path("mapreduce")
-            .path("jobs")
-            .path(jobId)
-            .path("tasks")
-            .path(tid)
+        Response response = r.path("ws").path("v1").path("history")
+            .path("mapreduce").path("jobs").path(jobId).path("tasks").path(tid)
             .request(MediaType.APPLICATION_JSON)
             .get(Response.class);
         assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
             response.getMediaType().toString());
-        String entity = response.readEntity(String.class);
-        JSONObject json = new JSONObject(entity);
+        JSONObject json = response.readEntity(JSONObject.class);
         assertEquals("incorrect number of elements", 1, json.length());
         JSONObject info = json.getJSONObject("task");
         verifyHsSingleTask(info, task);
@@ -364,29 +310,21 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
   }
 
   @Test
-  public void testTaskIdSlash() throws Exception {
-    WebTarget r = target();
+  public void testTaskIdSlash() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
       for (Task task : jobsMap.get(id).getTasks().values()) {
 
         String tid = MRApps.toString(task.getID());
-        Response response = r
-            .path("ws")
-            .path("v1")
-            .path("history")
-            .path("mapreduce")
-            .path("jobs")
-            .path(jobId)
-            .path("tasks")
-            .path(tid + "/")
-            .request(MediaType.APPLICATION_JSON)
+        Response response = r.path("ws").path("v1").path("history")
+            .path("mapreduce").path("jobs").path(jobId).path("tasks")
+            .path(tid + "/").request(MediaType.APPLICATION_JSON)
             .get(Response.class);
         assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
             response.getMediaType().toString());
-        String entity = response.readEntity(String.class);
-        JSONObject json = new JSONObject(entity);
+        JSONObject json = response.readEntity(JSONObject.class);
         assertEquals("incorrect number of elements", 1, json.length());
         JSONObject info = json.getJSONObject("task");
         verifyHsSingleTask(info, task);
@@ -396,28 +334,19 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
 
   @Test
   public void testTaskIdDefault() throws Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
       for (Task task : jobsMap.get(id).getTasks().values()) {
 
         String tid = MRApps.toString(task.getID());
-        Response response = r
-            .path("ws")
-            .path("v1")
-            .path("history")
-            .path("mapreduce")
-            .path("jobs")
-            .path(jobId)
-            .path("tasks")
-            .path(tid)
-            .request()
+        Response response = r.path("ws").path("v1").path("history")
+            .path("mapreduce").path("jobs").path(jobId).path("tasks").path(tid).request()
             .get(Response.class);
         assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
             response.getMediaType().toString());
-        String entity = response.readEntity(String.class);
-        JSONObject json = new JSONObject(entity);
+        JSONObject json = response.readEntity(JSONObject.class);
         assertEquals("incorrect number of elements", 1, json.length());
         JSONObject info = json.getJSONObject("task");
         verifyHsSingleTask(info, task);
@@ -426,200 +355,175 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
   }
 
   @Test
-  public void testTaskIdBogus() throws Exception {
-    WebTarget r = target();
+  public void testTaskIdBogus() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
       String tid = "bogustaskid";
-      Response response = r
-          .path("ws")
-          .path("v1")
-          .path("history")
-          .path("mapreduce")
-          .path("jobs")
-          .path(jobId)
-          .path("tasks")
-          .path(tid)
-          .request()
-          .get();
-      assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
-              response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject msg = new JSONObject(entity);
-      JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
-      String message = exception.getString("message");
-      String type = exception.getString("exception");
-      String classname = exception.getString("javaClassName");
-      WebServicesTestUtils.checkStringEqual("exception message",
-          "TaskId string : " +
-          "bogustaskid is not properly formed" +
-          "\nReason: java.util.regex.Matcher[pattern=" +
-          TaskID.TASK_ID_REGEX + " region=0,11 lastmatch=]", message);
-      WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
-      WebServicesTestUtils.checkStringMatch("exception classname",
-          "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+      try {
+        Response response = r.path("ws").path("v1").path("history").path("mapreduce").path("jobs")
+            .path(jobId).path("tasks").path(tid).request().get();
+        throw new NotFoundException(response);
+      } catch (NotFoundException ue) {
+        Response response = ue.getResponse();
+        assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+        assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+            response.getMediaType().toString());
+        JSONObject msg = response.readEntity(JSONObject.class);
+        JSONObject exception = msg.getJSONObject("RemoteException");
+        assertEquals("incorrect number of elements", 3, exception.length());
+        String message = exception.getString("message");
+        String type = exception.getString("exception");
+        String classname = exception.getString("javaClassName");
+        WebServicesTestUtils.checkStringEqual("exception message",
+            "TaskId string : " +
+            "bogustaskid is not properly formed" +
+            "\nReason: java.util.regex.Matcher[pattern=" +
+            TaskID.TASK_ID_REGEX + " region=0,11 lastmatch=]", message);
+        WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
+        WebServicesTestUtils.checkStringMatch("exception classname",
+            "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+      }
     }
   }
 
   @Test
-  public void testTaskIdNonExist() throws Exception {
-    WebTarget r = target();
+  public void testTaskIdNonExist() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
       String tid = "task_0_0000_m_000000";
-      Response response = r
-          .path("ws")
-          .path("v1")
-          .path("history")
-          .path("mapreduce")
-          .path("jobs")
-          .path(jobId)
-          .path("tasks")
-          .path(tid)
-          .request()
-          .get();
-      assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
-          response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject msg = new JSONObject(entity);
-      JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
-      String message = exception.getString("message");
-      String type = exception.getString("exception");
-      String classname = exception.getString("javaClassName");
-      WebServicesTestUtils.checkStringMatch("exception message",
-          "task not found with id task_0_0000_m_000000", message);
-      WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
-      WebServicesTestUtils.checkStringMatch("exception classname",
-          "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+      try {
+        Response response = r.path("ws").path("v1").path("history").path("mapreduce").path("jobs")
+            .path(jobId).path("tasks").path(tid).request().get();
+        throw new NotFoundException(response);
+      } catch (NotFoundException ue) {
+        Response response = ue.getResponse();
+        assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+        assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+            response.getMediaType().toString());
+        JSONObject msg = response.readEntity(JSONObject.class);
+        JSONObject exception = msg.getJSONObject("RemoteException");
+        assertEquals("incorrect number of elements", 3, exception.length());
+        String message = exception.getString("message");
+        String type = exception.getString("exception");
+        String classname = exception.getString("javaClassName");
+        WebServicesTestUtils.checkStringMatch("exception message",
+            "task not found with id task_0_0000_m_000000", message);
+        WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
+        WebServicesTestUtils.checkStringMatch("exception classname",
+            "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+      }
     }
   }
 
   @Test
-  public void testTaskIdInvalid() throws Exception {
-    WebTarget r = target();
+  public void testTaskIdInvalid() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
       String tid = "task_0_0000_d_000000";
-      Response response = r
-          .path("ws")
-          .path("v1")
-          .path("history")
-          .path("mapreduce")
-          .path("jobs")
-          .path(jobId)
-          .path("tasks")
-          .path(tid)
-          .request()
-          .get();
-      assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
-          response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject msg = new JSONObject(entity);
-      JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
-      String message = exception.getString("message");
-      String type = exception.getString("exception");
-      String classname = exception.getString("javaClassName");
-      WebServicesTestUtils.checkStringEqual("exception message",
-          "TaskId string : " +
-          "task_0_0000_d_000000 is not properly formed" +
-          "\nReason: java.util.regex.Matcher[pattern=" +
-          TaskID.TASK_ID_REGEX + " region=0,20 lastmatch=]", message);
-      WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
-      WebServicesTestUtils.checkStringMatch("exception classname",
-          "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+      try {
+        Response response = r.path("ws").path("v1").path("history").path("mapreduce").path("jobs")
+            .path(jobId).path("tasks").path(tid).request().get();
+        throw new NotFoundException(response);
+      } catch (NotFoundException ue) {
+        Response response = ue.getResponse();
+        assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+        assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+            response.getMediaType().toString());
+        JSONObject msg = response.readEntity(JSONObject.class);
+        JSONObject exception = msg.getJSONObject("RemoteException");
+        assertEquals("incorrect number of elements", 3, exception.length());
+        String message = exception.getString("message");
+        String type = exception.getString("exception");
+        String classname = exception.getString("javaClassName");
+        WebServicesTestUtils.checkStringEqual("exception message",
+            "TaskId string : " +
+            "task_0_0000_d_000000 is not properly formed" +
+            "\nReason: java.util.regex.Matcher[pattern=" +
+            TaskID.TASK_ID_REGEX + " region=0,20 lastmatch=]", message);
+        WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
+        WebServicesTestUtils.checkStringMatch("exception classname",
+            "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+      }
     }
   }
 
   @Test
-  public void testTaskIdInvalid2() throws Exception {
-    WebTarget r = target();
+  public void testTaskIdInvalid2() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
       String tid = "task_0000_m_000000";
-      Response response = r
-          .path("ws")
-          .path("v1")
-          .path("history")
-          .path("mapreduce")
-          .path("jobs")
-          .path(jobId)
-          .path("tasks")
-          .path(tid)
-          .request()
-          .get();
-      assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
-          response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject msg = new JSONObject(entity);
-      JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
-      String message = exception.getString("message");
-      String type = exception.getString("exception");
-      String classname = exception.getString("javaClassName");
-      WebServicesTestUtils.checkStringEqual("exception message",
-          "TaskId string : " +
-          "task_0000_m_000000 is not properly formed" +
-          "\nReason: java.util.regex.Matcher[pattern=" +
-          TaskID.TASK_ID_REGEX + " region=0,18 lastmatch=]", message);
-      WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
-      WebServicesTestUtils.checkStringMatch("exception classname",
-          "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+      try {
+        Response response = r.path("ws").path("v1").path("history").path("mapreduce").path("jobs")
+            .path(jobId).path("tasks").path(tid).request().get();
+        throw new NotFoundException(response);
+      } catch (NotFoundException ue) {
+        Response response = ue.getResponse();
+        assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+        assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+            response.getMediaType().toString());
+        JSONObject msg = response.readEntity(JSONObject.class);
+        JSONObject exception = msg.getJSONObject("RemoteException");
+        assertEquals("incorrect number of elements", 3, exception.length());
+        String message = exception.getString("message");
+        String type = exception.getString("exception");
+        String classname = exception.getString("javaClassName");
+        WebServicesTestUtils.checkStringEqual("exception message",
+            "TaskId string : " +
+            "task_0000_m_000000 is not properly formed" +
+            "\nReason: java.util.regex.Matcher[pattern=" +
+            TaskID.TASK_ID_REGEX + " region=0,18 lastmatch=]", message);
+        WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
+        WebServicesTestUtils.checkStringMatch("exception classname",
+            "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+      }
     }
   }
 
   @Test
-  public void testTaskIdInvalid3() throws Exception {
-    WebTarget r = target();
+  public void testTaskIdInvalid3() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
       String tid = "task_0_0000_m";
-      Response response = r
-          .path("ws")
-          .path("v1")
-          .path("history")
-          .path("mapreduce")
-          .path("jobs")
-          .path(jobId)
-          .path("tasks")
-          .path(tid)
-          .request()
-          .get();
-      assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
-          response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject msg = new JSONObject(entity);
-      JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
-      String message = exception.getString("message");
-      String type = exception.getString("exception");
-      String classname = exception.getString("javaClassName");
-      WebServicesTestUtils.checkStringEqual("exception message",
-          "TaskId string : " +
-          "task_0_0000_m is not properly formed" +
-          "\nReason: java.util.regex.Matcher[pattern=" +
-          TaskID.TASK_ID_REGEX + " region=0,13 lastmatch=]", message);
-      WebServicesTestUtils.checkStringMatch("exception type",
-          "NotFoundException", type);
-      WebServicesTestUtils.checkStringMatch("exception classname",
-          "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+      try {
+        Response response = r.path("ws").path("v1").path("history").path("mapreduce").path("jobs")
+            .path(jobId).path("tasks").path(tid).request().get();
+        throw new NotFoundException(response);
+      } catch (NotFoundException ue) {
+        Response response = ue.getResponse();
+        assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+        assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+            response.getMediaType().toString());
+        JSONObject msg = response.readEntity(JSONObject.class);
+        JSONObject exception = msg.getJSONObject("RemoteException");
+        assertEquals("incorrect number of elements", 3, exception.length());
+        String message = exception.getString("message");
+        String type = exception.getString("exception");
+        String classname = exception.getString("javaClassName");
+        WebServicesTestUtils.checkStringEqual("exception message",
+            "TaskId string : " +
+            "task_0_0000_m is not properly formed" +
+            "\nReason: java.util.regex.Matcher[pattern=" +
+            TaskID.TASK_ID_REGEX + " region=0,13 lastmatch=]", message);
+        WebServicesTestUtils.checkStringMatch("exception type",
+            "NotFoundException", type);
+        WebServicesTestUtils.checkStringMatch("exception classname",
+            "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+      }
     }
   }
 
   @Test
-  public void testTaskIdXML() throws Exception {
+  public void testTaskIdXML() throws JSONException, Exception {
     WebTarget r = target();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -627,17 +531,9 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
       for (Task task : jobsMap.get(id).getTasks().values()) {
 
         String tid = MRApps.toString(task.getID());
-        Response response = r
-            .path("ws")
-            .path("v1")
-            .path("history")
-            .path("mapreduce")
-            .path("jobs")
-            .path(jobId)
-            .path("tasks")
-            .path(tid)
-            .request(MediaType.APPLICATION_XML)
-            .get(Response.class);
+        Response response = r.path("ws").path("v1").path("history")
+            .path("mapreduce").path("jobs").path(jobId).path("tasks").path(tid)
+            .request(MediaType.APPLICATION_XML).get(Response.class);
 
         assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
             response.getMediaType().toString());
@@ -739,8 +635,8 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
   }
 
   @Test
-  public void testTaskIdCounters() throws Exception {
-    WebTarget r = target();
+  public void testTaskIdCounters() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
@@ -753,8 +649,7 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
             .get(Response.class);
         assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
             response.getMediaType().toString());
-        String entity = response.readEntity(String.class);
-        JSONObject json = new JSONObject(entity);
+        JSONObject json = response.readEntity(JSONObject.class);
         assertEquals("incorrect number of elements", 1, json.length());
         JSONObject info = json.getJSONObject("jobTaskCounters");
         verifyHsJobTaskCounters(info, task);
@@ -764,28 +659,20 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
 
   @Test
   public void testTaskIdCountersSlash() throws Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
       for (Task task : jobsMap.get(id).getTasks().values()) {
+
         String tid = MRApps.toString(task.getID());
-        Response response = r
-            .path("ws")
-            .path("v1")
-            .path("history")
-            .path("mapreduce")
-            .path("jobs")
-            .path(jobId)
-            .path("tasks")
-            .path(tid)
-            .path("counters/")
-            .request(MediaType.APPLICATION_JSON)
+        Response response = r.path("ws").path("v1").path("history")
+            .path("mapreduce").path("jobs").path(jobId).path("tasks").path(tid)
+            .path("counters/").request(MediaType.APPLICATION_JSON)
             .get(Response.class);
         assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
             response.getMediaType().toString());
-        String entity = response.readEntity(String.class);
-        JSONObject json = new JSONObject(entity);
+        JSONObject json = response.readEntity(JSONObject.class);
         assertEquals("incorrect number of elements", 1, json.length());
         JSONObject info = json.getJSONObject("jobTaskCounters");
         verifyHsJobTaskCounters(info, task);
@@ -794,30 +681,20 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
   }
 
   @Test
-  public void testTaskIdCountersDefault() throws Exception {
-    WebTarget r = target();
+  public void testTaskIdCountersDefault() throws JSONException, Exception {
+    WebTarget r = targetWithJsonObject();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
       for (Task task : jobsMap.get(id).getTasks().values()) {
 
         String tid = MRApps.toString(task.getID());
-        Response response = r
-            .path("ws")
-            .path("v1")
-            .path("history")
-            .path("mapreduce")
-            .path("jobs")
-            .path(jobId)
-            .path("tasks")
-            .path(tid)
-            .path("counters")
-            .request()
-            .get(Response.class);
+        Response response = r.path("ws").path("v1").path("history")
+            .path("mapreduce").path("jobs").path(jobId).path("tasks").path(tid)
+            .path("counters").request().get(Response.class);
         assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
             response.getMediaType().toString());
-        String entity = response.readEntity(String.class);
-        JSONObject json = new JSONObject(entity);
+        JSONObject json = response.readEntity(JSONObject.class);
         assertEquals("incorrect number of elements", 1, json.length());
         JSONObject info = json.getJSONObject("jobTaskCounters");
         verifyHsJobTaskCounters(info, task);
@@ -834,17 +711,9 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
       for (Task task : jobsMap.get(id).getTasks().values()) {
 
         String tid = MRApps.toString(task.getID());
-        Response response = r
-            .path("ws")
-            .path("v1")
-            .path("history")
-            .path("mapreduce")
-            .path("jobs")
-            .path(jobId)
-            .path("tasks")
-            .path(tid)
-            .path("counters")
-            .request(MediaType.APPLICATION_XML)
+        Response response = r.path("ws").path("v1").path("history")
+            .path("mapreduce").path("jobs").path(jobId).path("tasks").path(tid)
+            .path("counters").request(MediaType.APPLICATION_XML)
             .get(Response.class);
         assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
             response.getMediaType().toString());
@@ -919,4 +788,5 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
       }
     }
   }
+
 }

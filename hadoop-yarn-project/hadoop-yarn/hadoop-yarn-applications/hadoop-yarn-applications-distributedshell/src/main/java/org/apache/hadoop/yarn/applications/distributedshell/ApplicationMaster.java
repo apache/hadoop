@@ -129,10 +129,9 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.log4j.LogManager;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import javax.ws.rs.ProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.ws.rs.ProcessingException;
 
 /**
  * An ApplicationMaster for executing shell commands on a set of launched

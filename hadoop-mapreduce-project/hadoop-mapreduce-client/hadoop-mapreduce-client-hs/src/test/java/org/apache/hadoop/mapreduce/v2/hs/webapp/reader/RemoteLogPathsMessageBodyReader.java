@@ -35,6 +35,10 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * We have defined a custom reader for RemoteLogPaths
+ * to adapt to the Jersey2 framework, ensuring it can be converted to JSON format.
+ */
 @Provider
 @Consumes(MediaType.APPLICATION_JSON)
 public class RemoteLogPathsMessageBodyReader implements MessageBodyReader<RemoteLogPaths> {

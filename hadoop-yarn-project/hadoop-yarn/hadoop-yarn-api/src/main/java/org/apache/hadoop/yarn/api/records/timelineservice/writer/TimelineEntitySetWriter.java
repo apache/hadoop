@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.api.records.timelineservice.writer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
@@ -32,7 +33,13 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
+/**
+ * We have defined a dedicated Writer for TimelineEntity,
+ * aimed at adapting to the Jersey2 framework to ensure
+ * that TimelineEntity can be converted into JSON format.
+ */
 @Provider
+@Consumes(MediaType.APPLICATION_JSON)
 public class TimelineEntitySetWriter implements MessageBodyWriter<Set<TimelineEntity>> {
 
   private ObjectMapper objectMapper = new ObjectMapper();

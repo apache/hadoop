@@ -267,7 +267,7 @@ public class TestHsWebServicesLogsExtend extends JerseyTestBase {
 
     TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
         LOCAL_ROOT_LOG_DIR, APPID_1, Collections.singletonMap(CONTAINER_1_1_3,
-            "Hello-" + CONTAINER_1_1_3), NM_ID_2, FILE_NAME, USER, false);
+        "Hello-" + CONTAINER_1_1_3), NM_ID_2, FILE_NAME, USER, false);
 
     Map<ContainerId, String> contentsApp2 = new HashMap<>();
     contentsApp2.put(CONTAINER_2_1_1, "Hello-" + CONTAINER_2_1_1);
@@ -279,7 +279,7 @@ public class TestHsWebServicesLogsExtend extends JerseyTestBase {
 
     TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
         LOCAL_ROOT_LOG_DIR, APPID_2, Collections.singletonMap(CONTAINER_2_2_3,
-            "Hello-" + CONTAINER_2_2_3), NM_ID_2, FILE_NAME, USER, false);
+        "Hello-" + CONTAINER_2_2_3), NM_ID_2, FILE_NAME, USER, false);
   }
 
   @AfterClass
@@ -294,14 +294,10 @@ public class TestHsWebServicesLogsExtend extends JerseyTestBase {
 
     WebTarget r = target().register(RemoteLogPathsMessageBodyReader.class);
 
-    Response response = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("remote-log-dir").
-        queryParam(YarnWebServiceParams.REMOTE_USER, USER).
-        request(MediaType.APPLICATION_JSON).
-        get(Response.class);
+    Response response = r.path("ws").path("v1").path("history")
+        .path("remote-log-dir").queryParam(YarnWebServiceParams.REMOTE_USER, USER)
+        .request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
 
     RemoteLogPaths res = response.readEntity(RemoteLogPaths.class);
 
@@ -327,12 +323,9 @@ public class TestHsWebServicesLogsExtend extends JerseyTestBase {
     UserGroupInformation.setLoginUser(ugi);
 
     WebTarget r = target().register(RemoteLogPathsMessageBodyReader.class);
-    Response response = r.
-        path("ws").
-        path("v1").
-        path("history").path("remote-log-dir").
-        request(MediaType.APPLICATION_JSON).
-        get(Response.class);
+    Response response = r.path("ws").path("v1").path("history")
+       .path("remote-log-dir")
+       .request(MediaType.APPLICATION_JSON).get(Response.class);
 
     RemoteLogPaths res = response.readEntity(RemoteLogPaths.class);
 
@@ -354,15 +347,12 @@ public class TestHsWebServicesLogsExtend extends JerseyTestBase {
     createReconfiguredServlet();
 
     WebTarget r = target().register(RemoteLogPathsMessageBodyReader.class);
-    Response response = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("remote-log-dir").
-        queryParam(YarnWebServiceParams.REMOTE_USER, USER).
-        queryParam(YarnWebServiceParams.APP_ID, APPID_1.toString()).
-        request(MediaType.APPLICATION_JSON).
-        get(Response.class);
+    Response response = r.path("ws").path("v1").path("history")
+        .path("remote-log-dir")
+        .queryParam(YarnWebServiceParams.REMOTE_USER, USER)
+        .queryParam(YarnWebServiceParams.APP_ID, APPID_1.toString())
+        .request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
     RemoteLogPaths res = response.readEntity(new GenericType<RemoteLogPaths>(){});
 
     List<String> collectedControllerNames = new ArrayList<>();

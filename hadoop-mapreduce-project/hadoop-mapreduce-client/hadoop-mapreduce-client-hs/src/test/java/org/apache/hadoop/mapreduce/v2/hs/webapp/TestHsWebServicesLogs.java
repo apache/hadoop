@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -49,9 +52,6 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -179,13 +179,10 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
       MockHistoryContext appContext = new MockHistoryContext(0, 1, 2, 1);
       webApp = mock(HsWebApp.class);
       when(webApp.name()).thenReturn("hsmockwebapp");
-
       ApplicationClientProtocol mockProtocol = mock(ApplicationClientProtocol.class);
-
       try {
         doAnswer(invocationOnMock -> {
           GetApplicationReportRequest request = invocationOnMock.getArgument(0);
-
           // returning the latest application attempt for each application
           if (request.getApplicationId().equals(APPID_1)) {
             return GetApplicationReportResponse.newInstance(
@@ -223,8 +220,10 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         LogServlet logServlet = hsWebServices.getLogServlet();
         logServlet = spy(logServlet);
         doReturn(null).when(logServlet).getNMWebAddressFromRM(any());
-        doReturn(NM_WEBADDRESS_1).when(logServlet).getNMWebAddressFromRM(NM_ID_1.toString());
-        doReturn(NM_WEBADDRESS_2).when(logServlet).getNMWebAddressFromRM(NM_ID_2.toString());
+        doReturn(NM_WEBADDRESS_1).when(logServlet).getNMWebAddressFromRM(
+            NM_ID_1.toString());
+        doReturn(NM_WEBADDRESS_2).when(logServlet).getNMWebAddressFromRM(
+            NM_ID_2.toString());
         hsWebServices.setLogServlet(logServlet);
       } catch (Exception ignore) {
         fail("Failed to setup WebServletModule class");
@@ -298,11 +297,8 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   public void testGetAggregatedLogsMetaForFinishedApp() {
     WebTarget r = target().register(new ContainerLogsInfoMessageBodyReader());
 
-    Response response = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("aggregatedlogs").
+    Response response = r.path("ws").path("v1").
+        path("history").path("aggregatedlogs").
         queryParam(YarnWebServiceParams.APP_ID, APPID_1.toString()).
         request(MediaType.APPLICATION_JSON).
         get(Response.class);
@@ -367,11 +363,8 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   public void testGetAggregatedLogsMetaForFinishedAppAttempt() {
     WebTarget r = target().register(ContainerLogsInfoMessageBodyReader.class);
 
-    Response response = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("aggregatedlogs").
+    Response response = r.path("ws").path("v1").
+        path("history").path("aggregatedlogs").
         queryParam(YarnWebServiceParams.APPATTEMPT_ID, APP_ATTEMPT_1_1.toString()).
         request(MediaType.APPLICATION_JSON).
         get(Response.class);
@@ -403,12 +396,10 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   public void testGetAggregatedLogsMetaForRunningAppAttempt() {
     WebTarget r = target().register(ContainerLogsInfoMessageBodyReader.class);
 
-    Response response = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("aggregatedlogs").
-        queryParam(YarnWebServiceParams.APPATTEMPT_ID, APP_ATTEMPT_2_2.toString()).
+    Response response = r.path("ws").path("v1").
+        path("history").path("aggregatedlogs").
+        queryParam(
+           YarnWebServiceParams.APPATTEMPT_ID, APP_ATTEMPT_2_2.toString()).
         request(MediaType.APPLICATION_JSON).
         get(Response.class);
 
@@ -438,13 +429,9 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   public void testGetContainerLogsForFinishedContainer() {
     WebTarget r = target().register(ContainerLogsInfoMessageBodyReader.class);
 
-    Response response = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("containers").
-        path(CONTAINER_1_1_2.toString()).
-        path("logs").
+    Response response = r.path("ws").path("v1")
+       .path("history").path("containers").
+        path(CONTAINER_1_1_2.toString()).path("logs").
         request(MediaType.APPLICATION_JSON).
         get(Response.class);
 
@@ -464,14 +451,11 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   public void testGetContainerLogsForRunningContainer() throws Exception {
     WebTarget r = target().register(ContainerLogsInfoMessageBodyReader.class);
 
-    URI requestURI = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("containers").
-        path(CONTAINER_2_2_2.toString()).
-        path("logs").
-        getUri();
+    URI requestURI = r.path("ws").path("v1")
+        .path("history").path("containers")
+        .path(CONTAINER_2_2_2.toString())
+        .path("logs")
+        .getUri();
     String redirectURL = getRedirectURL(requestURI.toString());
     assertThat(redirectURL).isNotNull();
     assertThat(redirectURL).contains(NM_WEBADDRESS_1,
@@ -479,15 +463,12 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
 
     // If we specify NM id, we would re-direct the request
     // to this NM's Web Address.
-    requestURI = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("containers").
-        path(CONTAINER_2_2_2.toString()).
-        path("logs").
-        queryParam(YarnWebServiceParams.NM_ID, NM_ID_2.toString()).
-        getUri();
+    requestURI = r.path("ws").path("v1")
+        .path("history").path("containers")
+        .path(CONTAINER_2_2_2.toString())
+        .path("logs")
+        .queryParam(YarnWebServiceParams.NM_ID, NM_ID_2.toString())
+        .getUri();
     redirectURL = getRedirectURL(requestURI.toString());
     assertThat(redirectURL).isNotNull();
     assertThat(redirectURL).contains(NM_WEBADDRESS_2,
@@ -540,31 +521,25 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   @Test
   public void testGetContainerLogFileForFinishedContainer() {
     WebTarget r = target();
-    Response response = r
-        .path("ws")
-        .path("v1")
-        .path("history")
-        .path("containerlogs")
+    Response response = r.path("ws").path("v1")
+        .path("history").path("containerlogs")
         .path(CONTAINER_1_1_2.toString())
         .path(FILE_NAME)
         .request(MediaType.TEXT_PLAIN)
         .get(Response.class);
-
     String responseText = response.readEntity(String.class);
-    assertThat(responseText).doesNotContain("Can not find logs", "Hello-" + CONTAINER_1_1_1);
+    assertThat(responseText).doesNotContain("Can not find logs",
+        "Hello-" + CONTAINER_1_1_1);
     assertThat(responseText).contains("Hello-" + CONTAINER_1_1_2);
   }
 
   @Test
   public void testNoRedirectForFinishedContainer() throws Exception {
     WebTarget r = target();
-    URI requestURI = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("containerlogs").
-        path(CONTAINER_2_2_1.toString()).
-        path(FILE_NAME).getUri();
+    URI requestURI = r.path("ws").path("v1")
+        .path("history").path("containerlogs")
+        .path(CONTAINER_2_2_1.toString())
+        .path(FILE_NAME).getUri();
     String redirectURL = getRedirectURL(requestURI.toString());
     assertThat(redirectURL).isNull();
   }
@@ -575,13 +550,10 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   @Test
   public void testGetContainerLogFileForRunningContainer() throws Exception {
     WebTarget r = target();
-    URI requestURI = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("containerlogs").
-        path(CONTAINER_2_2_2.toString()).
-        path(FILE_NAME).getUri();
+    URI requestURI = r.path("ws").path("v1")
+        .path("history").path("containerlogs")
+        .path(CONTAINER_2_2_2.toString())
+        .path(FILE_NAME).getUri();
 
     String redirectURL = getRedirectURL(requestURI.toString());
     assertThat(redirectURL).isNotNull();
@@ -590,15 +562,11 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
 
     // If we specify NM id, we would re-direct the request
     // to this NM's Web Address.
-    requestURI = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("containerlogs").
-        path(CONTAINER_2_2_2.toString()).
-        path(FILE_NAME).
-        queryParam(YarnWebServiceParams.NM_ID, NM_ID_2.toString()).
-        getUri();
+    requestURI = r.path("ws").path("v1")
+        .path("history").path("containerlogs")
+        .path(CONTAINER_2_2_2.toString()).path(FILE_NAME)
+        .queryParam(YarnWebServiceParams.NM_ID, NM_ID_2.toString())
+        .getUri();
     redirectURL = getRedirectURL(requestURI.toString());
     assertThat(redirectURL).isNotNull();
     assertThat(redirectURL).contains(NM_WEBADDRESS_2, "ws/v1/node/containers",
@@ -606,8 +574,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
 
     // If this is the redirect request, we would not re-direct the request
     // back and get the aggregated logs.
-    Response response = r.
-        path("ws").path("v1")
+    Response response = r.path("ws").path("v1")
         .path("history").path("containerlogs")
         .path(CONTAINER_2_2_3.toString()).path(FILE_NAME)
         .queryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE, "true")
@@ -624,15 +591,11 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
     ApplicationId nonExistingApp = ApplicationId.newInstance(99, 99);
 
     WebTarget r = target();
-    Response response = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("aggregatedlogs").
-        queryParam(YarnWebServiceParams.APP_ID, nonExistingApp.toString())
+    Response response = r.path("ws").path("v1")
+        .path("history").path("aggregatedlogs")
+        .queryParam(YarnWebServiceParams.APP_ID, nonExistingApp.toString())
         .request(MediaType.APPLICATION_JSON)
         .get(Response.class);
-
     String responseText = response.readEntity(String.class);
     assertThat(responseText).contains(
         WebApplicationException.class.getSimpleName());
@@ -642,12 +605,9 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   @Test
   public void testBadAppId() {
     WebTarget r = target();
-    Response response = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("aggregatedlogs").
-        queryParam(YarnWebServiceParams.APP_ID, "some text").
+    Response response = r.path("ws").path("v1")
+        .path("history").path("aggregatedlogs")
+        .queryParam(YarnWebServiceParams.APP_ID, "some text").
         request(MediaType.APPLICATION_JSON).
         get(Response.class);
     String responseText = response.readEntity(String.class);
@@ -663,14 +623,12 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         ApplicationAttemptId.newInstance(nonExistingApp, 1);
 
     WebTarget r = target();
-    Response response = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("aggregatedlogs").
-        queryParam(YarnWebServiceParams.APPATTEMPT_ID, nonExistingAppAttemptId.toString()).
-        request(MediaType.APPLICATION_JSON).
-        get(Response.class);
+    Response response = r.path("ws").path("v1")
+        .path("history").path("aggregatedlogs")
+        .queryParam(YarnWebServiceParams.APPATTEMPT_ID,
+            nonExistingAppAttemptId.toString())
+        .request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
     String responseText = response.readEntity(String.class);
     assertThat(responseText).contains(
         WebApplicationException.class.getSimpleName());
@@ -680,16 +638,11 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   @Test
   public void testBadAppAttemptId() {
     WebTarget r = target();
-
-    Response response = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("aggregatedlogs").
-        queryParam(YarnWebServiceParams.APPATTEMPT_ID, "some text").
-        request(MediaType.APPLICATION_JSON).
-        get(Response.class);
-
+    Response response = r.path("ws").path("v1")
+        .path("history").path("aggregatedlogs")
+        .queryParam(YarnWebServiceParams.APPATTEMPT_ID, "some text")
+        .request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
     String responseText = response.readEntity(String.class);
     assertThat(responseText).contains(
         BadRequestException.class.getSimpleName());
@@ -705,12 +658,10 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         ContainerId.newContainerId(nonExistingAppAttemptId, 1);
 
     WebTarget r = target();
-    Response response = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("aggregatedlogs").
-        queryParam(YarnWebServiceParams.CONTAINER_ID, nonExistingContainerId.toString()).
+    Response response = r.path("ws").path("v1")
+        .path("history").path("aggregatedlogs")
+        .queryParam(YarnWebServiceParams.CONTAINER_ID,
+            nonExistingContainerId.toString()).
         request(MediaType.APPLICATION_JSON)
         .get(Response.class);
     String responseText = response.readEntity(String.class);
@@ -722,60 +673,50 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   @Test
   public void testBadContainerId() {
     WebTarget r = target();
-    Response response = r
-        .path("ws")
-        .path("v1")
-        .path("history")
-        .path("aggregatedlogs")
+    Response response = r.path("ws").path("v1")
+        .path("history").path("aggregatedlogs")
         .queryParam(YarnWebServiceParams.CONTAINER_ID, "some text")
         .request(MediaType.APPLICATION_JSON)
         .get(Response.class);
     String responseText = response.readEntity(String.class);
-    assertThat(responseText).contains(BadRequestException.class.getSimpleName());
+    assertThat(responseText).contains(
+        BadRequestException.class.getSimpleName());
     assertThat(responseText).contains("Invalid ContainerId");
   }
 
   @Test
   public void testNonExistingContainerMeta() {
-    ApplicationId nonExistingApp =
-        ApplicationId.newInstance(99, 99);
+    ApplicationId nonExistingApp = ApplicationId.newInstance(99, 99);
     ApplicationAttemptId nonExistingAppAttemptId =
         ApplicationAttemptId.newInstance(nonExistingApp, 1);
     ContainerId nonExistingContainerId =
         ContainerId.newContainerId(nonExistingAppAttemptId, 1);
 
     WebTarget r = target();
-    Response response = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("containers").
-        path(nonExistingContainerId.toString()).
-        path("logs").
-        request(MediaType.APPLICATION_JSON).
-        get(Response.class);
+    Response response = r.path("ws").path("v1")
+        .path("history").path("containers")
+        .path(nonExistingContainerId.toString()).path("logs")
+        .request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
 
     String responseText = response.readEntity(String.class);
-    assertThat(responseText).contains(WebApplicationException.class.getSimpleName());
+    assertThat(responseText).contains(
+       WebApplicationException.class.getSimpleName());
     assertThat(responseText).contains("Can not find");
   }
 
   @Test
   public void testBadContainerForMeta() {
     WebTarget r = target();
-
-    Response response = r.
-        path("ws").
-        path("v1").
-        path("history").
-        path("containers").
-        path("some text").
-        path("logs").
-        request(MediaType.APPLICATION_JSON).
-        get(Response.class);
+    Response response = r.path("ws").path("v1")
+        .path("history").path("containers")
+        .path("some text").path("logs")
+        .request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
 
     String responseText = response.readEntity(String.class);
-    assertThat(responseText).contains(BadRequestException.class.getSimpleName());
+    assertThat(responseText).contains(
+        BadRequestException.class.getSimpleName());
     assertThat(responseText).contains("Invalid container id");
   }
 
@@ -822,7 +763,8 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   private static String getRedirectURL(String url) throws Exception {
-    HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+    HttpURLConnection conn = (HttpURLConnection) new URL(url)
+        .openConnection();
     // do not automatically follow the redirection
     // otherwise we get too many redirection exceptions
     conn.setInstanceFollowRedirects(false);

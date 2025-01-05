@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.api.records.timeline.writer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
@@ -31,7 +32,13 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * We have defined a dedicated Writer for TimelinePutResponse,
+ * aimed at adapting to the Jersey2 framework to ensure
+ * that TimelinePutResponse can be converted into JSON format.
+ */
 @Provider
+@Consumes(MediaType.APPLICATION_JSON)
 public class TimelinePutResponseWriter implements MessageBodyWriter<TimelinePutResponse> {
 
   private ObjectMapper objectMapper = new ObjectMapper();

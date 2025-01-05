@@ -32,6 +32,11 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * We have defined a dedicated Writer for TimelineEntities,
+ * aimed at adapting to the Jersey2 framework to ensure
+ * that TimelineEntities can be converted into JSON format.
+ */
 @Provider
 @Consumes(MediaType.APPLICATION_JSON)
 public class TimelineEntitiesWriter implements MessageBodyWriter<TimelineEntities> {
