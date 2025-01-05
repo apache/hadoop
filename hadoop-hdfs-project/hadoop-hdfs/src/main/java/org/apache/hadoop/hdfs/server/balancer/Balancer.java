@@ -642,6 +642,7 @@ public class Balancer {
     this.underUtilized.clear();
     this.policy.reset();
     dispatcher.reset(conf);
+    if (metrics!=null) DefaultMetricsSystem.instance().unregisterSource(metrics.getName());
   }
 
   NameNodeConnector getNnc() {
