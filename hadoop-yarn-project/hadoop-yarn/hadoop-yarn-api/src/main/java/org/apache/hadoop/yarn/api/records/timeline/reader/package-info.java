@@ -17,7 +17,7 @@
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-package org.apache.hadoop.yarn.api.records.reader;
+package org.apache.hadoop.yarn.api.records.timeline.reader;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 

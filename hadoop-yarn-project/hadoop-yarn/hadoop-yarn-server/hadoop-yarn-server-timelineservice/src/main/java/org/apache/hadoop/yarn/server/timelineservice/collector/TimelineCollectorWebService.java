@@ -143,11 +143,11 @@ public class TimelineCollectorWebService {
    * @param res Servlet response.
    * @param async flag indicating whether its an async put or not. "true"
    *     indicates, its an async call. If null, its considered false.
+   * @param isSubAppEntities subappwrite.
    * @param appId Application Id to which the entities to be put belong to. If
    *     appId is not there or it cannot be parsed, HTTP 400 will be sent back.
    * @param entities timeline entities to be put.
    * @return a Response with appropriate HTTP status.
-   * @throws JsonProcessingException json processing exception
    */
   @PUT
   @Path("/entities")
@@ -158,11 +158,7 @@ public class TimelineCollectorWebService {
       @QueryParam("async") String async,
       @QueryParam("subappwrite") String isSubAppEntities,
       @QueryParam("appid") String appId,
-      String entities) throws JsonProcessingException {
-
-    ObjectMapper mapper = new ObjectMapper();
-    TimelineEntities timelineEntities = mapper.readValue(entities, TimelineEntities.class);
-
+      TimelineEntities entities) {
     init(res);
     UserGroupInformation callerUgi = getUser(req);
     boolean isAsync = async != null && async.trim().equalsIgnoreCase("true");
@@ -189,10 +185,10 @@ public class TimelineCollectorWebService {
       }
 
       if (isAsync) {
-        collector.putEntitiesAsync(processTimelineEntities(timelineEntities, appId,
+        collector.putEntitiesAsync(processTimelineEntities(entities, appId,
             Boolean.valueOf(isSubAppEntities)), callerUgi);
       } else {
-        collector.putEntities(processTimelineEntities(timelineEntities, appId,
+        collector.putEntities(processTimelineEntities(entities, appId,
             Boolean.valueOf(isSubAppEntities)), callerUgi);
       }
 

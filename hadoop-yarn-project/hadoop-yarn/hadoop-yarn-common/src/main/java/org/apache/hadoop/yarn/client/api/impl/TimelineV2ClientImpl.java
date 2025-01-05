@@ -44,7 +44,8 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hadoop.yarn.api.records.timelineservice.writer.TimelineDomainWriter;
+import org.apache.hadoop.yarn.api.records.timelineservice.writer.TimelineEntitiesWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -294,16 +295,21 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
 
   private Response doPutObjects(URI base, String path, MultivaluedMap<String, String> params,
       Object obj) throws JsonProcessingException {
-    ObjectMapper mapper = new ObjectMapper();
-    WebTarget target = connector.getClient().target(base).path(path);
+
+    WebTarget target = connector.getClient()
+        .register(TimelineEntitiesWriter.class)
+        .register(TimelineDomainWriter.class)
+        .register(TimelineEntity.class)
+        .target(base)
+        .path(path);
+
     for(Map.Entry<String, List<String>> param : params.entrySet()) {
       for (String paramItem : param.getValue()) {
         target = target.queryParam(param.getKey(), paramItem);
       }
     }
-    final String json = mapper.writeValueAsString(obj);
     return target.request(MediaType.APPLICATION_JSON)
-        .put(Entity.entity(json, MediaType.APPLICATION_JSON), Response.class);
+        .put(Entity.json(obj), Response.class);
   }
 
   protected void putObjects(URI base, String path,
@@ -346,11 +352,14 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
       } catch (ProcessingException | IllegalStateException e) {
         msg = "Error getting entity from the HTTP response."
                 + e.getLocalizedMessage();
+      } catch (Throwable t) {
+        msg = "Error getting entity from the HTTP response."
+            + t.getLocalizedMessage();
       } finally {
         msg = "Response from the timeline server is not successful"
-                  + ", HTTP error code: " + resp.getStatus()
-                  + ", "
-                  + msg;
+            + ", HTTP error code: " + resp.getStatus()
+            + ", "
+            + msg;
         LOG.error(msg);
         throw new YarnException(msg);
       }

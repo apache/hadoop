@@ -21,7 +21,6 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
 import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
-import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
 import javax.servlet.Filter;

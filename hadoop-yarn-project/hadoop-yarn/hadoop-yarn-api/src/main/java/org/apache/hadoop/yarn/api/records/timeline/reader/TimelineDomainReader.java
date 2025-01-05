@@ -15,45 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.records.writer;
+package org.apache.hadoop.yarn.api.records.timeline.reader;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.ext.MessageBodyWriter;
+import javax.ws.rs.ext.MessageBodyReader;
 import javax.ws.rs.ext.Provider;
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
 
 @Provider
-public class TimelinePutResponseWriter implements MessageBodyWriter<TimelinePutResponse> {
+public class TimelineDomainReader implements MessageBodyReader<TimelineDomain> {
 
   private ObjectMapper objectMapper = new ObjectMapper();
 
   @Override
-  public boolean isWriteable(Class<?> type, Type genericType,
+  public boolean isReadable(Class<?> type, Type genericType,
       Annotation[] annotations, MediaType mediaType) {
-    return type == TimelinePutResponse.class;
+    return type == TimelineDomain.class;
   }
 
   @Override
-  public void writeTo(TimelinePutResponse timelinePutResponse, Class<?> type,
-      Type genericType, Annotation[] annotations, MediaType mediaType,
-      MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream)
-      throws IOException, WebApplicationException {
-    String entity = objectMapper.writeValueAsString(timelinePutResponse);
-    entityStream.write(entity.getBytes(StandardCharsets.UTF_8));
-  }
-
-  @Override
-  public long getSize(TimelinePutResponse timelinePutResponse, Class<?> type,
-      Type genericType, Annotation[] annotations, MediaType mediaType) {
-    return -1L;
+  public TimelineDomain readFrom(Class<TimelineDomain> type, Type genericType,
+      Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, String> httpHeaders,
+      InputStream entityStream) throws IOException, WebApplicationException {
+    return objectMapper.readValue(entityStream, TimelineDomain.class);
   }
 }

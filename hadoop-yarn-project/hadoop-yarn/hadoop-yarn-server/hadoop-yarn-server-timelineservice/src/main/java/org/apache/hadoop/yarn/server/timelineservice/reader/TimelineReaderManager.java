@@ -212,6 +212,7 @@ public class TimelineReaderManager extends AbstractService {
   /**
    * The API to confirm is a User is allowed to read this data.
    * @param callerUGI UserGroupInformation of the user
+   * @return allow return true, not-allow return false.
    */
   public boolean checkAccess(UserGroupInformation callerUGI) {
     // TODO to be removed or modified once ACL story is played

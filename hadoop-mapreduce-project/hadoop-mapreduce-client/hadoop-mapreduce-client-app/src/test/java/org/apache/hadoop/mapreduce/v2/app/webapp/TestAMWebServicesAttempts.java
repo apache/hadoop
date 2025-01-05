@@ -343,7 +343,8 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   public void testTaskAttemptIdInvalid() throws JSONException, Exception {
 
     testTaskAttemptIdErrorGeneric("attempt_0_12345_d_000000_0",
-        "Bad TaskType identifier. TaskAttemptId string : attempt_0_12345_d_000000_0 is not properly formed.");
+        "Bad TaskType identifier. " +
+        "TaskAttemptId string : attempt_0_12345_d_000000_0 is not properly formed.");
   }
 
   @Test

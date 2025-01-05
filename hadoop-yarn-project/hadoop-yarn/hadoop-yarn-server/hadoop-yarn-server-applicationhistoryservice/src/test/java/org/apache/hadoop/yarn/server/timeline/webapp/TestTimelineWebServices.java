@@ -38,12 +38,12 @@ import javax.ws.rs.core.Response.Status;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
-import org.apache.hadoop.yarn.api.records.writer.TimelineEntitiesWriter;
-import org.apache.hadoop.yarn.api.records.writer.TimelineDomainWriter;
-import org.apache.hadoop.yarn.api.records.writer.TimelineEntityWriter;
-import org.apache.hadoop.yarn.api.records.writer.TimelineDomainsWriter;
-import org.apache.hadoop.yarn.api.records.writer.TimelinePutResponseWriter;
-import org.apache.hadoop.yarn.api.records.writer.TimelineEventsWriter;
+import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEntitiesWriter;
+import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineDomainWriter;
+import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEntityWriter;
+import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineDomainsWriter;
+import org.apache.hadoop.yarn.api.records.timeline.writer.TimelinePutResponseWriter;
+import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEventsWriter;
 import org.apache.hadoop.yarn.server.timeline.reader.TimelineAboutReader;
 import org.apache.hadoop.yarn.server.timeline.reader.TimelineDomainReader;
 import org.apache.hadoop.yarn.server.timeline.reader.TimelineDomainsReader;
@@ -58,7 +58,6 @@ import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.TestProperties;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;

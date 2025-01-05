@@ -55,7 +55,7 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 @XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-@JsonIgnoreProperties({"children", "parent", "valid"})
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TimelineEntity implements Comparable<TimelineEntity> {
   protected final static String SYSTEM_INFO_KEY_PREFIX = "SYSTEM_INFO_";
   public final static long DEFAULT_ENTITY_PREFIX = 0L;

@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
-import com.google.inject.Singleton;
+import javax.inject.Singleton;
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -48,7 +49,6 @@ import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.HistoryInfo;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
 import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
-import org.glassfish.jersey.jettison.JettisonJaxbContext;
 
 @Singleton
 @Provider

@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import net.jodah.failsafe.Failsafe;
+import org.apache.hadoop.yarn.api.records.timelineservice.reader.TimelineEntityReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -36,6 +37,7 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
@@ -45,9 +47,10 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType.YARN_APPLICATION_ATTEMPT;
 import static org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType.YARN_CONTAINER;
@@ -119,7 +122,6 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     mergeFilters(params, filters);
 
     Response response = doGetUri(baseUri, path, params);
-    // TODO:
     TimelineEntity entity = response.readEntity(TimelineEntity.class);
     return entity;
   }
@@ -165,8 +167,8 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     mergeFilters(params, filters);
 
     Response response = doGetUri(baseUri, path, params);
-    TimelineEntity[] entities = response.readEntity(TimelineEntity[].class);
-    return Arrays.asList(entities);
+    Set<TimelineEntity> entities = response.readEntity(new GenericType<Set<TimelineEntity>>(){});
+    return entities.stream().collect(Collectors.toList());
   }
 
   @Override
@@ -211,8 +213,8 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
     mergeFilters(params, filters);
 
     Response response = doGetUri(baseUri, path, params);
-    TimelineEntity[] entity = response.readEntity(TimelineEntity[].class);
-    return Arrays.asList(entity);
+    Set<TimelineEntity> entities = response.readEntity(new GenericType<Set<TimelineEntity>>(){});
+    return entities.stream().collect(Collectors.toList());
   }
 
   @VisibleForTesting
@@ -238,7 +240,7 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
   @VisibleForTesting
   protected Response doGetUri(URI base, String path, MultivaluedMap<String, String> params)
       throws IOException {
-    WebTarget target = connector.getClient().target(base).path(path);
+    WebTarget target = connector.getClient().register(TimelineEntityReader.class).target(base).path(path);
 
     // To set query parameters where the value of a `MultivaluedMap` is a `List`,
     // we need to iterate through each value to configure them.

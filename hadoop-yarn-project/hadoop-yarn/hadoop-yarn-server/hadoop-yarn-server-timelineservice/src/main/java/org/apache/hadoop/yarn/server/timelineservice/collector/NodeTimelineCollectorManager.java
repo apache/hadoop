@@ -38,6 +38,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.timelineservice.reader.TimelineDomainReader;
+import org.apache.hadoop.yarn.api.records.timelineservice.reader.TimelineEntitiesReader;
+import org.apache.hadoop.yarn.api.records.timelineservice.writer.TimelineEntitiesWriter;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -334,6 +337,9 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
     config.packages("org.apache.hadoop.yarn.server.timelineservice.collector");
     config.register(GenericExceptionHandler.class);
     config.register(TimelineCollectorWebService.class);
+    config.register(TimelineEntitiesWriter.class);
+    config.register(TimelineEntitiesReader.class);
+    config.register(TimelineDomainReader.class);
     config.register(new JettisonFeature()).register(YarnJacksonJaxbJsonProvider.class);
     return config;
   }

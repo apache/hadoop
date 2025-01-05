@@ -35,6 +35,9 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ *
+ */
 @Provider
 @Consumes(MediaType.APPLICATION_JSON)
 public class ContainerLogsInfoMessageBodyReader

@@ -33,8 +33,9 @@ import javax.ws.rs.core.Response;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
-import org.apache.hadoop.yarn.api.records.writer.TimelineDomainWriter;
-import org.apache.hadoop.yarn.api.records.writer.TimelineEntitiesWriter;
+import org.apache.hadoop.yarn.api.records.timeline.reader.TimelinePutResponseReader;
+import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineDomainWriter;
+import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEntitiesWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -151,6 +152,7 @@ public abstract class TimelineWriter implements Flushable {
     final WebTarget webTarget = client
         .register(TimelineEntitiesWriter.class)
         .register(TimelineDomainWriter.class)
+        .register(TimelinePutResponseReader.class)
         .target(resURI);
 
     if (path == null) {
