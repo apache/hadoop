@@ -22,6 +22,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum;
 import org.apache.hadoop.fs.azurebfs.enums.RetryValue;
@@ -60,13 +63,6 @@ import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.NUMBER_
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.TOTAL_BACK_OFF;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.TOTAL_REQUESTS;
 import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.TOTAL_NUMBER_OF_REQUESTS;
-import static org.apache.hadoop.fs.azurebfs.enums.RetryValue.ONE;
-import static org.apache.hadoop.fs.azurebfs.enums.RetryValue.TWO;
-import static org.apache.hadoop.fs.azurebfs.enums.RetryValue.THREE;
-import static org.apache.hadoop.fs.azurebfs.enums.RetryValue.FOUR;
-import static org.apache.hadoop.fs.azurebfs.enums.RetryValue.FIVE_FIFTEEN;
-import static org.apache.hadoop.fs.azurebfs.enums.RetryValue.FIFTEEN_TWENTY_FIVE;
-import static org.apache.hadoop.fs.azurebfs.enums.RetryValue.TWENTY_FIVE_AND_ABOVE;
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_COUNTER;
 import static org.apache.hadoop.fs.azurebfs.enums.StatisticTypeEnum.TYPE_GAUGE;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
@@ -79,8 +75,9 @@ import static org.apache.hadoop.util.StringUtils.formatPercent;
  * retry operations in Azure Blob File System (ABFS).
  */
 public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
+  private static final Logger LOG = LoggerFactory.getLogger(AbfsBackoffMetrics.class);
   private static final List<RetryValue> RETRY_LIST = Arrays.asList(
-          ONE, TWO, THREE, FOUR, FIVE_FIFTEEN, FIFTEEN_TWENTY_FIVE, TWENTY_FIVE_AND_ABOVE);
+          RetryValue.values());
 
   /**
    * Constructor to initialize the IOStatisticsStore with counters and gauges.
@@ -101,10 +98,13 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
    */
   private String[] getMetricNames(StatisticTypeEnum type) {
     return Arrays.stream(AbfsBackoffMetricsEnum.values())
-            .filter(backoffMetricsEnum -> backoffMetricsEnum.getStatisticType().equals(type))
+            .filter(backoffMetricsEnum -> backoffMetricsEnum
+                    .getStatisticType()
+                    .equals(type))
             .flatMap(backoffMetricsEnum ->
                     RETRY.equals(backoffMetricsEnum.getType())
-                            ? RETRY_LIST.stream().map(retryCount -> retryCount.getValue() + COLON + backoffMetricsEnum.getName())
+                            ? RETRY_LIST.stream().map(retryCount ->
+                            getMetricName(backoffMetricsEnum, retryCount))
                             : Stream.of(backoffMetricsEnum.getName())
             ).toArray(String[]::new);
   }
@@ -117,7 +117,11 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
    * @return the constructed metric name
    */
   private String getMetricName(AbfsBackoffMetricsEnum metric, RetryValue retryValue) {
-    if (RETRY.equals(metric.getType())) {
+    if (metric == null) {
+      LOG.error("ABFS Backoff Metric should not be null");
+      return EMPTY_STRING;
+    }
+    if (RETRY.equals(metric.getType()) && retryValue != null) {
       return retryValue.getValue() + COLON + metric.getName();
     }
     return metric.getName();

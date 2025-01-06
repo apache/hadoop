@@ -19,11 +19,14 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.Arrays;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.enums.AbfsReadFooterMetricsEnum;
 import org.apache.hadoop.fs.azurebfs.enums.FileType;
@@ -32,6 +35,7 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.CHAR_DOLLAR;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.DOUBLE_PRECISION_FORMAT;
@@ -58,8 +62,12 @@ import static org.apache.hadoop.util.StringUtils.format;
  * This class is responsible for tracking and updating metrics related to reading footers in files.
  */
 public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
+    private static final Logger LOG = LoggerFactory.getLogger(AbfsReadFooterMetrics.class);
     private static final String FOOTER_LENGTH = "20";
-    private static final List<FileType> FILE_TYPE_LIST = Arrays.asList(PARQUET, NON_PARQUET);
+    private static final List<FileType> FILE_TYPE_LIST =
+            Arrays.asList(FileType.values());
+    private final Map<String, FileTypeMetrics> fileTypeMetricsMap =
+            new ConcurrentHashMap<>();
 
     /**
      * Inner class to handle file type checks.
@@ -242,8 +250,6 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
         }
     }
 
-    private final Map<String, FileTypeMetrics> fileTypeMetricsMap = new HashMap<>();
-
     /**
      * Constructor to initialize the IOStatisticsStore with counters and mean statistics.
      */
@@ -266,52 +272,75 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
                 .filter(readFooterMetricsEnum -> readFooterMetricsEnum.getStatisticType().equals(type))
                 .flatMap(readFooterMetricsEnum ->
                         FILE.equals(readFooterMetricsEnum.getType())
-                                ? FILE_TYPE_LIST.stream().map(fileType -> fileType + COLON + readFooterMetricsEnum.getName())
+                                ? FILE_TYPE_LIST.stream().map(fileType ->
+                                getMetricName(fileType, readFooterMetricsEnum))
                                 : Stream.of(readFooterMetricsEnum.getName()))
                 .toArray(String[]::new);
+    }
+
+    /**
+     * Returns the metric name for a specific file type and metric.
+     *
+     * @param fileType the type of the file
+     * @param readFooterMetricsEnum the metric to get the name for
+     * @return the metric name
+     */
+    private String getMetricName(FileType fileType,
+                                 AbfsReadFooterMetricsEnum readFooterMetricsEnum) {
+        if (fileType == null || readFooterMetricsEnum == null) {
+            LOG.error("File type or ABFS read footer metrics should not be null");
+            return EMPTY_STRING;
+        }
+        return fileType + COLON + readFooterMetricsEnum.getName();
     }
 
     /**
      * Looks up the counter value for a specific metric.
      *
      * @param fileType the type of the file
-     * @param metric the metric to look up
+     * @param abfsReadFooterMetricsEnum the metric to look up
      * @return the counter value
      */
-    private long getCounterMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metric) {
-        return lookupCounterValue(fileType + COLON + metric.getName());
+    private long getCounterMetricValue(FileType fileType,
+                                       AbfsReadFooterMetricsEnum abfsReadFooterMetricsEnum) {
+        return lookupCounterValue(getMetricName(fileType, abfsReadFooterMetricsEnum));
     }
 
     /**
      * Looks up the mean statistic value for a specific metric.
      *
      * @param fileType the type of the file
-     * @param metric the metric to look up
+     * @param abfsReadFooterMetricsEnum the metric to look up
      * @return the mean statistic value
      */
-    private String getMeanMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metric) {
-        return format(DOUBLE_PRECISION_FORMAT, lookupMeanStatistic(fileType + COLON + metric.getName()));
+    private String getMeanMetricValue(FileType fileType,
+                                      AbfsReadFooterMetricsEnum abfsReadFooterMetricsEnum) {
+        return format(DOUBLE_PRECISION_FORMAT,
+                lookupMeanStatistic(getMetricName(fileType, abfsReadFooterMetricsEnum)));
     }
 
     /**
      * Increments the value of a specific metric.
      *
      * @param fileType the type of the file
-     * @param metricName the metric to increment
+     * @param abfsReadFooterMetricsEnum the metric to increment
      */
-    public void incrementMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metricName) {
-        incCounterValue(fileType + COLON + metricName.getName());
+    public void incrementMetricValue(FileType fileType,
+                                     AbfsReadFooterMetricsEnum abfsReadFooterMetricsEnum) {
+        incCounterValue(getMetricName(fileType, abfsReadFooterMetricsEnum));
     }
 
     /**
      * Adds a mean statistic value for a specific metric.
      *
      * @param fileType the type of the file
-     * @param metricName the metric to update
+     * @param abfsReadFooterMetricsEnum the metric to update
      * @param value the new value of the metric
      */
-    public void addMeanMetricValue(FileType fileType, AbfsReadFooterMetricsEnum metricName, long value) {
-        addMeanStatistic(fileType + COLON + metricName.getName(), value);
+    public void addMeanMetricValue(FileType fileType,
+                                   AbfsReadFooterMetricsEnum abfsReadFooterMetricsEnum,
+                                   long value) {
+        addMeanStatistic(getMetricName(fileType, abfsReadFooterMetricsEnum), value);
     }
 
     /**
@@ -362,9 +391,7 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
                                int len,
                                long contentLength,
                                long nextReadPos) {
-        synchronized (this) {
-            fileTypeMetrics.incrementReadCount();
-        }
+        fileTypeMetrics.incrementReadCount();
 
         long readCount = fileTypeMetrics.getReadCount();
 
@@ -429,7 +456,7 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
      * @param fileTypeMetrics The {@link FileTypeMetrics} object containing metrics and read details.
      * @param len The length of the current read operation.
      */
-    private synchronized void handleFurtherRead(FileTypeMetrics fileTypeMetrics, int len) {
+    private void handleFurtherRead(FileTypeMetrics fileTypeMetrics, int len) {
         if (fileTypeMetrics.getCollectLenMetrics() && fileTypeMetrics.getFileType() != null) {
             FileType fileType = fileTypeMetrics.getFileType();
             addMeanMetricValue(fileType, AVG_READ_LEN_REQUESTED, len);
@@ -445,7 +472,7 @@ public class AbfsReadFooterMetrics extends AbstractAbfsStatisticsSource {
      * @param len The length of the current read operation.
      * @param contentLength The total length of the file content.
      */
-    private synchronized void updateMetricsData(FileTypeMetrics fileTypeMetrics,
+    private void updateMetricsData(FileTypeMetrics fileTypeMetrics,
                                                 int len,
                                                 long contentLength) {
         long sizeReadByFirstRead = Long.parseLong(fileTypeMetrics.getSizeReadByFirstRead().split("_")[0]);
