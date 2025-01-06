@@ -107,44 +107,6 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
   }
 
   @Test
-  public void testSchedulerPercentageAndWeight()
-      throws Exception {
-    Map<String, String> configMap = new HashMap<>();
-    configMap.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", "false");
-    configMap.put("yarn.scheduler.capacity.root.queues", "default, test_1, test_2");
-    configMap.put("yarn.scheduler.capacity.root.test_1.queues", "test_1_1, test_1_2, test_1_3");
-    configMap.put("yarn.scheduler.capacity.root.default.capacity", "1w");
-    configMap.put("yarn.scheduler.capacity.root.test_1.capacity", "50");
-    configMap.put("yarn.scheduler.capacity.root.test_2.capacity", "3w");
-    configMap.put("yarn.scheduler.capacity.root.test_1.test_1_1.capacity", "12.5");
-    configMap.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity", "12.5");
-    configMap.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "1w");
-    try (MockRM rm = createRM(createConfiguration(configMap))) {
-      runTest(EXPECTED_FILE_TMPL, "testSchedulerPercentageAndWeight", rm, target());
-    }
-  }
-
-  @Test
-  public void testSchedulerPercentageAndWeightUsingCapacityVector()
-      throws Exception {
-    Map<String, String> conf = new HashMap<>();
-    conf.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", "false");
-    conf.put("yarn.scheduler.capacity.root.queues", "default, test_1, test_2");
-    conf.put("yarn.scheduler.capacity.root.test_1.queues", "test_1_1, test_1_2, test_1_3");
-    conf.put("yarn.scheduler.capacity.root.default.capacity", "[memory=1w, vcores=1w]");
-    conf.put("yarn.scheduler.capacity.root.test_1.capacity", "[memory=50%, vcores=50%]");
-    conf.put("yarn.scheduler.capacity.root.test_2.capacity", "[memory=3w, vcores=3w]");
-    conf.put("yarn.scheduler.capacity.root.test_1.test_1_1.capacity",
-        "[memory=12.5%, vcores=12.5%]");
-    conf.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity",
-        "[memory=12.5%, vcores=12.5%]");
-    conf.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "[memory=1w, vcores=1w]");
-    try (MockRM rm = createRM(createConfiguration(conf))) {
-      runTest(EXPECTED_FILE_TMPL, "testSchedulerPercentageAndWeight", rm, target());
-    }
-  }
-
-  @Test
   public void testSchedulerAbsoluteAndPercentageAndWeight()
       throws Exception {
     Map<String, String> conf = new HashMap<>();

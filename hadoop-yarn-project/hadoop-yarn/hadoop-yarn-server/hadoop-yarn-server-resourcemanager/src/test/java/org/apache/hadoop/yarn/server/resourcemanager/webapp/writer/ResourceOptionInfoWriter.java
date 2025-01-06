@@ -59,26 +59,24 @@ public class ResourceOptionInfoWriter implements MessageBodyWriter<ResourceOptio
     return type == ResourceOptionInfo.class;
   }
 
-    @Override
+  @Override
   public void writeTo(ResourceOptionInfo resourceOptionInfo, Class<?> type,
       Type genericType, Annotation[] annotations, MediaType mediaType,
       MultivaluedMap<String, Object> httpHeaders,
       OutputStream entityStream) throws IOException, WebApplicationException {
-
     StringWriter stringWriter = new StringWriter();
     try {
         if (mediaType.toString().equals(MediaType.APPLICATION_JSON)) {
-            jettisonMarshaller.marshallToJSON(resourceOptionInfo, stringWriter);
-            entityStream.write(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
+          jettisonMarshaller.marshallToJSON(resourceOptionInfo, stringWriter);
+          entityStream.write(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
         }
 
         if (mediaType.toString().equals(MediaType.APPLICATION_XML)) {
-            marshaller.marshal(resourceOptionInfo, stringWriter);
-            entityStream.write(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
+          marshaller.marshal(resourceOptionInfo, stringWriter);
+          entityStream.write(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
         }
-
     } catch (JAXBException e) {
-        throw new IOException(e);
+      throw new IOException(e);
     }
   }
 }

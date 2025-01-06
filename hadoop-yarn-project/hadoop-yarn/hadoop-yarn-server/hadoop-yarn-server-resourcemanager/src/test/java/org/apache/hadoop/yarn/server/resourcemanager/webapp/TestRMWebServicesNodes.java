@@ -764,8 +764,10 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
 
   @Test
   public void testUpdateNodeResource() throws Exception {
-    WebTarget r = target().register(ResourceOptionInfoReader.class)
-        .register(ResourceOptionInfoWriter.class).path(RMWSConsts.RM_WEB_SERVICE_PATH);
+    WebTarget r = targetWithJsonObject()
+        .register(ResourceOptionInfoReader.class)
+        .register(ResourceOptionInfoWriter.class)
+        .path(RMWSConsts.RM_WEB_SERVICE_PATH);
 
     r = r.queryParam("user.name", userName);
     RMNode rmnode = getRunningRMNode("h1", 1234, 5120);
@@ -810,8 +812,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         .request(MediaType.APPLICATION_JSON)
         .post(Entity.json(resourceOption), Response.class);
     assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
-    String _json = response.readEntity(String.class);
-    JSONObject json = new JSONObject(_json);
+    JSONObject json = response.readEntity(JSONObject.class);
     JSONObject exception = json.getJSONObject("RemoteException");
     assertEquals("IllegalArgumentException", exception.getString("exception"));
     String msg = exception.getString("message");

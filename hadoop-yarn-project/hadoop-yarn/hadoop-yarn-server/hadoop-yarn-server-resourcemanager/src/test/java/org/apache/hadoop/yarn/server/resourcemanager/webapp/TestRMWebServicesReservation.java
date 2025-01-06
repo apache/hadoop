@@ -68,7 +68,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileWriter;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -113,20 +115,20 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
   private static final String GET_NEW_RESERVATION_PATH =
       "reservation/new-reservation";
 
-  private static JettisonUnmarshaller reader;
+  private static JettisonUnmarshaller reservationSubmissionRequestInfoReader;
   static {
     try {
       JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(
           ReservationSubmissionRequestInfo.class);
-      reader = jettisonJaxbContext.createJsonUnmarshaller();
+      reservationSubmissionRequestInfoReader = jettisonJaxbContext.createJsonUnmarshaller();
     } catch (JAXBException e) {
       throw new RuntimeException(e);
     }
   }
 
   private ResourceConfig config;
-  private HttpServletRequest request = mock(HttpServletRequest.class);
-  private HttpServletResponse response = mock(HttpServletResponse.class);
+  private HttpServletRequest hsRequest = mock(HttpServletRequest.class);
+  private HttpServletResponse hsResponse = mock(HttpServletResponse.class);
 
   /*
    * Helper class to allow testing of RM web services which require
@@ -168,7 +170,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
   }
 
   private class JerseyBinder extends AbstractBinder {
-    Configuration conf = new YarnConfiguration();
+    private Configuration conf = new YarnConfiguration();
 
     @Override
     protected void configure() {
@@ -179,38 +181,46 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       rm = new MockRM(conf);
       bind(rm).to(ResourceManager.class).named("rm");
       bind(conf).to(Configuration.class).named("conf");
-      bind(request).to(HttpServletRequest.class);
-      bind(response).to(HttpServletResponse.class);
+      bind(hsRequest).to(HttpServletRequest.class);
+      bind(hsResponse).to(HttpServletResponse.class);
     }
 
     public void configureScheduler() {
+    }
+
+    public Configuration getConf() {
+      return conf;
+    }
+
+    public void setConf(Configuration conf) {
+      this.conf = conf;
     }
   }
 
   private class CapTestServletModule extends JerseyBinder {
 
-    public CapTestServletModule(boolean flag) {
+    CapTestServletModule(boolean flag) {
       if(flag) {
-        conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
-        conf.setStrings(YarnConfiguration.YARN_ADMIN_ACL, "testuser1");
+        getConf().setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+        getConf().setStrings(YarnConfiguration.YARN_ADMIN_ACL, "testuser1");
       }
     }
 
     @Override
     public void configureScheduler() {
-      conf.set(YarnConfiguration.RM_SCHEDULER,
+      getConf().set(YarnConfiguration.RM_SCHEDULER,
           CapacityScheduler.class.getName());
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+      getConf().setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
           ResourceScheduler.class);
       CapacitySchedulerConfiguration csconf =
-          new CapacitySchedulerConfiguration(conf);
+          new CapacitySchedulerConfiguration(getConf());
       String[] queues = { "default", "dedicated" };
       QueuePath dedicatedQueuePath = new QueuePath("root.dedicated");
       csconf.setQueues(new QueuePath("root"), queues);
       csconf.setCapacity(new QueuePath("root.default"), 50.0f);
       csconf.setCapacity(dedicatedQueuePath, 50.0f);
       csconf.setReservable(dedicatedQueuePath, true);
-      conf = csconf;
+      setConf(csconf);
     }
   }
 
@@ -218,10 +228,10 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     public FairTestServletModule(boolean flag) {
       if(flag) {
-        conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+        getConf().setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
         // set the admin acls otherwise all users are considered admins
         // and we can't test authorization
-        conf.setStrings(YarnConfiguration.YARN_ADMIN_ACL, "testuser1");
+        getConf().setStrings(YarnConfiguration.YARN_ADMIN_ACL, "testuser1");
       }
     }
 
@@ -238,8 +248,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
                   .aclAdministerApps("someuser ").build())
               .build())
           .writeToFile(FS_ALLOC_FILE);
-      conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, FS_ALLOC_FILE);
-      conf.set(YarnConfiguration.RM_SCHEDULER, FairScheduler.class.getName());
+      getConf().set(FairSchedulerConfiguration.ALLOCATION_FILE, FS_ALLOC_FILE);
+      getConf().set(YarnConfiguration.RM_SCHEDULER, FairScheduler.class.getName());
     }
   }
 
@@ -508,7 +518,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return;
     }
 
-    JSONObject reservations = json.getJSONObject("reservationListInfo").getJSONObject("reservations");
+    JSONObject reservations =
+        json.getJSONObject("reservationListInfo").getJSONObject("reservations");
 
     testRDLHelper(reservations);
 
@@ -992,7 +1003,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     if (this.isAuthenticationEnabled()) {
       Principal principal1 = () -> webserviceUserName;
-      when(request.getUserPrincipal()).thenReturn(principal1);
+      when(hsRequest.getUserPrincipal()).thenReturn(principal1);
     }
 
     Response response = constructWebResource(GET_NEW_RESERVATION_PATH)
@@ -1051,7 +1062,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
   private Response submitAndVerifyReservation(String path, String media,
       String reservationJson) throws Exception {
-    ReservationSubmissionRequestInfo rsci = reader.
+    ReservationSubmissionRequestInfo rsci = reservationSubmissionRequestInfoReader.
         unmarshalFromJSON(new StringReader(reservationJson),
         ReservationSubmissionRequestInfo.class);
     Thread.sleep(1000);
@@ -1073,16 +1084,16 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     String reservationJson = loadJsonFile("update-reservation.json");
 
-    JettisonUnmarshaller reader;
+    JettisonUnmarshaller reservationUpdateRequestInfoReader;
     try {
       JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(
           ReservationUpdateRequestInfo.class);
-      reader = jettisonJaxbContext.createJsonUnmarshaller();
+      reservationUpdateRequestInfoReader = jettisonJaxbContext.createJsonUnmarshaller();
     } catch (JAXBException e) {
       throw new RuntimeException(e);
     }
 
-    ReservationUpdateRequestInfo rsci = reader.
+    ReservationUpdateRequestInfo rsci = reservationUpdateRequestInfoReader.
         unmarshalFromJSON(new StringReader(reservationJson),
         ReservationUpdateRequestInfo.class);
 

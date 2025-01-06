@@ -137,8 +137,7 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
-    assertTrue(response.readEntity(String.class)
-       .contains("Invalid command: NOT-EXIST-SIGNAL"));
+    assertTrue(response.readEntity(String.class).contains("Invalid command: NOT-EXIST-SIGNAL"));
 
     // test error containerId
     response =

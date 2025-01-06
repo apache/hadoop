@@ -53,12 +53,11 @@ import static org.mockito.Mockito.when;
  *     root.test_1.test_1_3       12/16      [memory=12288, vcores=12]      37.5%
  *     root.test_2              12/32      [memory=12288,   vcores=12]      37.5%
  */
-public class TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndWeight
-    extends JerseyTestBase {
+public class TestRMWebServicesCapacitySchedulerMixedModePercentageAndWeightVector extends JerseyTestBase {
 
   private static final String EXPECTED_FILE_TMPL = "webapp/mixed-%s-%s.json";
 
-  public TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndWeight() {
+  public TestRMWebServicesCapacitySchedulerMixedModePercentageAndWeightVector() {
     backupSchedulerConfigFileInTarget();
   }
 
@@ -89,12 +88,14 @@ public class TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndWeight
       configMap.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", "false");
       configMap.put("yarn.scheduler.capacity.root.queues", "default, test_1, test_2");
       configMap.put("yarn.scheduler.capacity.root.test_1.queues", "test_1_1, test_1_2, test_1_3");
-      configMap.put("yarn.scheduler.capacity.root.default.capacity", "1w");
-      configMap.put("yarn.scheduler.capacity.root.test_1.capacity", "[memory=16384, vcores=16]");
-      configMap.put("yarn.scheduler.capacity.root.test_2.capacity", "3w");
-      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_1.capacity", "[memory=2048, vcores=2]");
-      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity", "[memory=2048, vcores=2]");
-      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "1w");
+      configMap.put("yarn.scheduler.capacity.root.default.capacity", "[memory=1w, vcores=1w]");
+      configMap.put("yarn.scheduler.capacity.root.test_1.capacity", "[memory=50%, vcores=50%]");
+      configMap.put("yarn.scheduler.capacity.root.test_2.capacity", "[memory=3w, vcores=3w]");
+      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_1.capacity",
+          "[memory=12.5%, vcores=12.5%]");
+      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity",
+          "[memory=12.5%, vcores=12.5%]");
+      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "[memory=1w, vcores=1w]");
       conf = createConfiguration(configMap);
 
       rm = createRM(createConfiguration(configMap));
@@ -112,7 +113,7 @@ public class TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndWeight
   }
 
   @Test
-  public void testSchedulerAbsoluteAndWeight() throws Exception {
-    runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndWeight", rm, target());
+  public void testSchedulerPercentageAndWeightUsingCapacityVector() throws Exception {
+    runTest(EXPECTED_FILE_TMPL, "testSchedulerPercentageAndWeight", rm, target());
   }
 }

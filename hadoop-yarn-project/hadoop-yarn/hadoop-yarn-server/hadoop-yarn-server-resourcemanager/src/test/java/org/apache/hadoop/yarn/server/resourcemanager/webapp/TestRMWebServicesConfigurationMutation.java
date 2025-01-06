@@ -45,8 +45,6 @@ import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.jettison.JettisonJaxbContext;
-import org.glassfish.jersey.jettison.JettisonMarshaller;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -78,6 +76,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getCapacitySchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.backupSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.restoreSchedulerConfigFileInTarget;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
@@ -271,15 +270,14 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
   }
 
   private long getConfigVersion() throws Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Response response = r.path("ws").path("v1").path("cluster")
         .queryParam("user.name", userName)
         .path(RMWSConsts.SCHEDULER_CONF_VERSION)
         .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
 
-    String _json = response.readEntity(String.class);
-    JSONObject json = new JSONObject(_json).getJSONObject("configversion");
+    JSONObject json = response.readEntity(JSONObject.class).getJSONObject("configversion");
     return Long.parseLong(json.get("versionID").toString());
   }
 
@@ -827,7 +825,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = addNodeLabelsResource.queryParam("user.name", userName)
         .request(MediaType.APPLICATION_JSON)
         .post(Entity.entity(logAndReturnJson(addNodeLabelsResource,
-        toJson2(nodeLabelsInfo, NodeLabelsInfo.class)), MediaType.APPLICATION_JSON), Response.class);
+        toJson(nodeLabelsInfo, NodeLabelsInfo.class)), MediaType.APPLICATION_JSON), Response.class);
 
     // 2. Verify new Node Label
     response = getNodeLabelsResource.queryParam("user.name", userName)
@@ -857,7 +855,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = schedulerConfResource
         .queryParam("user.name", userName)
         .request(MediaType.APPLICATION_JSON)
-        .put(Entity.entity(logAndReturnJson(schedulerConfResource, toJson2(updateInfo,
+        .put(Entity.entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
         SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON), Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
 
@@ -904,7 +902,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = schedulerConfResource
         .queryParam("user.name", userName)
         .request(MediaType.APPLICATION_JSON)
-        .put(Entity.entity(logAndReturnJson(schedulerConfResource, toJson2(updateInfo,
+        .put(Entity.entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
         SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON),
         Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -956,7 +954,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = schedulerConfResource
         .queryParam("user.name", userName)
         .request(MediaType.APPLICATION_JSON)
-        .put(Entity.entity(logAndReturnJson(schedulerConfResource, toJson2(updateInfo,
+        .put(Entity.entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
         SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON), Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     assertEquals(Sets.newHashSet("*"),
@@ -1013,7 +1011,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   @Test
   public void testValidateWithClusterMaxAllocation() throws Exception {
-    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);;
+    WebTarget r = target().register(SchedConfUpdateInfoWriter.class);
     int clusterMax = YarnConfiguration.
         DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB * 2;
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
@@ -1034,14 +1032,6 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         .post(Entity.entity(updateInfo, MediaType.APPLICATION_JSON),
         Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
-  }
-
-  public static String toJson2(Object obj, Class<?> klass) throws Exception {
-    StringWriter stringWriter = new StringWriter();
-    JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(klass);
-    JettisonMarshaller jettisonMarshaller = jettisonJaxbContext.createJsonMarshaller();
-    jettisonMarshaller.marshallToJSON(obj, stringWriter);
-    return stringWriter.toString();
   }
 
   @Override

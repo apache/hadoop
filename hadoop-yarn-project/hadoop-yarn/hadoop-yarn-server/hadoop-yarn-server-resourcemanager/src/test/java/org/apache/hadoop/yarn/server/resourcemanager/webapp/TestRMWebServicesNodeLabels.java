@@ -117,7 +117,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   }
 
   private class JerseyBinder extends AbstractBinder {
-    org.apache.hadoop.conf.Configuration conf = new YarnConfiguration();
+    private Configuration conf = new YarnConfiguration();
 
     @Override
     protected void configure() {

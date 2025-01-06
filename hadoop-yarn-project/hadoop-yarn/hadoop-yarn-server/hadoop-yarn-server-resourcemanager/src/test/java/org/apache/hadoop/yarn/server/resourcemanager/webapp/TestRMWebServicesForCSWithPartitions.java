@@ -163,21 +163,18 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
 
         nm1 = new MockNM("127.0.0.1:1234", 2 * 1024,
         rm.getResourceTrackerService());
-        MockNM nm2 = new MockNM("127.0.0.2:1234", 2 * 1024,
-        rm.getResourceTrackerService());
+        MockNM nm2 = new MockNM("127.0.0.2:1234", 2 * 1024, rm.getResourceTrackerService());
         nm1.registerNode();
         nm2.registerNode();
 
         rm.getRMContext().getNodeLabelManager().addLabelsToNode(ImmutableMap
             .of(NodeId.newInstance("127.0.0.2", 0), Sets.newHashSet(LABEL_LY)));
 
-        MockNM nm3 = new MockNM("127.0.0.2:1234", 128 * 1024,
-        rm.getResourceTrackerService());
+        MockNM nm3 = new MockNM("127.0.0.2:1234", 128 * 1024, rm.getResourceTrackerService());
         nm3.registerNode();
 
         // Default partition
-        MockNM nm4 = new MockNM("127.0.0.3:1234", 128 * 1024,
-        rm.getResourceTrackerService());
+        MockNM nm4 = new MockNM("127.0.0.3:1234", 128 * 1024, rm.getResourceTrackerService());
         nm4.registerNode();
 
         HttpServletRequest request = mock(HttpServletRequest.class);
@@ -278,14 +275,13 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
 
   @Test
   public void testSchedulerPartitions() throws JSONException, Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Response response =
         r.path("ws").path("v1").path("cluster").path("scheduler")
         .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String _json = response.readEntity(String.class);
-    JSONObject json = new JSONObject(_json);
+    JSONObject json = response.readEntity(JSONObject.class);
     verifySchedulerInfoJson(json);
   }
 

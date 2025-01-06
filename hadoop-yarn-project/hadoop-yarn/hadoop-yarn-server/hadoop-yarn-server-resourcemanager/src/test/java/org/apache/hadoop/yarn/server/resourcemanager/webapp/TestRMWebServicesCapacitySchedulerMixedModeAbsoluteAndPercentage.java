@@ -68,8 +68,8 @@ public class TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndPercentage ex
 
   @AfterClass
   public static void afterClass() {
-        restoreSchedulerConfigFileInTarget();
-    }
+    restoreSchedulerConfigFileInTarget();
+  }
 
   @Override
   protected Application configure() {
@@ -112,8 +112,7 @@ public class TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndPercentage ex
   }
 
   @Test
-  public void testSchedulerAbsoluteAndPercentage()
-      throws Exception {
+  public void testSchedulerAbsoluteAndPercentage() throws Exception {
     runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndPercentage", rm, target());
   }
 }

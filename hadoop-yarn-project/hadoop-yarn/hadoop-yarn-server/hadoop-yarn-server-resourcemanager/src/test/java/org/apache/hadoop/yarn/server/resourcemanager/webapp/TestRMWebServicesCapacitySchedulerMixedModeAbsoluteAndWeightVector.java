@@ -112,8 +112,7 @@ public class TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndWeightVector
   }
 
   @Test
-  public void testSchedulerAbsoluteAndWeightUsingCapacityVector()
-      throws Exception {
+  public void testSchedulerAbsoluteAndWeightUsingCapacityVector() throws Exception {
     runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndWeight", rm, target());
   }
 }

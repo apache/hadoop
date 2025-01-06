@@ -119,7 +119,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
   }
 
   private class JerseyBinder extends AbstractBinder {
-    Configuration conf = new YarnConfiguration();
+    private Configuration conf = new YarnConfiguration();
 
     @Override
     protected void configure() {
@@ -140,7 +140,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
       Principal principal1 = () -> "testuser";
       when(request.getUserPrincipal()).thenReturn(principal1);
 
-      if (isKerberosAuth == true) {
+      if (isKerberosAuth) {
         bind(TestKerberosAuthFilter.class);
       } else {
         bind(TestSimpleAuthFilter.class);
@@ -148,6 +148,10 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     }
 
     public void configureScheduler() {
+    }
+
+    public Configuration getConf() {
+      return conf;
     }
   }
 
@@ -193,7 +197,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     @Override
     public void configureScheduler() {
       isKerberosAuth = false;
-      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "simple");
+      getConf().set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "simple");
     }
   }
 
@@ -201,13 +205,13 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     @Override
     public void configureScheduler() {
       isKerberosAuth = true;
-      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-      conf.set(YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY, httpSpnegoPrincipal);
-      conf.set(YarnConfiguration.RM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY,
+      getConf().set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+      getConf().set(YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY, httpSpnegoPrincipal);
+      getConf().set(YarnConfiguration.RM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY,
           httpSpnegoKeytabFile.getAbsolutePath());
-      conf.set(YarnConfiguration.NM_WEBAPP_SPNEGO_USER_NAME_KEY,
+      getConf().set(YarnConfiguration.NM_WEBAPP_SPNEGO_USER_NAME_KEY,
           httpSpnegoPrincipal);
-      conf.set(YarnConfiguration.NM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY,
+      getConf().set(YarnConfiguration.NM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY,
           httpSpnegoKeytabFile.getAbsolutePath());
     }
   }
@@ -281,14 +285,14 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
         "<delegation-token><renewer>" + renewer
             + "</renewer></delegation-token>";
     String[] mediaTypes =
-        { MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML };
+        {MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML};
     Map<String, String> bodyMap = new HashMap<>();
     bodyMap.put(MediaType.APPLICATION_JSON, jsonBody);
     bodyMap.put(MediaType.APPLICATION_XML, xmlBody);
     for (final String mediaType : mediaTypes) {
       final String body = bodyMap.get(mediaType);
       for (final String contentType : mediaTypes) {
-        if (isKerberosAuth == true) {
+        if (isKerberosAuth) {
           when(request.getAuthType()).thenReturn("Kerberos");
           verifyKerberosAuthCreate(mediaType, contentType, body, renewer);
         } else {
@@ -534,7 +538,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     String renewer = "client2";
     dtoken.setRenewer(renewer);
     String[] mediaTypes =
-        { MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML};
+        {MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML};
     when(request.getAuthType()).thenReturn("Kerberos");
     for (final String mediaType : mediaTypes) {
       for (final String contentType : mediaTypes) {
@@ -609,7 +613,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
                 Response response =
                     targetWithJsonObject().path("ws").path("v1").path("cluster").
                     path("delegation-token").request(contentType).
-                    post(Entity.entity(toEntity(dtoken, DelegationToken.class,mediaType),
+                    post(Entity.entity(toEntity(dtoken, DelegationToken.class, mediaType),
                     mediaType), Response.class);
                 assertResponseStatusCode(Response.Status.OK, response.getStatusInfo());
                 DelegationToken tok = getDelegationTokenFromResponse(response);
