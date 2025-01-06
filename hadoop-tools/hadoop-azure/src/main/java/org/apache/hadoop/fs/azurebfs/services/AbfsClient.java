@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
@@ -48,7 +49,11 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidFileSystemPropertyException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
@@ -383,7 +388,7 @@ public abstract class AbfsClient implements Closeable {
    * @return common request headers
    */
   protected List<AbfsHttpHeader> createCommonHeaders(ApiVersion xMsVersion) {
-    final List<AbfsHttpHeader> requestHeaders = new ArrayList<AbfsHttpHeader>();
+    final List<AbfsHttpHeader> requestHeaders = new ArrayList<>();
     requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, xMsVersion.toString()));
     requestHeaders.add(new AbfsHttpHeader(ACCEPT_CHARSET, UTF_8));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, EMPTY_STRING));
@@ -624,7 +629,7 @@ public abstract class AbfsClient implements Closeable {
    * @param result executed rest operation containing response from server.
    * @return True if the path is a directory, False otherwise.
    */
-  protected abstract boolean checkIsDir(AbfsHttpOperation result);
+  public abstract boolean checkIsDir(AbfsHttpOperation result);
 
   /**
    * Creates a rest operation for rename.
@@ -1616,4 +1621,62 @@ public abstract class AbfsClient implements Closeable {
   protected boolean isRenameResilience() {
     return renameResilience;
   }
+
+  /**
+   * Parses response of Listing API from server based on Endpoint used.
+   * @param stream InputStream of the response
+   * @return ListResultSchema
+   * @throws IOException if parsing fails
+   */
+  public abstract ListResultSchema parseListPathResults(InputStream stream) throws IOException;
+
+  /**
+   * Parses response of Get Block List from server based on Endpoint used.
+   * @param stream InputStream of the response
+   * @return List of block IDs
+   * @throws IOException if parsing fails
+   */
+  public abstract List<String> parseBlockListResponse(InputStream stream) throws IOException;
+
+  /**
+   * Parses response from ErrorStream returned by server based on Endpoint used.
+   * @param stream InputStream of the response
+   * @return StorageErrorResponseSchema
+   * @throws IOException if parsing fails
+   */
+  public abstract StorageErrorResponseSchema processStorageErrorResponse(InputStream stream) throws IOException;
+
+  /**
+   * Returns continuation token from server response based on Endpoint used.
+   * @param result response from server
+   * @return continuation token
+   */
+  public abstract String getContinuationFromResponse(AbfsHttpOperation result);
+
+  /**
+   * Returns user-defined metadata from server response based on Endpoint used.
+   * @param result response from server
+   * @return user-defined metadata key-value pairs
+   * @throws InvalidFileSystemPropertyException if parsing fails
+   * @throws InvalidAbfsRestOperationException if parsing fails
+   */
+  public abstract Hashtable<String, String> getXMSProperties(AbfsHttpOperation result)
+      throws InvalidFileSystemPropertyException,
+      InvalidAbfsRestOperationException;
+
+  /**
+   * Encode attribute with encoding based on Endpoint used.
+   * @param value to be encoded
+   * @return encoded value
+   * @throws UnsupportedEncodingException if encoding fails
+   */
+  public abstract byte[] encodeAttribute(String value) throws UnsupportedEncodingException;
+
+  /**
+   * Decode attribute with decoding based on Endpoint used.
+   * @param value to be decoded
+   * @return decoded value
+   * @throws UnsupportedEncodingException if decoding fails
+   */
+  public abstract String decodeAttribute(byte[] value) throws UnsupportedEncodingException;
 }

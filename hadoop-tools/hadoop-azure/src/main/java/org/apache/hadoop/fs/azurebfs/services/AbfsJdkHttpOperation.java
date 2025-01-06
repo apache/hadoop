@@ -62,15 +62,17 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
    * @param requestHeaders The HTTP request headers.READ_TIMEOUT
    * @param connectionTimeout The Connection Timeout value to be used while establishing http connection
    * @param readTimeout The Read Timeout value to be used with http connection while making a request
+   * @param abfsClient The AbfsClient instance.
    * @throws IOException if an error occurs.
    */
   public AbfsJdkHttpOperation(final URL url,
       final String method,
       final List<AbfsHttpHeader> requestHeaders,
       final Duration connectionTimeout,
-      final Duration readTimeout)
+      final Duration readTimeout,
+      final AbfsClient abfsClient)
       throws IOException {
-    super(LOG, url, method, requestHeaders, connectionTimeout, readTimeout);
+    super(LOG, url, method, requestHeaders, connectionTimeout, readTimeout, abfsClient);
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
@@ -94,6 +96,12 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
   /**{@inheritDoc}*/
   public String getResponseHeader(String httpHeader) {
     return connection.getHeaderField(httpHeader);
+  }
+
+  /**{@inheritDoc}*/
+  @Override
+  public Map<String, List<String>> getResponseHeaders() {
+    return connection.getHeaderFields();
   }
 
   /**{@inheritDoc}*/

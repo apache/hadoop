@@ -16,24 +16,38 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.contracts.services;
+package org.apache.hadoop.hdfs.server.datanode;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * The ListResultSchema model.
- */
-public interface ListResultSchema {
-  /**
-   * Get the paths value.
-   * @return the paths value
-   */
-  List<? extends ListResultEntrySchema> paths();
+public class ModDataSetSubLockStrategy implements DataSetSubLockStrategy {
+  public static final Logger LOG = LoggerFactory.getLogger(DataSetSubLockStrategy.class);
 
-  /**
-   * Set the paths value.
-   * @param paths the paths value to set
-   * @return the ListSchema object itself.
-   */
-  ListResultSchema withPaths(List<? extends ListResultEntrySchema> paths);
+  private static final String LOCK_NAME_PERFIX = "SubLock";
+  private long modFactor;
+
+  public ModDataSetSubLockStrategy(long mod) {
+    if (mod <= 0) {
+      mod = 1L;
+    }
+    this.modFactor = mod;
+  }
+
+  @Override
+  public String blockIdToSubLock(long blockid) {
+    return LOCK_NAME_PERFIX + (blockid % modFactor);
+  }
+
+  @Override
+  public List<String> getAllSubLockName() {
+    List<String> res = new ArrayList<>();
+    for (long i = 0L; i < modFactor; i++) {
+      res.add(LOCK_NAME_PERFIX + i);
+    }
+    return res;
+  }
 }

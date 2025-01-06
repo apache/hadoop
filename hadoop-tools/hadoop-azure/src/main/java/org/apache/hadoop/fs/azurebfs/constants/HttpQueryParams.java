@@ -67,6 +67,11 @@ public final class HttpQueryParams {
    * {@value}
    */
   public static final String QUERY_PARAM_BLOCKLISTTYPE = "blocklisttype";
+  public static final String QUERY_PARAM_INCLUDE = "include";
+  public static final String QUERY_PARAM_PREFIX = "prefix";
+  public static final String QUERY_PARAM_MARKER = "marker";
+  public static final String QUERY_PARAM_DELIMITER = "delimiter";
+  public static final String QUERY_PARAM_MAX_RESULTS = "maxresults";
 
   //query params for SAS
   public static final String QUERY_PARAM_SAOID = "saoid";

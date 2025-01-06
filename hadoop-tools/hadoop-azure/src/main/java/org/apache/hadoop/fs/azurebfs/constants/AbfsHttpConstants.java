@@ -50,6 +50,7 @@ public final class AbfsHttpConstants {
   public static final String DEFAULT_LEASE_BREAK_PERIOD = "0";
   public static final String DEFAULT_TIMEOUT = "90";
   public static final String APPEND_BLOB_TYPE = "appendblob";
+  public static final String LIST = "list";
 
   //Abfs Http Client Constants for Blob Endpoint APIs.
 
@@ -201,6 +202,40 @@ public final class AbfsHttpConstants {
 
   @Deprecated
   public static final String DECEMBER_2019_API_VERSION = ApiVersion.DEC_12_2019.toString();
+
+  /**
+   * List of Constants Used by Blob Endpoint Rest APIs.
+   */
+  public static final String XML_TAG_NAME = "Name";
+  public static final String XML_TAG_BLOB = "Blob";
+  public static final String XML_TAG_NEXT_MARKER = "NextMarker";
+  public static final String XML_TAG_METADATA = "Metadata";
+  public static final String XML_TAG_PROPERTIES = "Properties";
+  public static final String XML_TAG_BLOB_PREFIX = "BlobPrefix";
+  public static final String XML_TAG_CONTENT_LEN = "Content-Length";
+  public static final String XML_TAG_RESOURCE_TYPE = "ResourceType";
+  public static final String XML_TAG_INVALID_XML = "Invalid XML";
+  public static final String XML_TAG_HDI_ISFOLDER = "hdi_isfolder";
+  public static final String XML_TAG_ETAG = "Etag";
+  public static final String XML_TAG_LAST_MODIFIED_TIME = "Last-Modified";
+  public static final String XML_TAG_CREATION_TIME   = "Creation-Time";
+  public static final String XML_TAG_OWNER = "Owner";
+  public static final String XML_TAG_GROUP = "Group";
+  public static final String XML_TAG_PERMISSIONS = "Permissions";
+  public static final String XML_TAG_ACL = "Acl";
+  public static final String XML_TAG_COPY_ID = "CopyId";
+  public static final String XML_TAG_COPY_STATUS = "CopyStatus";
+  public static final String XML_TAG_COPY_SOURCE = "CopySource";
+  public static final String XML_TAG_COPY_PROGRESS = "CopyProgress";
+  public static final String XML_TAG_COPY_COMPLETION_TIME = "CopyCompletionTime";
+  public static final String XML_TAG_COPY_STATUS_DESCRIPTION = "CopyStatusDescription";
+  public static final String XML_TAG_BLOB_ERROR_CODE_START_XML = "<Code>";
+  public static final String XML_TAG_BLOB_ERROR_CODE_END_XML = "</Code>";
+  public static final String XML_TAG_BLOB_ERROR_MESSAGE_START_XML = "<Message>";
+  public static final String XML_TAG_BLOB_ERROR_MESSAGE_END_XML = "</Message>";
+  public static final String XML_TAG_COMMITTED_BLOCKS = "CommittedBlocks";
+  public static final String XML_TAG_BLOCK_NAME = "Block";
+  public static final String PUT_BLOCK_LIST = "PutBlockList";
 
   /**
    * Value that differentiates categories of the http_status.

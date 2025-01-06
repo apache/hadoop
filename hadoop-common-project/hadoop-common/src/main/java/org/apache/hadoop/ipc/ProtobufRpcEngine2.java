@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
+import org.apache.hadoop.ipc.ProcessingDetails.Timing;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.protobuf.ProtobufRpcEngine2Protos.RequestHeaderProto;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -425,28 +426,37 @@ public class ProtobufRpcEngine2 implements RpcEngine {
       private final RPC.Server server;
       private final Call call;
       private final String methodName;
-      private final long setupTime;
 
       ProtobufRpcEngineCallbackImpl() {
         this.server = CURRENT_CALL_INFO.get().getServer();
         this.call = Server.getCurCall().get();
         this.methodName = CURRENT_CALL_INFO.get().getMethodName();
-        this.setupTime = Time.now();
+      }
+
+      private void updateProcessingDetails(Call rpcCall, long deltaNanos) {
+        ProcessingDetails details = rpcCall.getProcessingDetails();
+        rpcCall.getProcessingDetails().set(Timing.PROCESSING, deltaNanos, TimeUnit.NANOSECONDS);
+        deltaNanos -= details.get(Timing.LOCKWAIT, TimeUnit.NANOSECONDS);
+        deltaNanos -= details.get(Timing.LOCKSHARED, TimeUnit.NANOSECONDS);
+        deltaNanos -= details.get(Timing.LOCKEXCLUSIVE, TimeUnit.NANOSECONDS);
+        details.set(Timing.LOCKFREE, deltaNanos, TimeUnit.NANOSECONDS);
       }
 
       @Override
       public void setResponse(Message message) {
-        long processingTime = Time.now() - setupTime;
+        long deltaNanos = Time.monotonicNowNanos() - call.getStartHandleTimestampNanos();
+        updateProcessingDetails(call, deltaNanos);
         call.setDeferredResponse(RpcWritable.wrap(message));
-        server.updateDeferredMetrics(methodName, processingTime);
+        server.updateDeferredMetrics(call, methodName, deltaNanos);
       }
 
       @Override
       public void error(Throwable t) {
-        long processingTime = Time.now() - setupTime;
-        String detailedMetricsName = t.getClass().getSimpleName();
-        server.updateDeferredMetrics(detailedMetricsName, processingTime);
+        long deltaNanos = Time.monotonicNowNanos() - call.getStartHandleTimestampNanos();
+        updateProcessingDetails(call, deltaNanos);
         call.setDeferredError(t);
+        String detailedMetricsName = t.getClass().getSimpleName();
+        server.updateDeferredMetrics(call, detailedMetricsName, deltaNanos);
       }
     }
 

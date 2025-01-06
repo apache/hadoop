@@ -261,11 +261,13 @@
     "debian:10": "openjdk-11-jdk",
     "ubuntu:focal": [
       "openjdk-8-jdk",
-      "openjdk-11-jdk"
+      "openjdk-11-jdk",
+      "openjdk-17-jdk"
     ],
     "ubuntu:focal::arch64": [
       "openjdk-8-jdk",
-      "openjdk-11-jdk"
+      "openjdk-11-jdk",
+      "openjdk-17-jdk"
     ]
   },
   "pinentry-curses": {

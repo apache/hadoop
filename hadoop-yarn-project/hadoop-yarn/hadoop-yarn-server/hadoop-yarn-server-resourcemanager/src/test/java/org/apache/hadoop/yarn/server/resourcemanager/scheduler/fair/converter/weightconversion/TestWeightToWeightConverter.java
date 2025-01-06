@@ -54,7 +54,7 @@ public class TestWeightToWeightConverter extends WeightConverterTestBase {
 
     assertEquals("root weight", 1.0f,
         csConfig.getNonLabeledQueueWeight(ROOT), 0.0f);
-    assertEquals("Converted items", 21,
+    assertEquals("Converted items", 22,
         csConfig.getPropsWithPrefix(PREFIX).size());
   }
 
@@ -67,7 +67,7 @@ public class TestWeightToWeightConverter extends WeightConverterTestBase {
         csConfig.getNonLabeledQueueWeight(ROOT), 0.0f);
     assertEquals("root.a weight", 1.0f,
         csConfig.getNonLabeledQueueWeight(ROOT_A), 0.0f);
-    assertEquals("Number of properties", 22,
+    assertEquals("Number of properties", 23,
         csConfig.getPropsWithPrefix(PREFIX).size());
   }
 
@@ -77,7 +77,7 @@ public class TestWeightToWeightConverter extends WeightConverterTestBase {
 
     converter.convertWeightsForChildQueues(root, csConfig);
 
-    assertEquals("Number of properties", 24,
+    assertEquals("Number of properties", 25,
         csConfig.getPropsWithPrefix(PREFIX).size());
     assertEquals("root weight", 1.0f,
         csConfig.getNonLabeledQueueWeight(ROOT), 0.0f);
@@ -103,7 +103,7 @@ public class TestWeightToWeightConverter extends WeightConverterTestBase {
     FSQueue root = createParent(new ArrayList<>());
     converter.convertWeightsForChildQueues(root, csConfig);
 
-    assertEquals("Number of properties", 21,
+    assertEquals("Number of properties", 22,
         csConfig.getPropsWithPrefix(PREFIX).size());
     assertTrue("root autocreate v2 enabled",
         csConfig.isAutoQueueCreationV2Enabled(ROOT));

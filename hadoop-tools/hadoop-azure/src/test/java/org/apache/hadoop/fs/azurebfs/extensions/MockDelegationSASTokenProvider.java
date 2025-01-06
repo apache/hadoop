@@ -108,7 +108,7 @@ public class MockDelegationSASTokenProvider implements SASTokenProvider {
     requestBody.append("</Expiry></KeyInfo>");
 
     AbfsJdkHttpOperation op = new AbfsJdkHttpOperation(url, method, requestHeaders,
-        Duration.ofMillis(DEFAULT_HTTP_CONNECTION_TIMEOUT), Duration.ofMillis(DEFAULT_HTTP_READ_TIMEOUT));
+        Duration.ofMillis(DEFAULT_HTTP_CONNECTION_TIMEOUT), Duration.ofMillis(DEFAULT_HTTP_READ_TIMEOUT), null);
 
     byte[] requestBuffer = requestBody.toString().getBytes(StandardCharsets.UTF_8.toString());
     op.sendPayload(requestBuffer, 0, requestBuffer.length);

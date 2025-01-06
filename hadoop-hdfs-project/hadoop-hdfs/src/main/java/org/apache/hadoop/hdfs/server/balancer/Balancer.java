@@ -43,6 +43,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.net.NetworkTopology;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -255,7 +256,7 @@ public class Balancer {
   private static void checkReplicationPolicyCompatibility(Configuration conf
       ) throws UnsupportedActionException {
     BlockPlacementPolicies placementPolicies =
-        new BlockPlacementPolicies(conf, null, null, null);
+        new BlockPlacementPolicies(conf, null, NetworkTopology.getInstance(conf), null);
     if (!(placementPolicies.getPolicy(CONTIGUOUS) instanceof
         BlockPlacementPolicyDefault)) {
       throw new UnsupportedActionException(

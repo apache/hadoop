@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.assertInverseQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
@@ -814,6 +815,25 @@ public class TestDataNodeMetrics {
           return readXceiversCount == 0;
         }
       }, 100, 10000);
+    }
+  }
+
+  @Test
+  public void testDataNodeDatasetLockMetrics() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      FileSystem fs = cluster.getFileSystem();
+      // Create and read a 1 byte file
+      Path tmpfile = new Path("/tmp.txt");
+      DFSTestUtil.createFile(fs, tmpfile,
+              (long)1, (short)1, 1L);
+      DFSTestUtil.readFile(fs, tmpfile);
+      List<DataNode> datanodes = cluster.getDataNodes();
+      assertEquals(datanodes.size(), 1);
+      DataNode datanode = datanodes.get(0);
+      MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
+      assertCounterGt("AcquireDatasetWriteLockNumOps", (long)1, rb);
+      assertCounterGt("AcquireDatasetReadLockNumOps", (long)1, rb);
     }
   }
 }

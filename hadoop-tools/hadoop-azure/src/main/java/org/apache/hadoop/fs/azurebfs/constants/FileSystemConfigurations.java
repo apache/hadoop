@@ -39,11 +39,11 @@ public final class FileSystemConfigurations {
   private static final int SIXTY_SECONDS = 60_000;
 
   // Retry parameter defaults.
-  public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 3_000;  // 3s
-  public static final int DEFAULT_MAX_BACKOFF_INTERVAL = 30_000;  // 30s
+  public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 500;  // 500ms
+  public static final int DEFAULT_MAX_BACKOFF_INTERVAL = 25_000;  // 25s
   public static final boolean DEFAULT_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED = true;
   public static final int DEFAULT_STATIC_RETRY_INTERVAL = 1_000; // 1s
-  public static final int DEFAULT_BACKOFF_INTERVAL = 3_000;  // 3s
+  public static final int DEFAULT_BACKOFF_INTERVAL = 500;  // 500ms
   public static final int DEFAULT_MAX_RETRY_ATTEMPTS = 30;
   public static final int DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT = 3;
 
@@ -108,7 +108,7 @@ public final class FileSystemConfigurations {
 
   public static final boolean DEFAULT_ENABLE_FLUSH = true;
   public static final boolean DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH = true;
-  public static final boolean DEFAULT_ENABLE_AUTOTHROTTLING = true;
+  public static final boolean DEFAULT_ENABLE_AUTOTHROTTLING = false;
   public static final int DEFAULT_METRIC_IDLE_TIMEOUT_MS = 60_000;
   public static final int DEFAULT_METRIC_ANALYSIS_TIMEOUT_MS = 60_000;
   public static final boolean DEFAULT_FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED = true;

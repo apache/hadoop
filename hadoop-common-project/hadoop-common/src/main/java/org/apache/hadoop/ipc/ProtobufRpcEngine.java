@@ -26,6 +26,7 @@ import com.google.protobuf.TextFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -34,7 +35,6 @@ import org.apache.hadoop.ipc.protobuf.ProtobufRpcEngineProtos.RequestHeaderProto
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.tracing.TraceScope;
 import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.util.Time;
@@ -393,28 +393,38 @@ public class ProtobufRpcEngine implements RpcEngine {
       private final RPC.Server server;
       private final Call call;
       private final String methodName;
-      private final long setupTime;
 
       public ProtobufRpcEngineCallbackImpl() {
         this.server = CURRENT_CALL_INFO.get().getServer();
         this.call = Server.getCurCall().get();
         this.methodName = CURRENT_CALL_INFO.get().getMethodName();
-        this.setupTime = Time.now();
+      }
+
+      private void updateProcessingDetails(Call rpcCall, long deltaNanos) {
+        ProcessingDetails details = rpcCall.getProcessingDetails();
+        rpcCall.getProcessingDetails().set(ProcessingDetails.Timing.PROCESSING, deltaNanos,
+            TimeUnit.NANOSECONDS);
+        deltaNanos -= details.get(ProcessingDetails.Timing.LOCKWAIT, TimeUnit.NANOSECONDS);
+        deltaNanos -= details.get(ProcessingDetails.Timing.LOCKSHARED, TimeUnit.NANOSECONDS);
+        deltaNanos -= details.get(ProcessingDetails.Timing.LOCKEXCLUSIVE, TimeUnit.NANOSECONDS);
+        details.set(ProcessingDetails.Timing.LOCKFREE, deltaNanos, TimeUnit.NANOSECONDS);
       }
 
       @Override
       public void setResponse(Message message) {
-        long processingTime = Time.now() - setupTime;
+        long deltaNanos = Time.monotonicNowNanos() - call.getStartHandleTimestampNanos();
+        updateProcessingDetails(call, deltaNanos);
         call.setDeferredResponse(RpcWritable.wrap(message));
-        server.updateDeferredMetrics(methodName, processingTime);
+        server.updateDeferredMetrics(call, methodName, deltaNanos);
       }
 
       @Override
       public void error(Throwable t) {
-        long processingTime = Time.now() - setupTime;
-        String detailedMetricsName = t.getClass().getSimpleName();
-        server.updateDeferredMetrics(detailedMetricsName, processingTime);
+        long deltaNanos = Time.monotonicNowNanos() - call.getStartHandleTimestampNanos();
+        updateProcessingDetails(call, deltaNanos);
         call.setDeferredError(t);
+        String detailedMetricsName = t.getClass().getSimpleName();
+        server.updateDeferredMetrics(call, detailedMetricsName, deltaNanos);
       }
     }
 

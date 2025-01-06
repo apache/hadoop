@@ -150,6 +150,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_PLU
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_STAR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DIRECTORY;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
@@ -343,11 +344,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   byte[] encodeAttribute(String value) throws UnsupportedEncodingException {
-    return value.getBytes(XMS_PROPERTIES_ENCODING);
+    // DFS Client works with ISO_8859_1 encoding, Blob Works with UTF-8.
+    return getClient().encodeAttribute(value);
   }
 
   String decodeAttribute(byte[] value) throws UnsupportedEncodingException {
-    return new String(value, XMS_PROPERTIES_ENCODING);
+    // DFS Client works with ISO_8859_1 encoding, Blob Works with UTF-8.
+    return getClient().decodeAttribute(value);
   }
 
   private String[] authorityParts(URI uri) throws InvalidUriAuthorityException, InvalidUriException {
@@ -485,9 +488,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           .getFilesystemProperties(tracingContext);
       perfInfo.registerResult(op.getResult());
 
-      final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
-
-      parsedXmsProperties = parseCommaSeparatedXmsProperties(xMsProperties);
+      // Handling difference in request headers formats between DFS and Blob Clients.
+      parsedXmsProperties = getClient().getXMSProperties(op.getResult());
       perfInfo.registerSuccess(true);
 
       return parsedXmsProperties;
@@ -533,10 +535,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       perfInfo.registerResult(op.getResult());
       contextEncryptionAdapter.destroy();
 
-      final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
-
-      parsedXmsProperties = parseCommaSeparatedXmsProperties(xMsProperties);
-
+      // Handling difference in request headers formats between DFS and Blob Clients.
+      parsedXmsProperties = getClient().getXMSProperties(op.getResult());
       perfInfo.registerSuccess(true);
 
       return parsedXmsProperties;
@@ -899,10 +899,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       } else {
         AbfsHttpOperation op = getClient().getPathStatus(relativePath, false,
             tracingContext, null).getResult();
-        resourceType = op.getResponseHeader(
-            HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-        contentLength = Long.parseLong(
-            op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+        resourceType = getClient().checkIsDir(op) ? DIRECTORY : FILE;
+        contentLength = extractContentLength(op);
         eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
         /*
          * For file created with ENCRYPTION_CONTEXT, client shall receive
@@ -983,17 +981,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           .getPathStatus(relativePath, false, tracingContext, null);
       perfInfo.registerResult(op.getResult());
 
-      final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-      final Long contentLength = Long.valueOf(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
-
-      if (parseIsDirectory(resourceType)) {
+      if (getClient().checkIsDir(op.getResult())) {
         throw new AbfsRestOperationException(
                 AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
                 AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-                "openFileForRead must be used with files and not directories",
+                "openFileForWrite must be used with files and not directories",
                 null);
       }
 
+      final long contentLength = extractContentLength(op.getResult());
       final long offset = overwrite ? 0 : contentLength;
 
       perfInfo.registerSuccess(true);
@@ -1180,8 +1176,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         contentLength = 0;
         resourceIsDir = true;
       } else {
-        contentLength = parseContentLength(result.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
-        resourceIsDir = parseIsDirectory(result.getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE));
+        contentLength = extractContentLength(result);
+        resourceIsDir = getClient().checkIsDir(result);
       }
 
       final String transformedOwner = identityTransformer.transformIdentityForGetRequest(
@@ -1256,10 +1252,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             startFrom);
 
     final String relativePath = getRelativePath(path);
+    AbfsClient listingClient = getClient();
 
     if (continuation == null || continuation.isEmpty()) {
       // generate continuation token if a valid startFrom is provided.
       if (startFrom != null && !startFrom.isEmpty()) {
+        /*
+         * Blob Endpoint Does not support startFrom yet. Fallback to DFS Client.
+         * startFrom remains null for all HDFS APIs. This is only for internal use.
+         */
+        listingClient = getClient(AbfsServiceType.DFS);
         continuation = getIsNamespaceEnabled(tracingContext)
             ? generateContinuationTokenForXns(startFrom)
             : generateContinuationTokenForNonXns(relativePath, startFrom);
@@ -1268,11 +1270,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     do {
       try (AbfsPerfInfo perfInfo = startTracking("listStatus", "listPath")) {
-        AbfsRestOperation op = getClient().listPath(relativePath, false,
+        AbfsRestOperation op = listingClient.listPath(relativePath, false,
             abfsConfiguration.getListMaxResults(), continuation,
             tracingContext);
         perfInfo.registerResult(op.getResult());
-        continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+        continuation = listingClient.getContinuationFromResponse(op.getResult());
         ListResultSchema retrievedSchema = op.getResult().getListResultSchema();
         if (retrievedSchema == null) {
           throw new AbfsRestOperationException(
@@ -1465,7 +1467,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = getClient()
           .getAclStatus(relativePath, useUpn, tracingContext);
       perfInfoGet.registerResult(op.getResult());
-      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      final String eTag = extractEtagHeader(op.getResult());
 
       final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
 
@@ -1508,7 +1510,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = getClient()
           .getAclStatus(relativePath, isUpnFormat, tracingContext);
       perfInfoGet.registerResult(op.getResult());
-      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      final String eTag = extractEtagHeader(op.getResult());
 
       final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
 
@@ -1546,7 +1548,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = getClient()
           .getAclStatus(relativePath, tracingContext);
       perfInfoGet.registerResult(op.getResult());
-      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      final String eTag = extractEtagHeader(op.getResult());
       final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
       final Map<String, String> defaultAclEntries = new HashMap<>();
 
@@ -1590,7 +1592,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = getClient()
           .getAclStatus(relativePath, tracingContext);
       perfInfoGet.registerResult(op.getResult());
-      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      final String eTag = extractEtagHeader(op.getResult());
 
       final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
       final Map<String, String> newAclEntries = new HashMap<>();
@@ -1636,7 +1638,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = getClient()
           .getAclStatus(relativePath, isUpnFormat, tracingContext);
       perfInfoGet.registerResult(op.getResult());
-      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      final String eTag = extractEtagHeader(op.getResult());
 
       final Map<String, String> getAclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
 
@@ -1859,12 +1861,24 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return relPath;
   }
 
-  private long parseContentLength(final String contentLength) {
-    if (contentLength == null) {
-      return -1;
+  /**
+   * Extracts the content length from the HTTP operation's response headers.
+   *
+   * @param op The AbfsHttpOperation instance from which to extract the content length.
+   *           This operation contains the HTTP response headers.
+   * @return The content length as a long value. If the Content-Length header is
+   *         not present or is empty, returns 0.
+   */
+  private long extractContentLength(AbfsHttpOperation op) {
+    long contentLength;
+    String contentLengthHeader = op.getResponseHeader(
+        HttpHeaderConfigurations.CONTENT_LENGTH);
+    if (!contentLengthHeader.equals(EMPTY_STRING)) {
+      contentLength = Long.parseLong(contentLengthHeader);
+    } else {
+      contentLength = 0;
     }
-
-    return Long.parseLong(contentLength);
+    return contentLength;
   }
 
   private boolean parseIsDirectory(final String resourceType) {

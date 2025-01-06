@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY;
 import static org.apache.hadoop.fs.StorageType.DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY;
@@ -40,6 +41,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBER
 
 import java.lang.reflect.Field;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyWithNodeGroup;
+import org.apache.hadoop.net.NetworkTopologyWithNodeGroup;
 import org.junit.AfterClass;
 
 import static org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset.CONFIG_PROPERTY_NONDFSUSED;
@@ -1643,6 +1646,22 @@ public class TestBalancer {
     initConf(conf);
     doTest(conf, new long[]{CAPACITY, CAPACITY}, new String[]{RACK0, RACK1},
         CAPACITY, RACK2, new PortNumberBasedNodes(3, 0, 1), true, true);
+  }
+
+  /**
+   * Test a cluster with BlockPlacementPolicyWithNodeGroup
+   */
+  @Test(timeout=100000)
+  public void testBalancerCliWithBlockPlacementPolicyWithNodeGroup() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    conf.setBoolean(DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY, false);
+    conf.set(NET_TOPOLOGY_IMPL_KEY, NetworkTopologyWithNodeGroup.class.getName());
+    conf.set(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+        BlockPlacementPolicyWithNodeGroup.class.getName());
+    String rackWithNodeGroup = "/rack0/nodegroup0";
+    doTest(conf, new long[] {CAPACITY}, new String[] {rackWithNodeGroup}, CAPACITY / 2,
+        rackWithNodeGroup, true);
   }
 
   /**

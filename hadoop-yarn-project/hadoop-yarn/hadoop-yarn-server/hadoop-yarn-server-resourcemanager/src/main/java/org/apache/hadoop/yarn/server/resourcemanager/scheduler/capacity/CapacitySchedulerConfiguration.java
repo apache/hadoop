@@ -299,7 +299,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       DEFAULT_SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS = 100;
 
   @Private
-  public static final boolean DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE = false;
+  public static final boolean DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE = true;
 
   @Private
   public static final String QUEUE_MAPPING = PREFIX + "queue-mappings";

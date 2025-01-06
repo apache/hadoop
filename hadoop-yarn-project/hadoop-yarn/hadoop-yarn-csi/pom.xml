@@ -26,8 +26,8 @@
     <packaging>jar</packaging>
 
     <properties>
-        <grpc.version>1.53.0</grpc.version>
-        <animal-sniffer.version>1.21</animal-sniffer.version>
+        <grpc.version>1.69.0</grpc.version>
+        <animal-sniffer.version>1.24</animal-sniffer.version>
     </properties>
 
     <dependencies>

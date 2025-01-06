@@ -167,6 +167,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     conf.set("yarn.scheduler.capacity.root.a.max-parallel-app", "42");
     conf.set("yarn.scheduler.capacity.root.b.capacity", "50");
     conf.set("yarn.scheduler.capacity.root.c.capacity", "37.5");
+    conf.set("yarn.scheduler.capacity.schedule-asynchronously.enable", "false");
     return conf;
   }
 }
