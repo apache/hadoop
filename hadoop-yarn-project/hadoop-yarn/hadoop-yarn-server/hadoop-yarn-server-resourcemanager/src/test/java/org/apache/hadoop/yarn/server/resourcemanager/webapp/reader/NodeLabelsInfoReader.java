@@ -59,8 +59,9 @@ public class NodeLabelsInfoReader implements MessageBodyReader<NodeLabelsInfo> {
       MultivaluedMap<String, String> httpHeaders, InputStream entityStream)
       throws IOException, WebApplicationException {
     try {
-       NodeLabelsInfo nodeLabelsInfo = jsonUnmarshaller.unmarshalFromJSON(entityStream, NodeLabelsInfo.class);
-       return nodeLabelsInfo;
+      NodeLabelsInfo nodeLabelsInfo =
+          jsonUnmarshaller.unmarshalFromJSON(entityStream, NodeLabelsInfo.class);
+      return nodeLabelsInfo;
     } catch (JAXBException e) {
       throw new IOException(e);
     }

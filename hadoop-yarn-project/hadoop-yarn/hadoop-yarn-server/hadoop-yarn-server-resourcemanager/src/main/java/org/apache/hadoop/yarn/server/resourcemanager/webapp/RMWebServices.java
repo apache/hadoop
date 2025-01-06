@@ -3010,7 +3010,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           .entity(e.getMessage()).build();
     }
     return Response.status(Status.OK).entity("signal success").build();
-}
+  }
 
   @GET
   @Path(RMWSConsts.SCHEDULER_OVERVIEW)

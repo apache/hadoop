@@ -165,13 +165,13 @@ public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTest
         MediaType.APPLICATION_JSON), Response.class);
 
      // HTTP 400 - Bad Request is encountered, check the logs for the failure
-     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
-     assertJsonResponse(target().path("ws/v1/cluster/scheduler")
-         .queryParam("user.name", userName)
-         .request(MediaType.APPLICATION_JSON).get(Response.class),
-         getExpectedResourceFile(EXPECTED_FILE_TMPL, "absolute-hierarchy", "after-update",
-         legacyQueueMode));
+    assertJsonResponse(target().path("ws/v1/cluster/scheduler")
+        .queryParam("user.name", userName)
+        .request(MediaType.APPLICATION_JSON).get(Response.class),
+        getExpectedResourceFile(EXPECTED_FILE_TMPL, "absolute-hierarchy", "after-update",
+        legacyQueueMode));
   }
 
   private Configuration createAbsoluteConfig() {

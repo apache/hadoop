@@ -41,9 +41,6 @@ import org.junit.AfterClass;
 import org.junit.Test;
 
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;

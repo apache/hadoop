@@ -41,8 +41,8 @@ public class NodeToLabelsInfoReader implements MessageBodyReader<NodeToLabelsInf
 
   public NodeToLabelsInfoReader() {
     try {
-       JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(NodeToLabelsInfo.class);
-       jsonUnmarshaller = jettisonJaxbContext.createJsonUnmarshaller();
+      JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(NodeToLabelsInfo.class);
+      jsonUnmarshaller = jettisonJaxbContext.createJsonUnmarshaller();
     } catch (JAXBException e) {
     }
   }

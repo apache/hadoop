@@ -44,15 +44,15 @@ public class TimelinePutResponseReader implements MessageBodyReader<TimelinePutR
 
   @Override
   public boolean isReadable(Class<?> type, Type genericType,
-    Annotation[] annotations, MediaType mediaType) {
+      Annotation[] annotations, MediaType mediaType) {
     return type == TimelinePutResponse.class;
   }
 
   @Override
   public TimelinePutResponse readFrom(Class<TimelinePutResponse> type, Type genericType,
-    Annotation[] annotations, MediaType mediaType,
-    MultivaluedMap<String, String> httpHeaders,
-    InputStream entityStream) throws IOException, WebApplicationException {
-   return objectMapper.readValue(entityStream, TimelinePutResponse.class);
+      Annotation[] annotations, MediaType mediaType,
+      MultivaluedMap<String, String> httpHeaders,
+      InputStream entityStream) throws IOException, WebApplicationException {
+    return objectMapper.readValue(entityStream, TimelinePutResponse.class);
   }
 }

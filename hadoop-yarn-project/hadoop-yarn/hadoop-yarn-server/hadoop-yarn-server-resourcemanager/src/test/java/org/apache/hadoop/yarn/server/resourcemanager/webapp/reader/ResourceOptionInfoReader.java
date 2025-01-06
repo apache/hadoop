@@ -41,8 +41,8 @@ public class ResourceOptionInfoReader implements MessageBodyReader<ResourceOptio
 
   public ResourceOptionInfoReader() {
     try {
-       JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(ResourceOptionInfo.class);
-       jsonUnmarshaller = jettisonJaxbContext.createJsonUnmarshaller();
+      JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(ResourceOptionInfo.class);
+      jsonUnmarshaller = jettisonJaxbContext.createJsonUnmarshaller();
     } catch (JAXBException e) {
     }
   }
@@ -59,11 +59,11 @@ public class ResourceOptionInfoReader implements MessageBodyReader<ResourceOptio
       MultivaluedMap<String, String> httpHeaders, InputStream entityStream)
       throws IOException, WebApplicationException {
     try {
-       ResourceOptionInfo resourceOptionInfo =
-           jsonUnmarshaller.unmarshalFromJSON(entityStream, ResourceOptionInfo.class);
-       return resourceOptionInfo;
+      ResourceOptionInfo resourceOptionInfo =
+          jsonUnmarshaller.unmarshalFromJSON(entityStream, ResourceOptionInfo.class);
+      return resourceOptionInfo;
     } catch (JAXBException e) {
-       throw new IOException(e);
+      throw new IOException(e);
     }
   }
 }

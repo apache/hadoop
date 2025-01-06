@@ -68,7 +68,8 @@ public class TestRMWebServicesCapacitySchedDefaultLabel extends JerseyTestBase {
   }
 
   @Override
-  protected Application configure() {config = new ResourceConfig();
+  protected Application configure() {
+    config = new ResourceConfig();
     config.register(RMWebServices.class);
     config.register(new JerseyBinder());
     config.register(GenericExceptionHandler.class);

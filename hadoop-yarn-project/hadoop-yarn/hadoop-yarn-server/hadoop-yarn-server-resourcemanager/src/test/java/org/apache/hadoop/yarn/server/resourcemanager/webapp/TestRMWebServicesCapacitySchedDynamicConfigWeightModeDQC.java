@@ -107,18 +107,19 @@ public class TestRMWebServicesCapacitySchedDynamicConfigWeightModeDQC extends Je
   private class JerseyBinder extends AbstractBinder {
     @Override
     protected void configure() {
-      Map<String, String> conf1 = new HashMap<>();
-      conf1.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
-      conf1.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
-      conf1.put("yarn.scheduler.capacity.root.test1.queues", "test1_1, test1_2, test1_3");
-      conf1.put("yarn.scheduler.capacity.root.default.capacity", "4w");
-      conf1.put("yarn.scheduler.capacity.root.test1.capacity", "16w");
-      conf1.put("yarn.scheduler.capacity.root.test2.capacity", "12w");
-      conf1.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "2w");
-      conf1.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "2w");
-      conf1.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "12w");
+      Map<String, String> configMap = new HashMap<>();
+      configMap.put("yarn.scheduler.capacity.legacy-queue-mode.enabled",
+          String.valueOf(legacyQueueMode));
+      configMap.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
+      configMap.put("yarn.scheduler.capacity.root.test1.queues", "test1_1, test1_2, test1_3");
+      configMap.put("yarn.scheduler.capacity.root.default.capacity", "4w");
+      configMap.put("yarn.scheduler.capacity.root.test1.capacity", "16w");
+      configMap.put("yarn.scheduler.capacity.root.test2.capacity", "12w");
+      configMap.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "2w");
+      configMap.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "2w");
+      configMap.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "12w");
 
-      conf = createConfiguration(conf1);
+      conf = createConfiguration(configMap);
       conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
           YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
 
@@ -176,9 +177,9 @@ public class TestRMWebServicesCapacitySchedDynamicConfigWeightModeDQC extends Je
     config.set(queueWithConfigPrefix + "autoParent1.auto-queue-creation-v2.template.maximum-applications", "300");
   }
 
-  private void createDynamicQueues(MockRM rm, String queueName) {
+  private void createDynamicQueues(MockRM mockRM, String queueName) {
     try {
-      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
       CapacitySchedulerQueueManager autoQueueHandler = cs.getCapacitySchedulerQueueManager();
       autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".auto1"));
       autoQueueHandler.createQueue(new QueuePath("root." + queueName + ".auto2"));

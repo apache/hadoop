@@ -484,7 +484,7 @@ public class HistoryClientService extends AbstractService {
     private Configuration configuration;
     private ApplicationClientProtocol protocol;
 
-    public HSJerseyBinder(Configuration pConfiguration,
+    HSJerseyBinder(Configuration pConfiguration,
         ApplicationClientProtocol acProtocol) {
       this.configuration = pConfiguration;
       this.protocol = acProtocol;

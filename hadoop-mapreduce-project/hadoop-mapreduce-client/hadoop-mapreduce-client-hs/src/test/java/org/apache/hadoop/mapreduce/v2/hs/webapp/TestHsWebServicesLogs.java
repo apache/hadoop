@@ -430,10 +430,10 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
     WebTarget r = target().register(ContainerLogsInfoMessageBodyReader.class);
 
     Response response = r.path("ws").path("v1")
-       .path("history").path("containers").
-        path(CONTAINER_1_1_2.toString()).path("logs").
-        request(MediaType.APPLICATION_JSON).
-        get(Response.class);
+        .path("history").path("containers")
+        .path(CONTAINER_1_1_2.toString()).path("logs")
+        .request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
 
     List<ContainerLogsInfo> responseText =
         response.readEntity(new GenericType<List<ContainerLogsInfo>>(){});
@@ -701,7 +701,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
 
     String responseText = response.readEntity(String.class);
     assertThat(responseText).contains(
-       WebApplicationException.class.getSimpleName());
+        WebApplicationException.class.getSimpleName());
     assertThat(responseText).contains("Can not find");
   }
 

@@ -240,7 +240,8 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
   @VisibleForTesting
   protected Response doGetUri(URI base, String path, MultivaluedMap<String, String> params)
       throws IOException {
-    WebTarget target = connector.getClient().register(TimelineEntityReader.class).target(base).path(path);
+    WebTarget target = connector.getClient().
+        register(TimelineEntityReader.class).target(base).path(path);
 
     // To set query parameters where the value of a `MultivaluedMap` is a `List`,
     // we need to iterate through each value to configure them.

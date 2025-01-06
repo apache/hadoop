@@ -177,11 +177,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   @Test
   public void testClusterSchedulerOverviewCapacity() throws Exception {
     rm.registerNode("h1:1234", 32 * GB, 32);
-    Response response = target().path("ws/v1/cluster/scheduler-overview")
+    Response response = targetWithJsonObject().path("ws/v1/cluster/scheduler-overview")
         .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertJsonType(response);
-    String _json = response.readEntity(String.class);
-    JSONObject json = new JSONObject(_json);
+    JSONObject json = response.readEntity(JSONObject.class);
     JSONObject scheduler = json.getJSONObject("scheduler");
     TestRMWebServices.verifyClusterSchedulerOverView(scheduler, "Capacity Scheduler");
   }

@@ -28,7 +28,6 @@ import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.jettison.internal.entity.JettisonObjectProvider.App;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.Before;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;

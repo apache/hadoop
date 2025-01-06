@@ -26,12 +26,8 @@ import javax.ws.rs.core.Response;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 
-import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-
-import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
 
 /**
  * This class contains several utility function which could be used to generate

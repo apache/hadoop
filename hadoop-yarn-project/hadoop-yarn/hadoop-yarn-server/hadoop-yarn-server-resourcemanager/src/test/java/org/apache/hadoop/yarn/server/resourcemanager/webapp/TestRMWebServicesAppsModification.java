@@ -161,8 +161,8 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
   private static final QueuePath TEST = ROOT.createNewLeaf("test");
   private static final QueuePath TEST_QUEUE = ROOT.createNewLeaf("testqueue");
   private ResourceConfig config;
-  private HttpServletRequest request = mock(HttpServletRequest.class);
-  private HttpServletResponse response = mock(HttpServletResponse.class);
+  private HttpServletRequest hsRequest = mock(HttpServletRequest.class);
+  private HttpServletResponse hsResponse = mock(HttpServletResponse.class);
 
   private static final JettisonMarshaller APP_STATE_WRITER;
   static {
@@ -200,7 +200,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
       JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(AppTimeoutInfo.class);
       APP_TIMEOUT_WRITER = jettisonJaxbContext.createJsonMarshaller();
     } catch (JAXBException e) {
-        throw new RuntimeException(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -218,7 +218,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
   }
 
   private class JerseyBinder extends AbstractBinder {
-    Configuration conf = new YarnConfiguration();
+    private Configuration conf = new YarnConfiguration();
 
     @Override
     protected void configure() {
@@ -228,11 +228,15 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
       rm = new MockRM(conf);
       bind(rm).to(ResourceManager.class).named("rm");
       bind(conf).to(Configuration.class).named("conf");
-      bind(request).to(HttpServletRequest.class);
-      bind(response).to(HttpServletResponse.class);
+      bind(hsRequest).to(HttpServletRequest.class);
+      bind(hsResponse).to(HttpServletResponse.class);
     }
 
     public void configureScheduler() {
+    }
+
+    public Configuration getConf() {
+      return conf;
     }
   }
 
@@ -266,28 +270,28 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
   }
 
   private class CapTestServletModule extends JerseyBinder {
-    public CapTestServletModule(boolean flag) {
+    CapTestServletModule(boolean flag) {
       if(flag) {
-        conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
-        conf.setStrings(YarnConfiguration.YARN_ADMIN_ACL, "testuser1");
+        getConf().setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+        getConf().setStrings(YarnConfiguration.YARN_ADMIN_ACL, "testuser1");
       }
     }
 
     @Override
     public void configureScheduler() {
-      conf.set(YarnConfiguration.RM_SCHEDULER,
+      getConf().set(YarnConfiguration.RM_SCHEDULER,
           CapacityScheduler.class.getName());
     }
   }
 
   private class FairTestServletModule extends JerseyBinder {
 
-    public FairTestServletModule(boolean flag) {
+    FairTestServletModule(boolean flag) {
       if(flag) {
-        conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+        getConf().setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
         // set the admin acls otherwise all users are considered admins
         // and we can't test authorization
-        conf.setStrings(YarnConfiguration.YARN_ADMIN_ACL, "testuser1");
+        getConf().setStrings(YarnConfiguration.YARN_ADMIN_ACL, "testuser1");
       }
     }
 
@@ -302,8 +306,8 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
           .aclAdministerApps("someuser ").build())
           .build())
           .writeToFile(FS_ALLOC_FILE);
-      conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, FS_ALLOC_FILE);
-      conf.set(YarnConfiguration.RM_SCHEDULER, FairScheduler.class.getName());
+      getConf().set(FairSchedulerConfiguration.ALLOCATION_FILE, FS_ALLOC_FILE);
+      getConf().set(YarnConfiguration.RM_SCHEDULER, FairScheduler.class.getName());
     }
   }
 
@@ -315,7 +319,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
   private CapTestServletModule getSimpleAuthInjectorCap() {
     setAuthFilter = true;
     Principal principal = () -> "testuser";
-    when(request.getUserPrincipal()).thenReturn(principal);
+    when(hsRequest.getUserPrincipal()).thenReturn(principal);
     return new CapTestServletModule(true);
   }
 
@@ -327,7 +331,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
   private FairTestServletModule getSimpleAuthInjectorFair() {
     setAuthFilter = true;
     Principal principal = () -> "testuser";
-    when(request.getUserPrincipal()).thenReturn(principal);
+    when(hsRequest.getUserPrincipal()).thenReturn(principal);
     return new FairTestServletModule(true);
   }
 
@@ -847,7 +851,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     csconf.setQueues(ROOT, queues);
     csconf.setCapacity(DEFAULT, 50.0f);
     csconf.setCapacity(TEST_QUEUE, 50.0f);
-    when(request.getRequestURL()).thenReturn(new StringBuffer("/apps"));
+    when(hsRequest.getRequestURL()).thenReturn(new StringBuffer("/apps"));
     rm.getResourceScheduler().reinitialize(csconf, rm.getRMContext());
 
     String appName = "test";

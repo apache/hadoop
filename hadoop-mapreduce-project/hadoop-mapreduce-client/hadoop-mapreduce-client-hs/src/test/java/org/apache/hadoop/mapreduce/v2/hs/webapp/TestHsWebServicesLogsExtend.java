@@ -324,8 +324,8 @@ public class TestHsWebServicesLogsExtend extends JerseyTestBase {
 
     WebTarget r = target().register(RemoteLogPathsMessageBodyReader.class);
     Response response = r.path("ws").path("v1").path("history")
-       .path("remote-log-dir")
-       .request(MediaType.APPLICATION_JSON).get(Response.class);
+        .path("remote-log-dir")
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
 
     RemoteLogPaths res = response.readEntity(RemoteLogPaths.class);
 

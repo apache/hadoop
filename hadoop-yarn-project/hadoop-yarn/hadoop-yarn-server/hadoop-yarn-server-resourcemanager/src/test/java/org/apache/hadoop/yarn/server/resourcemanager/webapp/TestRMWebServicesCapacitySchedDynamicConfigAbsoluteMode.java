@@ -97,18 +97,19 @@ public class TestRMWebServicesCapacitySchedDynamicConfigAbsoluteMode extends Jer
   private class JerseyBinder extends AbstractBinder {
     @Override
     protected void configure() {
-      Map<String, String> conf1 = new HashMap<>();
-      conf1.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
-      conf1.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
-      conf1.put("yarn.scheduler.capacity.root.test1.queues", "test1_1, test1_2, test1_3");
-      conf1.put("yarn.scheduler.capacity.root.default.capacity", "[memory=4096,vcores=4]");
-      conf1.put("yarn.scheduler.capacity.root.test1.capacity", "[memory=16384,vcores=16]");
-      conf1.put("yarn.scheduler.capacity.root.test2.capacity", "[memory=12288,vcores=12]");
-      conf1.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "[memory=2048,vcores=2]");
-      conf1.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "[memory=2048,vcores=2]");
-      conf1.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "[memory=12288,vcores=12]");
+      Map<String, String> confMap = new HashMap<>();
+      confMap.put("yarn.scheduler.capacity.legacy-queue-mode.enabled",
+          String.valueOf(legacyQueueMode));
+      confMap.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
+      confMap.put("yarn.scheduler.capacity.root.test1.queues", "test1_1, test1_2, test1_3");
+      confMap.put("yarn.scheduler.capacity.root.default.capacity", "[memory=4096,vcores=4]");
+      confMap.put("yarn.scheduler.capacity.root.test1.capacity", "[memory=16384,vcores=16]");
+      confMap.put("yarn.scheduler.capacity.root.test2.capacity", "[memory=12288,vcores=12]");
+      confMap.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "[memory=2048,vcores=2]");
+      confMap.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "[memory=2048,vcores=2]");
+      confMap.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "[memory=12288,vcores=12]");
 
-      Configuration conf = createConfiguration(conf1);
+      Configuration conf = createConfiguration(confMap);
       conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
           YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
       conf.setClass(YarnConfiguration.RM_SCHEDULER, FifoScheduler.class,

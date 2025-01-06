@@ -37,8 +37,8 @@ public class LabelsToNodesInfoReader implements MessageBodyReader<LabelsToNodesI
 
   public LabelsToNodesInfoReader() {
     try {
-       JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(LabelsToNodesInfo.class);
-       jsonUnmarshaller = jettisonJaxbContext.createJsonUnmarshaller();
+      JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(LabelsToNodesInfo.class);
+      jsonUnmarshaller = jettisonJaxbContext.createJsonUnmarshaller();
     } catch (JAXBException e) {
     }
   }

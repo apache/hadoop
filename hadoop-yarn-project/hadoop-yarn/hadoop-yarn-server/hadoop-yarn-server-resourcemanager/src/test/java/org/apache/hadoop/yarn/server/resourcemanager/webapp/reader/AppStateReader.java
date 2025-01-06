@@ -58,7 +58,7 @@ public class AppStateReader implements MessageBodyReader<AppState> {
       MediaType mediaType, MultivaluedMap<String, String> httpHeaders, InputStream entityStream)
       throws IOException, WebApplicationException {
     try {
-       return jsonUnmarshaller.unmarshalFromJSON(entityStream, AppState.class);
+        return jsonUnmarshaller.unmarshalFromJSON(entityStream, AppState.class);
     } catch (JAXBException e) {
       throw new IOException(e);
     }
