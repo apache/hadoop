@@ -27,7 +27,7 @@ import java.io.IOException;
  * established async calls to avoid buffer overflow in order for follow-on async
  * calls going correctly.
  */
-public class AsyncCallLimitExceededException extends IOException {
+public class AsyncCallLimitExceededException extends StandbyException {
   private static final long serialVersionUID = 1L;
 
   public AsyncCallLimitExceededException(String message) {

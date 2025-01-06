@@ -34,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.security.sasl.SaslException;
 
-import org.apache.hadoop.ipc.AsyncCallLimitExceededException;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
@@ -736,10 +735,6 @@ public class RetryPolicies {
             "Access denied");
       } else if (e instanceof SocketException
           || (e instanceof IOException && !(e instanceof RemoteException))) {
-        if (e instanceof AsyncCallLimitExceededException) {
-          return new RetryAction(RetryAction.RetryDecision.FAILOVER_AND_RETRY,
-              getFailoverOrRetrySleepTime(failovers));
-        }
         if (isIdempotentOrAtMostOnce) {
           return new RetryAction(RetryAction.RetryDecision.FAILOVER_AND_RETRY,
               getFailoverOrRetrySleepTime(retries));
