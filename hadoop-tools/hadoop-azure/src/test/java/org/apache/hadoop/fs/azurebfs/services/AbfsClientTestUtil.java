@@ -288,4 +288,36 @@ public final class AbfsClientTestUtil {
             Mockito.anyString(), Mockito.any(URL.class), Mockito.anyList(),
             Mockito.nullable(String.class));
   }
+
+  public static void mockGetDeleteBlobHandler(AbfsBlobClient blobClient,
+                                              FunctionRaisingIOE<BlobDeleteHandler, Void> functionRaisingIOE) {
+    Mockito.doAnswer(answer -> {
+              BlobDeleteHandler blobDeleteHandler = Mockito.spy(
+                      (BlobDeleteHandler) answer.callRealMethod());
+              Mockito.doAnswer(answer1 -> {
+                functionRaisingIOE.apply(blobDeleteHandler);
+                return answer1.callRealMethod();
+              }).when(blobDeleteHandler).execute();
+              return blobDeleteHandler;
+            })
+            .when(blobClient)
+            .getBlobDeleteHandler(Mockito.anyString(), Mockito.anyBoolean(),
+                    Mockito.any(TracingContext.class));
+  }
+  public static void mockGetRenameBlobHandler(AbfsBlobClient blobClient,
+                                              FunctionRaisingIOE<BlobRenameHandler, Void> functionRaisingIOE) {
+    Mockito.doAnswer(answer -> {
+              BlobRenameHandler blobRenameHandler = Mockito.spy(
+                      (BlobRenameHandler) answer.callRealMethod());
+              Mockito.doAnswer(answer1 -> {
+                functionRaisingIOE.apply(blobRenameHandler);
+                return answer1.callRealMethod();
+              }).when(blobRenameHandler).execute();
+              return blobRenameHandler;
+            })
+            .when(blobClient)
+            .getBlobRenameHandler(Mockito.anyString(), Mockito.anyString(),
+                    Mockito.nullable(String.class), Mockito.anyBoolean(),
+                    Mockito.any(TracingContext.class));
+  }
 }

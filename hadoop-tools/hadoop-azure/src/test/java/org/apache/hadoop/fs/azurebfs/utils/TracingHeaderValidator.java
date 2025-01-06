@@ -41,6 +41,8 @@ public class TracingHeaderValidator implements Listener {
   private String ingressHandler = null;
   private String position = null;
 
+  private Integer operatedBlobCount = null;
+
   @Override
   public void callTracingHeaderValidator(String tracingContextHeader,
       TracingHeaderFormat format) {
@@ -56,6 +58,7 @@ public class TracingHeaderValidator implements Listener {
     tracingHeaderValidator.primaryRequestId = primaryRequestId;
     tracingHeaderValidator.ingressHandler = ingressHandler;
     tracingHeaderValidator.position = position;
+    tracingHeaderValidator.operatedBlobCount = operatedBlobCount;
     return tracingHeaderValidator;
   }
 
@@ -81,6 +84,13 @@ public class TracingHeaderValidator implements Listener {
     validateBasicFormat(idList);
     if (format != TracingHeaderFormat.ALL_ID_FORMAT) {
       return;
+    }
+    if (idList.length >= 8) {
+      if (operatedBlobCount != null) {
+        Assertions.assertThat(Integer.parseInt(idList[7]))
+                .describedAs("OperatedBlobCount is incorrect")
+                .isEqualTo(operatedBlobCount);
+      }
     }
     if (!primaryRequestId.isEmpty() && !idList[3].isEmpty()) {
       Assertions.assertThat(idList[3])
@@ -170,5 +180,9 @@ public class TracingHeaderValidator implements Listener {
   @Override
   public void updatePosition(String position) {
     this.position = position;
+  }
+
+  public void setOperatedBlobCount(Integer operatedBlobCount) {
+    this.operatedBlobCount = operatedBlobCount;
   }
 }

@@ -628,4 +628,9 @@ public class BlobRenameHandler extends ListActionTaker {
             throw e;
         }
     }
+
+    @VisibleForTesting
+    public List<AbfsLease> getLeases() {
+        return leases;
+    }
 }
