@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.ipc;
 
-import java.io.IOException;
-
 /**
  * Signals that an AsyncCallLimitExceededException has occurred. This class is
  * used to make application code using async RPC aware that limit of max async
