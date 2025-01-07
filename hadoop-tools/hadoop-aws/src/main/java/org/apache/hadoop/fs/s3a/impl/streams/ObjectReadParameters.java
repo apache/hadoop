@@ -32,7 +32,7 @@ import static java.util.Objects.requireNonNull;
  * {@link ObjectInputStreamFactory}.
  * It is designed to support extra parameters added
  * in future.
- * <p>Note that the {@link #build()}
+ * <p>Note that the {@link #validate()}
  * operation does not freeze the parameters -instead it simply
  * verifies that all required values are set.
  */
@@ -173,7 +173,7 @@ public final class ObjectReadParameters {
    * Mock tests can skip this if required.
    * @return the object.
    */
-  public ObjectReadParameters build() {
+  public ObjectReadParameters validate() {
     // please keep in alphabetical order.
     requireNonNull(boundedThreadPool, "boundedThreadPool");
     requireNonNull(callbacks, "callbacks");

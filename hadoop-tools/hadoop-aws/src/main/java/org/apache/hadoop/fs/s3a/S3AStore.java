@@ -47,6 +47,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.impl.ClientManager;
@@ -78,6 +79,7 @@ public interface S3AStore extends
     ClientManager,
     IOStatisticsSource,
     ObjectInputStreamFactory,
+    PathCapabilities,
     Service {
 
   /**

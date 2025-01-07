@@ -61,6 +61,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.ProgressableProgressListener;
 import org.apache.hadoop.fs.s3a.Retries;
@@ -75,6 +76,7 @@ import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStream;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
+import org.apache.hadoop.fs.s3a.impl.streams.StreamThreadOptions;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
@@ -113,6 +115,7 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GE
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
  * Store Layer.
@@ -240,12 +243,46 @@ public class S3AStoreImpl
     initLocalDirAllocator();
   }
 
+
+  /**
+   * Return the store capabilities.
+   * If the object stream factory is non-null, hands off the
+   * query to that factory if not handled here.
+   * @param path path to query the capability of.
+   * @param capability non-null, non-empty string to query the path for support.
+   * @return known capabilities
+   */
+    @Override
+    public boolean hasPathCapability(final Path path, final String capability) {
+      switch (toLowerCase(capability)) {
+      case StreamCapabilities.IOSTATISTICS:
+        return true;
+      default:
+        return hasCapability(capability);
+      }
+    }
+
+  /**
+   * Return the capabilities of input streams created
+   * through the store.
+   * @param capability string to query the stream support for.
+   * @return capabilities declared supported in streams.
+   */
+  @Override
+  public boolean hasCapability(final String capability) {
+    if (objectInputStreamFactory != null) {
+      return objectInputStreamFactory.hasCapability(capability);
+    }
+    return false;
+  }
+
   /**
    * Initialize dir allocator if not already initialized.
    */
   private void initLocalDirAllocator() {
     String bufferDir = getConfig().get(BUFFER_DIR) != null
-        ? BUFFER_DIR : HADOOP_TMP_DIR;
+        ? BUFFER_DIR
+        : HADOOP_TMP_DIR;
     directoryAllocator = new LocalDirAllocator(bufferDir);
   }
 
@@ -897,11 +934,12 @@ public class S3AStoreImpl
   @Override /* ObjectInputStreamFactory */
   public ObjectInputStream readObject(ObjectReadParameters parameters)
       throws IOException {
-    return objectInputStreamFactory.readObject(parameters);
+    parameters.withDirectoryAllocator(getDirectoryAllocator());
+    return objectInputStreamFactory.readObject(parameters.validate());
   }
 
   @Override /* ObjectInputStreamFactory */
-  public ThreadOptions prefetchThreadRequirements() {
-    return objectInputStreamFactory.prefetchThreadRequirements();
+  public StreamThreadOptions threadRequirements() {
+    return objectInputStreamFactory.threadRequirements();
   }
 }

@@ -146,9 +146,9 @@ import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.impl.StoreContextFactory;
 import org.apache.hadoop.fs.s3a.impl.UploadContentProviders;
 import org.apache.hadoop.fs.s3a.impl.CSEUtils;
-import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
+import org.apache.hadoop.fs.s3a.impl.streams.StreamThreadOptions;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -157,7 +157,6 @@ import org.apache.hadoop.fs.statistics.FileSystemStatisticNames;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
-import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.store.audit.AuditEntryPoint;
@@ -925,8 +924,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Initialize the thread pools.
+   * <p>
    * This must be re-invoked after replacing the S3Client during test
    * runs.
+   * <p>
+   * It requires the S3Store to have been instantiated.
    * @param conf configuration.
    */
   private void initThreadPools() {
@@ -948,9 +950,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             TimeUnit.SECONDS,
             Duration.ZERO).getSeconds();
 
-    final ObjectInputStreamFactory.ThreadOptions requirements =
-        getStore().prefetchThreadRequirements();
-    int numPrefetchThreads = requirements.sharedThreads();
+    final StreamThreadOptions threadRequirements =
+        getStore().threadRequirements();
+    int numPrefetchThreads = threadRequirements.sharedThreads();
 
     int activeTasksForBoundedThreadPool = maxThreads;
     int waitingTasksForBoundedThreadPool = maxThreads + totalTasks + numPrefetchThreads;
@@ -968,7 +970,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     unboundedThreadPool.allowCoreThreadTimeOut(true);
     executorCapacity = intOption(conf,
         EXECUTOR_CAPACITY, DEFAULT_EXECUTOR_CAPACITY, 1);
-    if (requirements.createFuturePool()) {
+    if (threadRequirements.createFuturePool()) {
+      // create a future pool.
       final S3AInputStreamStatistics s3AInputStreamStatistics =
           statisticsContext.newInputStreamStatistics();
       futurePool = new ExecutorServiceFuturePool(
@@ -1855,24 +1858,32 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         auditSpan);
     fileInformation.applyOptions(readContext);
     LOG.debug("Opening '{}'", readContext);
-    // QUESTION: why are we creating a new executor on each open?
+
+    // what does the stream need
+    final StreamThreadOptions requirements =
+        getStore().threadRequirements();
+
+    // calculate the permit count.
+    final int permitCount = requirements.streamThreads() +
+        (requirements.vectorSupported()
+            ? vectoredActiveRangeReads
+            : 0);
+    // create an executor which is a subset of the
+    // bounded thread pool.
     final SemaphoredDelegatingExecutor pool = new SemaphoredDelegatingExecutor(
         boundedThreadPool,
-        vectoredActiveRangeReads,
+        permitCount,
         true,
         inputStreamStats);
+
+    // do not validate() the parameters as the store
+    // completes this.
     ObjectReadParameters parameters = new ObjectReadParameters()
         .withBoundedThreadPool(pool)
         .withCallbacks(createInputStreamCallbacks(auditSpan))
         .withContext(readContext.build())
-        .withDirectoryAllocator(getStore().getDirectoryAllocator())
         .withObjectAttributes(createObjectAttributes(path, fileStatus))
-        .withStreamStatistics(inputStreamStats)
-        .build();
-
-    // TODO: move into S3AStore and export the factory API through
-    // the store, which will add some of the features (callbacks, stats)
-    // before invoking the real factory
+        .withStreamStatistics(inputStreamStats);
     return new FSDataInputStream(getStore().readObject(parameters));
   }
 
@@ -4273,16 +4284,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
         // At this point the S3A client is shut down,
         // now the executor pools are closed
+
+        // shut future pool first as it wraps the bounded thread pool
+        if (futurePool != null) {
+          futurePool.shutdown(LOG, THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
+          futurePool = null;
+        }
         HadoopExecutors.shutdown(boundedThreadPool, LOG,
             THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
         boundedThreadPool = null;
         HadoopExecutors.shutdown(unboundedThreadPool, LOG,
             THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
         unboundedThreadPool = null;
-        if (futurePool != null) {
-          futurePool.shutdown(LOG, THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
-          futurePool = null;
-        }
+
         // other services are shutdown.
         cleanupWithLogger(LOG,
             delegationTokens.orElse(null),
@@ -5347,15 +5361,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case AWS_S3_ACCESS_GRANTS_ENABLED:
       return s3AccessGrantsEnabled;
 
-      // stream leak detection.
-    case StreamStatisticNames.STREAM_LEAKS:
-      return true;
-
     default:
       // is it a performance flag?
       if (performanceFlags.hasCapability(capability)) {
         return true;
       }
+
+      // ask the store for what input stream capabilities it offers
+      if (getStore() != null && getStore().hasCapability(capability)) {
+        return true;
+      }
+
       // fall through
     }
 

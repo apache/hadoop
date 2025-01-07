@@ -21,10 +21,10 @@ package org.apache.hadoop.fs.s3a.prefetch;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.impl.streams.AbstractObjectInputStreamFactory;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStream;
-import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
-import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.fs.s3a.impl.streams.StreamThreadOptions;
 
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_COUNT_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_COUNT;
@@ -39,8 +39,7 @@ import static org.apache.hadoop.util.Preconditions.checkState;
  * <p>
  * Reads and validates prefetch configuration options during service init.
  */
-public class PrefetchingInputStreamFactory extends AbstractService
-    implements ObjectInputStreamFactory {
+public class PrefetchingInputStreamFactory extends AbstractObjectInputStreamFactory {
 
   /** Size in bytes of a single prefetch block. */
   private int prefetchBlockSize;
@@ -85,7 +84,7 @@ public class PrefetchingInputStreamFactory extends AbstractService
    * @return a positive thread count.
    */
   @Override
-  public ThreadOptions prefetchThreadRequirements() {
-    return new ThreadOptions(prefetchBlockCount, true);
+  public StreamThreadOptions threadRequirements() {
+    return new StreamThreadOptions(prefetchBlockCount, 0, true, false);
   }
 }

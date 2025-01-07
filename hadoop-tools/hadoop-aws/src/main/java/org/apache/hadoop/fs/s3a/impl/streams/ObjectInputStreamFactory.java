@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.impl.streams;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.service.Service;
 
 /**
@@ -34,7 +35,8 @@ import org.apache.hadoop.service.Service;
  * {@link ObjectReadParameters} class, rather than change the
  * interface signature.
  */
-public interface ObjectInputStreamFactory extends Service {
+public interface ObjectInputStreamFactory
+    extends Service, StreamCapabilities {
 
   /**
    * Create a new input stream.
@@ -48,46 +50,10 @@ public interface ObjectInputStreamFactory extends Service {
       throws IOException;
 
   /**
-   * Get the number of prefetch threads required for this factory.
-   * @return the count of prefetch threads.
+   * Get the number of background threads required for this factory.
+   * @return the count of background threads.
    */
-  default ThreadOptions prefetchThreadRequirements() {
-    return new ThreadOptions(0, false);
-  }
+  StreamThreadOptions threadRequirements();
 
-  /**
-   * Will streams created through this factory have the requested capability?
-   * @param capability capability to probe for.
-   * @return true if a capability is known to be supported.
-   */
-  default boolean hasStreamCapability(String capability) {
-    return false;
-  }
-
-  /**
-   * Options for threading.
-   */
-  class ThreadOptions {
-    /** number of shared threads to included in the bounded pool. */
-    private final int sharedThreads;
-
-    /**
-     * flag to enable creation of a future pool around the bounded thread pool.
-     */
-    private final boolean createFuturePool;
-
-    public ThreadOptions(final int sharedThreads, final boolean createFuturePool) {
-      this.sharedThreads = sharedThreads;
-      this.createFuturePool = createFuturePool;
-    }
-
-    public int sharedThreads() {
-      return sharedThreads;
-    }
-
-    public boolean createFuturePool() {
-      return createFuturePool;
-    }
-  }
 }
 

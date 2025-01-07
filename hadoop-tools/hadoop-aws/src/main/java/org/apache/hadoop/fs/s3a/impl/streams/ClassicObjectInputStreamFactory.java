@@ -16,21 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl;
+package org.apache.hadoop.fs.s3a.impl.streams;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
-import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStream;
-import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory;
-import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
-import org.apache.hadoop.service.AbstractService;
+
+import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
  * Factory of classic {@link S3AInputStream} instances.
  */
-public class ClassicObjectInputStreamFactory extends AbstractService
-    implements ObjectInputStreamFactory {
+public class ClassicObjectInputStreamFactory extends AbstractObjectInputStreamFactory {
 
   public ClassicObjectInputStreamFactory() {
     super("ClassicObjectInputStreamFactory");
@@ -41,4 +39,28 @@ public class ClassicObjectInputStreamFactory extends AbstractService
       throws IOException {
     return new S3AInputStream(parameters);
   }
+
+  @Override
+  public boolean hasCapability(final String capability) {
+
+    switch (toLowerCase(capability)) {
+    case StreamCapabilities.IOSTATISTICS_CONTEXT:
+    case StreamCapabilities.READAHEAD:
+    case StreamCapabilities.UNBUFFER:
+    case StreamCapabilities.VECTOREDIO:
+      return true;
+    default:
+      return super.hasCapability(capability);
+    }
+  }
+
+  /**
+   * Get the number of background threads required for this factory.
+   * @return the count of background threads.
+   */
+  @Override
+  public StreamThreadOptions threadRequirements() {
+    return new StreamThreadOptions(0, 0, false, true);
+  }
+
 }

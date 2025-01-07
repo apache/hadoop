@@ -18,32 +18,42 @@
 
 package org.apache.hadoop.fs.s3a.impl.streams;
 
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_STREAM_TYPE_ANALYTICS;
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_STREAM_TYPE_CLASSIC;
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_STREAM_TYPE_PREFETCH;
+import java.util.function.Function;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.prefetch.PrefetchingInputStreamFactory;
 
 /**
  * Enum of input stream types.
+ * Each enum value contains the factory function actually used to create
+ * the factory.
  */
 public enum InputStreamType {
   /**
    * The classic input stream.
    */
-  Classic(INPUT_STREAM_TYPE_CLASSIC),
+  Classic("classic", c ->
+      new ClassicObjectInputStreamFactory()),
+
   /**
    * The prefetching input stream.
    */
-  Prefetch(INPUT_STREAM_TYPE_PREFETCH),
+  Prefetch("prefetch", c ->
+      new PrefetchingInputStreamFactory()),
+
   /**
    * The analytics input stream.
    */
-  Analytics(INPUT_STREAM_TYPE_ANALYTICS);
+  Analytics("analytics", c -> {
+    throw new IllegalArgumentException("not yet supported");
+  });
 
   /**
    * Name.
    */
   private final String name;
 
+  private final Function<Configuration, ObjectInputStreamFactory> factory;
   /**
    * String name.
    * @return the name
@@ -52,13 +62,24 @@ public enum InputStreamType {
     return name;
   }
 
-  InputStreamType(String name) {
+  InputStreamType(String name, final Function<Configuration, ObjectInputStreamFactory> factory) {
     this.name = name;
+    this.factory = factory;
+  }
+
+  /**
+   * Factory constructor.
+   * @return the factory associated with this stream type.
+   */
+  public Function<Configuration, ObjectInputStreamFactory> factory() {
+    return factory;
   }
 
   /**
    * What is the default type?
    */
   public static final InputStreamType DEFAULT_STREAM_TYPE = Classic;
+
+
 
 }
