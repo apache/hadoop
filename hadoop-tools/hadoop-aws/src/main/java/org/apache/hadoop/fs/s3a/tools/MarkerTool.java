@@ -346,6 +346,8 @@ public final class MarkerTool extends S3GuardTool {
       throws IOException {
     S3AFileSystem fs = bindFilesystem(scanArgs.getSourceFS());
 
+    // extract the callbacks needed for the rest of the work
+    storeContext = fs.createStoreContext();
     // qualify the path
     Path path = scanArgs.getPath();
     Path target = path.makeQualified(fs.getUri(), new Path("/"));

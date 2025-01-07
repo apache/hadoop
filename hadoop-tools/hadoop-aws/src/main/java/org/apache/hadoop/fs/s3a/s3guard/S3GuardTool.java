@@ -385,8 +385,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
 
     @VisibleForTesting
     public static final String IS_MARKER_AWARE =
-        "\tThe S3A connector is compatible with buckets where"
-            + " directory markers are not deleted";
+        "\tThe S3A connector does not delete markers";
 
     public static final String CAPABILITY_FORMAT = "\t%s %s%n";
 
@@ -542,7 +541,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
       }
 
       // directory markers
-      processMarkerOption(out, fs,
+      processMarkerOption(out,
           getCommandFormat().getOptValue(MARKERS_FLAG));
 
       // and check for capabilities
@@ -569,22 +568,29 @@ public abstract class S3GuardTool extends Configured implements Tool,
     /**
      * Validate the marker options.
      * @param out output stream
-     * @param fs filesystem
      * @param marker desired marker option -may be null.
      */
     private void processMarkerOption(final PrintStream out,
-        final S3AFileSystem fs,
         final String marker) {
       println(out, "%nThis version of Hadoop always retains directory markers");
 
-      final String optionName = marker.toLowerCase(Locale.ROOT);
-      switch(optionName) {
+
+      String desiredMarker = marker == null
+          ? ""
+          : marker.trim().toLowerCase(Locale.ROOT);
+      switch(desiredMarker) {
+      case "":
       case DIRECTORY_MARKER_POLICY_KEEP:
-      case MARKERS_AWARE:
-        println(out, optionName);
         break;
+
+      case MARKERS_AWARE:
+        // simple awareness test -provides a way to validate compatibility
+        // on the command line
+        println(out, IS_MARKER_AWARE);
+        break;
+
       default:
-        throw badState("Unsupported Marker Policy \"%s\"", optionName);
+        throw badState("Unsupported Marker Policy \"%s\"", desiredMarker);
       }
     }
 

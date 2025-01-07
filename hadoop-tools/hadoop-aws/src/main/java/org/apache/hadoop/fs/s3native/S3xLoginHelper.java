@@ -33,11 +33,11 @@ import static org.apache.commons.lang3.StringUtils.equalsIgnoreCase;
 
 /**
  * Class to aid logging in to S3 endpoints.
- * It is in this package for historical reasons.
- * <p>
+ * It is in S3N so that it can be used across all S3 filesystems.
+ *
  * The core function of this class was the extraction and decoding of user:secret
  * information from filesystems URIs.
- * All that is left how is some URI canonicalization and checking.
+ * All that is left now is some URI canonicalization and checking.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -56,7 +56,8 @@ public final class S3xLoginHelper {
     // look for login secrets and fail if they are present.
     Objects.requireNonNull(uri, "null uri");
     Objects.requireNonNull(uri.getScheme(), "null uri.getScheme()");
-    return uri;
+    Objects.requireNonNull(uri.getHost(), "null uri host.");
+    return URI.create(uri.getScheme() + "://" + uri.getHost());
   }
 
   /**
