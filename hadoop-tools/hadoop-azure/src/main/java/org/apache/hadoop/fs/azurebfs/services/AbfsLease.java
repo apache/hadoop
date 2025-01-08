@@ -46,10 +46,10 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_THR
  * AbfsLease manages an Azure blob lease. It acquires an infinite lease on instantiation and
  * releases the lease when free() is called. Use it to prevent writes to the blob by other
  * processes that don't have the lease.
- *
+ * <p>
  * Creating a new Lease object blocks the caller until the Azure blob lease is acquired. It will
  * retry a fixed number of times before failing if there is a problem acquiring the lease.
- *
+ * <p>
  * Call free() to release the Lease. If the holder process dies, AzureBlobFileSystem breakLease
  * will need to be called before another client will be able to write to the file.
  */
@@ -86,6 +86,17 @@ public final class AbfsLease {
     }
   }
 
+    /**
+     * Create a new lease object and acquire a lease on the given path.
+     *
+     * @param client              AbfsClient
+     * @param path                Path to acquire lease on
+     * @param isAsync             Whether to acquire lease asynchronously
+     * @param leaseRefreshDuration Duration in milliseconds to renew the lease
+     * @param eTag                ETag of the file
+     * @param tracingContext      Tracing context
+     * @throws AzureBlobFileSystemException if the lease cannot be acquired
+     */
   public AbfsLease(AbfsClient client, String path,
                    final boolean isAsync, final long leaseRefreshDuration,
                    final String eTag, TracingContext tracingContext) throws AzureBlobFileSystemException {
@@ -93,6 +104,19 @@ public final class AbfsLease {
             DEFAULT_LEASE_ACQUIRE_RETRY_INTERVAL, leaseRefreshDuration, eTag, tracingContext);
   }
 
+  /**
+   * Create a new lease object and acquire a lease on the given path.
+   *
+   * @param client              AbfsClient
+   * @param path                Path to acquire lease on
+   * @param isAsync             Whether to acquire lease asynchronously
+   * @param acquireMaxRetries   Maximum number of retries to acquire lease
+   * @param acquireRetryInterval Retry interval in seconds to acquire lease
+   * @param leaseRefreshDuration Duration in milliseconds to renew the lease
+   * @param eTag                ETag of the file
+   * @param tracingContext      Tracing context
+   * @throws AzureBlobFileSystemException if the lease cannot be acquired
+   */
   @VisibleForTesting
   public AbfsLease(AbfsClient client, String path, final boolean isAsync, int acquireMaxRetries,
                    int acquireRetryInterval, final long leaseRefreshDuration,
@@ -133,6 +157,17 @@ public final class AbfsLease {
     LOG.debug("Acquired lease {} on {}", leaseID, path);
   }
 
+  /**
+   * Acquire a lease on the given path.
+   *
+   * @param retryPolicy        Retry policy
+   * @param numRetries         Number of retries
+   * @param retryInterval      Retry interval in seconds
+   * @param delay              Delay in seconds
+   * @param eTag               ETag of the file
+   * @param tracingContext     Tracing context
+   * @throws LeaseException if the lease cannot be acquired
+   */
   private void acquireLease(RetryPolicy retryPolicy, int numRetries,
       int retryInterval, long delay, final String eTag, TracingContext tracingContext)
       throws LeaseException {
@@ -214,6 +249,9 @@ public final class AbfsLease {
     }
   }
 
+    /**
+     * Cancel the lease renewal timer.
+     */
   public void cancelTimer() {
     if (leaseTimerTask != null) {
       leaseTimerTask.cancel();
@@ -221,24 +259,45 @@ public final class AbfsLease {
     timer.purge();
   }
 
+  /**
+   * Check if the lease has been freed.
+   *
+   * @return true if the lease has been freed
+   */
   public boolean isFreed() {
     return leaseFreed;
   }
 
+  /**
+   * Get the lease ID.
+   *
+   * @return lease ID
+   */
   public String getLeaseID() {
     return leaseID;
   }
 
+  /**
+   * Get the number of times the lease was retried.
+   * @return number of acquired retry count
+   */
   @VisibleForTesting
   public int getAcquireRetryCount() {
     return acquireRetryCount;
   }
 
+  /**
+   * Get Tracing Context.
+   * @return TracingContext tracing context
+   */
   @VisibleForTesting
   public TracingContext getTracingContext() {
     return tracingContext;
   }
 
+  /**
+   * Lease renewal timer task.
+   */
   private static class LeaseTimerTask extends TimerTask {
     private final AbfsClient client;
     private final String path;

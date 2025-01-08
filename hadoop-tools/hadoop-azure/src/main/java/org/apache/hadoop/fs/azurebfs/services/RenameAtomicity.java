@@ -21,6 +21,10 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -72,6 +76,8 @@ public class RenameAtomicity {
 
     private int renamePendingJsonLen;
 
+    private final AbfsLease sourcePathLease;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final Random RANDOM = new Random();
@@ -99,6 +105,7 @@ public class RenameAtomicity {
         this.renameJsonPath = renameJsonPath;
         this.tracingContext = tracingContext;
         this.srcEtag = srcEtag;
+        this.sourcePathLease = null;
     }
 
     /**
@@ -109,17 +116,20 @@ public class RenameAtomicity {
      * @param tracingContext Tracing context
      * @param srcEtag ETag of the source directory
      * @param abfsClient AbfsClient instance
+     * @param sourceLease Lease of the source directory
      */
     public RenameAtomicity(final Path renameJsonPath,
                            final int renamePendingJsonFileLen,
                            TracingContext tracingContext,
                            final String srcEtag,
-                           final AbfsClient abfsClient) {
+                           final AbfsClient abfsClient,
+                           final AbfsLease sourceLease) {
         this.abfsClient = (AbfsBlobClient) abfsClient;
         this.renameJsonPath = renameJsonPath;
         this.tracingContext = tracingContext;
         this.srcEtag = srcEtag;
         this.renamePendingJsonLen = renamePendingJsonFileLen;
+        this.sourcePathLease = sourceLease;
     }
 
     /**
@@ -149,7 +159,8 @@ public class RenameAtomicity {
 
                 BlobRenameHandler blobRenameHandler = new BlobRenameHandler(
                         this.src.toUri().getPath(), dst.toUri().getPath(),
-                        abfsClient, srcEtag, true, true, tracingContext);
+                        abfsClient, srcEtag, true, true,
+                        sourcePathLease, tracingContext);
 
                 blobRenameHandler.execute();
             }
@@ -199,7 +210,12 @@ public class RenameAtomicity {
         // PutBlob on the path.
         AbfsRestOperation putBlobOp = abfsClient.createPath(path.toUri().getPath(),
                 true,
-                true, null, false, null, null, tracingContext);
+                true,
+                null,
+                false,
+                null,
+                null,
+                tracingContext);
         String eTag = extractEtagHeader(putBlobOp.getResult());
 
         String blockId = generateBlockId();
@@ -212,8 +228,9 @@ public class RenameAtomicity {
         abfsClient.append(path.toUri().getPath(), bytes,
                 appendRequestParameters, null, null, tracingContext);
 
+        List<String> blockIdList = new ArrayList<>(Collections.singleton(blockId));
         // PutBlockList on the path.
-        String blockList = ""; //generateBlockListXml(Collections.singleton(blockId));
+        String blockList = "";//generateBlockListXml(blockIdList);
         abfsClient.flush(blockList.getBytes(StandardCharsets.UTF_8),
                 path.toUri().getPath(), true, null, null, eTag, null, tracingContext);
     }
@@ -222,6 +239,7 @@ public class RenameAtomicity {
      * Before starting the atomic rename, create a file with -RenamePending.json
      * suffix in the source parent directory. This file contains the states
      * required source, destination, and source-eTag for the rename operation.
+     * <p>
      * If the path that is getting renamed is a /sourcePath, then the JSON file
      * will be /sourcePath-RenamePending.json.
      *
@@ -249,7 +267,7 @@ public class RenameAtomicity {
              * if-match header. If file is not there, the conditional header will fail,
              * the server will return 412.
              */
-            if (isPreRenameRetryableException(e)) {
+            if (isPreRenameRetriableException(e)) {
                 preRenameRetryCount++;
                 if (preRenameRetryCount == 1) {
                     return preRename();
@@ -264,7 +282,7 @@ public class RenameAtomicity {
      * @param e Exception to be checked
      * @return true if the exception is retryable, false otherwise
      */
-    private boolean isPreRenameRetryableException(IOException e) {
+    private boolean isPreRenameRetriableException(IOException e) {
         AbfsRestOperationException ex;
         while (e != null) {
             if (e instanceof AbfsRestOperationException) {

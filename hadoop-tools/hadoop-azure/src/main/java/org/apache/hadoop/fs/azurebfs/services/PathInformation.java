@@ -18,26 +18,44 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+/**
+ * Information about a path.
+ */
 public class PathInformation {
     private Boolean pathExists;
     private Boolean isDirectory;
+    private Boolean isImplicit;
     private String eTag;
 
-    public PathInformation(Boolean pathExists, Boolean isDirectory, String eTag) {
+    /**
+     * Constructor.
+     * @param pathExists The path exists.
+     * @param isDirectory Is the path a directory?
+     * @param eTag The ETag of the path.
+     * @param isImplicit Is the path implicit?
+     */
+    public PathInformation(Boolean pathExists, Boolean isDirectory, String eTag, Boolean isImplicit) {
         this.pathExists = pathExists;
         this.isDirectory = isDirectory;
         this.eTag = eTag;
+        this.isImplicit = isImplicit;
     }
 
     public PathInformation() {
     }
 
+    /**
+     * Copy the path information.
+     * @param pathInformation The path information to copy.
+     */
     public void copy(PathInformation pathInformation) {
         this.pathExists = pathInformation.getPathExists();
         this.isDirectory = pathInformation.getIsDirectory();
         this.eTag = pathInformation.getETag();
+        this.isImplicit = pathInformation.getIsImplicit();
     }
 
+    /** Setters and Getters */
     public String getETag() {
         return eTag;
     }
@@ -48,5 +66,13 @@ public class PathInformation {
 
     public Boolean getIsDirectory() {
         return isDirectory;
+    }
+
+    public Boolean getIsImplicit() {
+        return isImplicit;
+    }
+
+    void setETag(String eTag) {
+        this.eTag = eTag;
     }
 }

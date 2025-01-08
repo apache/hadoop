@@ -30,16 +30,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_LIST_MAX_RESULTS;
 
 /**
  * ListActionTaker is an abstract class that provides a way to list the paths
@@ -52,7 +55,7 @@ public abstract class ListActionTaker {
 
     private final Path path;
 
-    private final AbfsBlobClient abfsBlobClient;
+    protected final AbfsBlobClient abfsClient;
 
     private final TracingContext tracingContext;
 
@@ -64,25 +67,17 @@ public abstract class ListActionTaker {
     /** Constructor.
      *
      * @param path the path to list recursively.
-     * @param abfsBlobClient the AbfsBlobClient to use for listing.
+     * @param abfsClient the AbfsBlobClient to use for listing.
      * @param tracingContext the tracing context to use for listing.
      */
     public ListActionTaker(Path path,
-                           AbfsBlobClient abfsBlobClient,
+                           AbfsBlobClient abfsClient,
                            TracingContext tracingContext) {
         this.path = path;
-        this.abfsBlobClient = abfsBlobClient;
+        this.abfsClient = abfsClient;
         this.tracingContext = tracingContext;
         executorService = Executors.newFixedThreadPool(
                 getMaxConsumptionParallelism());
-    }
-
-    /** Get the AbfsBlobClient.
-     *
-     * @return the AbfsBlobClient.
-     */
-    public AbfsBlobClient getAbfsBlobClient() {
-        return abfsBlobClient;
     }
 
     /** Get the maximum number of parallelism for consumption.
@@ -99,18 +94,11 @@ public abstract class ListActionTaker {
      */
     abstract boolean takeAction(Path path) throws AzureBlobFileSystemException;
 
-    /** Take action on a list of paths in parallel.
-     *
-     * @param paths the list of paths to take action on.
-     * @return true if the action is successful.
-     * @throws AzureBlobFileSystemException if the action fails.
-     */
-    private boolean takeAction(List<Path> paths) throws AzureBlobFileSystemException {
+    private boolean takeAction(List<Path> paths)
+            throws AzureBlobFileSystemException {
         List<Future<Boolean>> futureList = new ArrayList<>();
         for (Path path : paths) {
-            Future<Boolean> future = executorService.submit(() -> {
-                return takeAction(path);
-            });
+            Future<Boolean> future = executorService.submit(() -> takeAction(path));
             futureList.add(future);
         }
 
@@ -144,12 +132,12 @@ public abstract class ListActionTaker {
      * @return true if the action is successful.
      * @throws AzureBlobFileSystemException if the action fails.
      */
-    public boolean listRecursiveAndTakeAction() throws AzureBlobFileSystemException {
-        AbfsConfiguration configuration = abfsBlobClient.getAbfsConfiguration();
+    public boolean listRecursiveAndTakeAction()
+            throws AzureBlobFileSystemException {
+        AbfsConfiguration configuration = abfsClient.getAbfsConfiguration();
         Thread producerThread = null;
         try {
-            ListBlobQueue listBlobQueue = new ListBlobQueue(
-                    configuration.getProducerQueueMaxSize(), getMaxConsumptionParallelism());
+            ListBlobQueue listBlobQueue = createListBlobQueue(configuration);
             producerThread = new Thread(() -> {
                 try {
                     produceConsumableList(listBlobQueue);
@@ -183,49 +171,95 @@ public abstract class ListActionTaker {
         }
     }
 
-    /** List the children of the path recursively and queue them in into
-     * {@link ListBlobQueue}.
+    /**
+     * Create a {@link ListBlobQueue} instance.
      *
-     * @param listBlobQueue the queue to which the paths are enqueued.
+     * @param configuration the configuration to use.
+     * @return the created {@link ListBlobQueue} instance.
+     * @throws InvalidConfigurationValueException if the configuration is invalid.
+     */
+    @VisibleForTesting
+    protected ListBlobQueue createListBlobQueue(final AbfsConfiguration configuration)
+            throws InvalidConfigurationValueException {
+        return new ListBlobQueue(
+                configuration.getProducerQueueMaxSize(),
+                getMaxConsumptionParallelism(),
+                configuration.getListingMaxConsumptionLag()
+        );
+    }
+
+    /**
+     * Produce the consumable list of paths.
+     *
+     * @param listBlobQueue the {@link ListBlobQueue} to enqueue the paths.
      * @throws AzureBlobFileSystemException if the listing fails.
      */
     private void produceConsumableList(final ListBlobQueue listBlobQueue)
             throws AzureBlobFileSystemException {
         String continuationToken = null;
         do {
-            List<Path> paths = new ArrayList<>();
-            final int queueAvailableSize = listBlobQueue.availableSize();
-            if (queueAvailableSize == 0) {
-                break;
-            }
-            final AbfsRestOperation op;
-            try {
-                op = abfsBlobClient.listPath(path.toUri().getPath(),
-                        true,
-                        queueAvailableSize, continuationToken,
-                        tracingContext);
-            } catch (AzureBlobFileSystemException ex) {
-                throw ex;
-            } catch (IOException ex) {
-                throw new AbfsRestOperationException(-1, null,
-                        "Unknown exception from listing: " + ex.getMessage(), ex);
-            }
-
-            ListResultSchema retrievedSchema = op.getResult().getListResultSchema();
-            if (retrievedSchema == null) {
-                continue;
-            }
-            continuationToken
-                    = ((BlobListResultSchema) retrievedSchema).getNextMarker();
-            for (ListResultEntrySchema entry : retrievedSchema.paths()) {
-                Path entryPath = new Path(ROOT_PATH, entry.name());
-                if (!entryPath.equals(this.path)) {
-                    paths.add(entryPath);
-                }
-            }
-            listBlobQueue.enqueue(paths);
+            continuationToken = listAndEnqueue(listBlobQueue, continuationToken);
         } while (!producerThreadToBeStopped.get() && continuationToken != null
                 && !listBlobQueue.getConsumptionFailed());
         listBlobQueue.complete();
+    }
+
+    /**
+     * List the paths and enqueue them into the {@link ListBlobQueue}.
+     *
+     * @param listBlobQueue the {@link ListBlobQueue} to enqueue the paths.
+     * @param continuationToken the continuation token to use for listing.
+     * @return the continuation token for the next listing.
+     * @throws AzureBlobFileSystemException if the listing fails.
+     */
+    @VisibleForTesting
+    protected String listAndEnqueue(final ListBlobQueue listBlobQueue,
+                                    String continuationToken) throws AzureBlobFileSystemException {
+        final int queueAvailableSizeForProduction = Math.min(
+                DEFAULT_AZURE_LIST_MAX_RESULTS,
+                listBlobQueue.availableSizeForProduction());
+        if (queueAvailableSizeForProduction == 0) {
+            return null;
+        }
+        final AbfsRestOperation op;
+        try {
+            op = abfsClient.listPath(path.toUri().getPath(),
+                    true,
+                    queueAvailableSizeForProduction, continuationToken,
+                    tracingContext);
+        } catch (AzureBlobFileSystemException ex) {
+            throw ex;
+        } catch (IOException ex) {
+            throw new AbfsRestOperationException(-1, null,
+                    "Unknown exception from listing: " + ex.getMessage(), ex);
+        }
+
+        ListResultSchema retrievedSchema = op.getResult().getListResultSchema();
+        if (retrievedSchema == null) {
+            return continuationToken;
+        }
+        continuationToken
+                = ((BlobListResultSchema) retrievedSchema).getNextMarker();
+        List<Path> paths = new ArrayList<>();
+        addPaths(paths, retrievedSchema);
+        listBlobQueue.enqueue(paths);
+        return continuationToken;
+    }
+
+    /**
+     * Add the paths from the retrieved schema to the list of paths.
+     *
+     * @param paths the list of paths to add to.
+     * @param retrievedSchema the retrieved schema.
+     */
+    @VisibleForTesting
+    protected void addPaths(final List<Path> paths,
+                            final ListResultSchema retrievedSchema) {
+        for (ListResultEntrySchema entry : retrievedSchema.paths()) {
+            Path entryPath = new Path(ROOT_PATH, entry.name());
+            if (!entryPath.equals(this.path)) {
+                paths.add(entryPath);
+            }
+        }
     }
 }

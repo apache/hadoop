@@ -370,6 +370,12 @@ public final class ConfigurationKeys {
           = "fs.azure.blob.atomic.rename.lease.refresh.duration";
   /**Maximum number of blob information enqueued in memory for rename or delete orchestration {@value}*/
   public static final String FS_AZURE_PRODUCER_QUEUE_MAX_SIZE = "fs.azure.blob.dir.list.producer.queue.max.size";
+  /**
+   * Maximum consumer lag (count of blob information which is yet to be taken for operation)
+   * in blob listing which can be tolerated before making producer to wait for
+   * consumer lag to become tolerable: {@value}.
+   */
+  public static final String FS_AZURE_CONSUMER_MAX_LAG = "fs.azure.blob.dir.list.consumer.max.lag";
   /**Maximum number of thread per blob-rename orchestration {@value}*/
   public static final String FS_AZURE_BLOB_DIR_RENAME_MAX_THREAD = "fs.azure.blob.dir.rename.max.thread";
   /**Maximum number of thread per blob-delete orchestration {@value}*/

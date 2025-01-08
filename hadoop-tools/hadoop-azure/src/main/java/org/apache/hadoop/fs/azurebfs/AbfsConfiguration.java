@@ -412,6 +412,10 @@ public class AbfsConfiguration{
   private int producerQueueMaxSize;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+          FS_AZURE_CONSUMER_MAX_LAG, DefaultValue = DEFAULT_FS_AZURE_CONSUMER_MAX_LAG)
+  private int listingMaxConsumptionLag;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_BLOB_DIR_RENAME_MAX_THREAD, DefaultValue = DEFAULT_FS_AZURE_BLOB_RENAME_THREAD)
   private int blobRenameDirConsumptionParallelism;
 
@@ -1546,15 +1550,23 @@ public class AbfsConfiguration{
   public long getBlobCopyProgressPollWaitMillis() {
     return blobCopyProgressPollWaitMillis;
   }
+
   public long getAtomicRenameLeaseRefreshDuration() {
     return blobAtomicRenameLeaseRefreshDuration;
   }
+
   public int getProducerQueueMaxSize() {
     return producerQueueMaxSize;
   }
+
+  public int getListingMaxConsumptionLag() {
+    return listingMaxConsumptionLag;
+  }
+
   public int getBlobRenameDirConsumptionParallelism() {
     return blobRenameDirConsumptionParallelism;
   }
+
   public int getBlobDeleteDirConsumptionParallelism() {
     return blobDeleteDirConsumptionParallelism;
   }

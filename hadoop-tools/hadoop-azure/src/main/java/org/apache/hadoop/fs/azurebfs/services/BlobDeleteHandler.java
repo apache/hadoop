@@ -20,12 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -41,9 +37,6 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
  * deleting the blobs and creating the parent directory marker file if needed.
  */
 public class BlobDeleteHandler extends ListActionTaker {
-
-    private static final Logger LOG = LoggerFactory.getLogger(
-            AzureBlobFileSystemStore.class);
 
     private final Path path;
 
@@ -78,7 +71,7 @@ public class BlobDeleteHandler extends ListActionTaker {
      */
     @Override
     int getMaxConsumptionParallelism() {
-        return getAbfsBlobClient().getAbfsConfiguration()
+        return abfsClient.getAbfsConfiguration()
                 .getBlobDeleteDirConsumptionParallelism();
     }
 
@@ -90,7 +83,7 @@ public class BlobDeleteHandler extends ListActionTaker {
      */
     private boolean deleteInternal(final Path path)
             throws AzureBlobFileSystemException {
-        getAbfsBlobClient().deleteBlobPath(path, null, tracingContext);
+        abfsClient.deleteBlobPath(path, null, tracingContext);
         deleteCount.incrementAndGet();
         return true;
     }
@@ -158,9 +151,14 @@ public class BlobDeleteHandler extends ListActionTaker {
             throws AzureBlobFileSystemException {
         if (!path.isRoot() && !path.getParent().isRoot()) {
             try {
-                getAbfsBlobClient().createPath(path.getParent().toUri().getPath(), false, false,
+                abfsClient.createPath(path.getParent().toUri().getPath(),
+                        false,
+                        false,
                         null,
-                        false, null, null, tracingContext);
+                        false,
+                        null,
+                        null,
+                        tracingContext);
             } catch (AbfsRestOperationException ex) {
                 if (ex.getStatusCode() != HTTP_CONFLICT) {
                     throw ex;

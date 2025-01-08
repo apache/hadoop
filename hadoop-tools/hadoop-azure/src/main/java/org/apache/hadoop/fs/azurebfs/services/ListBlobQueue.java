@@ -25,6 +25,9 @@ import java.util.Queue;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
+
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CONSUMER_MAX_LAG;
 
 /**
  * Data-structure to hold the list of paths to be processed. The paths are
@@ -35,7 +38,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
  * server. The consumer can mark the queue as failed if it encounters any exception
  * while consuming the paths.
  */
-public class ListBlobQueue {
+class ListBlobQueue {
 
     private final Queue<Path> pathQueue = new ArrayDeque<>();
 
@@ -49,14 +52,40 @@ public class ListBlobQueue {
 
     private volatile AzureBlobFileSystemException failureFromProducer;
 
-    /** Constructor.
-     *
-     * @param maxSize maximum size of the queue
-     * @param consumeSetSize number of paths to be consumed at a time
+    /**
+     * Maximum number of entries in the queue allowed for letting the producer to
+     * produce. If the current size of the queue is greater than or equal to
+     * maxConsumptionLag, the producer will wait until the current size of the queue
+     * becomes lesser than maxConsumptionLag. This parameter is used to control the
+     * behavior of the producer-consumer pattern and preventing producer from
+     * rapidly producing very small amount of items.
+     * <p>
+     * For example, let's say maxSize is 10000 and maxConsumptionLag is 5000.
+     * The producer will stop producing when the current size of the queue is 5000
+     * and will wait until the current size of the queue becomes lesser than 5000.
+     * Once, the size becomes lesser than 5000, producer can produce (maxSize - currentSize)
+     * of items, which would make the current size of the queue to be 10000. Then again
+     * it will wait for 5000 items to be consumed before generating next 5000 items.
+     * <p>
+     * If this is not used, the producer will keep on producing items as soon as
+     * the queue become available with small size. Let say, 5 items got consumed,
+     * producer would make a server call for only 5 items and would populate the queue.
+     * <p>
+     * This mechanism would prevent producer making server calls for very small amount
+     * of items.
      */
-    ListBlobQueue(int maxSize, int consumeSetSize) {
+    private final int maxConsumptionLag;
+
+    ListBlobQueue(int maxSize, int consumeSetSize, int maxConsumptionLag)
+            throws InvalidConfigurationValueException {
         this.maxSize = maxSize;
+        this.maxConsumptionLag = maxConsumptionLag;
         this.consumeSetSize = consumeSetSize;
+
+        if (maxConsumptionLag >= maxSize) {
+            throw new InvalidConfigurationValueException(FS_AZURE_CONSUMER_MAX_LAG,
+                    "maxConsumptionLag should be lesser than maxSize");
+        }
     }
 
     /** Mark the queue as failed.*/
@@ -131,7 +160,7 @@ public class ListBlobQueue {
     private List<Path> dequeue() {
         List<Path> pathListForConsumption = new ArrayList<>();
         int counter = 0;
-        while (counter < consumeSetSize && pathQueue.size() > 0) {
+        while (counter < consumeSetSize && !pathQueue.isEmpty()) {
             pathListForConsumption.add(pathQueue.poll());
             counter++;
         }
@@ -146,15 +175,15 @@ public class ListBlobQueue {
     }
 
     /**
-     * Returns the available size of the queue. This is calculated by subtracting the current size of the queue
-     * from its maximum size. If the queue is full, this method will wait until some elements are consumed and
-     * space becomes available. If consumption has failed, it immediately returns zero. This method is synchronized
-     * to prevent concurrent modifications of the queue.
+     * Returns the available size of the queue for production. This is calculated by subtracting
+     * the current size of the queue from its maximum size. This method waits until
+     * the current size of the queue becomes lesser than the maxConsumptionLag. This
+     * method is synchronized to prevent concurrent modifications of the queue.
      *
-     * @return the available size of the queue
+     * @return the available size of the queue.
      */
-    synchronized int availableSize() {
-        while (maxSize - size() <= 0) {
+    synchronized int availableSizeForProduction() {
+        while (size() >= maxConsumptionLag) {
             if (isConsumptionFailed) {
                 return 0;
             }

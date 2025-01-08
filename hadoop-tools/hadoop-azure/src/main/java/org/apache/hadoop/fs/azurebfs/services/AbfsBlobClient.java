@@ -47,6 +47,7 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
@@ -73,12 +74,14 @@ import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 
-import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
-import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.isKeyForDirectorySet;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ACQUIRE_LEASE_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_BLOB_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_BLOCK;
@@ -157,7 +160,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_MAX_RESULTS;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_PREFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_RESTYPE;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.PATH_EXISTS;
+import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.isKeyForDirectorySet;
 
 /**
  * AbfsClient interacting with Blob endpoint.
@@ -352,7 +355,7 @@ public class AbfsBlobClient extends AbfsClient {
       abfsUriQueryBuilder.addQuery(QUERY_PARAM_DELIMITER, FORWARD_SLASH);
     }
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAX_RESULTS, String.valueOf(listMaxResults));
-    appendSASTokenToQuery(relativePath, SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilder);
+    appendSASTokenToQuery(relativePath, SASTokenProvider.LIST_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -381,6 +384,34 @@ public class AbfsBlobClient extends AbfsClient {
       return listOp;
     }
     return op;
+  }
+
+  private void fixAtomicEntriesInListResults(final AbfsRestOperation op,
+                                             final TracingContext tracingContext) throws AzureBlobFileSystemException {
+    /*
+     * Crashed HBase log rename recovery is done by Filesystem.getFileStatus and
+     * Filesystem.listStatus.
+     */
+    if (tracingContext == null
+            || tracingContext.getOpType() != FSOperationType.LISTSTATUS
+            || op == null || op.getResult() == null
+            || op.getResult().getStatusCode() != HTTP_OK) {
+      return;
+    }
+    BlobListResultSchema listResultSchema
+            = (BlobListResultSchema) op.getResult().getListResultSchema();
+    if (listResultSchema == null) {
+      return;
+    }
+    List<BlobListResultEntrySchema> filteredEntries = new ArrayList<>();
+    for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
+      if (!takeListPathAtomicRenameKeyAction(entry.path(),
+              (int) (long) entry.contentLength(), tracingContext)) {
+        filteredEntries.add(entry);
+      }
+    }
+
+    listResultSchema.withPaths(filteredEntries);
   }
 
   /**
@@ -732,7 +763,21 @@ public class AbfsBlobClient extends AbfsClient {
             destination, sourceEtag, isAtomicRenameKey(source), tracingContext
     );
     incrementAbfsRenamePath();
-    return blobRenameHandler.execute();
+    if( blobRenameHandler.execute()) {
+      final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+      final URL url = createRequestUrl(destination, abfsUriQueryBuilder.toString());
+      final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+      final AbfsRestOperation successOp = getAbfsRestOperation(
+              AbfsRestOperationType.RenamePath, HTTP_METHOD_PUT,
+              url, requestHeaders);
+      successOp.hardSetResult(HttpURLConnection.HTTP_OK);
+      return new AbfsClientRenameResult(successOp, true, false);
+    } else {
+      throw new AbfsRestOperationException(HTTP_INTERNAL_ERROR,
+              AzureServiceErrorCode.UNKNOWN.getErrorCode(),
+              "FNS-Blob Rename was not successfull",
+              null);
+    }
   }
 
   @VisibleForTesting
@@ -769,6 +814,7 @@ public class AbfsBlobClient extends AbfsClient {
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
     requestHeaders.add(new AbfsHttpHeader(CONTENT_LENGTH, String.valueOf(buffer.length)));
+    requestHeaders.add(new AbfsHttpHeader(IF_MATCH, reqParams.getETag()));
     if (reqParams.getLeaseId() != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, reqParams.getLeaseId()));
     }
@@ -1071,7 +1117,7 @@ public class AbfsBlobClient extends AbfsClient {
      */
     if (tracingContext.getOpType() == FSOperationType.GET_FILESTATUS
             && op.getResult() != null && checkIsDir(op.getResult())) {
-      takeGetPathStatusAtomicRenameKeyAction(new Path(path), tracingContext);
+      takeGetPathStatusAtomicRenameKeyAction(new Path(path), null, tracingContext);
     }
     return op;
   }
@@ -1097,7 +1143,7 @@ public class AbfsBlobClient extends AbfsClient {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN,
         String.valueOf(getAbfsConfiguration().isUpnUsed()));
-    appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION,
+    appendSASTokenToQuery(path, SASTokenProvider.GET_PROPERTIES_OPERATION,
         abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
@@ -1687,9 +1733,10 @@ public class AbfsBlobClient extends AbfsClient {
    * @return true if action is taken.
    * @throws AzureBlobFileSystemException server error
    */
-  public boolean takeListPathAtomicRenameKeyAction(final Path path,
-                                                   final int renamePendingJsonLen, final TracingContext tracingContext)
-          throws IOException {
+  private boolean takeListPathAtomicRenameKeyAction(final Path path,
+                                                    final int renamePendingJsonLen,
+                                                    final TracingContext tracingContext)
+          throws AzureBlobFileSystemException {
     if (path == null || path.isRoot() || !isAtomicRenameKey(
             path.toUri().getPath()) || !path.toUri()
             .getPath()
@@ -1698,7 +1745,8 @@ public class AbfsBlobClient extends AbfsClient {
     }
     try {
       RenameAtomicity renameAtomicity
-              = getRedoRenameAtomicity(path, renamePendingJsonLen, tracingContext);
+              = getRedoRenameAtomicity(path, renamePendingJsonLen,
+              tracingContext, null);
       renameAtomicity.redo();
     } catch (AbfsRestOperationException ex) {
       /*
@@ -1716,10 +1764,13 @@ public class AbfsBlobClient extends AbfsClient {
     }
     return true;
   }
+
   @VisibleForTesting
-  RenameAtomicity getRedoRenameAtomicity(final Path path, int fileLen,
-                                         final TracingContext tracingContext) {
-    RenameAtomicity renameAtomicity = new RenameAtomicity(path,
+  RenameAtomicity getRedoRenameAtomicity(final Path renamePendingJsonPath,
+                                                int fileLen,
+                                                final TracingContext tracingContext,
+                                                final AbfsLease sourcePathLease) {
+    return new RenameAtomicity(renamePendingJsonPath,
             fileLen,
             tracingContext,
             null,

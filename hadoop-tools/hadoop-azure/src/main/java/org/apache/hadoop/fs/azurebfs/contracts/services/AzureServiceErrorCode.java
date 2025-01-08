@@ -61,10 +61,10 @@ public enum AzureServiceErrorCode {
   ACCOUNT_REQUIRES_HTTPS("AccountRequiresHttps", HttpURLConnection.HTTP_BAD_REQUEST, null),
   MD5_MISMATCH("Md5Mismatch", HttpURLConnection.HTTP_BAD_REQUEST,
           "The MD5 value specified in the request did not match with the MD5 value calculated by the server."),
+  COPY_BLOB_FAILED("CopyBlobFailed", HttpURLConnection.HTTP_INTERNAL_ERROR, null),
+  COPY_BLOB_ABORTED("CopyBlobAborted", HttpURLConnection.HTTP_INTERNAL_ERROR, null),
   BLOB_OPERATION_NOT_SUPPORTED("BlobOperationNotSupported", HttpURLConnection.HTTP_CONFLICT, null),
   INVALID_APPEND_OPERATION("InvalidAppendOperation", HttpURLConnection.HTTP_CONFLICT, null),
-  COPY_BLOB_FAILED("COPY_BLOB_FAILED", HttpURLConnection.HTTP_INTERNAL_ERROR, null),
-  COPY_BLOB_ABORTED("COPY_BLOB_ABORTED", HttpURLConnection.HTTP_INTERNAL_ERROR, null),
   UNKNOWN(null, -1, null);
 
   private final String errorCode;

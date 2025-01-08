@@ -579,7 +579,7 @@ public class ITestAzureBlobFileSystemRename extends
             .deleteBlobPath(Mockito.any(Path.class), Mockito.nullable(String.class),
                     Mockito.any(TracingContext.class));
     new RenameAtomicity(renameJson, 1,
-            getTestTracingContext(fs, true), null, client).redo();
+            getTestTracingContext(fs, true), null, client, null).redo();
     Assertions.assertThat(renameJsonDeleteCounter[0])
             .describedAs("RenamePendingJson should be deleted")
             .isEqualTo(1);
@@ -616,7 +616,7 @@ public class ITestAzureBlobFileSystemRename extends
             .deleteBlobPath(Mockito.any(Path.class), Mockito.nullable(String.class),
                     Mockito.any(TracingContext.class));
     new RenameAtomicity(renameJson, 2,
-            getTestTracingContext(fs, true), null, client);
+            getTestTracingContext(fs, true), null, client, null);
   }
   @Test
   public void testRenameCompleteBeforeRenameAtomicityRedo() throws Exception {
@@ -637,7 +637,7 @@ public class ITestAzureBlobFileSystemRename extends
             getTestTracingContext(fs, true), fileStatus.getEtag(), client).preRename();
     RenameAtomicity redoRenameAtomicity = Mockito.spy(
             new RenameAtomicity(renameJson, jsonLen,
-                    getTestTracingContext(fs, true), null, client));
+                    getTestTracingContext(fs, true), null, client, null));
     RenameAtomicityTestUtils.addReadPathMock(redoRenameAtomicity,
             readCallbackAnswer -> {
               byte[] bytes = (byte[]) readCallbackAnswer.callRealMethod();
