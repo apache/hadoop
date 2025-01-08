@@ -112,37 +112,12 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
     return ioStatisticsToPrettyString(getFileSystem().getIOStatistics());
   }
 
-  @Test
-  public void testMagicMkdir() throws Throwable {
-    describe("Mkdirs 'MAGIC PATH' always skips dir marker deletion");
-    S3AFileSystem fs = getFileSystem();
-    Path baseDir = methodPath();
-    // create dest dir marker, always
-    fs.mkdirs(baseDir);
-    Path magicDir = new Path(baseDir, MAGIC_PATH_PREFIX + JOB_ID);
-    verifyMetrics(() -> {
-      fs.mkdirs(magicDir);
-      return fileSystemIOStats();
-    },
-        with(OBJECT_BULK_DELETE_REQUEST, 0),
-        with(OBJECT_DELETE_REQUEST, 0),
-        with(DIRECTORIES_CREATED, 1));
-    verifyMetrics(() -> {
-      fs.delete(magicDir, true);
-      return fileSystemIOStats();
-    },
-        with(OBJECT_BULK_DELETE_REQUEST, 0),
-        with(OBJECT_DELETE_REQUEST, 1),
-        with(DIRECTORIES_CREATED, 0));
-    assertPathExists("parent", baseDir);
-  }
-
   /**
    * When a magic subdir is deleted, parent dirs are not recreated.
    */
   @Test
   public void testMagicMkdirs() throws Throwable {
-    describe("Mkdirs __magic_job-<jobId>/subdir always skips dir marker deletion");
+    describe("Mkdirs __magic_job-<jobId>/subdir always skips dir marker recreation");
     S3AFileSystem fs = getFileSystem();
     Path baseDir = methodPath();
     Path magicDir = new Path(baseDir, MAGIC_PATH_PREFIX + JOB_ID);
@@ -192,7 +167,7 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
 
   @Test
   public void testCostOfCreatingMagicFile() throws Throwable {
-    describe("Files created under magic paths skip existence checks and marker deletes");
+    describe("Files created under magic paths skip existence checks");
     S3AFileSystem fs = getFileSystem();
     Path destFile = methodSubPath("file.txt");
     fs.delete(destFile.getParent(), true);
@@ -213,9 +188,8 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
 
       stream.write("hello".getBytes(StandardCharsets.UTF_8));
 
-      // when closing, there will be no directories deleted
-      // we do expect two PUT requests, because the marker and manifests
-      // are both written
+      // when closing, we expect two PUT requests,
+      // because the marker and manifests are both written
       LOG.info("closing magic stream to {}", magicDest);
       verifyMetrics(() -> {
         stream.close();

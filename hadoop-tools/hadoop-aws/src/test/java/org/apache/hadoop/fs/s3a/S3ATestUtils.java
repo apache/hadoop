@@ -1081,8 +1081,7 @@ public final class S3ATestUtils {
     List<CompletableFuture<Path>> futures = new ArrayList<>(paths.size()
         + dirs.size());
 
-    // create directories. With dir marker retention, that adds more entries
-    // to cause deletion issues
+    // create directories.
     try (DurationInfo ignore =
              new DurationInfo(LOG, "Creating %d directories", dirs.size())) {
       for (Path path : dirs) {

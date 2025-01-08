@@ -45,10 +45,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Use metrics to assert about the cost of file API calls.
- * Parameterized on directory marker keep vs delete.
- * When the FS is instantiated with creation performance, things
- * behave differently...its value is that of the marker keep flag,
- * so deletion costs are the same.
  */
 public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
 
@@ -111,7 +107,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
 
   @Test
   public void testCostOfListFilesOnEmptyDir() throws Throwable {
-    describe("Perpforming listFiles() on an empty dir with marker");
+    describe("Performing listFiles() on an empty dir with marker");
     // this attem
     Path dir = path(getMethodName());
     S3AFileSystem fs = getFileSystem();

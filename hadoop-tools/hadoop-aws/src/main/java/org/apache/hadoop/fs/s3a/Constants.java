@@ -869,10 +869,13 @@ public final class Constants {
   /**
    * Paths considered "authoritative".
    * When S3guard was supported, this skipped checks to s3 on directory listings.
-   * It is also use to optionally disable marker retentation purely on these
-   * paths -a feature which is still retained/available.
+   * It was also possilbe to use to optionally disable marker retentation purely on these
+   * paths -a feature which is no longer available.
+   * As no feature uses this any more, it is declared as deprecated.
    * */
+  @Deprecated
   public static final String AUTHORITATIVE_PATH = "fs.s3a.authoritative.path";
+  @Deprecated
   public static final String[] DEFAULT_AUTHORITATIVE_PATH = {};
 
   /**
@@ -1405,6 +1408,7 @@ public final class Constants {
    * Always false.
    * Value: {@value}.
    */
+  @Deprecated
   public static final String STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE
       = "fs.s3a.capability.directory.marker.policy.delete";
 
@@ -1414,6 +1418,7 @@ public final class Constants {
    * This probe always returns false.
    * Value: {@value}.
    */
+  @Deprecated
   public static final String
       STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_AUTHORITATIVE =
       "fs.s3a.capability.directory.marker.policy.authoritative";

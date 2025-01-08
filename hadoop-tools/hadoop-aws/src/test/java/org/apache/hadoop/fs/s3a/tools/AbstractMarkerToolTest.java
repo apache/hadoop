@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.tools;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.URI;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
@@ -32,22 +31,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.VERBOSE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.runS3GuardCommand;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.runS3GuardCommandToFailure;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.UNLIMITED_LISTING;
 
 /**
- * Class for marker tool tests -sets up keeping/deleting filesystems,
- * has methods to invoke.
+ * Class for marker tool tests.
  */
 public class AbstractMarkerToolTest extends AbstractS3ATestBase {
 
@@ -56,9 +52,6 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
 
   /** the -verbose option. */
   protected static final String V = AbstractMarkerToolTest.m(VERBOSE);
-
-  /** FS which keeps markers. */
-  private S3AFileSystem keepingFS;
 
   @Override
   protected Configuration createConfiguration() {
@@ -130,46 +123,18 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
   }
 
   /**
-   * Create a new FS with given marker policy and path.
-   * This filesystem MUST be closed in test teardown.
-   * @param markerPolicy markers
-   * @param authPath authoritative path. If null: no path.
-   * @return a new FS.
-   */
-  protected S3AFileSystem createFS(String markerPolicy,
-      String authPath) throws Exception {
-    S3AFileSystem testFS = getFileSystem();
-    Configuration conf = new Configuration(testFS.getConf());
-    URI testFSUri = testFS.getUri();
-    String bucketName = getTestBucketName(conf);
-    removeBucketOverrides(bucketName, conf,
-        BULK_DELETE_PAGE_SIZE);
-    // Use a very small page size to force the paging
-    // code to be tested.
-    conf.setInt(BULK_DELETE_PAGE_SIZE, 2);
-    S3AFileSystem fs2 = new S3AFileSystem();
-    fs2.initialize(testFSUri, conf);
-    LOG.info("created new filesystem with policy {} and auth path {}",
-        markerPolicy,
-        (authPath == null ? "(null)": authPath));
-    return fs2;
-  }
-
-  /**
    * Execute the marker tool, expecting the execution to succeed.
    * @param sourceFS filesystem to use
    * @param path path to scan
-   * @param doPurge should markers be purged
    * @param expectedMarkerCount number of markers expected
    * @return the result
    */
   protected MarkerTool.ScanResult markerTool(
       final FileSystem sourceFS,
       final Path path,
-      final boolean doPurge,
       final int expectedMarkerCount)
       throws IOException {
-    return markerTool(0, sourceFS, path, doPurge,
+    return markerTool(0, sourceFS, path, false,
         expectedMarkerCount,
         UNLIMITED_LISTING, false);
   }

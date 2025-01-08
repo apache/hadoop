@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.s3a.UnknownStoreException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ExitUtil;
 
-import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo.IS_MARKER_AWARE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_S3GUARD_UNSUPPORTED;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.INVALID_ARGUMENT;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;

@@ -23,12 +23,12 @@
 
 ###  <a name="directory-marker-compatibility"></a> Directory Marker Compatibility
 
-This release does not delete directory markers when creating
+This release never delete directory markers when creating
 files or directories underneath.
 This is incompatible with versions of the Hadoop S3A client released
 before 2021.
 
-Consult [Controlling the S3A Directory Marker Behavior](directory_markers.html) for
+Consult [S3A and Directory Markers](directory_markers.html) for
 full details.
 
 ## <a name="documents"></a> Documents
@@ -40,7 +40,7 @@ full details.
 * [Working with Third-party S3 Stores](./third_party_stores.html)
 * [Troubleshooting](./troubleshooting_s3a.html)
 * [Prefetching](./prefetching.html)
-* [Controlling the S3A Directory Marker Behavior](directory_markers.html).
+* [S3A and Directory Markers](directory_markers.html).
 * [Auditing](./auditing.html).
 * [Committing work to S3 with the "S3A Committers"](./committers.html)
 * [S3A Committers Architecture](./committer_architecture.html)

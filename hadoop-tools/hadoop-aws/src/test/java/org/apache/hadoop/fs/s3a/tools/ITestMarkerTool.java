@@ -45,8 +45,7 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_FOUN
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
 
 /**
- * Test the marker tool and use it to compare the behavior
- * of keeping vs legacy S3A FS instances.
+ * Test the marker tools.
  */
 public class ITestMarkerTool extends AbstractMarkerToolTest {
 
@@ -80,7 +79,7 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
 
   @Test
   public void testCleanMarkersFileLimit() throws Throwable {
-    describe("Clean markers under a keeping FS -with file limit");
+    describe("Clean markers with file limit");
     CreatedPaths createdPaths = createPaths(getFileSystem(), methodPath());
 
     // audit will be interrupted
@@ -89,8 +88,8 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
   }
 
   @Test
-  public void testRenameKeepingFS() throws Throwable {
-    describe("Rename with the keeping FS -verify that no markers"
+  public void testRenameDoesntCopyMarkers() throws Throwable {
+    describe("Rename with and verify that no markers"
         + " exist at far end");
     Path base = methodPath();
     Path source = new Path(base, "source");
@@ -102,12 +101,12 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
     // audit will find three entries
     int expectedMarkerCount = createdPaths.dirs.size();
 
-    markerTool(fs, source, false, expectedMarkerCount);
+    markerTool(fs, source, expectedMarkerCount);
     fs.rename(source, dest);
     assertIsDirectory(dest);
 
     // there are no markers
-    markerTool(fs, dest, false, 0);
+    markerTool(fs, dest, 0);
     LOG.info("Auditing destination paths");
     verifyRenamed(dest, createdPaths);
   }
@@ -158,7 +157,6 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
   @Test
   public void testRunAuditWithExpectedMarkers() throws Throwable {
     describe("Run a verbose audit expecting some markers");
-    // a run under the keeping FS will create paths
     CreatedPaths createdPaths = createPaths(getFileSystem(), methodPath());
     final File audit = tempAuditFile();
     run(MARKERS, V,
@@ -174,7 +172,6 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
   @Test
   public void testRunAuditWithExcessMarkers() throws Throwable {
     describe("Run a verbose audit failing as surplus markers were found");
-    // a run under the keeping FS will create paths
     CreatedPaths createdPaths = createPaths(getFileSystem(), methodPath());
     final File audit = tempAuditFile();
     runToFailure(EXIT_NOT_ACCEPTABLE, MARKERS, V,
@@ -219,8 +216,8 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
   }
 
   @Test
-  public void testBucketInfoKeepingOnKeeping() throws Throwable {
-    describe("Run bucket info with the keeping config on the keeping fs");
+  public void testBucketInfoKeeping() throws Throwable {
+    describe("Run bucket info with the keeping option");
     runS3GuardCommand(uncachedFSConfig(getFileSystem()),
         BUCKET_INFO,
         m(MARKERS), DIRECTORY_MARKER_POLICY_KEEP,

@@ -247,12 +247,6 @@ public interface S3ATestConstants {
       TEST_SESSION_TOKEN_DURATION_SECONDS);
 
   /**
-   * Test option to enable audits of the method path after
-   * every test case.
-   */
-  String DIRECTORY_MARKER_AUDIT = "fs.s3a.directory.marker.audit";
-
-  /**
    * Constant bytes being written when Client side encryption KMS is enabled
    * for a test. This bytes written takes into account "EncryptionContext",
    * which contains the algo used for eg:

@@ -12,7 +12,7 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# Controlling the S3A Directory Marker Behavior
+# S3A Directory Marker Behavior
 
 This document discusses directory markers and a change to the S3A
 connector: surplus directory markers are no longer deleted.
@@ -21,7 +21,7 @@ This document shows how the performance of S3 I/O, especially applications
 creating many files (for example Apache Hive) or working with versioned S3 buckets can
 increase performance by changing the S3A directory marker retention policy.
 
-This release always retains markers, 
+This release always retains markers
 and _is potentially not backwards compatible_ with hadoop versions
 released before 2021.
 
@@ -69,7 +69,7 @@ Everyone using these branches should upgrade to a supported version.
 
 ## History
 
-### Hadoop 3.3.1 Directory marker retention is optional 
+### Hadoop 3.3.1 Directory marker retention is optional
 
 [HADOOP-13230](https://issues.apache.org/jira/browse/HADOOP-13230)
  _S3A to optionally retain directory markers_
@@ -84,7 +84,7 @@ Marker deletion can still be enabled.
 
 Since this release there have been no reports of incompatibilities
 surfacing "in the wild". That is: out of date hadoop versions are not
-being used to work into the same parts of S3 buckets as modern releases. 
+being used to work into the same parts of S3 buckets as modern releases.
 
 ### Hadoop 3.5: markers are never deleted
 

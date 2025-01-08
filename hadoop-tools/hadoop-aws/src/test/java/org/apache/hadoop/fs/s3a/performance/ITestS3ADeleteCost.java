@@ -101,7 +101,7 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         probe(!bulkDelete, OBJECT_DELETE_REQUEST,
             DELETE_OBJECT_REQUEST + DELETE_MARKER_REQUEST),
 
-        // keeping: create no parent dirs or delete parents
+        // create no parent dirs or delete parents
         with(DIRECTORIES_CREATED, 0),
         with(OBJECT_BULK_DELETE_REQUEST, 0)
     );
@@ -142,7 +142,7 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         // no need to create a parent
         with(DIRECTORIES_CREATED, 0),
 
-        // keeping: create no parent dirs or delete parents
+        // create no parent dirs or delete parents
         with(OBJECT_DELETE_REQUEST, DELETE_OBJECT_REQUEST));
   }
 

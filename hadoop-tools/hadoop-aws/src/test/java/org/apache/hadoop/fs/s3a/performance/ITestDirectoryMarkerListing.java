@@ -402,10 +402,6 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
   /**
    * Rename the base directory, expect the source files to move.
-   * <p></p>
-   * Whether or not the marker itself is copied depends on whether
-   * the release's rename operation explicitly skips
-   * markers on renames.
    */
   @Test
   public void testRenameBase() throws Throwable {
@@ -433,14 +429,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     assertIsFile(destMarkerPeer);
     head(destFileKeyUnderMarker);
 
-    // probe for the marker based on expected rename
-    // behavior
-    if (RENAME_COPIES_MARKERS) {
-      head(destMarkerKeySlash);
-    } else {
-      head404(destMarkerKeySlash);
-    }
-
+    // rename doesn't copy non-leaf markers
+    head404(destMarkerKeySlash);
   }
 
   /**

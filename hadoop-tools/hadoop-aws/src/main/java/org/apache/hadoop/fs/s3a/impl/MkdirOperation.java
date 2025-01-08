@@ -262,9 +262,6 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
     /**
      * Create a fake directory, always ending in "/".
      * Retry policy: retrying; translated.
-     * the keepMarkers flag controls whether or not markers
-     * are automatically kept (this is set when creating
-     * directories under a magic path, always)
      * @param dir dir to create
      * @throws IOException IO failure
      */

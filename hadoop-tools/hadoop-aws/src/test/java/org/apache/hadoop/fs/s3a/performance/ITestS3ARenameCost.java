@@ -75,7 +75,7 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
         always(RENAME_SINGLE_FILE_DIFFERENT_DIR),
         with(DIRECTORIES_CREATED, 0),
         with(DIRECTORIES_DELETED, 0),
-        // keeping: only the core delete operation is issued.
+        // only the core delete operation is issued.
         with(OBJECT_DELETE_REQUEST, DELETE_OBJECT_REQUEST),
         with(FAKE_DIRECTORIES_DELETED, 0),
         with(OBJECT_DELETE_OBJECTS, 1));
