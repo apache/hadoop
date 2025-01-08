@@ -1068,7 +1068,6 @@ public class RPC {
    /**
     * The value in map
     */
-   @SuppressWarnings("checkstyle:Indentation")
    static class ProtoClassProtoImpl {
      final Class<?> protocolClass;
       final Object protocolImpl;
@@ -1088,6 +1087,7 @@ public class RPC {
    ArrayList<Map<ProtoNameVer, ProtoClassProtoImpl>> protocolImplMapArray = 
        new ArrayList<Map<ProtoNameVer, ProtoClassProtoImpl>>(RpcKind.MAX_SIZE);
 
+   @SuppressWarnings("checkstyle:Indentation")
    Map<ProtoNameVer, ProtoClassProtoImpl> getProtocolImplMap(RPC.RpcKind rpcKind) {
      if (protocolImplMapArray.size() == 0) {// initialize for all rpc kinds
        for (int i = 0; i < RpcKind.MAX_SIZE; ++i) {
