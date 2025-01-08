@@ -27,6 +27,9 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 public class RenameAtomicityTestUtils {
 
+    public RenameAtomicityTestUtils() {
+    }
+
     /**
      * Creates a spied object of {@link BlobRenameHandler} and {@link RenameAtomicity}
      * and adds mocked behavior to {@link RenameAtomicity#createRenamePendingJson(Path, byte[])}.

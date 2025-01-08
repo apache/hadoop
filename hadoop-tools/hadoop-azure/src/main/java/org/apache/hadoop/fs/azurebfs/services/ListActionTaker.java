@@ -55,7 +55,7 @@ public abstract class ListActionTaker {
 
     private final Path path;
 
-    protected final AbfsBlobClient abfsClient;
+    private final AbfsBlobClient abfsClient;
 
     private final TracingContext tracingContext;
 
@@ -78,6 +78,10 @@ public abstract class ListActionTaker {
         this.tracingContext = tracingContext;
         executorService = Executors.newFixedThreadPool(
                 getMaxConsumptionParallelism());
+    }
+
+    public AbfsBlobClient getAbfsClient() {
+        return abfsClient;
     }
 
     /** Get the maximum number of parallelism for consumption.
@@ -134,7 +138,7 @@ public abstract class ListActionTaker {
      */
     public boolean listRecursiveAndTakeAction()
             throws AzureBlobFileSystemException {
-        AbfsConfiguration configuration = abfsClient.getAbfsConfiguration();
+        AbfsConfiguration configuration = getAbfsClient().getAbfsConfiguration();
         Thread producerThread = null;
         try {
             ListBlobQueue listBlobQueue = createListBlobQueue(configuration);
@@ -223,7 +227,7 @@ public abstract class ListActionTaker {
         }
         final AbfsRestOperation op;
         try {
-            op = abfsClient.listPath(path.toUri().getPath(),
+            op = getAbfsClient().listPath(path.toUri().getPath(),
                     true,
                     queueAvailableSizeForProduction, continuationToken,
                     tracingContext);

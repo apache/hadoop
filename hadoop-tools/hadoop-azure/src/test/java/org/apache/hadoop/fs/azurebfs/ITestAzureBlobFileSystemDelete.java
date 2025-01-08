@@ -301,8 +301,9 @@ public class ITestAzureBlobFileSystemDelete extends
                       Mockito.anyInt(), Mockito.nullable(String.class),
                       Mockito.nullable(TracingContext.class),
                       Mockito.anyBoolean());
-      doCallRealMethod().when((AbfsBlobClient) mockClient).getPathStatus(Mockito.nullable(String.class), Mockito.nullable(TracingContext.class), Mockito.nullable(
-              ContextEncryptionAdapter.class), Mockito.anyBoolean());
+      doCallRealMethod().when((AbfsBlobClient) mockClient)
+              .getPathStatus(Mockito.nullable(String.class), Mockito.nullable(TracingContext.class),
+                      Mockito.nullable(ContextEncryptionAdapter.class), Mockito.anyBoolean());
     }
     when(mockClient.deletePath("/NonExistingPath", false, null,
         tracingContext, fs.getIsNamespaceEnabled(tracingContext)))
@@ -348,6 +349,7 @@ public class ITestAzureBlobFileSystemDelete extends
   private void assumeBlobClient() throws IOException {
     assertTrue(getFileSystem().getAbfsClient() instanceof AbfsBlobClient);
   }
+
   /**
    * Assert that deleting an implicit directory delete all the children of the
    * folder.
@@ -366,8 +368,10 @@ public class ITestAzureBlobFileSystemDelete extends
             .describedAs("FileStatus of the deleted directory should not exist")
             .isTrue();
     Assertions.assertThat(!fs.exists(new Path("/testDir/dir1/file1")))
-            .describedAs("Child of a deleted directory should not be present");
+            .describedAs("Child of a deleted directory should not be present")
+            .isTrue();
   }
+
   /**
    * Assert deleting an implicit directory, for which paginated list is required.
    */
@@ -401,6 +405,7 @@ public class ITestAzureBlobFileSystemDelete extends
             .describedAs("FileStatus of the deleted directory should not exist")
             .isFalse();
   }
+
   /**
    * Assert deleting of the only child of an implicit directory ensures that the
    * parent directory's marker is present.
@@ -425,6 +430,24 @@ public class ITestAzureBlobFileSystemDelete extends
             .describedAs("Parent Implicit directory should exist")
             .isTrue();
   }
+
+  /**
+   * Tests the scenario where a parallel blob deletion fails due to an access denied exception.
+   * This test simulates a failure while deleting blobs in a directory in parallel, where
+   * an exception is thrown when attempting to delete the blobs.
+   * <p>
+   * The test sets up a directory (`/testDir`) with multiple files (`file1`, `file2`, `file3`)
+   * and attempts to delete the directory using the `fs.delete` method with the recursive flag
+   * set to `true`. During the deletion process, the mock `deleteBlobPath` method of the
+   * `AbfsBlobClient` is set to throw an `AbfsRestOperationException` with a `HTTP_FORBIDDEN`
+   * status, simulating an access denial error. The test expects an `AccessDeniedException` to
+   * be thrown when the deletion is attempted.
+   * <p>
+   * The purpose of this test is to ensure that the system properly handles access denied errors
+   * when attempting to delete blobs in parallel.
+   *
+   * @throws Exception If an error occurs during the file system operations or mock setup.
+   */
   @Test
   public void testDeleteParallelBlobFailure() throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
@@ -448,12 +471,27 @@ public class ITestAzureBlobFileSystemDelete extends
               fs.delete(new Path("/testDir"), true);
             });
   }
+
+  /**
+   * Tests the deletion of the root directory with the non-recursive option set to false.
+   * This test verifies that when attempting to delete the root directory (or any
+   * non-empty directory) without recursion, the operation should fail, returning
+   * false as it cannot delete a non-empty directory without recursion.
+   * <p>
+   * The test sets up a directory `/testDir` inside the root directory and then
+   * attempts to delete the root directory (`ROOT_PATH`) without the recursive flag.
+   * Since the root directory is not empty and the non-recursive option is set to false,
+   * the delete operation is expected to fail.
+   *
+   * @throws Exception If an error occurs during file system operations.
+   */
   @Test
   public void testDeleteRootWithNonRecursion() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     fs.mkdirs(new Path("/testDir"));
     Assertions.assertThat(fs.delete(new Path(ROOT_PATH), false)).isFalse();
   }
+
   /**
    * Assert that delete operation failure should stop List producer.
    */
@@ -484,7 +522,6 @@ public class ITestAzureBlobFileSystemDelete extends
     store.setClient(spiedClient);
     Mockito.doReturn(store).when(fs).getAbfsStore();
     final int[] deleteCallInvocation = new int[1];
-    deleteCallInvocation[0] = 0;
     Mockito.doAnswer(answer -> {
               throw new AbfsRestOperationException(HTTP_FORBIDDEN, "", "",
                       new Exception());
@@ -508,10 +545,9 @@ public class ITestAzureBlobFileSystemDelete extends
               return null;
             });
     final int[] listCallInvocation = new int[1];
-    listCallInvocation[0] = 0;
     Mockito.doAnswer(answer -> {
               if (listCallInvocation[0] == 1) {
-                while (deleteCallInvocation[0] == 0) ;
+                while (deleteCallInvocation[0] == 0) {}
               }
               listCallInvocation[0]++;
               return answer.callRealMethod();
@@ -527,6 +563,7 @@ public class ITestAzureBlobFileSystemDelete extends
             .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
                     Mockito.nullable(String.class), Mockito.any(TracingContext.class));
   }
+
   /**
    * Test to assert that the CID in src marker delete contains the
    * total number of blobs operated in the delete directory.
@@ -548,9 +585,7 @@ public class ITestAzureBlobFileSystemDelete extends
     List<Future> futures = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       final int iter = i;
-      Future future = executorService.submit(() -> {
-        return fs.create(new Path("/testDir/dir1/file" + iter));
-      });
+      Future future = executorService.submit(() -> fs.create(new Path("/testDir/dir1/file" + iter)));
       futures.add(future);
     }
     for (Future future : futures) {

@@ -321,6 +321,22 @@ public class ITestAzureBlobFileSystemRename extends
       assertFalse(fs.exists(new Path("testDir2/test1/test2/test3/file")));
     }
   }
+
+  /**
+   * <pre>
+   * Test to check behaviour of rename API if the destination directory is already
+   * there. The HNS call and the one for Blob endpoint should have same behaviour.
+   *
+   * /testDir2/test1/test2/test3 contains (/file)
+   * There is another path that exists: /testDir2/test4/test3
+   * On rename(/testDir2/test1/test2/test3, /testDir2/test4).
+   * </pre>
+   *
+   * Expectation for HNS / Blob endpoint:<ol>
+   * <li>Rename should fail</li>
+   * <li>No file should be transferred to destination directory</li>
+   * </ol>
+   */
   @Test
   public void testPosixRenameDirectoryWherePartAlreadyThereOnDestination()
           throws Exception {
@@ -346,6 +362,7 @@ public class ITestAzureBlobFileSystemRename extends
     assertFalse(fs.exists(new Path("testDir2/test1/test2/test3/file")));
     assertFalse(fs.exists(new Path("testDir2/test1/test2/test3/file1")));
   }
+
   /**
    * Test that after completing rename for a directory which is enabled for
    * AtomicRename, the RenamePending JSON file is deleted.
@@ -378,9 +395,11 @@ public class ITestAzureBlobFileSystemRename extends
                     Mockito.any(TracingContext.class));
     assertTrue(fs.rename(new Path("hbase/test1/test2/test3"),
             new Path("hbase/test4")));
-    assertTrue("RenamePendingJson should be deleted",
-            correctDeletePathCount[0] == 1);
+    assertEquals("RenamePendingJson should be deleted",
+            1,
+            (int) correctDeletePathCount[0]);
   }
+
   private AbfsClient addSpyHooksOnClient(final AzureBlobFileSystem fs) {
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     Mockito.doReturn(store).when(fs).getAbfsStore();
@@ -388,6 +407,7 @@ public class ITestAzureBlobFileSystemRename extends
     Mockito.doReturn(client).when(store).getClient();
     return client;
   }
+
   /**
    * Test for a directory in /hbase directory. To simulate the crash of process,
    * test will throw an exception with 403 on a copy of one of the blob.<br>
@@ -414,6 +434,7 @@ public class ITestAzureBlobFileSystemRename extends
       return null;
     });
   }
+
   /**
    * Test for a directory in /hbase directory. To simulate the crash of process,
    * test will throw an exception with 403 on a copy of one of the blob. The
@@ -442,6 +463,7 @@ public class ITestAzureBlobFileSystemRename extends
       return null;
     });
   }
+
   private void crashRenameAndRecover(final AzureBlobFileSystem fs,
                                      AbfsBlobClient client,
                                      final String srcPath,
@@ -452,7 +474,6 @@ public class ITestAzureBlobFileSystemRename extends
     fs2.setWorkingDirectory(new Path(ROOT_PATH));
     client = (AbfsBlobClient) addSpyHooksOnClient(fs2);
     int[] renameJsonDeleteCounter = new int[1];
-    renameJsonDeleteCounter[0] = 0;
     Mockito.doAnswer(answer -> {
               if ((ROOT_PATH + srcPath + SUFFIX)
                       .equalsIgnoreCase(((Path) answer.getArgument(0)).toUri().getPath())) {
@@ -476,6 +497,7 @@ public class ITestAzureBlobFileSystemRename extends
     assertFalse(fs2.exists(new Path("hbase/test1/test2/test3/file1")));
     assertTrue(fs2.exists(new Path("hbase/test4/test2/test3/file1")));
   }
+
   private void crashRename(final AzureBlobFileSystem fs,
                            final AbfsBlobClient client,
                            final String srcPath) throws Exception {
@@ -502,6 +524,7 @@ public class ITestAzureBlobFileSystemRename extends
       lease.free();
     }
   }
+
   /**
    * Simulates a scenario where HMaster in Hbase starts up and executes listStatus
    * API on the directory that has to be renamed by some other executor-machine.
@@ -519,6 +542,7 @@ public class ITestAzureBlobFileSystemRename extends
     testRenamePreRenameFailureResolution(fs);
     testAtomicityRedoInvalidFile(fs);
   }
+
   private void testRenamePreRenameFailureResolution(final AzureBlobFileSystem fs)
           throws Exception {
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
@@ -554,6 +578,7 @@ public class ITestAzureBlobFileSystemRename extends
             .describedAs("Creation of RenamePendingJson should be attempted twice")
             .isEqualTo(2);
   }
+
   private void testAtomicityRedoInvalidFile(final AzureBlobFileSystem fs)
           throws Exception {
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
@@ -565,7 +590,6 @@ public class ITestAzureBlobFileSystemRename extends
     os.write("{".getBytes(StandardCharsets.UTF_8));
     os.close();
     int[] renameJsonDeleteCounter = new int[1];
-    renameJsonDeleteCounter[0] = 0;
     Mockito.doAnswer(deleteAnswer -> {
               Path ansPath = deleteAnswer.getArgument(0);
               if (renameJson.toUri()
@@ -587,6 +611,11 @@ public class ITestAzureBlobFileSystemRename extends
             Mockito.any(Path.class), Mockito.nullable(String.class),
             Mockito.any(TracingContext.class));
   }
+
+  /**
+   * Test to check the atomicity of rename operation. The rename operation should
+   * be atomic and should not leave any intermediate state.
+   */
   @Test
   public void testRenameJsonDeletedBeforeRenameAtomicityCanDelete()
           throws Exception {
@@ -601,7 +630,6 @@ public class ITestAzureBlobFileSystemRename extends
     os.write("{}".getBytes(StandardCharsets.UTF_8));
     os.close();
     int[] renameJsonDeleteCounter = new int[1];
-    renameJsonDeleteCounter[0] = 0;
     Mockito.doAnswer(deleteAnswer -> {
               Path ansPath = deleteAnswer.getArgument(0);
               if (renameJson.toUri()
@@ -618,6 +646,23 @@ public class ITestAzureBlobFileSystemRename extends
     new RenameAtomicity(renameJson, 2,
             getTestTracingContext(fs, true), null, client, null);
   }
+
+  /**
+   * Tests the scenario where the rename operation is complete before the redo
+   * operation for atomicity, leading to a failure. This test verifies that the
+   * system correctly handles the case when a rename operation is attempted after
+   * the source path has already been deleted, which should result in an error.
+   * <p>
+   * The test simulates a situation where a `renameJson` file is created for the
+   * rename operation, and the source path is deleted during the read process in
+   * the redo operation. The `redoRenameAtomicity` is then executed, and it is
+   * expected to fail with a `404` error, indicating that the source path no longer exists.
+   * <p>
+   * The test ensures that the system can handle this error condition and return
+   * the correct response, preventing a potentially invalid or inconsistent state.
+   *
+   * @throws Exception If an error occurs during file system operations.
+   */
   @Test
   public void testRenameCompleteBeforeRenameAtomicityRedo() throws Exception {
     final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
@@ -645,9 +690,7 @@ public class ITestAzureBlobFileSystemRename extends
               return bytes;
             });
     AbfsRestOperationException ex = intercept(AbfsRestOperationException.class,
-            () -> {
-              redoRenameAtomicity.redo();
-            });
+            redoRenameAtomicity::redo);
     Assertions.assertThat(ex.getStatusCode())
             .describedAs("RenameAtomicity redo should fail with 404")
             .isEqualTo(SOURCE_PATH_NOT_FOUND.getStatusCode());
@@ -655,6 +698,21 @@ public class ITestAzureBlobFileSystemRename extends
             .describedAs("RenameAtomicity redo should fail with 404")
             .isEqualTo(SOURCE_PATH_NOT_FOUND);
   }
+
+  /**
+   * Tests the idempotency of the copyBlob operation during a rename when the
+   * destination already exists. This test simulates a scenario where the source
+   * blob is copied to the destination before the actual rename operation is invoked.
+   * It ensures that the copyBlob operation can handle idempotency issues and perform
+   * the rename successfully even when the destination is pre-created.
+   * <p>
+   * The test verifies that the rename operation successfully copies the blob from
+   * the source to the destination, and the source is deleted, leaving only the
+   * destination file. This ensures that the system behaves correctly in scenarios
+   * where the destination path already contains the blob.
+   *
+   * @throws Exception If an error occurs during file system operations.
+   */
   @Test
   public void testCopyBlobIdempotency() throws Exception {
     final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
@@ -690,6 +748,21 @@ public class ITestAzureBlobFileSystemRename extends
             .describedAs("Destination should exist after rename")
             .isTrue();
   }
+
+  /**
+   * Tests the idempotency of the rename operation when the destination path is
+   * created by some other process before the rename operation. This test simulates
+   * the scenario where a source blob is renamed, and the destination path already
+   * exists due to actions from another process. It ensures that the rename operation
+   * behaves idempotently and correctly handles the case where the destination is
+   * pre-created.
+   * <p>
+   * The test verifies that the rename operation fails (since the destination already
+   * exists), but the source path remains intact, and the blob copy operation is able
+   * to handle the idempotency issue.
+   *
+   * @throws IOException If an error occurs during file system operations.
+   */
   @Test
   public void testRenameBlobIdempotencyWhereDstIsCreatedFromSomeOtherProcess()
           throws IOException {
@@ -715,6 +788,15 @@ public class ITestAzureBlobFileSystemRename extends
             .describedAs("Source should exist after rename failure")
             .isTrue();
   }
+
+  /**
+   * Tests renaming a directory when the destination directory is missing a marker blob.
+   * This test involves creating multiple directories and files, deleting a blob (marker) in the
+   * destination directory, and renaming the source directory to the destination.
+   * It then verifies that the renamed directory exists at the expected destination path.
+   *
+   * @throws Exception If an error occurs during the file system operations or assertions.
+   */
   @Test
   public void testRenameDirWhenMarkerBlobIsAbsentOnDstDir() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
@@ -730,6 +812,15 @@ public class ITestAzureBlobFileSystemRename extends
     fs.rename(new Path("/test4"), new Path("/test1/test2"));
     assertTrue(fs.exists(new Path("/test1/test2/test4/test5")));
   }
+
+  /**
+   * Tests the renaming of a directory when the source directory does not have a marker file.
+   * This test creates a file within a source directory, deletes the source directory from the blob storage,
+   * creates a new target directory, and renames the source directory to the target location.
+   * It verifies that the renamed source directory exists in the target path.
+   *
+   * @throws Exception If an error occurs during the file system operations or assertions.
+   */
   @Test
   public void testBlobRenameSrcDirHasNoMarker() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
@@ -742,6 +833,16 @@ public class ITestAzureBlobFileSystemRename extends
     fs.rename(new Path("/test1"), new Path("/test2"));
     assertTrue(fs.exists(new Path("/test2/test1")));
   }
+
+  /**
+   * Mocks the progress status for a copy blob operation.
+   * This method simulates a copy operation that is pending and not yet completed.
+   * It intercepts the `copyBlob` method and modifies its response to return a "COPY_STATUS_PENDING"
+   * status for the copy operation.
+   *
+   * @param spiedClient The {@link AbfsBlobClient} instance that is being spied on.
+   * @throws AzureBlobFileSystemException if the mock setup fails.
+   */
   private void addMockForProgressStatusOnCopyOperation(final AbfsBlobClient spiedClient)
           throws AzureBlobFileSystemException {
     Mockito.doAnswer(answer -> {
@@ -757,6 +858,20 @@ public class ITestAzureBlobFileSystemRename extends
             .copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
                     Mockito.nullable(String.class), Mockito.any(TracingContext.class));
   }
+
+  /**
+   * Verifies the behavior of a blob copy operation that takes time to complete.
+   * The test ensures the following:
+   * <ul>
+   *   <li>A file is created and a rename operation is initiated.</li>
+   *   <li>The copy operation progress is mocked to simulate a time-consuming process.</li>
+   *   <li>The rename operation triggers a call to handle the copy progress.</li>
+   *   <li>The test checks that the file exists after the rename and that the
+   *       `handleCopyInProgress` method is called exactly once.</li>
+   * </ul>
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
   @Test
   public void testCopyBlobTakeTime() throws Exception {
     AzureBlobFileSystem fileSystem = Mockito.spy(getFileSystem());
@@ -777,6 +892,16 @@ public class ITestAzureBlobFileSystemRename extends
             .handleCopyInProgress(Mockito.any(Path.class),
                     Mockito.any(TracingContext.class), Mockito.any(String.class));
   }
+
+  /**
+   * Mocks the final status of a blob copy operation.
+   * This method ensures that when checking the status of a copy operation in progress,
+   * it returns the specified final status (e.g., success, failure, aborted).
+   *
+   * @param spiedClient The mocked Azure Blob client to apply the mock behavior.
+   * @param requiredCopyFinalStatus The final status of the copy operation to be returned
+   *                                (e.g., COPY_STATUS_FAILED, COPY_STATUS_ABORTED).
+   */
   private void addMockForCopyOperationFinalStatus(final AbfsBlobClient spiedClient,
                                                   final String requiredCopyFinalStatus) {
     AbfsClientTestUtil.mockGetRenameBlobHandler(spiedClient,
@@ -807,6 +932,19 @@ public class ITestAzureBlobFileSystemRename extends
               return null;
             });
   }
+
+  /**
+   * Verifies the behavior when a blob copy operation takes time and eventually fails.
+   * The test ensures the following:
+   * <ul>
+   *   <li>A file is created and a copy operation is initiated.</li>
+   *   <li>The copy operation is mocked to eventually fail.</li>
+   *   <li>The rename operation triggers an exception due to the failed copy.</li>
+   *   <li>The test checks that the appropriate 'COPY_FAILED' error code and status code are returned.</li>
+   * </ul>
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
   @Test
   public void testCopyBlobTakeTimeAndEventuallyFail() throws Exception {
     AzureBlobFileSystem fileSystem = Mockito.spy(getFileSystem());
@@ -815,8 +953,7 @@ public class ITestAzureBlobFileSystemRename extends
             fileSystem);
     addMockForProgressStatusOnCopyOperation(spiedClient);
     fileSystem.create(new Path("/test1/file"));
-    final String requiredCopyFinalStatus = COPY_STATUS_FAILED;
-    addMockForCopyOperationFinalStatus(spiedClient, requiredCopyFinalStatus);
+    addMockForCopyOperationFinalStatus(spiedClient, COPY_STATUS_FAILED);
     AbfsRestOperationException ex = intercept(AbfsRestOperationException.class,
             () -> {
               fileSystem.rename(new Path("/test1/file"), new Path("/test1/file2"));
@@ -828,6 +965,19 @@ public class ITestAzureBlobFileSystemRename extends
             .describedAs("Expecting COPY_FAILED error code")
             .isEqualTo(COPY_BLOB_FAILED);
   }
+
+  /**
+   * Verifies the behavior when a blob copy operation takes time and is eventually aborted.
+   * The test ensures the following:
+   * <ul>
+   *   <li>A file is created and a copy operation is initiated.</li>
+   *   <li>The copy operation is mocked to eventually be aborted.</li>
+   *   <li>The rename operation triggers an exception due to the aborted copy.</li>
+   *   <li>The test checks that the appropriate 'COPY_ABORTED' error code and status code are returned.</li>
+   * </ul>
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
   @Test
   public void testCopyBlobTakeTimeAndEventuallyAborted() throws Exception {
     AzureBlobFileSystem fileSystem = Mockito.spy(getFileSystem());
@@ -836,8 +986,7 @@ public class ITestAzureBlobFileSystemRename extends
             fileSystem);
     addMockForProgressStatusOnCopyOperation(spiedClient);
     fileSystem.create(new Path("/test1/file"));
-    final String requiredCopyFinalStatus = COPY_STATUS_ABORTED;
-    addMockForCopyOperationFinalStatus(spiedClient, requiredCopyFinalStatus);
+    addMockForCopyOperationFinalStatus(spiedClient, COPY_STATUS_ABORTED);
     AbfsRestOperationException ex = intercept(AbfsRestOperationException.class,
             () -> {
               fileSystem.rename(new Path("/test1/file"), new Path("/test1/file2"));
@@ -849,6 +998,19 @@ public class ITestAzureBlobFileSystemRename extends
             .describedAs("Expecting COPY_ABORTED error code")
             .isEqualTo(COPY_BLOB_ABORTED);
   }
+
+  /**
+   * Verifies the behavior when a blob copy operation takes time and the destination blob
+   * is deleted during the process. The test ensures the following:
+   * <ul>
+   *   <li>A source file is created and a copy operation is initiated.</li>
+   *   <li>During the copy process, the destination file is deleted.</li>
+   *   <li>The copy operation returns a pending status.</li>
+   *   <li>The test checks that the destination file does not exist after the copy operation is interrupted.</li>
+   * </ul>
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
   @Test
   public void testCopyBlobTakeTimeAndBlobIsDeleted() throws Exception {
     AzureBlobFileSystem fileSystem = Mockito.spy(getFileSystem());
@@ -874,6 +1036,18 @@ public class ITestAzureBlobFileSystemRename extends
     assertFalse(fileSystem.rename(new Path(srcFile), new Path(dstFile)));
     assertFalse(fileSystem.exists(new Path(dstFile)));
   }
+
+  /**
+   * Verifies the behavior when attempting to copy a blob after the source has been deleted
+   * in the Azure Blob FileSystem. The test ensures the following:
+   * <ul>
+   *   <li>A source blob is created and then deleted.</li>
+   *   <li>An attempt to copy the deleted source blob results in a 'not found' error.</li>
+   *   <li>The test checks that the correct HTTP error (404 Not Found) is returned when copying a non-existent source.</li>
+   * </ul>
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
   @Test
   public void testCopyAfterSourceHasBeenDeleted() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
@@ -896,6 +1070,19 @@ public class ITestAzureBlobFileSystemRename extends
             .describedAs("Source has to be not found at copy")
             .isEqualTo(HTTP_NOT_FOUND);
   }
+
+  /**
+   * Verifies that parallel rename operations in the Azure Blob FileSystem fail when
+   * trying to perform an atomic rename with lease acquisition. The test ensures the following:
+   * <ul>
+   *   <li>A directory is created and a rename operation is attempted.</li>
+   *   <li>A parallel thread attempts to rename the directory while the lease is being acquired.</li>
+   *   <li>The parallel rename operation should fail due to a lease conflict, triggering an exception.</li>
+   *   <li>The test verifies that the expected conflict exception is thrown when attempting a parallel rename.</li>
+   * </ul>
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
   @Test
   public void testParallelRenameForAtomicRenameShouldFail() throws Exception {
     Configuration config = getRawConfiguration();
@@ -914,7 +1101,7 @@ public class ITestAzureBlobFileSystemRename extends
     Mockito.doAnswer(answer -> {
               AbfsRestOperation op = (AbfsRestOperation) answer.callRealMethod();
               leaseAcquired.set(true);
-              while (!parallelThreadDone.get()) ;
+              while (!parallelThreadDone.get()) {}
               return op;
             })
             .when(client)
@@ -922,7 +1109,7 @@ public class ITestAzureBlobFileSystemRename extends
                     Mockito.nullable(String.class),
                     Mockito.any(TracingContext.class));
     new Thread(() -> {
-      while (!leaseAcquired.get()) ;
+      while (!leaseAcquired.get()) {}
       try {
         fs.rename(src, dst);
       } catch (Exception e) {
@@ -937,11 +1124,23 @@ public class ITestAzureBlobFileSystemRename extends
       }
     }).start();
     fs.rename(src, dst);
-    while (!parallelThreadDone.get()) ;
+    while (!parallelThreadDone.get()) {}
     Assertions.assertThat(exceptionOnParallelRename.get())
             .describedAs("Parallel rename should fail")
             .isTrue();
   }
+
+  /**
+   * Verifies the behavior of appending data to a blob during a rename operation in the
+   * Azure Blob FileSystem. The test ensures the following:
+   * <ul>
+   *   <li>A file is created and data is appended to it while a rename operation is in progress.</li>
+   *   <li>The append operation should fail due to the rename operation in progress.</li>
+   *   <li>The test checks that the append operation is properly interrupted and fails as expected.</li>
+   * </ul>
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
   @Test
   public void testAppendAtomicBlobDuringRename() throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
@@ -955,12 +1154,12 @@ public class ITestAzureBlobFileSystemRename extends
     AtomicBoolean appendFailed = new AtomicBoolean(false);
     Mockito.doAnswer(answer -> {
       copyInProgress.set(true);
-      while (!outputStreamClosed.get()) ;
+      while (!outputStreamClosed.get()) {}
       return answer.callRealMethod();
     }).when(client).copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
             Mockito.nullable(String.class), Mockito.any(TracingContext.class));
     new Thread(() -> {
-      while (!copyInProgress.get()) ;
+      while (!copyInProgress.get()) {}
       try {
         os.write(1);
         os.close();
@@ -975,6 +1174,19 @@ public class ITestAzureBlobFileSystemRename extends
             .describedAs("Append should fail")
             .isTrue();
   }
+
+  /**
+   * Verifies the behavior of renaming a directory in the Azure Blob FileSystem when
+   * there is a neighboring directory with the same prefix. The test ensures the following:
+   * <ul>
+   *   <li>Two directories with similar prefixes are created, along with files inside them.</li>
+   *   <li>The rename operation moves one directory to a new location.</li>
+   *   <li>Files in the renamed directory are moved, while files in the neighboring directory with the same prefix remain unaffected.</li>
+   *   <li>Correct existence checks are performed to confirm the renamed directory and its files are moved, and the original directory is deleted.</li>
+   * </ul>
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
   @Test
   public void testBlobRenameOfDirectoryHavingNeighborWithSamePrefix()
           throws Exception {
@@ -996,6 +1208,20 @@ public class ITestAzureBlobFileSystemRename extends
     Assertions.assertThat(fs.exists(new Path("/testDir/dir/")))
             .isFalse();
   }
+
+  /**
+   * Verifies the behavior of renaming a directory in the Azure Blob FileSystem when
+   * the `listPath` operation returns paginated results with one object per list.
+   * The test ensures the following:
+   * <ul>
+   *   <li>A directory and its files are created.</li>
+   *   <li>The `listPath` operation is mocked to return one file at a time in each paginated result.</li>
+   *   <li>The rename operation successfully moves the directory and its files to a new location.</li>
+   *   <li>All files are verified to exist in the new location after the rename.</li>
+   * </ul>
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
   @Test
   public void testBlobRenameWithListGivingPaginatedResultWithOneObjectPerList()
           throws Exception {
@@ -1025,8 +1251,19 @@ public class ITestAzureBlobFileSystemRename extends
               .isTrue();
     }
   }
+
   /**
-   * Assert that Rename operation failure should stop List producer.
+   * Verifies that the producer stops on a rename failure due to an access denial
+   * (HTTP_FORBIDDEN error) in the Azure Blob FileSystem. The test ensures the following:
+   * <ul>
+   *   <li>Multiple file creation tasks are submitted concurrently.</li>
+   *   <li>The rename operation is attempted but fails with an access denied exception.</li>
+   *   <li>On failure, the list operation for the source directory is invoked at most twice.</li>
+   * </ul>
+   * The test simulates a failure scenario where the rename operation encounters an access
+   * denied error, and the list operation should stop after the failure.
+   *
+   * @throws Exception if an error occurs during the test execution
    */
   @Test
   public void testProducerStopOnRenameFailure() throws Exception {
@@ -1053,7 +1290,6 @@ public class ITestAzureBlobFileSystemRename extends
     store.setClient(spiedClient);
     Mockito.doReturn(store).when(fs).getAbfsStore();
     final int[] copyCallInvocation = new int[1];
-    copyCallInvocation[0] = 0;
     Mockito.doAnswer(answer -> {
               throw new AbfsRestOperationException(HTTP_FORBIDDEN, "", "",
                       new Exception());
@@ -1077,11 +1313,10 @@ public class ITestAzureBlobFileSystemRename extends
               return null;
             });
     final int[] listCallInvocation = new int[1];
-    listCallInvocation[0] = 0;
     Mockito.doAnswer(answer -> {
               if (answer.getArgument(0).equals("/src")) {
                 if (listCallInvocation[0] == 1) {
-                  while (copyCallInvocation[0] == 0) ;
+                  while (copyCallInvocation[0] == 0) {}
                 }
                 listCallInvocation[0]++;
                 return getFileSystem().getAbfsClient().listPath(answer.getArgument(0),
@@ -1103,6 +1338,18 @@ public class ITestAzureBlobFileSystemRename extends
                     + "Once consumption fails, listing would be stopped.")
             .isLessThanOrEqualTo(2);
   }
+
+  /**
+   * Verifies the behavior of renaming a directory through the Azure Blob FileSystem
+   * when the source directory is deleted just before the rename operation is resumed.
+   * It ensures that:
+   * <ul>
+   *   <li>No blobs are copied during the resume operation.</li>
+   * </ul>
+   * The test simulates a crash, deletes the source directory, and checks for the expected result.
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
   @Test
   public void testRenameResumeThroughListStatusWithSrcDirDeletedJustBeforeResume()
           throws Exception {
@@ -1127,6 +1374,19 @@ public class ITestAzureBlobFileSystemRename extends
             .describedAs("No Copy on resume")
             .isEqualTo(0);
   }
+
+  /**
+   * Verifies the behavior of renaming a directory through the Azure Blob FileSystem
+   * when the source directory's ETag changes just before the rename operation is resumed.
+   * It ensures that:
+   * <ul>
+   *   <li>No blobs are copied during the resume operation.</li>
+   *   <li>The pending rename JSON file is deleted.</li>
+   * </ul>
+   * The test simulates a crash, retries the operation, and checks for the expected results.
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
   @Test
   public void testRenameResumeThroughListStatusWithSrcDirETagChangedJustBeforeResume()
           throws Exception {
@@ -1167,6 +1427,14 @@ public class ITestAzureBlobFileSystemRename extends
             .describedAs("RenamePendingJson should be deleted")
             .isEqualTo(1);
   }
+
+  /**
+   * Test case to verify the behavior of renaming a directory through the Azure Blob
+   * FileSystem when the source directory's ETag changes just before the rename operation
+   * is resumed. This test specifically checks the following:
+   *
+   * @throws Exception if any errors occur during the test execution
+   */
   @Test
   public void testRenameResumeThroughGetStatusWithSrcDirETagChangedJustBeforeResume()
           throws Exception {
@@ -1209,6 +1477,7 @@ public class ITestAzureBlobFileSystemRename extends
             .describedAs("RenamePendingJson should be deleted")
             .isEqualTo(1);
   }
+
   /**
    * Test to assert that the CID in src marker blob copy and delete contains the
    * total number of blobs operated in the rename directory.
@@ -1227,9 +1496,8 @@ public class ITestAzureBlobFileSystemRename extends
     List<Future> futures = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       final int iter = i;
-      Future future = executorService.submit(() -> {
-        return fs.create(new Path("/testDir/dir1/file" + iter));
-      });
+      Future future = executorService.submit(() ->
+              fs.create(new Path("/testDir/dir1/file" + iter)));
       futures.add(future);
     }
     for (Future future : futures) {

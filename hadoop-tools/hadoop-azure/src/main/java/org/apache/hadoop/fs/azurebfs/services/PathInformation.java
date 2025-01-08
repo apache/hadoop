@@ -55,7 +55,9 @@ public class PathInformation {
         this.isImplicit = pathInformation.getIsImplicit();
     }
 
-    /** Setters and Getters */
+    /** Setters and Getters
+     *
+     * @return Boolean Values*/
     public String getETag() {
         return eTag;
     }

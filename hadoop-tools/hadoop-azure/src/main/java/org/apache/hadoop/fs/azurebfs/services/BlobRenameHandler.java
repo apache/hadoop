@@ -120,7 +120,7 @@ public class BlobRenameHandler extends ListActionTaker {
 
     @Override
     int getMaxConsumptionParallelism() {
-        return abfsClient.getAbfsConfiguration()
+        return getAbfsClient().getAbfsConfiguration()
                 .getBlobRenameDirConsumptionParallelism();
     }
 
@@ -137,7 +137,7 @@ public class BlobRenameHandler extends ListActionTaker {
             RenameAtomicity renameAtomicity = null;
             if (pathInformation.getIsDirectory()
                     && pathInformation.getIsImplicit()) {
-                AbfsRestOperation createMarkerOp = abfsClient.createPath(src.toUri().getPath(),
+                AbfsRestOperation createMarkerOp = getAbfsClient().createPath(src.toUri().getPath(),
                         false, false, null,
                         false, null, null, tracingContext);
                 pathInformation.setETag(extractEtagHeader(createMarkerOp.getResult()));
@@ -217,7 +217,7 @@ public class BlobRenameHandler extends ListActionTaker {
                 new Path(src.getParent(), src.getName() + RenameAtomicity.SUFFIX),
                 tracingContext,
                 pathInformation.getETag(),
-                abfsClient);
+                getAbfsClient());
     }
 
     /** Takes a lease on the path.
@@ -230,8 +230,8 @@ public class BlobRenameHandler extends ListActionTaker {
      */
     private AbfsLease takeLease(final Path path, final String eTag)
             throws AzureBlobFileSystemException {
-        AbfsLease lease = new AbfsLease(abfsClient, path.toUri().getPath(), false,
-                abfsClient.getAbfsConfiguration()
+        AbfsLease lease = new AbfsLease(getAbfsClient(), path.toUri().getPath(), false,
+                getAbfsClient().getAbfsConfiguration()
                         .getAtomicRenameLeaseRefreshDuration(),
                 eTag, tracingContext);
         leases.add(lease);
@@ -460,7 +460,7 @@ public class BlobRenameHandler extends ListActionTaker {
         boolean operated = false;
         try {
             copyPath(path, destinationPathForBlobPartOfRenameSrcDir, leaseId);
-            abfsClient.deleteBlobPath(path, leaseId, tracingContext);
+            getAbfsClient().deleteBlobPath(path, leaseId, tracingContext);
             operated = true;
         } finally {
             if (abfsLease != null) {
@@ -489,7 +489,7 @@ public class BlobRenameHandler extends ListActionTaker {
             throws AzureBlobFileSystemException {
         String copyId;
         try {
-            AbfsRestOperation copyPathOp = abfsClient.copyBlob(src, dst, leaseId,
+            AbfsRestOperation copyPathOp = getAbfsClient().copyBlob(src, dst, leaseId,
                     tracingContext);
             final String progress = copyPathOp.getResult()
                     .getResponseHeader(X_MS_COPY_STATUS);
@@ -500,10 +500,10 @@ public class BlobRenameHandler extends ListActionTaker {
                     .getResponseHeader(X_MS_COPY_ID);
         } catch (AbfsRestOperationException ex) {
             if (ex.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
-                AbfsRestOperation dstPathStatus = abfsClient.getPathStatus(
+                AbfsRestOperation dstPathStatus = getAbfsClient().getPathStatus(
                         dst.toUri().getPath(),
                         tracingContext, null, false);
-                final String srcCopyPath = ROOT_PATH + abfsClient.getFileSystem()
+                final String srcCopyPath = ROOT_PATH + getAbfsClient().getFileSystem()
                         + src.toUri().getPath();
                 if (dstPathStatus.getResult() != null && (srcCopyPath.equals(
                         getDstSource(dstPathStatus)))) {
@@ -512,7 +512,7 @@ public class BlobRenameHandler extends ListActionTaker {
             }
             throw ex;
         }
-        final long pollWait = abfsClient.getAbfsConfiguration()
+        final long pollWait = getAbfsClient().getAbfsConfiguration()
                 .getBlobCopyProgressPollWaitMillis();
         while (handleCopyInProgress(dst, tracingContext, copyId)
                 == BlobCopyProgress.PENDING) {
@@ -563,7 +563,7 @@ public class BlobRenameHandler extends ListActionTaker {
     public BlobCopyProgress handleCopyInProgress(final Path dstPath,
                                                  final TracingContext tracingContext,
                                                  final String copyId) throws AzureBlobFileSystemException {
-        AbfsRestOperation op = abfsClient.getPathStatus(dstPath.toUri().getPath(),
+        AbfsRestOperation op = getAbfsClient().getPathStatus(dstPath.toUri().getPath(),
                 tracingContext, null, false);
 
         if (op.getResult() != null && copyId.equals(
@@ -627,11 +627,11 @@ public class BlobRenameHandler extends ListActionTaker {
                                                TracingContext tracingContext)
             throws AzureBlobFileSystemException {
         try {
-            AbfsRestOperation op = abfsClient.getPathStatus(path.toString(),
+            AbfsRestOperation op = getAbfsClient().getPathStatus(path.toString(),
                     tracingContext, null, true);
 
             return new PathInformation(true,
-                    abfsClient.checkIsDir(op.getResult()),
+                    getAbfsClient().checkIsDir(op.getResult()),
                     extractEtagHeader(op.getResult()),
                     op.getResult() instanceof AbfsHttpOperation.AbfsHttpOperationWithFixedResultForGetFileStatus);
         } catch (AzureBlobFileSystemException e) {
