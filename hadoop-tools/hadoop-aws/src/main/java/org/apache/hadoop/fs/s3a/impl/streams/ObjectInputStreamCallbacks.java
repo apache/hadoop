@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 /**
- * Callbacks for reading objectd data from the S3 Store.
+ * Callbacks for reading object data from the S3 Store.
  */
 public interface ObjectInputStreamCallbacks extends Closeable {
 
