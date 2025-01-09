@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocolPB;
 
-import java.io.IOException;
-
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.EndCheckpointRequestProto;
@@ -51,247 +48,229 @@ import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RollEditLogR
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RollEditLogResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.StartCheckpointRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.StartCheckpointResponseProto;
-import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
-import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
+import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
-import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
-
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
-/**
- * Implementation for protobuf service that forwards requests
- * received on {@link NamenodeProtocolPB} to the
- * {@link NamenodeProtocol} server implementation.
- */
-public class NamenodeProtocolServerSideTranslatorPB implements
-    NamenodeProtocolPB {
-  private final NamenodeProtocol impl;
+import static org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil.asyncRouterServer;
 
-  protected final static ErrorReportResponseProto VOID_ERROR_REPORT_RESPONSE =
-      ErrorReportResponseProto.newBuilder().build();
+public class RouterNamenodeProtocolServerSideTranslatorPB
+    extends NamenodeProtocolServerSideTranslatorPB {
 
-  protected final static EndCheckpointResponseProto VOID_END_CHECKPOINT_RESPONSE =
-      EndCheckpointResponseProto.newBuilder().build();
+  private final RouterRpcServer server;
+  private final boolean isAsyncRpc;
 
-  public NamenodeProtocolServerSideTranslatorPB(NamenodeProtocol impl) {
-    this.impl = impl;
+  public RouterNamenodeProtocolServerSideTranslatorPB(NamenodeProtocol impl) {
+    super(impl);
+    this.server = (RouterRpcServer) impl;
+    this.isAsyncRpc = server.isAsync();
   }
 
   @Override
   public GetBlocksResponseProto getBlocks(RpcController unused,
       GetBlocksRequestProto request) throws ServiceException {
-    DatanodeInfo dnInfo = new DatanodeInfoBuilder()
-        .setNodeID(PBHelperClient.convert(request.getDatanode()))
-        .build();
-    BlocksWithLocations blocks;
-    try {
-      blocks = impl.getBlocks(dnInfo, request.getSize(),
+    if (!isAsyncRpc) {
+      return super.getBlocks(unused, request);
+    }
+    asyncRouterServer(() -> {
+      DatanodeInfo dnInfo = new DatanodeInfo.DatanodeInfoBuilder()
+          .setNodeID(PBHelperClient.convert(request.getDatanode()))
+          .build();
+      return server.getBlocks(dnInfo, request.getSize(),
           request.getMinBlockSize(), request.getTimeInterval(),
           request.hasStorageType() ?
               PBHelperClient.convertStorageType(request.getStorageType()): null);
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-    return GetBlocksResponseProto.newBuilder()
-        .setBlocks(PBHelper.convert(blocks)).build();
+    }, blocks ->
+        GetBlocksResponseProto.newBuilder()
+            .setBlocks(PBHelper.convert(blocks)).build());
+    return null;
   }
 
   @Override
   public GetBlockKeysResponseProto getBlockKeys(RpcController unused,
       GetBlockKeysRequestProto request) throws ServiceException {
-    ExportedBlockKeys keys;
-    try {
-      keys = impl.getBlockKeys();
-    } catch (IOException e) {
-      throw new ServiceException(e);
+    if (!isAsyncRpc) {
+      return super.getBlockKeys(unused, request);
     }
-    GetBlockKeysResponseProto.Builder builder = 
-        GetBlockKeysResponseProto.newBuilder();
-    if (keys != null) {
-      builder.setKeys(PBHelper.convert(keys));
-    }
-    return builder.build();
+    asyncRouterServer(server::getBlockKeys, keys -> {
+      GetBlockKeysResponseProto.Builder builder =
+          GetBlockKeysResponseProto.newBuilder();
+      if (keys != null) {
+        builder.setKeys(PBHelper.convert(keys));
+      }
+      return builder.build();
+    });
+    return null;
   }
 
   @Override
   public GetTransactionIdResponseProto getTransactionId(RpcController unused,
       GetTransactionIdRequestProto request) throws ServiceException {
-    long txid;
-    try {
-      txid = impl.getTransactionID();
-    } catch (IOException e) {
-      throw new ServiceException(e);
+    if (!isAsyncRpc) {
+      return super.getTransactionId(unused, request);
     }
-    return GetTransactionIdResponseProto.newBuilder().setTxId(txid).build();
+    asyncRouterServer(server::getTransactionID,
+        txid -> GetTransactionIdResponseProto
+            .newBuilder().setTxId(txid).build());
+    return null;
   }
-  
+
   @Override
   public GetMostRecentCheckpointTxIdResponseProto getMostRecentCheckpointTxId(
       RpcController unused, GetMostRecentCheckpointTxIdRequestProto request)
       throws ServiceException {
-    long txid;
-    try {
-      txid = impl.getMostRecentCheckpointTxId();
-    } catch (IOException e) {
-      throw new ServiceException(e);
+    if (!isAsyncRpc) {
+      return super.getMostRecentCheckpointTxId(unused, request);
     }
-    return GetMostRecentCheckpointTxIdResponseProto.newBuilder().setTxId(txid).build();
+    asyncRouterServer(server::getMostRecentCheckpointTxId,
+        txid -> GetMostRecentCheckpointTxIdResponseProto
+            .newBuilder().setTxId(txid).build());
+    return null;
   }
 
   @Override
   public GetMostRecentNameNodeFileTxIdResponseProto getMostRecentNameNodeFileTxId(
       RpcController unused, GetMostRecentNameNodeFileTxIdRequestProto request)
       throws ServiceException {
-    long txid;
-    try {
-      txid = impl.getMostRecentNameNodeFileTxId(
-          NNStorage.NameNodeFile.valueOf(request.getNameNodeFile()));
-    } catch (IOException e) {
-      throw new ServiceException(e);
+    if (!isAsyncRpc) {
+      return super.getMostRecentNameNodeFileTxId(unused, request);
     }
-    return GetMostRecentNameNodeFileTxIdResponseProto.newBuilder().setTxId(txid).build();
+    asyncRouterServer(() -> server.getMostRecentNameNodeFileTxId(
+        NNStorage.NameNodeFile.valueOf(request.getNameNodeFile())),
+        txid -> GetMostRecentNameNodeFileTxIdResponseProto
+            .newBuilder().setTxId(txid).build());
+    return null;
   }
-
 
   @Override
   public RollEditLogResponseProto rollEditLog(RpcController unused,
       RollEditLogRequestProto request) throws ServiceException {
-    CheckpointSignature signature;
-    try {
-      signature = impl.rollEditLog();
-    } catch (IOException e) {
-      throw new ServiceException(e);
+    if (!isAsyncRpc) {
+      return super.rollEditLog(unused, request);
     }
-    return RollEditLogResponseProto.newBuilder()
-        .setSignature(PBHelper.convert(signature)).build();
+    asyncRouterServer(server::rollEditLog,
+        signature -> RollEditLogResponseProto.newBuilder()
+            .setSignature(PBHelper.convert(signature)).build());
+    return null;
   }
 
   @Override
   public ErrorReportResponseProto errorReport(RpcController unused,
       ErrorReportRequestProto request) throws ServiceException {
-    try {
-      impl.errorReport(PBHelper.convert(request.getRegistration()),
-          request.getErrorCode(), request.getMsg());
-    } catch (IOException e) {
-      throw new ServiceException(e);
+    if (!isAsyncRpc) {
+      return super.errorReport(unused, request);
     }
-    return VOID_ERROR_REPORT_RESPONSE;
+    asyncRouterServer(() -> {
+      server.errorReport(PBHelper.convert(request.getRegistration()),
+          request.getErrorCode(), request.getMsg());
+      return null;
+    }, result -> VOID_ERROR_REPORT_RESPONSE);
+    return null;
   }
 
   @Override
   public RegisterResponseProto registerSubordinateNamenode(
-      RpcController unused, RegisterRequestProto request)
-      throws ServiceException {
-    NamenodeRegistration reg;
-    try {
-      reg = impl.registerSubordinateNamenode(
-          PBHelper.convert(request.getRegistration()));
-    } catch (IOException e) {
-      throw new ServiceException(e);
+      RpcController unused, RegisterRequestProto request) throws ServiceException {
+    if (!isAsyncRpc) {
+      return super.registerSubordinateNamenode(unused, request);
     }
-    return RegisterResponseProto.newBuilder()
-        .setRegistration(PBHelper.convert(reg)).build();
+    asyncRouterServer(() -> server.registerSubordinateNamenode(
+        PBHelper.convert(request.getRegistration())),
+        reg -> RegisterResponseProto.newBuilder()
+            .setRegistration(PBHelper.convert(reg)).build());
+    return null;
   }
 
   @Override
   public StartCheckpointResponseProto startCheckpoint(RpcController unused,
       StartCheckpointRequestProto request) throws ServiceException {
-    NamenodeCommand cmd;
-    try {
-      cmd = impl.startCheckpoint(PBHelper.convert(request.getRegistration()));
-    } catch (IOException e) {
-      throw new ServiceException(e);
+    if (!isAsyncRpc) {
+      return super.startCheckpoint(unused, request);
     }
-    return StartCheckpointResponseProto.newBuilder()
-        .setCommand(PBHelper.convert(cmd)).build();
+    asyncRouterServer(() ->
+            server.startCheckpoint(PBHelper.convert(request.getRegistration())),
+        cmd -> StartCheckpointResponseProto.newBuilder()
+            .setCommand(PBHelper.convert(cmd)).build());
+    return null;
   }
+
 
   @Override
   public EndCheckpointResponseProto endCheckpoint(RpcController unused,
       EndCheckpointRequestProto request) throws ServiceException {
-    try {
-      impl.endCheckpoint(PBHelper.convert(request.getRegistration()),
-          PBHelper.convert(request.getSignature()));
-    } catch (IOException e) {
-      throw new ServiceException(e);
+    if (!isAsyncRpc) {
+      return super.endCheckpoint(unused, request);
     }
-    return VOID_END_CHECKPOINT_RESPONSE;
+    asyncRouterServer(() -> {
+      server.endCheckpoint(PBHelper.convert(request.getRegistration()),
+          PBHelper.convert(request.getSignature()));
+      return null;
+    }, result -> VOID_END_CHECKPOINT_RESPONSE);
+    return null;
   }
 
   @Override
   public GetEditLogManifestResponseProto getEditLogManifest(
-      RpcController unused, GetEditLogManifestRequestProto request)
-      throws ServiceException {
-    RemoteEditLogManifest manifest;
-    try {
-      manifest = impl.getEditLogManifest(request.getSinceTxId());
-    } catch (IOException e) {
-      throw new ServiceException(e);
+      RpcController unused, GetEditLogManifestRequestProto request) throws ServiceException {
+    if (!isAsyncRpc) {
+      return super.getEditLogManifest(unused, request);
     }
-    return GetEditLogManifestResponseProto.newBuilder()
-        .setManifest(PBHelper.convert(manifest)).build();
+    asyncRouterServer(() -> server.getEditLogManifest(request.getSinceTxId()),
+        manifest -> GetEditLogManifestResponseProto.newBuilder()
+            .setManifest(PBHelper.convert(manifest)).build());
+    return null;
   }
 
   @Override
-  public VersionResponseProto versionRequest(RpcController controller,
+  public VersionResponseProto versionRequest(
+      RpcController controller,
       VersionRequestProto request) throws ServiceException {
-    NamespaceInfo info;
-    try {
-      info = impl.versionRequest();
-    } catch (IOException e) {
-      throw new ServiceException(e);
+    if (!isAsyncRpc) {
+      return super.versionRequest(controller, request);
     }
-    return VersionResponseProto.newBuilder()
-        .setInfo(PBHelper.convert(info)).build();
+    asyncRouterServer(server::versionRequest,
+        info -> VersionResponseProto.newBuilder()
+            .setInfo(PBHelper.convert(info)).build());
+    return null;
   }
 
   @Override
-  public IsUpgradeFinalizedResponseProto isUpgradeFinalized(
-      RpcController controller, IsUpgradeFinalizedRequestProto request)
-      throws ServiceException {
-    boolean isUpgradeFinalized;
-    try {
-      isUpgradeFinalized = impl.isUpgradeFinalized();
-    } catch (IOException e) {
-      throw new ServiceException(e);
+  public IsUpgradeFinalizedResponseProto isUpgradeFinalized(RpcController controller,
+      IsUpgradeFinalizedRequestProto request) throws ServiceException {
+    if (!isAsyncRpc) {
+      return super.isUpgradeFinalized(controller, request);
     }
-    return IsUpgradeFinalizedResponseProto.newBuilder()
-        .setIsUpgradeFinalized(isUpgradeFinalized).build();
+    asyncRouterServer(server::isUpgradeFinalized,
+        isUpgradeFinalized -> IsUpgradeFinalizedResponseProto.newBuilder()
+            .setIsUpgradeFinalized(isUpgradeFinalized).build());
+    return null;
   }
 
   @Override
   public IsRollingUpgradeResponseProto isRollingUpgrade(
       RpcController controller, IsRollingUpgradeRequestProto request)
       throws ServiceException {
-    boolean isRollingUpgrade;
-    try {
-      isRollingUpgrade = impl.isRollingUpgrade();
-    } catch (IOException e) {
-      throw new ServiceException(e);
+    if (!isAsyncRpc) {
+      return super.isRollingUpgrade(controller, request);
     }
-    return IsRollingUpgradeResponseProto.newBuilder()
-        .setIsRollingUpgrade(isRollingUpgrade).build();
+    asyncRouterServer(server::isRollingUpgrade,
+        isRollingUpgrade -> IsRollingUpgradeResponseProto.newBuilder()
+            .setIsRollingUpgrade(isRollingUpgrade).build());
+    return null;
   }
 
   @Override
   public GetNextSPSPathResponseProto getNextSPSPath(
       RpcController controller, GetNextSPSPathRequestProto request)
-          throws ServiceException {
-    try {
-      Long nextSPSPath = impl.getNextSPSPath();
-      if (nextSPSPath == null) {
-        return GetNextSPSPathResponseProto.newBuilder().build();
-      }
-      return GetNextSPSPathResponseProto.newBuilder().setSpsPath(nextSPSPath)
-          .build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
+      throws ServiceException {
+    if (!isAsyncRpc) {
+      return super.getNextSPSPath(controller, request);
     }
+    asyncRouterServer(server::getNextSPSPath,
+        nextSPSPath -> GetNextSPSPathResponseProto.newBuilder()
+            .setSpsPath(nextSPSPath).build());
+    return null;
   }
 }

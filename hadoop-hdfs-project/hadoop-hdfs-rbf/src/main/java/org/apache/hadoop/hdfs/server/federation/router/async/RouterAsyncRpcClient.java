@@ -108,16 +108,17 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
    * @param resolver A NN resolver to determine the currently active NN in HA.
    * @param monitor Optional performance monitor.
    * @param routerStateIdContext the router state context object to hold the state ids for all
+   * @param asyncRouterHandler async router handler
    * namespaces.
    */
-  public RouterAsyncRpcClient(
-      Configuration conf, Router router, ActiveNamenodeResolver resolver,
-      RouterRpcMonitor monitor, RouterStateIdContext routerStateIdContext) {
+  public RouterAsyncRpcClient(Configuration conf,
+      Router router, ActiveNamenodeResolver resolver, RouterRpcMonitor monitor,
+      RouterStateIdContext routerStateIdContext, Executor asyncRouterHandler) {
     super(conf, router, resolver, monitor, routerStateIdContext);
     this.router = router;
     this.namenodeResolver = resolver;
     this.rpcMonitor = monitor;
-    this.asyncRouterHandler = router.getRpcServer().getAsyncRouterHandler();
+    this.asyncRouterHandler = asyncRouterHandler;
   }
 
   /**

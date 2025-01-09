@@ -20,16 +20,21 @@ package org.apache.hadoop.hdfs.protocolPB;
 
 import org.apache.hadoop.hdfs.server.federation.router.ThreadLocalContext;
 import org.apache.hadoop.hdfs.server.federation.router.async.utils.ApplyFunction;
+import org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
+import org.apache.hadoop.ipc.ProtobufRpcEngineCallback2;
 import org.apache.hadoop.ipc.internal.ShadedProtobufHelper;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 import org.apache.hadoop.util.concurrent.AsyncGet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.Async.warpCompletionException;
@@ -97,6 +102,45 @@ public final class AsyncRpcProtocolPBUtil {
   }
 
   /**
+   * Asynchronously invokes an RPC call and applies a response transformation function
+   * to the result on server-side.
+   * @param req The IPC call encapsulating the RPC request on server-side.
+   * @param res The function to apply to the response of the RPC call on server-side.
+   * @param <T> Type of the call's result.
+   */
+  public static <T> void asyncRouterServer(ServerReq<T> req, ServerRes<T> res) {
+    final ProtobufRpcEngineCallback2 callback =
+        ProtobufRpcEngine2.Server.registerForDeferredResponse2();
+
+    CompletableFuture<Object> completableFuture =
+        CompletableFuture.completedFuture(null);
+    completableFuture.thenCompose(o -> {
+      try {
+        req.req();
+        return (CompletableFuture<T>) AsyncUtil.getAsyncUtilCompletableFuture();
+      } catch (Exception e) {
+        throw new CompletionException(e);
+      }
+    }).handle((result, e) -> {
+      LOG.debug("Async response, callback: {}, CallerContext: {}, result: [{}], exception: [{}]",
+          callback, CallerContext.getCurrent(), result, e);
+      if (e == null) {
+        Message value = null;
+        try {
+          value = res.res(result);
+        } catch (Exception re) {
+          callback.error(re);
+          return null;
+        }
+        callback.setResponse(value);
+      } else {
+        callback.error(e.getCause());
+      }
+      return null;
+    });
+  }
+
+  /**
    * Sets the executor used for handling responses asynchronously within
    * the utility class.
    *
@@ -104,5 +148,15 @@ public final class AsyncRpcProtocolPBUtil {
    */
   public static void setWorker(Executor worker) {
     AsyncRpcProtocolPBUtil.worker = worker;
+  }
+
+  @FunctionalInterface
+  interface ServerReq<T> {
+    T req() throws Exception;
+  }
+
+  @FunctionalInterface
+  interface ServerRes<T> {
+    Message res(T result) throws Exception;
   }
 }

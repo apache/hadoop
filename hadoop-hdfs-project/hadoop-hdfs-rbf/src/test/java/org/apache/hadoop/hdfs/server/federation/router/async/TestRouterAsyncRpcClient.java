@@ -152,7 +152,8 @@ public class TestRouterAsyncRpcClient {
     asyncRpcClient = new RouterAsyncRpcClient(
         routerConf, router.getRouter(), routerRpcServer.getNamenodeResolver(),
         routerRpcServer.getRPCMonitor(),
-        routerRpcServer.getRouterStateIdContext());
+        routerRpcServer.getRouterStateIdContext(),
+        routerRpcServer.getAsyncRouterHandler());
 
     // Create a test file
     FSDataOutputStream fsDataOutputStream = routerFs.create(

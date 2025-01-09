@@ -795,6 +795,12 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   }
 
   @Override
+  public DatanodeInfo[] getSlowDatanodeReport() throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
+    return rpcServer.getSlowDatanodeReportAsync(true, 0);
+  }
+
+  @Override
   public DatanodeStorageReport[] getDatanodeStorageReport(
       HdfsConstants.DatanodeReportType type) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
