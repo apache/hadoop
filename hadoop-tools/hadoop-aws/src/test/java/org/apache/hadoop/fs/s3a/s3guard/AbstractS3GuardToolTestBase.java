@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.s3a.UnknownStoreException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ExitUtil;
 
-import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo.IS_MARKER_AWARE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_S3GUARD_UNSUPPORTED;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.INVALID_ARGUMENT;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
@@ -169,12 +168,9 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
 
     // run a bucket info command
     S3GuardTool.BucketInfo infocmd = toClose(new S3GuardTool.BucketInfo(conf));
-    String info = exec(infocmd, S3GuardTool.BucketInfo.NAME,
+    exec(infocmd, S3GuardTool.BucketInfo.NAME,
         "-" + MARKERS, S3GuardTool.BucketInfo.MARKERS_AWARE,
         fsUri.toString());
-
-    assertTrue("Output should contain information about S3A client " + info,
-        info.contains(IS_MARKER_AWARE));
   }
 
   /**

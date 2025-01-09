@@ -6568,15 +6568,6 @@
       problem. In produce default set false, because it's have little performance loss.
     </description>
   </property>
-
-  <property>
-    <name>dfs.datanode.dataset.sublock.count</name>
-    <value>1000</value>
-    <description>
-      The dataset readwrite lock counts for a volume.
-    </description>
-  </property>
-
   <property>
     <name>dfs.client.fsck.connect.timeout</name>
     <value>60000ms</value>

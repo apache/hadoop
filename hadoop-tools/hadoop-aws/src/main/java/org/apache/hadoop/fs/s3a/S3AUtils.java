@@ -724,7 +724,6 @@ public final class S3AUtils {
    */
   public static S3xLoginHelper.Login getAWSAccessKeys(URI name,
       Configuration conf) throws IOException {
-    S3xLoginHelper.rejectSecretsInURIs(name);
     Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
         conf, S3AFileSystem.class);
     String bucket = name != null ? name.getHost() : "";

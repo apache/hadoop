@@ -68,7 +68,7 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
             .withProgress(progressable)
             .withPutTracker(putTracker)
             .withWriteOperations(oHelper)
-            .withPutOptions(PutObjectOptions.keepingDirs())
+            .withPutOptions(PutObjectOptions.defaultOptions())
             .withIOStatisticsAggregator(
                 IOStatisticsContext.getCurrentIOStatisticsContext()
                     .getAggregator());

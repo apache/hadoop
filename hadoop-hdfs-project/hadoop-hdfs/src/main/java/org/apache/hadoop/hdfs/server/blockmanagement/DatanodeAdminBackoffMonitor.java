@@ -738,7 +738,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    * @return
    */
   private boolean isBlockReplicatedOk(DatanodeDescriptor datanode,
-      BlockInfo block, Boolean scheduleReconStruction,
+      BlockInfo block, boolean scheduleReconStruction,
       BlockStats suspectBlocks) {
     if (blockManager.blocksMap.getStoredBlock(block) == null) {
       LOG.trace("Removing unknown block {}", block);
@@ -760,19 +760,8 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
     boolean isDecommission = datanode.isDecommissionInProgress();
     boolean isMaintenance = datanode.isEnteringMaintenance();
 
-    boolean neededReconstruction = isDecommission ?
-        blockManager.isNeededReconstruction(block, num) :
-        blockManager.isNeededReconstructionForMaintenance(block, num);
-    if (neededReconstruction && scheduleReconStruction) {
-      if (!blockManager.neededReconstruction.contains(block) &&
-          blockManager.pendingReconstruction.getNumReplicas(block) == 0 &&
-          blockManager.isPopulatingReplQueues()) {
-        // Process these blocks only when active NN is out of safe mode.
-        blockManager.neededReconstruction.add(block,
-            liveReplicas, num.readOnlyReplicas(),
-            num.outOfServiceReplicas(),
-            blockManager.getExpectedRedundancyNum(block));
-      }
+    if (scheduleReconStruction) {
+      addReconstructionBlockIfNeeded(isDecommission, block, num, liveReplicas);
     }
 
     if (suspectBlocks != null) {

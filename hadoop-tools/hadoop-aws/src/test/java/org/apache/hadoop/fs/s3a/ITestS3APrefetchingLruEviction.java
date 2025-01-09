@@ -69,7 +69,6 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
   }
 
   public ITestS3APrefetchingLruEviction(final String maxBlocks) {
-    super(true);
     this.maxBlocks = maxBlocks;
   }
 

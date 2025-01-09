@@ -90,7 +90,7 @@ public final class MultipartTestUtils {
       WriteOperationHelper writeHelper = fs.getWriteOperationHelper();
       byte[] data = dataset(len, 'a', 'z');
       InputStream in = new ByteArrayInputStream(data);
-      String uploadId = writeHelper.initiateMultiPartUpload(key, PutObjectOptions.keepingDirs());
+      String uploadId = writeHelper.initiateMultiPartUpload(key, PutObjectOptions.defaultOptions());
       UploadPartRequest req = writeHelper.newUploadPartRequestBuilder(key, uploadId,
           partNo, true, len).build();
       RequestBody body = RequestBody.fromInputStream(in, len);

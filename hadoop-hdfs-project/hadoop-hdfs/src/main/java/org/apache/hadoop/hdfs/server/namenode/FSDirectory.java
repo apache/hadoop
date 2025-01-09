@@ -695,7 +695,7 @@ public class FSDirectory implements Closeable {
    * accessible path that also passed additional sanity checks based on how
    * the path will be used as specified by the DirOp.
    *   READ:   Expands reserved paths and performs permission checks
-   *           during traversal.  Raw paths are only accessible by a superuser.
+   *           during traversal.
    *   WRITE:  In addition to READ checks, ensures the path is not a
    *           snapshot path.
    *   CREATE: In addition to WRITE checks, ensures path does not contain

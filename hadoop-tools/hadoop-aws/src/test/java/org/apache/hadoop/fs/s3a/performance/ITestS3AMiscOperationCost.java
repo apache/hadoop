@@ -49,7 +49,6 @@ import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
 
 /**
  * Use metrics to assert about the cost of misc operations.
- * Parameterized on directory marker keep vs delete
  */
 @RunWith(Parameterized.class)
 public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
@@ -68,15 +67,13 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {"keep-markers-auditing", true, true},
-        {"delete-markers-unaudited", false, false}
+        {"auditing", true},
+        {"unaudited", false}
     });
   }
 
   public ITestS3AMiscOperationCost(final String name,
-      final boolean keepMarkers,
       final boolean auditing) {
-    super(keepMarkers);
     this.auditing = auditing;
   }
 

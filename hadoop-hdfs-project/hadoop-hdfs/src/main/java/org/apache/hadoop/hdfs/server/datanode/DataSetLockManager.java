@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Stack;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +41,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   private boolean isFair = true;
   private final boolean openLockTrace;
   private Exception lastException;
+  private DataNode datanode;
 
   /**
    * Class for maintain lockMap and is thread safe.
@@ -94,13 +96,6 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
             + resources[0] + "volume lock :" + resources[1]);
       }
       return resources[0] + resources[1];
-    } else if (resources.length == 3 && level == LockLevel.DIR) {
-      if (resources[0] == null || resources[1] == null || resources[2] == null) {
-        throw new IllegalArgumentException("acquire a null dataset lock : "
-            + resources[0] + ",volume lock :" + resources[1]
-        + ",subdir lock :" + resources[2]);
-      }
-      return resources[0] + resources[1] + resources[2];
     } else {
       throw new IllegalArgumentException("lock level do not match resource");
     }
@@ -143,24 +138,25 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
     }
   }
 
-  public DataSetLockManager(Configuration conf) {
+  public DataSetLockManager() {
+    this.openLockTrace = true;
+  }
+
+  public DataSetLockManager(Configuration conf, DataNode dn) {
     this.isFair = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_LOCK_FAIR_KEY,
         DFSConfigKeys.DFS_DATANODE_LOCK_FAIR_DEFAULT);
     this.openLockTrace = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_LOCKMANAGER_TRACE,
         DFSConfigKeys.DFS_DATANODE_LOCKMANAGER_TRACE_DEFAULT);
-  }
-
-  public DataSetLockManager() {
-    this.openLockTrace = true;
+    this.datanode = dn;
   }
 
   @Override
   public AutoCloseDataSetLock readLock(LockLevel level, String... resources) {
     if (level == LockLevel.BLOCK_POOl) {
       return getReadLock(level, resources[0]);
-    } else if (level == LockLevel.VOLUME){
+    } else {
       AutoCloseDataSetLock bpLock = getReadLock(LockLevel.BLOCK_POOl, resources[0]);
       AutoCloseDataSetLock volLock = getReadLock(level, resources);
       volLock.setParentLock(bpLock);
@@ -169,17 +165,6 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
             resources[0]);
       }
       return volLock;
-    } else {
-      AutoCloseDataSetLock bpLock = getReadLock(LockLevel.BLOCK_POOl, resources[0]);
-      AutoCloseDataSetLock volLock = getReadLock(LockLevel.VOLUME, resources[0], resources[1]);
-      volLock.setParentLock(bpLock);
-      AutoCloseDataSetLock dirLock = getReadLock(level, resources);
-      dirLock.setParentLock(volLock);
-      if (openLockTrace) {
-        LOG.debug("Sub lock " + resources[0] + resources[1] + resources[2] + " parent lock " +
-            resources[0] + resources[1]);
-      }
-      return dirLock;
     }
   }
 
@@ -187,7 +172,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   public AutoCloseDataSetLock writeLock(LockLevel level, String... resources) {
     if (level == LockLevel.BLOCK_POOl) {
       return getWriteLock(level, resources[0]);
-    } else if (level == LockLevel.VOLUME) {
+    } else {
       AutoCloseDataSetLock bpLock = getReadLock(LockLevel.BLOCK_POOl, resources[0]);
       AutoCloseDataSetLock volLock = getWriteLock(level, resources);
       volLock.setParentLock(bpLock);
@@ -196,17 +181,6 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
             resources[0]);
       }
       return volLock;
-    } else {
-      AutoCloseDataSetLock bpLock = getReadLock(LockLevel.BLOCK_POOl, resources[0]);
-      AutoCloseDataSetLock volLock = getReadLock(LockLevel.VOLUME, resources[0], resources[1]);
-      volLock.setParentLock(bpLock);
-      AutoCloseDataSetLock dirLock = getWriteLock(level, resources);
-      dirLock.setParentLock(volLock);
-      if (openLockTrace) {
-        LOG.debug("Sub lock " + resources[0] + resources[1] + resources[2] + " parent lock " +
-            resources[0] + resources[1]);
-      }
-      return dirLock;
     }
   }
 
@@ -214,6 +188,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
    * Return a not null ReadLock.
    */
   private AutoCloseDataSetLock getReadLock(LockLevel level, String... resources) {
+    long startTimeNanos = Time.monotonicNowNanos();
     String lockName = generateLockName(level, resources);
     AutoCloseDataSetLock lock = lockMap.getReadLock(lockName);
     if (lock == null) {
@@ -226,6 +201,9 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
     if (openLockTrace) {
       putThreadName(getThreadName());
     }
+    if (datanode != null) {
+      datanode.metrics.addAcquireDataSetReadLock(Time.monotonicNowNanos() - startTimeNanos);
+    }
     return lock;
   }
 
@@ -233,6 +211,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
    * Return a not null WriteLock.
    */
   private AutoCloseDataSetLock getWriteLock(LockLevel level, String... resources) {
+    long startTimeNanos = Time.monotonicNowNanos();
     String lockName = generateLockName(level, resources);
     AutoCloseDataSetLock lock = lockMap.getWriteLock(lockName);
     if (lock == null) {
@@ -245,6 +224,9 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
     if (openLockTrace) {
       putThreadName(getThreadName());
     }
+    if (datanode != null) {
+      datanode.metrics.addAcquireDataSetWriteLock(Time.monotonicNowNanos() - startTimeNanos);
+    }
     return lock;
   }
 
@@ -253,13 +235,8 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
     String lockName = generateLockName(level, resources);
     if (level == LockLevel.BLOCK_POOl) {
       lockMap.addLock(lockName, new ReentrantReadWriteLock(isFair));
-    } else if (level == LockLevel.VOLUME) {
-      lockMap.addLock(resources[0], new ReentrantReadWriteLock(isFair));
-      lockMap.addLock(lockName, new ReentrantReadWriteLock(isFair));
     } else {
       lockMap.addLock(resources[0], new ReentrantReadWriteLock(isFair));
-      lockMap.addLock(generateLockName(LockLevel.VOLUME, resources[0], resources[1]),
-          new ReentrantReadWriteLock(isFair));
       lockMap.addLock(lockName, new ReentrantReadWriteLock(isFair));
     }
   }

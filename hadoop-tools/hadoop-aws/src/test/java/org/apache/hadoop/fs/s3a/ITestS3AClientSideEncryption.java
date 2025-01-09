@@ -336,7 +336,7 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
         putObjectRequestBuilder.contentLength(Long.parseLong(String.valueOf(SMALL_FILE_SIZE)));
         putObjectRequestBuilder.metadata(metadata);
         fs.putObjectDirect(putObjectRequestBuilder.build(),
-            PutObjectOptions.deletingDirs(),
+            PutObjectOptions.defaultOptions(),
             new S3ADataBlocks.BlockUploadData(new byte[SMALL_FILE_SIZE], null),
             null);
 

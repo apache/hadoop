@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.tools;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.URI;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
@@ -32,23 +31,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.VERBOSE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.runS3GuardCommand;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.runS3GuardCommandToFailure;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.UNLIMITED_LISTING;
 
 /**
- * Class for marker tool tests -sets up keeping/deleting filesystems,
- * has methods to invoke.
+ * Class for marker tool tests.
  */
 public class AbstractMarkerToolTest extends AbstractS3ATestBase {
 
@@ -58,26 +53,15 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
   /** the -verbose option. */
   protected static final String V = AbstractMarkerToolTest.m(VERBOSE);
 
-  /** FS which keeps markers. */
-  private S3AFileSystem keepingFS;
-
-  /** FS which deletes markers. */
-  private S3AFileSystem deletingFS;
-
-  /** FS which mixes markers; only created in some tests. */
-  private S3AFileSystem mixedFS;
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     String bucketName = getTestBucketName(conf);
     removeBaseAndBucketOverrides(bucketName, conf,
         S3A_BUCKET_PROBE,
-        DIRECTORY_MARKER_POLICY,
         AUTHORITATIVE_PATH,
         FS_S3A_CREATE_PERFORMANCE,
         FS_S3A_PERFORMANCE_FLAGS);
-    // base FS is legacy
-    conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_DELETE);
     conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, false);
 
     // turn off bucket probes for a bit of speedup in the connectors we create.
@@ -87,53 +71,13 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
   }
 
   @Override
-  public void setup() throws Exception {
-    super.setup();
-    setKeepingFS(createFS(DIRECTORY_MARKER_POLICY_KEEP, null));
-    setDeletingFS(createFS(DIRECTORY_MARKER_POLICY_DELETE, null));
-  }
-
-  @Override
   public void teardown() throws Exception {
     // do this ourselves to avoid audits teardown failing
     // when surplus markers are found
     deleteTestDirInTeardown();
     super.teardown();
-    IOUtils.cleanupWithLogger(LOG, getKeepingFS(),
-        getMixedFS(), getDeletingFS());
-
   }
 
-  /**
-   * FS which deletes markers.
-   */
-  public S3AFileSystem getDeletingFS() {
-    return deletingFS;
-  }
-
-  public void setDeletingFS(final S3AFileSystem deletingFS) {
-    this.deletingFS = deletingFS;
-  }
-
-  /**
-   * FS which keeps markers.
-   */
-  protected S3AFileSystem getKeepingFS() {
-    return keepingFS;
-  }
-
-  private void setKeepingFS(S3AFileSystem keepingFS) {
-    this.keepingFS = keepingFS;
-  }
-
-  /** only created on demand. */
-  private S3AFileSystem getMixedFS() {
-    return mixedFS;
-  }
-
-  protected void setMixedFS(S3AFileSystem mixedFS) {
-    this.mixedFS = mixedFS;
-  }
 
   /**
    * Get a filename for a temp file.
@@ -179,52 +123,18 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
   }
 
   /**
-   * Create a new FS with given marker policy and path.
-   * This filesystem MUST be closed in test teardown.
-   * @param markerPolicy markers
-   * @param authPath authoritative path. If null: no path.
-   * @return a new FS.
-   */
-  protected S3AFileSystem createFS(String markerPolicy,
-      String authPath) throws Exception {
-    S3AFileSystem testFS = getFileSystem();
-    Configuration conf = new Configuration(testFS.getConf());
-    URI testFSUri = testFS.getUri();
-    String bucketName = getTestBucketName(conf);
-    removeBucketOverrides(bucketName, conf,
-        DIRECTORY_MARKER_POLICY,
-        BULK_DELETE_PAGE_SIZE,
-        AUTHORITATIVE_PATH);
-    if (authPath != null) {
-      conf.set(AUTHORITATIVE_PATH, authPath);
-    }
-    // Use a very small page size to force the paging
-    // code to be tested.
-    conf.setInt(BULK_DELETE_PAGE_SIZE, 2);
-    conf.set(DIRECTORY_MARKER_POLICY, markerPolicy);
-    S3AFileSystem fs2 = new S3AFileSystem();
-    fs2.initialize(testFSUri, conf);
-    LOG.info("created new filesystem with policy {} and auth path {}",
-        markerPolicy,
-        (authPath == null ? "(null)": authPath));
-    return fs2;
-  }
-
-  /**
    * Execute the marker tool, expecting the execution to succeed.
    * @param sourceFS filesystem to use
    * @param path path to scan
-   * @param doPurge should markers be purged
    * @param expectedMarkerCount number of markers expected
    * @return the result
    */
   protected MarkerTool.ScanResult markerTool(
       final FileSystem sourceFS,
       final Path path,
-      final boolean doPurge,
       final int expectedMarkerCount)
       throws IOException {
-    return markerTool(0, sourceFS, path, doPurge,
+    return markerTool(0, sourceFS, path, false,
         expectedMarkerCount,
         UNLIMITED_LISTING, false);
   }
@@ -315,7 +225,6 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
             .withMinMarkerCount(expectedMarkers)
             .withMaxMarkerCount(expectedMarkers)
             .withLimit(limit)
-            .withNonAuth(nonAuth)
             .build());
     Assertions.assertThat(result.getExitCode())
         .describedAs("Exit code of marker(%s, %s, %d) -> %s",

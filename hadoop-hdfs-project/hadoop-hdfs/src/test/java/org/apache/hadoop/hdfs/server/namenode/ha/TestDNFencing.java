@@ -50,7 +50,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
@@ -597,13 +596,9 @@ public class TestDNFencing {
       throws IOException {
     int count = 0;
     for (DataNode dn : cluster.getDataNodes()) {
-      try {
-        if (DataNodeTestUtils.getFSDataset(dn).getStoredBlock(
-            block.getBlockPoolId(), block.getBlockId()) != null) {
-          count++;
-        }
-      } catch (ReplicaNotFoundException e) {
-        continue;
+      if (DataNodeTestUtils.getFSDataset(dn).getStoredBlock(
+          block.getBlockPoolId(), block.getBlockId()) != null) {
+        count++;
       }
     }
     return count;

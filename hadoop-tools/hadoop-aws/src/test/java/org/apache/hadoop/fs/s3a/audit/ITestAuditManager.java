@@ -49,10 +49,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 public class ITestAuditManager extends AbstractS3ACostTest {
 
-  public ITestAuditManager() {
-    super(true);
-  }
-
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();

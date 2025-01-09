@@ -1744,10 +1744,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean
       DFS_DATANODE_LOCKMANAGER_TRACE_DEFAULT = false;
 
-  public static final String DFS_DATANODE_DATASET_SUBLOCK_COUNT_KEY =
-      "dfs.datanode.dataset.sublock.count";
-  public static final long DFS_DATANODE_DATASET_SUBLOCK_COUNT_DEFAULT = 1000L;
-
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated
   public static final String  DFS_CLIENT_RETRY_POLICY_ENABLED_KEY

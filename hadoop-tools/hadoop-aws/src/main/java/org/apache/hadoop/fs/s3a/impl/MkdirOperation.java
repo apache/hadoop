@@ -145,8 +145,7 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
     // If so, we declare success without looking any further
     if (isMagicPath) {
       // Create the marker file immediately,
-      // and don't delete markers
-      callbacks.createFakeDirectory(dir, true);
+      callbacks.createFakeDirectory(dir);
       return true;
     }
 
@@ -159,9 +158,8 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
     // if we get here there is no directory at the destination.
     // so create one.
 
-    // Create the marker file, delete the parent entries
-    // if the filesystem isn't configured to retain them
-    callbacks.createFakeDirectory(dir, false);
+    // Create the directory marker file
+    callbacks.createFakeDirectory(dir);
     return true;
   }
 
@@ -264,15 +262,10 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
     /**
      * Create a fake directory, always ending in "/".
      * Retry policy: retrying; translated.
-     * the keepMarkers flag controls whether or not markers
-     * are automatically kept (this is set when creating
-     * directories under a magic path, always)
      * @param dir dir to create
-     * @param keepMarkers always keep markers
-     *
      * @throws IOException IO failure
      */
     @Retries.RetryTranslated
-    void createFakeDirectory(Path dir, boolean keepMarkers) throws IOException;
+    void createFakeDirectory(Path dir) throws IOException;
   }
 }

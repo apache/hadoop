@@ -534,6 +534,10 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `ProcessedCommandsOpNumOps` | Total number of processed commands operations |
 | `ProcessedCommandsOpAvgTime` | Average time of processed commands operations in milliseconds |
 | `NullStorageBlockReports` | Number of blocks in IBRs that failed due to null storage |
+| `AcquireDatasetReadLockNumOps` | Total number of acquiring dataset read lock operations |
+| `AcquireDatasetReadLockAvgTime` | Average time of acquiring dataset read lock operations in nanoseconds |
+| `AcquireDatasetWriteLockNumOps` | Total number of acquiring dataset write lock operations |
+| `AcquireDatasetWriteLockAvgTime` | Average time of acquiring dataset write lock operations in nanoseconds |
 
 FsVolume
 --------

@@ -47,7 +47,6 @@ import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.adapter.AwsV1BindingSupport;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
-import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
@@ -139,15 +138,12 @@ public final class CredentialProviderListFactory {
   public static AWSCredentialProviderList createAWSCredentialProviderList(
       @Nullable URI binding,
       Configuration conf) throws IOException {
-    // this will reject any user:secret entries in the URI
-    S3xLoginHelper.rejectSecretsInURIs(binding);
     AWSCredentialProviderList credentials =
         buildAWSProviderList(binding,
             conf,
             AWS_CREDENTIALS_PROVIDER,
             STANDARD_AWS_PROVIDERS,
             new HashSet<>());
-    // make sure the logging message strips out any auth details
     LOG.debug("For URI {}, using credentials {}",
         binding, credentials);
     return credentials;

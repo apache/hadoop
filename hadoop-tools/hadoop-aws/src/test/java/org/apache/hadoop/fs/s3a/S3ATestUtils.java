@@ -722,13 +722,6 @@ public final class S3ATestUtils {
     }
     conf.set(BUFFER_DIR, tmpDir);
 
-    // directory marker policy
-    String directoryRetention = getTestProperty(
-        conf,
-        DIRECTORY_MARKER_POLICY,
-        DEFAULT_DIRECTORY_MARKER_POLICY);
-    conf.set(DIRECTORY_MARKER_POLICY, directoryRetention);
-
     boolean prefetchEnabled =
         getTestPropertyBool(conf, PREFETCH_ENABLED_KEY, PREFETCH_ENABLED_DEFAULT);
     conf.setBoolean(PREFETCH_ENABLED_KEY, prefetchEnabled);
@@ -1088,8 +1081,7 @@ public final class S3ATestUtils {
     List<CompletableFuture<Path>> futures = new ArrayList<>(paths.size()
         + dirs.size());
 
-    // create directories. With dir marker retention, that adds more entries
-    // to cause deletion issues
+    // create directories.
     try (DurationInfo ignore =
              new DurationInfo(LOG, "Creating %d directories", dirs.size())) {
       for (Path path : dirs) {

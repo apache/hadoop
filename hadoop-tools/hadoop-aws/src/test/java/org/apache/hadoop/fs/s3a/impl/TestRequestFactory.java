@@ -179,9 +179,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     a(factory.newListObjectsV2RequestBuilder(path, "/", 1));
     a(factory.newMultipartUploadRequestBuilder(path, null));
     a(factory.newPutObjectRequestBuilder(path,
-        PutObjectOptions.keepingDirs(), -1, true));
-    a(factory.newPutObjectRequestBuilder(path,
-        PutObjectOptions.deletingDirs(), 1024, false));
+        PutObjectOptions.defaultOptions(), -1, true));
   }
 
   /**
@@ -265,7 +263,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
 
     // A simple PUT
     final PutObjectRequest put = factory.newPutObjectRequestBuilder(path,
-        PutObjectOptions.deletingDirs(), 1024, false).build();
+        PutObjectOptions.defaultOptions(), 1024, false).build();
     assertApiTimeouts(partDuration, put);
 
     // multipart part
