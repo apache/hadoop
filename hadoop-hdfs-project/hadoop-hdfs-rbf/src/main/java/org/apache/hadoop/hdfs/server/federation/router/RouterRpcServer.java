@@ -43,6 +43,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncU
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncForEach;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncReturn;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncTry;
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.SCHEDULER_JOURNAL_URI;
 
 import java.io.FileNotFoundException;
@@ -75,6 +76,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil;
+import org.apache.hadoop.hdfs.protocolPB.RouterClientNamenodeProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.RouterGetUserMappingsProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.RouterNamenodeProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.RouterRefreshUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.federation.router.async.AsyncQuota;
 import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncClientProtocol;
 import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncNamenodeProtocol;
@@ -328,26 +333,39 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     RPC.setProtocolEngine(this.conf, ClientNamenodeProtocolPB.class,
         ProtobufRpcEngine2.class);
-
     ClientNamenodeProtocolServerSideTranslatorPB
-        clientProtocolServerTranslator =
-            new ClientNamenodeProtocolServerSideTranslatorPB(this);
+        clientProtocolServerTranslator = null;
+    NamenodeProtocolServerSideTranslatorPB namenodeProtocolXlator = null;
+    RefreshUserMappingsProtocolServerSideTranslatorPB refreshUserMappingXlator = null;
+    GetUserMappingsProtocolServerSideTranslatorPB getUserMappingXlator = null;
+    if (isAsync()) {
+      clientProtocolServerTranslator =
+          new RouterClientNamenodeProtocolServerSideTranslatorPB(this);
+      namenodeProtocolXlator =
+          new RouterNamenodeProtocolServerSideTranslatorPB(this);
+      refreshUserMappingXlator =
+          new RouterRefreshUserMappingsProtocolServerSideTranslatorPB(this);
+      getUserMappingXlator =
+          new RouterGetUserMappingsProtocolServerSideTranslatorPB(this);
+    } else {
+      clientProtocolServerTranslator = new ClientNamenodeProtocolServerSideTranslatorPB(this);
+      namenodeProtocolXlator =
+          new NamenodeProtocolServerSideTranslatorPB(this);
+      refreshUserMappingXlator =
+          new RefreshUserMappingsProtocolServerSideTranslatorPB(this);
+      getUserMappingXlator =
+          new GetUserMappingsProtocolServerSideTranslatorPB(this);
+    }
     BlockingService clientNNPbService = ClientNamenodeProtocol
         .newReflectiveBlockingService(clientProtocolServerTranslator);
 
-    NamenodeProtocolServerSideTranslatorPB namenodeProtocolXlator =
-        new NamenodeProtocolServerSideTranslatorPB(this);
     BlockingService nnPbService = NamenodeProtocolService
         .newReflectiveBlockingService(namenodeProtocolXlator);
 
-    RefreshUserMappingsProtocolServerSideTranslatorPB refreshUserMappingXlator =
-        new RefreshUserMappingsProtocolServerSideTranslatorPB(this);
     BlockingService refreshUserMappingService =
         RefreshUserMappingsProtocolProtos.RefreshUserMappingsProtocolService.
         newReflectiveBlockingService(refreshUserMappingXlator);
 
-    GetUserMappingsProtocolServerSideTranslatorPB getUserMappingXlator =
-        new GetUserMappingsProtocolServerSideTranslatorPB(this);
     BlockingService getUserMappingService =
         GetUserMappingsProtocolProtos.GetUserMappingsProtocolService.
         newReflectiveBlockingService(getUserMappingXlator);
@@ -428,7 +446,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     // Create the client
     if (this.enableAsync) {
       this.rpcClient = new RouterAsyncRpcClient(this.conf, this.router,
-          this.namenodeResolver, this.rpcMonitor, routerStateIdContext);
+          this.namenodeResolver, this.rpcMonitor,
+          routerStateIdContext, asyncRouterHandler);
       this.clientProto = new RouterAsyncClientProtocol(conf, this);
       this.nnProto = new RouterAsyncNamenodeProtocol(this);
       this.routerProto = new RouterAsyncUserProtocol(this);
@@ -1336,8 +1355,13 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     try {
       DatanodeInfo[] dns = clientProto.getDatanodeReport(type);
+      if (router.getRpcServer().isAsync()) {
+        dns = syncReturn(DatanodeInfo[].class);
+      }
       LOG.debug("Refresh cached DN report with {} datanodes", dns.length);
       return dns;
+    } catch (Exception e) {
+      throw new IOException(e);
     } finally {
       // Reset ugi to remote user for remaining operations.
       RouterRpcServer.resetCurrentUser();
