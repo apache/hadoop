@@ -650,7 +650,7 @@ public class TestRollingUpgrade {
   public void testCheckpoint(int nnCount) throws IOException, InterruptedException {
     final Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 2);
 
     final Path foo = new Path("/foo");
 
@@ -719,7 +719,7 @@ public class TestRollingUpgrade {
   public void testEditLogTailerRollingUpgrade() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 2);
 
     HAUtil.setAllowStandbyReads(conf, true);
 
