@@ -18,36 +18,16 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
 import java.util.List;
 
-public class ModDataSetSubLockStrategy implements DataSetSubLockStrategy {
-  public static final Logger LOG = LoggerFactory.getLogger(DataSetSubLockStrategy.class);
-
-  private static final String LOCK_NAME_PERFIX = "SubLock";
-  private long modFactor;
-
-  public ModDataSetSubLockStrategy(long mod) {
-    if (mod <= 0) {
-      mod = 1L;
-    }
-    this.modFactor = mod;
-  }
-
+public class DataNodeLayoutSubLockStrategy implements DataSetSubLockStrategy {
   @Override
   public String blockIdToSubLock(long blockid) {
-    return LOCK_NAME_PERFIX + (blockid % modFactor);
+    return DatanodeUtil.idToBlockDirSuffixName(blockid);
   }
 
   @Override
   public List<String> getAllSubLockName() {
-    List<String> res = new ArrayList<>();
-    for (long i = 0L; i < modFactor; i++) {
-      res.add(LOCK_NAME_PERFIX + i);
-    }
-    return res;
+    return DatanodeUtil.getAllSubDirNameForDataSetLock();
   }
 }

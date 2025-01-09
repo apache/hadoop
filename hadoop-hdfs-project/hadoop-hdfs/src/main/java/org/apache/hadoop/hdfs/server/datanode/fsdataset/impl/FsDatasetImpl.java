@@ -64,12 +64,12 @@ import org.apache.hadoop.hdfs.server.common.AutoCloseDataSetLock;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutSubLockStrategy;
 import org.apache.hadoop.hdfs.server.datanode.DataSetLockManager;
 import org.apache.hadoop.hdfs.server.datanode.DataSetSubLockStrategy;
 import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
-import org.apache.hadoop.hdfs.server.datanode.ModDataSetSubLockStrategy;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -292,7 +292,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private volatile long lastDirScannerFinishTime;
 
   private final DataSetSubLockStrategy datasetSubLockStrategy;
-  private final long datasetSubLockCount;
 
   /**
    * An FSDataset has a directory where it loads its data files.
@@ -398,9 +397,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_MAX_NOTIFY_COUNT_KEY,
         DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_MAX_NOTIFY_COUNT_DEFAULT);
     lastDirScannerNotifyTime = System.currentTimeMillis();
-    datasetSubLockCount = conf.getLong(DFSConfigKeys.DFS_DATANODE_DATASET_SUBLOCK_COUNT_KEY,
-        DFSConfigKeys.DFS_DATANODE_DATASET_SUBLOCK_COUNT_DEFAULT);
-    this.datasetSubLockStrategy = new ModDataSetSubLockStrategy(datasetSubLockCount);
+    this.datasetSubLockStrategy = new DataNodeLayoutSubLockStrategy();
   }
 
   /**
