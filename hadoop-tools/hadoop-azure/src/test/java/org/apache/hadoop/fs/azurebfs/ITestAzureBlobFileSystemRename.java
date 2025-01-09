@@ -92,6 +92,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestAzureBlobFileSystemRename extends
     AbstractAbfsIntegrationTest {
 
+  private static final int MAX_ITERATIONS = 20;
+  private static final int BLOB_COUNT = 11;
+
   public ITestAzureBlobFileSystemRename() throws Exception {
     super();
   }
@@ -1272,7 +1275,7 @@ public class ITestAzureBlobFileSystemRename extends
     fs.mkdirs(new Path("/src"));
     ExecutorService executorService = Executors.newFixedThreadPool(10);
     List<Future> futureList = new ArrayList<>();
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < MAX_ITERATIONS; i++) {
       int iter = i;
       Future future = executorService.submit(() -> {
         try {
@@ -1512,7 +1515,7 @@ public class ITestAzureBlobFileSystemRename extends
     Mockito.doAnswer(copyAnswer -> {
               if (dirPathStr.equalsIgnoreCase(
                       ((Path) copyAnswer.getArgument(0)).toUri().getPath())) {
-                tracingHeaderValidator.setOperatedBlobCount(11);
+                tracingHeaderValidator.setOperatedBlobCount(BLOB_COUNT);
                 return copyAnswer.callRealMethod();
               }
               return copyAnswer.callRealMethod();

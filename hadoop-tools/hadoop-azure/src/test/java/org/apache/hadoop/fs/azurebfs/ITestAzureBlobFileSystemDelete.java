@@ -81,6 +81,8 @@ public class ITestAzureBlobFileSystemDelete extends
 
   private static final int REDUCED_RETRY_COUNT = 1;
   private static final int REDUCED_MAX_BACKOFF_INTERVALS_MS = 5000;
+  private static final int MAX_ITERATIONS = 20;
+  private static final int BLOB_COUNT = 11;
 
   public ITestAzureBlobFileSystemDelete() throws Exception {
     super();
@@ -504,7 +506,7 @@ public class ITestAzureBlobFileSystemDelete extends
     fs.mkdirs(new Path("/src"));
     ExecutorService executorService = Executors.newFixedThreadPool(10);
     List<Future> futureList = new ArrayList<>();
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < MAX_ITERATIONS; i++) {
       int iter = i;
       Future future = executorService.submit(() -> {
         try {
@@ -601,7 +603,7 @@ public class ITestAzureBlobFileSystemDelete extends
               Mockito.doAnswer(deleteAnswer -> {
                         if (dirPathStr.equalsIgnoreCase(
                                 ((Path) deleteAnswer.getArgument(0)).toUri().getPath())) {
-                          tracingHeaderValidator.setOperatedBlobCount(11);
+                          tracingHeaderValidator.setOperatedBlobCount(BLOB_COUNT);
                           Object result = deleteAnswer.callRealMethod();
                           tracingHeaderValidator.setOperatedBlobCount(null);
                           return result;

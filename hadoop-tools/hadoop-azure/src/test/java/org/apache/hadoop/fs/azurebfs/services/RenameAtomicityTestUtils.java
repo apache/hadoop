@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
-public class RenameAtomicityTestUtils {
+public final class RenameAtomicityTestUtils {
 
     private RenameAtomicityTestUtils() {
     }
