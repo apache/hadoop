@@ -61,8 +61,4 @@
               files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]commit[\\/]ITestAbfsTerasort.java"/>
      <suppress checks="ParameterNumber"
        files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]TestAbfsOutputStream.java"/>
-    <suppress checks="MagicNumber"
-              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]ITestAzureBlobFileSystemDelete.java"/>
-    <suppress checks="MagicNumber"
-              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]ITestAzureBlobFileSystemRename.java"/>
 </suppressions>
