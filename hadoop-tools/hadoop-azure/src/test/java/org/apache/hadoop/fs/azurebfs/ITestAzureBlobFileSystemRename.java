@@ -1114,8 +1114,8 @@ public class ITestAzureBlobFileSystemRename extends
         fs.rename(src, dst);
       } catch (Exception e) {
         if (e.getCause() instanceof AbfsLease.LeaseException
-                && e.getCause().getCause() instanceof AbfsRestOperationException &&
-                ((AbfsRestOperationException) e.getCause()
+                && e.getCause().getCause() instanceof AbfsRestOperationException
+                && ((AbfsRestOperationException) e.getCause()
                         .getCause()).getStatusCode() == HTTP_CONFLICT) {
           exceptionOnParallelRename.set(true);
         }

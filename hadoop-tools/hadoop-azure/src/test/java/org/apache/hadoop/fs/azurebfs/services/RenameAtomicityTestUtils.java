@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 public class RenameAtomicityTestUtils {
 
-    public RenameAtomicityTestUtils() {
+    private RenameAtomicityTestUtils() {
     }
 
     /**
