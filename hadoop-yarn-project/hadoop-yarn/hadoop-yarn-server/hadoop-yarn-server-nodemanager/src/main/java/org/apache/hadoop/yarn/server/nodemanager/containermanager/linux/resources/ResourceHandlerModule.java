@@ -76,10 +76,10 @@ public class ResourceHandlerModule {
   private static volatile CpuResourceHandler
       cGroupsCpuResourceHandler;
 
-  private static void initializeCGroupHandlers(Configuration conf)
-      throws ResourceHandlerException {
+  private static void initializeCGroupHandlers(Configuration conf,
+      CGroupsHandler.CGroupController controller) throws ResourceHandlerException {
     initializeCGroupV1Handler(conf);
-    if (cgroupsV2Enabled) {
+    if (cgroupsV2Enabled && !isMountedInCGroupsV1(controller)) {
       initializeCGroupV2Handler(conf);
     }
   }
@@ -108,6 +108,10 @@ public class ResourceHandlerModule {
         }
       }
     }
+  }
+
+  private static boolean isMountedInCGroupsV1(CGroupsHandler.CGroupController controller) {
+    return (cGroupV1Handler != null && cGroupV1Handler.getControllerPath(controller) != null);
   }
 
   private static boolean isMountedInCGroupsV2(CGroupsHandler.CGroupController controller) {
@@ -174,7 +178,7 @@ public class ResourceHandlerModule {
           if (cGroupsCpuResourceHandler == null) {
             LOG.debug("Creating new cgroups cpu handler");
 
-            initializeCGroupHandlers(conf);
+            initializeCGroupHandlers(conf, CGroupsHandler.CGroupController.CPU);
             if (isMountedInCGroupsV2(CGroupsHandler.CGroupController.CPU)) {
               cGroupsCpuResourceHandler = new CGroupsV2CpuResourceHandlerImpl(cGroupV2Handler);
             } else {
@@ -198,7 +202,7 @@ public class ResourceHandlerModule {
           if (trafficControlBandwidthHandler == null) {
             LOG.info("Creating new traffic control bandwidth handler.");
 
-            initializeCGroupHandlers(conf);
+            initializeCGroupHandlers(conf, CGroupsHandler.CGroupController.NET_CLS);
             trafficControlBandwidthHandler = new
                 TrafficControlBandwidthHandlerImpl(PrivilegedOperationExecutor
                 .getInstance(conf), cGroupV1Handler,
@@ -235,7 +239,7 @@ public class ResourceHandlerModule {
         if (networkPacketTaggingHandlerImpl == null) {
           LOG.info("Creating new network-tagging-handler.");
 
-          initializeCGroupHandlers(conf);
+          initializeCGroupHandlers(conf, CGroupsHandler.CGroupController.NET_CLS);
           networkPacketTaggingHandlerImpl =
               new NetworkPacketTaggingHandlerImpl(
                   PrivilegedOperationExecutor.getInstance(conf), cGroupV1Handler);
@@ -267,7 +271,7 @@ public class ResourceHandlerModule {
         if (cGroupsBlkioResourceHandler == null) {
           LOG.debug("Creating new cgroups blkio handler");
 
-          initializeCGroupHandlers(conf);
+          initializeCGroupHandlers(conf, CGroupsHandler.CGroupController.BLKIO);
           cGroupsBlkioResourceHandler =
               new CGroupsBlkioResourceHandlerImpl(cGroupV1Handler);
         }
@@ -292,7 +296,7 @@ public class ResourceHandlerModule {
       synchronized (MemoryResourceHandler.class) {
         if (cGroupsMemoryResourceHandler == null) {
 
-          initializeCGroupHandlers(conf);
+          initializeCGroupHandlers(conf, CGroupsHandler.CGroupController.MEMORY);
           if (isMountedInCGroupsV2(CGroupsHandler.CGroupController.MEMORY)) {
             cGroupsMemoryResourceHandler = new CGroupsV2MemoryResourceHandlerImpl(cGroupV2Handler);
           } else {
@@ -359,7 +363,7 @@ public class ResourceHandlerModule {
     }
 
     for (ResourcePlugin plugin : pluginMap.values()) {
-      initializeCGroupHandlers(conf);
+      initializeCGroupV1Handler(conf);
       addHandlerIfNotNull(handlerList,
           plugin.createResourceHandler(nmContext,
               cGroupV1Handler,
