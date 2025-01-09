@@ -243,7 +243,7 @@ public class FileIoProvider {
     final long begin = profilingEventHook.beforeMetadataOp(volume, DELETE);
     try {
       faultInjectorEventHook.beforeMetadataOp(volume, DELETE);
-      boolean deleted = !f.exists() || f.delete();
+      boolean deleted = !f.exists() || f.delete() || !f.exists();
       profilingEventHook.afterMetadataOp(volume, DELETE, begin);
       if (!deleted) {
         LOG.warn("Failed to delete file {}", f);
@@ -686,7 +686,7 @@ public class FileIoProvider {
     boolean succeeded = false;
     try {
       faultInjectorEventHook.beforeMetadataOp(volume, MKDIRS);
-      succeeded = dir.isDirectory() || dir.mkdirs();
+      succeeded = dir.isDirectory() || dir.mkdirs() || dir.isDirectory();
       profilingEventHook.afterMetadataOp(volume, MKDIRS, begin);
     } catch(Exception e) {
       onFailure(volume, begin);
