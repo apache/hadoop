@@ -92,9 +92,12 @@ public class TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndPercentageVec
       configMap.put("yarn.scheduler.capacity.root.default.capacity", "[memory=25%, vcores=25%]");
       configMap.put("yarn.scheduler.capacity.root.test_1.capacity", "[memory=16384, vcores=16]");
       configMap.put("yarn.scheduler.capacity.root.test_2.capacity", "[memory=75%, vcores=75%]");
-      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_1.capacity", "[memory=2048, vcores=2]");
-      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity", "[memory=2048, vcores=2]");
-      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "[memory=100%, vcores=100%]");
+      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_1.capacity",
+          "[memory=2048, vcores=2]");
+      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity",
+          "[memory=2048, vcores=2]");
+      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity",
+          "[memory=100%, vcores=100%]");
       conf = createConfiguration(configMap);
 
       rm = createRM(createConfiguration(configMap));

@@ -97,18 +97,19 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
   private class JerseyBinder extends AbstractBinder {
     @Override
     protected void configure() {
-      Map<String, String> conf1 = new HashMap<>();
-      conf1.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
-      conf1.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
-      conf1.put("yarn.scheduler.capacity.root.test1.queues", "test1_1, test1_2, test1_3");
-      conf1.put("yarn.scheduler.capacity.root.default.capacity", "12.5");
-      conf1.put("yarn.scheduler.capacity.root.test1.capacity", "50");
-      conf1.put("yarn.scheduler.capacity.root.test2.capacity", "37.5");
-      conf1.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "12.5");
-      conf1.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "12.5");
-      conf1.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "75");
+      Map<String, String> configMap = new HashMap<>();
+      configMap.put("yarn.scheduler.capacity.legacy-queue-mode.enabled",
+          String.valueOf(legacyQueueMode));
+      configMap.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
+      configMap.put("yarn.scheduler.capacity.root.test1.queues", "test1_1, test1_2, test1_3");
+      configMap.put("yarn.scheduler.capacity.root.default.capacity", "12.5");
+      configMap.put("yarn.scheduler.capacity.root.test1.capacity", "50");
+      configMap.put("yarn.scheduler.capacity.root.test2.capacity", "37.5");
+      configMap.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "12.5");
+      configMap.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "12.5");
+      configMap.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "75");
 
-      Configuration conf = createConfiguration(conf1);
+      Configuration conf = createConfiguration(configMap);
       conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
           YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
 

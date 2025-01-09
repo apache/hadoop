@@ -68,8 +68,8 @@ public class TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndWeightVector
 
   @AfterClass
   public static void afterClass() {
-        restoreSchedulerConfigFileInTarget();
-    }
+    restoreSchedulerConfigFileInTarget();
+  }
 
   @Override
   protected Application configure() {
@@ -92,9 +92,12 @@ public class TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndWeightVector
       configMap.put("yarn.scheduler.capacity.root.default.capacity", "[memory=1w, vcores=1w]");
       configMap.put("yarn.scheduler.capacity.root.test_1.capacity", "[memory=16384, vcores=16]");
       configMap.put("yarn.scheduler.capacity.root.test_2.capacity", "[memory=3w, vcores=3w]");
-      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_1.capacity", "[memory=2048, vcores=2]");
-      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity", "[memory=2048, vcores=2]");
-      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "[memory=1w, vcores=1w]");
+      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_1.capacity",
+          "[memory=2048, vcores=2]");
+      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity",
+          "[memory=2048, vcores=2]");
+      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity",
+          "[memory=1w, vcores=1w]");
       conf = createConfiguration(configMap);
 
       rm = createRM(createConfiguration(configMap));

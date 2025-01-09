@@ -370,12 +370,12 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     for (final String mediaType : mediaTypes) {
       for (final String contentType : mediaTypes) {
 
-        if (isKerberosAuth == false) {
+        if (!isKerberosAuth) {
           verifySimpleAuthRenew(mediaType, contentType);
           continue;
         }
 
-        if(isKerberosAuth == true) {
+        if(isKerberosAuth) {
           when(request.getAuthType()).thenReturn("Kerberos");
         }
 

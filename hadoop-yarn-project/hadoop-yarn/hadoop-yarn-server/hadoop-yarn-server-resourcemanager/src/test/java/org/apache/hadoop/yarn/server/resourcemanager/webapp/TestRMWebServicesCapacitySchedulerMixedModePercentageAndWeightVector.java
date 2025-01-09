@@ -53,7 +53,8 @@ import static org.mockito.Mockito.when;
  *     root.test_1.test_1_3       12/16      [memory=12288, vcores=12]      37.5%
  *     root.test_2              12/32      [memory=12288,   vcores=12]      37.5%
  */
-public class TestRMWebServicesCapacitySchedulerMixedModePercentageAndWeightVector extends JerseyTestBase {
+public class TestRMWebServicesCapacitySchedulerMixedModePercentageAndWeightVector
+    extends JerseyTestBase {
 
   private static final String EXPECTED_FILE_TMPL = "webapp/mixed-%s-%s.json";
 
@@ -95,7 +96,8 @@ public class TestRMWebServicesCapacitySchedulerMixedModePercentageAndWeightVecto
           "[memory=12.5%, vcores=12.5%]");
       configMap.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity",
           "[memory=12.5%, vcores=12.5%]");
-      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "[memory=1w, vcores=1w]");
+      configMap.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity",
+          "[memory=1w, vcores=1w]");
       conf = createConfiguration(configMap);
 
       rm = createRM(createConfiguration(configMap));

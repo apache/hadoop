@@ -107,7 +107,8 @@ public class TestRMWebServicesCapacitySchedDynamicConfigAbsoluteMode extends Jer
       confMap.put("yarn.scheduler.capacity.root.test2.capacity", "[memory=12288,vcores=12]");
       confMap.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "[memory=2048,vcores=2]");
       confMap.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "[memory=2048,vcores=2]");
-      confMap.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "[memory=12288,vcores=12]");
+      confMap.put("yarn.scheduler.capacity.root.test1.test1_3.capacity",
+          "[memory=12288,vcores=12]");
 
       Configuration conf = createConfiguration(confMap);
       conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,

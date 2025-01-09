@@ -109,17 +109,18 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
   @Test
   public void testSchedulerAbsoluteAndPercentageAndWeight()
       throws Exception {
-    Map<String, String> conf = new HashMap<>();
-    conf.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", "false");
-    conf.put("yarn.scheduler.capacity.root.queues", "default, test_1, test_2");
-    conf.put("yarn.scheduler.capacity.root.test_1.queues", "test_1_1, test_1_2, test_1_3");
-    conf.put("yarn.scheduler.capacity.root.default.capacity", "1w");
-    conf.put("yarn.scheduler.capacity.root.test_1.capacity", "[memory=16384, vcores=16]");
-    conf.put("yarn.scheduler.capacity.root.test_2.capacity", "75");
-    conf.put("yarn.scheduler.capacity.root.test_1.test_1_1.capacity", "50");
-    conf.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity", "1w");
-    conf.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "[memory=12288, vcores=12]");
-    try (MockRM rm = createRM(createConfiguration(conf))) {
+    Map<String, String> configMap = new HashMap<>();
+    configMap.put("yarn.scheduler.capacity.legacy-queue-mode.enabled", "false");
+    configMap.put("yarn.scheduler.capacity.root.queues", "default, test_1, test_2");
+    configMap.put("yarn.scheduler.capacity.root.test_1.queues", "test_1_1, test_1_2, test_1_3");
+    configMap.put("yarn.scheduler.capacity.root.default.capacity", "1w");
+    configMap.put("yarn.scheduler.capacity.root.test_1.capacity", "[memory=16384, vcores=16]");
+    configMap.put("yarn.scheduler.capacity.root.test_2.capacity", "75");
+    configMap.put("yarn.scheduler.capacity.root.test_1.test_1_1.capacity", "50");
+    configMap.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity", "1w");
+    configMap.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity",
+        "[memory=12288, vcores=12]");
+    try (MockRM rm = createRM(createConfiguration(configMap))) {
       runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndPercentageAndWeight", rm, target());
     }
   }

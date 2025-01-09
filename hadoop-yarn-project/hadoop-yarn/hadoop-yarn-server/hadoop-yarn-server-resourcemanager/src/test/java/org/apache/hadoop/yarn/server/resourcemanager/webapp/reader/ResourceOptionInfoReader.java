@@ -49,8 +49,8 @@ public class ResourceOptionInfoReader implements MessageBodyReader<ResourceOptio
 
   @Override
   public boolean isReadable(Class<?> type, Type genericType,
-    Annotation[] annotations, MediaType mediaType) {
-      return type == ResourceOptionInfo.class;
+      Annotation[] annotations, MediaType mediaType) {
+    return type == ResourceOptionInfo.class;
   }
 
   @Override

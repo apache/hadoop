@@ -65,7 +65,6 @@ import javax.ws.rs.core.Response.Status;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
