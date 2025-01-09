@@ -154,6 +154,11 @@ public final class AsyncUtil {
     CUR_COMPLETABLE_FUTURE.set((CompletableFuture<Object>) completableFuture);
   }
 
+  public static CompletableFuture<Object> getAsyncUtilCompletableFuture() {
+    assert CUR_COMPLETABLE_FUTURE.get() != null;
+    return CUR_COMPLETABLE_FUTURE.get();
+  }
+
   /**
    * Completes the current asynchronous operation with an exception.
    * This method sets the result of the current thread's {@link CompletableFuture}

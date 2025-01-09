@@ -112,7 +112,8 @@ public class RouterAsyncProtocolTestBase {
     RouterAsyncRpcClient asyncRpcClient = new RouterAsyncRpcClient(
         routerConf, router.getRouter(), routerRpcServer.getNamenodeResolver(),
         routerRpcServer.getRPCMonitor(),
-        routerRpcServer.getRouterStateIdContext());
+        routerRpcServer.getRouterStateIdContext(),
+        routerRpcServer.getAsyncRouterHandler());
     routerAsyncRpcServer = Mockito.spy(routerRpcServer);
     Mockito.when(routerAsyncRpcServer.getRPCClient()).thenReturn(asyncRpcClient);
     Mockito.when(routerAsyncRpcServer.isAsync()).thenReturn(true);
