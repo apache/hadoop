@@ -581,5 +581,11 @@
       <artifactId>bcpkix-jdk18on</artifactId>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-format-testing</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>
