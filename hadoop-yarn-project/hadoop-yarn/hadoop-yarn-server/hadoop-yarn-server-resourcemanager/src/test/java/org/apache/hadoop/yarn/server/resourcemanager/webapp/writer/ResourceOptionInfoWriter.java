@@ -43,7 +43,7 @@ public class ResourceOptionInfoWriter implements MessageBodyWriter<ResourceOptio
   private JettisonMarshaller jettisonMarshaller;
   private Marshaller marshaller;
 
-  public ResourceOptionInfoWriter(){
+  public ResourceOptionInfoWriter() {
     try {
       JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(
           ResourceOptionInfo.class);
@@ -53,7 +53,7 @@ public class ResourceOptionInfoWriter implements MessageBodyWriter<ResourceOptio
     }
   }
 
-    @Override
+  @Override
   public boolean isWriteable(Class<?> type, Type genericType,
       Annotation[] annotations, MediaType mediaType) {
     return type == ResourceOptionInfo.class;
@@ -66,15 +66,15 @@ public class ResourceOptionInfoWriter implements MessageBodyWriter<ResourceOptio
       OutputStream entityStream) throws IOException, WebApplicationException {
     StringWriter stringWriter = new StringWriter();
     try {
-        if (mediaType.toString().equals(MediaType.APPLICATION_JSON)) {
-          jettisonMarshaller.marshallToJSON(resourceOptionInfo, stringWriter);
-          entityStream.write(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
-        }
+      if (mediaType.toString().equals(MediaType.APPLICATION_JSON)) {
+        jettisonMarshaller.marshallToJSON(resourceOptionInfo, stringWriter);
+        entityStream.write(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
+      }
 
-        if (mediaType.toString().equals(MediaType.APPLICATION_XML)) {
-          marshaller.marshal(resourceOptionInfo, stringWriter);
-          entityStream.write(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
-        }
+      if (mediaType.toString().equals(MediaType.APPLICATION_XML)) {
+        marshaller.marshal(resourceOptionInfo, stringWriter);
+        entityStream.write(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
+      }
     } catch (JAXBException e) {
       throw new IOException(e);
     }

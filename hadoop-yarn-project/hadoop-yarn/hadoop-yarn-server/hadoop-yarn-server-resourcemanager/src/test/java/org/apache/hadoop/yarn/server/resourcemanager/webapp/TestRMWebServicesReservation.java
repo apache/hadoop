@@ -226,7 +226,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
   private class FairTestServletModule extends JerseyBinder {
 
-    public FairTestServletModule(boolean flag) {
+    FairTestServletModule(boolean flag) {
       if(flag) {
         getConf().setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
         // set the admin acls otherwise all users are considered admins
@@ -918,7 +918,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return;
     }
 
-    JSONObject reservations = json.getJSONObject("reservationListInfo").getJSONObject("reservations");
+    JSONObject reservations =
+        json.getJSONObject("reservationListInfo").getJSONObject("reservations");
 
     testRDLHelper(reservations);
 

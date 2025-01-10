@@ -64,16 +64,16 @@ public class SchedConfUpdateInfoWriter implements MessageBodyWriter<SchedConfUpd
       Type genericType, Annotation[] annotations, MediaType mediaType,
       MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream)
       throws IOException, WebApplicationException {
-      StringWriter stringWriter = new StringWriter();
+    StringWriter stringWriter = new StringWriter();
     try {
       if (mediaType.toString().equals(MediaType.APPLICATION_JSON)) {
-         jettisonMarshaller.marshallToJSON(schedConfUpdateInfo, stringWriter);
-         entityStream.write(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
+        jettisonMarshaller.marshallToJSON(schedConfUpdateInfo, stringWriter);
+        entityStream.write(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
       }
 
       if (mediaType.toString().equals(MediaType.APPLICATION_XML)) {
-         marshaller.marshal(schedConfUpdateInfo, stringWriter);
-         entityStream.write(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
+        marshaller.marshal(schedConfUpdateInfo, stringWriter);
+        entityStream.write(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
       }
     } catch (JAXBException e) {
       throw new IOException(e);
