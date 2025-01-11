@@ -26,7 +26,7 @@ public class DFSRouterFaultInjector {
   @VisibleForTesting
   private static DFSRouterFaultInjector instance =
       new DFSRouterFaultInjector();
-  
+
   @VisibleForTesting
   public static DFSRouterFaultInjector get() {
     return instance;
@@ -34,10 +34,10 @@ public class DFSRouterFaultInjector {
 
   public static void set(DFSRouterFaultInjector injector) {
     instance = injector;
-  } 
-  
+  }
+
   @VisibleForTesting
   public boolean shouldSkipShutdownAsyncExecutors() {
-    return false;
+    return true;
   }
 }

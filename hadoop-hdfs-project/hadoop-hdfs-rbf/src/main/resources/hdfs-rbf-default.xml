@@ -136,15 +136,15 @@
   </property>
 
   <property>
-    <name>dfs.federation.router.rpc.async.handler.count</name>
-    <value>2</value>
+    <name>dfs.federation.router.async.rpc.handler.count</name>
+    <value>10</value>
     <description>
       The number of async handler for the router to handle RPC client requests.
     </description>
   </property>
 
   <property>
-    <name>dfs.federation.router.rpc.async.responder.count</name>
+    <name>dfs.federation.router.async.rpc.responder.count</name>
     <value>10</value>
     <description>
       The number of async responder for the router to handle responses.

@@ -510,6 +510,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   /**
    * Init router async handlers and router async responders.
+   * @param configuration the configuration.
    */
   public void initAsyncThreadPools(Configuration configuration) {
     LOG.info("Begin initialize asynchronous handler and responder thread pool.");
@@ -692,7 +693,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     if (this.fedRenameScheduler != null) {
       fedRenameScheduler.shutDown();
     }
-    if (DFSRouterFaultInjector.get().shouldSkipShutdownAsyncExecutors()) {
+    if (isAsync() && DFSRouterFaultInjector.get().shouldSkipShutdownAsyncExecutors()) {
       shutdownAsyncRouterRpcExecutors();
     }
     super.serviceStop();
