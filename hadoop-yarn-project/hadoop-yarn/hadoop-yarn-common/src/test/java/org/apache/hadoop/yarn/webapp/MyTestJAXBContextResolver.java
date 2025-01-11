@@ -21,14 +21,14 @@ package org.apache.hadoop.yarn.webapp;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import javax.inject.Singleton;
 import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
 
+import javax.inject.Singleton;
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
 
 import org.apache.hadoop.yarn.webapp.MyTestWebService.MyInfo;
-import org.glassfish.jersey.jettison.JettisonJaxbContext;
 
 @Singleton
 @Provider

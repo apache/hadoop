@@ -18,14 +18,31 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.http.JettyUtils;
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.File;
+import java.io.StringReader;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Date;
+
+import javax.ws.rs.BadRequestException;
+import javax.ws.rs.core.MediaType;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.Response;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -39,16 +56,12 @@ import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.test.JerseyTest;
-import org.glassfish.jersey.test.TestProperties;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,26 +70,16 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import javax.ws.rs.core.MediaType;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.File;
-import java.io.StringReader;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Date;
-
-import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
 
 /**
  * Basic sanity Tests for AuxServices.
  *
  */
-public class TestNMWebServicesAuxServices extends JerseyTest {
+public class TestNMWebServicesAuxServices extends JerseyTestBase {
   private static final String AUX_SERVICES_PATH = "auxiliaryservices";
   private static Context nmContext;
   private static Configuration conf = new Configuration();
@@ -135,12 +138,12 @@ public class TestNMWebServicesAuxServices extends JerseyTest {
       conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
       LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
       NodeHealthCheckerService healthChecker =
-              new NodeHealthCheckerService(dirsHandler);
+          new NodeHealthCheckerService(dirsHandler);
       healthChecker.init(conf);
       dirsHandler = healthChecker.getDiskHandler();
       ApplicationACLsManager aclsManager = new ApplicationACLsManager(conf);
       nmContext = new NodeManager.NMContext(null, null, dirsHandler,
-              aclsManager, null, false, conf) {
+          aclsManager, null, false, conf) {
         public NodeId getNodeId() {
           return NodeId.newInstance("testhost.foo.com", 8042);
         }
@@ -149,7 +152,6 @@ public class TestNMWebServicesAuxServices extends JerseyTest {
           return 1234;
         }
       };
-
       WebApp nmWebApp = new NMWebApp(resourceView, aclsManager, dirsHandler);
       final HttpServletRequest request = mock(HttpServletRequest.class);
       when(request.getQueryString()).thenReturn("?user.name=user&nm.id=localhost:1111");
@@ -187,14 +189,13 @@ public class TestNMWebServicesAuxServices extends JerseyTest {
   @Test
   public void testNodeAuxServicesNone() throws Exception {
     addAuxServices();
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Response response = r.path("ws").path("v1").path("node")
         .path(AUX_SERVICES_PATH).request(MediaType.APPLICATION_JSON)
         .get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("aux services isn't empty", "{\"services\":\"\"}", json.toString());
   }
 
@@ -227,14 +228,13 @@ public class TestNMWebServicesAuxServices extends JerseyTest {
     AuxServiceRecord r2 = new AuxServiceRecord().name("name2").launchTime(new
         Date(456L));
     addAuxServices(r1, r2);
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
 
     Response response = r.path("ws").path("v1").path("node").path(path)
         .request(media).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     JSONObject info = json.getJSONObject("services");
     assertEquals("incorrect number of elements", 1, info.length());
     JSONArray auxInfo = info.getJSONArray("service");
@@ -274,26 +274,28 @@ public class TestNMWebServicesAuxServices extends JerseyTest {
     AuxServices auxServices = mock(AuxServices.class);
     when(auxServices.isManifestEnabled()).thenReturn(false);
     nmContext.setAuxServices(auxServices);
-    WebTarget r = target();
-    Response response = r.path("ws").path("v1").path("node").path(AUX_SERVICES_PATH)
-        .request(MediaType.APPLICATION_JSON).get();
-    assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
-        response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject msg = new JSONObject(entity);
-    JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 4, exception.length());
-    String message = exception.getString("message");
-    String cause = exception.getString("cause");
-    String type = exception.getString("exception");
-    String classname = exception.getString("javaClassName");
-    WebServicesTestUtils.checkStringMatch("exception message", "HTTP 400 Bad Request", message);
-    WebServicesTestUtils.checkStringMatch("exception cause",
-        "Auxiliary services manifest is not enabled", cause);
-    WebServicesTestUtils.checkStringMatch("exception type", "BadRequestException", type);
-    WebServicesTestUtils.checkStringMatch("exception classname",
-        "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
+    WebTarget r = targetWithJsonObject();
+    try {
+      Response response = r.path("ws").path("v1").path("node").path(AUX_SERVICES_PATH)
+          .request(MediaType.APPLICATION_JSON).get();
+      throw new BadRequestException(response);
+    } catch (BadRequestException ue) {
+      Response response = ue.getResponse();
+      assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
+      JSONObject exception = msg.getJSONObject("RemoteException");
+      assertEquals("incorrect number of elements", 3, exception.length());
+      String message = exception.getString("message");
+      String type = exception.getString("exception");
+      String classname = exception.getString("javaClassName");
+      WebServicesTestUtils.checkStringMatch("exception message",
+          "Auxiliary services manifest is not enabled", message);
+      WebServicesTestUtils.checkStringMatch("exception type", "BadRequestException", type);
+      WebServicesTestUtils.checkStringMatch("exception classname",
+          "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
+    }
   }
 
   public void verifyAuxServicesInfoXML(NodeList nodes, AuxServiceRecord...

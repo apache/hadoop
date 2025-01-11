@@ -22,6 +22,8 @@ import java.io.File;
 import java.net.URI;
 import java.util.EnumSet;
 
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Response;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import net.jodah.failsafe.RetryPolicy;
 import org.junit.jupiter.api.AfterAll;
@@ -43,9 +45,6 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistor
 import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
-
-import javax.ws.rs.client.Client;
-import javax.ws.rs.core.Response;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

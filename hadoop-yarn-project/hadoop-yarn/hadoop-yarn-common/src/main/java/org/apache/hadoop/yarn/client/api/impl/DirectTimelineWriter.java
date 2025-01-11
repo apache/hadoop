@@ -63,4 +63,5 @@ public class DirectTimelineWriter extends TimelineWriter {
       TimelineDomain domain) throws IOException, YarnException {
     throw new IOException("Not supported");
   }
+
 }

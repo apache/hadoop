@@ -22,10 +22,12 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents.EventsOfOneEntity;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyReader;
+import javax.ws.rs.ext.Provider;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
@@ -35,6 +37,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * We have defined a dedicated Reader for TimelineEvents,
+ * aimed at adapting to the Jersey2 framework
+ * to ensure that JSON can be converted into TimelineEvents.
+ */
+@Provider
+@Consumes(MediaType.APPLICATION_JSON)
 public class TimelineEventsReader implements MessageBodyReader<TimelineEvents> {
 
   private ObjectMapper objectMapper = new ObjectMapper();

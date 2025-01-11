@@ -19,12 +19,8 @@ package org.apache.hadoop.yarn.webapp.util;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
-
-import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
@@ -34,6 +30,8 @@ import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 
 /**
  * Utility for handling Web client.

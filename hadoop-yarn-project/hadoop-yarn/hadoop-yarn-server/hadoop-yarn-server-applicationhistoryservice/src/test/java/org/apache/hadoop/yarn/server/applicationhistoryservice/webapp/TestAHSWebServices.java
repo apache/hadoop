@@ -39,14 +39,12 @@ import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.apache.hadoop.yarn.server.timeline.reader.ContainerLogsInfoListReader;
-import org.apache.hadoop.yarn.server.timeline.reader.TimelineAboutReader;
-import org.codehaus.jettison.json.JSONArray;
-import org.codehaus.jettison.json.JSONException;
-import org.codehaus.jettison.json.JSONObject;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -80,6 +78,8 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
+import org.apache.hadoop.yarn.server.timeline.reader.ContainerLogsInfoListReader;
+import org.apache.hadoop.yarn.server.timeline.reader.TimelineAboutReader;
 import org.apache.hadoop.yarn.server.webapp.LogServlet;
 import org.apache.hadoop.yarn.server.webapp.LogWebServiceUtils;
 import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
@@ -250,7 +250,7 @@ public class TestAHSWebServices extends JerseyTestBase {
 
   @MethodSource("rounds")
   @ParameterizedTest
-  void testInvalidContainer(int round) {
+  void testInvalidContainer(int round) throws Exception {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
@@ -271,12 +271,12 @@ public class TestAHSWebServices extends JerseyTestBase {
       return;
     }
     assertResponseStatusCode("404 not found expected",
-            Response.Status.NOT_FOUND, response.getStatusInfo());
+        Response.Status.NOT_FOUND, response.getStatusInfo());
   }
 
   @MethodSource("rounds")
   @ParameterizedTest
-  void testInvalidUri(int round) {
+  void testInvalidUri(int round) throws JSONException, Exception {
     WebTarget r = target();
     String responseStr = "";
     try {
@@ -295,7 +295,7 @@ public class TestAHSWebServices extends JerseyTestBase {
 
   @MethodSource("rounds")
   @ParameterizedTest
-  public void testInvalidUri2(int round) {
+  public void testInvalidUri2(int round) throws JSONException, Exception {
     WebTarget r = target();
     String responseStr = "";
     try {
@@ -363,7 +363,7 @@ public class TestAHSWebServices extends JerseyTestBase {
   @MethodSource("rounds")
   @ParameterizedTest
   void testAppsQuery(int round) throws Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     when(request.getRemoteUser()).thenReturn(USERS[round]);
     Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
@@ -372,8 +372,7 @@ public class TestAHSWebServices extends JerseyTestBase {
             .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
@@ -408,7 +407,7 @@ public class TestAHSWebServices extends JerseyTestBase {
   @ParameterizedTest
   void testSingleApp(int round) throws Exception {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     when(request.getRemoteUser()).thenReturn(USERS[round]);
     Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
@@ -418,8 +417,7 @@ public class TestAHSWebServices extends JerseyTestBase {
             .get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject app = json.getJSONObject("app");
     assertEquals(appId.toString(), app.getString("appId"));
@@ -443,7 +441,7 @@ public class TestAHSWebServices extends JerseyTestBase {
   @ParameterizedTest
   void testMultipleAttempts(int round) throws Exception {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     when(request.getRemoteUser()).thenReturn(USERS[round]);
     Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
@@ -456,8 +454,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     }
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject appAttempts = json.getJSONObject("appAttempts");
     assertEquals(1, appAttempts.length(), "incorrect number of elements");
@@ -471,7 +468,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     when(request.getRemoteUser()).thenReturn(USERS[round]);
     Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
@@ -486,8 +483,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     }
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject appAttempt = json.getJSONObject("appAttempt");
     assertEquals(appAttemptId.toString(), appAttempt.getString("appAttemptId"));
@@ -505,7 +501,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     when(request.getRemoteUser()).thenReturn(USERS[round]);
     Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
@@ -519,8 +515,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     }
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject containers = json.getJSONObject("containers");
     assertEquals(1, containers.length(), "incorrect number of elements");
@@ -535,7 +530,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     when(request.getRemoteUser()).thenReturn(USERS[round]);
     Response response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")
@@ -551,8 +546,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     }
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject container = json.getJSONObject("container");
     assertEquals(containerId.toString(), container.getString("containerId"));
@@ -915,7 +909,6 @@ public class TestAHSWebServices extends JerseyTestBase {
         List<ContainerLogsInfo>>(){
     });
     assertTrue(responseText.size() == 2);
-
     for (ContainerLogsInfo logInfo : responseText) {
       if (logInfo.getLogType().equals(
           ContainerLogAggregationType.AGGREGATED.toString())) {
@@ -941,13 +934,10 @@ public class TestAHSWebServices extends JerseyTestBase {
         .queryParam("user.name", user)
         .request(MediaType.APPLICATION_JSON)
         .get(Response.class);
-
     responseText = response.readEntity(new GenericType<
         List<ContainerLogsInfo>>(){
     });
-
     assertTrue(responseText.size() == 2);
-
     for (ContainerLogsInfo logInfo : responseText) {
       if (logInfo.getLogType().equals(
           ContainerLogAggregationType.AGGREGATED.toString())) {

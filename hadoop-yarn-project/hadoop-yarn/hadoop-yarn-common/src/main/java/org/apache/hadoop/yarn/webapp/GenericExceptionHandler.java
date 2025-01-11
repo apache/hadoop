@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.webapp;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import javax.inject.Singleton;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.NotAcceptableException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
@@ -31,15 +31,16 @@ import javax.xml.bind.UnmarshalException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 
+import javax.inject.Singleton;
 /**
  * Handle webservices jersey exceptions and create json or xml response
  * with the ExceptionData.
  */
-@LimitedPrivate({"YARN", "MapReduce"})
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 @Singleton
 @Provider
 public class GenericExceptionHandler implements ExceptionMapper<Exception> {
@@ -91,6 +92,8 @@ public class GenericExceptionHandler implements ExceptionMapper<Exception> {
     } else if (e instanceof WebApplicationException
         && e.getCause() instanceof UnmarshalException) {
       s = Response.Status.BAD_REQUEST;
+    } else if (e instanceof NotAcceptableException) {
+      s = Response.Status.NOT_ACCEPTABLE;
     } else {
       LOG.warn("SERVICE_UNAVAILABLE", e);
       s = Response.Status.SERVICE_UNAVAILABLE;

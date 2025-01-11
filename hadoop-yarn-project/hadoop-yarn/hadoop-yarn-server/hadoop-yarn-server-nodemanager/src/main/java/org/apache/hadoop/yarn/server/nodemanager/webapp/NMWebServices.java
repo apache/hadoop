@@ -31,9 +31,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.hadoop.io.IOUtils;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecord;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecords;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
@@ -96,21 +93,18 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 @Singleton
 @Path("/ws/v1/node")
 public class NMWebServices {
   private static final Logger LOG =
        LoggerFactory.getLogger(NMWebServices.class);
-
   private Context nmContext;
-
   private ResourceView rview;
-
   private WebApp webapp;
-
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-
   private String redirectWSUrl;
   private LogAggregationFileControllerFactory factory;
   private boolean filterAppsByUser = false;
@@ -152,16 +146,16 @@ public class NMWebServices {
   }
 
   @GET
-  @Produces({ MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + ";" + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public NodeInfo get() {
     return getNodeInfo();
   }
 
   @GET
   @Path("/info")
-  @Produces({ MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + ";" + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public NodeInfo getNodeInfo() {
     init();
     return new NodeInfo(this.nmContext, this.rview);

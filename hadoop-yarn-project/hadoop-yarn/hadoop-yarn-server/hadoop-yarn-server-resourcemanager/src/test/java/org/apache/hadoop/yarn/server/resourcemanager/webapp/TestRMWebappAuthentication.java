@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -180,7 +181,7 @@ public class TestRMWebappAuthentication {
         new URL("http://localhost:8088/ws/v1/cluster/apps/new-application");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     TestRMWebServicesDelegationTokenAuthentication.setupConn(conn, "POST",
-        "application/xml", requestBody);
+      "application/xml", requestBody);
 
     try {
       conn.getInputStream();
@@ -192,7 +193,7 @@ public class TestRMWebappAuthentication {
     url = new URL("http://localhost:8088/ws/v1/cluster/apps");
     conn = (HttpURLConnection) url.openConnection();
     TestRMWebServicesDelegationTokenAuthentication.setupConn(conn, "POST",
-        "application/xml", requestBody);
+      "application/xml", requestBody);
 
     try {
       conn.getInputStream();
@@ -201,15 +202,13 @@ public class TestRMWebappAuthentication {
       assertEquals(Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
     }
 
-   // requestBody = "{ \"state\": \"KILLED\"}";
     AppState appState = new AppState();
     appState.setState("KILLED");
-    requestBody = TestRMWebServicesDelegationTokenAuthentication
-        .getMarshalledAppState(appState);
+    requestBody = toJson(appState, AppState.class);
     url = new URL("http://localhost:8088/ws/v1/cluster/apps/application_123_0/state");
     conn = (HttpURLConnection) url.openConnection();
     TestRMWebServicesDelegationTokenAuthentication.setupConn(conn, "PUT",
-        "application/xml", requestBody);
+      "application/json", requestBody);
 
     try {
       conn.getInputStream();
@@ -232,7 +231,8 @@ public class TestRMWebappAuthentication {
     URL url = new URL("http://localhost:8088/ws/v1/cluster/apps");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     TestRMWebServicesDelegationTokenAuthentication.setupConn(conn, "POST",
-        "application/xml", requestBody);
+      "application/xml", requestBody);
+
     conn.getInputStream();
     assertEquals(Status.ACCEPTED.getStatusCode(), conn.getResponseCode());
     boolean appExists =

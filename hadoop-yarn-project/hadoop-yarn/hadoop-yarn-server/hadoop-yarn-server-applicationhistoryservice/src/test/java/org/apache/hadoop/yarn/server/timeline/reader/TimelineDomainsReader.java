@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.timeline.reader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
@@ -30,7 +31,13 @@ import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
+/**
+ * We have defined a dedicated Reader for TimelineDomains,
+ * aimed at adapting to the Jersey2 framework
+ * to ensure that JSON can be converted into TimelineDomains.
+ */
 @Provider
+@Consumes(MediaType.APPLICATION_JSON)
 public class TimelineDomainsReader implements MessageBodyReader<TimelineDomains> {
 
   private ObjectMapper objectMapper = new ObjectMapper();

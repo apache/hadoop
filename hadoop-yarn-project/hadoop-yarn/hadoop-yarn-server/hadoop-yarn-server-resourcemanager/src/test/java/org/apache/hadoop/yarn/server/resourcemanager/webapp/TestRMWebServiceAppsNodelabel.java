@@ -56,14 +56,14 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.test.TestProperties;
 import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
 
 /**
  * Tests partition resource usage per application.
@@ -98,7 +98,7 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
       setupQueueConfiguration(csConf);
       conf = new YarnConfiguration(csConf);
       conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-              ResourceScheduler.class);
+          ResourceScheduler.class);
       rm = new MockRM(conf);
       Set<NodeLabel> labels = new HashSet<>();
       labels.add(NodeLabel.newInstance(LABEL_X));
@@ -143,18 +143,17 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
   }
 
   @Test
-  public void testAppsFinished() throws Exception {
+  public void testAppsFinished() throws JSONException, Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     amNodeManager.nodeHeartbeat(true);
     RMApp killedApp = MockRMAppSubmitter.submitWithMemory(AM_CONTAINER_MB, rm);
     rm.killApp(killedApp.getApplicationId());
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Response response =
         r.path("ws").path("v1").path("cluster").path("apps")
         .request(MediaType.APPLICATION_JSON).get(Response.class);
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
     try {
@@ -168,7 +167,7 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
   }
 
   @Test
-  public void testAppsRunning() throws Exception {
+  public void testAppsRunning() throws JSONException, Exception {
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 2048);
     MockNM nm2 = rm.registerNode("h2:1235", 2048);
@@ -192,12 +191,11 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     am1.allocate("*", 1024, 1, new ArrayList<>(), "X");
     nm2.nodeHeartbeat(true);
 
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
 
     Response response = r.path("ws").path("v1").path("cluster").path("apps")
         .request(MediaType.APPLICATION_JSON).get(Response.class);
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
 
     // Verify apps resource
     JSONObject apps = json.getJSONObject("apps");

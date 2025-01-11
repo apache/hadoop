@@ -33,7 +33,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServlet;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.http.HttpConfig.Policy;
@@ -75,11 +75,9 @@ import com.google.inject.servlet.GuiceFilter;
  *     }
  *   });</pre>
  */
-@LimitedPrivate({"YARN", "MapReduce"})
-@SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class WebApps {
   static final Logger LOG = LoggerFactory.getLogger(WebApps.class);
-
   public static class Builder<T> {
 
     static class ServletStruct {
@@ -173,7 +171,6 @@ public class WebApps {
       this.config = resourceConfig;
       return this;
     }
-
 
     public Builder<T> with(Configuration conf) {
       this.conf = conf;

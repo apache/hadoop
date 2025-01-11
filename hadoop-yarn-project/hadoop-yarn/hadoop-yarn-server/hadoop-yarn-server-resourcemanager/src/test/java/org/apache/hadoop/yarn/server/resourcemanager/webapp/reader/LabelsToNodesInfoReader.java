@@ -21,16 +21,25 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInf
 import org.glassfish.jersey.jettison.JettisonJaxbContext;
 import org.glassfish.jersey.jettison.JettisonUnmarshaller;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyReader;
+import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
+/**
+ * We have defined a dedicated Reader for LabelsToNodesInfo,
+ * aimed at adapting to the Jersey2 framework
+ * to ensure that JSON can be converted into LabelsToNodesInfo.
+ */
+@Provider
+@Consumes(MediaType.APPLICATION_JSON)
 public class LabelsToNodesInfoReader implements MessageBodyReader<LabelsToNodesInfo> {
 
   private JettisonUnmarshaller jsonUnmarshaller;

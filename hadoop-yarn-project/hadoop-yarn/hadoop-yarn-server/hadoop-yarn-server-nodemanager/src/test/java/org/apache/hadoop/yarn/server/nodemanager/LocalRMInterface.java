@@ -56,13 +56,15 @@ public class LocalRMInterface implements ResourceTracker {
   @Override
   public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
       throws YarnException, IOException {
-    return recordFactory.newRecordInstance(NodeHeartbeatResponse.class);
+    NodeHeartbeatResponse response = recordFactory.newRecordInstance(NodeHeartbeatResponse.class);
+    return response;
   }
 
   @Override
   public UnRegisterNodeManagerResponse unRegisterNodeManager(
-      UnRegisterNodeManagerRequest request) {
-    return recordFactory
+      UnRegisterNodeManagerRequest request) throws YarnException, IOException {
+    UnRegisterNodeManagerResponse response = recordFactory
         .newRecordInstance(UnRegisterNodeManagerResponse.class);
+    return response;
   }
 }

@@ -33,6 +33,11 @@ import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
+/**
+ * We have defined a dedicated Reader for ResourceOptionInfo,
+ * aimed at adapting to the Jersey2 framework
+ * to ensure that JSON can be converted into ResourceOptionInfo.
+ */
 @Provider
 @Consumes(MediaType.APPLICATION_JSON)
 public class ResourceOptionInfoReader implements MessageBodyReader<ResourceOptionInfo> {

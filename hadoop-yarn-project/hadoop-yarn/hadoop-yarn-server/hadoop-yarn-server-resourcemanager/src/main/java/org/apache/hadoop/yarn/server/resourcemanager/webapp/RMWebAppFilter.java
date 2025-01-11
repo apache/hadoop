@@ -28,12 +28,17 @@ import java.net.URISyntaxException;
 import java.util.Random;
 import java.util.Set;
 
-import javax.servlet.*;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.http.IsActiveServlet;
@@ -63,7 +68,6 @@ public class RMWebAppFilter implements Filter {
    * 
    */
   private static final long serialVersionUID = 1L;
-
 
   // define a set of URIs which do not need to do redirection
   private static final Set<String> NON_REDIRECTED_URIS = Sets.newHashSet(

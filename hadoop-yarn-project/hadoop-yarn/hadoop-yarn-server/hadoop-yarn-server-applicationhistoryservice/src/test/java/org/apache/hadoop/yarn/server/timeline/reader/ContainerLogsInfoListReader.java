@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
@@ -34,7 +35,13 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * We have defined a dedicated Reader for ContainerLogsInfo,
+ * aimed at adapting to the Jersey2 framework
+ * to ensure that JSON can be converted into ContainerLogsInfo.
+ */
 @Provider
+@Consumes(MediaType.APPLICATION_JSON)
 public class ContainerLogsInfoListReader implements MessageBodyReader<List<ContainerLogsInfo>> {
 
   private ObjectMapper objectMapper = new ObjectMapper();

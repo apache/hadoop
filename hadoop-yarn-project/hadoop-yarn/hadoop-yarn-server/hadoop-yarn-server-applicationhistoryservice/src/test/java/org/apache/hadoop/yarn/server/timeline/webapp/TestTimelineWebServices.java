@@ -38,22 +38,6 @@ import javax.ws.rs.core.Response.Status;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
-import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEntitiesWriter;
-import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineDomainWriter;
-import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEntityWriter;
-import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineDomainsWriter;
-import org.apache.hadoop.yarn.api.records.timeline.writer.TimelinePutResponseWriter;
-import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEventsWriter;
-import org.apache.hadoop.yarn.server.timeline.reader.TimelineAboutReader;
-import org.apache.hadoop.yarn.server.timeline.reader.TimelineDomainReader;
-import org.apache.hadoop.yarn.server.timeline.reader.TimelineDomainsReader;
-import org.apache.hadoop.yarn.server.timeline.reader.TimelineEntitiesReader;
-import org.apache.hadoop.yarn.server.timeline.reader.TimelineEntityReader;
-import org.apache.hadoop.yarn.server.timeline.reader.TimelineEventsReader;
-import org.apache.hadoop.yarn.server.timeline.reader.TimelinePutResponseReader;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -84,6 +68,22 @@ import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilter;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEntitiesWriter;
+import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineDomainWriter;
+import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEntityWriter;
+import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineDomainsWriter;
+import org.apache.hadoop.yarn.api.records.timeline.writer.TimelinePutResponseWriter;
+import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEventsWriter;
+import org.apache.hadoop.yarn.server.timeline.reader.TimelineAboutReader;
+import org.apache.hadoop.yarn.server.timeline.reader.TimelineDomainReader;
+import org.apache.hadoop.yarn.server.timeline.reader.TimelineDomainsReader;
+import org.apache.hadoop.yarn.server.timeline.reader.TimelineEntitiesReader;
+import org.apache.hadoop.yarn.server.timeline.reader.TimelineEntityReader;
+import org.apache.hadoop.yarn.server.timeline.reader.TimelineEventsReader;
+import org.apache.hadoop.yarn.server.timeline.reader.TimelinePutResponseReader;
+import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.JerseyTestBase;
+import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -568,9 +568,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   public void testPostEntitiesWithYarnACLsEnabled() throws Exception {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
-
     try {
-
       TimelineEntities entities = new TimelineEntities();
       TimelineEntity entity = new TimelineEntity();
       entity.setEntityId("test id 2");
@@ -811,9 +809,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
 
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
-
     try {
-
       // Put entity [4, 4] in domain 1
       TimelineEntities entities = new TimelineEntities();
       TimelineEntity entity = new TimelineEntity();
@@ -883,7 +879,6 @@ public class TestTimelineWebServices extends JerseyTestBase {
       assertEquals(1, entities.getEntities().size());
       assertEquals("test type 4", entities.getEntities().get(0).getEntityType());
       assertEquals("test id 4", entities.getEntities().get(0).getEntityId());
-
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
     }

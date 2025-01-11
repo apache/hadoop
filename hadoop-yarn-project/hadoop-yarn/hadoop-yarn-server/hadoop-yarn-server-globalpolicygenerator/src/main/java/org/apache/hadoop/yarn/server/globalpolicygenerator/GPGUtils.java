@@ -49,10 +49,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * GPGUtils contains utility functions for the GPG.
+ *
  */
 public final class GPGUtils {
-
-  private static final Logger LOG = LoggerFactory.getLogger(GPGUtils.class);
 
   // hide constructor
   private GPGUtils() {
@@ -91,6 +90,7 @@ public final class GPGUtils {
           .request(MediaType.APPLICATION_XML).get(Response.class);
       if (response.getStatus() == SC_OK) {
         obj = response.readEntity(returnType);
+        return obj;
       } else {
         throw new YarnRuntimeException(
             "Bad response from remote web service: " + response.getStatus());
@@ -101,7 +101,6 @@ public final class GPGUtils {
       }
       client.close();
     }
-    return obj;
   }
 
   /**
@@ -139,7 +138,7 @@ public final class GPGUtils {
    * We will set the timeout when creating JerseyClient.
    *
    * @param conf Configuration.
-   * @return Jersey Client
+   * @return Jersey Client.
    */
   public static Client createJerseyClient(Configuration conf) {
     Client client = ClientBuilder.newClient();

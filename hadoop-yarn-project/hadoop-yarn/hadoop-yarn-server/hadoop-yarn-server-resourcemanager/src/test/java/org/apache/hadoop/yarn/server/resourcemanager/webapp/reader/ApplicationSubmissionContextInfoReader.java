@@ -33,6 +33,11 @@ import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
+/**
+ * We have defined a dedicated Reader for ApplicationSubmissionContextInfo,
+ * aimed at adapting to the Jersey2 framework
+ * to ensure that JSON can be converted into ApplicationSubmissionContextInfo.
+ */
 @Provider
 @Consumes(MediaType.APPLICATION_JSON)
 public class ApplicationSubmissionContextInfoReader

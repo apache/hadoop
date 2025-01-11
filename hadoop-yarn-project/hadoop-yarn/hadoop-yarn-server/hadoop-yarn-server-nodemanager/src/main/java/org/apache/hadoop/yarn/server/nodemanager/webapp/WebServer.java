@@ -19,11 +19,6 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
-
-import javax.servlet.Filter;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +39,10 @@ import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import javax.servlet.Filter;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -182,8 +181,6 @@ public class WebServer extends AbstractService {
 
     @Override
     public void setup() {
-      bind(GenericExceptionHandler.class);
-      bind(JAXBContextResolver.class);
       bind(ResourceView.class).toInstance(this.resourceView);
       bind(ApplicationACLsManager.class).toInstance(this.aclsManager);
       bind(LocalDirsHandlerService.class).toInstance(dirsHandler);

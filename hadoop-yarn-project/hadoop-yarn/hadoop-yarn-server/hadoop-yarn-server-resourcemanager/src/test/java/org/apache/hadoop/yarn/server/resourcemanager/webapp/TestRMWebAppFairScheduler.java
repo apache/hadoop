@@ -164,7 +164,7 @@ public class TestRMWebAppFairScheduler {
     return rm;
   }
 
-  private static FairScheduler mockFairScheduler() {
+  private static FairScheduler mockFairScheduler() throws IOException {
     FairScheduler fs = new FairScheduler();
     FairSchedulerConfiguration conf = new FairSchedulerConfiguration();
     fs.setRMContext(new RMContextImpl(null, null, null, null, null,
@@ -186,7 +186,8 @@ public class TestRMWebAppFairScheduler {
     return rm;
   }
 
-  private static FairScheduler mockFairSchedulerWithoutApps(RMContext rmContext) {
+  private static FairScheduler mockFairSchedulerWithoutApps(RMContext rmContext)
+      throws IOException {
     FairScheduler fs = new FairScheduler() {
       @Override
       public FSAppAttempt getSchedulerApp(ApplicationAttemptId

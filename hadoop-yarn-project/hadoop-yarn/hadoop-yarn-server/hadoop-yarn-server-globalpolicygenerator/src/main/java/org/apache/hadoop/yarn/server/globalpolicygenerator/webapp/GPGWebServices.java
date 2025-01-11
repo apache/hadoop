@@ -38,13 +38,10 @@ public class GPGWebServices {
   private static final Logger LOG = LoggerFactory.getLogger(GPGWebServices.class);
 
   private GlobalPolicyGenerator gpgGenerator;
-  private WebApp webapp;
 
   @Inject
-  public GPGWebServices(final @Named("gpg") GlobalPolicyGenerator gpg,
-      final @Named("webapp") WebApp webapp) {
+  public GPGWebServices(final @Named("gpg") GlobalPolicyGenerator gpg) {
     this.gpgGenerator = gpg;
-    this.webapp = webapp;
   }
 
   @GET

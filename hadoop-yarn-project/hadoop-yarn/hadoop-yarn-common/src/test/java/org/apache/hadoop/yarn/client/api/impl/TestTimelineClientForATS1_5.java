@@ -22,7 +22,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
-import net.jodah.failsafe.RetryPolicy;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Response;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,8 +41,7 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-import javax.ws.rs.client.Client;
-import javax.ws.rs.core.Response;
+import net.jodah.failsafe.RetryPolicy;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;

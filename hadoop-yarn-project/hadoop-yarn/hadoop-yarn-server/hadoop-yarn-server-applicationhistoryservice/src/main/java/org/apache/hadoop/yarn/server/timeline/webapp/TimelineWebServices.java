@@ -270,7 +270,6 @@ public class TimelineWebServices {
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
       TimelineDomain domain) {
-
     init(res);
     UserGroupInformation callerUGI = getUser(req);
     if (callerUGI == null) {
@@ -294,7 +293,6 @@ public class TimelineWebServices {
       throw new WebApplicationException(e,
           Response.Status.INTERNAL_SERVER_ERROR);
     }
-
     return new TimelinePutResponse();
   }
 

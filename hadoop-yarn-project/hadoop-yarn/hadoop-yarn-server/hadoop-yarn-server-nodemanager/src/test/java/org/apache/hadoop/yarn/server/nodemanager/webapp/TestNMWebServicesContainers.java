@@ -32,17 +32,19 @@ import java.io.StringReader;
 import java.util.HashMap;
 import java.util.List;
 
+import javax.ws.rs.BadRequestException;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.http.JettyUtils;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Response;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -62,16 +64,12 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.test.JerseyTest;
-import org.glassfish.jersey.test.TestProperties;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -80,7 +78,12 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-public class TestNMWebServicesContainers extends JerseyTest {
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
+
+public class TestNMWebServicesContainers extends JerseyTestBase {
 
   private static Context nmContext;
   private static ResourceView resourceView;
@@ -141,12 +144,12 @@ public class TestNMWebServicesContainers extends JerseyTest {
       conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
       LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
       NodeHealthCheckerService healthChecker =
-              new NodeHealthCheckerService(dirsHandler);
+          new NodeHealthCheckerService(dirsHandler);
       healthChecker.init(conf);
       dirsHandler = healthChecker.getDiskHandler();
       aclsManager = new ApplicationACLsManager(conf);
       nmContext = new NodeManager.NMContext(null, null, dirsHandler,
-              aclsManager, null, false, conf) {
+          aclsManager, null, false, conf) {
         public NodeId getNodeId() {
           return NodeId.newInstance("testhost.foo.com", 8042);
         };
@@ -155,7 +158,6 @@ public class TestNMWebServicesContainers extends JerseyTest {
           return 1234;
         };
       };
-
       nmWebApp = new NMWebApp(resourceView, aclsManager, dirsHandler);
       final HttpServletRequest request = mock(HttpServletRequest.class);
       when(request.getQueryString()).thenReturn("?user.name=user&nm.id=localhost:1111");
@@ -182,7 +184,6 @@ public class TestNMWebServicesContainers extends JerseyTest {
     testLogDir.mkdir();
   }
 
-
   @AfterClass
   static public void cleanup() {
     FileUtil.fullyDelete(testRootDir);
@@ -194,14 +195,13 @@ public class TestNMWebServicesContainers extends JerseyTest {
 
   @Test
   public void testNodeContainersNone() throws JSONException, Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Response response = r.path("ws").path("v1").path("node")
         .path("containers").request(MediaType.APPLICATION_JSON)
         .get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("apps isn't empty", "{\"containers\":\"\"}", json.toString());
   }
 
@@ -263,7 +263,7 @@ public class TestNMWebServicesContainers extends JerseyTest {
 
   public void testNodeHelper(String path, String media) throws JSONException,
       Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     addAppContainers(app);
@@ -275,8 +275,7 @@ public class TestNMWebServicesContainers extends JerseyTest {
         .request(media).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject json = new JSONObject(entity);
+    JSONObject json = response.readEntity(JSONObject.class);
     JSONObject info = json.getJSONObject("containers");
     assertEquals("incorrect number of elements", 1, info.length());
     JSONArray conInfo = info.getJSONArray("container");
@@ -304,8 +303,9 @@ public class TestNMWebServicesContainers extends JerseyTest {
     testNodeSingleContainersHelper("");
   }
 
-  public void testNodeSingleContainersHelper(String media) throws Exception {
-    WebTarget target = target();
+  public void testNodeSingleContainersHelper(String media)
+      throws JSONException, Exception {
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     HashMap<String, String> hash = addAppContainers(app);
@@ -318,8 +318,7 @@ public class TestNMWebServicesContainers extends JerseyTest {
           .path("containers").path(id).request(media).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
-      String entity = response.readEntity(String.class);
-      JSONObject json = new JSONObject(entity);
+      JSONObject json = response.readEntity(JSONObject.class);
       verifyNodeContainerInfo(json.getJSONObject("container"), nmContext
           .getContainers().get(ContainerId.fromString(id)));
     }
@@ -327,95 +326,100 @@ public class TestNMWebServicesContainers extends JerseyTest {
 
   @Test
   public void testSingleContainerInvalid() throws Exception {
-    WebTarget target = target();
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     addAppContainers(app);
     Application app2 = new MockApp(2);
     nmContext.getApplications().put(app2.getAppId(), app2);
     addAppContainers(app2);
-
-    Response response = target.path("ws").path("v1").path("node").path("containers")
-        .path("container_foo_1234").request(MediaType.APPLICATION_JSON).get();
-    assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
-        response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject msg = new JSONObject(entity);
-    JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 4, exception.length());
-    String message = exception.getString("message");
-    String cause = exception.getString("cause");
-    String type = exception.getString("exception");
-    String classname = exception.getString("javaClassName");
-    WebServicesTestUtils.checkStringMatch("exception message", "HTTP 400 Bad Request", message);
-    WebServicesTestUtils.checkStringMatch("exception cause",
-        "invalid container id, container_foo_1234", cause);
-    WebServicesTestUtils.checkStringMatch("exception type", "BadRequestException", type);
-    WebServicesTestUtils.checkStringMatch("exception classname",
-        "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
+    try {
+      Response response = target.path("ws").path("v1").path("node").path("containers")
+          .path("container_foo_1234").request(MediaType.APPLICATION_JSON).get();
+      throw new BadRequestException(response);
+    } catch (BadRequestException ue) {
+      Response response = ue.getResponse();
+      assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+         response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
+      JSONObject exception = msg.getJSONObject("RemoteException");
+      assertEquals("incorrect number of elements", 3, exception.length());
+      String message = exception.getString("message");
+      String type = exception.getString("exception");
+      String classname = exception.getString("javaClassName");
+      WebServicesTestUtils.checkStringMatch("exception cause",
+          "invalid container id, container_foo_1234", message);
+      WebServicesTestUtils.checkStringMatch("exception type", "BadRequestException", type);
+      WebServicesTestUtils.checkStringMatch("exception classname",
+          "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
+    }
   }
 
   @Test
   public void testSingleContainerInvalid2() throws JSONException, Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     addAppContainers(app);
     Application app2 = new MockApp(2);
     nmContext.getApplications().put(app2.getAppId(), app2);
     addAppContainers(app2);
-
-    Response response = r.path("ws").path("v1").path("node").path("containers")
-        .path("container_1234_0001").request(MediaType.APPLICATION_JSON).get();
-    assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
-        response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject msg = new JSONObject(entity);
-    JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 4, exception.length());
-    String message = exception.getString("message");
-    String cause = exception.getString("cause");
-    String type = exception.getString("exception");
-    String classname = exception.getString("javaClassName");
-    WebServicesTestUtils.checkStringMatch("exception message", "HTTP 400 Bad Request", message);
-    WebServicesTestUtils.checkStringMatch("exception cause",
-        "invalid container id, container_1234_0001", cause);
-    WebServicesTestUtils.checkStringMatch("exception type", "BadRequestException", type);
-    WebServicesTestUtils.checkStringMatch("exception classname",
-        "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
+    try {
+      Response response = r.path("ws").path("v1").path("node").path("containers")
+          .path("container_1234_0001").request(MediaType.APPLICATION_JSON).get();
+      throw new BadRequestException(response);
+    } catch (BadRequestException ue) {
+      Response response = ue.getResponse();
+      assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
+      JSONObject exception = msg.getJSONObject("RemoteException");
+      assertEquals("incorrect number of elements", 3, exception.length());
+      String message = exception.getString("message");
+      String type = exception.getString("exception");
+      String classname = exception.getString("javaClassName");
+      WebServicesTestUtils.checkStringMatch("exception cause",
+          "invalid container id, container_1234_0001", message);
+      WebServicesTestUtils.checkStringMatch("exception type", "BadRequestException", type);
+      WebServicesTestUtils.checkStringMatch("exception classname",
+          "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
+    }
   }
 
   @Test
   public void testSingleContainerWrong() throws Exception {
-    WebTarget target = target();
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     addAppContainers(app);
     Application app2 = new MockApp(2);
     nmContext.getApplications().put(app2.getAppId(), app2);
     addAppContainers(app2);
-
-    Response response = target.path("ws").path("v1").path("node").path("containers")
-        .path("container_1234_0001_01_000005")
-        .request(MediaType.APPLICATION_JSON).get();
-    assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
-        response.getMediaType().toString());
-    String entity = response.readEntity(String.class);
-    JSONObject msg = new JSONObject(entity);
-    JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 4, exception.length());
-    String message = exception.getString("message");
-    String type = exception.getString("exception");
-    String classname = exception.getString("javaClassName");
-    WebServicesTestUtils.checkStringMatch("exception message",
-        "java.lang.Exception: container with id, container_1234_0001_01_000005, not found",
-        message);
-    WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
-    WebServicesTestUtils.checkStringMatch("exception classname",
-        "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+    try {
+      Response response = target.path("ws").path("v1").path("node").path("containers")
+          .path("container_1234_0001_01_000005")
+          .request(MediaType.APPLICATION_JSON).get();
+      throw new NotFoundException(response);
+    } catch (NotFoundException ue) {
+      Response response = ue.getResponse();
+      assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
+      JSONObject exception = msg.getJSONObject("RemoteException");
+      assertEquals("incorrect number of elements", 3, exception.length());
+      String message = exception.getString("message");
+      String type = exception.getString("exception");
+      String classname = exception.getString("javaClassName");
+      WebServicesTestUtils.checkStringMatch("exception message",
+          "container with id, container_1234_0001_01_000005, not found",
+          message);
+      WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
+      WebServicesTestUtils.checkStringMatch("exception classname",
+          "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+    }
   }
 
   @Test
@@ -444,6 +448,7 @@ public class TestNMWebServicesContainers extends JerseyTest {
       assertEquals("incorrect number of elements", 1, nodes.getLength());
       verifyContainersInfoXML(nodes,
           nmContext.getContainers().get(ContainerId.fromString(id)));
+
     }
   }
 

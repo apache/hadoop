@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.timeline.reader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
@@ -31,7 +32,13 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 
+/**
+ * We have defined a dedicated Reader for TimelineEntity,
+ * aimed at adapting to the Jersey2 framework
+ * to ensure that JSON can be converted into TimelineEntity.
+ */
 @Provider
+@Consumes(MediaType.APPLICATION_JSON)
 public class TimelineEntityReader implements MessageBodyReader<TimelineEntity> {
 
   private ObjectMapper objectMapper = new ObjectMapper();

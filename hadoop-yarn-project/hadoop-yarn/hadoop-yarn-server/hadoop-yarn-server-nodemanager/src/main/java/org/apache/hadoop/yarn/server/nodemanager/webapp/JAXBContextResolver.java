@@ -22,15 +22,22 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Arrays;
 
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
 import javax.inject.Singleton;
 import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
-import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.*;
+import javax.xml.bind.JAXBContext;
+
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AuxiliaryServiceInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AuxiliaryServicesInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainerInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.NMGpuResourceInfo;
 import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
-import org.glassfish.jersey.jettison.JettisonJaxbContext;
-
-import javax.xml.bind.JAXBContext;
 
 @Singleton
 @Provider

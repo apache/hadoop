@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.fairscheduler;
 
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -39,15 +43,10 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.test.TestProperties;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Element;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.client.WebTarget;
@@ -67,8 +66,8 @@ import static org.mockito.Mockito.mock;
  * explicitly setting custom resource types. with the help of
  * {@link CustomResourceTypesConfigurationProvider}
  */
-public class TestRMWebServicesFairSchedulerCustomResourceTypes extends JerseyTestBase {
-
+public class TestRMWebServicesFairSchedulerCustomResourceTypes
+    extends JerseyTestBase {
   private static MockRM rm;
   private static YarnConfiguration conf;
 
@@ -265,8 +264,6 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes extends JerseyTes
           CustomResourceTypesConfigurationProvider.getCustomResourceTypes()
           .stream()
           .collect(Collectors.toMap(Function.identity(), v -> value));
-
-      System.out.println(customResources.size());
 
       queue.incUsedResource(Resource.newInstance(20, 30, customResources));
     } catch (Exception e) {

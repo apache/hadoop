@@ -18,8 +18,6 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import net.jodah.failsafe.Failsafe;
-import org.apache.hadoop.yarn.api.records.timelineservice.reader.TimelineEntityReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -32,8 +30,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.TimelineReaderClient;
+import org.apache.hadoop.yarn.api.records.timelineservice.reader.TimelineEntityReader;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import net.jodah.failsafe.Failsafe;
 
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;

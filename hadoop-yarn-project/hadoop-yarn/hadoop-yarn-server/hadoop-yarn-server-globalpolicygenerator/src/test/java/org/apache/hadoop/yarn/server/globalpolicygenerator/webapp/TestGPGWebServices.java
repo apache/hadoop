@@ -16,18 +16,18 @@
  */
 package org.apache.hadoop.yarn.server.globalpolicygenerator.webapp;
 
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.jettison.internal.entity.JettisonObjectProvider.App;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.apache.hadoop.yarn.webapp.WebApp;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.jettison.internal.entity.JettisonObjectProvider.App;
-import org.glassfish.jersey.server.ResourceConfig;
+
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
@@ -61,7 +61,6 @@ public class TestGPGWebServices extends JerseyTestBase {
       Configuration conf = new Configuration();
 
       bind(gpg).to(GlobalPolicyGenerator.class).named("gpg");
-      bind(webApp).to(WebApp.class).named("webapp");
       bind(conf).to(Configuration.class).named("conf");
       final HttpServletResponse response = mock(HttpServletResponse.class);
       final HttpServletRequest request = mock(HttpServletRequest.class);

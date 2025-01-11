@@ -30,7 +30,7 @@ public class ConflictException extends WebApplicationException {
     super(Response.Status.CONFLICT);
   }
 
-  public ConflictException(java.lang.Throwable cause) {
+  public ConflictException(Throwable cause) {
     super(cause, Response.Status.CONFLICT);
   }
 

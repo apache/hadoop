@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.util.StringHelper;
+import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Assert;
@@ -407,5 +408,13 @@ public class TestRMWebApp {
     // Define default queue
     conf.setQueues(new QueuePath("default"), new String[] {"default"});
     conf.setCapacity(new QueuePath("default"), 100);
+  }
+
+  public static void main(String[] args) throws Exception {
+    // For manual testing
+    WebApps.$for("yarn", new TestRMWebApp()).at(8888).inDevMode().
+        start(new RMWebApp(mockRm(2500, 8, 8, 8*GiB))).joinThread();
+    WebApps.$for("yarn", new TestRMWebApp()).at(8888).inDevMode().
+        start(new RMWebApp(mockFifoRm(10, 1, 4, 8*GiB))).joinThread();
   }
 }

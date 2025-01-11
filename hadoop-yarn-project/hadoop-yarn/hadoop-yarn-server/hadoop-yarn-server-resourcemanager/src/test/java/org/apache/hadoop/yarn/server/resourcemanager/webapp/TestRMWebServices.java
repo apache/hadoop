@@ -44,6 +44,8 @@ import java.util.concurrent.TimeoutException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.NotAcceptableException;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
@@ -107,10 +109,6 @@ import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.test.TestProperties;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -120,6 +118,11 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
 
 public class TestRMWebServices extends JerseyTestBase {
   private static final Logger LOG =
@@ -169,7 +172,7 @@ public class TestRMWebServices extends JerseyTestBase {
   }
 
   @Test
-  public void testInfoXML() throws Exception {
+  public void testInfoXML() throws JSONException, Exception {
     WebTarget r = target();
     Response response = r.path("ws").path("v1").path("cluster")
         .path("info").request("application/xml").get(Response.class);
@@ -180,38 +183,54 @@ public class TestRMWebServices extends JerseyTestBase {
   }
 
   @Test
-  public void testInvalidUri() {
+  public void testInvalidUri() throws JSONException, Exception {
     WebTarget r = target();
-    String responseStr;
-    Response response = r.path("ws").path("v1").path("cluster").path("bogus")
-        .request(MediaType.APPLICATION_JSON).get();
-    responseStr = response.readEntity(String.class);
-    assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
-    WebServicesTestUtils.checkStringMatch(
-        "error string exists and shouldn't", "", responseStr);
+    String responseStr = "";
+    try {
+      Response response = r.path("ws").path("v1").path("cluster").path("bogus")
+          .request(MediaType.APPLICATION_JSON).get();
+      throw new NotFoundException(response);
+    } catch (NotFoundException ue) {
+      Response response = ue.getResponse();
+      assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+      responseStr = response.readEntity(String.class);
+      WebServicesTestUtils.checkStringMatch(
+          "error string exists and shouldn't", "", responseStr);
+    }
   }
 
   @Test
-  public void testInvalidUri2() {
+  public void testInvalidUri2() throws JSONException, Exception {
     WebTarget r = target();
-    String responseStr;
-    Response response = r.request(MediaType.APPLICATION_JSON).get();
-    responseStr = response.readEntity(String.class);
-    assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
-    WebServicesTestUtils.checkStringMatch(
-        "error string exists and shouldn't", "", responseStr);
+    String responseStr = "";
+    try {
+      Response response = r.request(MediaType.APPLICATION_JSON).get();
+      throw new NotFoundException(response);
+    } catch (NotFoundException ue) {
+      Response response = ue.getResponse();
+      responseStr = response.readEntity(String.class);
+      assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+      WebServicesTestUtils.checkStringMatch(
+          "error string exists and shouldn't", "", responseStr);
+    }
   }
 
   @Test
-  public void testInvalidAccept() {
+  public void testInvalidAccept() throws JSONException, Exception {
     WebTarget r = target();
-    Response response = r.path("ws").path("v1").path("cluster")
-        .request(MediaType.TEXT_PLAIN).get();
-    String responseStr = response.readEntity(String.class);
-    assertResponseStatusCode(Response.Status.SERVICE_UNAVAILABLE,
-        response.getStatusInfo());
-    WebServicesTestUtils.checkStringContains(
-        "error string exists and shouldn't", "NotAcceptableException", responseStr);
+    String responseStr = "";
+    try {
+      Response response = r.path("ws").path("v1").path("cluster")
+         .request(MediaType.TEXT_PLAIN).get();
+      throw new NotAcceptableException(response);
+    } catch (NotAcceptableException ue) {
+      Response response = ue.getResponse();
+      responseStr = response.readEntity(String.class);
+      assertResponseStatusCode(Response.Status.NOT_ACCEPTABLE,
+          response.getStatusInfo());
+      WebServicesTestUtils.checkStringContains(
+          "error string exists and shouldn't", "NotAcceptableException", responseStr);
+    }
   }
 
   @Test

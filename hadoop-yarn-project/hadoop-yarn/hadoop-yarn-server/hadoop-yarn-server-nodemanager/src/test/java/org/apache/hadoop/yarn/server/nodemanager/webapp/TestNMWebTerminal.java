@@ -111,9 +111,9 @@ public class TestNMWebTerminal {
   public void testWebTerminal() {
     Client client = ClientBuilder.newClient();
     Response response = client.target("http://127.0.0.1:" + port +
-                    "/terminal/terminal.template").request("text/html")
-            .get(Response.class);
+        "/terminal/terminal.template").request("text/html")
+        .get(Response.class);
     assertEquals(MediaType.TEXT_HTML + ";" + JettyUtils.UTF_8,
-            response.getMediaType().toString());
+        response.getMediaType().toString());
   }
 }

@@ -36,6 +36,11 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * We have defined a dedicated Writer for SchedConfUpdateInfo,
+ * aimed at adapting to the Jersey2 framework to ensure
+ * that SchedConfUpdateInfo can be converted into JSON format.
+ */
 @Provider
 @Consumes(MediaType.APPLICATION_JSON)
 public class SchedConfUpdateInfoWriter implements MessageBodyWriter<SchedConfUpdateInfo> {
