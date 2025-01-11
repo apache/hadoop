@@ -106,7 +106,6 @@ public class TestRouterAsyncRpcClient {
     routerConf = new RouterConfigBuilder()
         .metrics()
         .rpc()
-        .stateStore()
         .build();
 
     // Reduce the number of RPC clients threads to overload the Router easy
