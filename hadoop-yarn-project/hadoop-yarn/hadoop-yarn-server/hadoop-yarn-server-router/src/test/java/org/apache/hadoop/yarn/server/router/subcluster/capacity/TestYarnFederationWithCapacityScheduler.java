@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.yarn.server.router.subcluster.capacity;
 
+import static javax.servlet.http.HttpServletResponse.SC_ACCEPTED;
+import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
@@ -67,9 +70,6 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import static javax.servlet.http.HttpServletResponse.SC_ACCEPTED;
-import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
-import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.RM_WEB_SERVICE_PATH;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.INFO;
@@ -147,7 +147,6 @@ public class TestYarnFederationWithCapacityScheduler {
       assertNotNull(clusterInfo);
       assertTrue(subClusters.contains(clusterInfo.getSubClusterId()));
     }
-    Thread.sleep(20000000);
   }
 
   @Test

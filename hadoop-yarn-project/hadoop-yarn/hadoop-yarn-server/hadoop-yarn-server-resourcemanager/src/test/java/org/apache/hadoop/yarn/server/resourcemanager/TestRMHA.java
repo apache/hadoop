@@ -41,7 +41,6 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.glassfish.jersey.jettison.internal.entity.JettisonObjectProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -75,6 +74,8 @@ import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import org.glassfish.jersey.jettison.internal.entity.JettisonObjectProvider;
 
 public class TestRMHA {
   private static final Logger LOG = LoggerFactory.getLogger(TestRMHA.class);

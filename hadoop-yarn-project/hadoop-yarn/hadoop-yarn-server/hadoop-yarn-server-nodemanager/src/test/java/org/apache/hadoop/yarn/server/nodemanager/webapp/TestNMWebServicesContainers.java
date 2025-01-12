@@ -341,7 +341,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
       Response response = ue.getResponse();
       assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
-         response.getMediaType().toString());
+          response.getMediaType().toString());
       JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());

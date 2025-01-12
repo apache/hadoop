@@ -104,6 +104,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
@@ -452,11 +453,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       Response response = interceptor.createNewApplication(hsr);
       if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
-        // NewApplication entity = response.readEntity(NewApplication.class);
-        // ApplicationId applicationId = ApplicationId.fromString(entity.getApplicationId());
-        // RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_NEW_APP,
-        //    TARGET_WEB_SERVICE, applicationId, subClusterId);
-        return response;
+        NewApplication entity = response.readEntity(NewApplication.class);
+        ApplicationId applicationId = ApplicationId.fromString(entity.getApplicationId());
+        RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_NEW_APP,
+        TARGET_WEB_SERVICE, applicationId, subClusterId);
+        return Response.status(Status.OK).entity(entity).build();
       }
     } catch (Exception e) {
       blackList.add(subClusterId);
@@ -639,10 +640,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Response response = getOrCreateInterceptorForSubCluster(subClusterId,
           subClusterInfo.getRMWebServiceAddress()).submitApplication(submissionContext, hsr);
       if (response != null && response.getStatus() == HttpServletResponse.SC_ACCEPTED) {
-        /*LOG.info("Application {} with appId {} submitted on {}.",
+        LOG.info("Application {} with appId {} submitted on {}.",
             context.getApplicationName(), applicationId, subClusterId);
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), SUBMIT_NEW_APP,
-            TARGET_WEB_SERVICE, applicationId, subClusterId);*/
+            TARGET_WEB_SERVICE, applicationId, subClusterId);
         return response;
       }
       String msg = String.format("application %s failed to be submitted.", applicationId);

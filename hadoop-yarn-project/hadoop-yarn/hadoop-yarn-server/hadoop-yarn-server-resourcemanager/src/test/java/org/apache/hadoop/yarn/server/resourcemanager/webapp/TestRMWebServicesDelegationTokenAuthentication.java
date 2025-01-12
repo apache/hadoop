@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -59,12 +60,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.jettison.JettisonJaxbContext;
-import org.glassfish.jersey.jettison.JettisonMarshaller;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -150,12 +148,12 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     return Arrays.asList(new Object[][] { {OldDelegationTokenHeader}, {NewDelegationTokenHeader}});
   }
 
-  public TestRMWebServicesDelegationTokenAuthentication(String header) {
+  public TestRMWebServicesDelegationTokenAuthentication(String header) throws Exception {
     super();
     this.delegationTokenHeader = header;
   }
 
-  private void setupAndStartRM() {
+  private void setupAndStartRM() throws Exception {
     Configuration rmconf = new Configuration();
     rmconf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
       YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -307,16 +305,14 @@ public class TestRMWebServicesDelegationTokenAuthentication {
   @Test
   public void testDelegationTokenOps() throws Exception {
     String token = getDelegationToken("client");
-
     DelegationToken createRequestToken = new DelegationToken();
     createRequestToken.setRenewer("test");
     String createRequest =
-        toJson2(createRequestToken, DelegationToken.class);
-
+        toJson(createRequestToken, DelegationToken.class);
     DelegationToken renewRequestToken = new DelegationToken();
     renewRequestToken.setToken(token);
     String renewRequest =
-        toJson2(renewRequestToken, DelegationToken.class);
+        toJson(renewRequestToken, DelegationToken.class);
 
     // first test create and renew
     String[] requests = { createRequest, renewRequest };
@@ -360,12 +356,9 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         String token = "";
         String owner = "";
         String renewer = "renewer";
-        // String body = "{\"renewer\":\"" + renewer + "\"}";
-
         DelegationToken token2 = new DelegationToken();
         token2.setRenewer(renewer);
-        String body = toJson2(token2, DelegationToken.class);
-
+        String body = toJson(token2, DelegationToken.class);
         URL url =
             new URL("http://localhost:8088/ws/v1/cluster/delegation-token?doAs=client2");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -399,11 +392,9 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     // this should not work
     final String token = getDelegationToken("client");
     String renewer = "renewer";
-    // String body = "{\"renewer\":\"" + renewer + "\"}";
-
     DelegationToken token2 = new DelegationToken();
     token2.setRenewer(renewer);
-    String body = toJson2(token2, DelegationToken.class);
+    String body = toJson(token2, DelegationToken.class);
 
     URL url =
         new URL("http://localhost:8088/ws/v1/cluster/delegation-token?doAs=client2");
@@ -447,10 +438,9 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       @Override
       public String call() throws Exception {
         String ret = null;
-
         DelegationToken token = new DelegationToken();
         token.setRenewer(renewer);
-        String body = toJson2(token, DelegationToken.class);
+        String body = toJson(token, DelegationToken.class);
         URL url =
             new URL("http://localhost:8088/ws/v1/cluster/delegation-token");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -478,14 +468,6 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     });
   }
 
-  public static String toJson2(Object obj, Class<?> klass) throws Exception {
-    StringWriter stringWriter = new StringWriter();
-    JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(klass);
-    JettisonMarshaller jettisonMarshaller = jettisonJaxbContext.createJsonMarshaller();
-    jettisonMarshaller.marshallToJSON(obj, stringWriter);
-    return stringWriter.toString();
-  }
-
   private void cancelDelegationToken(final String tokenString) throws Exception {
 
     KerberosTestUtils.doAsClient(new Callable<Void>() {
@@ -507,19 +489,12 @@ public class TestRMWebServicesDelegationTokenAuthentication {
 
   static String getMarshalledAppInfo(ApplicationSubmissionContextInfo appInfo)
       throws Exception {
+
     StringWriter writer = new StringWriter();
     JAXBContext context =
         JAXBContext.newInstance(ApplicationSubmissionContextInfo.class);
     Marshaller m = context.createMarshaller();
     m.marshal(appInfo, writer);
-    return writer.toString();
-  }
-
-  static String getMarshalledAppState(AppState appState) throws Exception {
-    StringWriter writer = new StringWriter();
-    JAXBContext context = JAXBContext.newInstance(AppState.class);
-    Marshaller m = context.createMarshaller();
-    m.marshal(appState, writer);
     return writer.toString();
   }
 

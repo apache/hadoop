@@ -114,13 +114,6 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.jettison.JettisonJaxbContext;
-import org.glassfish.jersey.jettison.JettisonMarshaller;
-import org.glassfish.jersey.jettison.internal.entity.JettisonObjectProvider.App;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.test.TestProperties;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -135,7 +128,13 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import com.google.inject.Singleton;
-
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
+import org.glassfish.jersey.jettison.JettisonMarshaller;
+import org.glassfish.jersey.jettison.internal.entity.JettisonObjectProvider.App;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
 import static javax.ws.rs.core.Response.Status.ACCEPTED;
 import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
 import static javax.ws.rs.core.Response.Status.OK;
@@ -1428,7 +1427,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
         response = this
             .constructWebResource("apps", app.getApplicationId().toString(),
                 "timeout")
-                .request(mediaType)
+            .request(mediaType)
             .put(Entity.entity(entity, contentType), Response.class);
 
         if (!isAuthenticationEnabled()) {

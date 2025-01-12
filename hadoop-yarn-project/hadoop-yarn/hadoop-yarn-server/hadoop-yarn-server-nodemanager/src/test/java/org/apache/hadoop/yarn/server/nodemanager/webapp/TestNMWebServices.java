@@ -309,7 +309,7 @@ public class TestNMWebServices extends JerseyTestBase {
       Response response = ue.getResponse();
       responseStr = response.readEntity(String.class);
       assertEquals(Response.Status.NOT_FOUND.getStatusCode(),
-         response.getStatusInfo().getStatusCode());
+          response.getStatusInfo().getStatusCode());
       WebServicesTestUtils.checkStringMatch(
           "error string exists and shouldn't", "", responseStr);
     }

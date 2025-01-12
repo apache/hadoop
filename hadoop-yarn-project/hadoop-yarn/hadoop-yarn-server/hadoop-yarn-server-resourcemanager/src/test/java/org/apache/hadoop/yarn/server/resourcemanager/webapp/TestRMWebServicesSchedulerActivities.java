@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -29,10 +34,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.NodeLabelsInfoReader;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.test.TestProperties;
 import org.junit.Before;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -378,14 +379,13 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
               10)), null);
 
       //Get JSON
-      WebTarget r = target();
+      WebTarget r = targetWithJsonObject();
       Response response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParam("nodeId", "127.0.0.0").request(
           MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
-      String s = response.readEntity(String.class);
-      JSONObject json = new JSONObject(s);
+      JSONObject json = response.readEntity(JSONObject.class);
 
       nm.nodeHeartbeat(true);
       Thread.sleep(1000);
@@ -396,8 +396,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
           MediaType.APPLICATION_JSON).get(Response.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
-      s = response.readEntity(String.class);
-      json = new JSONObject(s);
+      json = response.readEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 0);
     } finally {

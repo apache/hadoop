@@ -79,18 +79,19 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.jettison.JettisonJaxbContext;
-import org.glassfish.jersey.jettison.JettisonUnmarshaller;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.test.TestProperties;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
+import org.glassfish.jersey.jettison.JettisonUnmarshaller;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
 
 @RunWith(Parameterized.class)
 public class TestRMWebServicesReservation extends JerseyTestBase {
@@ -154,6 +155,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       props.put(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "false");
       return props;
     }
+
   }
 
   @Override
@@ -389,7 +391,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     long currentTimestamp = clock.getTime() + MINIMUM_RESOURCE_DURATION;
     Response response =
         reservationSubmissionTestHelper("reservation/submit", MediaType.APPLICATION_JSON,
-            currentTimestamp, "res1", rid);
+        currentTimestamp, "res1", rid);
 
     // Make sure that the first submission is successful
     if (this.isAuthenticationEnabled()) {

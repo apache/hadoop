@@ -50,12 +50,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.ApplicationSu
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.writer.ApplicationSubmissionContextInfoWriter;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
+import org.junit.Before;
+import org.junit.Test;
+
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.TestProperties;
-import org.junit.Before;
-import org.junit.Test;
 
 /**
  * Testing containers REST API.

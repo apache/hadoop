@@ -562,8 +562,8 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     addAppContainers(app2);
 
     try {
-      Response response = target.path("ws").path("v1").path("node").path("apps").path("app_foo_0000")
-          .request(MediaType.APPLICATION_JSON).get();
+      Response response = target.path("ws").path("v1").path("node").path("apps")
+          .path("app_foo_0000").request(MediaType.APPLICATION_JSON).get();
       throw new BadRequestException(response);
     } catch (BadRequestException ue) {
       Response response = ue.getResponse();

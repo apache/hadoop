@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -43,9 +46,6 @@ import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -125,7 +125,6 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         throw new RuntimeException("Unable to get current user name "
             + ioe.getMessage(), ioe);
       }
-
       csConf = new CapacitySchedulerConfiguration(new Configuration(false),
           false);
       setupQueueConfiguration(csConf);
@@ -201,15 +200,15 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
   private CapacitySchedulerConfiguration getSchedulerConf()
       throws JSONException {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     Response response =
         r.path("ws").path("v1").path("cluster")
             .queryParam("user.name", userName).path("scheduler-conf")
             .request(MediaType.APPLICATION_JSON)
             .get(Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
-    String configuration = response.readEntity(String.class);
-    JSONObject json = new JSONObject(configuration).getJSONObject("configuration");
+    JSONObject json = response.readEntity(JSONObject.class).
+        getJSONObject("configuration");
     JSONArray items = (JSONArray) json.get("property");
     CapacitySchedulerConfiguration parsedConf =
         new CapacitySchedulerConfiguration();
@@ -276,7 +275,8 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         .request(MediaType.APPLICATION_JSON).get(Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
 
-    JSONObject json = response.readEntity(JSONObject.class).getJSONObject("configversion");
+    JSONObject json = response.readEntity(JSONObject.class).
+        getJSONObject("configversion");
     return Long.parseLong(json.get("versionID").toString());
   }
 

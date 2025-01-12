@@ -63,11 +63,11 @@ import org.apache.hadoop.yarn.service.conf.RestApiConstants;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.util.RMHAUtils;
 import org.eclipse.jetty.util.UrlEncoded;
-import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.client.ClientProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.ClientProperties;
 
 import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.*;
 
@@ -144,7 +144,7 @@ public class ApiServiceClient extends AppAdminClient {
             return scheme + host;
           }
         } catch (Exception e) {
-          LOG.info("Fail to connect to: {}" + host);
+          LOG.info("Fail to connect to: {}", host);
           LOG.debug("Root cause: ", e);
           diagnosticsMsg.append("Error connecting to " + host
               + " due to " + e.getMessage() + "\n");

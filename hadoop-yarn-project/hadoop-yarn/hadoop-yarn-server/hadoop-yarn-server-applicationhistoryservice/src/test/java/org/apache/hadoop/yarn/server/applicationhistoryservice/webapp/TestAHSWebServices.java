@@ -31,8 +31,8 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.NotAcceptableException;
 import javax.ws.rs.NotFoundException;
-import javax.ws.rs.ServiceUnavailableException;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.GenericType;
@@ -90,6 +90,10 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import static javax.ws.rs.core.Response.Status.NOT_ACCEPTABLE;
+import static javax.ws.rs.core.Response.Status.NOT_FOUND;
+import static javax.ws.rs.core.Response.Status.FORBIDDEN;
+import static javax.ws.rs.core.Response.Status.OK;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -101,10 +105,6 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
-import static javax.ws.rs.core.Response.Status.NOT_FOUND;
-import static javax.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE;
-import static javax.ws.rs.core.Response.Status.OK;
-import static javax.ws.rs.core.Response.Status.FORBIDDEN;
 
 public class TestAHSWebServices extends JerseyTestBase {
 
@@ -321,9 +321,9 @@ public class TestAHSWebServices extends JerseyTestBase {
               .queryParam("user.name", USERS[round])
               .request(MediaType.TEXT_PLAIN).get(String.class);
       fail("should have thrown exception on invalid uri");
-    } catch (ServiceUnavailableException ue) {
+    } catch (NotAcceptableException ue) {
       Response response = ue.getResponse();
-      assertResponseStatusCode(SERVICE_UNAVAILABLE,
+      assertResponseStatusCode(NOT_ACCEPTABLE,
           response.getStatusInfo());
       WebServicesTestUtils.checkStringMatch(
           "error string exists and shouldn't", "", responseStr);

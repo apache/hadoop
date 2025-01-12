@@ -28,27 +28,24 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.security.Principal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.*;
+import javax.ws.rs.core.Application;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.NodeLabelsInfoReader;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.LabelsToNodesInfoReader;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.NodeToLabelsInfoReader;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.jettison.JettisonJaxbContext;
-import org.glassfish.jersey.jettison.JettisonMarshaller;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.test.TestProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.http.JettyUtils;
@@ -56,6 +53,15 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntry;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.NodeLabelsInfoReader;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.LabelsToNodesInfoReader;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.NodeToLabelsInfoReader;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -65,6 +71,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
+import org.glassfish.jersey.jettison.JettisonMarshaller;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
 public class TestRMWebServicesNodeLabels extends JerseyTestBase {
 
   private static final int BAD_REQUEST_CODE = 400;
@@ -155,7 +167,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   }
 
   private WebTarget getClusterWebResource() {
-    return target().
+    return targetWithJsonObject().
         register(NodeLabelsInfoReader.class).
         register(LabelsToNodesInfoReader.class).
         register(NodeToLabelsInfoReader.class).
@@ -204,7 +216,6 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
         webTarget = webTarget.queryParam(param.getKey(), value);
       }
     }
-
     return webTarget.request(MediaType.APPLICATION_JSON)
         .post(Entity.entity(toJson(payload, payloadClass),
         MediaType.APPLICATION_JSON), Response.class);
@@ -612,8 +623,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
       String expectedMessage)
       throws JSONException {
     Assert.assertEquals(BAD_REQUEST_CODE, response.getStatus());
-    String json = response.readEntity(String.class);
-    JSONObject msg = new JSONObject(json);
+    JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
     String message = exception.getString("message");
     assertEquals("incorrect number of elements", 3, exception.length());

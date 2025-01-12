@@ -68,10 +68,6 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.logging.LoggingFeature;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -89,10 +85,15 @@ import org.xml.sax.SAXException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toEntity;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.logging.LoggingFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 
 @RunWith(Parameterized.class)
 public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
@@ -644,6 +645,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     }
 
     rm.stop();
+    return;
   }
 
   private void testCancelTokenBadRequests(String mType, String cType)

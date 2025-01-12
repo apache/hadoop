@@ -19,7 +19,6 @@ package org.apache.hadoop.yarn.server.globalpolicygenerator.webapp;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.webapp.dao.GpgInfo;
-import org.apache.hadoop.yarn.webapp.WebApp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
