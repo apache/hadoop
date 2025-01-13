@@ -44,8 +44,6 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.glassfish.jersey.client.ClientProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * GPGUtils contains utility functions for the GPG.

@@ -581,8 +581,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
           .queryParam("finalStatus", "INVALID_test")
           .request(MediaType.APPLICATION_JSON).get();
       throw new BadRequestException(response);
-    }
-    catch (BadRequestException ue) {
+    } catch (BadRequestException ue) {
       Response response = ue.getResponse();
       assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
