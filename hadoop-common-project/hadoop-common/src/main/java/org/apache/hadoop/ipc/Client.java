@@ -205,8 +205,6 @@ public class Client implements AutoCloseable {
   private final int maxAsyncCalls;
   private final AtomicInteger asyncCallCounter = new AtomicInteger(0);
   private final int asyncCalllPermitsTimeoutMs;
-  private final ConcurrentMap<ConnectionId, Semaphore> asyncCallCounters =
-      new ConcurrentHashMap<>();
 
   /**
    * set the ping interval value in configuration
@@ -421,6 +419,7 @@ public class Client implements AutoCloseable {
 
     // currently active calls
     private Hashtable<Integer, Call> calls = new Hashtable<Integer, Call>();
+    private Semaphore asyncCallPermits = new Semaphore(maxAsyncCalls);
     private AtomicLong lastActivity = new AtomicLong();// last I/O activity time
     private AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
     private IOException closeException; // close reason
@@ -507,9 +506,10 @@ public class Client implements AutoCloseable {
      * @param call to add
      * @return true if the call was added.
      */
-    private synchronized boolean addCall(Call call) {
+    private synchronized boolean addCall(Call call) throws IOException {
       if (shouldCloseConnection.get())
         return false;
+      checkAsyncCall();
       calls.put(call.id, call);
       notify();
       return true;
@@ -1351,9 +1351,34 @@ public class Client implements AutoCloseable {
     }
 
     private void releaseAsyncCallPermit() {
-      Semaphore asyncCallPermits = asyncCallCounters.get(remoteId);
       if (asyncCallPermits != null) {
         asyncCallPermits.release(1);
+      }
+    }
+
+    private void checkAsyncCall() throws IOException {
+      if (isAsynchronousMode()) {
+        asyncCallCounter.incrementAndGet();
+        try {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Acquiring async call permit for connectionId {}", this.remoteId);
+          }
+          boolean isAcquired = asyncCallPermits.tryAcquire(asyncCalllPermitsTimeoutMs,
+              TimeUnit.MILLISECONDS);
+          if (!isAcquired) {
+            String errMsg = String.format(
+                "Exceeded limit of max asynchronous calls: %d, " +
+                    "please configure %s to adjust it.",
+                maxAsyncCalls,
+                CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY);
+            throw new AsyncCallLimitExceededException(errMsg);
+          }
+        } catch (InterruptedException e) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Interrupted when acquiring async call permit for connectionId {}", remoteId);
+          }
+          throw new IOException(e);
+        }
       }
     }
   }
@@ -1474,33 +1499,6 @@ public class Client implements AutoCloseable {
         fallbackToSimpleAuth, alignmentContext);
   }
 
-  private void checkAsyncCall(ConnectionId remoteId) throws IOException {
-    if (isAsynchronousMode()) {
-      asyncCallCounter.incrementAndGet();
-      Semaphore asyncPermits = asyncCallCounters.computeIfAbsent(remoteId,
-          id -> new Semaphore(maxAsyncCalls));
-      try {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Acquiring lock for connectionId {}", remoteId);
-        }
-        boolean isAcquired = asyncPermits.tryAcquire(asyncCalllPermitsTimeoutMs,
-            TimeUnit.MILLISECONDS);
-        if (!isAcquired) {
-          String errMsg = String.format(
-              "Exceeded limit of max asynchronous calls: %d, " +
-                  "please configure %s to adjust it.",
-              maxAsyncCalls,
-              CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY);
-          throw new AsyncCallLimitExceededException(errMsg);
-        }
-      } catch (InterruptedException e) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Cannot acquire a permit for connectionId {}", remoteId);
-        }
-      }
-    }
-  }
-
   Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
                 ConnectionId remoteId, int serviceClass,
                 AtomicBoolean fallbackToSimpleAuth)
@@ -1531,9 +1529,7 @@ public class Client implements AutoCloseable {
     final Call call = createCall(rpcKind, rpcRequest);
     call.setAlignmentContext(alignmentContext);
     final Connection connection;
-
     try {
-      checkAsyncCall(remoteId);
       connection = getConnection(remoteId, call, serviceClass,
           fallbackToSimpleAuth);
       try {
