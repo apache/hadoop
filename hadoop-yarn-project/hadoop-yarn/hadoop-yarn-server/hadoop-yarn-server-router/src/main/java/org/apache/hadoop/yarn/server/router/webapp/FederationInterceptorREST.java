@@ -456,7 +456,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         NewApplication entity = response.readEntity(NewApplication.class);
         ApplicationId applicationId = ApplicationId.fromString(entity.getApplicationId());
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_NEW_APP,
-          TARGET_WEB_SERVICE, applicationId, subClusterId);
+            TARGET_WEB_SERVICE, applicationId, subClusterId);
         return Response.status(Status.OK).entity(entity).build();
       }
     } catch (Exception e) {
