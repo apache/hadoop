@@ -76,7 +76,7 @@ on the client requirements.
 </property>
 <property>
    <name>fs.s3a.vectored.read.max.merged.size</name>
-   <value>4M</value>
+   <value>2M</value>
    <description>
       What is the largest merged read size in bytes such
       that we group ranges together during vectored read.

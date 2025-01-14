@@ -89,6 +89,6 @@ public final class Sizes {
   public static final int S_5M = 5 * S_1M;
 
   /** 10 MiB:  {@value}. */
-  public static final int S_10M = 10 * S_1M << 1;
+  public static final int S_10M = 10 * S_1M;
 
 }
