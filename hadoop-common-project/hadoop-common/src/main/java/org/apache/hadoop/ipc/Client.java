@@ -165,7 +165,7 @@ public class Client implements AutoCloseable {
   private final byte[] clientId;
   private final int maxAsyncCalls;
   private final AtomicInteger asyncCallCounter = new AtomicInteger(0);
-  private final int asyncCalllPermitsTimeoutMs;
+  private final int asyncCallPermitsTimeoutMs;
 
   /**
    * set the ping interval value in configuration
@@ -1332,7 +1332,7 @@ public class Client implements AutoCloseable {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Acquiring async call permit for connectionId {}", this.remoteId);
           }
-          boolean isAcquired = asyncCallPermits.tryAcquire(asyncCalllPermitsTimeoutMs,
+          boolean isAcquired = asyncCallPermits.tryAcquire(asyncCallPermitsTimeoutMs,
               TimeUnit.MILLISECONDS);
           if (!isAcquired) {
             String errMsg = String.format(
@@ -1377,7 +1377,7 @@ public class Client implements AutoCloseable {
     this.maxAsyncCalls = conf.getInt(
         CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY,
         CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_DEFAULT);
-    this.asyncCalllPermitsTimeoutMs = conf.getInt(
+    this.asyncCallPermitsTimeoutMs = conf.getInt(
         CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_PERMITS_ACQUIRE_TIMEOUT_MS_KEY,
         CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_PERMITS_ACQUIRE_TIMEOUT_MS_DEFAULT);
   }
