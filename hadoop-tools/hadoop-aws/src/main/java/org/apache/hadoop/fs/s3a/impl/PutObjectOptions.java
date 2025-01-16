@@ -97,7 +97,8 @@ public final class PutObjectOptions {
   /**
    * Empty options.
    */
-  private static final PutObjectOptions EMPTY_OPTIONS = new PutObjectOptions(
+  private static final PutObjectOptions EMPTY_OPTIONS = new PutObjectOptions(false, false,
+          null, null);
   private static final PutObjectOptions KEEP_DIRS = new PutObjectOptions(true, false,
       null, null);
   private static final PutObjectOptions DELETE_DIRS = new PutObjectOptions(false, false,
