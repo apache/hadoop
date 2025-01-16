@@ -213,6 +213,7 @@ import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -498,17 +499,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   /**
-   * Shut down all ARR executors.
-   */
-  private void shutdownAsyncRouterRpcExecutors() {
-    for (ExecutorService e: asyncRouterHandlerExecutors.values()) {
-      e.shutdownNow();
-    }
-    routerDefaultAsyncHandlerExecutor.shutdownNow();
-    routerAsyncResponderExecutor.shutdownNow();
-  }
-
-  /**
    * Init router async handlers and router async responders.
    * @param configuration the configuration.
    */
@@ -692,9 +682,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     }
     if (this.fedRenameScheduler != null) {
       fedRenameScheduler.shutDown();
-    }
-    if (isAsync() && DFSRouterFaultInjector.get().shouldSkipShutdownAsyncExecutors()) {
-      shutdownAsyncRouterRpcExecutors();
     }
     super.serviceStop();
   }
@@ -2520,8 +2507,10 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     }
 
     @Override
-    public Thread newThread(Runnable r) {
-      return new Thread(r, namePrefix + threadNumber.getAndIncrement());
+    public Thread newThread(@NonNull Runnable r) {
+      Thread thread = new Thread(r, namePrefix + threadNumber.getAndIncrement());
+      thread.setDaemon(true);
+      return thread;
     }
   }
 }

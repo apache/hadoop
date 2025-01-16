@@ -321,32 +321,20 @@ public class TestRouterRpc {
 
   @Test
   public void testRpcService() throws IOException {
-    DFSRouterFaultInjector rbfFaultInject = new DFSRouterFaultInjector() {
-      @Override
-      public boolean shouldSkipShutdownAsyncExecutors() {
-        return false;
-      }
-    };
-    DFSRouterFaultInjector oldRbfFaultInject = DFSRouterFaultInjector.get();
-    DFSRouterFaultInjector.set(rbfFaultInject);
-    try {
-      Router testRouter = new Router();
-      List<String> nss = cluster.getNameservices();
-      String ns0 = nss.get(0);
-      Configuration routerConfig = cluster.generateRouterConfiguration(ns0, null);
-      RouterRpcServer server = new RouterRpcServer(routerConfig, testRouter,
-          testRouter.getNamenodeResolver(), testRouter.getSubclusterResolver());
-      server.init(routerConfig);
-      assertEquals(STATE.INITED, server.getServiceState());
-      server.start();
-      assertEquals(STATE.STARTED, server.getServiceState());
-      server.stop();
-      assertEquals(STATE.STOPPED, server.getServiceState());
-      server.close();
-      testRouter.close();
-    } finally {
-      DFSRouterFaultInjector.set(oldRbfFaultInject);
-    }
+    Router testRouter = new Router();
+    List<String> nss = cluster.getNameservices();
+    String ns0 = nss.get(0);
+    Configuration routerConfig = cluster.generateRouterConfiguration(ns0, null);
+    RouterRpcServer server = new RouterRpcServer(routerConfig, testRouter,
+        testRouter.getNamenodeResolver(), testRouter.getSubclusterResolver());
+    server.init(routerConfig);
+    assertEquals(STATE.INITED, server.getServiceState());
+    server.start();
+    assertEquals(STATE.STARTED, server.getServiceState());
+    server.stop();
+    assertEquals(STATE.STOPPED, server.getServiceState());
+    server.close();
+    testRouter.close();
   }
 
   protected MiniRouterDFSCluster getCluster() {
