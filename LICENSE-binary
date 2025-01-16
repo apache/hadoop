@@ -363,7 +363,17 @@ org.xerial.snappy:snappy-java:1.1.10.4
 org.yaml:snakeyaml:2.0
 org.wildfly.openssl:wildfly-openssl:2.1.4.Final
 software.amazon.awssdk:bundle:2.25.53
-
+org.glassfish.jersey.core:jersey-common:2.46
+org.glassfish.jersey.core:jersey-server:2.46
+org.glassfish.jersey.inject:jersey-hk2:2.46
+org.glassfish.jersey.core:jersey-client:2.46
+org.glassfish.jersey.test-framework:jersey-test-framework-core:2.46
+org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-grizzly2:2.46
+org.glassfish.jersey.containers:jersey-container-servlet:2.46
+org.glassfish.jersey.containers:jersey-container-servlet-core:2.46
+org.glassfish.jersey.media:jersey-media-json-jettison:2.46
+org.glassfish.jersey.media:jersey-media-jaxb:2.46
+net.jodah:failsafe:2.4.4
 
 --------------------------------------------------------------------------------
 This product bundles various third-party components under other open source
@@ -490,16 +500,6 @@ org.codehaus.mojo:animal-sniffer-annotations:1.24
 org.jruby.jcodings:jcodings:1.0.13
 org.jruby.joni:joni:2.1.2
 org.ojalgo:ojalgo:43.0
-org.glassfish.jersey.core:jersey-common:2.46
-org.glassfish.jersey.core:jersey-server:2.46
-org.glassfish.jersey.inject:jersey-hk2:2.46
-org.glassfish.jersey.core:jersey-client:2.46
-org.glassfish.jersey.test-framework:jersey-test-framework-core:2.46
-org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-grizzly2:2.46
-org.glassfish.jersey.containers:jersey-container-servlet:2.46
-org.glassfish.jersey.containers:jersey-container-servlet-core:2.46
-org.glassfish.jersey.media:jersey-media-json-jettison:2.46
-org.glassfish.jersey.media:jersey-media-jaxb:2.46
 org.slf4j:jul-to-slf4j:1.7.36
 org.slf4j:slf4j-api:1.7.36
 org.slf4j:slf4j-reload4j:1.7.36
@@ -516,11 +516,11 @@ javax.servlet.jsp:jsp-api:2.1
 javax.websocket:javax.websocket-api:1.0
 javax.ws.rs:jsr311-api:1.1.1
 javax.xml.bind:jaxb-api:2.2.11
-jakarta.ws.rs-api:jakarta.ws.rs-api:2.1.6
-jakarta.servlet.jsp:jakarta.servlet.jsp-api:2.3.6
-jakarta.servlet:jakarta.servlet-api:4.0.4
+
+Eclipse Distribution License (EDL) 1.0
+--------------------------
+
 jakarta.xml.bind:jakarta.xml.bind-api:2.3.3
-net.jodah:failsafe:2.4.4
 
 Eclipse Public License 1.0
 --------------------------
@@ -528,6 +528,12 @@ Eclipse Public License 1.0
 junit:junit:4.13.2
 org.jacoco:org.jacoco.agent:0.8.5
 
+Eclipse Public License 2.0 (EPL) 2.0
+--------------------------
+
+jakarta.ws.rs-api:jakarta.ws.rs-api:2.1.6
+jakarta.servlet.jsp:jakarta.servlet.jsp-api:2.3.6
+jakarta.servlet:jakarta.servlet-api:4.0.4
 
 
 HSQL License
