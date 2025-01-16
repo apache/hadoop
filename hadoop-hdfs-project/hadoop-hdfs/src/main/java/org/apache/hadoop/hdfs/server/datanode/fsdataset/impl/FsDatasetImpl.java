@@ -436,7 +436,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       FsVolumeReference ref) throws IOException {
     for (String bp : volumeMap.getBlockPoolList()) {
       lockManager.addLock(LockLevel.VOLUME, bp, ref.getVolume().getStorageID());
-      List<String> allSubDirNameForDataSetLock = datasetSubLockStrategy.getAllSubLockName();
+      List<String> allSubDirNameForDataSetLock = datasetSubLockStrategy.getAllSubLockNames();
       for (String dir : allSubDirNameForDataSetLock) {
         lockManager.addLock(LockLevel.DIR, bp, ref.getVolume().getStorageID(), dir);
         LOG.info("Added DIR lock for bpid:{}, volume storageid:{}, dir:{}",
@@ -641,7 +641,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       for (String storageUuid : storageToRemove) {
         storageMap.remove(storageUuid);
         for (String bp : volumeMap.getBlockPoolList()) {
-          List<String> allSubDirNameForDataSetLock = datasetSubLockStrategy.getAllSubLockName();
+          List<String> allSubDirNameForDataSetLock = datasetSubLockStrategy.getAllSubLockNames();
           for (String dir : allSubDirNameForDataSetLock) {
             lockManager.removeLock(LockLevel.DIR, bp, storageUuid, dir);
             LOG.info("Removed DIR lock for bpid:{}, volume storageid:{}, dir:{}",
@@ -3294,7 +3294,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       Set<String> vols = storageMap.keySet();
       for (String v : vols) {
         lockManager.addLock(LockLevel.VOLUME, bpid, v);
-        List<String> allSubDirNameForDataSetLock = datasetSubLockStrategy.getAllSubLockName();
+        List<String> allSubDirNameForDataSetLock = datasetSubLockStrategy.getAllSubLockNames();
         for (String dir : allSubDirNameForDataSetLock) {
           lockManager.addLock(LockLevel.DIR, bpid, v, dir);
           LOG.info("Added DIR lock for bpid:{}, volume storageid:{}, dir:{}",

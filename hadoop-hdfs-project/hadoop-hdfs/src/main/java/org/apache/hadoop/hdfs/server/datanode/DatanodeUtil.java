@@ -119,7 +119,7 @@ public class DatanodeUtil {
   /**
    * Take an example.
    * We hava a block with blockid mapping to:
-   * "/data1/hadoop/hdfs/datanode/current/BP-xxxx/current/finalized/subdir0/subdir0"
+   * "/data1/hadoop/hdfs/datanode/current/BP-xxxx/current/finalized/subdir0/subdir1"
    * We return "subdir0/subdir0".
    * @param blockId the block id.
    * @return two-level subdir string where block will be stored.

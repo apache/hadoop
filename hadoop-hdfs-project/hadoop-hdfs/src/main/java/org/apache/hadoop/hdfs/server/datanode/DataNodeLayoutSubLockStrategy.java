@@ -27,7 +27,7 @@ public class DataNodeLayoutSubLockStrategy implements DataSetSubLockStrategy {
   }
 
   @Override
-  public List<String> getAllSubLockName() {
+  public List<String> getAllSubLockNames() {
     return DatanodeUtil.getAllSubDirNameForDataSetLock();
   }
 }

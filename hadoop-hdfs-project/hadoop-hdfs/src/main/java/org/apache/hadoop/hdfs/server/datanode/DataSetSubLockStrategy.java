@@ -32,5 +32,5 @@ public interface DataSetSubLockStrategy {
    */
   String blockIdToSubLock(long blockid);
 
-  List<String> getAllSubLockName();
+  List<String> getAllSubLockNames();
 }
