@@ -39,7 +39,7 @@ public class DatanodeUtil {
   public static final String DISK_ERROR = "Possible disk error: ";
 
   private static final String SEP = System.getProperty("file.separator");
-  
+
   private static final long MASK = 0x1F;
 
   /** Get the cause of an I/O exception if caused by a possible disk error
