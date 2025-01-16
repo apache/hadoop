@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.protocolPB;
 
+import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCMetrics;
 import org.apache.hadoop.hdfs.server.federation.router.ThreadLocalContext;
 import org.apache.hadoop.hdfs.server.federation.router.async.utils.ApplyFunction;
 import org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil;
@@ -28,6 +29,7 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtobufRpcEngineCallback2;
 import org.apache.hadoop.ipc.internal.ShadedProtobufHelper;
 import org.apache.hadoop.thirdparty.protobuf.Message;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.AsyncGet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,6 +89,7 @@ public final class AsyncRpcProtocolPBUtil {
     // transfer thread local context to worker threads of executor.
     ThreadLocalContext threadLocalContext = new ThreadLocalContext();
     asyncCompleteWith(responseFuture.handleAsync((result, e) -> {
+      FederationRPCMetrics.ASYNC_RESPONDER_START_TIME.set(Time.monotonicNow());
       threadLocalContext.transfer();
       if (e != null) {
         throw warpCompletionException(e);
@@ -136,6 +139,7 @@ public final class AsyncRpcProtocolPBUtil {
       } else {
         callback.error(e.getCause());
       }
+      FederationRPCMetrics.addAsyncResponderThreadTime();
       return null;
     });
   }

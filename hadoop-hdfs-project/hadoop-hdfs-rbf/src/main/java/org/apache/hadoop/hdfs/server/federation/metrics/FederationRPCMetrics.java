@@ -30,6 +30,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
+import org.apache.hadoop.util.Time;
 
 /**
  * Implementation of the RPC metrics collector.
@@ -41,9 +42,15 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   private final MetricsRegistry registry = new MetricsRegistry("router");
 
   private RouterRpcServer rpcServer;
+  public static final ThreadLocal<Long> ASYNC_RESPONDER_START_TIME =
+      ThreadLocal.withInitial(() -> -1L);
+  public static final ThreadLocal<Long> ASYNC_RESPONDER_END_TIME =
+      ThreadLocal.withInitial(() -> -1L);
 
   @Metric("Time for the router to process an operation internally")
   private MutableRate processing;
+  @Metric("Time for the router async responder to process an operation internally")
+  private static MutableRate asyncResponderProcessing;
   @Metric("Number of operations the Router processed internally")
   private MutableCounterLong processingOp;
   @Metric("Time for the Router to proxy an operation to the Namenodes")
@@ -300,6 +307,20 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   public void addProcessingTime(long time) {
     processing.add(time);
     processingOp.incr();
+  }
+
+  public static void addAsyncResponderThreadTime() {
+    ASYNC_RESPONDER_END_TIME.set(Time.monotonicNow());
+    long duration = getAsyncResponderProcessingTime();
+    asyncResponderProcessing.add(duration);
+  }
+
+  public static long getAsyncResponderProcessingTime() {
+    if (ASYNC_RESPONDER_START_TIME.get() != null && ASYNC_RESPONDER_START_TIME.get() > 0 &&
+        ASYNC_RESPONDER_END_TIME.get() != null && ASYNC_RESPONDER_END_TIME.get() > 0) {
+      return ASYNC_RESPONDER_END_TIME.get() - ASYNC_RESPONDER_START_TIME.get();
+    }
+    return -1;
   }
 
   @Override
