@@ -39,6 +39,8 @@ public class DatanodeUtil {
   public static final String DISK_ERROR = "Possible disk error: ";
 
   private static final String SEP = System.getProperty("file.separator");
+  
+  private static final long MASK = 0x1F;
 
   /** Get the cause of an I/O exception if caused by a possible disk error
    * @param ioe an I/O exception
@@ -115,23 +117,6 @@ public class DatanodeUtil {
   }
 
   /**
-   * Get the directory where a finalized block with this ID should be stored.
-   * Do not attempt to create the directory.
-   * Note: update {@link DatanodeUtil#idToBlockDirSuffixName(long)} and
-   * {@link DatanodeUtil#getAllSubDirNameForDataSetLock()} when current method changed.
-   * @param root the root directory where finalized blocks are stored
-   * @param blockId
-   * @return
-   */
-  public static File idToBlockDir(File root, long blockId) {
-    int d1 = (int) ((blockId >> 16) & 0x1F);
-    int d2 = (int) ((blockId >> 8) & 0x1F);
-    String path = DataStorage.BLOCK_SUBDIR_PREFIX + d1 + SEP +
-        DataStorage.BLOCK_SUBDIR_PREFIX + d2;
-    return new File(root, path);
-  }
-
-  /**
    * Take an example.
    * We hava a block with blockid mapping to:
    * "/data1/hadoop/hdfs/datanode/current/BP-xxxx/current/finalized/subdir0/subdir0"
@@ -139,17 +124,29 @@ public class DatanodeUtil {
    * @param blockId the block id.
    * @return two-level subdir string where block will be stored.
    */
-  public static String idToBlockDirSuffixName(long blockId) {
-    int d1 = (int) ((blockId >> 16) & 0x1F);
-    int d2 = (int) ((blockId >> 8) & 0x1F);
+  public static String idToBlockDirSuffix(long blockId) {
+    int d1 = (int) ((blockId >> 16) & MASK);
+    int d2 = (int) ((blockId >> 8) & MASK);
     return DataStorage.BLOCK_SUBDIR_PREFIX + d1 + SEP +
         DataStorage.BLOCK_SUBDIR_PREFIX + d2;
   }
 
+  /**
+   * Get the directory where a finalized block with this ID should be stored.
+   * Do not attempt to create the directory.
+   * @param root the root directory where finalized blocks are stored
+   * @param blockId
+   * @return
+   */
+  public static File idToBlockDir(File root, long blockId) {
+    String path = idToBlockDirSuffix(blockId);
+    return new File(root, path);
+  }
+
   public static List<String> getAllSubDirNameForDataSetLock() {
     List<String> res = new ArrayList<>();
-    for (int d1 = 0; d1 <= 0x1F; d1++) {
-      for (int d2 = 0; d2 <= 0x1F; d2++) {
+    for (int d1 = 0; d1 <= MASK; d1++) {
+      for (int d2 = 0; d2 <= MASK; d2++) {
         res.add(DataStorage.BLOCK_SUBDIR_PREFIX + d1 + SEP +
             DataStorage.BLOCK_SUBDIR_PREFIX + d2);
       }

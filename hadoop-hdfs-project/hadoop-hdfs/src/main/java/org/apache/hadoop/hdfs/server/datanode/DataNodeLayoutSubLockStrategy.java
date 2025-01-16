@@ -23,7 +23,7 @@ import java.util.List;
 public class DataNodeLayoutSubLockStrategy implements DataSetSubLockStrategy {
   @Override
   public String blockIdToSubLock(long blockid) {
-    return DatanodeUtil.idToBlockDirSuffixName(blockid);
+    return DatanodeUtil.idToBlockDirSuffix(blockid);
   }
 
   @Override
