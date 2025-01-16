@@ -528,7 +528,7 @@ Eclipse Public License 1.0
 junit:junit:4.13.2
 org.jacoco:org.jacoco.agent:0.8.5
 
-Eclipse Public License 2.0 (EPL) 2.0
+Eclipse Public License (EPL) 2.0
 --------------------------
 
 jakarta.ws.rs-api:jakarta.ws.rs-api:2.1.6
