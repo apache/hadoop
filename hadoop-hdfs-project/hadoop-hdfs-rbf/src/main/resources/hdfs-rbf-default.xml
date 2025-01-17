@@ -62,7 +62,7 @@
     <description>
       The number of asynchronous handlers per nameservice, separated by commas, internally separated by colons.
       The identifier of nameservice is in dfs.nameservices configuration entry.
-      Such as: nsPlaceholder1:0,nsPlaceholder2:0
+      Such as: ns1:count1,ns2:count2,ns3:count3.
     </description>
   </property>
 
