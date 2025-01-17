@@ -81,8 +81,7 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   // Example: ns1:count1,ns2:count2,ns3:count3
   public static final String DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_KEY =
           FEDERATION_ROUTER_ASYNC_RPC_PREFIX + "ns.handler.count";
-  public static final String DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_DEFAULT =
-          "nsPlaceholder1:0,nsPlaceholder2:0";
+  public static final String DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_DEFAULT = "";
   public static final String DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY =
           FEDERATION_ROUTER_ASYNC_RPC_PREFIX + "handler.count";
   public static final int DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_DEFAULT = 10;

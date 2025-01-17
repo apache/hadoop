@@ -58,10 +58,11 @@
 
   <property>
     <name>dfs.federation.router.async.rpc.ns.handler.count</name>
-    <value>nsPlaceholder1:0,nsPlaceholder2:0</value>
+    <value></value>
     <description>
       The number of asynchronous handlers per nameservice, separated by commas, internally separated by colons.
       The identifier of nameservice is in dfs.nameservices configuration entry.
+      Such as: nsPlaceholder1:0,nsPlaceholder2:0
     </description>
   </property>
 

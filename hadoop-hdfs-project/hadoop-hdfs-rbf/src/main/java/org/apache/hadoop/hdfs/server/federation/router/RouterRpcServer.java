@@ -552,9 +552,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_DEFAULT);
     if (StringUtils.isEmpty(configNsHandler)) {
       LOG.error(
-          "The config key: {} is incorrect! The value is empty.",
+          "The value of config key: {} is empty. Will use default conf.",
           DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_KEY);
-      configNsHandler = DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_DEFAULT;
     }
     String[] nsHandlers = configNsHandler.split(",");
     for (String nsHandlerInfo : nsHandlers) {
