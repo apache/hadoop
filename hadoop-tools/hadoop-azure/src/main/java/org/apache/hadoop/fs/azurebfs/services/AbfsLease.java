@@ -251,6 +251,7 @@ public final class AbfsLease {
 
     /**
      * Cancel the lease renewal timer.
+     * Also purge the lease refresh timer.
      */
   public void cancelTimer() {
     if (leaseTimerTask != null) {
@@ -279,6 +280,7 @@ public final class AbfsLease {
 
   /**
    * Get the number of times the lease was retried.
+   *
    * @return number of acquired retry count
    */
   @VisibleForTesting
@@ -288,6 +290,7 @@ public final class AbfsLease {
 
   /**
    * Get Tracing Context.
+   *
    * @return TracingContext tracing context
    */
   @VisibleForTesting
@@ -296,7 +299,8 @@ public final class AbfsLease {
   }
 
   /**
-   * Lease renewal timer task.
+   * Class to track lease renewal.
+   * If the lease is not renewed, the lease will expire and the file will be available for write.
    */
   private static class LeaseTimerTask extends TimerTask {
     private final AbfsClient client;

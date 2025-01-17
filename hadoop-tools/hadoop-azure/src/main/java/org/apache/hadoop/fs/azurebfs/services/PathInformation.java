@@ -55,25 +55,46 @@ public class PathInformation {
         this.isImplicit = pathInformation.getIsImplicit();
     }
 
-    /** Setters and Getters
+    /**
+     * Get the ETag of the path.
      *
-     * @return Boolean Values*/
+     * @return the etag value*/
     public String getETag() {
         return eTag;
     }
 
+    /**
+     * Get value of pathExists.
+     *
+     * @return true if path exists, false otherwise.
+     */
     public Boolean getPathExists() {
         return pathExists;
     }
 
+    /**
+     * Get value of isDirectory.
+     *
+     * @return true if path is a directory, false otherwise.
+     */
     public Boolean getIsDirectory() {
         return isDirectory;
     }
 
+    /**
+     * Get value of isImplicit.
+     *
+     * @return true if path is implicit, false otherwise.
+     */
     public Boolean getIsImplicit() {
         return isImplicit;
     }
 
+    /**
+     * Set the eTag value.
+     *
+     * @param eTag The eTag value to set.
+     */
     void setETag(String eTag) {
         this.eTag = eTag;
     }

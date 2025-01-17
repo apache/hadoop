@@ -33,7 +33,7 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
 
 /**
  * Orchestrator for delete over Blob endpoint. Blob endpoint for flat-namespace
- * account does not support director delete. This class is responsible for
+ * account does not support directory delete. This class is responsible for
  * deleting the blobs and creating the parent directory marker file if needed.
  */
 public class BlobDeleteHandler extends ListActionTaker {
@@ -116,7 +116,7 @@ public class BlobDeleteHandler extends ListActionTaker {
         try {
             /*
              * Delete the required path.
-             * Directory needs to be safely delete the path, as the path can be implicit.
+             * Directory should be safely deleted as the path might be implicit.
              */
             deleted = recursive ? safeDelete(path) : deleteInternal(path);
         } finally {

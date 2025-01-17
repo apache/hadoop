@@ -1114,17 +1114,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                   isNamespaceEnabled);
 
         AbfsRestOperation op = abfsClientRenameResult.getOp();
-        /*
-         * Blob endpoint does not have a rename API. The AbfsBlobClient would
-         * perform the copy and delete operation for renaming a path.
-         * As it would not be one operation, hence, the client would not return
-         * AbfsRestOperation object.
-         */
-        if (op != null) {
-          perfInfo.registerResult(op.getResult());
-          continuation = op.getResult()
-                  .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
-        }
+        perfInfo.registerResult(op.getResult());
+        continuation = op.getResult()
+                .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         perfInfo.registerSuccess(true);
         countAggregate++;
         shouldContinue = continuation != null && !continuation.isEmpty();
@@ -1158,16 +1150,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       try (AbfsPerfInfo perfInfo = startTracking("delete", "deletePath")) {
         AbfsRestOperation op = getClient().deletePath(relativePath, recursive,
             continuation, tracingContext, getIsNamespaceEnabled(tracingContext));
-        /*
-         * Blob endpoint does not have a directory delete API. The AbfsBlobClient would
-         * perform multiple operation to delete a path, hence, the client would not return
-         * AbfsRestOperation object.
-         */
-        if (op != null) {
-          perfInfo.registerResult(op.getResult());
-          continuation = op.getResult()
-                  .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
-        }
+
+        perfInfo.registerResult(op.getResult());
+        continuation = op.getResult()
+                .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         perfInfo.registerSuccess(true);
         countAggregate++;
         shouldContinue = continuation != null && !continuation.isEmpty();

@@ -43,6 +43,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STA
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_FAILED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_SUCCESS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_SOURCE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_STATUS;
@@ -105,6 +106,17 @@ public class BlobRenameHandler extends ListActionTaker {
         this.isAtomicRenameRecovery = isAtomicRenameRecovery;
     }
 
+    /** Constructor.
+     *
+     * @param src source path
+     * @param dst destination path
+     * @param abfsClient AbfsBlobClient to use for the rename operation
+     * @param srcEtag eTag of the source path
+     * @param isAtomicRename true if the rename operation is atomic
+     * @param isAtomicRenameRecovery true if the rename operation is a recovery of a previous failed atomic rename operation
+     * @param srcAbfsLease lease on the source path
+     * @param tracingContext object of tracingContext used for the tracing of the server calls.
+     */
     public BlobRenameHandler(final String src,
                              final String dst,
                              final AbfsBlobClient abfsClient,
@@ -118,6 +130,7 @@ public class BlobRenameHandler extends ListActionTaker {
         this.srcAbfsLease = srcAbfsLease;
     }
 
+    /** {@inheritDoc} */
     @Override
     int getMaxConsumptionParallelism() {
         return getAbfsClient().getAbfsConfiguration()
@@ -175,7 +188,7 @@ public class BlobRenameHandler extends ListActionTaker {
             } finally {
                 if (srcAbfsLease != null) {
                     // If the operation is successful, cancel the timer and no need to release
-                    // the lease as delete on the blob-path has taken place.
+                    // the lease as rename on the blob-path has taken place.
                     if (result) {
                         srcAbfsLease.cancelTimer();
                     } else {
@@ -245,7 +258,7 @@ public class BlobRenameHandler extends ListActionTaker {
      * @return true if the path contains a colon
      */
     private boolean containsColon(Path p) {
-        return p.toUri().getPath().contains(":");
+        return p.toUri().getPath().contains(COLON);
     }
 
     /**
@@ -634,12 +647,9 @@ public class BlobRenameHandler extends ListActionTaker {
                     getAbfsClient().checkIsDir(op.getResult()),
                     extractEtagHeader(op.getResult()),
                     op.getResult() instanceof AbfsHttpOperation.AbfsHttpOperationWithFixedResultForGetFileStatus);
-        } catch (AzureBlobFileSystemException e) {
-            if (e instanceof AbfsRestOperationException) {
-                AbfsRestOperationException ex = (AbfsRestOperationException) e;
-                if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-                    return new PathInformation(false, false, null, false);
-                }
+        } catch (AbfsRestOperationException e) {
+            if (e.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+                return new PathInformation(false, false, null, false);
             }
             throw e;
         }
