@@ -74,15 +74,20 @@ ENV INFOPATH "${GCC_HOME}/root/usr/share/info"
 
 # TODO: Set locale
 
-RUN yum install -y java-17-openjdk-devel
-
 ######
 # Set env vars required to build Hadoop
 ######
 ENV MAVEN_HOME /opt/maven
 ENV PATH "${PATH}:${MAVEN_HOME}/bin"
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
-ENV JAVA_HOME /usr/lib/jvm/java-1.17.0
+# Download and install OpenJDK 17
+RUN wget https://download.java.net/java/GA/jdk17/latest/binaries/openjdk-17_linux-x64_bin.tar.gz && \
+    mkdir -p /usr/lib/jvm && \
+    tar -xzf openjdk-17_linux-x64_bin.tar.gz -C /usr/lib/jvm && \
+    rm -f openjdk-17_linux-x64_bin.tar.gz
+
+# Set JAVA_HOME and update PATH
+ENV JAVA_HOME=/usr/lib/jvm/jdk-17
 
 #######
 # Set env vars for SpotBugs
