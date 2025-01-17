@@ -58,7 +58,7 @@ ENV PYTHONIOENCODING=utf-8
 ######
 ENV MAVEN_HOME /usr
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
-ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-amd64
 
 #######
 # Set env vars for SpotBugs 4.2.2
