@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.sun.jersey.api.client.ClientResponse;
-
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.security.Principal;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -32,9 +35,17 @@ import java.util.Map;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.ApplicationSubmissionContextInfoReader;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.writer.ApplicationSubmissionContextInfoWriter;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.writer.SchedConfUpdateInfoWriter;
+import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,23 +59,63 @@ import org.junit.runners.Parameterized;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createMutableRM;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.backupSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getCapacitySchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getExpectedResourceFile;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.restoreSchedulerConfigFileInTarget;
-import static org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils.toJson;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @RunWith(Parameterized.class)
 public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTestBase {
   private static final String EXPECTED_FILE_TMPL = "webapp/configmutation-%s-%s.json";
   private final boolean legacyQueueMode;
-  private final String userName;
+  private String userName;
+  private Configuration absoluteConfig;
+  private MockRM rm;
+  private HttpServletRequest request;
 
   @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
   public static Collection<Boolean> getParameters() {
     return Arrays.asList(true, false);
+  }
+
+  @Override
+  protected Application configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.register(RMWebServices.class);
+    config.register(new JerseyBinder());
+    config.register(GenericExceptionHandler.class);
+    config.register(ApplicationSubmissionContextInfoWriter.class);
+    config.register(SchedConfUpdateInfoWriter.class);
+    config.register(ApplicationSubmissionContextInfoReader.class);
+    config.register(TestRMWebServicesAppsModification.TestRMCustomAuthFilter.class);
+    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    return config;
+  }
+
+  private class JerseyBinder extends AbstractBinder {
+    @Override
+    protected void configure() {
+      try {
+        absoluteConfig = createAbsoluteConfig();
+        FileOutputStream out = new FileOutputStream(getCapacitySchedulerConfigFileInTarget());
+        absoluteConfig.writeXml(out);
+        out.close();
+      } catch (Exception e) {
+        System.out.println(e);
+      }
+
+      rm = createMutableRM(absoluteConfig, true);
+      request = mock(HttpServletRequest.class);
+      when(request.getScheme()).thenReturn("http");
+      final HttpServletResponse response = mock(HttpServletResponse.class);
+      bind(rm).to(ResourceManager.class).named("rm");
+      bind(absoluteConfig).to(Configuration.class).named("conf");
+      bind(request).to(HttpServletRequest.class);
+      bind(response).to(HttpServletResponse.class);
+    }
   }
 
   @BeforeClass
@@ -79,51 +130,48 @@ public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTest
 
   public TestRMWebServicesCapacitySchedulerConfigMutation(boolean legacyQueueMode)
       throws IOException {
-    super(createWebAppDescriptor());
     this.legacyQueueMode = legacyQueueMode;
-    userName = UserGroupInformation.getCurrentUser().getShortUserName();
+    this.userName = UserGroupInformation.getCurrentUser().getShortUserName();
   }
 
   @Test
   public void testUpdateAbsoluteHierarchyWithZeroCapacities() throws Exception {
-    Configuration absoluteConfig = createAbsoluteConfig();
-    FileOutputStream out = new FileOutputStream(getCapacitySchedulerConfigFileInTarget());
-    absoluteConfig.writeXml(out);
-    out.close();
 
-    try (MockRM rm = createMutableRM(absoluteConfig, true)){
-      rm.registerNode("h1:1234", 32 * GB, 32);
+    Principal principal = () -> userName;
+    when(request.getUserPrincipal()).thenReturn(principal);
 
-      assertJsonResponse(resource().path("ws/v1/cluster/scheduler")
-              .queryParam("user.name", userName)
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class),
-          getExpectedResourceFile(EXPECTED_FILE_TMPL, "absolute-hierarchy", "before-update",
-              legacyQueueMode));
+    rm.registerNode("h1:1234", 32 * GB, 32);
 
-      SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
-      Map<String, String> capacityChange = new HashMap<>();
-      capacityChange.put(CapacitySchedulerConfiguration.CAPACITY,
-          "[memory=4096, vcores=4]");
-      capacityChange.put(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY,
-          "[memory=32768, vcores=32]");
-      QueueConfigInfo b = new QueueConfigInfo("root.a", capacityChange);
-      updateInfo.getUpdateQueueInfo().add(b);
+    assertJsonResponse(target().path("ws/v1/cluster/scheduler")
+        .queryParam("user.name", userName)
+        .request(MediaType.APPLICATION_JSON).get(Response.class),
+        getExpectedResourceFile(EXPECTED_FILE_TMPL, "absolute-hierarchy", "before-update",
+        legacyQueueMode));
 
-      ClientResponse response = resource().path("ws/v1/cluster/scheduler-conf")
-          .queryParam("user.name", userName)
-          .accept(MediaType.APPLICATION_JSON)
-          .entity(toJson(updateInfo, SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-          .put(ClientResponse.class);
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    Map<String, String> capacityChange = new HashMap<>();
+    capacityChange.put(CapacitySchedulerConfiguration.CAPACITY,
+        "[memory=4096, vcores=4]");
+    capacityChange.put(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY,
+        "[memory=32768, vcores=32]");
+    QueueConfigInfo b = new QueueConfigInfo("root.a", capacityChange);
+    updateInfo.getUpdateQueueInfo().add(b);
 
-      // HTTP 400 - Bad Request is encountered, check the logs for the failure
-      assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Response response = target().register(SchedConfUpdateInfoWriter.class)
+        .path("ws/v1/cluster/scheduler-conf")
+        .queryParam("user.name", userName)
+        .request(MediaType.APPLICATION_JSON)
+        .put(Entity.entity(updateInfo,
+        MediaType.APPLICATION_JSON), Response.class);
 
-      assertJsonResponse(resource().path("ws/v1/cluster/scheduler")
-              .queryParam("user.name", userName)
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class),
-          getExpectedResourceFile(EXPECTED_FILE_TMPL, "absolute-hierarchy", "after-update",
-              legacyQueueMode));
-    }
+     // HTTP 400 - Bad Request is encountered, check the logs for the failure
+    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+
+    assertJsonResponse(target().path("ws/v1/cluster/scheduler")
+        .queryParam("user.name", userName)
+        .request(MediaType.APPLICATION_JSON).get(Response.class),
+        getExpectedResourceFile(EXPECTED_FILE_TMPL, "absolute-hierarchy", "after-update",
+        legacyQueueMode));
   }
 
   private Configuration createAbsoluteConfig() {

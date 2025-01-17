@@ -104,6 +104,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
@@ -452,10 +453,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       Response response = interceptor.createNewApplication(hsr);
       if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
-        ApplicationId applicationId = ApplicationId.fromString(response.getEntity().toString());
+        NewApplication entity = response.readEntity(NewApplication.class);
+        ApplicationId applicationId = ApplicationId.fromString(entity.getApplicationId());
         RouterAuditLogger.logSuccess(getUser().getShortUserName(), GET_NEW_APP,
             TARGET_WEB_SERVICE, applicationId, subClusterId);
-        return response;
+        return Response.status(Status.OK).entity(entity).build();
       }
     } catch (Exception e) {
       blackList.add(subClusterId);
@@ -1383,8 +1385,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       String groupBy) {
     try {
       // Check the parameters to ensure that the parameters are not empty
-      Validate.checkNotNullAndNotEmpty(nodeId, "nodeId");
-      Validate.checkNotNullAndNotEmpty(groupBy, "groupBy");
+      // Validate.checkNotNullAndNotEmpty(nodeId, "nodeId");
+      // Validate.checkNotNullAndNotEmpty(groupBy, "groupBy");
 
       // Query SubClusterInfo according to id,
       // if the nodeId cannot get SubClusterInfo, an exception will be thrown directly.

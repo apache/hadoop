@@ -2001,8 +2001,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.connect();
 
     LambdaTestUtils.intercept(IOException.class,
-        "Content-Type \"text/html;charset=iso-8859-1\" "
-            + "is incompatible with \"application/json\"",
+        "java.io.IOException: Server returned HTTP response code: 500 for URL",
         () -> HttpFSUtils.jsonParse(conn));
     conn.disconnect();
   }

@@ -537,7 +537,7 @@ public abstract class FSQueue implements Queue, Schedulable {
    *
    * @param res the resource to increase
    */
-  protected void incUsedResource(Resource res) {
+  public void incUsedResource(Resource res) {
     synchronized (resourceUsage) {
       Resources.addTo(resourceUsage, res);
       if (parent != null) {

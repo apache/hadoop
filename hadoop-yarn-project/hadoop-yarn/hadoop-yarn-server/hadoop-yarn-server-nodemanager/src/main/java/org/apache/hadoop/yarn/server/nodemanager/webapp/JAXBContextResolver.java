@@ -22,10 +22,8 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Arrays;
 
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.google.inject.Singleton;
-
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
+import javax.inject.Singleton;
 import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
@@ -37,6 +35,8 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AuxiliaryServicesInf
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.NMGpuResourceInfo;
 import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
 
 @Singleton
@@ -50,14 +50,13 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
   private final Class[] cTypes = {AppInfo.class, AppsInfo.class,
       AuxiliaryServicesInfo.class, AuxiliaryServiceInfo.class,
       ContainerInfo.class, ContainersInfo.class, NodeInfo.class,
-      RemoteExceptionData.class};
+      RemoteExceptionData.class, NMGpuResourceInfo.class, NMResourceInfo.class};
 
   public JAXBContextResolver() throws Exception {
-    this.types = new HashSet<Class>(Arrays.asList(cTypes));
+    this.types = new HashSet<>(Arrays.asList(cTypes));
     // sets the json configuration so that the json output looks like
     // the xml output
-    this.context = new JSONJAXBContext(JSONConfiguration.natural().
-        rootUnwrapping(false).build(), cTypes);
+    this.context = new JettisonJaxbContext(cTypes);
   }
 
   @Override

@@ -34,10 +34,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -91,17 +88,11 @@ public class TestNMWebFilter {
 
     HttpServletResponseForTest response = new HttpServletResponseForTest();
     // dummy filter
-    FilterChain chain = new FilterChain() {
-      @Override
-      public void doFilter(ServletRequest servletRequest,
-          ServletResponse servletResponse) throws IOException,
-          ServletException {
-        // Do Nothing
-      }
+    FilterChain chain = (servletRequest, servletResponse) -> {
+      // Do Nothing
     };
 
-    String uri = "testNM:8042/node/containerlogs/"
-            + containerId.toString() + "/" + USER;
+    String uri = "testNM:8042/node/containerlogs/" + containerId + "/" + USER;
     HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getRequestURI()).thenReturn(uri);
     testFilter.doFilter(request, response, chain);
@@ -113,7 +104,7 @@ public class TestNMWebFilter {
     assertTrue(redirect.contains(USER));
 
     String logType = "syslog";
-    uri = "testNM:8042/node/containerlogs/" + containerId.toString()
+    uri = "testNM:8042/node/containerlogs/" + containerId
         + "/" + USER + "/" + logType + "/?start=10";
     HttpServletRequest request2 = mock(HttpServletRequest.class);
     when(request2.getRequestURI()).thenReturn(uri);

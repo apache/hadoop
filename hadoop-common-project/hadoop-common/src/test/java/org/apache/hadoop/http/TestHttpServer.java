@@ -82,7 +82,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   public static class EchoMapServlet extends HttpServlet {
     @SuppressWarnings("unchecked")
     @Override
-    public void doGet(HttpServletRequest request, 
+    public void doGet(HttpServletRequest request,
                       HttpServletResponse response
                       ) throws ServletException, IOException {
       response.setContentType(MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8);
@@ -110,7 +110,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   public static class EchoServlet extends HttpServlet {
     @SuppressWarnings("unchecked")
     @Override
-    public void doGet(HttpServletRequest request, 
+    public void doGet(HttpServletRequest request,
                       HttpServletResponse response
                       ) throws ServletException, IOException {
       response.setContentType(MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8);
@@ -133,7 +133,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   @SuppressWarnings("serial")
   public static class HtmlContentServlet extends HttpServlet {
     @Override
-    public void doGet(HttpServletRequest request, 
+    public void doGet(HttpServletRequest request,
                       HttpServletResponse response
                       ) throws ServletException, IOException {
       response.setContentType(MediaType.TEXT_HTML + "; " + JettyUtils.UTF_8);
@@ -417,10 +417,10 @@ public class TestHttpServer extends HttpServerFunctionalTest {
    * will be accessed as the passed user, by sending user.name request
    * parameter.
    * 
-   * @param urlstring
-   * @param userName
-   * @return
-   * @throws IOException
+   * @param urlstring web url.
+   * @param userName userName.
+   * @return http status code.
+   * @throws IOException an I/O exception of some sort has occurred.
    */
   static int getHttpStatusCode(String urlstring, String userName)
       throws IOException {
@@ -458,7 +458,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
    * Verify the access for /logs, /stacks, /conf, and /logLevel
    * servlets, when authentication filters are set, but authorization is not
    * enabled.
-   * @throws Exception 
+   * @throws Exception if there is an error during, an exception will be thrown.
    */
   @Test
   public void testDisabledAuthorizationOfDefaultServlets() throws Exception {
@@ -494,7 +494,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
    * Verify the administrator access for /logs, /stacks, /conf, and /logLevel
    * servlets.
    * 
-   * @throws Exception
+   * @throws Exception if there is an error during, an exception will be thrown.
    */
   @Test
   public void testAuthorizationOfDefaultServlets() throws Exception {

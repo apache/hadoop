@@ -31,6 +31,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.CollectorInfo;
@@ -140,8 +141,10 @@ public class TestTimelineServiceClientIntegration {
       flow.setName("test_flow_name");
       flow.setVersion("test_flow_version");
       flow.setRunId(1L);
+      flow.setCreatedTime(Time.now());
       flow.setParent(cluster.getType(), cluster.getId());
       ApplicationEntity app = new ApplicationEntity();
+      app.setQueue("test_queue");
       app.setId(appId.toString());
       flow.addChild(app.getType(), app.getId());
       ApplicationAttemptId attemptId =

@@ -45,6 +45,8 @@ import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.eclipse.jetty.webapp.WebAppContext;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.servlet.ServletProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,10 +104,10 @@ public class WebApps {
     private String spnegoKeytabKey;
     private String csrfConfigPrefix;
     private String xfsConfigPrefix;
-    private final HashSet<ServletStruct> servlets = new HashSet<ServletStruct>();
-    private final HashMap<String, Object> attributes = new HashMap<String, Object>();
+    private final HashSet<ServletStruct> servlets = new HashSet<>();
+    private final HashMap<String, Object> attributes = new HashMap<>();
     private ApplicationClientProtocol appClientProtocol;
-
+    private ResourceConfig config;
     Builder(String name, Class<T> api, T application, String wsName) {
       this.name = name;
       this.api = api;
@@ -165,6 +167,11 @@ public class WebApps {
       return this;
     }
 
+    public Builder<T> withResourceConfig(ResourceConfig resourceConfig) {
+      this.config = resourceConfig;
+      return this;
+    }
+
     public Builder<T> with(Configuration conf) {
       this.conf = conf;
       return this;
@@ -183,13 +190,13 @@ public class WebApps {
 
     /**
      * Set port range config key and associated configuration object.
-     * @param config configuration.
+     * @param configuration configuration.
      * @param portRangeConfKey port range config key.
      * @return builder object.
      */
-    public Builder<T> withPortRange(Configuration config,
+    public Builder<T> withPortRange(Configuration configuration,
         String portRangeConfKey) {
-      this.conf = config;
+      this.conf = configuration;
       this.portRangeConfigKey = portRangeConfKey;
       return this;
     }
@@ -252,7 +259,7 @@ public class WebApps {
       webapp.setWebServices(wsName);
       String basePath = "/" + name;
       webapp.setRedirectPath(basePath);
-      List<String> pathList = new ArrayList<String>();
+      List<String> pathList = new ArrayList<>();
       if (basePath.equals("/")) { 
         webapp.addServePathSpec("/*");
         pathList.add("/*");
@@ -344,7 +351,7 @@ public class WebApps {
         }
         int startPort = port;
         if (ranges != null && !ranges.isEmpty()) {
-          // Set port ranges if its configured.
+          // Set port ranges if it's configured.
           startPort = ranges.getRangeStart();
           builder.setPortRanges(ranges);
         }
@@ -407,9 +414,11 @@ public class WebApps {
                                    new String[] {"/*"});
         }
 
+        final Map<String, String> guiceFilterParams = new HashMap<>();
+        guiceFilterParams.put(ServletProperties.FILTER_FORWARD_ON_404, "true");
         HttpServer2.defineFilter(server.getWebAppContext(), "guice",
-          GuiceFilter.class.getName(), null, new String[] { "/*" });
-
+            GuiceFilter.class.getName(), guiceFilterParams, new String[]{"/*"});
+        server.addJerseyResourceConfig(config, "/*", null);
         webapp.setConf(conf);
         webapp.setHttpServer(server);
       } catch (ClassNotFoundException e) {
@@ -452,8 +461,7 @@ public class WebApps {
     }
 
     private Map<String, String> getConfigParameters(String configPrefix) {
-      return configPrefix != null ? conf.getPropsWithPrefix(configPrefix) :
-          null;
+      return configPrefix != null ? conf.getPropsWithPrefix(configPrefix) : null;
     }
 
     public WebApp start() {
@@ -473,8 +481,7 @@ public class WebApps {
       }
       try {
         httpServer.start();
-        LOG.info("Web app " + name + " started at "
-            + httpServer.getConnectorAddress(0).getPort());
+        LOG.info("Web app {} started at {}.", name, httpServer.getConnectorAddress(0).getPort());
       } catch (IOException e) {
         throw new WebAppException("Error starting http server", e, webApp);
       }
@@ -517,7 +524,7 @@ public class WebApps {
    * @return a webapp builder
    */
   public static <T> Builder<T> $for(String prefix, Class<T> api, T app, String wsPrefix) {
-    return new Builder<T>(prefix, api, app, wsPrefix);
+    return new Builder<>(prefix, api, app, wsPrefix);
   }
 
   /**
@@ -530,7 +537,7 @@ public class WebApps {
    * @return a webapp builder
    */
   public static <T> Builder<T> $for(String prefix, Class<T> api, T app) {
-    return new Builder<T>(prefix, api, app);
+    return new Builder<>(prefix, api, app);
   }
 
   // Short cut mostly for tests/demos
