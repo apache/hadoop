@@ -36,8 +36,9 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.sun.jersey.api.ParamException;
-import com.sun.jersey.api.container.ContainerException;
+import org.glassfish.jersey.server.ContainerException;
+import org.glassfish.jersey.server.ParamException;
+import org.glassfish.hk2.api.MultiException;
 
 /** Handle exceptions. */
 @Provider
@@ -94,6 +95,10 @@ public class ExceptionHandler implements ExceptionMapper<Exception> {
     if (e instanceof SecurityException) {
       e = toCause(e);
     }
+
+    if(e instanceof MultiException) {
+      e = toCause(e);
+    }
     
     //Map response status
     final Response.Status s;
@@ -109,6 +114,8 @@ public class ExceptionHandler implements ExceptionMapper<Exception> {
       s = Response.Status.BAD_REQUEST;
     } else if (e instanceof IllegalArgumentException) {
       s = Response.Status.BAD_REQUEST;
+    } else if (e instanceof MultiException) {
+      s = Response.Status.FORBIDDEN;
     } else {
       LOG.warn("INTERNAL_SERVER_ERROR", e);
       s = Response.Status.INTERNAL_SERVER_ERROR;

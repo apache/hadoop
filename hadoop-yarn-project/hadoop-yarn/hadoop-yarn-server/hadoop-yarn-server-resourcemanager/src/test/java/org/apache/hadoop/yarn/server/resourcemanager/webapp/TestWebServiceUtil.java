@@ -33,7 +33,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
@@ -49,13 +53,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
-
+import org.glassfish.jersey.jettison.JettisonJaxbContext;
+import org.glassfish.jersey.jettison.JettisonMarshaller;
 import org.junit.Assert;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
@@ -66,12 +65,9 @@ import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.junit.Assert.assertEquals;
@@ -85,33 +81,9 @@ public final class TestWebServiceUtil {
   private TestWebServiceUtil(){
   }
 
-  public static class WebServletModule extends ServletModule {
-    private final MockRM rm;
-    private final boolean setCustomAuthFilter;
-
-    WebServletModule(MockRM rm, boolean setCustomAuthFilter) {
-      this.rm = rm;
-      this.setCustomAuthFilter = setCustomAuthFilter;
-    }
-
-    @Override
-    protected void configureServlets() {
-      bind(JAXBContextResolver.class);
-      bind(RMWebServices.class);
-      bind(GenericExceptionHandler.class);
-      bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
-
-      if (setCustomAuthFilter) {
-        filter("/*").through(TestRMWebServicesAppsModification
-            .TestRMCustomAuthFilter.class);
-      }
-    }
-  }
-
   public static void runTest(String template, String name,
       MockRM rm,
-      WebResource resource) throws Exception {
+      WebTarget resource) throws Exception {
     try {
       boolean legacyQueueMode = ((CapacityScheduler) rm.getResourceScheduler())
           .getConfiguration().isLegacyQueueMode();
@@ -174,22 +146,22 @@ public final class TestWebServiceUtil {
     return text;
   }
 
-  public static ClientResponse sendRequest(WebResource resource) {
+  public static Response sendRequest(WebTarget resource) {
     return resource.path("ws").path("v1").path("cluster")
-        .path("scheduler").accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
+        .path("scheduler").request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
   }
 
-  public static void assertXmlType(ClientResponse response) {
-    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
+  public static void assertXmlType(Response response) {
+    assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
   }
 
-  public static void assertXmlResponse(ClientResponse response,
+  public static void assertXmlResponse(Response response,
       String expectedResourceFilename) throws
       Exception {
     assertXmlType(response);
-    Document document = loadDocument(response.getEntity(String.class));
+    Document document = loadDocument(response.readEntity(String.class));
     String actual = serializeDocument(document).trim();
     updateTestDataAutomatically(expectedResourceFilename, actual);
     assertEquals(getResourceAsString(expectedResourceFilename), actual);
@@ -214,11 +186,11 @@ public final class TestWebServiceUtil {
     return builder.parse(is);
   }
 
-  public static void assertJsonResponse(ClientResponse response,
+  public static void assertJsonResponse(Response response,
       String expectedResourceFilename) throws IOException {
     assertJsonType(response);
 
-    JsonNode jsonNode = MAPPER.readTree(response.getEntity(String.class));
+    JsonNode jsonNode = MAPPER.readTree(response.readEntity(String.class));
     sortQueuesLexically((ObjectNode) jsonNode);
 
     String actual = OBJECT_WRITER.writeValueAsString(jsonNode);
@@ -272,9 +244,9 @@ public final class TestWebServiceUtil {
     }
   }
 
-  public static void assertJsonType(ClientResponse response) {
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
+  public static void assertJsonType(Response response) {
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
   }
 
   public static InputStream getResourceAsStream(String configFilename) {
@@ -319,13 +291,6 @@ public final class TestWebServiceUtil {
       Assert.fail("overwrite should not fail " + e.getMessage());
     }
   }
-  public static WebAppDescriptor createWebAppDescriptor() {
-    return new WebAppDescriptor.Builder(
-        TestRMWebServicesCapacitySched.class.getPackage().getName())
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build();
-  }
 
   public static MockRM createRM(Configuration config) {
     return createRM(config, false);
@@ -337,8 +302,6 @@ public final class TestWebServiceUtil {
     config.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     MockRM rm = new MockRM(config);
-    GuiceServletConfig.setInjector(Guice.createInjector(
-        new WebServletModule(rm, setCustomAuthFilter)));
     rm.start();
     return rm;
   }
@@ -383,5 +346,32 @@ public final class TestWebServiceUtil {
         throw new RuntimeException("Failed to restore configuration file");
       }
     }
+  }
+
+  public static String toEntity(Object obj, Class<?> klass, String mediaType)
+      throws Exception {
+    if (mediaType == MediaType.APPLICATION_JSON) {
+      return toJson(obj, klass);
+    }
+    if(mediaType == MediaType.APPLICATION_XML) {
+      return toXml(obj, klass);
+    }
+    return null;
+  }
+
+  public static String toJson(Object obj, Class<?> klass) throws Exception {
+    StringWriter stringWriter = new StringWriter();
+    JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(klass);
+    JettisonMarshaller jettisonMarshaller = jettisonJaxbContext.createJsonMarshaller();
+    jettisonMarshaller.marshallToJSON(obj, stringWriter);
+    return stringWriter.toString();
+  }
+
+  public static String toXml(Object obj, Class<?> klass) throws JAXBException {
+    StringWriter stringWriter = new StringWriter();
+    JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(klass);
+    Marshaller marshaller = jettisonJaxbContext.createMarshaller();
+    marshaller.marshal(obj, stringWriter);
+    return stringWriter.toString();
   }
 }

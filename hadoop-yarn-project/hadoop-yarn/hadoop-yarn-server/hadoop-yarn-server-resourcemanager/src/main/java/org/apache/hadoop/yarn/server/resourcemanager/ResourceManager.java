@@ -22,7 +22,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
+import org.glassfish.jersey.servlet.ServletContainer;
 
 import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
 import org.apache.hadoop.yarn.server.webproxy.DefaultAppReportFetcher;
@@ -642,12 +642,11 @@ public class ResourceManager extends CompositeService
   }
 
   protected MultiNodeSortingManager<SchedulerNode> createMultiNodeSortingManager() {
-    return new MultiNodeSortingManager<SchedulerNode>();
+    return new MultiNodeSortingManager<>();
   }
 
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
-    List<SystemMetricsPublisher> publishers =
-        new ArrayList<SystemMetricsPublisher>();
+    List<SystemMetricsPublisher> publishers = new ArrayList<>();
     if (YarnConfiguration.timelineServiceV1Enabled(conf) &&
         YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
       SystemMetricsPublisher publisherV1 = new TimelineServiceV1Publisher();
@@ -822,7 +821,7 @@ public class ResourceManager extends CompositeService
       recoveryEnabled = conf.getBoolean(YarnConfiguration.RECOVERY_ENABLED,
           YarnConfiguration.DEFAULT_RM_RECOVERY_ENABLED);
 
-      RMStateStore rmStore = null;
+      RMStateStore rmStore;
       if (recoveryEnabled) {
         rmStore = RMStateStoreFactory.getStore(conf);
         boolean isWorkPreservingRecoveryEnabled =
@@ -1398,13 +1397,12 @@ public class ResourceManager extends CompositeService
   }
 
   protected void startWepApp() {
-    Map<String, String> serviceConfig = null;
     Configuration conf = getConfig();
 
     RMWebAppUtil.setupSecurityAndFilters(conf,
         getClientRMService().rmDTSecretManager);
 
-    Map<String, String> params = new HashMap<String, String>();
+    Map<String, String> params = new HashMap<>();
     if (getConfig().getBoolean(YarnConfiguration.YARN_API_SERVICES_ENABLE,
         false)) {
       String apiPackages = "org.apache.hadoop.yarn.service.webapp;" +
@@ -1416,8 +1414,7 @@ public class ResourceManager extends CompositeService
 
     Builder<ResourceManager> builder =
         WebApps
-            .$for("cluster", ResourceManager.class, this,
-                "ws")
+            .$for("cluster", ResourceManager.class, this, "rm-ws")
             .with(conf)
             .withServlet("API-Service", "/app/*",
                 ServletContainer.class, params, false)
@@ -1469,10 +1466,10 @@ public class ResourceManager extends CompositeService
       } else {
         if (onDiskPath.endsWith(".war")) {
           uiWebAppContext.setWar(onDiskPath);
-          LOG.info("Using war file at: " + onDiskPath);
+          LOG.info("Using war file at: {}.", onDiskPath);
         } else {
           uiWebAppContext.setResourceBase(onDiskPath);
-          LOG.info("Using webapps at: " + onDiskPath);
+          LOG.info("Using webapps at: {}.", onDiskPath);
         }
       }
     }
@@ -1483,19 +1480,9 @@ public class ResourceManager extends CompositeService
         IsResourceManagerActiveServlet.class);
 
     try {
-      // Build the webapp.
-      webApp = builder.build(new RMWebApp(this));
-
-      // If UI2 is enabled, add UI2 context to webapp.
-      if (uiWebAppContext != null) {
-        // Copy all necessary filters from default context to UI2.
-        RMWebAppUtil.addFiltersForUI2Context(uiWebAppContext,
-            webApp.httpServer(), getConfig());
-        webApp.httpServer().addHandlerAtFront(uiWebAppContext);
-      }
-
-      // Start webapp after setting all required contexts.
-      builder.startWithOutBuild(webApp);
+      RMWebApp rmWebApp = new RMWebApp(this);
+      builder.withResourceConfig(rmWebApp.resourceConfig());
+      webApp = builder.start(rmWebApp, uiWebAppContext);
     } catch (WebAppException e) {
       webApp = e.getWebApp();
       throw e;
@@ -1621,7 +1608,7 @@ public class ResourceManager extends CompositeService
       transitionToActive();
     }
   }
-  
+
   protected void doSecureLogin() throws IOException {
 	InetSocketAddress socAddr = getBindAddress(conf);
     SecurityUtil.login(this.conf, YarnConfiguration.RM_KEYTAB,
@@ -1925,8 +1912,8 @@ public class ResourceManager extends CompositeService
         confStore.format();
       }
     } else {
-      System.out.println(String.format("Scheduler Configuration format only " +
-          "supported by %s.", MutableConfScheduler.class.getSimpleName()));
+      System.out.printf("Scheduler Configuration format only " +
+          "supported by %s.%n", MutableConfScheduler.class.getSimpleName());
     }
   }
 

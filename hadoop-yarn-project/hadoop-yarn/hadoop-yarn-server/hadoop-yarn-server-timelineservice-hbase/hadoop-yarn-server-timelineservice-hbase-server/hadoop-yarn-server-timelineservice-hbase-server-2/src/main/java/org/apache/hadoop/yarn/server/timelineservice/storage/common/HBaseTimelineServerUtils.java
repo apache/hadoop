@@ -184,6 +184,7 @@ public final class HBaseTimelineServerUtils {
    * Flush and compact all regions of a table.
    * @param server region server
    * @param table the table to flush and compact
+   * @throws IOException any IOE raised, or translated exception.
    * @return the number of regions flushed and compacted
    */
   public static int flushCompactTableRegions(HRegionServer server,
@@ -202,7 +203,7 @@ public final class HBaseTimelineServerUtils {
    * @param table  table to check
    * @param existenceExpected true if the FlowRunCoprocessor is expected
    *                         to be loaded in the table, false otherwise
-   * @throws Exception
+   * @throws Exception  Exception if any.
    */
   public static void validateFlowRunCoprocessor(HRegionServer server,
       TableName table, boolean existenceExpected) throws Exception {

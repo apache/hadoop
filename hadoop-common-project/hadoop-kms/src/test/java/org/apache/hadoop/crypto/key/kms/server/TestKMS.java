@@ -583,9 +583,9 @@ public class TestKMS {
   @Test
   public void testStartStopHttpPseudo() throws Exception {
     // Make sure bogus errors don't get emitted.
+    // Jersey2 does not have a method similar to AbstractWadlGeneratorGrammarGenerator.
     GenericTestUtils.LogCapturer logs =
-        GenericTestUtils.LogCapturer.captureLogs(LoggerFactory.getLogger(
-            "com.sun.jersey.server.wadl.generators.AbstractWadlGeneratorGrammarGenerator"));
+        GenericTestUtils.LogCapturer.captureLogs(LOG);
     try {
       testStartStop(false, false);
     } finally {

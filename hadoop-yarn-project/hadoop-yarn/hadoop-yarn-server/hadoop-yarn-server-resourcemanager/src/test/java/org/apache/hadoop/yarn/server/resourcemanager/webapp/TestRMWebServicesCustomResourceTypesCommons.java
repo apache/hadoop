@@ -67,7 +67,7 @@ public class TestRMWebServicesCustomResourceTypesCommons {
 
     AppInfoJsonVerifications.verify(info, app);
 
-    JSONArray resourceRequests = info.getJSONArray("resourceRequests");
+    JSONArray resourceRequests = parseResourceRequests(info);
     JSONObject requestInfo = resourceRequests.getJSONObject(0);
     ResourceRequest rr =
         ((AbstractYarnScheduler) rm.getRMContext().getScheduler())
@@ -76,6 +76,20 @@ public class TestRMWebServicesCustomResourceTypesCommons {
 
     ResourceRequestsJsonVerifications.verifyWithCustomResourceTypes(requestInfo,
         rr, CustomResourceTypesConfigurationProvider.getCustomResourceTypes());
+  }
+
+  public static JSONArray parseResourceRequests(JSONObject info) throws JSONException {
+    Object resourceRequests = info.get("resourceRequests");
+    if (resourceRequests instanceof JSONArray) {
+      return info.getJSONArray("resourceRequests");
+    }
+    if (resourceRequests instanceof JSONObject) {
+      JSONObject resourceRequest = info.getJSONObject("resourceRequests");
+      JSONArray jsonArray = new JSONArray();
+      jsonArray.put(resourceRequest);
+      return jsonArray;
+    }
+    return null;
   }
 
   static int getExpectedNumberOfElements(RMApp app) {

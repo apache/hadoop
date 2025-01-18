@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.webapp;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.UniformInterfaceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -188,10 +186,9 @@ public final class LogWebServiceUtils {
 
   public static String getNMWebAddressFromRM(Configuration yarnConf,
       String nodeId)
-      throws ClientHandlerException, UniformInterfaceException, JSONException {
-    JSONObject nodeInfo =
-        YarnWebServiceUtils.getNodeInfoFromRMWebService(yarnConf, nodeId)
-            .getJSONObject("node");
+      throws JSONException {
+    JSONObject nodeInfo = YarnWebServiceUtils.getNodeInfoFromRMWebService(yarnConf, nodeId)
+        .getJSONObject("node");
     return nodeInfo.has("nodeHTTPAddress") ?
         nodeInfo.getString("nodeHTTPAddress") : null;
   }

@@ -18,29 +18,30 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import java.io.IOException;
-import java.util.Random;
+import org.glassfish.jersey.jettison.internal.entity.JettisonObjectProvider;
+import org.glassfish.jersey.test.JerseyTest;
+import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
-import com.sun.jersey.test.framework.JerseyTest;
-import com.sun.jersey.test.framework.WebAppDescriptor;
-
-import org.apache.hadoop.net.ServerSocketUtil;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Application;
 
 public abstract class JerseyTestBase extends JerseyTest {
-  public JerseyTestBase(WebAppDescriptor appDescriptor) {
-    super(appDescriptor);
-  }
+  public static final String JERSEY_RANDOM_PORT = "0";
 
   @Override
-  protected int getPort(int port) {
-    Random rand = new Random();
-    int jerseyPort = port + rand.nextInt(1000);
-    try {
-      jerseyPort = ServerSocketUtil.getPort(jerseyPort, 10);
-    } catch (IOException e) {
-      // Ignore exception even after 10 times free port is
-      // not received.
-    }
-    return super.getPort(jerseyPort);
+  protected Application configure() {
+    return new Application();
+  }
+
+  @BeforeEach
+  @Before
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
+  }
+
+  public final WebTarget targetWithJsonObject() {
+    return target().register(new JettisonObjectProvider.App());
   }
 }

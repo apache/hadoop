@@ -72,6 +72,8 @@ import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.security.authorize.ClientHSPolicyProvider;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.HsWebApp;
+import org.apache.hadoop.mapreduce.v2.hs.webapp.HsWebServices;
+import org.apache.hadoop.mapreduce.v2.hs.webapp.JAXBContextResolver;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.net.NetUtils;
@@ -86,10 +88,14 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -171,6 +177,7 @@ public class HistoryClientService extends AbstractService {
         .withCSRFProtection(JHAdminConfig.MR_HISTORY_CSRF_PREFIX)
         .withXFSProtection(JHAdminConfig.MR_HISTORY_XFS_PREFIX)
         .withAppClientProtocol(appClientProtocol)
+        .withResourceConfig(configure(conf, appClientProtocol))
         .at(NetUtils.getHostPortString(bindAddress)).start(webApp);
     
     String connectHost = MRWebAppUtil.getJHSWebappURLWithoutScheme(conf).split(":")[0];
@@ -459,5 +466,36 @@ public class HistoryClientService extends AbstractService {
       }
     }
 
+  }
+
+  protected ResourceConfig configure(Configuration configuration,
+      ApplicationClientProtocol protocol) {
+    ResourceConfig config = new ResourceConfig();
+    config.packages("org.apache.hadoop.mapreduce.v2.hs.webapp");
+    config.register(new HSJerseyBinder(configuration, protocol));
+    config.register(HsWebServices.class);
+    config.register(GenericExceptionHandler.class);
+    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    return config;
+  }
+
+  private class HSJerseyBinder extends AbstractBinder {
+
+    private Configuration configuration;
+    private ApplicationClientProtocol protocol;
+
+    HSJerseyBinder(Configuration pConfiguration,
+        ApplicationClientProtocol acProtocol) {
+      this.configuration = pConfiguration;
+      this.protocol = acProtocol;
+    }
+
+    @Override
+    protected void configure() {
+      bind(history).to(HistoryContext.class).named("ctx");
+      bind(configuration).to(Configuration.class).named("conf");
+      bind(webApp).to(WebApp.class).named("hsWebApp");
+      bind(protocol).to(ApplicationClientProtocol.class).named("appClient");
+    }
   }
 }

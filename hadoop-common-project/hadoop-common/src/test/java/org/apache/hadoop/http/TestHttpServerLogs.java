@@ -20,7 +20,6 @@ package org.apache.hadoop.http;
 import org.apache.http.HttpStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.http.resource.JerseyResource;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -29,7 +28,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.URL;
+import java.util.Objects;
 
 public class TestHttpServerLogs extends HttpServerFunctionalTest {
   static final Logger LOG = LoggerFactory.getLogger(TestHttpServerLogs.class);
@@ -41,8 +42,6 @@ public class TestHttpServerLogs extends HttpServerFunctionalTest {
 
   private void startServer(Configuration conf) throws Exception {
     server = createTestServer(conf);
-    server.addJerseyResourcePackage(
-        JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
     baseUrl = getServerURL(server);
     LOG.info("HTTP server started: "+ baseUrl);
@@ -61,8 +60,8 @@ public class TestHttpServerLogs extends HttpServerFunctionalTest {
     conf.setBoolean(
         CommonConfigurationKeysPublic.HADOOP_HTTP_LOGS_ENABLED, true);
     startServer(conf);
-    URL url = new URL("http://"
-        + NetUtils.getHostPortString(server.getConnectorAddress(0)) + "/logs");
+    InetSocketAddress inetSocketAddress = Objects.requireNonNull(server.getConnectorAddress(0));
+    URL url = new URL("http://" + NetUtils.getHostPortString(inetSocketAddress) + "/logs");
     HttpURLConnection conn = (HttpURLConnection)url.openConnection();
     assertEquals(HttpStatus.SC_OK, conn.getResponseCode());
   }

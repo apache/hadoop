@@ -137,6 +137,12 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-tests</artifactId>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>javassist</artifactId>
+          <groupId>org.javassist</groupId>
+        </exclusion>
+      </exclusions>
       <type>test-jar</type>
     </dependency>
     <dependency>

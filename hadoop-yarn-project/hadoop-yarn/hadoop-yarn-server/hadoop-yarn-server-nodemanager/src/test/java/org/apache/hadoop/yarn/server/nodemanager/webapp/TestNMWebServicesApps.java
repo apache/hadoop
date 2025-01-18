@@ -21,10 +21,13 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import javax.ws.rs.BadRequestException;
+import javax.ws.rs.NotFoundException;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
@@ -33,9 +36,9 @@ import java.util.HashMap;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
+import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -60,7 +63,6 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -76,14 +78,10 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.ClientResponse.Status;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
 
 public class TestNMWebServicesApps extends JerseyTestBase {
 
@@ -99,14 +97,25 @@ public class TestNMWebServicesApps extends JerseyTestBase {
   private static File testLogDir = new File("target",
       TestNMWebServicesApps.class.getSimpleName() + "LogDir");
 
-  private static class WebServletModule extends ServletModule {
+  @Override
+  protected javax.ws.rs.core.Application configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.register(new JerseyBinder());
+    config.register(NMWebServices.class);
+    config.register(GenericExceptionHandler.class);
+    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
+    return config;
+  }
+
+  private static class JerseyBinder extends AbstractBinder {
+
     @Override
-    protected void configureServlets() {
+    protected void configure() {
       conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
       conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
       LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
-      NodeHealthCheckerService healthChecker =
-          new NodeHealthCheckerService(dirsHandler);
+      NodeHealthCheckerService healthChecker = new NodeHealthCheckerService(dirsHandler);
       healthChecker.init(conf);
       dirsHandler = healthChecker.getDiskHandler();
       aclsManager = new ApplicationACLsManager(conf);
@@ -144,30 +153,22 @@ public class TestNMWebServicesApps extends JerseyTestBase {
         }
       };
       nmWebApp = new NMWebApp(resourceView, aclsManager, dirsHandler);
-      bind(JAXBContextResolver.class);
-      bind(NMWebServices.class);
-      bind(GenericExceptionHandler.class);
-      bind(Context.class).toInstance(nmContext);
-      bind(WebApp.class).toInstance(nmWebApp);
-      bind(ResourceView.class).toInstance(resourceView);
-      bind(ApplicationACLsManager.class).toInstance(aclsManager);
-      bind(LocalDirsHandlerService.class).toInstance(dirsHandler);
 
-      serve("/*").with(GuiceContainer.class);
+      nmWebApp = new NMWebApp(resourceView, aclsManager, dirsHandler);
+      final HttpServletRequest request = mock(HttpServletRequest.class);
+      final HttpServletResponse response = mock(HttpServletResponse.class);
+      bind(nmContext).to(Context.class).named("nm");
+      bind(nmWebApp).to(WebApp.class).named("webapp");
+      bind(request).to(HttpServletRequest.class);
+      bind(response).to(HttpServletResponse.class);
+      bind(aclsManager).to(ApplicationACLsManager.class);
+      bind(dirsHandler).to(LocalDirsHandlerService.class);
+      bind(resourceView).to(ResourceView.class).named("view");
     }
   }
 
-  static {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
-  }
-
   @Before
-  @Override
-  public void setUp() throws Exception {
-    super.setUp();
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
+  public void before() throws Exception {
     testRootDir.mkdirs();
     testLogDir.mkdir();
   }
@@ -179,23 +180,17 @@ public class TestNMWebServicesApps extends JerseyTestBase {
   }
 
   public TestNMWebServicesApps() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.nodemanager.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   @Test
   public void testNodeAppsNone() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("apps isn't empty",
-        new JSONObject().toString(), json.get("apps").toString());
+    WebTarget target = targetWithJsonObject();
+    Response response = target.path("ws").path("v1").path("node").path("apps")
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
+    assertEquals("apps is not empty", new JSONObject("{apps:\"\"}"), json);
   }
 
   private HashMap<String, String> addAppContainers(Application app) 
@@ -244,7 +239,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
   public void testNodeHelper(String path, String media) throws JSONException,
       Exception {
-    WebResource r = resource();
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     HashMap<String, String> hash = addAppContainers(app);
@@ -252,11 +247,11 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     nmContext.getApplications().put(app2.getAppId(), app2);
     HashMap<String, String> hash2 = addAppContainers(app2);
 
-    ClientResponse response = r.path("ws").path("v1").path("node").path(path)
-        .accept(media).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+    Response response = target.path("ws").path("v1").path("node").path(path)
+        .request(media).get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     JSONObject info = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, info.length());
     JSONArray appInfo = info.getJSONArray("app");
@@ -273,7 +268,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
   @Test
   public void testNodeAppsUser() throws JSONException, Exception {
-    WebResource r = resource();
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     HashMap<String, String> hash = addAppContainers(app);
@@ -281,23 +276,23 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     nmContext.getApplications().put(app2.getAppId(), app2);
     addAppContainers(app2);
 
-    ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
-        .queryParam("user", "mockUser").accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+    Response response = target.path("ws").path("v1").path("node").path("apps")
+        .queryParam("user", "mockUser").request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
 
     JSONObject info = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, info.length());
-    JSONArray appInfo = info.getJSONArray("app");
+    JSONArray appInfo = parseJsonArray(info);
     assertEquals("incorrect number of elements", 1, appInfo.length());
     verifyNodeAppInfo(appInfo.getJSONObject(0), app, hash);
   }
 
   @Test
   public void testNodeAppsUserNone() throws JSONException, Exception {
-    WebResource r = resource();
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     addAppContainers(app);
@@ -305,19 +300,18 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     nmContext.getApplications().put(app2.getAppId(), app2);
     addAppContainers(app2);
 
-    ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
-        .queryParam("user", "george").accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("apps is not empty",
-        new JSONObject().toString(), json.get("apps").toString());
+    Response response = target.path("ws").path("v1").path("node").path("apps")
+        .queryParam("user", "george").request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
+    assertEquals("apps is not empty", new JSONObject("{apps:\"\"}"), json);
   }
 
   @Test
   public void testNodeAppsUserEmpty() throws JSONException, Exception {
-    WebResource r = resource();
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     addAppContainers(app);
@@ -326,28 +320,24 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     addAppContainers(app2);
 
     try {
-      r.path("ws").path("v1").path("node").path("apps").queryParam("user", "")
-          .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
-      fail("should have thrown exception on invalid user query");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-
-      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
+      Response response = target
+          .path("ws").path("v1").path("node").path("apps").queryParam("user", "")
+          .request(MediaType.APPLICATION_JSON).get();
+      throw new BadRequestException(response);
+    } catch (BadRequestException ue) {
+      Response response = ue.getResponse();
+      assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
-      WebServicesTestUtils
-          .checkStringMatch(
-              "exception message",
-              "java.lang.Exception: Error: You must specify a non-empty string for the user",
-              message);
-      WebServicesTestUtils.checkStringMatch("exception type",
-          "BadRequestException", type);
+      WebServicesTestUtils.checkStringMatch("exception cause",
+          "Error: You must specify a non-empty string for the user", message);
+      WebServicesTestUtils.checkStringMatch("exception type", "BadRequestException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
           "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
     }
@@ -355,7 +345,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
   @Test
   public void testNodeAppsState() throws JSONException, Exception {
-    WebResource r = resource();
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     addAppContainers(app);
@@ -364,17 +354,17 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     HashMap<String, String> hash2 = addAppContainers(app2);
     app2.setState(ApplicationState.RUNNING);
 
-    ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
+    Response response = target.path("ws").path("v1").path("node").path("apps")
         .queryParam("state", ApplicationState.RUNNING.toString())
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
 
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
 
     JSONObject info = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, info.length());
-    JSONArray appInfo = info.getJSONArray("app");
+    JSONArray appInfo = parseJsonArray(info);
     assertEquals("incorrect number of elements", 1, appInfo.length());
     verifyNodeAppInfo(appInfo.getJSONObject(0), app2, hash2);
 
@@ -382,7 +372,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
   @Test
   public void testNodeAppsStateNone() throws JSONException, Exception {
-    WebResource r = resource();
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     addAppContainers(app);
@@ -390,20 +380,19 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     nmContext.getApplications().put(app2.getAppId(), app2);
     addAppContainers(app2);
 
-    ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
+    Response response = target.path("ws").path("v1").path("node").path("apps")
         .queryParam("state", ApplicationState.INITING.toString())
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
 
-    assertEquals("apps is not empty",
-        new JSONObject().toString(), json.get("apps").toString());
+    assertEquals("apps is not empty", new JSONObject("{apps:\"\"}"), json);
   }
 
   @Test
   public void testNodeAppsStateInvalid() throws JSONException, Exception {
-    WebResource r = resource();
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     addAppContainers(app);
@@ -412,17 +401,17 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     addAppContainers(app2);
 
     try {
-      r.path("ws").path("v1").path("node").path("apps")
-          .queryParam("state", "FOO_STATE").accept(MediaType.APPLICATION_JSON)
-          .get(JSONObject.class);
-      fail("should have thrown exception on invalid user query");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
+      Response response = target.path("ws").path("v1").path("node").path("apps")
+          .queryParam("state", "FOO_STATE").request(MediaType.APPLICATION_JSON)
+          .get(Response.class);
+      throw new BadRequestException(response);
+    } catch (BadRequestException ue) {
+      Response response = ue.getResponse();
 
-      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
+      assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
@@ -435,7 +424,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
   // verify the exception object default format is JSON
   @Test
   public void testNodeAppsStateInvalidDefault() throws JSONException, Exception {
-    WebResource r = resource();
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     addAppContainers(app);
@@ -444,16 +433,16 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     addAppContainers(app2);
 
     try {
-      r.path("ws").path("v1").path("node").path("apps")
-          .queryParam("state", "FOO_STATE").get(JSONObject.class);
-      fail("should have thrown exception on invalid user query");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
+      Response response = target.path("ws").path("v1").path("node").path("apps")
+          .queryParam("state", "FOO_STATE").request().get();
+      throw new BadRequestException(response);
+    } catch (BadRequestException ue) {
+      Response response = ue.getResponse();
 
-      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
+      assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
@@ -466,7 +455,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
   // test that the exception output also returns XML
   @Test
   public void testNodeAppsStateInvalidXML() throws JSONException, Exception {
-    WebResource r = resource();
+    WebTarget target = target();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     addAppContainers(app);
@@ -475,29 +464,28 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     addAppContainers(app2);
 
     try {
-      r.path("ws").path("v1").path("node").path("apps")
-          .queryParam("state", "FOO_STATE").accept(MediaType.APPLICATION_XML)
-          .get(JSONObject.class);
-      fail("should have thrown exception on invalid user query");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
+      Response response = target.path("ws").path("v1").path("node").path("apps")
+          .queryParam("state", "FOO_STATE").request(MediaType.APPLICATION_XML)
+          .get();
+      throw new BadRequestException(response);
+    } catch (BadRequestException ue) {
+      Response response = ue.getResponse();
 
-      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      String msg = response.getEntity(String.class);
+      assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
+      assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+              response.getMediaType().toString());
+      String entity = response.readEntity(String.class);
 
       DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
       DocumentBuilder db = dbf.newDocumentBuilder();
       InputSource is = new InputSource();
-      is.setCharacterStream(new StringReader(msg));
+      is.setCharacterStream(new StringReader(entity));
       Document dom = db.parse(is);
       NodeList nodes = dom.getElementsByTagName("RemoteException");
       Element element = (Element) nodes.item(0);
       String message = WebServicesTestUtils.getXmlString(element, "message");
       String type = WebServicesTestUtils.getXmlString(element, "exception");
-      String classname = WebServicesTestUtils.getXmlString(element,
-          "javaClassName");
+      String classname = WebServicesTestUtils.getXmlString(element, "javaClassName");
       verifyStateInvalidException(message, type, classname);
     }
   }
@@ -516,19 +504,19 @@ public class TestNMWebServicesApps extends JerseyTestBase {
   }
 
   @Test
-  public void testNodeSingleApps() throws JSONException, Exception {
+  public void testNodeSingleApps() throws Exception {
     testNodeSingleAppHelper(MediaType.APPLICATION_JSON);
   }
 
   // make sure default is json output
   @Test
-  public void testNodeSingleAppsDefault() throws JSONException, Exception {
+  public void testNodeSingleAppsDefault() throws Exception {
     testNodeSingleAppHelper("");
   }
 
   public void testNodeSingleAppHelper(String media) throws JSONException,
       Exception {
-    WebResource r = resource();
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     HashMap<String, String> hash = addAppContainers(app);
@@ -536,37 +524,36 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     nmContext.getApplications().put(app2.getAppId(), app2);
     addAppContainers(app2);
 
-    ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
-        .path(app.getAppId().toString()).accept(media)
-        .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+    Response response = target.path("ws").path("v1").path("node").path("apps")
+        .path(app.getAppId().toString()).request(media).get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     verifyNodeAppInfo(json.getJSONObject("app"), app, hash);
   }
 
   @Test
   public void testNodeSingleAppsSlash() throws JSONException, Exception {
-    WebResource r = resource();
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     HashMap<String, String> hash = addAppContainers(app);
     Application app2 = new MockApp(2);
     nmContext.getApplications().put(app2.getAppId(), app2);
     addAppContainers(app2);
-    ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
+    Response response = target.path("ws").path("v1").path("node").path("apps")
         .path(app.getAppId().toString() + "/")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
 
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     verifyNodeAppInfo(json.getJSONObject("app"), app, hash);
   }
 
   @Test
   public void testNodeSingleAppsInvalid() throws JSONException, Exception {
-    WebResource r = resource();
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     addAppContainers(app);
@@ -575,27 +562,23 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     addAppContainers(app2);
 
     try {
-      r.path("ws").path("v1").path("node").path("apps").path("app_foo_0000")
-          .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
-      fail("should have thrown exception on invalid user query");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
+      Response response = target.path("ws").path("v1").path("node").path("apps")
+          .path("app_foo_0000").request(MediaType.APPLICATION_JSON).get();
+      throw new BadRequestException(response);
+    } catch (BadRequestException ue) {
+      Response response = ue.getResponse();
+      assertResponseStatusCode(Response.Status.BAD_REQUEST, response.getStatusInfo());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
-      WebServicesTestUtils.checkStringMatch("exception message",
-          "java.lang.IllegalArgumentException: Invalid ApplicationId prefix: "
-              + "app_foo_0000. The valid ApplicationId should start with prefix"
-              + " application",
-          message);
-      WebServicesTestUtils.checkStringMatch("exception type",
-          "BadRequestException", type);
+      WebServicesTestUtils.checkStringMatch("exception message", "Invalid ApplicationId prefix: " +
+          "app_foo_0000. The valid ApplicationId should start with prefix application", message);
+      WebServicesTestUtils.checkStringMatch("exception type", "BadRequestException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
           "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
     }
@@ -603,7 +586,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
   @Test
   public void testNodeSingleAppsMissing() throws JSONException, Exception {
-    WebResource r = resource();
+    WebTarget target = targetWithJsonObject();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     addAppContainers(app);
@@ -612,34 +595,31 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     addAppContainers(app2);
 
     try {
-      r.path("ws").path("v1").path("node").path("apps")
-          .path("application_1234_0009").accept(MediaType.APPLICATION_JSON)
-          .get(JSONObject.class);
-      fail("should have thrown exception on invalid user query");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
+      Response response = target.path("ws").path("v1").path("node").path("apps")
+          .path("application_1234_0009").request(MediaType.APPLICATION_JSON).get();
+      throw new NotFoundException(response);
+    } catch (NotFoundException ue) {
+      Response response = ue.getResponse();
+      assertResponseStatusCode(Response.Status.NOT_FOUND, response.getStatusInfo());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+          response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch("exception message",
-          "java.lang.Exception: app with id application_1234_0009 not found",
-          message);
-      WebServicesTestUtils.checkStringMatch("exception type",
-          "NotFoundException", type);
+          "app with id application_1234_0009 not found", message);
+      WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
           "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
     }
   }
 
   @Test
-  public void testNodeAppsXML() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testNodeAppsXML() throws Exception {
+    WebTarget target = target();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     addAppContainers(app);
@@ -647,11 +627,11 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     nmContext.getApplications().put(app2.getAppId(), app2);
     addAppContainers(app2);
 
-    ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
-        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
+    Response response = target.path("ws").path("v1").path("node").path("apps")
+        .request(MediaType.APPLICATION_XML).get(Response.class);
+    assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
     DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
@@ -662,8 +642,8 @@ public class TestNMWebServicesApps extends JerseyTestBase {
   }
 
   @Test
-  public void testNodeSingleAppsXML() throws JSONException, Exception {
-    WebResource r = resource();
+  public void testNodeSingleAppsXML() throws Exception {
+    WebTarget target = target();
     Application app = new MockApp(1);
     nmContext.getApplications().put(app.getAppId(), app);
     HashMap<String, String> hash = addAppContainers(app);
@@ -671,12 +651,12 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     nmContext.getApplications().put(app2.getAppId(), app2);
     addAppContainers(app2);
 
-    ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
+    Response response = target.path("ws").path("v1").path("node").path("apps")
         .path(app.getAppId().toString() + "/")
-        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
+        .request(MediaType.APPLICATION_XML).get(Response.class);
+    assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
     DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
@@ -769,5 +749,21 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     when(principal.getName()).thenReturn(username);
     when(mockHsr.getUserPrincipal()).thenReturn(principal);
     return mockHsr;
+  }
+
+  private JSONArray parseJsonArray(JSONObject info) throws JSONException {
+    Object app = info.get("app");
+    if (app instanceof JSONObject) {
+      JSONObject object = info.getJSONObject("app");
+      JSONArray array = new JSONArray();
+      array.put(object);
+      return array;
+    }
+
+    if (app instanceof JSONArray) {
+      return info.getJSONArray("app");
+    }
+
+    return new JSONArray();
   }
 }

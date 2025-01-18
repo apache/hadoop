@@ -26,6 +26,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -41,6 +42,7 @@ import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
 @Evolving
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TimelineEvent implements Comparable<TimelineEvent> {
 
   private long timestamp;

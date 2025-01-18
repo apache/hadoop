@@ -74,6 +74,9 @@ allowed_expr+="|^org/xerial/"
 # Jetty checks if class isAssignableFrom javax.servlet.Filter
 # throws exception due to relocation
 allowed_expr+="|^javax/"
+# Comes from jersey, not sure if relocatable.
+allowed_expr+="|^jersey"
+allowed_expr+="|^javassist"
 
 allowed_expr+=")"
 declare -i bad_artifacts=0

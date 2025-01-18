@@ -22,6 +22,9 @@ import java.io.IOException;
 import java.util.Set;
 
 import javax.annotation.Nullable;
+import javax.inject.Named;
+import javax.inject.Singleton;
+import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DefaultValue;
@@ -83,8 +86,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.google.inject.Inject;
 
+@Singleton
 @Path("/ws/v1/history")
 public class HsWebServices extends WebServices {
   private static final Logger LOG = LoggerFactory.getLogger(HsWebServices.class);
@@ -93,14 +96,18 @@ public class HsWebServices extends WebServices {
   private LogServlet logServlet;
   private boolean mrAclsEnabled;
 
-  private @Context HttpServletResponse response;
-  @Context UriInfo uriInfo;
+  @Context
+  private HttpServletResponse response;
+
+  @Context
+  private UriInfo uriInfo;
 
   @Inject
-  public HsWebServices(final HistoryContext ctx,
-      final Configuration conf,
-      final WebApp webapp,
-      @Nullable ApplicationClientProtocol appBaseProto) {
+  public HsWebServices(
+      final @Named("ctx") HistoryContext ctx,
+      final @Named("conf") Configuration conf,
+      final @Named("hsWebApp") WebApp webapp,
+      final @Named("appClient") @Nullable ApplicationClientProtocol appBaseProto) {
     super(appBaseProto);
     this.ctx = ctx;
     this.webapp = webapp;
@@ -459,7 +466,8 @@ public class HsWebServices extends WebServices {
    */
   @GET
   @Path("/remote-log-dir")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + ";" + JettyUtils.UTF_8 })
   public Response getRemoteLogDirPath(@Context HttpServletRequest req,
       @QueryParam(YarnWebServiceParams.REMOTE_USER) String user,
       @QueryParam(YarnWebServiceParams.APP_ID) String appIdStr)
@@ -514,7 +522,8 @@ public class HsWebServices extends WebServices {
 
   @GET
   @Path("/containers/{containerid}/logs")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + ";" + JettyUtils.UTF_8})
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
   public Response getContainerLogs(@Context HttpServletRequest hsr,
@@ -563,7 +572,12 @@ public class HsWebServices extends WebServices {
   }
 
   @VisibleForTesting
-  void setLogServlet(LogServlet logServlet) {
+  public void setLogServlet(LogServlet logServlet) {
     this.logServlet = logServlet;
+  }
+
+  @VisibleForTesting
+  public void setHttpServletResponse(HttpServletResponse resp) {
+    this.response = resp;
   }
 }

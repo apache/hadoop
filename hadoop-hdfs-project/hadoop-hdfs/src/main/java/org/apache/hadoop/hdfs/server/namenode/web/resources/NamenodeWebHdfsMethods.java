@@ -57,6 +57,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.UriInfo;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.InvalidPathException;
@@ -107,7 +108,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.web.JsonUtil;
-import org.apache.hadoop.hdfs.web.ParamFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.*;
@@ -125,11 +125,9 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.sun.jersey.spi.container.ResourceFilters;
 
 /** Web-hdfs NameNode implementation. */
 @Path("")
-@ResourceFilters(ParamFilter.class)
 public class NamenodeWebHdfsMethods {
   public static final Logger LOG =
       LoggerFactory.getLogger(NamenodeWebHdfsMethods.class);
@@ -467,14 +465,46 @@ public class NamenodeWebHdfsMethods {
     return uri;
   }
 
-  /** Handle HTTP PUT request for the root. */
+  /**
+   * Handle HTTP PUT request for the root.
+   *
+   * @param ugi User and group information for Hadoop.
+   * @param uriInfo An injectable interface that provides access.
+   * to application and request URI information.
+   * @param delegation Represents delegation token used for authentication.
+   * @param username User parameter.
+   * @param doAsUser DoAs parameter for proxy user.
+   * @param op Http POST operation parameter.
+   * @param destination Destination path parameter.
+   * @param owner Owner parameter.
+   * @param group Group parameter.
+   * @param permission Permission parameter,
+   * use a Short to represent a FsPermission.
+   * @param unmaskedPermission Unmasked permission parameter,
+   * use a Short to represent a FsPermission.
+   * @param overwrite Overwrite parameter.
+   * @param bufferSize Buffer size parameter.
+   * @param replication Replication parameter.
+   * @param blockSize Block size parameter.
+   * @param modificationTime Modification time parameter.
+   * @param accessTime Access time parameter.
+   * @param renameOptions Rename option set parameter.
+   * @param createFlagParam CreateFlag enum.
+   * @param noredirect Overwrite parameter.
+   * @param policyName policy parameter.
+   * @param ecpolicy policy parameter.
+   * @param namespaceQuota The name space quota parameter for directory.
+   * @param storagespaceQuota The storage space quota parameter for directory.
+   * @param storageType storage type parameter.
+   * @return Represents an HTTP response.
+   */
   @PUT
-  @Path("/")
   @Consumes({"*/*"})
   @Produces({MediaType.APPLICATION_OCTET_STREAM + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response putRoot(
       @Context final UserGroupInformation ugi,
+      @Context final UriInfo uriInfo,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
       @QueryParam(UserParam.NAME) @DefaultValue(UserParam.DEFAULT)
@@ -533,7 +563,7 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(StoragePolicyParam.NAME) @DefaultValue(StoragePolicyParam
           .DEFAULT) final StoragePolicyParam policyName,
       @QueryParam(ECPolicyParam.NAME) @DefaultValue(ECPolicyParam
-              .DEFAULT) final ECPolicyParam ecpolicy,
+          .DEFAULT) final ECPolicyParam ecpolicy,
       @QueryParam(NameSpaceQuotaParam.NAME)
       @DefaultValue(NameSpaceQuotaParam.DEFAULT)
       final NameSpaceQuotaParam namespaceQuota,
@@ -544,7 +574,7 @@ public class NamenodeWebHdfsMethods {
       @DefaultValue(StorageTypeParam.DEFAULT)
       final StorageTypeParam storageType
   ) throws IOException, InterruptedException {
-    return put(ugi, delegation, username, doAsUser, ROOT, op, destination,
+    return put(ugi, uriInfo, delegation, username, doAsUser, op, destination,
         owner, group, permission, unmaskedPermission, overwrite, bufferSize,
         replication, blockSize, modificationTime, accessTime, renameOptions,
         createParent, delegationTokenArgument, aclPermission, xattrName,
@@ -565,7 +595,51 @@ public class NamenodeWebHdfsMethods {
     }
   }
 
-  /** Handle HTTP PUT request. */
+  /**
+   * Handle HTTP PUT request.
+   *
+   * @param ugi User and group information for Hadoop.
+   * @param uriInfo An injectable interface that provides access.
+   * @param delegation Represents delegation token used for authentication.
+   * @param username User parameter.
+   * @param doAsUser DoAs parameter for proxy user.
+   * @param op Http POST operation parameter.
+   * @param destination Destination path parameter.
+   * @param owner Owner parameter.
+   * @param group Group parameter.
+   * @param permission Permission parameter,
+   * use a Short to represent a FsPermission.
+   * @param unmaskedPermission Unmasked permission parameter,
+   * use a Short to represent a FsPermission.
+   * @param overwrite Overwrite parameter.
+   * @param bufferSize Buffer size parameter.
+   * @param replication Replication parameter.
+   * @param blockSize Block size parameter.
+   * @param modificationTime Modification time parameter.
+   * @param accessTime Access time parameter.
+   * @param renameOptions Rename option set parameter.
+   * @param createParent Create Parent parameter.
+   * @param delegationTokenArgument Represents delegation token parameter as method arguments.
+   * @param aclPermission AclPermission parameter.
+   * @param xattrName  XAttr Name parameter.
+   * @param xattrValue  XAttr Value parameter.
+   * @param xattrSetFlag XAttr SetFlag parameter.
+   * @param snapshotName The snapshot name parameter
+   * for createSnapshot and deleteSnapshot operation.
+   * @param oldSnapshotName The old snapshot name parameter for renameSnapshot operation.
+   * @param excludeDatanodes Exclude datanodes param.
+   * @param createFlagParam CreateFlag enum.
+   * @param noredirect Overwrite parameter.
+   * @param policyName policy parameter.
+   * @param ecpolicy ec policy parameter.
+   * @param namespaceQuota The name space quota parameter for directory.
+   * @param storagespaceQuota The storage space quota parameter for directory.
+   * @param storageType storage type parameter.
+   * @return Represents an HTTP response.
+   * @throws IOException any IOE raised, or translated exception.
+   * @throws InterruptedException if the current thread was interrupted
+   * before or during the call.
+   */
   @PUT
   @Path("{" + UriFsPathParam.NAME + ":.*}")
   @Consumes({"*/*"})
@@ -573,13 +647,13 @@ public class NamenodeWebHdfsMethods {
       MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response put(
       @Context final UserGroupInformation ugi,
+      @Context final UriInfo uriInfo,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
       @QueryParam(UserParam.NAME) @DefaultValue(UserParam.DEFAULT)
           final UserParam username,
       @QueryParam(DoAsParam.NAME) @DefaultValue(DoAsParam.DEFAULT)
           final DoAsParam doAsUser,
-      @PathParam(UriFsPathParam.NAME) final UriFsPathParam path,
       @QueryParam(PutOpParam.NAME) @DefaultValue(PutOpParam.DEFAULT)
           final PutOpParam op,
       @QueryParam(DestinationParam.NAME) @DefaultValue(DestinationParam.DEFAULT)
@@ -642,6 +716,7 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(StorageTypeParam.NAME) @DefaultValue(StorageTypeParam.DEFAULT)
           final StorageTypeParam storageType
       ) throws IOException, InterruptedException {
+    final UriFsPathParam path = new UriFsPathParam(uriInfo.getPath());
     init(ugi, delegation, username, doAsUser, path, op, destination, owner,
         group, permission, unmaskedPermission, overwrite, bufferSize,
         replication, blockSize, modificationTime, accessTime, renameOptions,
@@ -889,13 +964,29 @@ public class NamenodeWebHdfsMethods {
           StorageType.parseStorageType(storageType.getValue()));
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     default:
-      throw new UnsupportedOperationException(op + " is not supported");
+      throw new UnsupportedOperationException(op + "  is not supported");
     }
   }
 
-  /** Handle HTTP POST request for the root. */
+  /**
+   * Handle HTTP POST request for the root.
+   *
+   * @param ugi User and group information for Hadoop.
+   * @param delegation Represents delegation token used for authentication.
+   * @param username User parameter.
+   * @param doAsUser DoAs parameter for proxy user.
+   * @param op Http POST operation parameter.
+   * @param concatSrcs The concat source paths parameter.
+   * @param bufferSize Buffer size parameter.
+   * @param excludeDatanodes Exclude datanodes param.
+   * @param newLength NewLength parameter.
+   * @param noredirect Overwrite parameter.
+   * @return Represents an HTTP response.
+   * @throws IOException any IOE raised, or translated exception.
+   * @throws InterruptedException if the current thread was interrupted
+   * before or during the call.
+   */
   @POST
-  @Path("/")
   @Consumes({"*/*"})
   @Produces({MediaType.APPLICATION_OCTET_STREAM + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
@@ -924,7 +1015,25 @@ public class NamenodeWebHdfsMethods {
         bufferSize, excludeDatanodes, newLength, noredirect);
   }
 
-  /** Handle HTTP POST request. */
+  /**
+   * Handle HTTP POST request.
+   *
+   * @param ugi User and group information for Hadoop.
+   * @param delegation Represents delegation token used for authentication.
+   * @param username User parameter.
+   * @param doAsUser DoAs parameter for proxy user.
+   * @param path The FileSystem path parameter.
+   * @param op Http POST operation parameter.
+   * @param concatSrcs The concat source paths parameter.
+   * @param bufferSize Buffer size parameter.
+   * @param excludeDatanodes Exclude datanodes param.
+   * @param newLength NewLength parameter.
+   * @param noredirect Overwrite parameter.
+   * @return Represents an HTTP response.
+   * @throws IOException any IOE raised, or translated exception.
+   * @throws InterruptedException if the current thread was interrupted
+   * before or during the call.
+   */
   @POST
   @Path("{" + UriFsPathParam.NAME + ":.*}")
   @Consumes({"*/*"})
@@ -1023,13 +1132,47 @@ public class NamenodeWebHdfsMethods {
     }
   }
 
-  /** Handle HTTP GET request for the root. */
+  /**
+   * Handle HTTP GET request for the root.
+   *
+   * @param ugi User and group information for Hadoop.
+   * @param uriInfo An injectable interface that provides access.
+   * to application and request URI information.
+   * @param delegation Represents delegation token used for authentication.
+   * @param username User parameter.
+   * @param doAsUser DoAs parameter for proxy user.
+   * @param op Http GET operation parameter.
+   * @param offset Offset parameter.
+   * @param length Length parameter.
+   * @param renewer Renewer parameter.
+   * @param bufferSize Buffer size parameter.
+   * @param xattrNames XAttr Name parameter.
+   * @param xattrEncoding Xattr Encoding parameter.
+   * @param excludeDatanodes Exclude datanodes param.
+   * @param fsAction FsAction Parameter.
+   * @param snapshotName
+   * The snapshot name parameter for createSnapshot and deleteSnapshot operation.
+   * @param oldSnapshotName
+   * The old snapshot name parameter for renameSnapshot operation.
+   * @param snapshotDiffStartPath
+   * The snapshot startPath parameter used by snapshotDiffReportListing.
+   * @param snapshotDiffIndex resuming index of snapshotDiffReportListing operation.
+   * @param tokenKind tokenKind Parameter.
+   * @param tokenService TokenService Parameter.
+   * @param noredirect Overwrite parameter.
+   * @param startAfter Used during batched ListStatus operations.
+   * @param allUsers AllUsers parameter.
+   * @return Represents an HTTP response.
+   * @throws IOException any IOE raised, or translated exception.
+   * @throws InterruptedException if the current thread was interrupted
+   * before or during the call.
+   */
   @GET
-  @Path("/")
   @Produces({MediaType.APPLICATION_OCTET_STREAM + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response getRoot(
       @Context final UserGroupInformation ugi,
+      @Context final UriInfo uriInfo,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
       @QueryParam(UserParam.NAME) @DefaultValue(UserParam.DEFAULT)
@@ -1073,7 +1216,7 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(AllUsersParam.NAME) @DefaultValue(AllUsersParam.DEFAULT)
           final AllUsersParam allUsers
       ) throws IOException, InterruptedException {
-    return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
+    return get(ugi, uriInfo, delegation, username, doAsUser, op, offset, length,
         renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes,
         fsAction, snapshotName, oldSnapshotName,
         snapshotDiffStartPath, snapshotDiffIndex,
@@ -1081,20 +1224,54 @@ public class NamenodeWebHdfsMethods {
         noredirect, startAfter, allUsers);
   }
 
-  /** Handle HTTP GET request. */
+  /**
+   * Handle HTTP GET request.
+   *
+   * @param ugi User and group information for Hadoop.
+   * @param uriInfo An injectable interface that provides access.
+   * @param delegation Represents delegation token used for authentication.
+   * @param username User parameter.
+   * @param doAsUser DoAs parameter for proxy user.
+   * @param op Http DELETE operation parameter.
+   * @param offset Offset parameter.
+   * @param length Length parameter.
+   * @param renewer Renewer parameter.
+   * @param bufferSize Buffer size parameter.
+   * @param xattrNames XAttr Name parameter.
+   * @param xattrEncoding Xattr Encoding parameter.
+   * @param excludeDatanodes Exclude datanodes param.
+   * @param fsAction FsAction Parameter.
+   * @param snapshotName
+   * The snapshot name parameter for createSnapshot and deleteSnapshot operation.
+   * @param oldSnapshotName
+   * The old snapshot name parameter for renameSnapshot operation.
+   * @param snapshotDiffStartPath
+   * The snapshot startPath parameter used by snapshotDiffReportListing.
+   * @param snapshotDiffIndex
+   * resuming index of snapshotDiffReportListing operation.
+   * @param tokenKind tokenKind Parameter.
+   * @param tokenService tokenService Parameter.
+   * @param noredirect overwrite parameter.
+   * @param startAfter used during batched ListStatus operations.
+   * @param allUsers AllUsers parameter.
+   * @return Represents an HTTP response.
+   * @throws IOException any IOE raised, or translated exception.
+   * @throws InterruptedException if the current thread was interrupted
+   * before or during the call.
+   */
   @GET
   @Path("{" + UriFsPathParam.NAME + ":.*}")
   @Produces({MediaType.APPLICATION_OCTET_STREAM + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response get(
       @Context final UserGroupInformation ugi,
+      @Context final UriInfo uriInfo,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
       @QueryParam(UserParam.NAME) @DefaultValue(UserParam.DEFAULT)
           final UserParam username,
       @QueryParam(DoAsParam.NAME) @DefaultValue(DoAsParam.DEFAULT)
           final DoAsParam doAsUser,
-      @PathParam(UriFsPathParam.NAME) final UriFsPathParam path,
       @QueryParam(GetOpParam.NAME) @DefaultValue(GetOpParam.DEFAULT)
           final GetOpParam op,
       @QueryParam(OffsetParam.NAME) @DefaultValue(OffsetParam.DEFAULT)
@@ -1133,20 +1310,16 @@ public class NamenodeWebHdfsMethods {
           final AllUsersParam allUsers
       ) throws IOException, InterruptedException {
 
+    final UriFsPathParam path = new UriFsPathParam(uriInfo.getPath());
     init(ugi, delegation, username, doAsUser, path, op, offset, length,
         renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction,
         snapshotName, oldSnapshotName, tokenKind, tokenService, startAfter, allUsers);
 
-    return doAs(ugi, new PrivilegedExceptionAction<Response>() {
-      @Override
-      public Response run() throws IOException, URISyntaxException {
-        return get(ugi, delegation, username, doAsUser, path.getAbsolutePath(),
-            op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
-            excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
-            snapshotDiffStartPath, snapshotDiffIndex,
-            tokenKind, tokenService, noredirect, startAfter, allUsers);
-      }
-    });
+    return doAs(ugi, () -> get(ugi, delegation, username, doAsUser, path.getAbsolutePath(),
+        op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
+        excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
+        snapshotDiffStartPath, snapshotDiffIndex,
+        tokenKind, tokenService, noredirect, startAfter, allUsers));
   }
 
   private static String encodeFeInfo(FileEncryptionInfo feInfo) {
@@ -1443,7 +1616,7 @@ public class NamenodeWebHdfsMethods {
    * /snapdir1/path/to/file, this method would return /snapdir1
    * @param pathStr String of path to a file or a directory.
    * @return Not null if found in a snapshot root directory.
-   * @throws IOException
+   * @throws IOException any IOE raised, or translated exception.
    */
   String getSnapshotRoot(String pathStr) throws IOException {
     SnapshottableDirectoryStatus[] dirStatusList =
@@ -1578,12 +1751,30 @@ public class NamenodeWebHdfsMethods {
   }
 
 
-  /** Handle HTTP DELETE request for the root. */
+  /**
+   * Handle HTTP DELETE request for the root.
+   *
+   * @param ugi User and group information for Hadoop.
+   * @param uriInfo An injectable interface that provides access.
+   * to application and request URI information.
+   * @param delegation Represents delegation token used for authentication.
+   * @param username User parameter.
+   * @param doAsUser DoAs parameter for proxy user.
+   * @param op Http DELETE operation parameter.
+   * @param recursive Recursive parameter.
+   * @param snapshotName The snapshot name parameter for createSnapshot.
+   * and deleteSnapshot operation.
+   * @return Represents an HTTP response.
+   * @throws IOException any IOE raised, or translated exception.
+   * @throws InterruptedException if the current thread was interrupted
+   * before or during the call.
+   */
   @DELETE
-  @Path("/")
   @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
+  @SuppressWarnings("checkstyle:ParameterNumber")
   public Response deleteRoot(
       @Context final UserGroupInformation ugi,
+      @Context final UriInfo uriInfo,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
       @QueryParam(UserParam.NAME) @DefaultValue(UserParam.DEFAULT)
@@ -1597,23 +1788,36 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
           final SnapshotNameParam snapshotName
       ) throws IOException, InterruptedException {
-    return delete(ugi, delegation, username, doAsUser, ROOT, op, recursive,
-        snapshotName);
+    return delete(ugi, uriInfo, delegation, username, doAsUser, op, recursive, snapshotName);
   }
 
-  /** Handle HTTP DELETE request. */
+  /**
+   * Handle HTTP DELETE request.
+   *
+   * @param ugi User and group information for Hadoop.
+   * @param uriInfo An injectable interface that provides access.
+   * to application and request URI information.
+   * @param delegation Represents delegation token used for authentication.
+   * @param username User parameter.
+   * @param doAsUser DoAs parameter for proxy user.
+   * @param op Http DELETE operation parameter.
+   * @param recursive Recursive parameter.
+   * @param snapshotName The snapshot name parameter for createSnapshot
+   * and deleteSnapshot operation.
+   * @return Represents an HTTP response.
+   */
   @DELETE
   @Path("{" + UriFsPathParam.NAME + ":.*}")
   @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Response delete(
       @Context final UserGroupInformation ugi,
+      @Context final UriInfo uriInfo,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
       @QueryParam(UserParam.NAME) @DefaultValue(UserParam.DEFAULT)
           final UserParam username,
       @QueryParam(DoAsParam.NAME) @DefaultValue(DoAsParam.DEFAULT)
           final DoAsParam doAsUser,
-      @PathParam(UriFsPathParam.NAME) final UriFsPathParam path,
       @QueryParam(DeleteOpParam.NAME) @DefaultValue(DeleteOpParam.DEFAULT)
           final DeleteOpParam op,
       @QueryParam(RecursiveParam.NAME) @DefaultValue(RecursiveParam.DEFAULT)
@@ -1621,16 +1825,11 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
           final SnapshotNameParam snapshotName
       ) throws IOException, InterruptedException {
-
+    final UriFsPathParam path = new UriFsPathParam(uriInfo.getPath());
     init(ugi, delegation, username, doAsUser, path, op, recursive, snapshotName);
 
-    return doAs(ugi, new PrivilegedExceptionAction<Response>() {
-      @Override
-      public Response run() throws IOException {
-          return delete(ugi, delegation, username, doAsUser,
-              path.getAbsolutePath(), op, recursive, snapshotName);
-      }
-    });
+    return doAs(ugi, () -> delete(ugi, delegation, username, doAsUser,
+        path.getAbsolutePath(), op, recursive, snapshotName));
   }
 
   protected Response delete(

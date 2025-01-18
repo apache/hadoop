@@ -60,6 +60,11 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <version>${httpcore.version}</version>
     </dependency>
     <dependency>
+      <groupId>jakarta.ws.rs</groupId>
+      <artifactId>jakarta.ws.rs-api</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>

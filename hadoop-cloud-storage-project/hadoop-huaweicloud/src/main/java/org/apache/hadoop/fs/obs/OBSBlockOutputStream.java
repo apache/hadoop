@@ -31,7 +31,6 @@ import com.obs.services.model.PutObjectRequest;
 import com.obs.services.model.UploadPartRequest;
 import com.obs.services.model.UploadPartResult;
 import com.obs.services.model.fs.WriteFileRequest;
-import com.sun.istack.NotNull;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -39,6 +38,7 @@ import org.apache.hadoop.fs.Syncable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;

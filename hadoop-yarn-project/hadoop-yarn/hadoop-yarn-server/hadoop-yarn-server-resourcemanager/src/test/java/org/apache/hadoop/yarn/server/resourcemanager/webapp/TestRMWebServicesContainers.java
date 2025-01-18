@@ -20,9 +20,17 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.security.Principal;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
@@ -38,19 +46,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.reader.ApplicationSubmissionContextInfoReader;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.writer.ApplicationSubmissionContextInfoWriter;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.eclipse.jetty.server.Response;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
 
 /**
  * Testing containers REST API.
@@ -60,12 +66,24 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
   private static MockRM rm;
   private static String userName;
 
-  private static class WebServletModule extends ServletModule {
+  @Override
+  protected Application configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.register(RMWebServices.class);
+    config.register(new JerseyBinder());
+    config.register(GenericExceptionHandler.class);
+    config.register(ApplicationSubmissionContextInfoWriter.class);
+    config.register(ApplicationSubmissionContextInfoReader.class);
+    config.register(TestRMWebServicesAppsModification.TestRMCustomAuthFilter.class);
+    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
+    return config;
+  }
+
+  private class JerseyBinder extends AbstractBinder {
+
     @Override
-    protected void configureServlets() {
-      bind(JAXBContextResolver.class);
-      bind(RMWebServices.class);
-      bind(GenericExceptionHandler.class);
+    protected void configure() {
       try {
         userName = UserGroupInformation.getCurrentUser().getShortUserName();
       } catch (IOException ioe) {
@@ -77,32 +95,24 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
           ResourceScheduler.class);
       conf.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
       rm = new MockRM(conf);
-      bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
-      filter("/*").through(TestRMWebServicesAppsModification
-          .TestRMCustomAuthFilter.class);
+      bind(rm).to(ResourceManager.class).named("rm");
+      bind(conf).to(Configuration.class).named("conf");
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      Principal principal = () -> userName;
+      when(request.getUserPrincipal()).thenReturn(principal);
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      bind(request).to(HttpServletRequest.class);
+      bind(response).to(HttpServletResponse.class);
     }
-  }
-
-  static {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
   }
 
   @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
   }
 
   public TestRMWebServicesContainers() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   @Test
@@ -115,21 +125,20 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
     MockRM
         .waitForState(app.getCurrentAppAttempt(), RMAppAttemptState.ALLOCATED);
     rm.sendAMLaunched(app.getCurrentAppAttempt().getAppAttemptId());
-    WebResource r = resource();
+    WebTarget r = target();
 
     // test error command
-    ClientResponse response =
+    Response response =
         r.path("ws").path("v1").path("cluster").path("containers").path(
             app.getCurrentAppAttempt().getMasterContainer().getId().toString())
             .path("signal")
             .path("not-exist-signal")
             .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    assertEquals(Response.SC_BAD_REQUEST, response.getStatus());
-    assertTrue(response.getEntity(String.class)
-        .contains("Invalid command: NOT-EXIST-SIGNAL"));
+            .request(MediaType.APPLICATION_JSON).post(null, Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    assertTrue(response.readEntity(String.class).contains("Invalid command: NOT-EXIST-SIGNAL"));
 
     // test error containerId
     response =
@@ -137,12 +146,14 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
             .path("signal")
             .path(SignalContainerCommand.OUTPUT_THREAD_DUMP.name())
             .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    assertEquals(Response.SC_INTERNAL_SERVER_ERROR, response.getStatus());
+            .request()
+            .accept(MediaType.APPLICATION_JSON)
+            .post(null, Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
     assertTrue(
-        response.getEntity(String.class).contains("Invalid ContainerId"));
+        response.readEntity(String.class).contains("Invalid ContainerId"));
 
     // test correct signal by owner
     response =
@@ -151,10 +162,12 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
             .path("signal")
             .path(SignalContainerCommand.OUTPUT_THREAD_DUMP.name())
             .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    assertEquals(Response.SC_OK, response.getStatus());
+            .request()
+            .accept(MediaType.APPLICATION_JSON)
+            .post(null, Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
     // test correct signal by admin
     response =
@@ -163,10 +176,10 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
             .path("signal")
             .path(SignalContainerCommand.OUTPUT_THREAD_DUMP.name())
             .queryParam("user.name", "admin")
-            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    assertEquals(Response.SC_OK, response.getStatus());
+            .request(MediaType.APPLICATION_JSON).post(null, Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
     rm.stop();
   }

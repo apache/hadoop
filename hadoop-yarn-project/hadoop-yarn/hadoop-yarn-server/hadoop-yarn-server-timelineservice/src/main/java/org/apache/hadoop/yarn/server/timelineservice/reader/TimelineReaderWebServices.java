@@ -28,6 +28,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TimeZone;
 
+import javax.inject.Singleton;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -36,6 +37,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -61,7 +63,6 @@ import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.google.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,7 +75,8 @@ public class TimelineReaderWebServices {
   private static final Logger LOG =
       LoggerFactory.getLogger(TimelineReaderWebServices.class);
 
-  @Context private ServletContext ctxt;
+  @Context
+  private ServletContext ctxt;
 
   private static final String QUERY_STRING_SEP = "?";
   private static final String RANGE_DELIMITER = "-";
@@ -489,6 +491,7 @@ public class TimelineReaderWebServices {
   @GET
   @Path("/apps/{appid}/entities/{entitytype}")
   @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
+  @Consumes(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getEntities(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -612,6 +615,7 @@ public class TimelineReaderWebServices {
   @GET
   @Path("/clusters/{clusterid}/apps/{appid}/entities/{entitytype}")
   @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
+  @Consumes(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getEntities(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -743,6 +747,7 @@ public class TimelineReaderWebServices {
   @GET
   @Path("/entity-uid/{uid}/")
   @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
+  @Consumes(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public TimelineEntity getEntity(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -899,6 +904,7 @@ public class TimelineReaderWebServices {
   @GET
   @Path("/apps/{appid}/entities/{entitytype}/{entityid}/")
   @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
+  @Consumes(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public TimelineEntity getEntity(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -979,6 +985,7 @@ public class TimelineReaderWebServices {
   @GET
   @Path("/clusters/{clusterid}/apps/{appid}/entities/{entitytype}/{entityid}/")
   @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
+  @Consumes(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public TimelineEntity getEntity(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,

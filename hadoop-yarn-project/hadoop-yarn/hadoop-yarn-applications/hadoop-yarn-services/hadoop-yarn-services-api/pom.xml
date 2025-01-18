@@ -132,12 +132,12 @@
       <artifactId>guice</artifactId>
     </dependency>
     <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>jsr311-api</artifactId>
+      <groupId>jakarta.ws.rs</groupId>
+      <artifactId>jakarta.ws.rs-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>javax.servlet-api</artifactId>
+      <groupId>jakarta.servlet</groupId>
+      <artifactId>jakarta.servlet-api</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
@@ -156,7 +156,7 @@
       <artifactId>hadoop-shaded-guava</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.sun.jersey</groupId>
+      <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-client</artifactId>
     </dependency>
     <dependency>
