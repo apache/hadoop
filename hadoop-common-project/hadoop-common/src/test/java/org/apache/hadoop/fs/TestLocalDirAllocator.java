@@ -567,5 +567,23 @@ public class TestLocalDirAllocator {
     // and expect to get a new file back
     dirAllocator.getLocalPathForWrite("file2", -1, conf);
   }
+
+  /**
+   * Test for HADOOP-19387 LocalDirAllocator cannot recover after thread interruption.
+   */
+  @Test(timeout = 30000)
+  public void testInterruptionRecovery() throws Throwable {
+
+    String dir0 = buildBufferDir(ROOT, 7);
+    conf.set(CONTEXT, dir0);
+    try {
+      Thread.currentThread().interrupt();
+      assertThrows(DiskErrorException.class, () -> dirAllocator.getLocalPathForWrite("file2", 1, conf));
+    } finally {
+      Thread.interrupted();
+    }
+    // expect to get a file with no exceptions
+    dirAllocator.getLocalPathForWrite("file2", 1, conf);
+  }
 }
 
