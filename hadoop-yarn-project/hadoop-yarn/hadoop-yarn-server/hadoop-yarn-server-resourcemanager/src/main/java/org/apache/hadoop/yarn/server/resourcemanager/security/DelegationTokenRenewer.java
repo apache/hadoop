@@ -967,12 +967,8 @@ public class DelegationTokenRenewer extends AbstractService {
           }
         }
 
-        DelegationTokenRenewerAppRecoverEvent event =
-            new DelegationTokenRenewerAppRecoverEvent(
-                evt.getApplicationId(), evt.getCredentials(),
-                evt.shouldCancelAtEnd(), evt.getUser(), evt.getTokenConf());
-        event.setAttempt(evt.getAttempt());
-        processDelegationTokenRenewerEvent(event);
+        evt.setAttempt(evt.getAttempt());
+        processDelegationTokenRenewerEvent(evt);
       }
     };
   }
@@ -1022,6 +1018,16 @@ public class DelegationTokenRenewer extends AbstractService {
                   "Exhausted max retry attempts {} in token renewer "
                       + "thread for {}",
                   tokenRenewerThreadRetryMaxAttempts, evt.getApplicationId());
+              if (evt instanceof DelegationTokenRenewerAppSubmitEvent) {
+                // Sending APP_REJECTED is fine, since we assume that the
+                // RMApp is in NEW state and thus we haven't yet informed the
+                // Scheduler about the existence of the application
+                rmContext.getDispatcher().getEventHandler().handle(
+                    new RMAppEvent(evt.getApplicationId(),
+                        RMAppEventType.APP_REJECTED,
+                        "Exhausted max retry attempts in token renewer " +
+                            "for submitted new application."));
+              }
             }
           }
         } catch (Exception e) {
@@ -1080,13 +1086,14 @@ public class DelegationTokenRenewer extends AbstractService {
             .handle(new RMAppEvent(event.getApplicationId(), RMAppEventType.START));
       } catch (Throwable t) {
         LOG.warn(
-            "Unable to add the application to the delegation token renewer.",
+            "Unable to add the application to the delegation token renewer," +
+                " will retry in delegationTokenRenewerPool.",
             t);
         // Sending APP_REJECTED is fine, since we assume that the
-        // RMApp is in NEW state and thus we havne't yet informed the
+        // RMApp is in NEW state, and thus we haven't yet informed the
         // Scheduler about the existence of the application
         rmContext.getDispatcher().getEventHandler().handle(
-            new RMAppEvent(event.getApplicationId(),
+            new RMAppEvent(evt.getApplicationId(),
                 RMAppEventType.APP_REJECTED, t.getMessage()));
       }
     }
