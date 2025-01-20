@@ -80,7 +80,17 @@ ENV INFOPATH "${GCC_HOME}/root/usr/share/info"
 ENV MAVEN_HOME /opt/maven
 ENV PATH "${PATH}:${MAVEN_HOME}/bin"
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
-ENV JAVA_HOME /usr/lib/jvm/java-1.8.0
+# Download and install OpenJDK 17
+RUN yum install -y wget && \
+    wget https://download.oracle.com/java/17/archive/jdk-17.0.12_linux-x64_bin.tar.gz && \
+    mkdir -p /usr/lib/jvm && \
+    tar -xzf jdk-17.0.12_linux-x64_bin.tar.gz -C /usr/lib/jvm && \
+    rm -f jdk-17.0.12_linux-x64_bin.tar.gz
+
+# Set JAVA_HOME and update PATH
+ENV JAVA_HOME=/usr/lib/jvm/jdk-17.0.12
+ENV PATH=$JAVA_HOME/bin:$PATH
+
 
 #######
 # Set env vars for SpotBugs
