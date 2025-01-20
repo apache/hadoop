@@ -49,10 +49,37 @@
   </property>
 
   <property>
-    <name>dfs.federation.router.rpc.async.enable</name>
+    <name>dfs.federation.router.async.rpc.enable</name>
     <value>false</value>
     <description>
       If true, router will process the RPC request asynchronously.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.async.rpc.ns.handler.count</name>
+    <value></value>
+    <description>
+      The number of asynchronous handlers per nameservice, separated by commas, internally separated by colons.
+      The identifier of nameservice is in dfs.nameservices configuration entry.
+      Such as: ns1:count1,ns2:count2,ns3:count3.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.async.rpc.responder.count</name>
+    <value>10</value>
+    <description>
+      For those nameservices not in dfs.federation.router.async.rpc.ns.handler.count configuration entry,
+      use this value as the asynchronous handler thread counts.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.async.rpc.responder.count</name>
+    <value>10</value>
+    <description>
+      The thread counts of async responder executor.
     </description>
   </property>
 
@@ -110,15 +137,15 @@
   </property>
 
   <property>
-    <name>dfs.federation.router.rpc.async.handler.count</name>
-    <value>2</value>
+    <name>dfs.federation.router.async.rpc.handler.count</name>
+    <value>10</value>
     <description>
       The number of async handler for the router to handle RPC client requests.
     </description>
   </property>
 
   <property>
-    <name>dfs.federation.router.rpc.async.responder.count</name>
+    <name>dfs.federation.router.async.rpc.responder.count</name>
     <value>10</value>
     <description>
       The number of async responder for the router to handle responses.

@@ -55,7 +55,7 @@ import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 public final class AsyncRpcProtocolPBUtil {
   public static final Logger LOG = LoggerFactory.getLogger(AsyncRpcProtocolPBUtil.class);
   /** The executor used for handling responses asynchronously. */
-  private static Executor worker;
+  private static Executor asyncResponderExecutor;
 
   private AsyncRpcProtocolPBUtil() {}
 
@@ -97,7 +97,7 @@ public final class AsyncRpcProtocolPBUtil {
       } catch (Exception ex) {
         throw warpCompletionException(ex);
       }
-    }, worker));
+    }, asyncResponderExecutor));
     return asyncReturn(clazz);
   }
 
@@ -144,10 +144,10 @@ public final class AsyncRpcProtocolPBUtil {
    * Sets the executor used for handling responses asynchronously within
    * the utility class.
    *
-   * @param worker The executor to be used for handling responses asynchronously.
+   * @param asyncResponderExecutor The executor to be used for handling responses asynchronously.
    */
-  public static void setWorker(Executor worker) {
-    AsyncRpcProtocolPBUtil.worker = worker;
+  public static void setAsyncResponderExecutor(Executor asyncResponderExecutor) {
+    AsyncRpcProtocolPBUtil.asyncResponderExecutor = asyncResponderExecutor;
   }
 
   @FunctionalInterface

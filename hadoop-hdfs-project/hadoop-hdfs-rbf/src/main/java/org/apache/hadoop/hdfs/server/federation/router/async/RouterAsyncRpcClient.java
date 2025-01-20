@@ -57,7 +57,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.Async.warpCompletionException;
@@ -98,7 +97,6 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
   private final ActiveNamenodeResolver namenodeResolver;
   /** Optional perf monitor. */
   private final RouterRpcMonitor rpcMonitor;
-  private final Executor asyncRouterHandler;
 
   /**
    * Create a router async RPC client to manage remote procedure calls to NNs.
@@ -108,17 +106,15 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
    * @param resolver A NN resolver to determine the currently active NN in HA.
    * @param monitor Optional performance monitor.
    * @param routerStateIdContext the router state context object to hold the state ids for all
-   * @param asyncRouterHandler async router handler
    * namespaces.
    */
   public RouterAsyncRpcClient(Configuration conf,
       Router router, ActiveNamenodeResolver resolver, RouterRpcMonitor monitor,
-      RouterStateIdContext routerStateIdContext, Executor asyncRouterHandler) {
+      RouterStateIdContext routerStateIdContext) {
     super(conf, router, resolver, monitor, routerStateIdContext);
     this.router = router;
     this.namenodeResolver = resolver;
     this.rpcMonitor = monitor;
-    this.asyncRouterHandler = asyncRouterHandler;
   }
 
   /**
@@ -172,6 +168,7 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
           " with params " + Arrays.deepToString(params) + " from "
           + router.getRouterId());
     }
+    String nsid = namenodes.get(0).getNameserviceId();
     // transfer threadLocalContext to worker threads of executor.
     ThreadLocalContext threadLocalContext = new ThreadLocalContext();
     asyncComplete(null);
@@ -183,7 +180,8 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
       threadLocalContext.transfer();
       invokeMethodAsync(ugi, (List<FederationNamenodeContext>) namenodes,
           useObserver, protocol, method, params);
-    }, asyncRouterHandler);
+    }, router.getRpcServer().getAsyncRouterHandlerExecutors().getOrDefault(nsid,
+        router.getRpcServer().getRouterAsyncHandlerDefaultExecutor()));
     return null;
   }
 
