@@ -59,6 +59,7 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
@@ -97,7 +98,7 @@ public class NNBench extends Configured implements Tool {
   private long numberOfMaps = 1l; // default is 1
   private long numberOfReduces = 1l; // default is 1
   private long startTime =
-          System.currentTimeMillis() + (120 * 1000); // default is 'now' + 2min
+      Time.monotonicNow() + (120 * 1000); // default is 'now' + 2min
   private long blockSize = 1l; // default is 1
   private int bytesToWrite = 0; // default is 0
   private long bytesPerChecksum = 1l; // default is 1
@@ -225,11 +226,11 @@ public class NNBench extends Configured implements Tool {
       "default is launch time + 2 mins. This is not mandatory>\n" +
       "\t-blockSize <Block size in bytes. default is 1. " + 
       "This is not mandatory>\n" +
-      "\t-bytesToWrite <Bytes to write. default is 0. " + 
+      "\t-bytesToWrite <Bytes to write per file. default is 0. " +
       "This is not mandatory>\n" +
       "\t-bytesPerChecksum <Bytes per checksum for the files. default is 1. " + 
       "This is not mandatory>\n" +
-      "\t-numberOfFiles <number of files to create. default is 1. " +
+      "\t-numberOfFiles <number of files to create per map. default is 1. " +
       "This is not mandatory>\n" +
       "\t-replicationFactorPerFile <Replication factor for the files." +
         " default is 1. This is not mandatory>\n" +
@@ -463,9 +464,9 @@ public class NNBench extends Configured implements Tool {
     "                           Maps to run: " + numberOfMaps,
     "                        Reduces to run: " + numberOfReduces,
     "                    Block Size (bytes): " + blockSize,
-    "                        Bytes to write: " + bytesToWrite,
+    "               Bytes to write per file: " + bytesToWrite,
     "                    Bytes per checksum: " + bytesPerChecksum,
-    "                       Number of files: " + numberOfFiles,
+    "               Number of files per map: " + numberOfFiles,
     "                    Replication factor: " + replicationFactorPerFile,
     "            Successful file operations: " + successfulFileOps,
     "",
@@ -709,7 +710,7 @@ public class NNBench extends Configured implements Tool {
      */
     private boolean barrier() {
       long startTime = getConf().getLong("test.nnbench.starttime", 0l);
-      long currentTime = System.currentTimeMillis();
+      long currentTime = Time.monotonicNow();
       long sleepTime = startTime - currentTime;
       boolean retVal = true;
       
@@ -759,23 +760,23 @@ public class NNBench extends Configured implements Tool {
       if (barrier()) {
         String fileName = "file_" + value;
         if (op.equals(OP_CREATE_WRITE)) {
-          startTimeTPmS = System.currentTimeMillis();
+          startTimeTPmS = Time.monotonicNow();
           doCreateWriteOp(fileName, reporter);
         } else if (op.equals(OP_OPEN_READ)) {
-          startTimeTPmS = System.currentTimeMillis();
+          startTimeTPmS = Time.monotonicNow();
           doOpenReadOp(fileName, reporter);
         } else if (op.equals(OP_RENAME)) {
-          startTimeTPmS = System.currentTimeMillis();
+          startTimeTPmS = Time.monotonicNow();
           doRenameOp(fileName, reporter);
         } else if (op.equals(OP_DELETE)) {
-          startTimeTPmS = System.currentTimeMillis();
+          startTimeTPmS = Time.monotonicNow();
           doDeleteOp(fileName, reporter);
         } else {
           throw new IllegalArgumentException(
               "unsupported operation [" + op + "]");
         }
         
-        endTimeTPms = System.currentTimeMillis();
+        endTimeTPms = Time.monotonicNow();
         totalTimeTPmS = endTimeTPms - startTimeTPmS;
       } else {
         output.collect(new Text("l:latemaps"), new Text("1"));
@@ -817,7 +818,7 @@ public class NNBench extends Configured implements Tool {
         while (! successfulOp && numOfExceptions < MAX_OPERATION_EXCEPTIONS) {
           try {
             // Set up timer for measuring AL (transaction #1)
-            startTimeAL = System.currentTimeMillis();
+            startTimeAL = Time.monotonicNow();
             // Create the file
             // Use a buffer size of 512
             out = filesystem.create(filePath, 
@@ -826,14 +827,14 @@ public class NNBench extends Configured implements Tool {
                     replFactor, 
                     blkSize);
             out.write(buffer);
-            totalTimeAL1 += (System.currentTimeMillis() - startTimeAL);
+            totalTimeAL1 += (Time.monotonicNow() - startTimeAL);
 
             // Close the file / file output stream
             // Set up timers for measuring AL (transaction #2)
-            startTimeAL = System.currentTimeMillis();
+            startTimeAL = Time.monotonicNow();
             out.close();
             
-            totalTimeAL2 += (System.currentTimeMillis() - startTimeAL);
+            totalTimeAL2 += (Time.monotonicNow() - startTimeAL);
             successfulOp = true;
             successfulFileOps ++;
 
@@ -866,16 +867,16 @@ public class NNBench extends Configured implements Tool {
         while (! successfulOp && numOfExceptions < MAX_OPERATION_EXCEPTIONS) {
           try {
             // Set up timer for measuring AL
-            startTimeAL = System.currentTimeMillis();
+            startTimeAL = Time.monotonicNow();
             input = filesystem.open(filePath);
-            totalTimeAL1 += (System.currentTimeMillis() - startTimeAL);
+            totalTimeAL1 += (Time.monotonicNow() - startTimeAL);
             
             // If the file needs to be read (specified at command line)
             if (readFile) {
-              startTimeAL = System.currentTimeMillis();
+              startTimeAL = Time.monotonicNow();
               input.readFully(buffer);
 
-              totalTimeAL2 += (System.currentTimeMillis() - startTimeAL);
+              totalTimeAL2 += (Time.monotonicNow() - startTimeAL);
             }
             input.close();
             successfulOp = true;
@@ -909,12 +910,12 @@ public class NNBench extends Configured implements Tool {
         while (! successfulOp && numOfExceptions < MAX_OPERATION_EXCEPTIONS) {
           try {
             // Set up timer for measuring AL
-            startTimeAL = System.currentTimeMillis();
+            startTimeAL = Time.monotonicNow();
             boolean result = filesystem.rename(filePath, filePathR);
             if (!result) {
               throw new IOException("rename failed for " + filePath);
             }
-            totalTimeAL1 += (System.currentTimeMillis() - startTimeAL);
+            totalTimeAL1 += (Time.monotonicNow() - startTimeAL);
             
             successfulOp = true;
             successfulFileOps ++;
@@ -945,13 +946,13 @@ public class NNBench extends Configured implements Tool {
         while (! successfulOp && numOfExceptions < MAX_OPERATION_EXCEPTIONS) {
           try {
             // Set up timer for measuring AL
-            startTimeAL = System.currentTimeMillis();
+            startTimeAL = Time.monotonicNow();
             boolean result = filesystem.delete(filePath, true);
             if (!result) {
               throw new IOException("delete failed for " + filePath);
             }
-            totalTimeAL1 += (System.currentTimeMillis() - startTimeAL);
-            
+            totalTimeAL1 += (Time.monotonicNow() - startTimeAL);
+
             successfulOp = true;
             successfulFileOps ++;
 
