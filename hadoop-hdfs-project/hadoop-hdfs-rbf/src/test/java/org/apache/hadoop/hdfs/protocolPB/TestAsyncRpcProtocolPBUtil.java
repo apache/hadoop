@@ -54,7 +54,7 @@ public class TestAsyncRpcProtocolPBUtil {
 
   @Before
   public void setUp() throws IOException {
-    AsyncRpcProtocolPBUtil.setWorker(ForkJoinPool.commonPool());
+    AsyncRpcProtocolPBUtil.setAsyncResponderExecutor(ForkJoinPool.commonPool());
     Configuration conf = new Configuration();
     RPC.setProtocolEngine(conf, TestRpcBase.TestRpcService.class,
         ProtobufRpcEngine2.class);

@@ -82,7 +82,7 @@ public class TestRouterClientSideTranslatorPB {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    AsyncRpcProtocolPBUtil.setWorker(ForkJoinPool.commonPool());
+    AsyncRpcProtocolPBUtil.setAsyncResponderExecutor(ForkJoinPool.commonPool());
     conf = new HdfsConfiguration();
     cluster = (new MiniDFSCluster.Builder(conf))
         .numDataNodes(1).build();
