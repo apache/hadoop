@@ -245,15 +245,9 @@ public class TestFTPFileSystem {
 
   private static void touch(FileSystem fs, Path path, byte[] data)
           throws IOException {
-    FSDataOutputStream out = null;
-    try {
-      out = fs.create(path);
+    try (FSDataOutputStream out = fs.create(path)) {
       if (data != null) {
         out.write(data);
-      }
-    } finally {
-      if (out != null) {
-        out.close();
       }
     }
   }
