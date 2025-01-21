@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
