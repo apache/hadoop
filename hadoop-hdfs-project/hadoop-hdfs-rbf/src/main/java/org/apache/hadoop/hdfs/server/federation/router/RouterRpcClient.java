@@ -1880,7 +1880,7 @@ public class RouterRpcClient {
     return routerRpcFairnessPolicyController;
   }
 
-  private void incrRejectedPermitForNs(String ns) {
+  protected void incrRejectedPermitForNs(String ns) {
     rejectedPermitsPerNs.computeIfAbsent(ns, k -> new LongAdder()).increment();
   }
 
@@ -1889,7 +1889,7 @@ public class RouterRpcClient {
         rejectedPermitsPerNs.get(ns).longValue() : 0L;
   }
 
-  private void incrAcceptedPermitForNs(String ns) {
+  protected void incrAcceptedPermitForNs(String ns) {
     acceptedPermitsPerNs.computeIfAbsent(ns, k -> new LongAdder()).increment();
   }
 
