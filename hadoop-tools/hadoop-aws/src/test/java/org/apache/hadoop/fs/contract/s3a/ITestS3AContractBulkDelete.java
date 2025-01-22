@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 
 import static java.util.stream.Collectors.toList;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertSuccessfulBulkDelete;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;

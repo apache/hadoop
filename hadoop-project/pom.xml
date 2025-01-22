@@ -795,7 +795,17 @@
         <version>${hadoop.version}</version>
         <type>test-jar</type>
       </dependency>
-
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-format-testing</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-format-testing</artifactId>
+        <version>${hadoop.version}</version>
+        <type>test-jar</type>
+      </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>

@@ -37,6 +37,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.wrappedio.WrappedIO;
 import org.apache.hadoop.io.wrappedio.impl.DynamicWrappedIO;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertSuccessfulBulkDelete;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.createListOfPaths;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.io.wrappedio.WrappedIO.bulkDelete_delete;
@@ -212,6 +214,20 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
     assertSuccessfulBulkDelete(bulkDelete_delete(getFileSystem(), basePath, paths));
   }
 
+  /**
+   * Use a more complex filename.
+   * This validates that any conversions to URI/string
+   * when passing to an object store is correct.
+   */
+  @Test
+  public void testDeleteComplexFilename() throws Exception {
+    Path path = new Path(basePath, "child[=comple]x");
+    List<Path> paths = new ArrayList<>();
+    paths.add(path);
+    // bulk delete call doesn't verify if a path exist or not before deleting.
+    assertSuccessfulBulkDelete(bulkDelete_delete(getFileSystem(), basePath, paths));
+  }
+
   @Test
   public void testDeletePathsDirectory() throws Exception {
     List<Path> paths = new ArrayList<>();
@@ -335,28 +351,4 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
     assertSuccessfulBulkDelete(bulkDelete_delete(getFileSystem(), basePath, paths));
   }
 
-
-  /**
-   * Assert on returned entries after bulk delete operation.
-   * Entries should be empty after successful delete.
-   */
-  public static void assertSuccessfulBulkDelete(List<Map.Entry<Path, String>> entries) {
-    Assertions.assertThat(entries)
-            .describedAs("Bulk delete failed, " +
-                    "return entries should be empty after successful delete")
-            .isEmpty();
-  }
-
-  /**
-   * Create a list of paths with the given count
-   * under the given base path.
-   */
-  private List<Path> createListOfPaths(int count, Path basePath) {
-    List<Path> paths = new ArrayList<>();
-    for (int i = 0; i < count; i++) {
-      Path path = new Path(basePath, "file-" + i);
-      paths.add(path);
-    }
-    return paths;
-  }
 }

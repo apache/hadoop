@@ -64,7 +64,7 @@ import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.io.wrappedio.WrappedIO;
 
-import static org.apache.hadoop.fs.contract.AbstractContractBulkDeleteTest.assertSuccessfulBulkDelete;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertSuccessfulBulkDelete;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.*;

@@ -23,6 +23,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 import org.apache.hadoop.fs.BulkDelete;
@@ -41,6 +43,9 @@ import static org.apache.hadoop.util.Preconditions.checkArgument;
  * S3A Implementation of the {@link BulkDelete} interface.
  */
 public class BulkDeleteOperation extends AbstractStoreOperation implements BulkDelete {
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      BulkDeleteOperation.class);
 
   private final BulkDeleteOperationCallbacks callbacks;
 
@@ -78,14 +83,18 @@ public class BulkDeleteOperation extends AbstractStoreOperation implements BulkD
   public List<Map.Entry<Path, String>> bulkDelete(final Collection<Path> paths)
       throws IOException, IllegalArgumentException {
     requireNonNull(paths);
-    checkArgument(paths.size() <= pageSize,
-        "Number of paths (%d) is larger than the page size (%d)", paths.size(), pageSize);
+    final int size = paths.size();
+    LOG.debug("bulkDelete() of {} paths with pagesize {}",
+        size, pageSize);
+    checkArgument(size <= pageSize,
+        "Number of paths (%d) is larger than the page size (%d)", size, pageSize);
     final StoreContext context = getStoreContext();
     final List<ObjectIdentifier> objects = paths.stream().map(p -> {
       checkArgument(p.isAbsolute(), "Path %s is not absolute", p);
       checkArgument(validatePathIsUnderParent(p, basePath),
               "Path %s is not under the base path %s", p, basePath);
       final String k = context.pathToKey(p);
+      LOG.debug("path \"{}\" mapped to \"{}\"", p, k);
       return ObjectIdentifier.builder().key(k).build();
     }).collect(toList());
 

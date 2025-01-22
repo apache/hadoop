@@ -54,6 +54,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.Set;
@@ -1870,6 +1871,48 @@ public class ContractTestUtils extends Assertions {
     return fileRanges.stream()
         .mapToLong(FileRange::getLength)
         .sum();
+  }
+
+  /**
+   * Assert on returned entries after bulk delete operation.
+   * Entries should be empty after successful delete.
+   */
+  public static void assertSuccessfulBulkDelete(List<Map.Entry<Path, String>> entries) {
+    Assertions.assertThat(entries)
+            .describedAs("Bulk delete failed, " +
+                    "return entries should be empty after successful delete")
+            .isEmpty();
+  }
+
+  /**
+   * Get a file status value or, if the path doesn't exist, return null.
+   * @param fs filesystem
+   * @param path path
+   * @return status or null
+   * @throws IOException Any IO Failure other than file not found.
+   */
+  public static final FileStatus getFileStatusOrNull(
+      final FileSystem fs,
+      final Path path)
+      throws IOException {
+    try {
+      return fs.getFileStatus(path);
+    } catch (FileNotFoundException e) {
+      return null;
+    }
+  }
+
+  /**
+   * Create a list of paths with the given count
+   * under the given base path.
+   */
+  public static  List<Path> createListOfPaths(int count, Path basePath) {
+    List<Path> paths = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      Path path = new Path(basePath, "file-" + i);
+      paths.add(path);
+    }
+    return paths;
   }
 
   /**

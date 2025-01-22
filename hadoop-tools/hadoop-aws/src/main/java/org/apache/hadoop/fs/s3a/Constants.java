@@ -1556,6 +1556,12 @@ public final class Constants {
       "fs.s3a.performance.flags";
 
   /**
+   * All performance flags in the enumeration.
+   */
+  public static final String PERFORMANCE_FLAGS =
+      "create, delete, mkdir, open";
+
+  /**
    * Is the create overwrite feature enabled or not?
    * A configuration option and a path status probe.
    * Value {@value}.

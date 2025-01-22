@@ -55,6 +55,10 @@
     <job.id>00</job.id>
     <!-- are root tests enabled. Set to false when running parallel jobs on same bucket -->
     <root.tests.enabled>unset</root.tests.enabled>
+
+    <!-- iceberg is java 11+ -->
+    <!-- This requires the changes of the Iceberg PR #12055 -->
+    <iceberg.version>1.9.0-SNAPSHOT</iceberg.version>
   </properties>
 
   <profiles>
@@ -322,6 +326,69 @@
       <properties>
         <stream>analytics</stream>
       </properties>
+    </profile>
+
+    <!-- Adds a *test only* java 17 build profile-->
+    <profile>
+      <id>java-17-or-later</id>
+      <activation>
+        <jdk>[17,)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>add-java17-test-source</id>
+                <phase>generate-test-sources</phase>
+                <goals>
+                  <goal>add-test-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${basedir}/src/test/java17</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+      <dependencies>
+
+        <!-- Apache Iceberg, used for testing/regression testing BulkDelete -->
+        <!-- iceberg is java 11+ and and is referenced in the java 17 test source tree -->
+        <dependency>
+          <groupId>org.apache.iceberg</groupId>
+          <artifactId>iceberg-core</artifactId>
+          <version>${iceberg.version}</version>
+          <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.httpcomponents.core5</groupId>
+              <artifactId>*</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.httpcomponents.client5</groupId>
+              <artifactId>*</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>com.fasterxml.jackson.core</groupId>
+              <artifactId>*</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>io.airlift</groupId>
+              <artifactId>aircompressor</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.checkerframework</groupId>
+              <artifactId>checker-qual</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+      </dependencies>
     </profile>
 
   </profiles>

@@ -350,6 +350,17 @@ mvn verify -Dparallel-tests -Dprefetch -DtestsThreadCount=8
 mvn verify -Dparallel-tests -Dprefetch -Dscale -DtestsThreadCount=8
 ```
 
+## <a name="java17"></a> Java 17 Tests
+
+This module includes a test source tree which compiles and runs on
+Java 17+ _only_. This is to allow external libraries to be used
+in testing -libraries which have been built on Java 17 and cannot
+be loaded on older versions.
+
+* This source tree is `src/test/java17`.
+* It may depend upon any library is built on Java 17 or later.
+* It is for testing only.
+
 ## <a name="scale"></a> Scale Tests
 
 There are a set of tests designed to measure the scalability and performance
