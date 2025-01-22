@@ -49,12 +49,20 @@ public final class StreamIntegration {
    */
   public static ObjectInputStreamFactory createStreamFactory(final Configuration conf) {
     // choose the default input stream type
+
+    // work out the default stream; this includes looking at the
+    // deprecated prefetch enabled key to see if it is set.
     InputStreamType defaultStream = InputStreamType.DEFAULT_STREAM_TYPE;
     if (conf.getBoolean(PREFETCH_ENABLED_KEY, false)) {
+
+      // prefetch enabled, warn (once) then change it to be the default.
       WARN_PREFETCH_KEY.info("Using {} is deprecated: choose the appropriate stream in {}",
           PREFETCH_ENABLED_KEY, INPUT_STREAM_TYPE);
       defaultStream = InputStreamType.Prefetch;
     }
+
+    // retrieve the enum value, returning the configured value or
+    // the default...then instantiate it.
     return conf.getEnum(INPUT_STREAM_TYPE, defaultStream)
         .factory()
         .apply(conf);

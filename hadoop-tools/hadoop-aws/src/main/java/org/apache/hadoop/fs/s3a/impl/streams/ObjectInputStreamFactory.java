@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a.impl.streams;
 
 import java.io.IOException;
 
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.service.Service;
 
@@ -39,6 +41,14 @@ public interface ObjectInputStreamFactory
     extends Service, StreamCapabilities {
 
   /**
+   * Set extra initialization parameters.
+   * This MUST ONLY be invoked between {@code init()}
+   * and {@code start()}.
+   * @param callbacks extra initialization parameters
+   */
+  void bind(StreamFactoryCallbacks callbacks);
+
+  /**
    * Create a new input stream.
    * There is no requirement to actually contact the store; this is generally done
    * lazily.
@@ -55,5 +65,18 @@ public interface ObjectInputStreamFactory
    */
   StreamThreadOptions threadRequirements();
 
+  /**
+   * Callbacks for stream factories.
+   */
+  interface StreamFactoryCallbacks {
+
+    /**
+     * Get the Async S3Client, raising a failure to create as an IOException.
+     * @param requireCRT is the CRT required.
+     * @return the Async S3 client
+     * @throws IOException failure to create the client.
+     */
+    S3AsyncClient getOrCreateAsyncClient(boolean requireCRT) throws IOException;
+  }
 }
 

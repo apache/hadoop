@@ -84,6 +84,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.RateLimiting;
 import org.apache.hadoop.util.functional.Tuples;
 
@@ -230,12 +231,19 @@ public class S3AStoreImpl
   @Override
   protected void serviceInit(final Configuration conf) throws Exception {
 
+    // create and register the stream factory, which will
+    // then follow the service lifecycle
     objectInputStreamFactory = createStreamFactory(conf);
     addService(objectInputStreamFactory);
 
-    // init all child services
+    // init all child services, including the stream factory
     super.serviceInit(conf);
+
+    // pass down extra information to the stream factory.
+    finishStreamFactoryInit();
   }
+
+
 
   @Override
   protected void serviceStart() throws Exception {
@@ -243,9 +251,8 @@ public class S3AStoreImpl
     initLocalDirAllocator();
   }
 
-
   /**
-   * Return the store capabilities.
+   * Return the store path capabilities.
    * If the object stream factory is non-null, hands off the
    * query to that factory if not handled here.
    * @param path path to query the capability of.
@@ -261,6 +268,7 @@ public class S3AStoreImpl
         return hasCapability(capability);
       }
     }
+
 
   /**
    * Return the capabilities of input streams created
@@ -931,6 +939,25 @@ public class S3AStoreImpl
     return File.createTempFile(prefix, null, dir);
   }
 
+  /*
+   =============== BEGIN ObjectInputStreamFactory ===============
+   */
+
+  /**
+   * All stream factory initialization required after {@code Service.init()},
+   * after all other services have themselves been initialized.
+   */
+  private void finishStreamFactoryInit() {
+    // must be on be invoked during service initialization
+    Preconditions.checkState(isInState(STATE.INITED),
+        "Store is in wrong state: %s", getServiceState());
+    Preconditions.checkState(clientManager.isInState(STATE.INITED),
+        "Client Manager is in wrong state: %s", clientManager.getServiceState());
+
+    // finish initialization and pass down callbacks to self
+    objectInputStreamFactory.bind(new FactoryCallbacks());
+  }
+
   @Override /* ObjectInputStreamFactory */
   public ObjectInputStream readObject(ObjectReadParameters parameters)
       throws IOException {
@@ -942,4 +969,32 @@ public class S3AStoreImpl
   public StreamThreadOptions threadRequirements() {
     return objectInputStreamFactory.threadRequirements();
   }
+
+  /**
+   * This operation is not implemented, as
+   * is this class which invokes it on the actual factory.
+   * @param callbacks factory callbacks.
+   * @throws UnsupportedOperationException always
+   */
+  @Override /* ObjectInputStreamFactory */
+  public void bind(final StreamFactoryCallbacks callbacks) {
+    throw new UnsupportedOperationException("Not supported");
+  }
+
+  /**
+   * Callbacks from {@link ObjectInputStreamFactory} instances.
+   */
+  private class FactoryCallbacks implements StreamFactoryCallbacks {
+
+    @Override
+    public S3AsyncClient getOrCreateAsyncClient(final boolean requireCRT) throws IOException {
+      // Needs support of the CRT before the requireCRT can be used
+      LOG.debug("Stream factory requested async client");
+      return clientManager().getOrCreateAsyncClient();
+    }
+  }
+
+  /*
+   =============== END ObjectInputStreamFactory ===============
+   */
 }

@@ -62,7 +62,7 @@ public class PrefetchingInputStreamFactory extends AbstractObjectInputStreamFact
     long prefetchBlockSizeLong =
         longBytesOption(conf, PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE, 1);
     checkState(prefetchBlockSizeLong < Integer.MAX_VALUE,
-        "S3A prefatch block size exceeds int limit");
+        "S3A prefetch block size exceeds int limit");
     prefetchBlockSize = (int) prefetchBlockSizeLong;
     prefetchBlockCount =
         intOption(conf, PREFETCH_BLOCK_COUNT_KEY, PREFETCH_BLOCK_DEFAULT_COUNT, 1);
@@ -87,4 +87,5 @@ public class PrefetchingInputStreamFactory extends AbstractObjectInputStreamFact
   public StreamThreadOptions threadRequirements() {
     return new StreamThreadOptions(prefetchBlockCount, 0, true, false);
   }
+
 }

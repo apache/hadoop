@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.impl.streams;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
@@ -34,6 +35,33 @@ public abstract class AbstractObjectInputStreamFactory extends AbstractService
     super(name);
   }
 
+  /**
+   * Callbacks.
+   */
+  private StreamFactoryCallbacks callbacks;
+
+  /**
+   * Bind to the callbacks.
+   * <p>
+   * The base class checks service state then stores
+   * the callback interface.
+   * @param factoryCallbacks callbacks needed by the factories.
+   */
+  @Override
+  public void bind(final StreamFactoryCallbacks factoryCallbacks) {
+    // must be on be invoked during service initialization
+    Preconditions.checkState(isInState(STATE.INITED),
+        "Input Stream factory %s is in wrong state: %s",
+        this, getServiceState());
+    this.callbacks = factoryCallbacks;
+  }
+
+  /**
+   * Return base capabilities of all stream factories,
+   * defined what the base ObjectInputStream class does.
+   * @param capability string to query the stream support for.
+   * @return true if implemented
+   */
   @Override
   public boolean hasCapability(final String capability) {
     switch (toLowerCase(capability)) {
@@ -45,4 +73,11 @@ public abstract class AbstractObjectInputStreamFactory extends AbstractService
     }
   }
 
+  /**
+   * Get the factory callbacks.
+   * @return callbacks.
+   */
+  public StreamFactoryCallbacks callbacks() {
+    return callbacks;
+  }
 }
