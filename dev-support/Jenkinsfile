@@ -104,10 +104,10 @@ pipeline {
                     '''
                 }
 
-                dir("${WORKSPACE}/ubuntu-focal") {
+                dir("${WORKSPACE}/ubuntu-jammy") {
                     sh '''#!/usr/bin/env bash
 
-                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/ubuntu-focal
+                    cp -Rp ${WORKSPACE}/src ${WORKSPACE}/ubuntu-jammy
                     '''
                 }
             }
@@ -251,12 +251,12 @@ pipeline {
             }
         }
 
-        // We want to use Ubuntu Focal as our main CI and thus, this stage
+        // We want to use Ubuntu Jammy as our main CI and thus, this stage
         // isn't optional (runs for all the PRs).
-        stage ('precommit-run Ubuntu focal') {
+        stage ('precommit-run Ubuntu jammy') {
             environment {
-                SOURCEDIR = "${WORKSPACE}/ubuntu-focal/src"
-                PATCHDIR = "${WORKSPACE}/ubuntu-focal/out"
+                SOURCEDIR = "${WORKSPACE}/ubuntu-jammy/src"
+                PATCHDIR = "${WORKSPACE}/ubuntu-jammy/out"
                 DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
                 IS_OPTIONAL = 0
             }
@@ -281,8 +281,8 @@ pipeline {
                                               usernameVariable: 'GITHUB_USER')]) {
                             sh '''#!/usr/bin/env bash
 
-                            # Copy the artifacts of Ubuntu focal build to workspace
-                            cp -Rp "${WORKSPACE}/ubuntu-focal/out" "${WORKSPACE}"
+                            # Copy the artifacts of Ubuntu jammy build to workspace
+                            cp -Rp "${WORKSPACE}/ubuntu-jammy/out" "${WORKSPACE}"
 
                             # Send Github status
                             chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"

@@ -1,6 +1,6 @@
 [
-  "ubuntu:focal",
-  "ubuntu:focal::arch64",
+  "ubuntu:jammy",
+  "ubuntu:jammy::arch64",
   "centos:7",
   "centos:8",
   "debian:10"
