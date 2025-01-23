@@ -17,7 +17,7 @@
 # Dockerfile for installing the necessary dependencies for building Hadoop.
 # See BUILDING.txt.
 
-FROM ubuntu:focal
+FROM ubuntu:jammy
 
 WORKDIR /root
 
@@ -45,7 +45,7 @@ RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
 # hadolint ignore=DL3008,SC2046
 RUN apt-get -q update \
     && apt-get -q install -y --no-install-recommends python3 \
-    && apt-get -q install -y --no-install-recommends $(pkg-resolver/resolve.py ubuntu:focal) \
+    && apt-get -q install -y --no-install-recommends $(pkg-resolver/resolve.py ubuntu:jammy) \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -83,11 +83,11 @@ ENV HADOOP_SKIP_YETUS_VERIFICATION true
 # Install packages
 ####
 RUN pkg-resolver/install-common-pkgs.sh
-RUN pkg-resolver/install-spotbugs.sh ubuntu:focal
-RUN pkg-resolver/install-boost.sh ubuntu:focal
-RUN pkg-resolver/install-protobuf.sh ubuntu:focal
-RUN pkg-resolver/install-hadolint.sh ubuntu:focal
-RUN pkg-resolver/install-intel-isa-l.sh ubuntu:focal
+RUN pkg-resolver/install-spotbugs.sh ubuntu:jammy
+RUN pkg-resolver/install-boost.sh ubuntu:jammy
+RUN pkg-resolver/install-protobuf.sh ubuntu:jammy
+RUN pkg-resolver/install-hadolint.sh ubuntu:jammy
+RUN pkg-resolver/install-intel-isa-l.sh ubuntu:jammy
 
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
