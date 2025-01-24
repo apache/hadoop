@@ -2075,6 +2075,12 @@ public class UserGroupInformation {
       }
       return ugi;
     } catch (LoginException le) {
+      String msg = le.getMessage();
+      if (msg != null && msg.contains("invalid null input")) {
+        // This error from the JDK indicates that the OS couldn't map the UID of this process to an
+        // actual user. Throw this as an IOException, because it's not related to Kerberos.
+        throw new IOException(INVALID_UID, le);
+      }
       KerberosAuthException kae =
         new KerberosAuthException(FAILURE_TO_LOGIN, le);
       if (params != null) {
