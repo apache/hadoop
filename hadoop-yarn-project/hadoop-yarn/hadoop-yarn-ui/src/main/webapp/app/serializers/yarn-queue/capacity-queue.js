@@ -83,7 +83,25 @@ export default DS.JSONAPISerializer.extend({
           usedCapacity: payload.usedCapacity,
           absoluteCapacity: 'absoluteCapacity' in payload ? payload.absoluteCapacity : payload.capacity,
           absoluteMaxCapacity: 'absoluteMaxCapacity' in payload ? payload.absoluteMaxCapacity : payload.maxCapacity,
-          absoluteUsedCapacity: 'absoluteUsedCapacity' in payload ? payload.absoluteUsedCapacity : payload.usedCapacity,
+          absoluteUsedCapacity: 'absoluteUsedCapacity' in payload ? payload.absoluteUsedCapacity : payload.usedCapacity
+        };
+      }
+
+      //add here the partitioninfo
+      ///scheduler/schedulerInfo/queues/queue[2]/resources/resourceUsagesByPartition/partitionName
+      //resources.resourceUsagesByPartition[].used.memory
+      var resourcePartitions = [];
+      var resourceUsagesByPartitionMap = {};
+      if ("resources" in payload){
+        resourcePartitions = payload.resources.resourceUsagesByPartition.map(
+          res => res.partitionName || PARTITION_LABEL);
+          resourceUsagesByPartitionMap = payload.resources.resourceUsagesByPartition.reduce((init, res) => {
+          init[res.partitionName || PARTITION_LABEL] = res;
+          return init;
+        }, {});
+      }else{
+        resourceUsagesByPartitionMap[PARTITION_LABEL] = {
+          partitionName: ""
         };
       }
 
@@ -105,15 +123,23 @@ export default DS.JSONAPISerializer.extend({
           normalizedWeight: payload.normalizedWeight,
           creationMethod: payload.creationMethod,
           state: payload.state,
-          orderingPolicy: payload.orderingPolicyInfo,
+          orderingPolicyInfo: payload.orderingPolicyInfo,
           userLimit: payload.userLimit,
           userLimitFactor: payload.userLimitFactor,
           preemptionDisabled: payload.preemptionDisabled,
+          intraQueuePreemptionDisabled: payload.intraQueuePreemptionDisabled,
           numPendingApplications: payload.numPendingApplications,
           numActiveApplications: payload.numActiveApplications,
+          numContainers: payload.numContainers,
+          maxApplications: payload.maxApplications,
+          maxApplicationsPerUser: payload.maxApplicationsPerUser,
+          nodeLabels: payload.nodeLabels,
+          defaultNodeLabelExpression: payload.defaultNodeLabelExpression,
           resources: payload.resources,
+          defaultPriority: payload.defaultPriority,
           partitions: partitions,
           partitionMap: partitionMap,
+          resourceUsagesByPartitionMap: resourceUsagesByPartitionMap,
           type: "capacity",
         },
         // Relationships

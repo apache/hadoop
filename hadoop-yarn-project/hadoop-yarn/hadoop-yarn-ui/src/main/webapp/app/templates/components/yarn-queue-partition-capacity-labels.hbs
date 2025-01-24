@@ -16,59 +16,250 @@
  * limitations under the License.
 }}
 
-<div class="top-1">
-  <span class="yarn-label primary">
-    <span class="label-key">absolute used</span>
-    <span class="label-value">{{data.absoluteUsedCapacity}}%</span>
-  </span>
-  <span class="yarn-label primary">
-    <span class="label-key">absolute capacity</span>
-    <span class="label-value">{{data.absoluteCapacity}}%</span>
-  </span>
-  <span class="yarn-label secondary">
-    <span class="label-key">absolute max capacity</span>
-    <span class="label-value">{{data.absoluteMaxCapacity}}%</span>
-  </span>
-</div>
-{{#if data.isWeightMode}}
-<div class="top-1">
-  <span class="yarn-label secondary">
-    <span class="label-key">weight</span>
-    <span class="label-value">{{data.weight}}</span>
-  </span>
-  <span class="yarn-label secondary">
-    <span class="label-key">normalized weight</span>
-    <span class="label-value">{{data.normalizedWeight}}</span>
-  </span>
-</div>
-{{else}}
-<div class="top-1">
-  <span class="yarn-label secondary">
-    <span class="label-key">configured capacity</span>
+<h4>Queue Status for Partition</h4>
+{{!
+/scheduler/schedulerInfo/queues/queue[1]/resources/resourceUsagesByPartition[2]/used/resourceInformations/resourceInformation[1]/name[text()='memory-mb']
+/scheduler/schedulerInfo/queues/queue[1]/resources/resourceUsagesByPartition[2]/used/resourceInformations/resourceInformation[1]/value/text('2048')
+/scheduler/schedulerInfo/queues/queue[2]/capacities/queueCapacitiesByPartition/usedCapacity[text()='37.883835']
+}}
+<ul>
+  <li class="queues-list">
+    <span class="label-key" title="Used Capacity/Resources: is the total of the resources consumed within the queue for the given partition <memory MB, vCores, %>.
+    The percentage value calculated differently for the DefaultResourceCalculator and for the DominantResourceCalculator."><b>used capacity:</b></span>
+    <span class="label-value"><b>{{data.usedCapacity}}%</b></span>
+    <span class="label-value"><ul>{{#each data.used.resourceInformations.resourceInformation as | resource|}}<li>{{resource.name}}: {{resource.value}}</li>{{/each}}</ul></span>
+  </li>
+
+  {{#if data.isWeightMode}}
+
+    <li class="yarn-list">
+      <span class="label-key" title="Configured Weight">weight:</span>
+      <span class="label-value">{{data.weight}}</span>
+    </li>
+    <li class="yarn-list">
+      <span class="label-key" title="Normalized Weight">normalized weight:</span>
+      <span class="label-value">{{data.normalizedWeight}}</span>
+    </li>
+
+  {{else}}
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[2]/capacities/queueCapacitiesByPartition[2]/capacity[text()='85.44922']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Configured Capacity: percentage = 'configured resources of the queue' / 'total available resources for the partition' * 100">configured capacity:</span>
+      <span class="label-value">{{data.capacity}}%</span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[2]/maxCapacity[text()='100.0']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Configured Max Capacity: percentage = 'configured maximum resources of the queue' / 'total available resources for the partition' * 100">configured max capacity:</span>
+      <span class="label-value">{{data.maxCapacity}}%</span>
+    </li>
+
+  {{/if}}
+
+  {{!
+  /scheduler/schedulerInfo/queues/queue[1]/capacities/queueCapacitiesByPartition[1]/effectiveMinResource/resourceInformations/resourceInformation[1]/name[text()='memory-mb']
+  /scheduler/schedulerInfo/queues/queue[1]/capacities/queueCapacitiesByPartition[1]/effectiveMinResource/resourceInformations/resourceInformation[1]/value[text()='2703']
+  /scheduler/schedulerInfo/queues/queue[1]/capacities/queueCapacitiesByPartition[1].capacity/name[text()='100']
+  }}
+  <li class="yarn-list">
+    <span class="label-key"  title="Effective min capacity">effective capacity:</span>
     <span class="label-value">{{data.capacity}}%</span>
-  </span>
-  <span class="yarn-label secondary">
-    <span class="label-key">configured max capacity</span>
+    <span class="label-value"><ul>{{#each data.effectiveMinResource.resourceInformations.resourceInformation as | resource|}}<li>{{resource.name}}: {{resource.value}}</li>{{/each}}</ul></span>
+  </li>
+
+  {{!
+  /scheduler/schedulerInfo/queues/queue[1]/capacities/queueCapacitiesByPartition[1]/effectiveMaxResource/resourceInformations/resourceInformation[1]/name[text()='memory-mb']
+  /scheduler/schedulerInfo/queues/queue[1]/capacities/queueCapacitiesByPartition[1]/effectiveMaxResource/resourceInformations/resourceInformation[1]/value[text()='2703']
+  /scheduler/schedulerInfo/queues/queue[1]/capacities/queueCapacitiesByPartition[1].maxCapacity/name[text()='100']
+  }}
+  <li class="yarn-list">
+    <span class="label-key"  title="Effective max capacity">effective max capacity:</span>
     <span class="label-value">{{data.maxCapacity}}%</span>
-  </span>
-</div>
-{{/if}}
+    <span class="label-value"><ul> {{#each data.effectiveMaxResource.resourceInformations.resourceInformation as | resource|}}<li>{{resource.name}}: {{resource.value}}</li>{{/each}}</ul></span>
+  </li>
+
+  <li class="yarn-list">
+    <span class="label-key" title="Absolute Used Capacity: percentage referring to the used resources from the total available resources for the partition">absolute used capacity:</span>
+    <span class="label-value">{{data.absoluteUsedCapacity}}%</span>
+  </li>
+
+  {{!
+  /scheduler/schedulerInfo/queues/queue[2]/capacities/queueCapacitiesByPartition[2]/absoluteCapacity[text()='85.44922']
+  }}
+  <li class="yarn-list">
+    <span class="label-key" title="Absolute Configured Capacity: percentage referring to the configured resources from the total available resources for the partition. This value  will be different from the configured capacity only when the parent queue is not the root queue.">absolute configured capacity:</span>
+    <span class="label-value">{{data.absoluteCapacity}}%</span>
+  </li>
+
+  {{!
+  /scheduler/schedulerInfo/queues/queue[2]/absoluteMaxCapacity[text()='100.0']
+  }}
+  <li class="yarn-list">
+    <span class="label-key" title="Absolute Configured Max Capacity: percentage referring to the configured maximum resources from the total available resources for the partition. This value will be different from the configured max capacity only when the parent queue is not the root queue.">absolute configured max capacity:</span>
+    <span class="label-value">{{data.absoluteMaxCapacity}}%</span>
+  </li>
+
+  {{!
+  /scheduler/schedulerInfo/queues/queue[2]/capacities/queueCapacitiesByPartition/maxAMLimitPercentage[text()='10.0']
+  }}
+  <li class="yarn-list">
+    <span class="label-key" title="Configured Max Application Master Limit">configured max application master limit:</span>
+    <span class="label-value">{{data.maxAMLimitPercentage}}%</span>
+  </li>
+
+  {{#if data.isLeafQueue}}
+    {{!
+    /scheduler/schedulerInfo/queues/queue[1]/resources/resourceUsagesByPartition[1]/amLimit/resourceInformations/resourceInformation[1]/name[text()='memory-mb']
+    /scheduler/schedulerInfo/queues/queue[1]/resources/resourceUsagesByPartition[1]/amLimit/resourceInformations/resourceInformation[1]/value[text()='3072']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Max Application Master Resources">max application master resources:</span>
+      <span class="label-value"><ul>{{#each data.amLimit.resourceInformations.resourceInformation as | resource|}}<li>{{resource.name}}: {{resource.value}}</li>{{/each}}</ul></span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[1]/resources/resourceUsagesByPartition[2]/amUsed/resourceInformations/resourceInformation[1]/name[text()='memory-mb']
+    /scheduler/schedulerInfo/queues/queue[1]/resources/resourceUsagesByPartition[2]/amUsed/resourceInformations/resourceInformation[1]/value[text()='1024']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Used Application Master Resources">used application master resources:</span>
+      <span class="label-value"><ul>{{#each data.amUsed.resourceInformations.resourceInformation as | resource|}}<li>{{resource.name}}: {{resource.value}}</li>{{/each}}</ul></span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[1]/resources/resourceUsagesByPartition[2]/userAmLimit/resourceInformations/resourceInformation[1]/name[text()='memory-mb']
+    /scheduler/schedulerInfo/queues/queue[1]/resources/resourceUsagesByPartition[2]/userAmLimit/resourceInformations/resourceInformation[1]/value[text()='0']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Max Application Master Resources Per User">max application master resources per user:</span>
+      <span class="label-value"><ul>{{#each data.userAmLimit.resourceInformations.resourceInformation as | resource|}}<li>{{resource.name}}: {{resource.value}}</li>{{/each}}</ul></span>
+    </li>
+  {{/if}}
+</ul>
+
 {{#if data.isLeafQueue}}
-<div class="top-1">
-  <span class="yarn-label secondary">
-    <span class="label-key">user limit</span>
-    <span class="label-value">{{data.userLimit}}%</span>
-  </span>
-  <span class="yarn-label secondary">
-    <span class="label-key">user limit factor</span>
-    <span class="label-value">{{data.userLimitFactor}}</span>
-  </span>
-</div>
-{{/if}}
-{{#if data.isFlexibleDynamicQueue}}
-<div class="top-1">
-  <span class="yarn-label secondary">
-    <span class="label-key">flexible dynamic queue</span>
-  </span>
-</div>
+  <h4>Queue Status</h4>
+  <ul>
+    {{!
+    /scheduler/schedulerInfo/queues/queue[2]/numActiveApplications[text()='1']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Num Schedulable Applications. Shows the #apps running in the queue regardless of the partition.">num schedulable applications:</span>
+      <span class="label-value">{{data.numActiveApplications}}</span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[2]/numPendingApplications[text()='0']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Non-Schedulable Applications. Shows the #apps pending in the queue regardless of the partition.">num non-schedulable spplications:</span>
+      <span class="label-value">{{data.numPendingApplications}}</span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[2]/numContainers[text()='2']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Number of Containers">num containers:</span>
+      <span class="label-value">{{data.numContainers}}</span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[2]/maxApplications[text()='3299']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Max Applications">max applications:</span>
+      <span class="label-value">{{data.maxApplications}}</span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[2]/maxApplicationsPerUser[text()='3299']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Max Applications Per User">max applications per user:</span>
+      <span class="label-value">{{data.maxApplicationsPerUser}}</span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[2]/userLimitFactor[text()='1.0']
+    }}
+    <li class="yarn-list" title="Configured Minimum User Limit Percent">
+      <span class="label-key">configured minimum user limit percent:</span>
+      <span class="label-value">{{data.userLimit}}%</span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[2]/userLimit[text()='100.0']
+    }}
+    <li class="yarn-list" title="Configured User Limit Factor">
+      <span class="label-key">configured user limit factor:</span>
+      <span class="label-value">{{data.userLimitFactor}}</span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[2]/nodeLabels[text()='*']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Accessible Node Labels">accessible node labels:</span>
+      <span class="label-value">{{data.nodeLabels}}</span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[2]/orderingPolicyInfo[text()='fifo']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Ordering Policy">ordering policy:</span>
+      <span class="label-value">{{data.orderingPolicyInfo}}</span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[2]/preemptionDisabled[text()='false']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Preemption Disabled">preemption disabled:</span>
+      <span class="label-value">{{data.preemptionDisabled}}</span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[2]/intraQueuePreemptionDisabled[text()='true']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Intra-queue Preemption Disabled">intra-queue preemption disabled:</span>
+      <span class="label-value">{{data.intraQueuePreemptionDisabled}}</span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[3]/queues/queue[1]/defaultNodeLabelExpression[text()='exclusive']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Default Node Label Expression:">default node label expression:</span>
+      <span class="label-value">
+            {{#if data.defaultNodeLabelExpression}}
+              {{data.defaultNodeLabelExpression}}
+            {{else}}
+              &lt;DEFAULT_PARTITION&gt;
+            {{/if}}
+      </span>
+    </li>
+
+    {{!
+    /scheduler/schedulerInfo/queues/queue[2]/defaultPriority[text()='0']
+    }}
+    <li class="yarn-list">
+      <span class="label-key" title="Default Application Priority">default application priority:</span>
+      <span class="label-value">{{data.defaultPriority}}</span>
+    </li>
+
+    {{#if data.isFlexibleDynamicQueue}}
+      <li class="yarn-list">
+        <span class="label-key" title="Flexible Dynamic Queue">flexible dynamic queue:</span>
+        <span class="label-value">{{data.isFlexibleDynamicQueue}}</span>
+      </li>
+    {{/if}}
+  </ul>
 {{/if}}

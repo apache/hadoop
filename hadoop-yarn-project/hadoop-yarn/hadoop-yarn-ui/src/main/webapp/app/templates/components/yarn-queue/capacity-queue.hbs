@@ -32,7 +32,7 @@
       </div>
     {{/if}}
 
-    {{yarn-queue-partition-capacity-labels partitionMap=model.selectedQueue.partitionMap queue=model.selectedQueue filteredPartition=filteredPartition}}
+    {{yarn-queue-partition-capacity-labels partitionMap=model.selectedQueue.partitionMap resourceUsagesByPartitionMap=model.selectedQueue.resourceUsagesByPartitionMap queue=model.selectedQueue filteredPartition=filteredPartition}}
   </div>
 
   <h5> Running Apps From All Users in Queue </h5>
