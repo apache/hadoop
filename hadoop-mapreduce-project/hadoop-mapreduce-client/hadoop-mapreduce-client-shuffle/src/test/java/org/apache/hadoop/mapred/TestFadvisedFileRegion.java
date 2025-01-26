@@ -28,8 +28,9 @@ import java.util.Random;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +39,8 @@ public class TestFadvisedFileRegion {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFadvisedFileRegion.class);
   
-  @Test(timeout = 100000)
+  @Test
+  @Timeout(value = 100)
   public void testCustomShuffleTransfer() throws IOException {
     File absLogDir = new File("target", 
         TestFadvisedFileRegion.class.getSimpleName() + 
@@ -84,7 +86,7 @@ public class TestFadvisedFileRegion {
       targetFile = new RandomAccessFile(outFile.getAbsolutePath(), "rw");
       target = targetFile.getChannel();
       
-      Assert.assertEquals(FILE_SIZE, inputFile.length());
+      Assertions.assertEquals(FILE_SIZE, inputFile.length());
       
       //create FadvisedFileRegion
       fileRegion = new FadvisedFileRegion(
@@ -100,8 +102,8 @@ public class TestFadvisedFileRegion {
       }
     
       //assert size
-      Assert.assertEquals(count, (int)pos);
-      Assert.assertEquals(count, targetFile.length());
+      Assertions.assertEquals(count, (int)pos);
+      Assertions.assertEquals(count, targetFile.length());
     } finally {
       if (fileRegion != null) {
         fileRegion.deallocate();
@@ -117,10 +119,10 @@ public class TestFadvisedFileRegion {
     try {
       int total = in.read(buff, 0, count);
     
-      Assert.assertEquals(count, total);
+      Assertions.assertEquals(count, total);
     
       for(int i = 0; i < count; i++) {
-        Assert.assertEquals(initBuff[position+i], buff[i]);
+        Assertions.assertEquals(initBuff[position+i], buff[i]);
       }
     } finally {
       IOUtils.cleanupWithLogger(LOG, in);
@@ -137,21 +139,21 @@ public class TestFadvisedFileRegion {
       FadvisedFileRegion fileRegion, WritableByteChannel target, int count) {
     try {
       fileRegion.customShuffleTransfer(target, -1);
-      Assert.fail("Expected a IllegalArgumentException");
+      Assertions.fail("Expected a IllegalArgumentException");
     } catch (IllegalArgumentException ie) {
       LOG.info("Expected - illegal argument is passed.");
     } catch (Exception e) {
-      Assert.fail("Expected a IllegalArgumentException");
+      Assertions.fail("Expected a IllegalArgumentException");
     }
 
     //test corner cases
     try {
       fileRegion.customShuffleTransfer(target, count + 1);
-      Assert.fail("Expected a IllegalArgumentException");
+      Assertions.fail("Expected a IllegalArgumentException");
     } catch (IllegalArgumentException ie) {
       LOG.info("Expected - illegal argument is passed.");
     } catch (Exception e) {
-      Assert.fail("Expected a IllegalArgumentException");
+      Assertions.fail("Expected a IllegalArgumentException");
     }
   }
 }
