@@ -39,9 +39,10 @@ import org.apache.hadoop.mapred.nativetask.testutil.TestInput;
 import org.apache.hadoop.mapred.nativetask.testutil.TestInput.KV;
 import org.apache.hadoop.util.Progress;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SuppressWarnings({ "rawtypes", "unchecked"})
 public class TestBufferPushPull {
@@ -50,7 +51,7 @@ public class TestBufferPushPull {
   public static int INPUT_KV_COUNT = 1000;
   private KV<BytesWritable, BytesWritable>[] dataInput;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     this.dataInput = TestInput.getMapInputs(INPUT_KV_COUNT);
   }
@@ -70,8 +71,8 @@ public class TestBufferPushPull {
       @Override
       public void write(BytesWritable key, BytesWritable value) throws IOException {
         final KV expect = dataInput[count++];
-        Assert.assertEquals(expect.key.toString(), key.toString());
-        Assert.assertEquals(expect.value.toString(), value.toString());
+        assertEquals(expect.key.toString(), key.toString());
+        assertEquals(expect.value.toString(), value.toString());
       }
     };
 
@@ -130,8 +131,8 @@ public class TestBufferPushPull {
       keyBytes.readFields(key);
       valueBytes.readFields(value);
 
-      Assert.assertEquals(dataInput[count].key.toString(), keyBytes.toString());
-      Assert.assertEquals(dataInput[count].value.toString(), valueBytes.toString());
+      assertEquals(dataInput[count].key.toString(), keyBytes.toString());
+      assertEquals(dataInput[count].value.toString(), valueBytes.toString());
 
       count++;
     }
@@ -178,7 +179,7 @@ public class TestBufferPushPull {
     public void reset() {
       count = 0;
     }
-  };
+  }
 
   public static class NativeHandlerForPull implements NativeDataSource, NativeDataTarget {
 
@@ -274,5 +275,5 @@ public class TestBufferPushPull {
     public Progress getProgress() {
       return null;
     }
-  };
+  }
 }
