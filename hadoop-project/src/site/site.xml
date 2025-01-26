@@ -180,7 +180,6 @@
             href="hadoop-azure-datalake/index.html"/>
       <item name="Tencent COS" href="hadoop-cos/cloud-storage/index.html"/>
       <item name="Huaweicloud OBS" href="hadoop-huaweicloud/index.html"/>
-      <item name="VolcanoEngine TOS" href="hadoop-tos/cloud-storage/index.html"/>
     </menu>
 
     <menu name="Auth" inherit="top">
