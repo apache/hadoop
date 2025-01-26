@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -65,9 +65,9 @@ import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -234,7 +234,7 @@ public class TestTaskImpl {
     
   }
   
-  @Before 
+  @BeforeEach
   @SuppressWarnings("unchecked")
   public void setup() {
      dispatcher = new InlineDispatcher();
@@ -273,7 +273,7 @@ public class TestTaskImpl {
         startCount, metrics, appContext, taskType);
   }
 
-  @After 
+  @AfterEach
   public void teardown() {
     taskAttempts.clear();
   }
@@ -372,7 +372,7 @@ public class TestTaskImpl {
   }
     
   /**
-   * {@link TaskState#KILL_WAIT}
+   * {@link TaskStateInternal#KILL_WAIT}
    */
   private void assertTaskKillWaitState() {
     assertEquals(TaskStateInternal.KILL_WAIT, mockTask.getInternalState());
@@ -407,7 +407,7 @@ public class TestTaskImpl {
   }
 
   @Test
-  /**
+  /*
    * {@link TaskState#NEW}->{@link TaskState#SCHEDULED}
    */
   public void testScheduleTask() {
@@ -418,7 +418,7 @@ public class TestTaskImpl {
   }
   
   @Test 
-  /**
+  /*
    * {@link TaskState#SCHEDULED}->{@link TaskState#KILL_WAIT}
    */
   public void testKillScheduledTask() {
@@ -430,7 +430,7 @@ public class TestTaskImpl {
   }
   
   @Test 
-  /**
+  /*
    * Kill attempt
    * {@link TaskState#SCHEDULED}->{@link TaskState#SCHEDULED}
    */
@@ -445,7 +445,7 @@ public class TestTaskImpl {
   }
   
   @Test 
-  /**
+  /*
    * Launch attempt
    * {@link TaskState#SCHEDULED}->{@link TaskState#RUNNING}
    */
@@ -458,7 +458,7 @@ public class TestTaskImpl {
   }
 
   @Test
-  /**
+  /*
    * Kill running attempt
    * {@link TaskState#RUNNING}->{@link TaskState#RUNNING} 
    */
@@ -475,7 +475,7 @@ public class TestTaskImpl {
 
   @Test
   public void testKillSuccessfulTask() {
-    LOG.info("--- START: testKillSuccesfulTask ---");
+    LOG.info("--- START: testKillSuccessfulTask ---");
     mockTask = createMockTask(TaskType.MAP);
     TaskId taskId = getNewTaskID();
     scheduleTaskAttempt(taskId);
@@ -489,7 +489,7 @@ public class TestTaskImpl {
   }
 
   @Test
-  /**
+  /*
    * Kill map attempt for succeeded map task
    * {@link TaskState#SUCCEEDED}->{@link TaskState#SCHEDULED}
    */
@@ -587,10 +587,10 @@ public class TestTaskImpl {
     mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(), 
         TaskEventType.T_ATTEMPT_SUCCEEDED));
     
-    assertFalse("First attempt should not commit",
-        mockTask.canCommit(taskAttempts.get(0).getAttemptId()));
-    assertTrue("Second attempt should commit",
-        mockTask.canCommit(getLastAttempt().getAttemptId()));
+    assertFalse(
+       mockTask.canCommit(taskAttempts.get(0).getAttemptId()), "First attempt should not commit");
+    assertTrue(
+       mockTask.canCommit(getLastAttempt().getAttemptId()), "Second attempt should commit");
 
     assertTaskSucceededState();
   }
@@ -820,16 +820,16 @@ public class TestTaskImpl {
     assertEquals(3, taskAttempts.size());
 
     // verify the speculative attempt(#2) is not a rescheduled attempt
-    assertEquals(false, taskAttempts.get(1).getRescheduled());
+    assertFalse(taskAttempts.get(1).getRescheduled());
 
     // verify the third attempt is a rescheduled attempt
-    assertEquals(true, taskAttempts.get(2).getRescheduled());
+    assertTrue(taskAttempts.get(2).getRescheduled());
 
     // now launch the latest attempt(#3) and set the internal state to running
     launchTaskAttempt(getLastAttempt().getAttemptId());
 
     // have the speculative attempt(#2) fail, verify task still since it
-    // hasn't reach the max attempts which is 4
+    // hasn't reached the max attempts which is 4
     MockTaskAttemptImpl taskAttempt1 = taskAttempts.get(1);
     taskAttempt1.setState(TaskAttemptState.FAILED);
     mockTask.handle(new TaskTAttemptFailedEvent(taskAttempt1.getAttemptId()));
@@ -879,7 +879,7 @@ public class TestTaskImpl {
     baseAttempt.setProgress(1.0f);
 
     Counters taskCounters = mockTask.getCounters();
-    assertEquals("wrong counters for task", specAttemptCounters, taskCounters);
+    assertEquals(specAttemptCounters, taskCounters, "wrong counters for task");
   }
 
   public static class MockTaskAttemptEventHandler implements EventHandler {
@@ -890,5 +890,5 @@ public class TestTaskImpl {
         lastTaskAttemptEvent = (TaskAttemptEvent)event;
       }
     }
-  };
+  }
 }

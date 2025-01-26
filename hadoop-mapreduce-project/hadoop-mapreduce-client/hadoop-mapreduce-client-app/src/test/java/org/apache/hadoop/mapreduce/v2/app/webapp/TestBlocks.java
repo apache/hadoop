@@ -26,7 +26,7 @@ import java.util.Map;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.yarn.webapp.View;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
 
 import static org.mockito.Mockito.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestBlocks {
   private ByteArrayOutputStream data = new ByteArrayOutputStream();
@@ -125,7 +125,7 @@ public class TestBlocks {
     when(task.getType()).thenReturn(TaskType.MAP);
 
 
-    Map<TaskId, Task> tasks = new HashMap<TaskId, Task>();
+    Map<TaskId, Task> tasks = new HashMap<>();
     tasks.put(taskId, task);
     AppContext ctx = mock(AppContext.class);
     Job job = mock(Job.class);
@@ -174,10 +174,8 @@ public class TestBlocks {
     when(task.getReport()).thenReturn(report);
     when(task.getType()).thenReturn(TaskType.REDUCE);
 
-    Map<TaskId, Task> tasks =
-        new HashMap<TaskId, Task>();
-    Map<TaskAttemptId, TaskAttempt> attempts =
-        new HashMap<TaskAttemptId, TaskAttempt>();
+    Map<TaskId, Task> tasks = new HashMap<>();
+    Map<TaskAttemptId, TaskAttempt> attempts = new HashMap<>();
     TaskAttempt attempt = mock(TaskAttempt.class);
     TaskAttemptId taId = new TaskAttemptIdPBImpl();
     taId.setId(0);
@@ -241,8 +239,7 @@ public class TestBlocks {
     when(reduceTask.getReport()).thenReturn(reduceReport);
     when(reduceTask.getType()).thenReturn(TaskType.REDUCE);
 
-    Map<TaskId, Task> tasks =
-            new HashMap<TaskId, Task>();
+    Map<TaskId, Task> tasks = new HashMap<>();
     tasks.put(mapTaskId, mapTask);
     tasks.put(reduceTaskId, reduceTask);
 
@@ -251,11 +248,11 @@ public class TestBlocks {
     when(appCtx.getJob(any(JobId.class))).thenReturn(job);
 
     // SingleCounter for map task
-    SingleCounterBlockForMapTest blockForMapTest
-            = spy(new SingleCounterBlockForMapTest(appCtx, ctx));
+    SingleCounterBlockForMapTest blockForMapTest =
+        spy(new SingleCounterBlockForMapTest(appCtx, ctx));
     PrintWriter pWriterForMapTest = new PrintWriter(data);
     Block htmlForMapTest = new BlockForTest(new HtmlBlockForTest(),
-            pWriterForMapTest, 0, false);
+        pWriterForMapTest, 0, false);
     blockForMapTest.render(htmlForMapTest);
     pWriterForMapTest.flush();
     assertTrue(data.toString().contains("task_0_0001_m_000000"));
@@ -276,7 +273,7 @@ public class TestBlocks {
   }
 
   private class ConfBlockForTest extends ConfBlock {
-    private final Map<String, String> params = new HashMap<String, String>();
+    private final Map<String, String> params = new HashMap<>();
 
     public void addParameter(String name, String value) {
       params.put(name, value);
@@ -303,7 +300,7 @@ public class TestBlocks {
   }
 
   private class AttemptsBlockForTest extends FewAttemptsBlock {
-    private final Map<String, String> params = new HashMap<String, String>();
+    private final Map<String, String> params = new HashMap<>();
 
     public void addParameter(String name, String value) {
       params.put(name, value);

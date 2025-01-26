@@ -37,15 +37,15 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.SystemClock;
 
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class TestTaskAttemptFinishingMonitor {
 
   @Test
-  public void testFinshingAttemptTimeout()
+  public void testFinishingAttemptTimeout()
       throws IOException, InterruptedException {
     SystemClock clock = SystemClock.getInstance();
     Configuration conf = new Configuration();
@@ -87,7 +87,7 @@ public class TestTaskAttemptFinishingMonitor {
     }
     taskAttemptFinishingMonitor.stop();
 
-    assertTrue("Finishing attempt didn't time out.", eventHandler.timedOut);
+    assertTrue(eventHandler.timedOut, "Finishing attempt didn't time out.");
 
   }
 
@@ -103,6 +103,6 @@ public class TestTaskAttemptFinishingMonitor {
         }
       }
     }
-  };
+  }
 
 }

@@ -79,8 +79,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,10 +92,9 @@ public class TestContainerLauncherImpl {
   private static final RecordFactory recordFactory =
     RecordFactoryProvider.getRecordFactory(null);
 
-  private Map<String, ByteBuffer> serviceResponse =
-      new HashMap<String, ByteBuffer>();
+  private Map<String, ByteBuffer> serviceResponse = new HashMap<>();
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     serviceResponse.clear();
     serviceResponse.put(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
@@ -135,14 +135,14 @@ public class TestContainerLauncherImpl {
       // That the other thread had time to insert the event into the queue and
       // start processing it.  For some reason we were getting interrupted
       // exceptions within eventQueue without this sleep.
-      Thread.sleep(100l);
+      Thread.sleep(100L);
       LOG.debug("POOL SIZE 1: "+this.eventQueue.size()+
           " POOL SIZE 2: "+this.launcherPool.getQueue().size()+
           " ACTIVE COUNT: "+ this.launcherPool.getActiveCount());
       while(!this.eventQueue.isEmpty() || 
           !this.launcherPool.getQueue().isEmpty() || 
           this.launcherPool.getActiveCount() > 0) {
-        Thread.sleep(100l);
+        Thread.sleep(100L);
         LOG.debug("POOL SIZE 1: "+this.eventQueue.size()+
             " POOL SIZE 2: "+this.launcherPool.getQueue().size()+
             " ACTIVE COUNT: "+ this.launcherPool.getActiveCount());
@@ -168,7 +168,8 @@ public class TestContainerLauncherImpl {
     return MRBuilderUtils.newTaskAttemptId(tID, id);
   }
   
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testHandle() throws Exception {
     LOG.info("STARTING testHandle");
     AppContext mockContext = mock(AppContext.class);
@@ -185,8 +186,8 @@ public class TestContainerLauncherImpl {
     ut.init(conf);
     ut.start();
     try {
-      ContainerId contId = makeContainerId(0l, 0, 0, 1);
-      TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
+      ContainerId contId = makeContainerId(0L, 0, 0, 1);
+      TaskAttemptId taskAttemptId = makeTaskAttemptId(0L, 0, 0, TaskType.MAP, 0);
       StartContainersResponse startResp =
         recordFactory.newRecordInstance(StartContainersResponse.class);
       startResp.setAllServicesMetaData(serviceResponse);
@@ -226,7 +227,8 @@ public class TestContainerLauncherImpl {
     }
   }
   
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testOutOfOrder() throws Exception {
     LOG.info("STARTING testOutOfOrder");
     AppContext mockContext = mock(AppContext.class);
@@ -243,8 +245,8 @@ public class TestContainerLauncherImpl {
     ut.init(conf);
     ut.start();
     try {
-      ContainerId contId = makeContainerId(0l, 0, 0, 1);
-      TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
+      ContainerId contId = makeContainerId(0L, 0, 0, 1);
+      TaskAttemptId taskAttemptId = makeTaskAttemptId(0L, 0, 0, TaskType.MAP, 0);
       String cmAddress = "127.0.0.1:8000";
       StartContainersResponse startResp =
         recordFactory.newRecordInstance(StartContainersResponse.class);
@@ -300,7 +302,8 @@ public class TestContainerLauncherImpl {
     }
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testMyShutdown() throws Exception {
     LOG.info("in test Shutdown");
 
@@ -318,8 +321,8 @@ public class TestContainerLauncherImpl {
     ut.init(conf);
     ut.start();
     try {
-      ContainerId contId = makeContainerId(0l, 0, 0, 1);
-      TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
+      ContainerId contId = makeContainerId(0L, 0, 0, 1);
+      TaskAttemptId taskAttemptId = makeTaskAttemptId(0L, 0, 0, TaskType.MAP, 0);
       String cmAddress = "127.0.0.1:8000";
       StartContainersResponse startResp =
         recordFactory.newRecordInstance(StartContainersResponse.class);
@@ -352,7 +355,8 @@ public class TestContainerLauncherImpl {
   }
   
   @SuppressWarnings({ "rawtypes", "unchecked" })
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testContainerCleaned() throws Exception {
     LOG.info("STARTING testContainerCleaned");
     
@@ -373,8 +377,8 @@ public class TestContainerLauncherImpl {
     ut.init(conf);
     ut.start();
     try {
-      ContainerId contId = makeContainerId(0l, 0, 0, 1);
-      TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
+      ContainerId contId = makeContainerId(0L, 0, 0, 1);
+      TaskAttemptId taskAttemptId = makeTaskAttemptId(0L, 0, 0, TaskType.MAP, 0);
       String cmAddress = "127.0.0.1:8000";
       StartContainersResponse startResp =
         recordFactory.newRecordInstance(StartContainersResponse.class);

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -57,7 +57,7 @@ import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -160,7 +160,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
               + JettyUtils.UTF_8, response.getMediaType().toString());
           JSONObject json = response.readEntity(JSONObject.class);
           JSONObject jobState = json.getJSONObject("jobTaskAttemptState");
-          assertEquals("incorrect number of elements", 1, json.length());
+          assertEquals(1, json.length(), "incorrect number of elements");
           assertEquals(att.getState().toString(), jobState.get("state"));
         }
       }
@@ -229,7 +229,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
               + JettyUtils.UTF_8, response.getMediaType().toString());
           JSONObject json = response.readEntity(JSONObject.class);
           JSONObject jobState = json.getJSONObject("jobTaskAttemptState");
-          assertEquals("incorrect number of elements", 1, json.length());
+          assertEquals(1, json.length(), "incorrect number of elements");
           assertEquals(TaskAttemptState.KILLED.toString(), jobState.get("state"));
         }
       }

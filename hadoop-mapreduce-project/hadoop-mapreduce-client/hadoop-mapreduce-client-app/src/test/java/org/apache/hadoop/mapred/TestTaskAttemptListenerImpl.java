@@ -23,10 +23,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -69,12 +69,12 @@ import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
@@ -172,7 +172,7 @@ public class TestTaskAttemptListenerImpl {
     }
   }
 
-  @After
+  @AfterEach
   public void after() throws IOException {
     if (listener != null) {
       listener.close();
@@ -180,13 +180,14 @@ public class TestTaskAttemptListenerImpl {
     }
   }
 
-  @Test  (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testGetTask() throws IOException {
     configureMocks();
     startListener(false);
 
     // Verify ask before registration.
-    //The JVM ID has not been registered yet so we should kill it.
+    //The JVM ID has not been registered yet, so we should kill it.
     JvmContext context = new JvmContext();
 
     context.jvmId = id; 
@@ -220,7 +221,7 @@ public class TestTaskAttemptListenerImpl {
 
     listener.unregister(attemptId, wid);
 
-    // Verify after unregistration.
+    // Verify after un-registration.
     result = listener.getTask(context);
     assertNotNull(result);
     assertTrue(result.shouldDie);
@@ -238,16 +239,18 @@ public class TestTaskAttemptListenerImpl {
 
   }
 
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testJVMId() {
 
     JVMId jvmid = new JVMId("test", 1, true, 2);
     JVMId jvmid1 = JVMId.forName("jvm_test_0001_m_000002");
-    // test compare methot should be the same
+    // test compare method should be the same
     assertEquals(0, jvmid.compareTo(jvmid1));
   }
 
-  @Test (timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testGetMapCompletionEvents() throws IOException {
     TaskAttemptCompletionEvent[] empty = {};
     TaskAttemptCompletionEvent[] taskEvents = {
@@ -312,7 +315,8 @@ public class TestTaskAttemptListenerImpl {
     return tce;
   }
 
-  @Test (timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testCommitWindow() throws IOException {
     SystemClock clock = SystemClock.getInstance();
 
@@ -373,7 +377,7 @@ public class TestTaskAttemptListenerImpl {
 
     TaskAttemptID tid = new TaskAttemptID("12345", 1, TaskType.REDUCE, 1, 0);
 
-    List<Path> partialOut = new ArrayList<Path>();
+    List<Path> partialOut = new ArrayList<>();
     partialOut.add(new Path("/prev1"));
     partialOut.add(new Path("/prev2"));
 
@@ -551,16 +555,13 @@ public class TestTaskAttemptListenerImpl {
     long unregisterTimeout = conf.getLong(MRJobConfig.TASK_EXIT_TIMEOUT,
         MRJobConfig.TASK_EXIT_TIMEOUT_DEFAULT);
     clock.setTime(unregisterTimeout + 1);
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        try {
-          AMFeedback response =
-              tal.statusUpdate(attemptID, firstReduceStatus);
-          return !response.getTaskFound();
-        } catch (Exception e) {
-          throw new RuntimeException("status update failed", e);
-        }
+    GenericTestUtils.waitFor(() -> {
+      try {
+        AMFeedback response =
+            tal.statusUpdate(attemptID, firstReduceStatus);
+        return !response.getTaskFound();
+      } catch (Exception e) {
+        throw new RuntimeException("status update failed", e);
       }
     }, 10, 10000);
   }

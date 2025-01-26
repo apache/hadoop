@@ -21,8 +21,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ClusterStorageCapacityExceededException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.*;
 
@@ -36,7 +36,7 @@ public class TestYarnChild {
   final static private String KILL_LIMIT_EXCEED_CONF_NAME =
       "mapreduce.job.dfs.storage.capacity.kill-limit-exceed";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     task = mock(Task.class);
     umbilical = mock(TaskUmbilicalProtocol.class);

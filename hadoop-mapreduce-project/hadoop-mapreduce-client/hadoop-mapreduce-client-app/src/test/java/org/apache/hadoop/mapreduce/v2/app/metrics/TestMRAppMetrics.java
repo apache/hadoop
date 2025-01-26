@@ -25,14 +25,14 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.*;
 
 public class TestMRAppMetrics {
 
-  @After
+  @AfterEach
   public void tearDown() {
     DefaultMetricsSystem.shutdown();
   }

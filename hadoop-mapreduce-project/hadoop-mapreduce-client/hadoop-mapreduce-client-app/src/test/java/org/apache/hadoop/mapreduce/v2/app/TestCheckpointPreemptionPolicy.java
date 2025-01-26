@@ -22,7 +22,7 @@ import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
@@ -58,8 +58,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestCheckpointPreemptionPolicy {
 
@@ -67,17 +67,15 @@ public class TestCheckpointPreemptionPolicy {
   RMContainerAllocator r;
   JobId jid;
   RunningAppContext mActxt;
-  Set<ContainerId> preemptedContainers = new HashSet<ContainerId>();
-  Map<ContainerId,TaskAttemptId> assignedContainers =
-      new HashMap<ContainerId, TaskAttemptId>();
+  Set<ContainerId> preemptedContainers = new HashSet<>();
+  Map<ContainerId,TaskAttemptId> assignedContainers = new HashMap<>();
   private final RecordFactory recordFactory =
-        RecordFactoryProvider.getRecordFactory(null);
-  HashMap<ContainerId,Resource> contToResourceMap =
-    new HashMap<ContainerId, Resource>();
+      RecordFactoryProvider.getRecordFactory(null);
+  HashMap<ContainerId,Resource> contToResourceMap = new HashMap<>();
 
   private int minAlloc = 1024;
 
-  @Before
+  @BeforeEach
   @SuppressWarnings("rawtypes") // mocked generics
   public void setup() {
     ApplicationId appId = ApplicationId.newInstance(200, 1);
@@ -120,7 +118,7 @@ public class TestCheckpointPreemptionPolicy {
       }
       @Override
       public List<Container> getContainers(TaskType t) {
-        List<Container> p = new ArrayList<Container>();
+        List<Container> p = new ArrayList<>();
         for (Map.Entry<ContainerId,TaskAttemptId> ent :
             assignedContainers.entrySet()) {
           if (ent.getValue().getTaskId().getTaskType().equals(t)) {
@@ -163,7 +161,7 @@ public class TestCheckpointPreemptionPolicy {
 
       @Override
       public List<Container> getContainers(TaskType t) {
-        List<Container> p = new ArrayList<Container>();
+        List<Container> p = new ArrayList<>();
         for (Map.Entry<ContainerId,TaskAttemptId> ent :
             assignedContainers.entrySet()){
           if(ent.getValue().getTaskId().getTaskType().equals(t)){
@@ -227,7 +225,7 @@ public class TestCheckpointPreemptionPolicy {
     CheckpointAMPreemptionPolicy policy, int supposedMemPreemption) {
     Resource effectivelyPreempted = Resource.newInstance(0, 0);
 
-    List<TaskAttemptId> preempting = new ArrayList<TaskAttemptId>();
+    List<TaskAttemptId> preempting = new ArrayList<>();
 
     for (Map.Entry<ContainerId, TaskAttemptId> ent :
         assignedContainers.entrySet()) {
@@ -256,7 +254,7 @@ public class TestCheckpointPreemptionPolicy {
       Resource minimumAllocation, boolean strict) {
 
     Set<ContainerId> currentContPreemption = Collections.unmodifiableSet(
-        new HashSet<ContainerId>(containerToPreempt));
+        new HashSet<>(containerToPreempt));
     containerToPreempt.clear();
     Resource tot = Resource.newInstance(0, 0);
     for(ContainerId c : currentContPreemption){
@@ -285,7 +283,7 @@ public class TestCheckpointPreemptionPolicy {
        pMsg = recordFactory.newRecordInstance(PreemptionMessage.class);
       StrictPreemptionContract pStrict =
           recordFactory.newRecordInstance(StrictPreemptionContract.class);
-      Set<PreemptionContainer> pCont = new HashSet<PreemptionContainer>();
+      Set<PreemptionContainer> pCont = new HashSet<>();
       for (ContainerId cId : allocation.getStrictContainerPreemptions()) {
         PreemptionContainer pc =
             recordFactory.newRecordInstance(PreemptionContainer.class);
@@ -306,15 +304,14 @@ public class TestCheckpointPreemptionPolicy {
       }
       PreemptionContract contract =
           recordFactory.newRecordInstance(PreemptionContract.class);
-      Set<PreemptionContainer> pCont = new HashSet<PreemptionContainer>();
+      Set<PreemptionContainer> pCont = new HashSet<>();
       for (ContainerId cId : allocation.getContainerPreemptions()) {
         PreemptionContainer pc =
             recordFactory.newRecordInstance(PreemptionContainer.class);
         pc.setId(cId);
         pCont.add(pc);
       }
-      List<PreemptionResourceRequest> pRes =
-        new ArrayList<PreemptionResourceRequest>();
+      List<PreemptionResourceRequest> pRes = new ArrayList<>();
       for (ResourceRequest crr : allocation.getResourcePreemptions()) {
         PreemptionResourceRequest prr =
             recordFactory.newRecordInstance(PreemptionResourceRequest.class);

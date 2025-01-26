@@ -37,9 +37,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestAppController {
 
@@ -48,7 +48,7 @@ public class TestAppController {
   private Job job;
   private static final String taskId = "task_01_01_m_01";
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     AppContext context = mock(AppContext.class);
     when(context.getApplicationID()).thenReturn(
@@ -275,8 +275,7 @@ public class TestAppController {
   public void testDownloadConfiguration() {
     appController.downloadConf();
     String jobConfXml = appController.getData();
-    assertTrue("Error downloading the job configuration file.",
-        !jobConfXml.contains("Error"));
+    assertFalse(jobConfXml.contains("Error"), "Error downloading the job configuration file.");
   }
 
   /**

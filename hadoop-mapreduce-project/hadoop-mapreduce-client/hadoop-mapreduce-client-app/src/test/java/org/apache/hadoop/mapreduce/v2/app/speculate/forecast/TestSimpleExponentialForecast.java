@@ -23,8 +23,8 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.yarn.util.ControlledClock;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Testing the statistical model of simple exponential estimator.
@@ -48,7 +48,7 @@ public class TestSimpleExponentialForecast {
     while(progress <= 1.0) {
       clock.tickMsec(clockTicks);
       forecaster.incorporateReading(clock.getTime(), progress);
-      LOG.info("progress: " + progress + " --> " + forecaster.toString());
+      LOG.info("progress: " + progress + " --> " + forecaster);
       progress += 0.005;
     }
 
@@ -69,7 +69,7 @@ public class TestSimpleExponentialForecast {
     while(progress <= 1.0) {
       clock.tickMsec(clockTicks);
       forecaster.incorporateReading(clock.getTime(), progress);
-      LOG.info("progress: " + progress + " --> " + forecaster.toString());
+      LOG.info("progress: " + progress + " --> " + forecaster);
       progress += progressRates[(int)(progress / 0.25)];
     }
 
@@ -90,7 +90,7 @@ public class TestSimpleExponentialForecast {
     while(progress <= 1.0) {
       clock.tickMsec(clockTicks);
       forecaster.incorporateReading(clock.getTime(), progress);
-      LOG.info("progress: " + progress + " --> " + forecaster.toString());
+      LOG.info("progress: " + progress + " --> " + forecaster);
       int currInd = progressInd++ > 1000 ? 4 : (int)(progress / 0.25);
       progress += progressRates[currInd];
     }
@@ -101,21 +101,21 @@ public class TestSimpleExponentialForecast {
   @Test
   public void testSimpleExponentialForecastLinearInc() throws Exception {
     int res = incTestSimpleExponentialForecast();
-    Assert.assertEquals("We got the wrong estimate from simple exponential.",
-        res, 0);
+    Assertions.assertEquals(
+       res, 0, "We got the wrong estimate from simple exponential.");
   }
 
   @Test
   public void testSimpleExponentialForecastLinearDec() throws Exception {
     int res = decTestSimpleExponentialForecast();
-    Assert.assertEquals("We got the wrong estimate from simple exponential.",
-        res, 0);
+    Assertions.assertEquals(
+       res, 0, "We got the wrong estimate from simple exponential.");
   }
 
   @Test
   public void testSimpleExponentialForecastZeros() throws Exception {
     int res = zeroTestSimpleExponentialForecast();
-    Assert.assertEquals("We got the wrong estimate from simple exponential.",
-        res, 0);
+    Assertions.assertEquals(
+       res, 0, "We got the wrong estimate from simple exponential.");
   }
 }

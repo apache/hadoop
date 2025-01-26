@@ -56,7 +56,8 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.event.Level;
 
 public class MRAppBenchmark {
@@ -121,8 +122,7 @@ public class MRAppBenchmark {
         implements ContainerAllocator, RMHeartbeatHandler {
       private int containerCount;
       private Thread thread;
-      private BlockingQueue<ContainerAllocatorEvent> eventQueue =
-        new LinkedBlockingQueue<ContainerAllocatorEvent>();
+      private BlockingQueue<ContainerAllocatorEvent> eventQueue = new LinkedBlockingQueue<>();
       public ThrottledContainerAllocator() {
         super("ThrottledContainerAllocator");
       }
@@ -136,40 +136,36 @@ public class MRAppBenchmark {
       }
       @Override
       protected void serviceStart() throws Exception {
-        thread = new Thread(new Runnable() {
-          @Override
-          @SuppressWarnings("unchecked")
-          public void run() {
-            ContainerAllocatorEvent event = null;
-            while (!Thread.currentThread().isInterrupted()) {
-              try {
-                if (concurrentRunningTasks < maxConcurrentRunningTasks) {
-                  event = eventQueue.take();
-                  ContainerId cId =
-                      ContainerId.newContainerId(getContext()
-                        .getApplicationAttemptId(), containerCount++);
+        thread = new Thread(() -> {
+          ContainerAllocatorEvent event;
+          while (!Thread.currentThread().isInterrupted()) {
+            try {
+              if (concurrentRunningTasks < maxConcurrentRunningTasks) {
+                event = eventQueue.take();
+                ContainerId cId =
+                    ContainerId.newContainerId(getContext()
+                      .getApplicationAttemptId(), containerCount++);
 
-                  //System.out.println("Allocating " + containerCount);
-                  
-                  Container container = 
-                      recordFactory.newRecordInstance(Container.class);
-                  container.setId(cId);
-                  NodeId nodeId = NodeId.newInstance("dummy", 1234);
-                  container.setNodeId(nodeId);
-                  container.setContainerToken(null);
-                  container.setNodeHttpAddress("localhost:8042");
-                  getContext().getEventHandler()
-                      .handle(
-                      new TaskAttemptContainerAssignedEvent(event
-                          .getAttemptID(), container, null));
-                  concurrentRunningTasks++;
-                } else {
-                  Thread.sleep(1000);
-                }
-              } catch (InterruptedException e) {
-                System.out.println("Returning, interrupted");
-                return;
+                //System.out.println("Allocating " + containerCount);
+
+                Container container =
+                    recordFactory.newRecordInstance(Container.class);
+                container.setId(cId);
+                NodeId nodeId = NodeId.newInstance("dummy", 1234);
+                container.setNodeId(nodeId);
+                container.setContainerToken(null);
+                container.setNodeHttpAddress("localhost:8042");
+                getContext().getEventHandler()
+                    .handle(
+                    new TaskAttemptContainerAssignedEvent(event
+                        .getAttemptID(), container, null));
+                concurrentRunningTasks++;
+              } else {
+                Thread.sleep(1000);
               }
+            } catch (InterruptedException e) {
+              System.out.println("Returning, interrupted");
+              return;
             }
           }
         });
@@ -196,7 +192,8 @@ public class MRAppBenchmark {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void benchmark1() throws Exception {
     int maps = 100; // Adjust for benchmarking. Start with thousands.
     int reduces = 0;
@@ -243,7 +240,7 @@ public class MRAppBenchmark {
                 AllocateResponse response =
                     Records.newRecord(AllocateResponse.class);
                 List<ResourceRequest> askList = request.getAskList();
-                List<Container> containers = new ArrayList<Container>();
+                List<Container> containers = new ArrayList<>();
                 for (ResourceRequest req : askList) {
                   if (!ResourceRequest.isAnyLocation(req.getResourceName())) {
                     continue;
@@ -275,7 +272,8 @@ public class MRAppBenchmark {
     });
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void benchmark2() throws Exception {
     int maps = 100; // Adjust for benchmarking, start with a couple of thousands
     int reduces = 50;

@@ -55,12 +55,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.NMToken;
-import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -69,8 +65,8 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 public class TestLocalContainerAllocator {
@@ -90,7 +86,7 @@ public class TestLocalContainerAllocator {
     lca.start();
     try {
       lca.heartbeat();
-      Assert.fail("heartbeat was supposed to throw");
+      Assertions.fail("heartbeat was supposed to throw");
     } catch (YarnException e) {
       // YarnException is expected
     } finally {
@@ -104,7 +100,7 @@ public class TestLocalContainerAllocator {
     lca.start();
     try {
       lca.heartbeat();
-      Assert.fail("heartbeat was supposed to throw");
+      Assertions.fail("heartbeat was supposed to throw");
     } catch (YarnRuntimeException e) {
       // YarnRuntimeException is expected
     } finally {
@@ -134,10 +130,10 @@ public class TestLocalContainerAllocator {
         ApplicationId.newInstance(1, 1), 1);
     AMRMTokenIdentifier oldTokenId = new AMRMTokenIdentifier(attemptId, 1);
     AMRMTokenIdentifier newTokenId = new AMRMTokenIdentifier(attemptId, 2);
-    Token<AMRMTokenIdentifier> oldToken = new Token<AMRMTokenIdentifier>(
-        oldTokenId.getBytes(), "oldpassword".getBytes(), oldTokenId.getKind(),
-        new Text());
-    Token<AMRMTokenIdentifier> newToken = new Token<AMRMTokenIdentifier>(
+    Token<AMRMTokenIdentifier> oldToken = new Token<>(
+            oldTokenId.getBytes(), "oldpassword".getBytes(), oldTokenId.getKind(),
+            new Text());
+    Token<AMRMTokenIdentifier> newToken = new Token<>(
         newTokenId.getBytes(), "newpassword".getBytes(), newTokenId.getKind(),
         new Text());
 
@@ -152,12 +148,9 @@ public class TestLocalContainerAllocator {
     UserGroupInformation testUgi = UserGroupInformation.createUserForTesting(
         "someuser", new String[0]);
     testUgi.addToken(oldToken);
-    testUgi.doAs(new PrivilegedExceptionAction<Void>() {
-          @Override
-          public Void run() throws Exception {
-            lca.heartbeat();
-            return null;
-          }
+    testUgi.doAs((PrivilegedExceptionAction<Void>) () -> {
+      lca.heartbeat();
+      return null;
     });
     lca.close();
 
@@ -172,14 +165,14 @@ public class TestLocalContainerAllocator {
       }
     }
 
-    Assert.assertEquals("too many AMRM tokens", 1, tokenCount);
-    Assert.assertArrayEquals("token identifier not updated",
-        newToken.getIdentifier(), ugiToken.getIdentifier());
-    Assert.assertArrayEquals("token password not updated",
-        newToken.getPassword(), ugiToken.getPassword());
-    Assert.assertEquals("AMRM token service not updated",
-        new Text(ClientRMProxy.getAMRMTokenService(conf)),
-        ugiToken.getService());
+    Assertions.assertEquals(1, tokenCount, "too many AMRM tokens");
+    Assertions.assertArrayEquals(
+       newToken.getIdentifier(), ugiToken.getIdentifier(), "token identifier not updated");
+    Assertions.assertArrayEquals(
+       newToken.getPassword(), ugiToken.getPassword(), "token password not updated");
+    Assertions.assertEquals(
+       new Text(ClientRMProxy.getAMRMTokenService(conf))
+,         ugiToken.getService(), "AMRM token service not updated");
   }
 
   @Test
@@ -202,7 +195,7 @@ public class TestLocalContainerAllocator {
     verify(eventHandler, times(1)).handle(containerAssignedCaptor.capture());
     Container container = containerAssignedCaptor.getValue().getContainer();
     Resource containerResource = container.getResource();
-    Assert.assertNotNull(containerResource);
+    Assertions.assertNotNull(containerResource);
     assertThat(containerResource.getMemorySize()).isEqualTo(0);
     assertThat(containerResource.getVirtualCores()).isEqualTo(0);
   }
@@ -282,8 +275,8 @@ public class TestLocalContainerAllocator {
     @Override
     public AllocateResponse allocate(AllocateRequest request)
         throws YarnException, IOException {
-      Assert.assertEquals("response ID mismatch",
-          responseId, request.getResponseId());
+      Assertions.assertEquals(
+         responseId, request.getResponseId(), "response ID mismatch");
       ++responseId;
       org.apache.hadoop.yarn.api.records.Token yarnToken = null;
       if (amToken != null) {
@@ -292,13 +285,13 @@ public class TestLocalContainerAllocator {
             amToken.getPassword(), amToken.getService().toString());
       }
       AllocateResponse response = AllocateResponse.newInstance(responseId,
-          Collections.<ContainerStatus>emptyList(),
-          Collections.<Container>emptyList(),
-          Collections.<NodeReport>emptyList(),
+          Collections.emptyList(),
+          Collections.emptyList(),
+          Collections.emptyList(),
           Resources.none(), null, 1, null,
-          Collections.<NMToken>emptyList(),
+          Collections.emptyList(),
           yarnToken,
-          Collections.<UpdatedContainer>emptyList());
+          Collections.emptyList());
       response.setApplicationPriority(Priority.newInstance(0));
       return response;
     }

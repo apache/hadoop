@@ -24,7 +24,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.TaskAttemptListenerImpl;
@@ -48,7 +48,7 @@ import org.apache.hadoop.mapreduce.v2.app.rm.preemption.AMPreemptionPolicy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy.ContainerManagementProtocolProxyData;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the state machine with respect to Job/Task/TaskAttempt failure 
@@ -68,20 +68,20 @@ public class TestFail {
     Job job = app.submit(conf);
     app.waitForState(job, JobState.SUCCEEDED);
     Map<TaskId,Task> tasks = job.getTasks();
-    Assert.assertEquals("Num tasks is not correct", 1, tasks.size());
+    Assertions.assertEquals(1, tasks.size(), "Num tasks is not correct");
     Task task = tasks.values().iterator().next();
-    Assert.assertEquals("Task state not correct", TaskState.SUCCEEDED,
-        task.getReport().getTaskState());
+    Assertions.assertEquals(TaskState.SUCCEEDED
+,         task.getReport().getTaskState(), "Task state not correct");
     Map<TaskAttemptId, TaskAttempt> attempts =
         tasks.values().iterator().next().getAttempts();
-    Assert.assertEquals("Num attempts is not correct", 2, attempts.size());
+    Assertions.assertEquals(2, attempts.size(), "Num attempts is not correct");
     //one attempt must be failed 
     //and another must have succeeded
     Iterator<TaskAttempt> it = attempts.values().iterator();
-    Assert.assertEquals("Attempt state not correct", TaskAttemptState.FAILED,
-        it.next().getReport().getTaskAttemptState());
-    Assert.assertEquals("Attempt state not correct", TaskAttemptState.SUCCEEDED,
-        it.next().getReport().getTaskAttemptState());
+    Assertions.assertEquals(TaskAttemptState.FAILED
+,         it.next().getReport().getTaskAttemptState(), "Attempt state not correct");
+    Assertions.assertEquals(TaskAttemptState.SUCCEEDED
+,         it.next().getReport().getTaskAttemptState(), "Attempt state not correct");
   }
 
   @Test
@@ -159,17 +159,17 @@ public class TestFail {
     Job job = app.submit(conf);
     app.waitForState(job, JobState.FAILED);
     Map<TaskId,Task> tasks = job.getTasks();
-    Assert.assertEquals("Num tasks is not correct", 1, tasks.size());
+    Assertions.assertEquals(1, tasks.size(), "Num tasks is not correct");
     Task task = tasks.values().iterator().next();
-    Assert.assertEquals("Task state not correct", TaskState.FAILED,
-        task.getReport().getTaskState());
+    Assertions.assertEquals(TaskState.FAILED
+,         task.getReport().getTaskState(), "Task state not correct");
     Map<TaskAttemptId, TaskAttempt> attempts =
         tasks.values().iterator().next().getAttempts();
-    Assert.assertEquals("Num attempts is not correct", maxAttempts,
-        attempts.size());
+    Assertions.assertEquals(maxAttempts
+,         attempts.size(), "Num attempts is not correct");
     for (TaskAttempt attempt : attempts.values()) {
-      Assert.assertEquals("Attempt state not correct", TaskAttemptState.FAILED,
-          attempt.getReport().getTaskAttemptState());
+      Assertions.assertEquals(TaskAttemptState.FAILED
+,           attempt.getReport().getTaskAttemptState(), "Attempt state not correct");
     }
   }
 
@@ -185,13 +185,13 @@ public class TestFail {
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
     Map<TaskId, Task> tasks = job.getTasks();
-    Assert.assertEquals("Num tasks is not correct", 1, tasks.size());
+    Assertions.assertEquals(1, tasks.size(), "Num tasks is not correct");
     Task task = tasks.values().iterator().next();
     app.waitForState(task, TaskState.SCHEDULED);
     Map<TaskAttemptId, TaskAttempt> attempts = tasks.values().iterator()
         .next().getAttempts();
-    Assert.assertEquals("Num attempts is not correct", maxAttempts, attempts
-        .size());
+    Assertions.assertEquals(maxAttempts, attempts
+        .size(), "Num attempts is not correct");
     TaskAttempt attempt = attempts.values().iterator().next();
     app.waitForInternalState((TaskAttemptImpl) attempt,
         TaskAttemptStateInternal.ASSIGNED);
@@ -204,7 +204,7 @@ public class TestFail {
   static class MRAppWithFailingTaskAndUnusedContainer extends MRApp {
 
     public MRAppWithFailingTaskAndUnusedContainer() {
-      super(1, 0, false, "TaskFailWithUnsedContainer", true);
+      super(1, 0, false, "TaskFailWithUnusedContainer", true);
     }
 
     @Override
@@ -241,7 +241,7 @@ public class TestFail {
           return null;
         }
       };
-    };
+    }
   }
 
   static class TimeOutTaskMRApp extends MRApp {
@@ -258,17 +258,17 @@ public class TestFail {
       //leading to Attempt failure
       return new TaskAttemptListenerImpl(getContext(), null, null, policy) {
         @Override
-        public void startRpcServer(){};
+        public void startRpcServer(){}
         @Override
-        public void stopRpcServer(){};
+        public void stopRpcServer(){}
         @Override
         public InetSocketAddress getAddress() {
           return NetUtils.createSocketAddr("localhost", 1234);
         }
 
         protected void serviceInit(Configuration conf) throws Exception {
-          conf.setInt(MRJobConfig.TASK_TIMEOUT, 1*1000);//reduce timeout
-          conf.setInt(MRJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 1*1000);
+          conf.setInt(MRJobConfig.TASK_TIMEOUT, 1000);//reduce timeout
+          conf.setInt(MRJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 1000);
           conf.setDouble(MRJobConfig.TASK_LOG_PROGRESS_DELTA_THRESHOLD, 0.01);
           super.serviceInit(conf);
         }

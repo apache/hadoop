@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 
 import java.io.File;
@@ -57,8 +57,8 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -69,7 +69,7 @@ import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 /**
  * Test the app master web service Rest API for getting the job conf. This
- * requires created a temporary configuration file.
+ * requires to be created a temporary configuration file.
  *
  *   /ws/v1/mapreduce/job/{jobid}/conf
  */
@@ -136,7 +136,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
     testConfDir.mkdir();
   }
 
-  @AfterClass
+  @AfterAll
   static public void stop() {
     FileUtil.fullyDelete(testConfDir);
   }
@@ -154,7 +154,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
       JSONObject json = response.readEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("conf");
       verifyAMJobConf(info, jobsMap.get(id));
     }
@@ -172,7 +172,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
       JSONObject json = response.readEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("conf");
       verifyAMJobConf(info, jobsMap.get(id));
     }
@@ -190,7 +190,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
           response.getMediaType().toString());
       JSONObject json = response.readEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("conf");
       verifyAMJobConf(info, jobsMap.get(id));
     }
@@ -221,7 +221,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
 
   public void verifyAMJobConf(JSONObject info, Job job) throws JSONException {
 
-    assertEquals("incorrect number of elements", 2, info.length());
+    assertEquals(2, info.length(), "incorrect number of elements");
 
     WebServicesTestUtils.checkStringMatch("path", job.getConfFile().toString(),
         info.getString("path"));
@@ -232,14 +232,14 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
       JSONObject prop = properties.getJSONObject(i);
       String name = prop.getString("name");
       String value = prop.getString("value");
-      assertTrue("name not set", (name != null && !name.isEmpty()));
-      assertTrue("value not set", (value != null && !value.isEmpty()));
+      assertTrue((name != null && !name.isEmpty()), "name not set");
+      assertTrue((value != null && !value.isEmpty()), "value not set");
     }
   }
 
   public void verifyAMJobConfXML(NodeList nodes, Job job) {
 
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
 
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
@@ -252,11 +252,11 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
 
       for (int j = 0; j < properties.getLength(); j++) {
         Element property = (Element) properties.item(j);
-        assertNotNull("should have counters in the web service info", property);
+        assertNotNull(property, "should have counters in the web service info");
         String name = WebServicesTestUtils.getXmlString(property, "name");
         String value = WebServicesTestUtils.getXmlString(property, "value");
-        assertTrue("name not set", (name != null && !name.isEmpty()));
-        assertTrue("name not set", (value != null && !value.isEmpty()));
+        assertTrue((name != null && !name.isEmpty()), "name not set");
+        assertTrue((value != null && !value.isEmpty()), "name not set");
       }
     }
   }

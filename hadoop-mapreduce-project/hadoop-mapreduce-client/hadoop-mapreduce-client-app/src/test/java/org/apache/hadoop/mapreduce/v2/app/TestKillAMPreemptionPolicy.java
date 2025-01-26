@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestKillAMPreemptionPolicy {
   private final RecordFactory recordFactory = RecordFactoryProvider
@@ -64,7 +64,7 @@ public class TestKillAMPreemptionPolicy {
     when(mPctxt.getTaskAttempt(any(ContainerId.class))).thenReturn(
         MRBuilderUtils.newTaskAttemptId(MRBuilderUtils.newTaskId(
             MRBuilderUtils.newJobId(appId, 1), 1, TaskType.MAP), 0));
-    List<Container> p = new ArrayList<Container>();
+    List<Container> p = new ArrayList<>();
     p.add(Container.newInstance(container, null, null, null, null, null));
     when(mPctxt.getContainers(any(TaskType.class))).thenReturn(p);
 
@@ -123,7 +123,7 @@ public class TestKillAMPreemptionPolicy {
       boolean contract, final ContainerId container) {
     PreemptionMessage preemptionMessage = recordFactory
         .newRecordInstance(PreemptionMessage.class);
-    Set<PreemptionContainer> cntrs = new HashSet<PreemptionContainer>();
+    Set<PreemptionContainer> cntrs = new HashSet<>();
     PreemptionContainer preemptContainer = recordFactory
         .newRecordInstance(PreemptionContainer.class);
     preemptContainer.setId(container);
