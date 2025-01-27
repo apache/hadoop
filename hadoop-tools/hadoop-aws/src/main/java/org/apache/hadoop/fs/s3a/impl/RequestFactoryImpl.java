@@ -543,10 +543,9 @@ public class RequestFactoryImpl implements RequestFactory {
     Map<String, String> optionHeaders = putOptions.getHeaders();
     requestBuilder = CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
             .multipartUpload(CompletedMultipartUpload.builder().parts(partETags).build());
-    if (putOptions.isconditionalPutEnabled()){
-      requestBuilder = CompleteMultipartUploadRequest.builder().overrideConfiguration(
-              override ->override.putHeader(IF_NONE_MATCH, optionHeaders.get(IF_NONE_MATCH)));
-
+    if (putOptions.isconditionalPutEnabled()) {
+      requestBuilder.overrideConfiguration(
+              override -> override.putHeader(IF_NONE_MATCH, optionHeaders.get(IF_NONE_MATCH)));
     }
 
     return prepareRequest(requestBuilder);

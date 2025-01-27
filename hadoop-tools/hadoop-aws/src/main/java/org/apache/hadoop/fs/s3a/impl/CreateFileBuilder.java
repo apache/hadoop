@@ -130,7 +130,6 @@ public class CreateFileBuilder extends
         .filter(key -> key.startsWith(headerPrefix) && key.length() > prefixLen)
         .forEach(key -> headers.put(key.substring(prefixLen), options.get(key)));
 
-
     EnumSet<CreateFlag> flags = getFlags();
     if (flags.contains(CreateFlag.APPEND)) {
       throw new UnsupportedOperationException("Append is not supported");
@@ -150,7 +149,6 @@ public class CreateFileBuilder extends
         path,
         getProgress(),
         new CreateFileOptions(flags, isRecursive(), performance, conditionalCreate, headers));
-
   }
 
   /**

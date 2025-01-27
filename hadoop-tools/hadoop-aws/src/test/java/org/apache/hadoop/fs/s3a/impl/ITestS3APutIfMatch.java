@@ -28,23 +28,21 @@ import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.io.IOUtils;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Test;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
-import java.nio.file.AccessDeniedException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
-import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_ARRAY;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CONDITIONAL_FILE_CREATE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_NONE_MATCH;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.scale.S3AScaleTestBase._1MB;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -101,23 +99,25 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
             Path path,
             byte[] data,
             String ifMatchTag) throws Exception {
-          FSDataOutputStreamBuilder builder = fs.createFile(path);
-          builder.must(FS_S3A_CONDITIONAL_FILE_CREATE, ifMatchTag);
-          FSDataOutputStream stream = builder.create().build();
-          if (data != null && data.length > 0) {
-              stream.write(data);
-          }
-          stream.close();
-          IOUtils.closeStream(stream);
+        FSDataOutputStreamBuilder builder = fs.createFile(path);
+        builder.must(FS_S3A_CONDITIONAL_FILE_CREATE, "true");
+        builder.opt(FS_S3A_CREATE_HEADER + "." + IF_NONE_MATCH, ifMatchTag);
+        FSDataOutputStream stream = builder.create().build();
+        if (data != null && data.length > 0) {
+            stream.write(data);
+        }
+        stream.close();
+        IOUtils.closeStream(stream);
     }
 
     @Test
     public void testPutIfAbsentConflict() throws Throwable {
         FileSystem fs = getFileSystem();
         Path testFile = methodPath();
-
         fs.mkdirs(testFile.getParent());
         byte[] fileBytes = dataset(TEST_FILE_LEN, 0, 255);
+
+        createFileWithIfNoneMatchFlag(fs, testFile, fileBytes, "*");
 
         RemoteFileChangedException firstException = intercept(RemoteFileChangedException.class,
                 () -> createFileWithIfNoneMatchFlag(fs, testFile, fileBytes, "*"));
@@ -137,6 +137,8 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
         // enough bytes for Multipart Upload
         byte[] fileBytes = dataset(6 * _1MB, 'a', 'z' - 'a');
 
+        createFileWithIfNoneMatchFlag(fs, testFile, fileBytes, "*");
+
         RemoteFileChangedException firstException = intercept(RemoteFileChangedException.class,
                 () -> createFileWithIfNoneMatchFlag(fs, testFile, fileBytes, "*"));
         assertS3ExceptionStatusCode(412, firstException);
@@ -144,6 +146,5 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
         RemoteFileChangedException secondException = intercept(RemoteFileChangedException.class,
                 () -> createFileWithIfNoneMatchFlag(fs, testFile, fileBytes, "*"));
         assertS3ExceptionStatusCode(412, secondException);
-
     }
 }
