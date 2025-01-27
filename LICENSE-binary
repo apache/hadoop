@@ -395,7 +395,7 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/d3-3.5.17.min.js
 leveldb v1.13
 
 com.google.protobuf:protobuf-java:2.5.0
-com.google.protobuf:protobuf-java:3.25.3
+com.google.protobuf:protobuf-java:3.25.5
 com.google.re2j:re2j:1.1
 com.jcraft:jsch:0.1.55
 com.thoughtworks.paranamer:paranamer:2.3
