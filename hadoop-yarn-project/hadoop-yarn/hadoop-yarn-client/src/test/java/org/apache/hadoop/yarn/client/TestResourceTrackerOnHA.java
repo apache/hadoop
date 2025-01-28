@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -33,10 +33,10 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 public class TestResourceTrackerOnHA extends ProtocolHATestBase {
@@ -46,13 +46,13 @@ public class TestResourceTrackerOnHA extends ProtocolHATestBase {
   @Rule
   public Timeout timeout = new Timeout(180, TimeUnit.SECONDS);
 
-  @Before
+  @BeforeEach
   public void initiate() throws Exception {
     startHACluster(0, false, true, false);
     this.resourceTracker = getRMClient();
   }
 
-  @After
+  @AfterEach
   public void shutDown() {
     if(this.resourceTracker != null) {
       RPC.stopProxy(this.resourceTracker);
@@ -69,7 +69,7 @@ public class TestResourceTrackerOnHA extends ProtocolHATestBase {
         RegisterNodeManagerRequest.newInstance(nodeId, 0, resource,
             YarnVersionInfo.getVersion(), null, null);
     resourceTracker.registerNodeManager(request);
-    Assert.assertTrue(waitForNodeManagerToConnect(200, nodeId));
+    Assertions.assertTrue(waitForNodeManagerToConnect(200, nodeId));
 
     // restart the failover thread, and make sure nodeHeartbeat works
     failoverThread = createAndStartFailoverThread();

@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.ServiceOperations;
@@ -60,8 +60,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 
 public class TestNMClientAsync {
@@ -89,12 +90,13 @@ public class TestNMClientAsync {
     }
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     ServiceOperations.stop(asyncClient);
   }
 
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testNMClientAsync() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(YarnConfiguration.NM_CLIENT_ASYNC_THREAD_POOL_MAX_SIZE, 10);
@@ -105,8 +107,8 @@ public class TestNMClientAsync {
 
     asyncClient = new MockNMClientAsync1(expectedSuccess, expectedFailure);
     asyncClient.init(conf);
-    Assert.assertEquals("The max thread pool size is not correctly set",
-        10, asyncClient.maxThreadPoolSize);
+    Assertions.assertEquals(
+       10, asyncClient.maxThreadPoolSize, "The max thread pool size is not correctly set");
     asyncClient.start();
 
 
@@ -149,25 +151,25 @@ public class TestNMClientAsync {
             .errorMsgs) {
       System.out.println(errorMsg);
     }
-    Assert.assertEquals("Error occurs in CallbackHandler", 0,
-        ((TestCallbackHandler1) asyncClient.getCallbackHandler())
-            .errorMsgs.size());
+    Assertions.assertEquals(0
+,         ((TestCallbackHandler1) asyncClient.getCallbackHandler())
+            .errorMsgs.size(), "Error occurs in CallbackHandler");
     for (String errorMsg : ((MockNMClientAsync1) asyncClient).errorMsgs) {
       System.out.println(errorMsg);
     }
-    Assert.assertEquals("Error occurs in ContainerEventProcessor", 0,
-        ((MockNMClientAsync1) asyncClient).errorMsgs.size());
+    Assertions.assertEquals(0
+,         ((MockNMClientAsync1) asyncClient).errorMsgs.size(), "Error occurs in ContainerEventProcessor");
     // When the callback functions are all executed, the event processor threads
     // may still not terminate and the containers may still not removed.
     while (asyncClient.containers.size() > 0) {
       Thread.sleep(10);
     }
     asyncClient.stop();
-    Assert.assertFalse(
-        "The thread of Container Management Event Dispatcher is still alive",
-        asyncClient.eventDispatcherThread.isAlive());
-    Assert.assertTrue("The thread pool is not shut down",
-        asyncClient.threadPool.isShutdown());
+    Assertions.assertFalse(
+    
+       asyncClient.eventDispatcherThread.isAlive(), "The thread of Container Management Event Dispatcher is still alive");
+    Assertions.assertTrue(
+       asyncClient.threadPool.isShutdown(), "The thread pool is not shut down");
   }
 
   private class MockNMClientAsync1 extends NMClientAsyncImpl {
@@ -697,7 +699,7 @@ public class TestNMClientAsync {
 
     private void assertAtomicIntegerArray(AtomicIntegerArray array) {
       for (int i = 0; i < array.length(); ++i) {
-        Assert.assertEquals(1, array.get(i));
+        Assertions.assertEquals(1, array.get(i));
       }
     }
   }
@@ -764,7 +766,8 @@ public class TestNMClientAsync {
     return client;
   }
 
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testOutOfOrder() throws Exception {
     CyclicBarrier barrierA = new CyclicBarrier(2);
     CyclicBarrier barrierB = new CyclicBarrier(2);
@@ -790,9 +793,9 @@ public class TestNMClientAsync {
     asyncClient.stopContainerAsync(container.getId(), container.getNodeId());
     barrierC.await();
 
-    Assert.assertFalse("Starting and stopping should be out of order",
-        ((TestCallbackHandler2) asyncClient.getCallbackHandler())
-            .exceptionOccurred.get());
+    Assertions.assertFalse(
+       ((TestCallbackHandler2) asyncClient.getCallbackHandler())
+            .exceptionOccurred.get(), "Starting and stopping should be out of order");
   }
 
   private class MockNMClientAsync2 extends NMClientAsyncImpl {

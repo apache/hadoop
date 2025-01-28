@@ -24,8 +24,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for the YarnClientUtils class
@@ -46,8 +46,8 @@ public class TestYarnClientUtils {
 
     String result = YarnClientUtils.getRmPrincipal(conf);
 
-    assertNull("The hostname translation did return null when the principal is "
-        + "missing from the conf: " + result, result);
+    assertNull(result, "The hostname translation did return null when the principal is "
+        + "missing from the conf: " + result);
 
     conf = new Configuration();
 
@@ -83,8 +83,8 @@ public class TestYarnClientUtils {
 
     String result = YarnClientUtils.getRmPrincipal(conf);
 
-    assertNull("The hostname translation did return null when the principal is "
-        + "missing from the conf: " + result, result);
+    assertNull(result, "The hostname translation did return null when the principal is "
+        + "missing from the conf: " + result);
 
     conf = new Configuration();
 
@@ -298,8 +298,8 @@ public class TestYarnClientUtils {
       if (!seen.add(key)) {
         // Here we use master.get() instead of property.getValue() because
         // they're not the same thing.
-        assertEquals("New configuration changed the value of "
-            + key, master.get(key), copy.get(key));
+        assertEquals(master.get(key), copy.get(key), "New configuration changed the value of "
+            + key);
       }
     }
 
@@ -310,9 +310,9 @@ public class TestYarnClientUtils {
       String key = property.getKey();
 
       if (!seen.contains(property.getKey())) {
-        assertEquals("New configuration changed the value of "
-            + key, copy.get(key),
-            master.get(key));
+        assertEquals(copy.get(key)
+,             master.get(key), "New configuration changed the value of "
+            + key);
       }
     }
   }

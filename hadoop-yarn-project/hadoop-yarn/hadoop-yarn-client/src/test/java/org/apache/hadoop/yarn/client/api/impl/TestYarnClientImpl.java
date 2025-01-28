@@ -50,9 +50,9 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager
         .ParameterizedSchedulerTestBase;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -79,7 +79,7 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
     super(type);
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     QueueMetrics.clearQueueMetrics();
     DefaultMetricsSystem.setMiniClusterMode(true);
@@ -116,7 +116,7 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
 
       client.init(conf);
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
               expectedTimeoutEnforcement, client.enforceAsyncAPITimeout());
     } finally {
       IOUtils.closeStream(client);
@@ -152,7 +152,7 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
       conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_CLIENT_BEST_EFFORT, false);
       client.serviceInit(conf);
       client.getTimelineDelegationToken();
-      Assert.fail("Get delegation token should have thrown an exception");
+      Assertions.fail("Get delegation token should have thrown an exception");
     } catch (IOException e) {
       // Success
     }
@@ -262,10 +262,10 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
       }
       Collection<Token<? extends TokenIdentifier>> dTokens =
            credentials.getAllTokens();
-      Assert.assertEquals("Failed to place token for Log Aggregation Path",
-          1, dTokens.size());
-      Assert.assertEquals("Wrong Token for Log Aggregation",
-          hdfsDT.getKind(), dTokens.iterator().next().getKind());
+      Assertions.assertEquals(
+         1, dTokens.size(), "Failed to place token for Log Aggregation Path");
+      Assertions.assertEquals(
+         hdfsDT.getKind(), dTokens.iterator().next().getKind(), "Wrong Token for Log Aggregation");
 
     } finally {
       if (hdfsCluster != null) {
@@ -356,8 +356,8 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
         }
         Collection<Token<? extends TokenIdentifier>> dTokens =
                 credentials.getAllTokens();
-        Assert.assertEquals(1, dTokens.size());
-        Assert.assertEquals(dToken, dTokens.iterator().next());
+        Assertions.assertEquals(1, dTokens.size());
+        Assertions.assertEquals(dToken, dTokens.iterator().next());
       }
     } finally {
       client.stop();
@@ -376,7 +376,7 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
     try {
       client.init(conf);
       client.start();
-      Assert.assertEquals("rm/localhost@EXAMPLE.COM", client.timelineDTRenewer);
+      Assertions.assertEquals("rm/localhost@EXAMPLE.COM", client.timelineDTRenewer);
     } finally {
       client.stop();
     }

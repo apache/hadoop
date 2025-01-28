@@ -24,8 +24,8 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -34,7 +34,7 @@ import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
@@ -65,7 +65,7 @@ public class TestNoHaRMFailoverProxyProvider {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, YarnException {
     conf = new YarnConfiguration();
   }
@@ -88,8 +88,8 @@ public class TestNoHaRMFailoverProxyProvider {
       rmClient.start();
       List <NodeReport> nodeReports = rmClient.getNodeReports();
       assertEquals(
-          "The proxy didn't get expected number of node reports",
-          NUMNODEMANAGERS, nodeReports.size());
+      
+         NUMNODEMANAGERS, nodeReports.size(), "The proxy didn't get expected number of node reports");
     } finally {
       if (rmClient != null) {
         rmClient.stop();
@@ -119,8 +119,8 @@ public class TestNoHaRMFailoverProxyProvider {
       rmClient.start();
       List <NodeReport> nodeReports = rmClient.getNodeReports();
       assertEquals(
-          "The proxy didn't get expected number of node reports",
-          NUMNODEMANAGERS, nodeReports.size());
+      
+         NUMNODEMANAGERS, nodeReports.size(), "The proxy didn't get expected number of node reports");
     } finally {
       if (rmClient != null) {
         rmClient.stop();
@@ -156,22 +156,22 @@ public class TestNoHaRMFailoverProxyProvider {
     fpp.init(conf, mockRMProxy, protocol);
     FailoverProxyProvider.ProxyInfo<Proxy> actualProxy1 = fpp.getProxy();
     assertEquals(
-        "AutoRefreshRMFailoverProxyProvider doesn't generate " +
-        "expected proxy",
-        mockProxy1, actualProxy1.proxy);
+    
+       mockProxy1, actualProxy1.proxy, "AutoRefreshRMFailoverProxyProvider doesn't generate " +
+        "expected proxy");
 
     // Invoke fpp.getProxy() multiple times and
     // validate the returned proxy is always mockProxy1
     actualProxy1 = fpp.getProxy();
     assertEquals(
-        "AutoRefreshRMFailoverProxyProvider doesn't generate " +
-        "expected proxy",
-        mockProxy1, actualProxy1.proxy);
+    
+       mockProxy1, actualProxy1.proxy, "AutoRefreshRMFailoverProxyProvider doesn't generate " +
+        "expected proxy");
     actualProxy1 = fpp.getProxy();
     assertEquals(
-        "AutoRefreshRMFailoverProxyProvider doesn't generate " +
-        "expected proxy",
-        mockProxy1, actualProxy1.proxy);
+    
+       mockProxy1, actualProxy1.proxy, "AutoRefreshRMFailoverProxyProvider doesn't generate " +
+        "expected proxy");
 
     // verify that mockRMProxy.getProxy() is invoked once only.
     verify(mockRMProxy, times(1))
@@ -181,9 +181,9 @@ public class TestNoHaRMFailoverProxyProvider {
     // Perform Failover and get proxy again from failover proxy provider
     fpp.performFailover(actualProxy1.proxy);
     FailoverProxyProvider.ProxyInfo<Proxy> actualProxy2 = fpp.getProxy();
-    assertEquals("AutoRefreshRMFailoverProxyProvider " +
-        "doesn't generate expected proxy after failover",
-        mockProxy1, actualProxy2.proxy);
+    assertEquals(
+       mockProxy1, actualProxy2.proxy, "AutoRefreshRMFailoverProxyProvider " +
+        "doesn't generate expected proxy after failover");
 
     // verify that mockRMProxy.getProxy() didn't get invoked again after
     // performFailover()
@@ -226,22 +226,22 @@ public class TestNoHaRMFailoverProxyProvider {
     fpp.init(conf, mockRMProxy, protocol);
     FailoverProxyProvider.ProxyInfo<Proxy> actualProxy1 = fpp.getProxy();
     assertEquals(
-        "AutoRefreshRMFailoverProxyProvider doesn't generate " +
-        "expected proxy",
-        mockProxy1, actualProxy1.proxy);
+    
+       mockProxy1, actualProxy1.proxy, "AutoRefreshRMFailoverProxyProvider doesn't generate " +
+        "expected proxy");
 
     // Invoke fpp.getProxy() multiple times and
     // validate the returned proxy is always mockProxy1
     actualProxy1 = fpp.getProxy();
     assertEquals(
-        "AutoRefreshRMFailoverProxyProvider doesn't generate " +
-        "expected proxy",
-        mockProxy1, actualProxy1.proxy);
+    
+       mockProxy1, actualProxy1.proxy, "AutoRefreshRMFailoverProxyProvider doesn't generate " +
+        "expected proxy");
     actualProxy1 = fpp.getProxy();
     assertEquals(
-        "AutoRefreshRMFailoverProxyProvider doesn't generate " +
-        "expected proxy",
-        mockProxy1, actualProxy1.proxy);
+    
+       mockProxy1, actualProxy1.proxy, "AutoRefreshRMFailoverProxyProvider doesn't generate " +
+        "expected proxy");
 
     // verify that mockRMProxy.getProxy() is invoked once only.
     verify(mockRMProxy, times(1))
@@ -260,13 +260,13 @@ public class TestNoHaRMFailoverProxyProvider {
     // Perform Failover and get proxy again from failover proxy provider
     fpp.performFailover(actualProxy1.proxy);
     FailoverProxyProvider.ProxyInfo<Proxy> actualProxy2 = fpp.getProxy();
-    assertEquals("AutoRefreshNoHARMFailoverProxyProvider " +
-        "doesn't generate expected proxy after failover",
-        mockProxy2, actualProxy2.proxy);
+    assertEquals(
+       mockProxy2, actualProxy2.proxy, "AutoRefreshNoHARMFailoverProxyProvider " +
+        "doesn't generate expected proxy after failover");
 
     // check the proxy is different with the one we created before.
-    assertNotEquals("AutoRefreshNoHARMFailoverProxyProvider " +
-        "shouldn't generate same proxy after failover",
-        actualProxy1.proxy, actualProxy2.proxy);
+    assertNotEquals(
+       actualProxy1.proxy, actualProxy2.proxy, "AutoRefreshNoHARMFailoverProxyProvider " +
+        "shouldn't generate same proxy after failover");
   }
 }

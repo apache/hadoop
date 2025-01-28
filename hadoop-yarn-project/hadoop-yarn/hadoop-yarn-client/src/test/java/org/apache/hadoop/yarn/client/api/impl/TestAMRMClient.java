@@ -19,11 +19,11 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -77,9 +77,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.ArgumentCaptor;
@@ -111,7 +112,8 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     });
   }
 
-  @Test (timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMRMClientNoMatchingRequests()
       throws IOException, YarnException {
     AMRMClient<ContainerRequest> amClient =  AMRMClient.createAMRMClient();
@@ -122,10 +124,11 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     Resource testCapability1 = Resource.newInstance(1024,  2);
     List<? extends Collection<ContainerRequest>> matches =
         amClient.getMatchingRequests(priority, node, testCapability1);
-    assertEquals("Expected no matching requests.", matches.size(), 0);
+    assertEquals(matches.size(), 0, "Expected no matching requests.");
   }
   
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMRMClientMatchingFit() throws YarnException, IOException {
     AMRMClient<ContainerRequest> amClient = null;
     try {
@@ -266,7 +269,8 @@ public class TestAMRMClient extends BaseAMRMClientTest{
   /**
    * Test fit of both GUARANTEED and OPPORTUNISTIC containers.
    */
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMRMClientMatchingFitExecType()
       throws YarnException, IOException {
     AMRMClient<ContainerRequest> amClient = null;
@@ -403,7 +407,8 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     assertEquals(matchSize, matches.get(0).size());
   }
   
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMRMClientMatchingFitInferredRack()
       throws YarnException, IOException {
     AMRMClientImpl<ContainerRequest> amClient = null;
@@ -598,7 +603,8 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     }
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAllocationWithBlacklist() throws YarnException, IOException {
     AMRMClientImpl<ContainerRequest> amClient = null;
     try {
@@ -663,7 +669,8 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     }
   }
   
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMRMClientWithBlacklist() throws YarnException, IOException {
     AMRMClientImpl<ContainerRequest> amClient = null;
     try {
@@ -737,17 +744,20 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     return allocatedContainerCount;
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMRMClient() throws YarnException, IOException {
     initAMRMClientAndTest(false);
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMRMClientAllocReqId() throws YarnException, IOException {
     initAMRMClientAndTest(true);
   }
 
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMRMClientWithSaslEncryption() throws Exception {
     // we have to create a new instance of MiniYARNCluster to avoid SASL qop
     // mismatches between client and server
@@ -768,7 +778,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       //setting an instance NMTokenCache
       amClient.setNMTokenCache(new NMTokenCache());
       //asserting we are not using the singleton instance cache
-      Assert.assertNotSame(NMTokenCache.getSingleton(), 
+      Assertions.assertNotSame(NMTokenCache.getSingleton(), 
           amClient.getNMTokenCache());
 
       amClient.init(conf);
@@ -792,7 +802,8 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     }
   }
   
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAskWithNodeLabels() {
     AMRMClientImpl<ContainerRequest> client =
         new AMRMClientImpl<ContainerRequest>();
@@ -824,7 +835,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       if (ResourceRequest.ANY.equals(req.getResourceName())) {
         assertEquals("y", req.getNodeLabelExpression());
       } else {
-        Assert.assertNull(req.getNodeLabelExpression());
+        Assertions.assertNull(req.getNodeLabelExpression());
       }
     }
     // set container with nodes and racks with labels
@@ -835,7 +846,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       if (ResourceRequest.ANY.equals(req.getResourceName())) {
         assertEquals("y", req.getNodeLabelExpression());
       } else {
-        Assert.assertNull(req.getNodeLabelExpression());
+        Assertions.assertNull(req.getNodeLabelExpression());
       }
     }
   }
@@ -850,7 +861,8 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     fail();
   }
   
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testAskWithInvalidNodeLabels() {
     AMRMClientImpl<ContainerRequest> client =
         new AMRMClientImpl<ContainerRequest>();
@@ -861,7 +873,8 @@ public class TestAMRMClient extends BaseAMRMClientTest{
             Priority.UNDEFINED, true, "x && y"));
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMRMClientWithContainerResourceChange()
       throws YarnException, IOException {
     // Fair scheduler does not support resource change
@@ -870,18 +883,18 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     try {
       // start am rm client
       amClient = AMRMClient.createAMRMClient();
-      Assert.assertNotNull(amClient);
+      Assertions.assertNotNull(amClient);
       // asserting we are using the singleton instance cache
-      Assert.assertSame(
+      Assertions.assertSame(
           NMTokenCache.getSingleton(), amClient.getNMTokenCache());
       amClient.init(conf);
       amClient.start();
       assertEquals(STATE.STARTED, amClient.getServiceState());
       // start am nm client
       NMClientImpl nmClient = (NMClientImpl) NMClient.createNMClient();
-      Assert.assertNotNull(nmClient);
+      Assertions.assertNotNull(nmClient);
       // asserting we are using the singleton instance cache
-      Assert.assertSame(
+      Assertions.assertSame(
           NMTokenCache.getSingleton(), nmClient.getNMTokenCache());
       nmClient.init(conf);
       nmClient.start();
@@ -1028,7 +1041,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       }
     }
 
-    Assert.assertEquals("Container resource change update failed", 1, updateResponse.size());
+    Assertions.assertEquals(1, updateResponse.size(), "Container resource change update failed");
   }
 
   @Test
@@ -1042,7 +1055,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
 
     // start am nm client
     NMClientImpl nmClient = (NMClientImpl) NMClient.createNMClient();
-    Assert.assertNotNull(nmClient);
+    Assertions.assertNotNull(nmClient);
     nmClient.init(conf);
     nmClient.start();
     assertEquals(STATE.STARTED, nmClient.getServiceState());
@@ -1164,23 +1177,24 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     }
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMRMClientWithContainerPromotion()
       throws YarnException, IOException {
     AMRMClientImpl<AMRMClient.ContainerRequest> amClient =
         (AMRMClientImpl<AMRMClient.ContainerRequest>) AMRMClient
             .createAMRMClient();
     //asserting we are not using the singleton instance cache
-    Assert.assertSame(NMTokenCache.getSingleton(),
+    Assertions.assertSame(NMTokenCache.getSingleton(),
         amClient.getNMTokenCache());
     amClient.init(conf);
     amClient.start();
 
     // start am nm client
     NMClientImpl nmClient = (NMClientImpl) NMClient.createNMClient();
-    Assert.assertNotNull(nmClient);
+    Assertions.assertNotNull(nmClient);
     // asserting we are using the singleton instance cache
-    Assert.assertSame(
+    Assertions.assertSame(
         NMTokenCache.getSingleton(), nmClient.getNMTokenCache());
     nmClient.init(conf);
     nmClient.start();
@@ -1305,22 +1319,23 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     amClient.ask.clear();
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMRMClientWithContainerDemotion()
       throws YarnException, IOException {
     AMRMClientImpl<AMRMClient.ContainerRequest> amClient =
         (AMRMClientImpl<AMRMClient.ContainerRequest>) AMRMClient
             .createAMRMClient();
     //asserting we are not using the singleton instance cache
-    Assert.assertSame(NMTokenCache.getSingleton(),
+    Assertions.assertSame(NMTokenCache.getSingleton(),
         amClient.getNMTokenCache());
     amClient.init(conf);
     amClient.start();
 
     NMClientImpl nmClient = (NMClientImpl) NMClient.createNMClient();
-    Assert.assertNotNull(nmClient);
+    Assertions.assertNotNull(nmClient);
     // asserting we are using the singleton instance cache
-    Assert.assertSame(
+    Assertions.assertSame(
         NMTokenCache.getSingleton(), nmClient.getNMTokenCache());
     nmClient.init(conf);
     nmClient.start();
@@ -1777,7 +1792,8 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testAMRMClientOnAMRMTokenRollOver() throws YarnException,
       IOException {
     AMRMClient<ContainerRequest> amClient = null;
@@ -1797,7 +1813,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
 
       org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> amrmToken_1 =
           getAMRMToken();
-      Assert.assertNotNull(amrmToken_1);
+      Assertions.assertNotNull(amrmToken_1);
       assertEquals(amrmToken_1.decodeIdentifier().getKeyId(),
         amrmTokenSecretManager.getMasterKey().getMasterKey().getKeyId());
 
@@ -1812,11 +1828,11 @@ public class TestAMRMClient extends BaseAMRMClientTest{
 
       org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> amrmToken_2 =
           getAMRMToken();
-      Assert.assertNotNull(amrmToken_2);
+      Assertions.assertNotNull(amrmToken_2);
       assertEquals(amrmToken_2.decodeIdentifier().getKeyId(),
         amrmTokenSecretManager.getMasterKey().getMasterKey().getKeyId());
 
-      Assert.assertNotEquals(amrmToken_1, amrmToken_2);
+      Assertions.assertNotEquals(amrmToken_1, amrmToken_2);
 
       // can do the allocate call with latest AMRMToken
       AllocateResponse response = amClient.allocate(0.1f);
@@ -1924,7 +1940,8 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     return result;
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testGetMatchingFitWithProfiles() throws Exception {
     teardown();
     conf.setBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED, true);
@@ -2010,7 +2027,8 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testNoUpdateTrackingUrl()  {
     try {
       AMRMClientImpl<ContainerRequest> amClient = null;
@@ -2044,7 +2062,8 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testUpdateTrackingUrl() {
     try {
       AMRMClientImpl<ContainerRequest> amClient = null;
