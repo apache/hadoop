@@ -289,6 +289,14 @@ public final class AbfsClientTestUtil {
             Mockito.nullable(String.class));
   }
 
+  /**
+   * Mocks the `getBlobDeleteHandler` method of `AbfsBlobClient` to apply a custom handler
+   * for the delete operation. This allows for controlling the behavior of the delete
+   * process during testing.
+   *
+   * @param blobClient the `AbfsBlobClient` instance to mock
+   * @param functionRaisingIOE the function to apply to the mocked `BlobDeleteHandler`
+   */
   public static void mockGetDeleteBlobHandler(AbfsBlobClient blobClient,
                                               FunctionRaisingIOE<BlobDeleteHandler, Void> functionRaisingIOE) {
     Mockito.doAnswer(answer -> {
@@ -304,6 +312,15 @@ public final class AbfsClientTestUtil {
             .getBlobDeleteHandler(Mockito.anyString(), Mockito.anyBoolean(),
                     Mockito.any(TracingContext.class));
   }
+
+  /**
+   * Mocks the `getBlobRenameHandler` method of `AbfsBlobClient` to apply a custom handler
+   * for the rename operation. This allows for controlling the behavior of the rename
+   * process during testing.
+   *
+   * @param blobClient the `AbfsBlobClient` instance to mock
+   * @param functionRaisingIOE the function to apply to the mocked `BlobRenameHandler`
+   */
   public static void mockGetRenameBlobHandler(AbfsBlobClient blobClient,
                                               FunctionRaisingIOE<BlobRenameHandler, Void> functionRaisingIOE) {
     Mockito.doAnswer(answer -> {

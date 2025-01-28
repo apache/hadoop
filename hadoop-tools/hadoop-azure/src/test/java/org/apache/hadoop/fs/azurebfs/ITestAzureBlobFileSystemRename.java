@@ -66,6 +66,7 @@ import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static org.junit.Assume.assumeTrue;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_ABORTED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_FAILED;
@@ -84,7 +85,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcom
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assume.assumeTrue;
 
 /**
  * Test rename operation.

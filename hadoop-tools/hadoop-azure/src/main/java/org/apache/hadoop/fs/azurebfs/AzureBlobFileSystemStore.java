@@ -640,7 +640,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
-  /**Checks existence of parent of the given path.*/
+  /**
+   * Checks existence of parent of the given path.
+   *
+   * @param path Path to check.
+   * @param tracingContext tracing context
+   *
+   * @throws IOException if there is an issue with the operation.
+   */
   public void createNonRecursivePreCheck(final Path path,
                                             TracingContext tracingContext)
           throws IOException {
