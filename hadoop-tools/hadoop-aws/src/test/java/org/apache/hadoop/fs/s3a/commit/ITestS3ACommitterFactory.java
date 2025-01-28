@@ -184,7 +184,7 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
     FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
     super.setup();
     skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
-        "S3ASeekableInputStream does not support InputStreamStatistics");
+        "AnalyticsStream does not support InputStreamStatistics");
     jobId = randomJobId();
     attempt0 = "attempt_" + jobId + "_m_000000_0";
     taskAttempt0 = TaskAttemptID.forName(attempt0);

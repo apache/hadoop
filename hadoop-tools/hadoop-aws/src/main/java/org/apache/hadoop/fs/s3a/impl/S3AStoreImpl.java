@@ -89,8 +89,7 @@ import org.apache.hadoop.util.RateLimiting;
 import org.apache.hadoop.util.functional.Tuples;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
-import static org.apache.hadoop.fs.s3a.Constants.HADOOP_TMP_DIR;
+import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.extractException;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getPutRequestLength;
 import static org.apache.hadoop.fs.s3a.S3AUtils.isThrottleException;
@@ -947,7 +946,7 @@ public class S3AStoreImpl
    * All stream factory initialization required after {@code Service.init()},
    * after all other services have themselves been initialized.
    */
-  private void finishStreamFactoryInit() {
+  private void finishStreamFactoryInit() throws Exception {
     // must be on be invoked during service initialization
     Preconditions.checkState(isInState(STATE.INITED),
         "Store is in wrong state: %s", getServiceState());

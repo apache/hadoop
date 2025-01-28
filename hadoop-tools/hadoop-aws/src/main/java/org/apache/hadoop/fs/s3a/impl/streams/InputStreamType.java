@@ -40,13 +40,11 @@ public enum InputStreamType {
    */
   Prefetch("prefetch", c ->
       new PrefetchingInputStreamFactory()),
-
   /**
    * The analytics input stream.
    */
-  Analytics("analytics", c -> {
-    throw new IllegalArgumentException("not yet supported");
-  });
+  Analytics("analytics", c ->
+      new AnalyticsStreamFactory());
 
   /**
    * Name.

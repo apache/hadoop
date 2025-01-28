@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.s3a.impl.S3ExpressStorage;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
+import org.apache.hadoop.fs.s3a.impl.streams.InputStreamType;
 import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
@@ -587,8 +588,8 @@ public final class S3ATestUtils {
   }
 
   public static boolean isAnalyticsAcceleratorEnabled(final Configuration conf) {
-    return conf.getBoolean(ANALYTICS_ACCELERATOR_ENABLED_KEY,
-        ANALYTICS_ACCELERATOR_ENABLED_DEFAULT);
+    return conf.getEnum(INPUT_STREAM_TYPE,
+            InputStreamType.DEFAULT_STREAM_TYPE) == InputStreamType.Analytics;
   }
 
   /**

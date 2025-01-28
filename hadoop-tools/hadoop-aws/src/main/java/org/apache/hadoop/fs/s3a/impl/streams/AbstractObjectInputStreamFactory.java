@@ -48,7 +48,7 @@ public abstract class AbstractObjectInputStreamFactory extends AbstractService
    * @param factoryCallbacks callbacks needed by the factories.
    */
   @Override
-  public void bind(final StreamFactoryCallbacks factoryCallbacks) {
+  public void bind(final StreamFactoryCallbacks factoryCallbacks) throws Exception {
     // must be on be invoked during service initialization
     Preconditions.checkState(isInState(STATE.INITED),
         "Input Stream factory %s is in wrong state: %s",

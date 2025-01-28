@@ -45,8 +45,9 @@ public interface ObjectInputStreamFactory
    * This MUST ONLY be invoked between {@code init()}
    * and {@code start()}.
    * @param callbacks extra initialization parameters
+   * @throws Exception on encountering exception
    */
-  void bind(StreamFactoryCallbacks callbacks);
+  void bind(StreamFactoryCallbacks callbacks) throws Exception;
 
   /**
    * Create a new input stream.

@@ -79,7 +79,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   public void setup() throws Exception {
     super.setup();
     skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
-        "S3ASeekableInputStream does not support InputStreamStatistics");
+        "AnalyticsStream does not support InputStreamStatistics");
     CommitUtils.verifyIsMagicCommitFS(getFileSystem());
   }
 

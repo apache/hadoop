@@ -90,8 +90,6 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
         PREFETCH_BLOCK_SIZE_KEY);
     conf.setInt(PREFETCH_MAX_BLOCKS_COUNT, Integer.parseInt(maxBlocks));
     conf.setInt(PREFETCH_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    // When both Prefetching and Analytics Accelerator enabled Analytics Accelerator is used
-    conf.setBoolean(ANALYTICS_ACCELERATOR_ENABLED_KEY, false);
     return conf;
   }
 

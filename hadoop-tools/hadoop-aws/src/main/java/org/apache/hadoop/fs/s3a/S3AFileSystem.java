@@ -51,10 +51,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
+import org.apache.hadoop.fs.s3a.impl.streams.InputStreamType;
 import software.amazon.awssdk.core.exception.SdkException;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.internal.crt.S3CrtAsyncClient;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
@@ -84,11 +83,6 @@ import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import software.amazon.awssdk.transfer.s3.model.CompletedCopy;
 import software.amazon.awssdk.transfer.s3.model.Copy;
 import software.amazon.awssdk.transfer.s3.model.CopyRequest;
-
-import software.amazon.s3.analyticsaccelerator.S3SdkObjectClient;
-import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamConfiguration;
-import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamFactory;
-import software.amazon.s3.analyticsaccelerator.common.ConnectorConfiguration;
 
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
@@ -316,13 +310,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private S3Client s3Client;
 
-  /**
-   * CRT-Based S3Client created of analytics accelerator library is enabled
-   * and managed by the S3AStoreImpl. Analytics accelerator library can be
-   * enabled with {@link Constants#ANALYTICS_ACCELERATOR_ENABLED_KEY}
-   */
-  private S3AsyncClient s3AsyncClient;
-
   // initial callback policy is fail-once; it's there just to assist
   // some mock tests and other codepaths trying to call the low level
   // APIs on an uninitialized filesystem.
@@ -351,8 +338,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   // If true, S3SeekableInputStream from Analytics Accelerator for Amazon S3 will be used.
   private boolean analyticsAcceleratorEnabled;
-
-  private boolean analyticsAcceleratorCRTEnabled;
 
   private int executorCapacity;
   private long multiPartThreshold;
@@ -522,11 +507,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private boolean s3AccessGrantsEnabled;
 
-  /**
-   * Factory to create S3SeekableInputStream if {@link this#analyticsAcceleratorEnabled} is true.
-   */
-  private S3SeekableInputStreamFactory s3SeekableInputStreamFactory;
-
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -673,16 +653,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       dirOperationsPurgeUploads = conf.getBoolean(DIRECTORY_OPERATIONS_PURGE_UPLOADS,
           s3ExpressStore);
 
-      this.analyticsAcceleratorEnabled =
-          conf.getBoolean(ANALYTICS_ACCELERATOR_ENABLED_KEY, ANALYTICS_ACCELERATOR_ENABLED_DEFAULT);
-      this.analyticsAcceleratorCRTEnabled =
-          conf.getBoolean(ANALYTICS_ACCELERATOR_CRT_ENABLED,
-              ANALYTICS_ACCELERATOR_CRT_ENABLED_DEFAULT);
+        this.analyticsAcceleratorEnabled = conf.getEnum(INPUT_STREAM_TYPE, InputStreamType.DEFAULT_STREAM_TYPE) == InputStreamType.Analytics;
 
       this.isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
               DEFAULT_MULTIPART_UPLOAD_ENABLED);
 
-      if(this.analyticsAcceleratorEnabled && !analyticsAcceleratorCRTEnabled) {
+      if(this.analyticsAcceleratorEnabled) {
         // Temp change: Analytics Accelerator with S3AsyncClient do not support Multi-part upload.
         this.isMultipartUploadEnabled = false;
       }
@@ -803,27 +779,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       int rateLimitCapacity = intOption(conf, S3A_IO_RATE_LIMIT, DEFAULT_S3A_IO_RATE_LIMIT, 0);
       // now create and initialize the store
       store = createS3AStore(clientManager, rateLimitCapacity);
-
-      if (this.analyticsAcceleratorEnabled) {
-        LOG.info("Using S3SeekableInputStream");
-        if(this.analyticsAcceleratorCRTEnabled) {
-          LOG.info("Using S3 CRT client for analytics accelerator S3");
-          this.s3AsyncClient = S3CrtAsyncClient.builder().maxConcurrency(600).build();
-        } else {
-          LOG.info("Using S3 async client for analytics accelerator S3");
-          this.s3AsyncClient = store.getOrCreateAsyncClient();
-        }
-
-        ConnectorConfiguration configuration = new ConnectorConfiguration(conf,
-            ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX);
-        S3SeekableInputStreamConfiguration seekableInputStreamConfiguration =
-            S3SeekableInputStreamConfiguration.fromConfiguration(configuration);
-        this.s3SeekableInputStreamFactory =
-            new S3SeekableInputStreamFactory(
-                new S3SdkObjectClient(this.s3AsyncClient),
-                seekableInputStreamConfiguration);
-      }
-
       // the s3 client is created through the store, rather than
       // directly through the client manager.
       // this is to aid mocking.
@@ -1909,7 +1864,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     final S3AFileStatus fileStatus =
         trackDuration(inputStreamStats,
             ACTION_FILE_OPENED.getSymbol(), () ->
-                extractOrFetchSimpleFileStatus(path, fileInformation));
+            extractOrFetchSimpleFileStatus(path, fileInformation));
     S3AReadOpContext readContext = createReadContext(
         fileStatus,
         auditSpan);
@@ -1933,7 +1888,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         true,
         inputStreamStats);
 
-    // do not validate() the parameters as the store
+      // do not validate() the parameters as the store
     // completes this.
     ObjectReadParameters parameters = new ObjectReadParameters()
         .withBoundedThreadPool(pool)
@@ -1941,7 +1896,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withContext(readContext.build())
         .withObjectAttributes(createObjectAttributes(path, fileStatus))
         .withStreamStatistics(inputStreamStats);
-    return new FSDataInputStream(getStore().readObject(parameters));
+      return new FSDataInputStream(getStore().readObject(parameters));
 
   }
 
@@ -1953,6 +1908,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final AuditSpan auditSpan) {
     return new InputStreamCallbacksImpl(auditSpan, getStore(), fsHandler, unboundedThreadPool);
   }
+
 
   /**
    * Callbacks for WriteOperationHelper.
@@ -4238,7 +4194,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws IOException {
     String key = putObjectRequest.key();
     ProgressableProgressListener listener =
-        new ProgressableProgressListener(store, key, progress);
+        new ProgressableProgressListener(getStore(), key, progress);
     UploadInfo info = putObject(putObjectRequest, file, listener);
     PutObjectResponse result = getStore().waitForUploadCompletion(key, info).response();
     listener.uploadCompleted(info.getFileUpload());
@@ -4338,8 +4294,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         closeAutocloseables(LOG, getStore());
         store = null;
         s3Client = null;
-        s3AsyncClient = null;
-        s3SeekableInputStreamFactory = null;
 
         // At this point the S3A client is shut down,
         // now the executor pools are closed

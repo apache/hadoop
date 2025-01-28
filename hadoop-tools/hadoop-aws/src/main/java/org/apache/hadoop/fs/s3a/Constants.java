@@ -1818,30 +1818,4 @@ public final class Constants {
   public static final String ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX =
           "fs.s3a.analytics.accelerator";
 
-  /**
-   * Config to enable Analytics Accelerator Library for Amazon S3.
-   * https://github.com/awslabs/analytics-accelerator-s3
-   */
-  public static final String ANALYTICS_ACCELERATOR_ENABLED_KEY =
-          ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX + ".enabled";
-
-  /**
-   * Config to enable usage of crt client with Analytics Accelerator Library.
-   * It is by default true.
-   */
-  public static final String ANALYTICS_ACCELERATOR_CRT_ENABLED =
-          "fs.s3a.analytics.accelerator.crt.client";
-
-  /**
-   * Default value for {@link #ANALYTICS_ACCELERATOR_ENABLED_KEY }
-   * Value {@value}.
-   */
-  public static final boolean ANALYTICS_ACCELERATOR_ENABLED_DEFAULT = false;
-
-  /**
-   * Default value for {@link #ANALYTICS_ACCELERATOR_CRT_ENABLED }
-   * Value {@value}.
-   */
-  public static final boolean ANALYTICS_ACCELERATOR_CRT_ENABLED_DEFAULT = true;
-
 }

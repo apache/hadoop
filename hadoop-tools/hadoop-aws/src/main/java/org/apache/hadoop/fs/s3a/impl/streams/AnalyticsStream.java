@@ -17,35 +17,34 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.s3a.impl.streams;
 
 import java.io.EOFException;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.s3a.Retries;
+import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.FSInputStream;
-
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStream;
-import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamFactory;
 import software.amazon.s3.analyticsaccelerator.util.S3URI;
 
-public class S3ASeekableStream extends FSInputStream implements StreamCapabilities {
+public class AnalyticsStream extends ObjectInputStream implements StreamCapabilities {
 
   private S3SeekableInputStream inputStream;
   private long lastReadCurrentPos = 0;
-  private final String key;
   private volatile boolean closed;
 
-  public static final Logger LOG = LoggerFactory.getLogger(S3ASeekableStream.class);
+  public static final Logger LOG = LoggerFactory.getLogger(AnalyticsStream.class);
 
-  public S3ASeekableStream(String bucket, String key,
-                           S3SeekableInputStreamFactory s3SeekableInputStreamFactory) {
-    this.inputStream = s3SeekableInputStreamFactory.createStream(S3URI.of(bucket, key));
-    this.key = key;
+  public AnalyticsStream(final ObjectReadParameters parameters, final S3SeekableInputStreamFactory s3SeekableInputStreamFactory) {
+    super(parameters);
+    S3ObjectAttributes s3Attributes = parameters.getObjectAttributes();
+    this.inputStream = s3SeekableInputStreamFactory.createStream(S3URI.of(s3Attributes.getBucket(), s3Attributes.getKey()));
   }
 
   /**
@@ -140,6 +139,24 @@ public class S3ASeekableStream extends FSInputStream implements StreamCapabiliti
   }
 
   @Override
+  protected boolean isStreamOpen() {
+    return !isClosed();
+  }
+
+  protected boolean isClosed() {
+    return inputStream == null;
+  }
+
+  @Override
+  protected void abortInFinalizer() {
+    try {
+      close();
+    } catch (IOException ignored) {
+
+    }
+  }
+
+  @Override
   public synchronized void close() throws IOException {
     if(!closed) {
       closed = true;
@@ -148,7 +165,7 @@ public class S3ASeekableStream extends FSInputStream implements StreamCapabiliti
         inputStream = null;
         super.close();
       } catch (IOException ioe) {
-        LOG.debug("Failure closing stream {}: ", key);
+        LOG.debug("Failure closing stream {}: ", getKey());
         throw ioe;
       }
     }
@@ -165,11 +182,11 @@ public class S3ASeekableStream extends FSInputStream implements StreamCapabiliti
     if (LOG.isDebugEnabled()) {
       LOG.debug("Got exception while trying to read from stream {}, " +
               "not trying to recover:",
-          key, ioe);
+              getKey(), ioe);
     } else {
       LOG.info("Got exception while trying to read from stream {}, " +
               "not trying to recover:",
-          key, ioe);
+              getKey(), ioe);
     }
     this.close();
   }
@@ -177,7 +194,7 @@ public class S3ASeekableStream extends FSInputStream implements StreamCapabiliti
 
   protected void throwIfClosed() throws IOException {
     if (closed) {
-      throw new IOException(key + ": " + FSExceptionMessages.STREAM_IS_CLOSED);
+      throw new IOException(getKey() + ": " + FSExceptionMessages.STREAM_IS_CLOSED);
     }
   }
 }

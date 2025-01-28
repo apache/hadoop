@@ -36,6 +36,8 @@ public final class StreamIntegration {
       LoggerFactory.getLogger(
           "org.apache.hadoop.conf.Configuration.deprecation");
 
+  public static final Logger LOG = LoggerFactory.getLogger(StreamIntegration.class);
+
   /**
    * Warn once on use of prefetch boolean flag rather than enum.
    */
@@ -53,7 +55,12 @@ public final class StreamIntegration {
     // work out the default stream; this includes looking at the
     // deprecated prefetch enabled key to see if it is set.
     InputStreamType defaultStream = InputStreamType.DEFAULT_STREAM_TYPE;
-    if (conf.getBoolean(PREFETCH_ENABLED_KEY, false)) {
+
+    if(conf.getEnum(INPUT_STREAM_TYPE, InputStreamType.DEFAULT_STREAM_TYPE) == InputStreamType.Analytics) {
+      LOG.info("Using AnalyticsStream");
+      defaultStream = InputStreamType.Analytics;
+
+    } else if (conf.getBoolean(PREFETCH_ENABLED_KEY, false)) {
 
       // prefetch enabled, warn (once) then change it to be the default.
       WARN_PREFETCH_KEY.info("Using {} is deprecated: choose the appropriate stream in {}",
