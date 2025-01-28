@@ -76,8 +76,6 @@ public class RenameAtomicity {
 
     private int renamePendingJsonLen;
 
-    private final AbfsLease sourcePathLease;
-
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final Random RANDOM = new Random();
@@ -105,7 +103,6 @@ public class RenameAtomicity {
         this.renameJsonPath = renameJsonPath;
         this.tracingContext = tracingContext;
         this.srcEtag = srcEtag;
-        this.sourcePathLease = null;
     }
 
     /**
@@ -116,20 +113,17 @@ public class RenameAtomicity {
      * @param tracingContext Tracing context
      * @param srcEtag ETag of the source directory
      * @param abfsClient AbfsClient instance
-     * @param sourceLease Lease of the source directory
      */
     public RenameAtomicity(final Path renameJsonPath,
                            final int renamePendingJsonFileLen,
                            TracingContext tracingContext,
                            final String srcEtag,
-                           final AbfsClient abfsClient,
-                           final AbfsLease sourceLease) {
+                           final AbfsClient abfsClient) {
         this.abfsClient = (AbfsBlobClient) abfsClient;
         this.renameJsonPath = renameJsonPath;
         this.tracingContext = tracingContext;
         this.srcEtag = srcEtag;
         this.renamePendingJsonLen = renamePendingJsonFileLen;
-        this.sourcePathLease = sourceLease;
     }
 
     /**
@@ -159,8 +153,8 @@ public class RenameAtomicity {
 
                 BlobRenameHandler blobRenameHandler = new BlobRenameHandler(
                         this.src.toUri().getPath(), dst.toUri().getPath(),
-                        abfsClient, srcEtag, true, true,
-                        sourcePathLease, tracingContext);
+                        abfsClient, srcEtag, true,
+                        true, tracingContext);
 
                 blobRenameHandler.execute();
             }

@@ -404,6 +404,10 @@ public class AbfsConfiguration{
   private long blobCopyProgressPollWaitMillis;
 
   @LongConfigurationValidatorAnnotation(ConfigurationKey =
+          FS_AZURE_BLOB_COPY_MAX_WAIT_MILLIS, DefaultValue = DEFAULT_AZURE_BLOB_COPY_MAX_WAIT_MILLIS)
+  private long blobCopyProgressMaxWaitMillis;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_BLOB_ATOMIC_RENAME_LEASE_REFRESH_DURATION, DefaultValue = DEFAULT_AZURE_BLOB_ATOMIC_RENAME_LEASE_REFRESH_DURATION)
   private long blobAtomicRenameLeaseRefreshDuration;
 
@@ -1549,6 +1553,10 @@ public class AbfsConfiguration{
 
   public long getBlobCopyProgressPollWaitMillis() {
     return blobCopyProgressPollWaitMillis;
+  }
+
+  public long getBlobCopyProgressMaxWaitMillis() {
+    return blobCopyProgressMaxWaitMillis;
   }
 
   public long getAtomicRenameLeaseRefreshDuration() {

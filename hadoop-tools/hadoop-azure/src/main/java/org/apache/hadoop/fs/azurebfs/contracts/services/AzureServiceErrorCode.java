@@ -45,7 +45,7 @@ public enum AzureServiceErrorCode {
   INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE("InvalidSourceOrDestinationResourceType", HttpURLConnection.HTTP_CONFLICT, null),
   RENAME_DESTINATION_PARENT_PATH_NOT_FOUND("RenameDestinationParentPathNotFound", HttpURLConnection.HTTP_NOT_FOUND, null),
   INVALID_RENAME_SOURCE_PATH("InvalidRenameSourcePath", HttpURLConnection.HTTP_CONFLICT, null),
-  DIRECTORY_NOT_EMPTY_DELETE("DirectoryNotEmpty", HttpURLConnection.HTTP_CONFLICT,
+  NON_EMPTY_DIRECTORY_DELETE("DirectoryNotEmpty", HttpURLConnection.HTTP_CONFLICT,
           "The recursive query parameter value must be true to delete a non-empty directory"),
   INGRESS_OVER_ACCOUNT_LIMIT("ServerBusy", HttpURLConnection.HTTP_UNAVAILABLE,
           "Ingress is over the account limit."),

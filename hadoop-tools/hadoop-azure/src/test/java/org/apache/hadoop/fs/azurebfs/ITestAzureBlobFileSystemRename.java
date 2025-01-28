@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
@@ -85,6 +84,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcom
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Test rename operation.
@@ -207,7 +207,7 @@ public class ITestAzureBlobFileSystemRename extends
     Path testDir2 = path("testDir2");
     fs.mkdirs(new Path(testDir2 + "/test1/test2/test3"));
     fs.mkdirs(new Path(testDir2 + "/test4"));
-    Assert.assertTrue(fs.rename(new Path(testDir2 + "/test1/test2/test3"), new Path(testDir2 + "/test4")));
+    assertTrue(fs.rename(new Path(testDir2 + "/test1/test2/test3"), new Path(testDir2 + "/test4")));
     assertPathExists(fs, "This path should exist", testDir2);
     assertPathExists(fs, "This path should exist",
         new Path(testDir2 + "/test1/test2"));
@@ -249,6 +249,15 @@ public class ITestAzureBlobFileSystemRename extends
             .isEqualTo(client instanceof AbfsDfsClient ? 2 : 1);
   }
 
+  /**
+   * Tests renaming a directory to the root directory. This test ensures that a directory can be renamed
+   * successfully to the root directory and that the renamed directory appears as expected.
+   *
+   * The test creates a directory (`/src1/src2`), renames it to the root (`/`), and verifies that
+   * the renamed directory (`/src2`) exists in the root.
+   *
+   * @throws Exception if an error occurs during test execution
+   */
   @Test
   public void testRenameToRoot() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
@@ -257,16 +266,42 @@ public class ITestAzureBlobFileSystemRename extends
     assertTrue(fs.exists(new Path("/src2")));
   }
 
+  /**
+   * Tests renaming a non-existent file to the root directory. This test ensures that the rename
+   * operation returns `false` when attempting to rename a file that does not exist.
+   *
+   * The test attempts to rename a file located at `/file` (which does not exist) to the root directory `/`
+   * and verifies that the rename operation fails.
+   *
+   * @throws Exception if an error occurs during test execution
+   */
   @Test
   public void testRenameNotFoundBlobToEmptyRoot() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     assertFalse(fs.rename(new Path("/file"), new Path("/")));
   }
 
+  /**
+   * Assumes the AzureBlobFileSystem client is an instance of `AbfsBlobClient`, ensuring that
+   * the test only proceeds if the underlying client is of the expected type.
+   * This assumption is typically used to validate that the file system is not using
+   * an HNS (Hierarchical Namespace) account, as it expects an `AbfsBlobClient` type client.
+   *
+   * @param fs the AzureBlobFileSystem instance to check
+   */
   private void assumeNonHnsAccountBlobEndpoint(final AzureBlobFileSystem fs) {
-    assertTrue(fs.getAbfsStore().getClient() instanceof AbfsBlobClient);
+    assumeTrue(fs.getAbfsStore().getClient() instanceof AbfsBlobClient);
   }
 
+  /**
+   * Tests renaming a source path to a destination path that contains a colon in the path.
+   * This verifies that the rename operation handles paths with special characters like a colon.
+   *
+   * The test creates a source directory and renames it to a destination path that includes a colon,
+   * ensuring that the operation succeeds without errors.
+   *
+   * @throws Exception if an error occurs during test execution
+   */
   @Test(expected = IOException.class)
   public void testRenameBlobToDstWithColonInPath() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
@@ -275,6 +310,15 @@ public class ITestAzureBlobFileSystemRename extends
     fs.rename(new Path("/src"), new Path("/dst:file"));
   }
 
+  /**
+   * Tests renaming a directory within the same parent directory when there is no marker file.
+   * This test ensures that the rename operation succeeds even when no special marker file is present.
+   *
+   * The test creates a file in a directory, deletes the blob path using the client, and then attempts
+   * to rename the directory. It verifies that the rename operation completes successfully.
+   *
+   * @throws Exception if an error occurs during test execution
+   */
   @Test
   public void testRenameBlobInSameDirectoryWithNoMarker() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
@@ -351,7 +395,7 @@ public class ITestAzureBlobFileSystemRename extends
     fs.create(new Path("testDir2/test4/file1"));
     assertTrue(fs.exists(new Path("testDir2/test1/test2/test3/file")));
     assertTrue(fs.exists(new Path("testDir2/test1/test2/test3/file1")));
-    Assert.assertTrue(fs.rename(new Path("testDir2/test1/test2/test3"),
+    assertTrue(fs.rename(new Path("testDir2/test1/test2/test3"),
             new Path("testDir2/test4")));
     assertTrue(fs.exists(new Path("testDir2")));
     assertTrue(fs.exists(new Path("testDir2/test1/test2")));
@@ -403,12 +447,53 @@ public class ITestAzureBlobFileSystemRename extends
             (int) correctDeletePathCount[0]);
   }
 
+  /**
+   * Spies on the AzureBlobFileSystem's store and client to enable mocking and verification
+   * of client interactions in tests. It replaces the actual store and client with mocked versions.
+   *
+   * @param fs the AzureBlobFileSystem instance
+   * @return the spied AbfsClient for interaction verification
+   */
   private AbfsClient addSpyHooksOnClient(final AzureBlobFileSystem fs) {
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     Mockito.doReturn(store).when(fs).getAbfsStore();
     AbfsClient client = Mockito.spy(store.getClient());
     Mockito.doReturn(client).when(store).getClient();
     return client;
+  }
+
+  /**
+   * A helper method to set up the test environment and execute the common logic for handling
+   * failed rename operations and recovery in HBase. This method performs the necessary setup
+   * (creating directories and files) and then triggers the `crashRenameAndRecover` method
+   * with a provided recovery action.
+   *
+   * This method is used by different tests that require different recovery actions, such as
+   * performing `listStatus` or checking the existence of a path after a failed rename.
+   *
+   * @param fs the AzureBlobFileSystem instance to be used in the test
+   * @param client the AbfsBlobClient instance to be used in the test
+   * @param srcPath the source path for the rename operation
+   * @param failedCopyPath the path that simulates a failed copy during rename
+   * @param recoveryAction the specific recovery action to be performed after the rename failure
+   *                       (e.g., listing directory status or checking path existence)
+   * @throws Exception if any error occurs during setup or execution of the recovery action
+   */
+  private void setupAndTestHBaseFailedRenameRecovery(
+          final AzureBlobFileSystem fs,
+          final AbfsBlobClient client,
+          final String srcPath,
+          final String failedCopyPath,
+          final FunctionRaisingIOE<AzureBlobFileSystem, Void> recoveryAction)
+          throws Exception {
+    fs.setWorkingDirectory(new Path("/"));
+    fs.mkdirs(new Path(srcPath));
+    fs.mkdirs(new Path(srcPath, "test3"));
+    fs.create(new Path(srcPath + "/test3/file"));
+    fs.create(new Path(failedCopyPath));
+    fs.mkdirs(new Path("hbase/test4/"));
+    fs.create(new Path("hbase/test4/file1"));
+    crashRenameAndRecover(fs, client, srcPath, recoveryAction);
   }
 
   /**
@@ -425,17 +510,12 @@ public class ITestAzureBlobFileSystemRename extends
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     String srcPath = "hbase/test1/test2";
     final String failedCopyPath = srcPath + "/test3/file1";
-    fs.setWorkingDirectory(new Path("/"));
-    fs.mkdirs(new Path(srcPath));
-    fs.mkdirs(new Path(srcPath, "test3"));
-    fs.create(new Path(srcPath + "/test3/file"));
-    fs.create(new Path(failedCopyPath));
-    fs.mkdirs(new Path("hbase/test4/"));
-    fs.create(new Path("hbase/test4/file1"));
-    crashRenameAndRecover(fs, client, srcPath, (abfsFs) -> {
-      abfsFs.listStatus(new Path(srcPath).getParent());
-      return null;
-    });
+
+    setupAndTestHBaseFailedRenameRecovery(fs, client, srcPath, failedCopyPath,
+            (abfsFs) -> {
+              abfsFs.listStatus(new Path(srcPath).getParent());
+              return null;
+            });
   }
 
   /**
@@ -454,19 +534,25 @@ public class ITestAzureBlobFileSystemRename extends
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     String srcPath = "hbase/test1/test2";
     final String failedCopyPath = srcPath + "/test3/file1";
-    fs.setWorkingDirectory(new Path("/"));
-    fs.mkdirs(new Path(srcPath));
-    fs.mkdirs(new Path(srcPath, "test3"));
-    fs.create(new Path(srcPath + "/test3/file"));
-    fs.create(new Path(failedCopyPath));
-    fs.mkdirs(new Path("hbase/test4/"));
-    fs.create(new Path("hbase/test4/file1"));
-    crashRenameAndRecover(fs, client, srcPath, (abfsFs) -> {
-      abfsFs.exists(new Path(srcPath));
-      return null;
-    });
+
+    setupAndTestHBaseFailedRenameRecovery(fs, client, srcPath, failedCopyPath,
+            (abfsFs) -> {
+              abfsFs.exists(new Path(srcPath));
+              return null;
+            });
   }
 
+
+  /**
+   * Simulates a rename failure, performs a recovery action, and verifies that the "RenamePendingJson"
+   * file is deleted. It checks that the rename operation is successfully completed after recovery.
+   *
+   * @param fs the AzureBlobFileSystem instance
+   * @param client the AbfsBlobClient instance
+   * @param srcPath the source path for the rename operation
+   * @param recoveryCallable the recovery action to perform
+   * @throws Exception if an error occurs during recovery or verification
+   */
   private void crashRenameAndRecover(final AzureBlobFileSystem fs,
                                      AbfsBlobClient client,
                                      final String srcPath,
@@ -501,6 +587,15 @@ public class ITestAzureBlobFileSystemRename extends
     assertTrue(fs2.exists(new Path("hbase/test4/test2/test3/file1")));
   }
 
+  /**
+   * Simulates a rename failure by triggering an `AbfsRestOperationException` during the rename process.
+   * It intercepts the exception and ensures that all leases acquired during the atomic rename are released.
+   *
+   * @param fs the AzureBlobFileSystem instance used for the rename operation
+   * @param client the AbfsBlobClient instance used for mocking the rename failure
+   * @param srcPath the source path for the rename operation
+   * @throws Exception if an error occurs during the simulated failure or lease release
+   */
   private void crashRename(final AzureBlobFileSystem fs,
                            final AbfsBlobClient client,
                            final String srcPath) throws Exception {
@@ -546,9 +641,18 @@ public class ITestAzureBlobFileSystemRename extends
     testAtomicityRedoInvalidFile(fs);
   }
 
+  /**
+   * Tests renaming a directory in AzureBlobFileSystem when the creation of the "RenamePendingJson"
+   * file fails on the first attempt. It ensures the renaming operation is retried.
+   *
+   * The test verifies that the creation of the "RenamePendingJson" file is attempted twice:
+   * once on failure and once on retry.
+   *
+   * @param fs the AzureBlobFileSystem instance for the test
+   * @throws Exception if an error occurs during the test
+   */
   private void testRenamePreRenameFailureResolution(final AzureBlobFileSystem fs)
           throws Exception {
-    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     Path src = new Path("hbase/test1/test2");
     Path dest = new Path("hbase/test4");
@@ -582,9 +686,18 @@ public class ITestAzureBlobFileSystemRename extends
             .isEqualTo(2);
   }
 
+  /**
+   * Tests the behavior of the redo operation when an invalid "RenamePendingJson" file exists.
+   * It verifies that the file is deleted and that no copy operation is performed.
+   *
+   * The test simulates a scenario where the "RenamePendingJson" file is partially written and
+   * ensures that the `redo` method correctly deletes the file and does not trigger a copy operation.
+   *
+   * @param fs the AzureBlobFileSystem instance for the test
+   * @throws Exception if an error occurs during the test
+   */
   private void testAtomicityRedoInvalidFile(final AzureBlobFileSystem fs)
           throws Exception {
-    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     Path path = new Path("/hbase/test1/test2");
     fs.mkdirs(new Path(path, "test3"));
@@ -606,7 +719,7 @@ public class ITestAzureBlobFileSystemRename extends
             .deleteBlobPath(Mockito.any(Path.class), Mockito.nullable(String.class),
                     Mockito.any(TracingContext.class));
     new RenameAtomicity(renameJson, 1,
-            getTestTracingContext(fs, true), null, client, null).redo();
+            getTestTracingContext(fs, true), null, client).redo();
     Assertions.assertThat(renameJsonDeleteCounter[0])
             .describedAs("RenamePendingJson should be deleted")
             .isEqualTo(1);
@@ -647,7 +760,7 @@ public class ITestAzureBlobFileSystemRename extends
             .deleteBlobPath(Mockito.any(Path.class), Mockito.nullable(String.class),
                     Mockito.any(TracingContext.class));
     new RenameAtomicity(renameJson, 2,
-            getTestTracingContext(fs, true), null, client, null);
+            getTestTracingContext(fs, true), null, client);
   }
 
   /**
@@ -685,7 +798,7 @@ public class ITestAzureBlobFileSystemRename extends
             getTestTracingContext(fs, true), fileStatus.getEtag(), client).preRename();
     RenameAtomicity redoRenameAtomicity = Mockito.spy(
             new RenameAtomicity(renameJson, jsonLen,
-                    getTestTracingContext(fs, true), null, client, null));
+                    getTestTracingContext(fs, true), null, client));
     RenameAtomicityTestUtils.addReadPathMock(redoRenameAtomicity,
             readCallbackAnswer -> {
               byte[] bytes = (byte[]) readCallbackAnswer.callRealMethod();
@@ -890,7 +1003,7 @@ public class ITestAzureBlobFileSystemRename extends
               return null;
             });
     fileSystem.rename(new Path("/test1/file"), new Path("/test1/file2"));
-    Assert.assertTrue(fileSystem.exists(new Path("/test1/file2")));
+    assertTrue(fileSystem.exists(new Path("/test1/file2")));
     Mockito.verify(blobRenameHandlers[0], Mockito.times(1))
             .handleCopyInProgress(Mockito.any(Path.class),
                     Mockito.any(TracingContext.class), Mockito.any(String.class));

@@ -60,6 +60,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
@@ -180,7 +181,7 @@ public class ITestAzureBlobFileSystemDelete extends
 
   @Test
   public void testDeleteIdempotency() throws Exception {
-    Assume.assumeTrue(DEFAULT_DELETE_CONSIDERED_IDEMPOTENT);
+    assumeTrue(DEFAULT_DELETE_CONSIDERED_IDEMPOTENT);
     // Config to reduce the retry and maxBackoff time for test run
     AbfsConfiguration abfsConfig
         = TestAbfsConfigurationFieldsValidation.updateRetryConfigs(
@@ -348,13 +349,21 @@ public class ITestAzureBlobFileSystemDelete extends
     fs.close();
   }
 
+  /**
+   * Assumes that the AzureBlobFileSystem's client is an instance of `AbfsBlobClient`.
+   * This assumption is used to ensure that the test runs only if the correct client type is present.
+   *
+   * @throws IOException if the file system client cannot be retrieved
+   */
   private void assumeBlobClient() throws IOException {
-    assertTrue(getFileSystem().getAbfsClient() instanceof AbfsBlobClient);
+    assumeTrue(getFileSystem().getAbfsClient() instanceof AbfsBlobClient);
   }
 
   /**
-   * Assert that deleting an implicit directory delete all the children of the
-   * folder.
+   * Tests deleting an implicit directory and its contents. The test verifies that after deletion,
+   * both the directory and its child file no longer exist.
+   *
+   * @throws Exception if an error occurs during the test execution
    */
   @Test
   public void testDeleteImplicitDir() throws Exception {
@@ -375,7 +384,10 @@ public class ITestAzureBlobFileSystemDelete extends
   }
 
   /**
-   * Assert deleting an implicit directory, for which paginated list is required.
+   * Tests deleting an implicit directory when a single list result is returned.
+   * The test verifies that the directory is properly deleted and no residual file status remains.
+   *
+   * @throws Exception if an error occurs during the test execution
    */
   @Test
   public void testDeleteImplicitDirWithSingleListResults() throws Exception {
@@ -409,8 +421,10 @@ public class ITestAzureBlobFileSystemDelete extends
   }
 
   /**
-   * Assert deleting of the only child of an implicit directory ensures that the
-   * parent directory's marker is present.
+   * Tests deleting an explicit directory within an implicit parent directory.
+   * It verifies that the directory and its contents are deleted, while the parent directory remains.
+   *
+   * @throws Exception if an error occurs during the test execution
    */
   @Test
   public void testDeleteExplicitDirInImplicitParentDir() throws Exception {
@@ -434,21 +448,11 @@ public class ITestAzureBlobFileSystemDelete extends
   }
 
   /**
-   * Tests the scenario where a parallel blob deletion fails due to an access denied exception.
-   * This test simulates a failure while deleting blobs in a directory in parallel, where
-   * an exception is thrown when attempting to delete the blobs.
-   * <p>
-   * The test sets up a directory (`/testDir`) with multiple files (`file1`, `file2`, `file3`)
-   * and attempts to delete the directory using the `fs.delete` method with the recursive flag
-   * set to `true`. During the deletion process, the mock `deleteBlobPath` method of the
-   * `AbfsBlobClient` is set to throw an `AbfsRestOperationException` with a `HTTP_FORBIDDEN`
-   * status, simulating an access denial error. The test expects an `AccessDeniedException` to
-   * be thrown when the deletion is attempted.
-   * <p>
-   * The purpose of this test is to ensure that the system properly handles access denied errors
-   * when attempting to delete blobs in parallel.
+   * Tests handling of a parallel delete operation failure when deleting multiple files in a directory.
+   * The test verifies that an `AccessDeniedException` is thrown when the delete operation fails
+   * due to an `AbfsRestOperationException`.
    *
-   * @throws Exception If an error occurs during the file system operations or mock setup.
+   * @throws Exception if an error occurs during the test execution
    */
   @Test
   public void testDeleteParallelBlobFailure() throws Exception {
@@ -475,17 +479,11 @@ public class ITestAzureBlobFileSystemDelete extends
   }
 
   /**
-   * Tests the deletion of the root directory with the non-recursive option set to false.
-   * This test verifies that when attempting to delete the root directory (or any
-   * non-empty directory) without recursion, the operation should fail, returning
-   * false as it cannot delete a non-empty directory without recursion.
-   * <p>
-   * The test sets up a directory `/testDir` inside the root directory and then
-   * attempts to delete the root directory (`ROOT_PATH`) without the recursive flag.
-   * Since the root directory is not empty and the non-recursive option is set to false,
-   * the delete operation is expected to fail.
+   * Tests deleting the root directory without recursion. The test verifies that
+   * the delete operation returns `false` since the root directory cannot be deleted
+   * without recursion.
    *
-   * @throws Exception If an error occurs during file system operations.
+   * @throws Exception if an error occurs during the test execution
    */
   @Test
   public void testDeleteRootWithNonRecursion() throws Exception {
@@ -495,7 +493,11 @@ public class ITestAzureBlobFileSystemDelete extends
   }
 
   /**
-   * Assert that delete operation failure should stop List producer.
+   * Tests that the producer stops when a delete operation fails with an `AccessDeniedException`.
+   * The test simulates a failure during a delete operation and verifies that the system properly
+   * handles the exception by stopping further actions.
+   *
+   * @throws Exception if an error occurs during the test execution
    */
   @Test
   public void testProducerStopOnDeleteFailure() throws Exception {
@@ -571,6 +573,8 @@ public class ITestAzureBlobFileSystemDelete extends
    * total number of blobs operated in the delete directory.
    * Also, to assert that all operations in the delete-directory flow have same
    * primaryId and opType.
+   *
+   * @throws Exception if an error occurs during the test execution
    */
   @Test
   public void testDeleteEmitDeletionCountInClientRequestId() throws Exception {

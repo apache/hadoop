@@ -364,6 +364,10 @@ public final class ConfigurationKeys {
    * for checking copy status: {@value}
    */
   public static final String FS_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS = "fs.azure.blob.copy.progress.wait.millis";
+  /**
+   * Maximum time to wait for a blob copy operation to complete: {@value}
+   */
+  public static final String FS_AZURE_BLOB_COPY_MAX_WAIT_MILLIS = "fs.azure.blob.copy.max.wait.millis";
   /**Blob rename lease refresh duration: {@value}*/
   public static final String FS_AZURE_BLOB_ATOMIC_RENAME_LEASE_REFRESH_DURATION
           = "fs.azure.blob.atomic.rename.lease.refresh.duration";

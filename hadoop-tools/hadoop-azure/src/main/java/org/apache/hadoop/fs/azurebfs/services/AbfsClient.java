@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.io.FileNotFoundException;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
@@ -44,6 +45,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
@@ -90,6 +92,7 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APN_VERSION;
@@ -549,6 +552,31 @@ public abstract class AbfsClient implements Closeable {
       String eTag,
       ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
+
+  /**
+   * Performs a pre-check for a createNonRecursive operation. Checks if parentPath
+   * exists or not.
+   *
+   * @param parentPath parent path of the file to be created.
+   * @param tracingContext trace context
+   *
+   * @throws IOException if parentPath does not exist or server error.
+   */
+  public void createNonRecursivePreCheck(Path parentPath, TracingContext tracingContext)
+          throws IOException {
+    try {
+      getPathStatus(parentPath.toUri().getPath(), false,
+              tracingContext, null);
+    } catch (AbfsRestOperationException ex) {
+      if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+        throw new FileNotFoundException("Cannot create file "
+                + parentPath.toUri().getPath() + " because parent folder does not exist.");
+      }
+      throw ex;
+    } finally {
+      abfsCounters.incrementCounter(CALL_GET_FILE_STATUS, 1);
+    }
+  }
 
   /**
    * Acquire lease on specified path.

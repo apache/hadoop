@@ -640,6 +640,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
+  /**Checks existence of parent of the given path.*/
+  public void createNonRecursivePreCheck(final Path path,
+                                            TracingContext tracingContext)
+          throws IOException {
+    getClient().createNonRecursivePreCheck(path.getParent(),
+            tracingContext);
+  }
+
   public OutputStream createFile(final Path path,
       final FileSystem.Statistics statistics, final boolean overwrite,
       final FsPermission permission, final FsPermission umask,
@@ -1114,9 +1122,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                   isNamespaceEnabled);
 
         AbfsRestOperation op = abfsClientRenameResult.getOp();
-        perfInfo.registerResult(op.getResult());
-        continuation = op.getResult()
-                .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+        if (op != null) {
+          perfInfo.registerResult(op.getResult());
+          continuation = op.getResult()
+                  .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+        }
         perfInfo.registerSuccess(true);
         countAggregate++;
         shouldContinue = continuation != null && !continuation.isEmpty();
@@ -1150,10 +1160,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       try (AbfsPerfInfo perfInfo = startTracking("delete", "deletePath")) {
         AbfsRestOperation op = getClient().deletePath(relativePath, recursive,
             continuation, tracingContext, getIsNamespaceEnabled(tracingContext));
-
-        perfInfo.registerResult(op.getResult());
-        continuation = op.getResult()
-                .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+        if (op != null) {
+          perfInfo.registerResult(op.getResult());
+          continuation = op.getResult()
+                  .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+        }
         perfInfo.registerSuccess(true);
         countAggregate++;
         shouldContinue = continuation != null && !continuation.isEmpty();

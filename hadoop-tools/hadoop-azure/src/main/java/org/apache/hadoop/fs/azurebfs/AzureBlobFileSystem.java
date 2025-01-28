@@ -442,18 +442,19 @@ public class AzureBlobFileSystem extends FileSystem
           ERR_CREATE_ON_ROOT,
           null);
     }
-    final Path parent = f.getParent();
+
     TracingContext tracingContext = new TracingContext(clientCorrelationId,
         fileSystemId, FSOperationType.CREATE_NON_RECURSIVE, tracingHeaderFormat,
         listener);
-    final FileStatus parentFileStatus = tryGetFileStatus(parent, tracingContext);
-
-    if (parentFileStatus == null) {
-      throw new FileNotFoundException("Cannot create file "
-          + f.getName() + " because parent folder does not exist.");
+    try {
+      Path qualifiedPath = makeQualified(f);
+      getAbfsStore().createNonRecursivePreCheck(qualifiedPath, tracingContext);
+      return create(f, permission, overwrite, bufferSize, replication,
+              blockSize, progress);
+    } catch (AzureBlobFileSystemException ex) {
+      checkException(f, ex);
+      return null;
     }
-
-    return create(f, permission, overwrite, bufferSize, replication, blockSize, progress);
   }
 
   @Override
@@ -553,9 +554,6 @@ public class AzureBlobFileSystem extends FileSystem
       Path adjustedDst = dst;
 
       if (dstFileStatus != null) {
-        if (!dstFileStatus.isDirectory()) {
-          return qualifiedSrcPath.equals(qualifiedDstPath);
-        }
         adjustedDst = new Path(dst, sourceFileName);
       }
 

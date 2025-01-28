@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.DIRECTORY_NOT_EMPTY_DELETE;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.NON_EMPTY_DIRECTORY_DELETE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.PATH_NOT_FOUND;
 
 /**
@@ -103,8 +103,8 @@ public class BlobDeleteHandler extends ListActionTaker {
         listRecursiveAndTakeAction();
         if (nonRecursiveDeleteDirectoryFailed) {
             throw new AbfsRestOperationException(HTTP_CONFLICT,
-                    DIRECTORY_NOT_EMPTY_DELETE.getErrorCode(),
-                    DIRECTORY_NOT_EMPTY_DELETE.getErrorMessage(),
+                    NON_EMPTY_DIRECTORY_DELETE.getErrorCode(),
+                    NON_EMPTY_DIRECTORY_DELETE.getErrorMessage(),
                     new PathIOException(path.toString(),
                             "Non-recursive delete of non-empty directory"));
         }

@@ -36,7 +36,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = true;
   public static final String USER_HOME_DIRECTORY_PREFIX = "/user";
 
-  private static final int SIXTY_SECONDS = 60_000;
+  public static final int SIXTY_SECONDS = 60_000;
 
   // Retry parameter defaults.
   public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 500;  // 500ms
@@ -184,15 +184,19 @@ public final class FileSystemConfigurations {
 
   public static final long DEFAULT_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS = 1_000L;
 
+  public static final long DEFAULT_AZURE_BLOB_COPY_MAX_WAIT_MILLIS = 300_000L;
+
   public static final long DEFAULT_AZURE_BLOB_ATOMIC_RENAME_LEASE_REFRESH_DURATION = 60_000L;
 
   public static final int DEFAULT_FS_AZURE_PRODUCER_QUEUE_MAX_SIZE = 2 * DEFAULT_AZURE_LIST_MAX_RESULTS;
 
   public static final int DEFAULT_FS_AZURE_CONSUMER_MAX_LAG = DEFAULT_AZURE_LIST_MAX_RESULTS;
 
-  public static final int DEFAULT_FS_AZURE_BLOB_RENAME_THREAD = 5;
+  public static final int DEFAULT_FS_AZURE_LISTING_ACTION_THREADS = 5;
 
-  public static final int DEFAULT_FS_AZURE_BLOB_DELETE_THREAD = 5;
+  public static final int DEFAULT_FS_AZURE_BLOB_RENAME_THREAD = DEFAULT_FS_AZURE_LISTING_ACTION_THREADS;
+
+  public static final int DEFAULT_FS_AZURE_BLOB_DELETE_THREAD = DEFAULT_FS_AZURE_LISTING_ACTION_THREADS;
 
   private FileSystemConfigurations() {}
 }
