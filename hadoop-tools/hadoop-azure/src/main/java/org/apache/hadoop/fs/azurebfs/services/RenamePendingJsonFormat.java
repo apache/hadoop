@@ -21,37 +21,38 @@ package org.apache.hadoop.fs.azurebfs.services;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class RenamePendingJsonFormat {
-    @JsonProperty(value = "OldFolderName")
-    private String oldFolderName;
 
-    @JsonProperty(value = "NewFolderName")
-    private String newFolderName;
+  @JsonProperty(value = "OldFolderName")
+  private String oldFolderName;
 
-    @JsonProperty(value = "ETag")
-    private String eTag;
+  @JsonProperty(value = "NewFolderName")
+  private String newFolderName;
 
-    /** Getters and Setters */
-    String getOldFolderName() {
-        return oldFolderName;
-    }
+  @JsonProperty(value = "ETag")
+  private String eTag;
 
-    String getNewFolderName() {
-        return newFolderName;
-    }
+  /** Getters and Setters */
+  String getOldFolderName() {
+    return oldFolderName;
+  }
 
-    String getETag() {
-        return eTag;
-    }
+  String getNewFolderName() {
+    return newFolderName;
+  }
 
-    void setOldFolderName(String oldFolderName) {
-        this.oldFolderName = oldFolderName;
-    }
+  String getETag() {
+    return eTag;
+  }
 
-    void setNewFolderName(String newFolderName) {
-        this.newFolderName = newFolderName;
-    }
+  void setOldFolderName(String oldFolderName) {
+    this.oldFolderName = oldFolderName;
+  }
 
-    void setETag(String eTag) {
-        this.eTag = eTag;
-    }
+  void setNewFolderName(String newFolderName) {
+    this.newFolderName = newFolderName;
+  }
+
+  void setETag(String eTag) {
+    this.eTag = eTag;
+  }
 }

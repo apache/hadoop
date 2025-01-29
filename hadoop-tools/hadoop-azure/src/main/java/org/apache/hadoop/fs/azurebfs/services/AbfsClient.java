@@ -21,8 +21,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.io.FileNotFoundException;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
@@ -138,43 +138,75 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNEC
  * AbfsClient.
  */
 public abstract class AbfsClient implements Closeable {
+
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
-  public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
-  public static final String ABFS_CLIENT_TIMER_THREAD_NAME = "abfs-timer-client";
+
+  public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE
+      + HUNDRED_CONTINUE + SEMICOLON;
+
+  public static final String ABFS_CLIENT_TIMER_THREAD_NAME
+      = "abfs-timer-client";
 
   private final URL baseUrl;
+
   private final SharedKeyCredentials sharedKeyCredentials;
+
   private ApiVersion xMsVersion = ApiVersion.getCurrentVersion();
+
   private final ExponentialRetryPolicy exponentialRetryPolicy;
+
   private final StaticRetryPolicy staticRetryPolicy;
+
   private final String filesystem;
+
   private final AbfsConfiguration abfsConfiguration;
+
   private final String userAgent;
+
   private final AbfsPerfTracker abfsPerfTracker;
+
   private String clientProvidedEncryptionKey = null;
+
   private String clientProvidedEncryptionKeySHA = null;
 
   private final String accountName;
+
   private final AuthType authType;
+
   private AccessTokenProvider tokenProvider;
+
   private SASTokenProvider sasTokenProvider;
+
   private final AbfsCounters abfsCounters;
+
   private Timer timer;
+
   private final String abfsMetricUrl;
+
   private boolean isMetricCollectionEnabled = false;
+
   private final MetricFormat metricFormat;
+
   private final AtomicBoolean isMetricCollectionStopped;
+
   private final int metricAnalysisPeriod;
+
   private final int metricIdlePeriod;
+
   private EncryptionContextProvider encryptionContextProvider = null;
+
   private EncryptionType encryptionType = EncryptionType.NONE;
+
   private final AbfsThrottlingIntercept intercept;
 
   private final ListeningScheduledExecutorService executorService;
 
   private boolean renameResilience;
+
   private TimerTask runningTimerTask;
+
   private boolean isSendMetricCall;
+
   private SharedKeyCredentials metricSharedkeyCredentials = null;
 
   private KeepAliveCache keepAliveCache;
@@ -185,7 +217,8 @@ public abstract class AbfsClient implements Closeable {
   /**
    * logging the rename failure if metadata is in an incomplete state.
    */
-  protected static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE = new LogExactlyOnce(LOG);
+  protected static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE
+      = new LogExactlyOnce(LOG);
 
   private AbfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
@@ -195,20 +228,26 @@ public abstract class AbfsClient implements Closeable {
     this.baseUrl = baseUrl;
     this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
-    this.filesystem = baseUrlString.substring(baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
+    this.filesystem = baseUrlString.substring(
+        baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
     this.abfsConfiguration = abfsConfiguration;
     this.exponentialRetryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.staticRetryPolicy = abfsClientContext.getStaticRetryPolicy();
-    this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
+    this.accountName = abfsConfiguration.getAccountName()
+        .substring(0,
+            abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
-    this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
+    this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName,
+        abfsConfiguration);
     this.renameResilience = abfsConfiguration.getRenameResilience();
 
     if (encryptionContextProvider != null) {
       this.encryptionContextProvider = encryptionContextProvider;
-      xMsVersion = ApiVersion.APR_10_2021; // will be default once server change deployed
+      xMsVersion
+          = ApiVersion.APR_10_2021; // will be default once server change deployed
       encryptionType = EncryptionType.ENCRYPTION_CONTEXT;
-    } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
+    } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey()
+        != null) {
       clientProvidedEncryptionKey =
           abfsConfiguration.getEncodedClientProvidedEncryptionKey();
       this.clientProvidedEncryptionKeySHA =
@@ -221,9 +260,12 @@ public abstract class AbfsClient implements Closeable {
     if (this.baseUrl.toString().startsWith(HTTPS_SCHEME)) {
       try {
         LOG.trace("Initializing DelegatingSSLSocketFactory with {} SSL "
-                + "Channel Mode", this.abfsConfiguration.getPreferredSSLFactoryOption());
-        DelegatingSSLSocketFactory.initializeDefaultFactory(this.abfsConfiguration.getPreferredSSLFactoryOption());
-        sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory().getProviderName();
+                + "Channel Mode",
+            this.abfsConfiguration.getPreferredSSLFactoryOption());
+        DelegatingSSLSocketFactory.initializeDefaultFactory(
+            this.abfsConfiguration.getPreferredSSLFactoryOption());
+        sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory()
+            .getProviderName();
       } catch (IOException e) {
         // Suppress exception, failure to init DelegatingSSLSocketFactory would have only performance impact.
         LOG.trace("NonCritFailure: DelegatingSSLSocketFactory Init failed : "
@@ -245,9 +287,12 @@ public abstract class AbfsClient implements Closeable {
     this.abfsCounters = abfsClientContext.getAbfsCounters();
 
     ThreadFactory tf =
-        new ThreadFactoryBuilder().setNameFormat("AbfsClient Lease Ops").setDaemon(true).build();
+        new ThreadFactoryBuilder().setNameFormat("AbfsClient Lease Ops")
+            .setDaemon(true)
+            .build();
     this.executorService = MoreExecutors.listeningDecorator(
-        HadoopExecutors.newScheduledThreadPool(this.abfsConfiguration.getNumLeaseThreads(), tf));
+        HadoopExecutors.newScheduledThreadPool(
+            this.abfsConfiguration.getNumLeaseThreads(), tf));
     this.metricFormat = abfsConfiguration.getMetricFormat();
     this.isMetricCollectionStopped = new AtomicBoolean(false);
     this.metricAnalysisPeriod = abfsConfiguration.getMetricAnalysisTimeout();
@@ -255,7 +300,8 @@ public abstract class AbfsClient implements Closeable {
     if (StringUtils.isNotEmpty(metricFormat.toString())) {
       String metricAccountName = abfsConfiguration.getMetricAccount();
       String metricAccountKey = abfsConfiguration.getMetricAccountKey();
-      if (StringUtils.isNotEmpty(metricAccountName) && StringUtils.isNotEmpty(metricAccountKey)) {
+      if (StringUtils.isNotEmpty(metricAccountName) && StringUtils.isNotEmpty(
+          metricAccountKey)) {
         isMetricCollectionEnabled = true;
         abfsCounters.initializeMetrics(metricFormat);
         int dotIndex = metricAccountName.indexOf(AbfsHttpConstants.DOT);
@@ -268,13 +314,14 @@ public abstract class AbfsClient implements Closeable {
               metricAccountName.substring(0, dotIndex),
               metricAccountKey);
         } catch (IllegalArgumentException e) {
-          throw new IOException("Exception while initializing metric credentials ", e);
+          throw new IOException(
+              "Exception while initializing metric credentials ", e);
         }
       }
     }
     if (isMetricCollectionEnabled) {
       this.timer = new Timer(
-              ABFS_CLIENT_TIMER_THREAD_NAME, true);
+          ABFS_CLIENT_TIMER_THREAD_NAME, true);
       timer.schedule(new TimerTaskImpl(),
           metricIdlePeriod,
           metricIdlePeriod);
@@ -282,22 +329,24 @@ public abstract class AbfsClient implements Closeable {
     this.abfsMetricUrl = abfsConfiguration.getMetricUri();
   }
 
-  public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
-                    final AbfsConfiguration abfsConfiguration,
-                    final AccessTokenProvider tokenProvider,
-                    final EncryptionContextProvider encryptionContextProvider,
-                    final AbfsClientContext abfsClientContext)
+  public AbfsClient(final URL baseUrl,
+      final SharedKeyCredentials sharedKeyCredentials,
+      final AbfsConfiguration abfsConfiguration,
+      final AccessTokenProvider tokenProvider,
+      final EncryptionContextProvider encryptionContextProvider,
+      final AbfsClientContext abfsClientContext)
       throws IOException {
     this(baseUrl, sharedKeyCredentials, abfsConfiguration,
         encryptionContextProvider, abfsClientContext);
     this.tokenProvider = tokenProvider;
   }
 
-  public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
-                    final AbfsConfiguration abfsConfiguration,
-                    final SASTokenProvider sasTokenProvider,
-                    final EncryptionContextProvider encryptionContextProvider,
-                    final AbfsClientContext abfsClientContext)
+  public AbfsClient(final URL baseUrl,
+      final SharedKeyCredentials sharedKeyCredentials,
+      final AbfsConfiguration abfsConfiguration,
+      final SASTokenProvider sasTokenProvider,
+      final EncryptionContextProvider encryptionContextProvider,
+      final AbfsClientContext abfsClientContext)
       throws IOException {
     this(baseUrl, sharedKeyCredentials, abfsConfiguration,
         encryptionContextProvider, abfsClientContext);
@@ -425,8 +474,10 @@ public abstract class AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException if namespace is not enabled.
    */
   protected void addEncryptionKeyRequestHeaders(String path,
-      List<AbfsHttpHeader> requestHeaders, boolean isCreateFileRequest,
-      ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
+      List<AbfsHttpHeader> requestHeaders,
+      boolean isCreateFileRequest,
+      ContextEncryptionAdapter contextEncryptionAdapter,
+      TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     String encodedKey, encodedKeySHA256;
     switch (encryptionType) {
@@ -446,7 +497,8 @@ public abstract class AbfsClient implements Closeable {
       encodedKeySHA256 = contextEncryptionAdapter.getEncodedKeySHA();
       break;
 
-    default: return; // no client-provided encryption keys
+    default:
+      return; // no client-provided encryption keys
     }
 
     requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY, encodedKey));
@@ -495,8 +547,11 @@ public abstract class AbfsClient implements Closeable {
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
    */
-  public abstract AbfsRestOperation listPath(String relativePath, boolean recursive,
-      int listMaxResults, String continuation, TracingContext tracingContext)
+  public abstract AbfsRestOperation listPath(String relativePath,
+      boolean recursive,
+      int listMaxResults,
+      String continuation,
+      TracingContext tracingContext)
       throws IOException;
 
   /**
@@ -562,15 +617,17 @@ public abstract class AbfsClient implements Closeable {
    *
    * @throws IOException if parentPath does not exist or server error.
    */
-  public void createNonRecursivePreCheck(Path parentPath, TracingContext tracingContext)
-          throws IOException {
+  public void createNonRecursivePreCheck(Path parentPath,
+      TracingContext tracingContext)
+      throws IOException {
     try {
       getPathStatus(parentPath.toUri().getPath(), false,
-              tracingContext, null);
+          tracingContext, null);
     } catch (AbfsRestOperationException ex) {
       if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
         throw new FileNotFoundException("Cannot create file "
-                + parentPath.toUri().getPath() + " because parent folder does not exist.");
+            + parentPath.toUri().getPath()
+            + " because parent folder does not exist.");
       }
       throw ex;
     } finally {
@@ -588,9 +645,9 @@ public abstract class AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   public abstract AbfsRestOperation acquireLease(String path,
-                                                 int duration,
-                                                 String eTag,
-                                                 TracingContext tracingContext) throws AzureBlobFileSystemException;
+      int duration,
+      String eTag,
+      TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**
    * Renew lease on specified path.
@@ -670,12 +727,13 @@ public abstract class AbfsClient implements Closeable {
    * @return un-executed rest operation.
    */
   @VisibleForTesting
-  AbfsRestOperation createRenameRestOperation(URL url, List<AbfsHttpHeader> requestHeaders) {
+  AbfsRestOperation createRenameRestOperation(URL url,
+      List<AbfsHttpHeader> requestHeaders) {
     AbfsRestOperation op = getAbfsRestOperation(
-            AbfsRestOperationType.RenamePath,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.RenamePath,
+        HTTP_METHOD_PUT,
+        url,
+        requestHeaders);
     return op;
   }
 
@@ -710,13 +768,16 @@ public abstract class AbfsClient implements Closeable {
       final AbfsRestOperation op,
       final String destination,
       TracingContext tracingContext) {
-    Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
+    Preconditions.checkArgument(op.hasResult(),
+        "Operations has null HTTP response");
 
     // removing isDir from debug logs as it can be misleading
     LOG.debug("rename({}, {}) failure {}; retry={} etag {}",
-              source, destination, op.getResult().getStatusCode(), op.isARetriedRequest(), sourceEtag);
+        source, destination, op.getResult().getStatusCode(),
+        op.isARetriedRequest(), sourceEtag);
     if (!(op.isARetriedRequest()
-            && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND))) {
+        && (op.getResult().getStatusCode()
+        == HttpURLConnection.HTTP_NOT_FOUND))) {
       // only attempt recovery if the failure was a 404 on a retried rename request.
       return false;
     }
@@ -725,16 +786,17 @@ public abstract class AbfsClient implements Closeable {
       // Server has returned HTTP 404, we have an etag, so see
       // if the rename has actually taken place,
       LOG.info("rename {} to {} failed, checking etag of destination",
-              source, destination);
+          source, destination);
       try {
         final AbfsRestOperation destStatusOp = getPathStatus(destination,
             false, tracingContext, null);
         final AbfsHttpOperation result = destStatusOp.getResult();
 
-        final boolean recovered = result.getStatusCode() == HttpURLConnection.HTTP_OK
+        final boolean recovered =
+            result.getStatusCode() == HttpURLConnection.HTTP_OK
                 && sourceEtag.equals(extractEtagHeader(result));
         LOG.info("File rename has taken place: recovery {}",
-                recovered ? "succeeded" : "failed");
+            recovered ? "succeeded" : "failed");
         return recovered;
 
       } catch (AzureBlobFileSystemException ex) {
@@ -745,7 +807,7 @@ public abstract class AbfsClient implements Closeable {
     } else {
       LOG.debug("No source etag; unable to probe for the operation's success");
     }
-      return false;
+    return false;
   }
 
   /**
@@ -759,9 +821,12 @@ public abstract class AbfsClient implements Closeable {
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
-  public abstract AbfsRestOperation append(String path, byte[] buffer,
-      AppendRequestParameters reqParams, String cachedSasToken,
-      ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
+  public abstract AbfsRestOperation append(String path,
+      byte[] buffer,
+      AppendRequestParameters reqParams,
+      String cachedSasToken,
+      ContextEncryptionAdapter contextEncryptionAdapter,
+      TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
   /**
@@ -787,16 +852,20 @@ public abstract class AbfsClient implements Closeable {
   // Hence, we pass/succeed the appendblob append call
   // in case we are doing a retry after checking the length of the file.
   public boolean appendSuccessCheckOp(AbfsRestOperation op, final String path,
-                                       final long length, TracingContext tracingContext)
+      final long length, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     if ((op.isARetriedRequest())
-        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
-      final AbfsRestOperation destStatusOp = getPathStatus(path, false, tracingContext, null);
-      if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
+        && (op.getResult().getStatusCode()
+        == HttpURLConnection.HTTP_BAD_REQUEST)) {
+      final AbfsRestOperation destStatusOp = getPathStatus(path, false,
+          tracingContext, null);
+      if (destStatusOp.getResult().getStatusCode()
+          == HttpURLConnection.HTTP_OK) {
         String fileLength = destStatusOp.getResult().getResponseHeader(
             HttpHeaderConfigurations.CONTENT_LENGTH);
         if (length <= Long.parseLong(fileLength)) {
-          LOG.debug("Returning success response from append blob idempotency code");
+          LOG.debug(
+              "Returning success response from append blob idempotency code");
           return true;
         }
       }
@@ -817,10 +886,14 @@ public abstract class AbfsClient implements Closeable {
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
-  public abstract AbfsRestOperation flush(String path, long position,
-      boolean retainUncommittedData, boolean isClose,
-      String cachedSasToken, String leaseId,
-      ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
+  public abstract AbfsRestOperation flush(String path,
+      long position,
+      boolean retainUncommittedData,
+      boolean isClose,
+      String cachedSasToken,
+      String leaseId,
+      ContextEncryptionAdapter contextEncryptionAdapter,
+      TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
   /**
@@ -854,8 +927,10 @@ public abstract class AbfsClient implements Closeable {
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
-  public abstract AbfsRestOperation setPathProperties(String path, Hashtable<String, String> properties,
-      TracingContext tracingContext, ContextEncryptionAdapter contextEncryptionAdapter)
+  public abstract AbfsRestOperation setPathProperties(String path,
+      Hashtable<String, String> properties,
+      TracingContext tracingContext,
+      ContextEncryptionAdapter contextEncryptionAdapter)
       throws AzureBlobFileSystemException;
 
   /**
@@ -928,7 +1003,8 @@ public abstract class AbfsClient implements Closeable {
    * @return REST operation response post idempotency check.
    */
   public AbfsRestOperation deleteIdempotencyCheckOp(final AbfsRestOperation op) {
-    Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
+    Preconditions.checkArgument(op.hasResult(),
+        "Operations has null HTTP response");
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)
         && DEFAULT_DELETE_CONSIDERED_IDEMPOTENT) {
@@ -956,7 +1032,9 @@ public abstract class AbfsClient implements Closeable {
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
-  public abstract AbfsRestOperation setOwner(String path, String owner, String group,
+  public abstract AbfsRestOperation setOwner(String path,
+      String owner,
+      String group,
       TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
@@ -968,7 +1046,8 @@ public abstract class AbfsClient implements Closeable {
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
-  public abstract AbfsRestOperation setPermission(String path, String permission,
+  public abstract AbfsRestOperation setPermission(String path,
+      String permission,
       TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
@@ -994,7 +1073,9 @@ public abstract class AbfsClient implements Closeable {
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
-  public abstract AbfsRestOperation setAcl(String path, String aclSpecString, String eTag,
+  public abstract AbfsRestOperation setAcl(String path,
+      String aclSpecString,
+      String eTag,
       TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
@@ -1005,8 +1086,9 @@ public abstract class AbfsClient implements Closeable {
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
-  public AbfsRestOperation getAclStatus(final String path, TracingContext tracingContext)
-          throws AzureBlobFileSystemException {
+  public AbfsRestOperation getAclStatus(final String path,
+      TracingContext tracingContext)
+      throws AzureBlobFileSystemException {
     return getAclStatus(path, abfsConfiguration.isUpnUsed(), tracingContext);
   }
 
@@ -1028,10 +1110,12 @@ public abstract class AbfsClient implements Closeable {
    * @param path  Path for which access check needs to be performed
    * @param rwx   The permission to be checked on the path
    * @param tracingContext Tracks identifiers for request header
-   * @return      The {@link AbfsRestOperation} object for the operation
+   * @return The {@link AbfsRestOperation} object for the operation
    * @throws AzureBlobFileSystemException in case of bad requests
    */
-  public abstract AbfsRestOperation checkAccess(String path, String rwx, TracingContext tracingContext)
+  public abstract AbfsRestOperation checkAccess(String path,
+      String rwx,
+      TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
   /**
@@ -1061,7 +1145,9 @@ public abstract class AbfsClient implements Closeable {
    * @return sasToken - returned for optional re-use.
    * @throws SASTokenProviderException if SAS token cannot be acquired.
    */
-  protected String appendSASTokenToQuery(String path, String operation, AbfsUriQueryBuilder queryBuilder) throws SASTokenProviderException {
+  protected String appendSASTokenToQuery(String path,
+      String operation,
+      AbfsUriQueryBuilder queryBuilder) throws SASTokenProviderException {
     return appendSASTokenToQuery(path, operation, queryBuilder, null);
   }
 
@@ -1075,9 +1161,9 @@ public abstract class AbfsClient implements Closeable {
    * @throws SASTokenProviderException if SAS token cannot be acquired.
    */
   protected String appendSASTokenToQuery(String path,
-                                         String operation,
-                                         AbfsUriQueryBuilder queryBuilder,
-                                         String cachedSasToken)
+      String operation,
+      AbfsUriQueryBuilder queryBuilder,
+      String cachedSasToken)
       throws SASTokenProviderException {
     String sasToken = null;
     if (this.authType == AuthType.SAS) {
@@ -1087,7 +1173,8 @@ public abstract class AbfsClient implements Closeable {
           sasToken = sasTokenProvider.getSASToken(this.accountName,
               this.filesystem, path, operation);
           if ((sasToken == null) || sasToken.isEmpty()) {
-            throw new UnsupportedOperationException("SASToken received is empty or null");
+            throw new UnsupportedOperationException(
+                "SASToken received is empty or null");
           }
         } else {
           sasToken = cachedSasToken;
@@ -1103,7 +1190,8 @@ public abstract class AbfsClient implements Closeable {
         LOG.trace("SAS token fetch complete for {} on {}", operation, path);
       } catch (Exception ex) {
         throw new SASTokenProviderException(String.format(
-            "Failed to acquire a SAS token for %s on %s due to %s", operation, path,
+            "Failed to acquire a SAS token for %s on %s due to %s", operation,
+            path,
             ex.toString()));
       }
     }
@@ -1117,7 +1205,8 @@ public abstract class AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException if URL creation fails.
    */
   @VisibleForTesting
-  protected URL createRequestUrl(final String query) throws AzureBlobFileSystemException {
+  protected URL createRequestUrl(final String query)
+      throws AzureBlobFileSystemException {
     return createRequestUrl(EMPTY_STRING, query);
   }
 
@@ -1130,7 +1219,7 @@ public abstract class AbfsClient implements Closeable {
    */
   @VisibleForTesting
   protected URL createRequestUrl(final String path, final String query)
-          throws AzureBlobFileSystemException {
+      throws AzureBlobFileSystemException {
     return createRequestUrl(baseUrl, path, query);
   }
 
@@ -1143,8 +1232,10 @@ public abstract class AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException if URL creation fails.
    */
   @VisibleForTesting
-  protected URL createRequestUrl(final URL baseUrl, final String path, final String query)
-          throws AzureBlobFileSystemException {
+  protected URL createRequestUrl(final URL baseUrl,
+      final String path,
+      final String query)
+      throws AzureBlobFileSystemException {
     String encodedPath = path;
     try {
       encodedPath = urlEncode(path);
@@ -1176,14 +1267,15 @@ public abstract class AbfsClient implements Closeable {
    * @return url encoded string.
    * @throws AzureBlobFileSystemException if encoding fails.
    */
-  public static String urlEncode(final String value) throws AzureBlobFileSystemException {
+  public static String urlEncode(final String value)
+      throws AzureBlobFileSystemException {
     String encodedString;
     try {
-      encodedString =  URLEncoder.encode(value, UTF_8)
+      encodedString = URLEncoder.encode(value, UTF_8)
           .replace(PLUS, PLUS_ENCODE)
           .replace(FORWARD_SLASH_ENCODE, FORWARD_SLASH);
     } catch (UnsupportedEncodingException ex) {
-        throw new InvalidUriException(value);
+      throw new InvalidUriException(value);
     }
 
     return encodedString;
@@ -1201,8 +1293,10 @@ public abstract class AbfsClient implements Closeable {
     return abfsConfiguration.isPaginatedDeleteEnabled();
   }
 
-  protected Boolean isPaginatedDelete(boolean isRecursiveDelete, boolean isNamespaceEnabled) {
-    return getIsPaginatedDeleteEnabled() && isNamespaceEnabled && isRecursiveDelete;
+  protected Boolean isPaginatedDelete(boolean isRecursiveDelete,
+      boolean isNamespaceEnabled) {
+    return getIsPaginatedDeleteEnabled() && isNamespaceEnabled
+        && isRecursiveDelete;
   }
 
   public AuthType getAuthType() {
@@ -1318,7 +1412,9 @@ public abstract class AbfsClient implements Closeable {
         numberOfBytesRead);
     String md5HashActual = result.getResponseHeader(CONTENT_MD5);
     if (!md5HashComputed.equals(md5HashActual)) {
-      LOG.debug("Md5 Mismatch Error in Read Operation. Server returned Md5: {}, Client computed Md5: {}", md5HashActual, md5HashComputed);
+      LOG.debug(
+          "Md5 Mismatch Error in Read Operation. Server returned Md5: {}, Client computed Md5: {}",
+          md5HashActual, md5HashComputed);
       throw new AbfsInvalidChecksumException(result.getRequestId());
     }
   }
@@ -1411,7 +1507,8 @@ public abstract class AbfsClient implements Closeable {
     return abfsConfiguration.getNumLeaseThreads();
   }
 
-  public <V> ListenableScheduledFuture<V> schedule(Callable<V> callable, long delay,
+  public <V> ListenableScheduledFuture<V> schedule(Callable<V> callable,
+      long delay,
       TimeUnit timeUnit) {
     return executorService.schedule(callable, delay, timeUnit);
   }
@@ -1420,7 +1517,8 @@ public abstract class AbfsClient implements Closeable {
     return executorService.submit(runnable);
   }
 
-  public <V> void addCallback(ListenableFuture<V> future, FutureCallback<V> callback) {
+  public <V> void addCallback(ListenableFuture<V> future,
+      FutureCallback<V> callback) {
     Futures.addCallback(future, callback, executorService);
   }
 
@@ -1459,33 +1557,35 @@ public abstract class AbfsClient implements Closeable {
    * @param timerTask The timertask object.
    * @return true or false.
    */
-  boolean timerOrchestrator(TimerFunctionality timerFunctionality, TimerTask timerTask) {
+  boolean timerOrchestrator(TimerFunctionality timerFunctionality,
+      TimerTask timerTask) {
     switch (timerFunctionality) {
-      case RESUME:
-        if (isMetricCollectionEnabled && isMetricCollectionStopped.get()) {
-          synchronized (this) {
-            if (isMetricCollectionStopped.get()) {
-              resumeTimer();
-            }
+    case RESUME:
+      if (isMetricCollectionEnabled && isMetricCollectionStopped.get()) {
+        synchronized (this) {
+          if (isMetricCollectionStopped.get()) {
+            resumeTimer();
           }
         }
-        break;
-      case SUSPEND:
-        long now = System.currentTimeMillis();
-        long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
-        if (isMetricCollectionEnabled && (now - lastExecutionTime >= metricAnalysisPeriod)) {
-          synchronized (this) {
-            if (!isMetricCollectionStopped.get()) {
-              timerTask.cancel();
-              timer.purge();
-              isMetricCollectionStopped.set(true);
-              return true;
-            }
+      }
+      break;
+    case SUSPEND:
+      long now = System.currentTimeMillis();
+      long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
+      if (isMetricCollectionEnabled && (now - lastExecutionTime
+          >= metricAnalysisPeriod)) {
+        synchronized (this) {
+          if (!isMetricCollectionStopped.get()) {
+            timerTask.cancel();
+            timer.purge();
+            isMetricCollectionStopped.set(true);
+            return true;
           }
         }
-        break;
-      default:
-        break;
+      }
+      break;
+    default:
+      break;
     }
     return false;
   }
@@ -1507,16 +1607,18 @@ public abstract class AbfsClient implements Closeable {
   public void getMetricCall(TracingContext tracingContext) throws IOException {
     this.isSendMetricCall = true;
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+    final AbfsUriQueryBuilder abfsUriQueryBuilder
+        = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
 
-    final URL url = createRequestUrl(new URL(abfsMetricUrl), EMPTY_STRING, abfsUriQueryBuilder.toString());
+    final URL url = createRequestUrl(new URL(abfsMetricUrl), EMPTY_STRING,
+        abfsUriQueryBuilder.toString());
 
     final AbfsRestOperation op = getAbfsRestOperation(
-            AbfsRestOperationType.GetFileSystemProperties,
-            HTTP_METHOD_HEAD,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.GetFileSystemProperties,
+        HTTP_METHOD_HEAD,
+        url,
+        requestHeaders);
     try {
       op.execute(tracingContext);
     } finally {
@@ -1533,18 +1635,20 @@ public abstract class AbfsClient implements Closeable {
   }
 
   class TimerTaskImpl extends TimerTask {
+
     TimerTaskImpl() {
       runningTimerTask = this;
     }
+
     @Override
     public void run() {
       try {
         if (timerOrchestrator(TimerFunctionality.SUSPEND, this)) {
-            try {
-              getMetricCall(getMetricTracingContext());
-            } finally {
-              abfsCounters.initializeMetrics(metricFormat);
-            }
+          try {
+            getMetricCall(getMetricTracingContext());
+          } finally {
+            abfsCounters.initializeMetrics(metricFormat);
+          }
         }
       } catch (IOException e) {
       }
@@ -1678,7 +1782,8 @@ public abstract class AbfsClient implements Closeable {
    * @return ListResultSchema
    * @throws IOException if parsing fails
    */
-  public abstract ListResultSchema parseListPathResults(InputStream stream) throws IOException;
+  public abstract ListResultSchema parseListPathResults(InputStream stream)
+      throws IOException;
 
   /**
    * Parses response of Get Block List from server based on Endpoint used.
@@ -1686,7 +1791,8 @@ public abstract class AbfsClient implements Closeable {
    * @return List of block IDs
    * @throws IOException if parsing fails
    */
-  public abstract List<String> parseBlockListResponse(InputStream stream) throws IOException;
+  public abstract List<String> parseBlockListResponse(InputStream stream)
+      throws IOException;
 
   /**
    * Parses response from ErrorStream returned by server based on Endpoint used.
@@ -1694,7 +1800,8 @@ public abstract class AbfsClient implements Closeable {
    * @return StorageErrorResponseSchema
    * @throws IOException if parsing fails
    */
-  public abstract StorageErrorResponseSchema processStorageErrorResponse(InputStream stream) throws IOException;
+  public abstract StorageErrorResponseSchema processStorageErrorResponse(
+      InputStream stream) throws IOException;
 
   /**
    * Returns continuation token from server response based on Endpoint used.
@@ -1720,7 +1827,8 @@ public abstract class AbfsClient implements Closeable {
    * @return encoded value
    * @throws UnsupportedEncodingException if encoding fails
    */
-  public abstract byte[] encodeAttribute(String value) throws UnsupportedEncodingException;
+  public abstract byte[] encodeAttribute(String value)
+      throws UnsupportedEncodingException;
 
   /**
    * Decode attribute with decoding based on Endpoint used.
@@ -1728,5 +1836,6 @@ public abstract class AbfsClient implements Closeable {
    * @return decoded value
    * @throws UnsupportedEncodingException if decoding fails
    */
-  public abstract String decodeAttribute(byte[] value) throws UnsupportedEncodingException;
+  public abstract String decodeAttribute(byte[] value)
+      throws UnsupportedEncodingException;
 }

@@ -651,8 +651,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   public void createNonRecursivePreCheck(final Path path,
                                             TracingContext tracingContext)
           throws IOException {
-    getClient().createNonRecursivePreCheck(path.getParent(),
-            tracingContext);
+    if (path.getParent() != null) {
+      getClient().createNonRecursivePreCheck(path.getParent(),
+              tracingContext);
+    }
   }
 
   public OutputStream createFile(final Path path,

@@ -22,20 +22,20 @@ package org.apache.hadoop.fs.azurebfs.enums;
  * Enum for BlobCopyProgress.
  */
 public enum BlobCopyProgress {
-    /**
-     * Copy is successful.
-     */
-    SUCCESS,
-    /**
-     * Copy is failed.
-     */
-    FAILURE,
-    /**
-     * Copy is aborted.
-     */
-    ABORTED,
-    /**
-     * Copy is pending.
-     */
-    PENDING;
+  /**
+   * Copy is successful.
+   */
+  SUCCESS,
+  /**
+   * Copy is failed.
+   */
+  FAILURE,
+  /**
+   * Copy is aborted.
+   */
+  ABORTED,
+  /**
+   * Copy is pending.
+   */
+  PENDING;
 }

@@ -22,80 +22,87 @@ package org.apache.hadoop.fs.azurebfs.services;
  * Information about a path.
  */
 public class PathInformation {
-    private Boolean pathExists;
-    private Boolean isDirectory;
-    private Boolean isImplicit;
-    private String eTag;
 
-    /**
-     * Constructor.
-     * @param pathExists The path exists.
-     * @param isDirectory Is the path a directory?
-     * @param eTag The ETag of the path.
-     * @param isImplicit Is the path implicit?
-     */
-    public PathInformation(Boolean pathExists, Boolean isDirectory, String eTag, Boolean isImplicit) {
-        this.pathExists = pathExists;
-        this.isDirectory = isDirectory;
-        this.eTag = eTag;
-        this.isImplicit = isImplicit;
-    }
+  private Boolean pathExists;
 
-    public PathInformation() {
-    }
+  private Boolean isDirectory;
 
-    /**
-     * Copy the path information.
-     * @param pathInformation The path information to copy.
-     */
-    public void copy(PathInformation pathInformation) {
-        this.pathExists = pathInformation.getPathExists();
-        this.isDirectory = pathInformation.getIsDirectory();
-        this.eTag = pathInformation.getETag();
-        this.isImplicit = pathInformation.getIsImplicit();
-    }
+  private Boolean isImplicit;
 
-    /**
-     * Get the ETag of the path.
-     *
-     * @return the etag value*/
-    public String getETag() {
-        return eTag;
-    }
+  private String eTag;
 
-    /**
-     * Get value of pathExists.
-     *
-     * @return true if path exists, false otherwise.
-     */
-    public Boolean getPathExists() {
-        return pathExists;
-    }
+  /**
+   * Constructor.
+   * @param pathExists The path exists.
+   * @param isDirectory Is the path a directory?
+   * @param eTag The ETag of the path.
+   * @param isImplicit Is the path implicit?
+   */
+  public PathInformation(Boolean pathExists,
+      Boolean isDirectory,
+      String eTag,
+      Boolean isImplicit) {
+    this.pathExists = pathExists;
+    this.isDirectory = isDirectory;
+    this.eTag = eTag;
+    this.isImplicit = isImplicit;
+  }
 
-    /**
-     * Get value of isDirectory.
-     *
-     * @return true if path is a directory, false otherwise.
-     */
-    public Boolean getIsDirectory() {
-        return isDirectory;
-    }
+  public PathInformation() {
+  }
 
-    /**
-     * Get value of isImplicit.
-     *
-     * @return true if path is implicit, false otherwise.
-     */
-    public Boolean getIsImplicit() {
-        return isImplicit;
-    }
+  /**
+   * Copy the path information.
+   * @param pathInformation The path information to copy.
+   */
+  public void copy(PathInformation pathInformation) {
+    this.pathExists = pathInformation.getPathExists();
+    this.isDirectory = pathInformation.getIsDirectory();
+    this.eTag = pathInformation.getETag();
+    this.isImplicit = pathInformation.getIsImplicit();
+  }
 
-    /**
-     * Set the eTag value.
-     *
-     * @param eTag The eTag value to set.
-     */
-    void setETag(String eTag) {
-        this.eTag = eTag;
-    }
+  /**
+   * Get the ETag of the path.
+   *
+   * @return the etag value*/
+  public String getETag() {
+    return eTag;
+  }
+
+  /**
+   * Get value of pathExists.
+   *
+   * @return true if path exists, false otherwise.
+   */
+  public Boolean getPathExists() {
+    return pathExists;
+  }
+
+  /**
+   * Get value of isDirectory.
+   *
+   * @return true if path is a directory, false otherwise.
+   */
+  public Boolean getIsDirectory() {
+    return isDirectory;
+  }
+
+  /**
+   * Get value of isImplicit.
+   *
+   * @return true if path is implicit, false otherwise.
+   */
+  public Boolean getIsImplicit() {
+    return isImplicit;
+  }
+
+  /**
+   * Set the eTag value.
+   *
+   * @param eTag The eTag value to set.
+   */
+  void setETag(String eTag) {
+    this.eTag = eTag;
+  }
 }

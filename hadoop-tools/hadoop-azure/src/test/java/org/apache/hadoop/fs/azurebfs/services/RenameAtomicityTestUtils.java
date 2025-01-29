@@ -27,53 +27,53 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 public final class RenameAtomicityTestUtils {
 
-    private RenameAtomicityTestUtils() {
-    }
+  private RenameAtomicityTestUtils() {
+  }
 
-    /**
-     * Creates a spied object of {@link BlobRenameHandler} and {@link RenameAtomicity}
-     * and adds mocked behavior to {@link RenameAtomicity#createRenamePendingJson(Path, byte[])}.
-     *
-     * @param client client that would supply BlobRenameHandler and RenameAtomicity.
-     * @param answer mocked behavior for {@link RenameAtomicity#createRenamePendingJson(Path, byte[])}.
-     */
-    public static void addCreatePathMock(AbfsBlobClient client, Answer answer) {
-        Mockito.doAnswer(clientHandlerAns -> {
-                    BlobRenameHandler renameHandler = Mockito.spy(
-                            (BlobRenameHandler) clientHandlerAns.callRealMethod());
-                    Mockito.doAnswer(getRenameAtomicityAns -> {
-                                RenameAtomicity renameAtomicity = Mockito.spy(
-                                        (RenameAtomicity) getRenameAtomicityAns.callRealMethod());
-                                Mockito.doAnswer(answer)
-                                        .when(renameAtomicity)
-                                        .createRenamePendingJson(Mockito.any(
-                                                Path.class), Mockito.any(byte[].class));
-                                return renameAtomicity;
-                            })
-                            .when(renameHandler)
-                            .getRenameAtomicity(Mockito.any(PathInformation.class));
-                    return renameHandler;
-                })
-                .when(client)
-                .getBlobRenameHandler(Mockito.anyString(), Mockito.anyString(),
-                        Mockito.nullable(String.class), Mockito.anyBoolean(), Mockito.any(
-                                TracingContext.class));
-    }
+  /**
+   * Creates a spied object of {@link BlobRenameHandler} and {@link RenameAtomicity}
+   * and adds mocked behavior to {@link RenameAtomicity#createRenamePendingJson(Path, byte[])}.
+   *
+   * @param client client that would supply BlobRenameHandler and RenameAtomicity.
+   * @param answer mocked behavior for {@link RenameAtomicity#createRenamePendingJson(Path, byte[])}.
+   */
+  public static void addCreatePathMock(AbfsBlobClient client, Answer answer) {
+    Mockito.doAnswer(clientHandlerAns -> {
+          BlobRenameHandler renameHandler = Mockito.spy(
+              (BlobRenameHandler) clientHandlerAns.callRealMethod());
+          Mockito.doAnswer(getRenameAtomicityAns -> {
+                RenameAtomicity renameAtomicity = Mockito.spy(
+                    (RenameAtomicity) getRenameAtomicityAns.callRealMethod());
+                Mockito.doAnswer(answer)
+                    .when(renameAtomicity)
+                    .createRenamePendingJson(Mockito.any(
+                        Path.class), Mockito.any(byte[].class));
+                return renameAtomicity;
+              })
+              .when(renameHandler)
+              .getRenameAtomicity(Mockito.any(PathInformation.class));
+          return renameHandler;
+        })
+        .when(client)
+        .getBlobRenameHandler(Mockito.anyString(), Mockito.anyString(),
+            Mockito.nullable(String.class), Mockito.anyBoolean(), Mockito.any(
+                TracingContext.class));
+  }
 
 
-    /**
-     * Adds mocked behavior to {@link RenameAtomicity#readRenamePendingJson(Path, int)}.
-     *
-     * @param redoRenameAtomicity {@link RenameAtomicity} to be spied.
-     * @param answer mocked behavior for {@link RenameAtomicity#readRenamePendingJson(Path, int)}.
-     *
-     * @throws AzureBlobFileSystemException server error or error from mocked behavior.
-     */
-    public static void addReadPathMock(RenameAtomicity redoRenameAtomicity,
-                                       Answer answer)
-            throws AzureBlobFileSystemException {
-        Mockito.doAnswer(answer)
-                .when(redoRenameAtomicity)
-                .readRenamePendingJson(Mockito.any(Path.class), Mockito.anyInt());
-    }
+  /**
+   * Adds mocked behavior to {@link RenameAtomicity#readRenamePendingJson(Path, int)}.
+   *
+   * @param redoRenameAtomicity {@link RenameAtomicity} to be spied.
+   * @param answer mocked behavior for {@link RenameAtomicity#readRenamePendingJson(Path, int)}.
+   *
+   * @throws AzureBlobFileSystemException server error or error from mocked behavior.
+   */
+  public static void addReadPathMock(RenameAtomicity redoRenameAtomicity,
+      Answer answer)
+      throws AzureBlobFileSystemException {
+    Mockito.doAnswer(answer)
+        .when(redoRenameAtomicity)
+        .readRenamePendingJson(Mockito.any(Path.class), Mockito.anyInt());
+  }
 }

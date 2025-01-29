@@ -24,11 +24,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
@@ -91,12 +91,12 @@ public class ITestAzureBlobFileSystemRenameUnicode extends
 
     Path folderPath2 = new Path(destDir);
     if (getFileSystem().getAbfsClient() instanceof AbfsBlobClient
-            && destDir.contains(COLON)) {
+        && destDir.contains(COLON)) {
       AbfsRestOperationException ex = intercept(
-              AbfsRestOperationException.class, () -> {
-                fs.rename(folderPath1, folderPath2);
-                return null;
-              });
+          AbfsRestOperationException.class, () -> {
+            fs.rename(folderPath1, folderPath2);
+            return null;
+          });
       assertTrue(ex.getCause() instanceof PathIOException);
       assertEquals(HTTP_BAD_REQUEST, ex.getStatusCode());
       return;
@@ -104,11 +104,13 @@ public class ITestAzureBlobFileSystemRenameUnicode extends
     assertRenameOutcome(fs, folderPath1, folderPath2, true);
     assertPathDoesNotExist(fs, "renamed", folderPath1);
     assertIsDirectory(fs, folderPath2);
-    assertPathExists(fs, "renamed file", new Path(folderPath2 + "/" + filename));
+    assertPathExists(fs, "renamed file",
+        new Path(folderPath2 + "/" + filename));
 
     FileStatus[] fileStatus = fs.listStatus(folderPath2);
     assertNotNull(fileStatus);
-    assertTrue("Empty listing returned from listStatus(\"" + folderPath2 + "\")",
+    assertTrue(
+        "Empty listing returned from listStatus(\"" + folderPath2 + "\")",
         fileStatus.length > 0);
     assertEquals(fileStatus[0].getPath().getName(), filename);
   }
