@@ -330,8 +330,5 @@ public final class AbfsHttpConstants {
   public static final String COPY_STATUS_ABORTED = "aborted";
   public static final String COPY_STATUS_FAILED = "failed";
 
-  public static final String ATOMIC_DIR_RENAME_RECOVERY_ON_GET_PATH_EXCEPTION =
-          "Path had to be recovered from atomic rename operation.";
-
   private AbfsHttpConstants() {}
 }

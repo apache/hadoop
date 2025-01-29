@@ -237,6 +237,23 @@ public class ITestAzureBlobFileSystemCreate extends
     }
   }
 
+  @Test
+  public void testCreateNonRecursiveWhenParentNotExist() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    Path createDirectoryPath = path("A/");
+    fs.mkdirs(createDirectoryPath);
+    fs.createNonRecursive(path("A/B/C"), FsPermission
+        .getDefault(), false, 1024, (short) 1, 1024, null).close();
+
+//    ex = intercept(AbfsRestOperationException.class, () ->
+//        fs.createNonRecursive(testFile, FsPermission.getDefault(),
+//            false, 1024, (short) 1, 1024, null));
+//    if (ex.getStatusCode() != HTTP_CONFLICT) {
+//      // Request should fail with 409.
+//      throw ex;
+//    }
+  }
+
   /**
    * Attempts to use to the ABFS stream after it is closed.
    */
