@@ -41,7 +41,7 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
 
   public static final Logger LOG = LoggerFactory.getLogger(AnalyticsStream.class);
 
-  public AnalyticsStream(final ObjectReadParameters parameters, final S3SeekableInputStreamFactory s3SeekableInputStreamFactory) {
+  public AnalyticsStream(final ObjectReadParameters parameters, final S3SeekableInputStreamFactory s3SeekableInputStreamFactory) throws IOException {
     super(parameters);
     S3ObjectAttributes s3Attributes = parameters.getObjectAttributes();
     this.inputStream = s3SeekableInputStreamFactory.createStream(S3URI.of(s3Attributes.getBucket(), s3Attributes.getKey()));
