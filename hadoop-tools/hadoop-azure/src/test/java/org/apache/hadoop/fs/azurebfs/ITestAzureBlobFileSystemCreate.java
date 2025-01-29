@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.FileNotFoundException;
 import java.io.FilterOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
@@ -137,7 +136,9 @@ public class ITestAzureBlobFileSystemCreate extends
     Path testFolderPath = path(TEST_FOLDER_PATH);
     Path testFile = new Path(testFolderPath, TEST_CHILD_FILE);
     try {
-      fs.createNonRecursive(testFile, FsPermission.getDefault(), EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), 1024, (short) 1, 1024, null);
+      fs.createNonRecursive(testFile, FsPermission.getDefault(),
+          EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), 1024, (short) 1,
+          1024, null);
       fail("Should've thrown");
     } catch (FileNotFoundException expected) {
     }
@@ -156,7 +157,8 @@ public class ITestAzureBlobFileSystemCreate extends
     Path testFolderPath = path(TEST_FOLDER_PATH);
     Path testFile = new Path(testFolderPath, TEST_CHILD_FILE);
     try {
-      fs.createNonRecursive(testFile, FsPermission.getDefault(), false, 1024, (short) 1, 1024, null);
+      fs.createNonRecursive(testFile, FsPermission.getDefault(), false, 1024,
+          (short) 1, 1024, null);
       fail("Should've thrown");
     } catch (FileNotFoundException e) {
     }
@@ -164,6 +166,18 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.createNonRecursive(testFile, true, 1024, (short) 1, 1024, null)
         .close();
     assertIsFile(fs, testFile);
+  }
+
+  @Test
+  public void testCreateNonRecursiveWhenParentNotExist() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    Path createDirectoryPath = path("A/");
+    fs.mkdirs(createDirectoryPath);
+    intercept(FileNotFoundException.class,
+        () -> fs.createNonRecursive(path("A/B/C"), FsPermission
+            .getDefault(), false, 1024, (short) 1, 1024, null));
+    Assertions.assertThat(fs.exists(path("A/B/C"))).isFalse();
+    fs.close();
   }
 
   @Test
@@ -184,23 +198,6 @@ public class ITestAzureBlobFileSystemCreate extends
       // Request should fail with 409.
       throw ex;
     }
-  }
-
-  @Test
-  public void testCreateNonRecursiveWhenParentNotExist() throws Exception {
-    AzureBlobFileSystem fs = getFileSystem();
-    Path createDirectoryPath = path("A/");
-    fs.mkdirs(createDirectoryPath);
-    fs.createNonRecursive(path("A/B/C"), FsPermission
-        .getDefault(), false, 1024, (short) 1, 1024, null).close();
-
-//    ex = intercept(AbfsRestOperationException.class, () ->
-//        fs.createNonRecursive(testFile, FsPermission.getDefault(),
-//            false, 1024, (short) 1, 1024, null));
-//    if (ex.getStatusCode() != HTTP_CONFLICT) {
-//      // Request should fail with 409.
-//      throw ex;
-//    }
   }
 
   /**

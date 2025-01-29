@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 
@@ -68,7 +69,8 @@ public class AbfsPermission extends FsPermission {
    * @return a permission object for the provided string representation
    */
   public static AbfsPermission valueOf(final String abfsSymbolicPermission) {
-    if (abfsSymbolicPermission == null) {
+    if (abfsSymbolicPermission == null
+        || StringUtils.isEmpty(abfsSymbolicPermission)) {
       return null;
     }
 
@@ -100,7 +102,8 @@ public class AbfsPermission extends FsPermission {
    * extended ACL; otherwise false.
    */
   public static boolean isExtendedAcl(final String abfsSymbolicPermission) {
-    if (abfsSymbolicPermission == null) {
+    if (abfsSymbolicPermission == null
+        || StringUtils.isEmpty(abfsSymbolicPermission)) {
       return false;
     }
 

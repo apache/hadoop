@@ -242,7 +242,7 @@ public class ITestAzureBlobFileSystemDelete extends
      * endpoint, the orchestration would be done by the client. The idempotency
      * issue would not happen for blob endpoint.
      */
-    assertTrue(fs.getAbfsClient() instanceof AbfsDfsClient);
+    assumeTrue(fs.getAbfsClient() instanceof AbfsDfsClient);
     AbfsClient client = ITestAbfsClient.createTestClientFromCurrentContext(
         fs.getAbfsStore().getClient(),
         this.getConfiguration());

@@ -559,7 +559,7 @@ public class AzureBlobFileSystem extends FileSystem
 
       qualifiedDstPath = makeQualified(adjustedDst);
 
-      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext, null);
+      getAbfsStore().rename(qualifiedSrcPath, qualifiedDstPath, tracingContext, null);
       return true;
     } catch (AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);
@@ -641,7 +641,7 @@ public class AzureBlobFileSystem extends FileSystem
       final Duration waitTime = rateLimiting.acquire(1);
 
       try {
-        final boolean recovered = abfsStore.rename(qualifiedSrcPath,
+        final boolean recovered = getAbfsStore().rename(qualifiedSrcPath,
             qualifiedDstPath, tracingContext, sourceEtag);
         return Pair.of(recovered, waitTime);
       } catch (AzureBlobFileSystemException ex) {
@@ -673,7 +673,7 @@ public class AzureBlobFileSystem extends FileSystem
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.DELETE, tracingHeaderFormat,
           listener);
-      abfsStore.delete(qualifiedPath, recursive, tracingContext);
+      getAbfsStore().delete(qualifiedPath, recursive, tracingContext);
       return true;
     } catch (AzureBlobFileSystemException ex) {
       checkException(f,
@@ -696,7 +696,7 @@ public class AzureBlobFileSystem extends FileSystem
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.LISTSTATUS, true, tracingHeaderFormat,
           listener);
-      FileStatus[] result = abfsStore.listStatus(qualifiedPath, tracingContext);
+      FileStatus[] result = getAbfsStore().listStatus(qualifiedPath, tracingContext);
       return result;
     } catch (AzureBlobFileSystemException ex) {
       checkException(f, ex);

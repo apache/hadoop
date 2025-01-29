@@ -199,17 +199,17 @@ public class TracingContext {
               + getPrimaryRequestIdForHeader(retryCount > 0) + ":" + streamID
               + ":" + opType + ":" + retryCount;
       header = addFailureReasons(header, previousFailure, retryPolicyAbbreviation);
-      header += (":" + httpOperation.getTracingContextSuffix());
       if (!(ingressHandler.equals(EMPTY_STRING))) {
         header += ":" + ingressHandler;
       }
       if (!(position.equals(EMPTY_STRING))) {
         header += ":" + position;
       }
-      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : "";
       if (operatedBlobCount != null) {
         header += (":" + operatedBlobCount);
       }
+      header += (":" + httpOperation.getTracingContextSuffix());
+      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : "";
       break;
     case TWO_ID_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId;
