@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a.tools;
 import java.io.File;
 
 import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runners.MethodSorters;
 
 import org.apache.hadoop.fs.Path;

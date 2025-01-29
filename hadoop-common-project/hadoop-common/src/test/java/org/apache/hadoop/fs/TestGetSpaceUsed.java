@@ -19,26 +19,26 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestGetSpaceUsed {
   final static private File DIR =
       GenericTestUtils.getTestDir("TestGetSpaceUsed");
 
-  @Before
+  @BeforeEach
   public void setUp() {
     FileUtil.fullyDelete(DIR);
     assertTrue(DIR.mkdirs());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     FileUtil.fullyDelete(DIR);
   }

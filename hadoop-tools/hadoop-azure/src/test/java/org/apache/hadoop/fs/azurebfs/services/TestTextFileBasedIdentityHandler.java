@@ -23,10 +23,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.NoSuchFileException;
 
-import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 
 import org.apache.commons.io.FileUtils;
@@ -65,7 +65,7 @@ public class TestTextFileBasedIdentityHandler {
   private static String testGroupDataLine4 = "          " + NEW_LINE;
   private static String testGroupDataLine5 = "7d83024d-957c-4456-aac1-a57f9e2de914:group4:21000:sgp-group4" + NEW_LINE;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws IOException {
     userMappingFile = tempDir.newFile("user-mapping.conf");
     groupMappingFile = tempDir.newFile("group-mapping.conf");
@@ -92,7 +92,7 @@ public class TestTextFileBasedIdentityHandler {
   private void assertUserLookup(TextFileBasedIdentityHandler handler, String userInTest, String expectedUser)
       throws IOException {
     String actualUser = handler.lookupForLocalUserIdentity(userInTest);
-    Assert.assertEquals("Wrong user identity for ", expectedUser, actualUser);
+    Assertions.assertEquals(expectedUser, actualUser, "Wrong user identity for ");
   }
 
   @Test
@@ -121,7 +121,7 @@ public class TestTextFileBasedIdentityHandler {
   private void assertGroupLookup(TextFileBasedIdentityHandler handler, String groupInTest, String expectedGroup)
       throws IOException {
     String actualGroup = handler.lookupForLocalGroupIdentity(groupInTest);
-    Assert.assertEquals("Wrong group identity for ", expectedGroup, actualGroup);
+    Assertions.assertEquals(expectedGroup, actualGroup, "Wrong group identity for ");
   }
 
   @Test

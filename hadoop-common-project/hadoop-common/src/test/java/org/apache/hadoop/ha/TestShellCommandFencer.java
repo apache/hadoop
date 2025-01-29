@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
@@ -28,10 +28,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -46,17 +47,17 @@ public class TestShellCommandFencer {
           new InetSocketAddress("dummyhost", 1234));
   private static final Logger LOG = ShellCommandFencer.LOG;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupLogMock() {
     ShellCommandFencer.LOG = mock(Logger.class, new LogAnswer());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownLogMock() throws Exception {
     ShellCommandFencer.LOG = LOG;
   }
 
-  @Before
+  @BeforeEach
   public void resetLogSpy() {
     Mockito.reset(ShellCommandFencer.LOG);
   }
@@ -89,8 +90,8 @@ public class TestShellCommandFencer {
       fail("Didn't throw when passing no args to shell");
     } catch (BadFencingConfigurationException confe) {
       assertTrue(
-        "Unexpected exception:" + StringUtils.stringifyException(confe),
-        confe.getMessage().contains("No argument passed"));    
+      
+       confe.getMessage().contains("No argument passed"), "Unexpected exception:" + StringUtils.stringifyException(confe));    
     }
   }
 
@@ -102,8 +103,8 @@ public class TestShellCommandFencer {
       fail("Didn't throw when passing no args to shell");
     } catch (BadFencingConfigurationException confe) {
       assertTrue(
-        "Unexpected exception:" + StringUtils.stringifyException(confe),
-        confe.getMessage().contains("Unable to parse line: 'shell()'"));
+      
+       confe.getMessage().contains("Unable to parse line: 'shell()'"), "Unexpected exception:" + StringUtils.stringifyException(confe));
     }
   }
 
@@ -201,7 +202,8 @@ public class TestShellCommandFencer {
    * so that, if we use 'ssh', it won't try to prompt for a password
    * and block forever, for example.
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testSubprocessInputIsClosed() {
     assertFalse(fencer.tryFence(TEST_TARGET, "read"));
   }

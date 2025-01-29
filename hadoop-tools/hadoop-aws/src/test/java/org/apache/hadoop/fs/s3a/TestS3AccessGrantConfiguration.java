@@ -24,7 +24,7 @@ import java.net.URISyntaxException;
 
 import org.assertj.core.api.AbstractStringAssert;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.awscore.AwsClient;
 import software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsIdentityProvider;
 

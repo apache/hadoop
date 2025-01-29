@@ -23,8 +23,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import org.apache.hadoop.io.Text;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestLineReader {
 
@@ -90,10 +90,10 @@ public class TestLineReader {
     lineReader.readLine(line);
     lineReader.close();
 
-    Assert.assertEquals(fillerString.toString(), line.toString());
+    Assertions.assertEquals(fillerString.toString(), line.toString());
 
     lineReader.readLine(line);
-    Assert.assertEquals(expected, line.toString());
+    Assertions.assertEquals(expected, line.toString());
   }
 
   /**
@@ -122,23 +122,23 @@ public class TestLineReader {
     final Text line = new Text();
 
     lineReader.readLine(line);
-    Assert.assertEquals("", line.toString());
+    Assertions.assertEquals("", line.toString());
     lineReader.readLine(line);
-    Assert.assertEquals("Kerala ", line.toString());
+    Assertions.assertEquals("Kerala ", line.toString());
 
     lineReader.readLine(line);
-    Assert.assertEquals("Bangalore", line.toString());
+    Assertions.assertEquals("Bangalore", line.toString());
 
     lineReader.readLine(line);
-    Assert.assertEquals(" North Korea", line.toString());
+    Assertions.assertEquals(" North Korea", line.toString());
 
     lineReader.readLine(line);
-    Assert.assertEquals("", line.toString());
+    Assertions.assertEquals("", line.toString());
     lineReader.readLine(line);
-    Assert.assertEquals("Guantanamo", line.toString());
+    Assertions.assertEquals("Guantanamo", line.toString());
 
     lineReader.readLine(line);
-    Assert.assertEquals(("ecord" + "recor" + "core"), line.toString());
+    Assertions.assertEquals(("ecord" + "recor" + "core"), line.toString());
 
     lineReader.close();
   }
@@ -157,9 +157,9 @@ public class TestLineReader {
     final Text line = new Text();
 
     lineReader.readLine(line);
-    Assert.assertEquals("a", line.toString());
+    Assertions.assertEquals("a", line.toString());
     lineReader.readLine(line);
-    Assert.assertEquals("ccc", line.toString());
+    Assertions.assertEquals("ccc", line.toString());
 
     lineReader.close();
   }

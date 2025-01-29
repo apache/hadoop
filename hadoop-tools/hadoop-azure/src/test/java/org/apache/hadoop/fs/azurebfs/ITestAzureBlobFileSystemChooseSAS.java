@@ -22,7 +22,7 @@ import java.nio.file.AccessDeniedException;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;

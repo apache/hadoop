@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +46,8 @@ public class TestInstrumentedReadWriteLock {
    * Tests exclusive access of the write lock.
    * @throws Exception
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testWriteLock() throws Exception {
     String testname = name.getMethodName();
     final ThreadLocal<Boolean> locked = new ThreadLocal<Boolean>();
@@ -95,7 +97,8 @@ public class TestInstrumentedReadWriteLock {
    * Tests the read lock.
    * @throws Exception
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testReadLock() throws Exception {
     String testname = name.getMethodName();
     InstrumentedReadWriteLock readWriteLock = new InstrumentedReadWriteLock(
@@ -129,7 +132,8 @@ public class TestInstrumentedReadWriteLock {
    * Tests the warning when the read lock is held longer than threshold.
    * @throws Exception
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testReadLockLongHoldingReport() throws Exception {
     String testname = name.getMethodName();
     final AtomicLong time = new AtomicLong(0);
@@ -184,7 +188,8 @@ public class TestInstrumentedReadWriteLock {
    * Tests the warning when the write lock is held longer than threshold.
    * @throws Exception
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testWriteLockLongHoldingReport() throws Exception {
     String testname = name.getMethodName();
     final AtomicLong time = new AtomicLong(0);
@@ -238,7 +243,8 @@ public class TestInstrumentedReadWriteLock {
   /**
    * Tests the warning when the write lock is held longer than threshold.
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testWriteLockLongHoldingReportWithReentrant() {
     String testname = name.getMethodName();
     final AtomicLong time = new AtomicLong(0);
@@ -298,7 +304,8 @@ public class TestInstrumentedReadWriteLock {
   /**
    * Tests the warning when the read lock is held longer than threshold.
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testReadLockLongHoldingReportWithReentrant() {
     String testname = name.getMethodName();
     final AtomicLong time = new AtomicLong(0);

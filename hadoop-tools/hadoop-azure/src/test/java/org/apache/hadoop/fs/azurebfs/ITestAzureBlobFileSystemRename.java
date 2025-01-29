@@ -25,8 +25,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -87,10 +87,10 @@ public class ITestAzureBlobFileSystemRename extends
     Path destDir = path("/testDst");
     assertRenameOutcome(fs, sourceDir, destDir, true);
     FileStatus[] fileStatus = fs.listStatus(destDir);
-    assertNotNull("Null file status", fileStatus);
+    assertNotNull(fileStatus, "Null file status");
     FileStatus status = fileStatus[0];
-    assertEquals("Wrong filename in " + status,
-        filename, status.getPath().getName());
+    assertEquals(
+       filename, status.getPath().getName(), "Wrong filename in " + status);
   }
 
   @Test
@@ -137,7 +137,7 @@ public class ITestAzureBlobFileSystemRename extends
     assertRenameOutcome(fs, source, dest, true);
 
     FileStatus[] files = fs.listStatus(dest);
-    assertEquals("Wrong number of files in listing", 1000, files.length);
+    assertEquals(1000, files.length, "Wrong number of files in listing");
     assertPathDoesNotExist(fs, "rename source dir", source);
   }
 
@@ -160,7 +160,7 @@ public class ITestAzureBlobFileSystemRename extends
     Path testDir2 = path("testDir2");
     fs.mkdirs(new Path(testDir2 + "/test1/test2/test3"));
     fs.mkdirs(new Path(testDir2 + "/test4"));
-    Assert.assertTrue(fs.rename(new Path(testDir2 + "/test1/test2/test3"), new Path(testDir2 + "/test4")));
+    Assertions.assertTrue(fs.rename(new Path(testDir2 + "/test1/test2/test3"), new Path(testDir2 + "/test4")));
     assertPathExists(fs, "This path should exist", testDir2);
     assertPathExists(fs, "This path should exist",
         new Path(testDir2 + "/test1/test2"));
@@ -186,8 +186,8 @@ public class ITestAzureBlobFileSystemRename extends
 
     // Verify that renaming on a destination with no parent dir wasn't
     // successful.
-    assertFalse("Rename result expected to be false with no Parent dir",
-        fs.rename(sourcePath, destPath));
+    assertFalse(
+       fs.rename(sourcePath, destPath), "Rename result expected to be false with no Parent dir");
 
     // Verify that metadata was in an incomplete state after the rename
     // failure, and we retired the rename once more.

@@ -27,8 +27,8 @@ import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension.Delegati
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class TestKeyProviderDelegationTokenExtension {
@@ -50,11 +50,11 @@ public class TestKeyProviderDelegationTokenExtension {
     KeyProviderDelegationTokenExtension kpDTE1 = 
         KeyProviderDelegationTokenExtension
         .createKeyProviderDelegationTokenExtension(kp);
-    Assert.assertNotNull(kpDTE1);
+    Assertions.assertNotNull(kpDTE1);
     Token<?>[] tokens = kpDTE1.addDelegationTokens("user", credentials);
     // Default implementation should return no tokens.
-    Assert.assertNotNull(tokens);
-    Assert.assertEquals(0, tokens.length);
+    Assertions.assertNotNull(tokens);
+    Assertions.assertEquals(0, tokens.length);
     
     MockKeyProvider mock = mock(MockKeyProvider.class);
     Mockito.when(mock.getConf()).thenReturn(new Configuration());
@@ -67,11 +67,11 @@ public class TestKeyProviderDelegationTokenExtension {
         KeyProviderDelegationTokenExtension
         .createKeyProviderDelegationTokenExtension(mock);
     tokens = kpDTE2.addDelegationTokens("renewer", credentials);
-    Assert.assertNotNull(tokens);
-    Assert.assertEquals(1, tokens.length);
-    Assert.assertEquals("kind", tokens[0].getKind().toString());
-    Assert.assertEquals("tservice", tokens[0].getService().toString());
-    Assert.assertNotNull(credentials.getToken(new Text("cservice")));
+    Assertions.assertNotNull(tokens);
+    Assertions.assertEquals(1, tokens.length);
+    Assertions.assertEquals("kind", tokens[0].getKind().toString());
+    Assertions.assertEquals("tservice", tokens[0].getService().toString());
+    Assertions.assertNotNull(credentials.getToken(new Text("cservice")));
   }
 
 }

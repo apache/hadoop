@@ -35,7 +35,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -374,8 +374,8 @@ public class TestRpcBase {
                 TestProtos.EmptyRequestProto request) throws ServiceException {
       // Ensure clientId is received
       byte[] clientId = Server.getClientId();
-      Assert.assertNotNull(clientId);
-      Assert.assertEquals(ClientId.BYTE_LENGTH, clientId.length);
+      Assertions.assertNotNull(clientId);
+      Assertions.assertEquals(ClientId.BYTE_LENGTH, clientId.length);
       return TestProtos.EmptyResponseProto.newBuilder().build();
     }
 

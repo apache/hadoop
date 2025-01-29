@@ -23,12 +23,12 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ANALYSIS_PERIOD;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for <code>AbfsClientThrottlingAnalyzer</code>.
@@ -62,31 +62,31 @@ public class TestAbfsClientThrottlingAnalyzer {
     final double upperBound = expected + percentage / 100 * expected;
 
     assertTrue(
-        String.format(
+    
+       actual >= lowerBound && actual <= upperBound, String.format(
             "The actual value %1$d is not within the expected range: "
                 + "[%2$.2f, %3$.2f].",
             actual,
             lowerBound,
-            upperBound),
-        actual >= lowerBound && actual <= upperBound);
+            upperBound));
   }
 
   private void validate(long expected, long actual) {
     assertEquals(
-        String.format("The actual value %1$d is not the expected value %2$d.",
+    
+       expected, actual, String.format("The actual value %1$d is not the expected value %2$d.",
             actual,
-            expected),
-        expected, actual);
+            expected));
   }
 
   private void validateLessThanOrEqual(long maxExpected, long actual) {
     assertTrue(
-        String.format(
+    
+       actual < maxExpected, String.format(
             "The actual value %1$d is not less than or equal to the maximum"
                 + " expected value %2$d.",
             actual,
-            maxExpected),
-        actual < maxExpected);
+            maxExpected));
   }
 
   /**

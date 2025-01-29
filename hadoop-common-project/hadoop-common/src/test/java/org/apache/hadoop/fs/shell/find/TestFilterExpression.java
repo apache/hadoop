@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs.shell.find;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
@@ -26,10 +26,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.shell.PathData;
 
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestFilterExpression {
   private Expression expr;
@@ -38,7 +38,7 @@ public class TestFilterExpression {
   @Rule
   public Timeout globalTimeout = new Timeout(10000, TimeUnit.MILLISECONDS);
 
-  @Before
+  @BeforeEach
   public void setup() {
     expr = mock(Expression.class);
     test = new FilterExpression(expr) {

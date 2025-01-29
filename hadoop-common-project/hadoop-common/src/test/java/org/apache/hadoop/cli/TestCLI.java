@@ -20,21 +20,21 @@ package org.apache.hadoop.cli;
 
 import org.apache.hadoop.cli.util.CLICommand;
 import org.apache.hadoop.cli.util.CommandExecutor;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the Command Line Interface (CLI)
  */
 public class TestCLI extends CLITestHelper {
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws Exception {
     super.tearDown();

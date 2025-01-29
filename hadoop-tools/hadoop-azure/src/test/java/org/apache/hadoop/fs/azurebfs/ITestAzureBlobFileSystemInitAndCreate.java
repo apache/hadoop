@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
@@ -67,10 +67,12 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
   public void teardown() {
   }
 
-  @Test (expected = FileNotFoundException.class)
+  @Test
   public void ensureFilesystemWillNotBeCreatedIfCreationConfigIsNotSet() throws Exception {
-    final AzureBlobFileSystem fs = this.createFileSystem();
-    FileStatus[] fileStatuses = fs.listStatus(new Path("/"));
+    assertThrows(FileNotFoundException.class, ()->{
+      final AzureBlobFileSystem fs = this.createFileSystem();
+      FileStatus[] fileStatuses = fs.listStatus(new Path("/"));
+    });
   }
 
   @Test

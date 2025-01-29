@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.contract;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -115,16 +115,16 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
       unbuffer(stream);
       validateFileContents(stream, TEST_FILE_LEN / 2, TEST_FILE_LEN / 2);
       unbuffer(stream);
-      assertEquals("stream should be at end of file", TEST_FILE_LEN,
-              stream.getPos());
+      assertEquals(TEST_FILE_LEN
+,               stream.getPos(), "stream should be at end of file");
     }
   }
 
   private void unbuffer(FSDataInputStream stream) throws IOException {
     long pos = stream.getPos();
     stream.unbuffer();
-    assertEquals("unbuffer unexpectedly changed the stream position", pos,
-            stream.getPos());
+    assertEquals(pos
+,             stream.getPos(), "unbuffer unexpectedly changed the stream position");
   }
 
   protected void validateFullFileContents(FSDataInputStream stream)
@@ -136,9 +136,9 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
                                       int startIndex)
           throws IOException {
     byte[] streamData = new byte[length];
-    assertEquals("failed to read expected number of bytes from "
-            + "stream. This may be transient",
-        length, stream.read(streamData));
+    assertEquals(
+       length, stream.read(streamData), "failed to read expected number of bytes from "
+            + "stream. This may be transient");
     byte[] validateFileBytes;
     if (startIndex == 0 && length == fileBytes.length) {
       validateFileBytes = fileBytes;
@@ -146,7 +146,7 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
       validateFileBytes = Arrays.copyOfRange(fileBytes, startIndex,
               startIndex + length);
     }
-    assertArrayEquals("invalid file contents", validateFileBytes, streamData);
+    assertArrayEquals(validateFileBytes, streamData, "invalid file contents");
   }
 
   protected Path getFile() {

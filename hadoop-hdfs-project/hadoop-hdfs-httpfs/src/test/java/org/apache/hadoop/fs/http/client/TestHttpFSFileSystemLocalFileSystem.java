@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.TestDirHelper;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -86,7 +86,7 @@ public class TestHttpFSFileSystemLocalFileSystem extends BaseTestHttpFSWith {
       FileStatus status1 = fs.getFileStatus(path);
       fs.close();
       FsPermission permission2 = status1.getPermission();
-      Assert.assertEquals(permission2, permission1);
+      Assertions.assertEquals(permission2, permission1);
 
       // sticky bit not supported on Windows with local file system, so the
       // subclass skips that part of the test

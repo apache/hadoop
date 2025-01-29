@@ -20,11 +20,11 @@ package org.apache.hadoop.security;
 
 import org.apache.hadoop.conf.Configuration;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
@@ -41,7 +41,7 @@ import static org.apache.hadoop.security.KDiag.CAT_TOKEN;
 import static org.apache.hadoop.security.KDiag.KerberosDiagsFailure;
 import static org.apache.hadoop.security.KDiag.exec;
 
-public class TestKDiagNoKDC extends Assert {
+public class TestKDiagNoKDC extends Assertions {
   private static final Logger LOG = LoggerFactory.getLogger(TestKDiagNoKDC.class);
 
   public static final String KEYLEN = "128";
@@ -52,7 +52,7 @@ public class TestKDiagNoKDC extends Assert {
   @Rule
   public Timeout testTimeout = new Timeout(30000, TimeUnit.MILLISECONDS);
 
-  @BeforeClass
+  @BeforeAll
   public static void nameThread() {
     Thread.currentThread().setName("JUnit");
   }
@@ -60,7 +60,7 @@ public class TestKDiagNoKDC extends Assert {
   private static Configuration conf = new Configuration();
 
 
-  @Before
+  @BeforeEach
   public void reset() {
     UserGroupInformation.reset();
   }

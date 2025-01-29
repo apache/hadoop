@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.commons.lang3.StringUtils;

@@ -19,7 +19,7 @@ package org.apache.hadoop.fs.shell;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -41,9 +41,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
 /**
@@ -56,7 +56,7 @@ public class TestLs {
 
   private static final Date NOW = new Date();
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     conf = new Configuration();
     conf.set(FS_DEFAULT_NAME_KEY, "mockfs:///");
@@ -64,7 +64,7 @@ public class TestLs {
     mockFs = mock(FileSystem.class);
   }
 
-  @Before
+  @BeforeEach
   public void resetMock() throws IOException, URISyntaxException {
     reset(mockFs);
     AclStatus mockAclStatus = mock(AclStatus.class);
@@ -1113,7 +1113,7 @@ public class TestLs {
     Ls ls = new Ls();
     boolean actual = ls.isDeprecated();
     boolean expected = false;
-    assertEquals("Ls.isDeprecated", expected, actual);
+    assertEquals(expected, actual, "Ls.isDeprecated");
   }
 
   // check there's no replacement command
@@ -1122,7 +1122,7 @@ public class TestLs {
     Ls ls = new Ls();
     String actual = ls.getReplacementCommand();
     String expected = null;
-    assertEquals("Ls.getReplacementCommand", expected, actual);
+    assertEquals(expected, actual, "Ls.getReplacementCommand");
   }
 
   // check the correct name is returned
@@ -1131,36 +1131,40 @@ public class TestLs {
     Ls ls = new Ls();
     String actual = ls.getName();
     String expected = "ls";
-    assertEquals("Ls.getName", expected, actual);
+    assertEquals(expected, actual, "Ls.getName");
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void processPathFileDisplayECPolicyWhenUnsupported()
       throws IOException {
-    TestFile testFile = new TestFile("testDirectory", "testFile");
-    LinkedList<PathData> pathData = new LinkedList<PathData>();
-    pathData.add(testFile.getPathData());
-    Ls ls = new Ls();
-    LinkedList<String> options = new LinkedList<String>();
-    options.add("-e");
-    ls.processOptions(options);
-    ls.processArguments(pathData);
+    assertThrows(UnsupportedOperationException.class, ()->{
+      TestFile testFile = new TestFile("testDirectory", "testFile");
+      LinkedList<PathData> pathData = new LinkedList<PathData>();
+      pathData.add(testFile.getPathData());
+      Ls ls = new Ls();
+      LinkedList<String> options = new LinkedList<String>();
+      options.add("-e");
+      ls.processOptions(options);
+      ls.processArguments(pathData);
+    });
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void processPathDirDisplayECPolicyWhenUnsupported()
       throws IOException {
-    TestFile testFile = new TestFile("testDirectory", "testFile");
-    TestFile testDir = new TestFile("", "testDirectory");
-    testDir.setIsDir(true);
-    testDir.addContents(testFile);
-    LinkedList<PathData> pathData = new LinkedList<PathData>();
-    pathData.add(testDir.getPathData());
-    Ls ls = new Ls();
-    LinkedList<String> options = new LinkedList<String>();
-    options.add("-e");
-    ls.processOptions(options);
-    ls.processArguments(pathData);
+    assertThrows(UnsupportedOperationException.class, () -> {
+      TestFile testFile = new TestFile("testDirectory", "testFile");
+      TestFile testDir = new TestFile("", "testDirectory");
+      testDir.setIsDir(true);
+      testDir.addContents(testFile);
+      LinkedList<PathData> pathData = new LinkedList<PathData>();
+      pathData.add(testDir.getPathData());
+      Ls ls = new Ls();
+      LinkedList<String> options = new LinkedList<String>();
+      options.add("-e");
+      ls.processOptions(options);
+      ls.processArguments(pathData);
+    });
   }
 
   // test class representing a file to be listed
@@ -1325,10 +1329,6 @@ public class TestLs {
      *
      * @param lineFormat
      *          format mask
-     * @param fileStatus
-     *          file status
-     * @param fileName
-     *          file name
      * @return formated line
      */
     private String formatLineMtime(String lineFormat) {
@@ -1344,11 +1344,7 @@ public class TestLs {
      *
      * @param lineFormat
      *          format mask
-     * @param fileStatus
-     *          file status
-     * @param fileName
-     *          file name
-     * @return formated line
+     * @return formatted line
      */
     private String formatLineAtime(String lineFormat) {
       return String.format(lineFormat, (isDir() ? "d" : "-"), getPermission(),

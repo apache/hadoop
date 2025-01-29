@@ -36,10 +36,9 @@ import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 
 import org.apache.hadoop.util.Sets;
-import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
@@ -78,6 +77,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.Paths.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.*;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * The main unit test suite of the staging committer.
@@ -143,7 +143,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     this.uniqueFilenames = uniqueFilenames;
   }
 
-  @Before
+  @BeforeEach
   public void setupCommitter() throws Exception {
     JobConf jobConf = getConfiguration();
     jobConf.setInt(FS_S3A_COMMITTER_THREADS, numThreads);
@@ -187,7 +187,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     Paths.resetTempFolderCache();
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     try {
       if (tmpDir != null) {
@@ -205,7 +205,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
   @Test
   public void testMockFSclientWiredUp() throws Throwable {
     final S3Client client = mockFS.getS3AInternals().getAmazonS3Client("test");
-    Assertions.assertThat(client)
+    assertThat(client)
         .describedAs("S3Client from FS")
         .isNotNull()
         .isSameAs(mockClient);
@@ -219,10 +219,10 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     config.setBoolean(FS_S3A_COMMITTER_REQUIRE_UUID, true);
     Pair<String, AbstractS3ACommitter.JobUUIDSource> t3 = AbstractS3ACommitter
         .buildJobUUID(config, JOB_ID);
-    assertEquals("Job UUID", uuid, t3.getLeft());
-    assertEquals("Job UUID source: " + t3,
-        AbstractS3ACommitter.JobUUIDSource.SparkWriteUUID,
-        t3.getRight());
+    assertEquals(uuid, t3.getLeft(), "Job UUID");
+    assertEquals(
+       AbstractS3ACommitter.JobUUIDSource.SparkWriteUUID
+,         t3.getRight(), "Job UUID source: " + t3);
   }
 
   /**
@@ -250,10 +250,10 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     config.set(SPARK_WRITE_UUID, "something");
     Pair<String, AbstractS3ACommitter.JobUUIDSource> t3 = AbstractS3ACommitter
         .buildJobUUID(config, JOB_ID);
-    assertEquals("Job UUID", uuid, t3.getLeft());
-    assertEquals("Job UUID source: " + t3,
-        AbstractS3ACommitter.JobUUIDSource.CommitterUUIDProperty,
-        t3.getRight());
+    assertEquals(uuid, t3.getLeft(), "Job UUID");
+    assertEquals(
+       AbstractS3ACommitter.JobUUIDSource.CommitterUUIDProperty
+,         t3.getRight(), "Job UUID source: " + t3);
   }
 
   /**
@@ -265,9 +265,9 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     Configuration config = newConfig();
     Pair<String, AbstractS3ACommitter.JobUUIDSource> t3 = AbstractS3ACommitter
         .buildJobUUID(config, JOB_ID);
-    assertEquals("Job UUID source: " + t3,
-        AbstractS3ACommitter.JobUUIDSource.JobID,
-        t3.getRight());
+    assertEquals(
+       AbstractS3ACommitter.JobUUIDSource.JobID
+,         t3.getRight(), "Job UUID source: " + t3);
     // parse it as a JobID
     JobID.forName(t3.getLeft());
   }
@@ -282,9 +282,9 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     config.setBoolean(FS_S3A_COMMITTER_GENERATE_UUID, true);
     Pair<String, AbstractS3ACommitter.JobUUIDSource> t3 = AbstractS3ACommitter
         .buildJobUUID(config, JOB_ID);
-    assertEquals("Job UUID source: " + t3,
-        AbstractS3ACommitter.JobUUIDSource.GeneratedLocally,
-        t3.getRight());
+    assertEquals(
+       AbstractS3ACommitter.JobUUIDSource.GeneratedLocally
+,         t3.getRight(), "Job UUID source: " + t3);
     // parse it
     UUID.fromString(t3.getLeft());
   }
@@ -314,7 +314,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     final String jobUUID = addUUID(config);
     config.set(BUFFER_DIR, "/tmp/mr-local-0,/tmp/mr-local-1");
     String commonPath = "file:/tmp/mr-local-";
-    Assertions.assertThat(getLocalTaskAttemptTempDir(config,
+    assertThat(getLocalTaskAttemptTempDir(config,
         jobUUID, tac.getTaskAttemptID()).toString())
         .describedAs("Missing scheme should produce local file paths")
         .startsWith(commonPath)
@@ -330,7 +330,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         jobUUID, AID).toString();
     String attempt2Path = getLocalTaskAttemptTempDir(config,
         jobUUID, AID2).toString();
-    Assertions.assertThat(attempt2Path)
+    assertThat(attempt2Path)
         .describedAs("local task attempt dir of TA1 must not match that of TA2")
         .isNotEqualTo(attempt1Path);
   }
@@ -344,7 +344,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     config.set(BUFFER_DIR,
         "file:/tmp/mr-local-0,file:/tmp/mr-local-1");
 
-    Assertions.assertThat(
+    assertThat(
         getLocalTaskAttemptTempDir(config,
             jobUUID, tac.getTaskAttemptID()).toString())
         .describedAs("Path should be the same with file scheme")
@@ -368,8 +368,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertEquals("Path should be in HDFS: " + committedTaskPath,
         "hdfs", committedTaskPath.toUri().getScheme());
     String ending = STAGING_UPLOADS + "/_temporary/0/task_job_0001_r_000002";
-    assertTrue("Did not end with \"" + ending +"\" :" + committedTaskPath,
-        committedTaskPath.toString().endsWith(ending));
+    assertTrue(
+       committedTaskPath.toString().endsWith(ending), "Did not end with \"" + ending +"\" :" + committedTaskPath);
   }
 
   @Test
@@ -377,23 +377,23 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     Path file = new Path(commitTask(committer, tac, 1).iterator().next());
 
     List<String> uploads = results.getUploads();
-    assertEquals("Should initiate one upload: " + results, 1, uploads.size());
+    assertEquals(1, uploads.size(), "Should initiate one upload: " + results);
 
     Path committedPath = committer.getCommittedTaskPath(tac);
     FileSystem dfs = committedPath.getFileSystem(conf);
 
-    assertEquals("Should commit to HDFS: "+ committer, getDFS(), dfs);
+    assertEquals(getDFS(), dfs, "Should commit to HDFS: "+ committer);
 
     FileStatus[] stats = dfs.listStatus(committedPath);
-    assertEquals("Should produce one commit file: " + results, 1, stats.length);
+    assertEquals(1, stats.length, "Should produce one commit file: " + results);
     assertEquals("Should name the commits file with the task ID: " + results,
         "task_job_0001_r_000002", stats[0].getPath().getName());
 
     PendingSet pending = PersistentCommitData.load(dfs, stats[0], PendingSet.serializer());
-    assertEquals("Should have one pending commit", 1, pending.size());
+    assertEquals(1, pending.size(), "Should have one pending commit");
     SinglePendingCommit commit = pending.getCommits().get(0);
-    assertEquals("Should write to the correct bucket:" + results,
-        BUCKET, commit.getBucket());
+    assertEquals(
+       BUCKET, commit.getBucket(), "Should write to the correct bucket:" + results);
     assertEquals("Should write to the correct key: " + results,
         OUTPUT_PREFIX + "/" + file.getName(), commit.getDestinationKey());
 
@@ -416,21 +416,21 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     committer.commitTask(tac);
 
     List<String> uploads = results.getUploads();
-    assertEquals("Should initiate one upload", 1, uploads.size());
+    assertEquals(1, uploads.size(), "Should initiate one upload");
 
     Path committedPath = committer.getCommittedTaskPath(tac);
     FileSystem dfs = committedPath.getFileSystem(conf);
 
-    assertEquals("Should commit to HDFS", getDFS(), dfs);
+    assertEquals(getDFS(), dfs, "Should commit to HDFS");
 
     assertIsFile(dfs, committedPath);
     FileStatus[] stats = dfs.listStatus(committedPath);
-    assertEquals("Should produce one commit file", 1, stats.length);
+    assertEquals(1, stats.length, "Should produce one commit file");
     assertEquals("Should name the commits file with the task ID",
         "task_job_0001_r_000002", stats[0].getPath().getName());
 
     PendingSet pending = PersistentCommitData.load(dfs, stats[0], PendingSet.serializer());
-    assertEquals("Should have one pending commit", 1, pending.size());
+    assertEquals(1, pending.size(), "Should have one pending commit");
   }
 
   @Test
@@ -439,33 +439,33 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     Set<String> files = commitTask(committer, tac, numFiles);
 
     List<String> uploads = results.getUploads();
-    assertEquals("Should initiate multiple uploads", numFiles, uploads.size());
+    assertEquals(numFiles, uploads.size(), "Should initiate multiple uploads");
 
     Path committedPath = committer.getCommittedTaskPath(tac);
     FileSystem dfs = committedPath.getFileSystem(conf);
 
-    assertEquals("Should commit to HDFS", getDFS(), dfs);
+    assertEquals(getDFS(), dfs, "Should commit to HDFS");
     assertIsFile(dfs, committedPath);
     FileStatus[] stats = dfs.listStatus(committedPath);
-    assertEquals("Should produce one commit file", 1, stats.length);
+    assertEquals(1, stats.length, "Should produce one commit file");
     assertEquals("Should name the commits file with the task ID",
         "task_job_0001_r_000002", stats[0].getPath().getName());
 
     List<SinglePendingCommit> pending =
         PersistentCommitData.load(dfs, stats[0], PendingSet.serializer()).getCommits();
-    assertEquals("Should have correct number of pending commits",
-        files.size(), pending.size());
+    assertEquals(
+       files.size(), pending.size(), "Should have correct number of pending commits");
 
     Set<String> keys = Sets.newHashSet();
     for (SinglePendingCommit commit : pending) {
-      assertEquals("Should write to the correct bucket: " + commit,
-          BUCKET, commit.getBucket());
+      assertEquals(
+         BUCKET, commit.getBucket(), "Should write to the correct bucket: " + commit);
       assertValidUpload(results.getTagsByUpload(), commit);
       keys.add(commit.getDestinationKey());
     }
 
-    assertEquals("Should write to the correct key",
-        files, keys);
+    assertEquals(
+       files, keys, "Should write to the correct key");
   }
 
   @Test
@@ -487,11 +487,11 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         "Should fail during init",
         () -> committer.commitTask(tac));
 
-    assertEquals("Should have initialized one file upload",
-        1, results.getUploads().size());
-    assertEquals("Should abort the upload",
-        new HashSet<>(results.getUploads()),
-        getAbortedIds(results.getAborts()));
+    assertEquals(
+       1, results.getUploads().size(), "Should have initialized one file upload");
+    assertEquals(
+       new HashSet<>(results.getUploads())
+,         getAbortedIds(results.getAborts()), "Should abort the upload");
     assertPathDoesNotExist(fs,
         "Should remove the attempt path",
         attemptPath);
@@ -518,11 +518,11 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
           return committer.toString();
         });
 
-    assertEquals("Should have attempted one file upload",
-        1, results.getUploads().size());
-    assertEquals("Should abort the upload",
-        results.getUploads().get(0),
-        results.getAborts().get(0).uploadId());
+    assertEquals(
+       1, results.getUploads().size(), "Should have attempted one file upload");
+    assertEquals(
+       results.getUploads().get(0)
+,         results.getAborts().get(0).uploadId(), "Should abort the upload");
     assertPathDoesNotExist(fs, "Should remove the attempt path",
         attemptPath);
   }
@@ -549,11 +549,11 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
           return committer.toString();
         });
 
-    assertEquals("Should have attempted two file uploads",
-        2, results.getUploads().size());
-    assertEquals("Should abort the upload",
-        new HashSet<>(results.getUploads()),
-        getAbortedIds(results.getAborts()));
+    assertEquals(
+       2, results.getUploads().size(), "Should have attempted two file uploads");
+    assertEquals(
+       new HashSet<>(results.getUploads())
+,         getAbortedIds(results.getAborts()), "Should abort the upload");
     assertPathDoesNotExist(fs, "Should remove the attempt path",
         attemptPath);
   }
@@ -581,11 +581,11 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
             return committer.toString();
         });
 
-    assertEquals("Should have attempted two file uploads",
-        2, results.getUploads().size());
-    assertEquals("Should not have succeeded with any aborts",
-        new HashSet<>(),
-        getAbortedIds(results.getAborts()));
+    assertEquals(
+       2, results.getUploads().size(), "Should have attempted two file uploads");
+    assertEquals(
+       new HashSet<>()
+,         getAbortedIds(results.getAborts()), "Should not have succeeded with any aborts");
     assertPathDoesNotExist(fs, "Should remove the attempt path", attemptPath);
   }
 
@@ -601,10 +601,10 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
     committer.abortTask(tac);
 
-    assertEquals("Should not upload anything",
-        0, results.getUploads().size());
-    assertEquals("Should not upload anything",
-        0, results.getParts().size());
+    assertEquals(
+       0, results.getUploads().size(), "Should not upload anything");
+    assertEquals(
+       0, results.getParts().size(), "Should not upload anything");
     assertPathDoesNotExist(fs, "Should remove all attempt data", outPath);
     assertPathDoesNotExist(fs, "Should remove the attempt path", attemptPath);
 
@@ -621,14 +621,14 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertPathExists(fs, "No job attempt path", jobAttemptPath);
 
     jobCommitter.commitJob(job);
-    assertEquals("Should have aborted no uploads",
-        0, results.getAborts().size());
+    assertEquals(
+       0, results.getAborts().size(), "Should have aborted no uploads");
 
-    assertEquals("Should have deleted no uploads",
-        0, results.getDeletes().size());
+    assertEquals(
+       0, results.getDeletes().size(), "Should have deleted no uploads");
 
-    assertEquals("Should have committed all uploads",
-        uploads, getCommittedIds(results.getCommits()));
+    assertEquals(
+       uploads, getCommittedIds(results.getCommits()), "Should have committed all uploads");
 
     assertPathDoesNotExist(fs, "jobAttemptPath not deleted", jobAttemptPath);
 
@@ -666,16 +666,16 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
             "s3a://" + delete.bucket() + "/" + delete.key())
         .collect(Collectors.toSet());
 
-    Assertions.assertThat(commits)
+    assertThat(commits)
         .describedAs("Committed objects compared to deleted paths %s", results)
         .containsExactlyInAnyOrderElementsOf(deletes);
 
-    Assertions.assertThat(results.getAborts())
+    assertThat(results.getAborts())
         .describedAs("aborted count in %s", results)
         .hasSize(7);
     Set<String> uploadIds = getCommittedIds(results.getCommits());
     uploadIds.addAll(getAbortedIds(results.getAborts()));
-    Assertions.assertThat(uploadIds)
+    assertThat(uploadIds)
         .describedAs("Combined commit/delete and aborted upload IDs")
         .containsExactlyInAnyOrderElementsOf(uploads);
 
@@ -691,14 +691,14 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
     assertPathExists(fs, "No job attempt path", jobAttemptPath);
     jobCommitter.abortJob(job, JobStatus.State.KILLED);
-    assertEquals("Should have committed no uploads: " + jobCommitter,
-        0, results.getCommits().size());
+    assertEquals(
+       0, results.getCommits().size(), "Should have committed no uploads: " + jobCommitter);
 
-    assertEquals("Should have deleted no uploads: " + jobCommitter,
-        0, results.getDeletes().size());
+    assertEquals(
+       0, results.getDeletes().size(), "Should have deleted no uploads: " + jobCommitter);
 
-    assertEquals("Should have aborted all uploads: " + jobCommitter,
-        uploads, getAbortedIds(results.getAborts()));
+    assertEquals(
+       uploads, getAbortedIds(results.getAborts()), "Should have aborted all uploads: " + jobCommitter);
 
     assertPathDoesNotExist(fs, "jobAttemptPath not deleted", jobAttemptPath);
   }
@@ -771,16 +771,16 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
   private static void assertValidUpload(Map<String, List<String>> parts,
                                         SinglePendingCommit commit) {
-    assertTrue("Should commit a valid uploadId",
-        parts.containsKey(commit.getUploadId()));
+    assertTrue(
+       parts.containsKey(commit.getUploadId()), "Should commit a valid uploadId");
 
     List<String> tags = parts.get(commit.getUploadId());
-    assertEquals("Should commit the correct number of file parts",
-        tags.size(), commit.getPartCount());
+    assertEquals(
+       tags.size(), commit.getPartCount(), "Should commit the correct number of file parts");
 
     for (int i = 0; i < tags.size(); i += 1) {
-      assertEquals("Should commit the correct part tags",
-          tags.get(i), commit.getEtags().get(i));
+      assertEquals(
+         tags.get(i), commit.getEtags().get(i), "Should commit the correct part tags");
     }
   }
 

@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
 
 import org.apache.hadoop.conf.Configuration;

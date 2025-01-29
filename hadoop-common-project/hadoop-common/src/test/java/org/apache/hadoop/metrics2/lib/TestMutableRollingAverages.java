@@ -23,8 +23,9 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -45,7 +46,8 @@ public class TestMutableRollingAverages {
    * Tests if the results are correct if no samples are inserted, dry run of
    * empty roll over.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRollingAveragesEmptyRollover() throws Exception {
     final MetricsRecordBuilder rb = mockMetricsRecordBuilder();
     /* 5s interval and 2 windows */
@@ -79,7 +81,8 @@ public class TestMutableRollingAverages {
    * 2...2] and [3, 3...3]
    * </p>
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRollingAveragesRollover() throws Exception {
     final MetricsRecordBuilder rb = mockMetricsRecordBuilder();
     final String name = "foo2";
@@ -135,7 +138,8 @@ public class TestMutableRollingAverages {
    * initialization.
    * @throws Exception
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testMutableRollingAveragesMetric() throws Exception {
     DummyTestMetric testMetric = new DummyTestMetric();
     testMetric.create();
@@ -157,10 +161,10 @@ public class TestMutableRollingAverages {
 
     double metric1Avg = getDoubleGauge("[Metric1]RollingAvgTesting", rb);
     double metric2Avg = getDoubleGauge("[Metric2]RollingAvgTesting", rb);
-    Assert.assertTrue("The rolling average of metric1 is not as expected",
-        metric1Avg == 500.0);
-    Assert.assertTrue("The rolling average of metric2 is not as expected",
-        metric2Avg == 1000.0);
+    Assertions.assertTrue(
+       metric1Avg == 500.0, "The rolling average of metric1 is not as expected");
+    Assertions.assertTrue(
+       metric2Avg == 1000.0, "The rolling average of metric2 is not as expected");
 
   }
 

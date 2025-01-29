@@ -19,7 +19,7 @@ package org.apache.hadoop.net;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
@@ -31,7 +31,8 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestTableMapping {
   private String hostName1 = "1.2.3.4";
@@ -162,7 +163,8 @@ public class TestTableMapping {
   }
 
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testBadFile() throws IOException {
     File mapFile = File.createTempFile(getClass().getSimpleName() +
         ".testBadFile", ".txt");

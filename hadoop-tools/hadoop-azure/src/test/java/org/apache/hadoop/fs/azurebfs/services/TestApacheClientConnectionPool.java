@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;

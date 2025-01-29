@@ -23,11 +23,13 @@ import java.io.File;
 import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestClassUtil {
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testFindContainingJar() {
     String containingJar = ClassUtil.findContainingJar(Assertions.class);
     Assertions
@@ -45,7 +47,8 @@ public class TestClassUtil {
         .matches("assertj-core.*[.]jar");
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testFindContainingClass() {
     String classFileLocation = ClassUtil.findClassLocation(ViewFileSystem.class);
     Assertions

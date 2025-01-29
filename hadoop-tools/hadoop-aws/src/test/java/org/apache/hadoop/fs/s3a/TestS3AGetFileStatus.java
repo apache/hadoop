@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 
 
@@ -66,9 +66,9 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     assertEquals(objectMetadata.contentLength().longValue(), stat.getLen());
     assertEquals(Date.from(objectMetadata.lastModified()).getTime(), stat.getModificationTime());
     ContractTestUtils.assertNotErasureCoded(fs, path);
-    assertTrue(path + " should have erasure coding unset in " +
-            "FileStatus#toString(): " + stat,
-        stat.toString().contains("isErasureCoded=false"));
+    assertTrue(
+       stat.toString().contains("isErasureCoded=false"), path + " should have erasure coding unset in " +
+            "FileStatus#toString(): " + stat);
   }
 
   @Test
@@ -107,9 +107,9 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     assertEquals(fs.makeQualified(path), stat.getPath());
     assertTrue(stat.isDirectory());
     ContractTestUtils.assertNotErasureCoded(fs, path);
-    assertTrue(path + " should have erasure coding unset in " +
-            "FileStatus#toString(): " + stat,
-        stat.toString().contains("isErasureCoded=false"));
+    assertTrue(
+       stat.toString().contains("isErasureCoded=false"), path + " should have erasure coding unset in " +
+            "FileStatus#toString(): " + stat);
   }
 
   @Test

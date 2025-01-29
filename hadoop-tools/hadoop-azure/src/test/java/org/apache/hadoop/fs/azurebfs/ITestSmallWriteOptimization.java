@@ -28,7 +28,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.runners.Parameterized;
 import org.junit.runner.RunWith;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -488,8 +488,8 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
     byte[] fileReadFromStore = new byte[totalFileSize];
     fs.open(testPath).read(fileReadFromStore, 0, totalFileSize);
 
-    assertArrayEquals("Test file content incorrect", bufferWritten,
-        fileReadFromStore);
+    assertArrayEquals(bufferWritten
+,         fileReadFromStore, "Test file content incorrect");
   }
 
   private void assertOpStats(Map<String, Long> metricMap,

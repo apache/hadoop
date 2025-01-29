@@ -29,7 +29,7 @@ import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.StsClientBuilder;
 import software.amazon.awssdk.services.sts.model.Credentials;
 import org.hamcrest.Matchers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,7 +54,7 @@ import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.assertCredentialsEqual
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
 import static org.apache.hadoop.fs.s3a.auth.delegation.SessionTokenBinding.CREDENTIALS_CONVERTED_TO_DELEGATION_TOKEN;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests use of temporary credentials (for example, AWS STS & S3).
@@ -201,9 +201,10 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
           = (SessionTokenIdentifier) fs.getDelegationToken("")
           .decodeIdentifier();
       String ids = identifier.toString();
-      assertThat("origin in " + ids,
-          identifier.getOrigin(),
-          containsString(CREDENTIALS_CONVERTED_TO_DELEGATION_TOKEN));
+      assertThat(identifier.getOrigin()).
+          contains(CREDENTIALS_CONVERTED_TO_DELEGATION_TOKEN).
+          as("origin in " + ids);
+
 
       // and validate the AWS bits to make sure everything has come across.
       assertCredentialsEqual("Reissued credentials in " + ids,
@@ -224,21 +225,19 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
     long permittedExpiryOffset = 60;
     OffsetDateTime expirationTimestamp = sc.getExpirationDateTime().get();
     OffsetDateTime localTimestamp = OffsetDateTime.now();
-    assertTrue("local time of " + localTimestamp
-            + " is after expiry time of " + expirationTimestamp,
-        localTimestamp.isBefore(expirationTimestamp));
+    assertTrue(
+       localTimestamp.isBefore(expirationTimestamp), "local time of " + localTimestamp
+            + " is after expiry time of " + expirationTimestamp);
 
     // what is the interval
     Duration actualDuration = Duration.between(localTimestamp,
         expirationTimestamp);
     Duration offset = actualDuration.minus(TEST_SESSION_TOKEN_DURATION);
 
-    assertThat(
-        "Duration of session " + actualDuration
-            + " out of expected range of with " + offset
-            + " this host's clock may be wrong.",
-        offset.getSeconds(),
-        Matchers.lessThanOrEqualTo(permittedExpiryOffset));
+    assertThat(offset.getSeconds()).
+        isLessThanOrEqualTo(permittedExpiryOffset).
+        as("Duration of session " + actualDuration + " out of expected range of with " + offset +
+        " this host's clock may be wrong.");
   }
 
   protected void updateConfigWithSessionCreds(final Configuration conf,

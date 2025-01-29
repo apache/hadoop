@@ -19,13 +19,12 @@
 package org.apache.hadoop.lib.lang;
 
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.test.HTestCase;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestRunnableCallable extends HTestCase {
 
@@ -86,11 +85,13 @@ public class TestRunnableCallable extends HTestCase {
     assertEquals(rc.toString(), "C");
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   public void callableExRun() throws Exception {
-    CEx c = new CEx();
-    RunnableCallable rc = new RunnableCallable(c);
-    rc.run();
+    assertThrows(RuntimeException.class, ()->{
+      CEx c = new CEx();
+      RunnableCallable rc = new RunnableCallable(c);
+      rc.run();
+    });
   }
 
 }

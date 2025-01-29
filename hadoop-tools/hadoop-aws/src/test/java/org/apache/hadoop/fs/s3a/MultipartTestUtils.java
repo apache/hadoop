@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,8 +80,8 @@ public final class MultipartTestUtils {
         anyFailure = true;
       }
     }
-    Assert.assertFalse("Failure aborting multipart upload(s), see log.",
-        anyFailure);
+    Assertions.assertFalse(
+       anyFailure, "Failure aborting multipart upload(s), see log.");
   }
 
   public static IdKey createPartUpload(S3AFileSystem fs, String key, int len,
@@ -116,7 +116,7 @@ public final class MultipartTestUtils {
     RemoteIterator<MultipartUpload> uploads = fs.listUploads(key);
     while (uploads.hasNext()) {
       MultipartUpload upload = uploads.next();
-      Assert.fail("Found unexpected upload " + upload.key() + " " +
+      Assertions.fail("Found unexpected upload " + upload.key() + " " +
           truncatedUploadId(upload.uploadId()));
     }
   }

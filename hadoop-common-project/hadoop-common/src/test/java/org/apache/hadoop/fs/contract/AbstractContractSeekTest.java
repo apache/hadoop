@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -225,8 +225,8 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     //expect that seek to 0 works
     //go just before the end
     instream.seek(TEST_FILE_LEN - 2);
-    assertTrue("Premature EOF", instream.read() != -1);
-    assertTrue("Premature EOF", instream.read() != -1);
+    assertTrue(instream.read() != -1, "Premature EOF");
+    assertTrue(instream.read() != -1, "Premature EOF");
     assertMinusOne("read past end of file", instream.read());
   }
 
@@ -260,7 +260,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     }
     //now go back and try to read from a valid point in the file
     instream.seek(1);
-    assertTrue("Premature EOF", instream.read() != -1);
+    assertTrue(instream.read() != -1, "Premature EOF");
   }
 
   /**
@@ -284,13 +284,13 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
 
     //do seek 32KB ahead
     instream.seek(32768);
-    assertEquals("@32768", block[32768], (byte) instream.read());
+    assertEquals(block[32768], (byte) instream.read(), "@32768");
     instream.seek(40000);
-    assertEquals("@40000", block[40000], (byte) instream.read());
+    assertEquals(block[40000], (byte) instream.read(), "@40000");
     instream.seek(8191);
-    assertEquals("@8191", block[8191], (byte) instream.read());
+    assertEquals(block[8191], (byte) instream.read(), "@8191");
     instream.seek(0);
-    assertEquals("@0", 0, (byte) instream.read());
+    assertEquals(0, (byte) instream.read(), "@0");
 
     // try read & readFully
     instream.seek(0);
@@ -321,10 +321,10 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     //have gone back
     assertEquals(40000, instream.getPos());
     //content is the same too
-    assertEquals("@40000", block[40000], (byte) instream.read());
+    assertEquals(block[40000], (byte) instream.read(), "@40000");
     //now verify the picked up data
     for (int i = 0; i < 256; i++) {
-      assertEquals("@" + i, block[i + 128], readBuffer[i]);
+      assertEquals(block[i + 128], readBuffer[i], "@" + i);
     }
   }
 
@@ -585,7 +585,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     describe("read at the end of the file");
     instream = getFileSystem().open(smallSeekFile);
     instream.seek(TEST_FILE_LEN -1);
-    assertTrue("read at last byte", instream.read() > 0);
-    assertEquals("read just past EOF", -1, instream.read());
+    assertTrue(instream.read() > 0, "read at last byte");
+    assertEquals(-1, instream.read(), "read just past EOF");
   }
 }

@@ -29,8 +29,8 @@ import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.test.TestJetty;
 import org.apache.hadoop.test.TestJettyHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
 
@@ -93,9 +93,9 @@ public class TestHttpFSAccessControlled extends HTestCase {
    */
   private void createHttpFSServer() throws Exception {
     File homeDir = TestDirHelper.getTestDir();
-    Assert.assertTrue(new File(homeDir, "conf").mkdir());
-    Assert.assertTrue(new File(homeDir, "log").mkdir());
-    Assert.assertTrue(new File(homeDir, "temp").mkdir());
+    Assertions.assertTrue(new File(homeDir, "conf").mkdir());
+    Assertions.assertTrue(new File(homeDir, "log").mkdir());
+    Assertions.assertTrue(new File(homeDir, "temp").mkdir());
     HttpFSServerWebApp.setHomeDirForCurrentThread(homeDir.getAbsolutePath());
 
     File secretFile = new File(new File(homeDir, "conf"), "secret");
@@ -175,9 +175,9 @@ public class TestHttpFSAccessControlled extends HTestCase {
     conn.connect();
     int resp = conn.getResponseCode();
     if ( expectOK ) {
-      Assert.assertEquals( outMsg, HttpURLConnection.HTTP_OK, resp);
+      Assertions.assertEquals(HttpURLConnection.HTTP_OK, resp, outMsg);
     } else {
-      Assert.assertEquals(outMsg, HttpURLConnection.HTTP_FORBIDDEN, resp);
+      Assertions.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, resp, outMsg);
     }
   }
 
@@ -207,9 +207,9 @@ public class TestHttpFSAccessControlled extends HTestCase {
     conn.connect();
     int resp = conn.getResponseCode();
     if ( expectOK ) {
-      Assert.assertEquals(outMsg, HttpURLConnection.HTTP_OK, resp);
+      Assertions.assertEquals(HttpURLConnection.HTTP_OK, resp, outMsg);
     } else {
-      Assert.assertEquals(outMsg, HttpURLConnection.HTTP_FORBIDDEN, resp);
+      Assertions.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, resp, outMsg);
     }
   }
 
@@ -239,9 +239,9 @@ public class TestHttpFSAccessControlled extends HTestCase {
     conn.connect();
     int resp = conn.getResponseCode();
     if ( expectOK ) {
-      Assert.assertEquals(outMsg, HttpURLConnection.HTTP_OK, resp);
+      Assertions.assertEquals(HttpURLConnection.HTTP_OK, resp, outMsg);
     } else {
-      Assert.assertEquals(outMsg, HttpURLConnection.HTTP_FORBIDDEN, resp);
+      Assertions.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, resp, outMsg);
     }
   }
 
@@ -271,9 +271,9 @@ public class TestHttpFSAccessControlled extends HTestCase {
     conn.connect();
     int resp = conn.getResponseCode();
     if ( expectOK ) {
-      Assert.assertEquals(outMsg, HttpURLConnection.HTTP_OK, resp);
+      Assertions.assertEquals(HttpURLConnection.HTTP_OK, resp, outMsg);
     } else {
-      Assert.assertEquals(outMsg, HttpURLConnection.HTTP_FORBIDDEN, resp);
+      Assertions.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, resp, outMsg);
     }
   }
 

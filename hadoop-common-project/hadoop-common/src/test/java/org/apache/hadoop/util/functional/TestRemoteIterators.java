@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.util.Preconditions;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -23,8 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +36,8 @@ import org.apache.hadoop.fs.s3a.AWSServiceIOException;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Some extra assertions for tests.
@@ -73,7 +73,7 @@ public final class ExtraAssertions {
     long actual = files.size();
     if (actual != expected) {
       String ls = files.stream().collect(Collectors.joining("\n"));
-      Assert.fail(message + ": expected " + expected + " files in " + path
+      Assertions.fail(message + ": expected " + expected + " files in " + path
           + " but got " + actual + "\n" + ls);
     }
   }
@@ -84,8 +84,8 @@ public final class ExtraAssertions {
    * @param contained text to look for.
    */
   public static void assertTextContains(String text, String contained) {
-    assertTrue("string \"" + contained + "\" not found in \"" + text + "\"",
-        text != null && text.contains(contained));
+    assertTrue(
+       text != null && text.contains(contained), "string \"" + contained + "\" not found in \"" + text + "\"");
   }
 
   /**
@@ -161,7 +161,7 @@ public final class ExtraAssertions {
    */
   public static void assertCompleteAbort(
       Abortable.AbortableResult result) {
-    Assertions.assertThat(result)
+    assertThat(result)
         .describedAs("Abort operation result %s", result)
         .matches(r -> !r.alreadyClosed())
         .matches(r -> r.anyCleanupException() == null);
@@ -174,7 +174,7 @@ public final class ExtraAssertions {
    */
   public static void assertNoopAbort(
       Abortable.AbortableResult result) {
-    Assertions.assertThat(result)
+    assertThat(result)
         .describedAs("Abort operation result %s", result)
         .matches(r -> r.alreadyClosed());
   }

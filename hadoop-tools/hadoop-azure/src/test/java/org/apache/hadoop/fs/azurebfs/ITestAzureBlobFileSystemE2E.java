@@ -26,7 +26,7 @@ import java.util.Random;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -80,34 +80,36 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     }
   }
 
-  @Test (expected = IOException.class)
+  @Test
   public void testOOBWritesAndReadFail() throws Exception {
-    Configuration conf = this.getRawConfiguration();
-    conf.setBoolean(AZURE_TOLERATE_CONCURRENT_APPEND, false);
-    final AzureBlobFileSystem fs = getFileSystem();
-    int readBufferSize = fs.getAbfsStore().getAbfsConfiguration().getReadBufferSize();
+    assertThrows(IOException.class, () -> {
+      Configuration conf = this.getRawConfiguration();
+      conf.setBoolean(AZURE_TOLERATE_CONCURRENT_APPEND, false);
+      final AzureBlobFileSystem fs = getFileSystem();
+      int readBufferSize = fs.getAbfsStore().getAbfsConfiguration().getReadBufferSize();
 
-    byte[] bytesToRead = new byte[readBufferSize];
-    final byte[] b = new byte[2 * readBufferSize];
-    new Random().nextBytes(b);
+      byte[] bytesToRead = new byte[readBufferSize];
+      final byte[] b = new byte[2 * readBufferSize];
+      new Random().nextBytes(b);
 
-    final Path testFilePath = path(methodName.getMethodName());
-    try(FSDataOutputStream writeStream = fs.create(testFilePath)) {
-      writeStream.write(b);
-      writeStream.flush();
-    }
-
-    try (FSDataInputStream readStream = fs.open(testFilePath)) {
-      assertEquals(readBufferSize,
-          readStream.read(bytesToRead, 0, readBufferSize));
+      final Path testFilePath = path(methodName.getMethodName());
       try (FSDataOutputStream writeStream = fs.create(testFilePath)) {
         writeStream.write(b);
         writeStream.flush();
       }
 
-      assertEquals(readBufferSize,
-          readStream.read(bytesToRead, 0, readBufferSize));
-    }
+      try (FSDataInputStream readStream = fs.open(testFilePath)) {
+        assertEquals(readBufferSize,
+            readStream.read(bytesToRead, 0, readBufferSize));
+        try (FSDataOutputStream writeStream = fs.create(testFilePath)) {
+          writeStream.write(b);
+          writeStream.flush();
+        }
+
+        assertEquals(readBufferSize,
+            readStream.read(bytesToRead, 0, readBufferSize));
+      }
+    });
   }
 
   @Test
@@ -251,11 +253,13 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
             TEST_STABLE_DEFAULT_READ_TIMEOUT_MS);
   }
 
-  @Test(expected = InvalidAbfsRestOperationException.class)
+  @Test
   public void testHttpReadTimeout() throws Exception {
-    // Small read timeout is bound to make the request fail.
-    testHttpTimeouts(TEST_STABLE_DEFAULT_CONNECTION_TIMEOUT_MS,
-            TEST_UNSTABLE_READ_TIMEOUT_MS);
+    assertThrows(InvalidAbfsRestOperationException.class, () -> {
+      // Small read timeout is bound to make the request fail.
+      testHttpTimeouts(TEST_STABLE_DEFAULT_CONNECTION_TIMEOUT_MS,
+          TEST_UNSTABLE_READ_TIMEOUT_MS);
+    });
   }
 
   public void testHttpTimeouts(int connectionTimeoutMs, int readTimeoutMs)

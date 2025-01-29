@@ -21,20 +21,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.bzip2.Bzip2Compressor;
 import org.apache.hadoop.io.compress.bzip2.Bzip2Decompressor;
 import org.apache.hadoop.test.MultithreadedTestUtil;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.*;
 import java.util.Random;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.Assume.*;
 
 public class TestBzip2CompressorDecompressor {
   
   private static final Random rnd = new Random(12345l);
 
-  @Before
+  @BeforeEach
   public void before() {
     assumeTrue(Bzip2Factory.isNativeBzip2Loaded(new Configuration()));
   }
@@ -49,25 +49,25 @@ public class TestBzip2CompressorDecompressor {
     try {
       Bzip2Compressor compressor = new Bzip2Compressor();
       Bzip2Decompressor decompressor = new Bzip2Decompressor();
-      assertFalse("testBzip2CompressDecompress finished error",
-          compressor.finished());
+      assertFalse(
+         compressor.finished(), "testBzip2CompressDecompress finished error");
       compressor.setInput(rawData, 0, rawData.length);
-      assertTrue("testBzip2CompressDecompress getBytesRead before error",
-          compressor.getBytesRead() == 0);
+      assertTrue(
+         compressor.getBytesRead() == 0, "testBzip2CompressDecompress getBytesRead before error");
       compressor.finish();
 
       byte[] compressedResult = new byte[rawDataSize];
       int cSize = compressor.compress(compressedResult, 0, rawDataSize);
-      assertTrue("testBzip2CompressDecompress getBytesRead after error",
-          compressor.getBytesRead() == rawDataSize);
       assertTrue(
-          "testBzip2CompressDecompress compressed size no less than original size",
-          cSize < rawDataSize);
+         compressor.getBytesRead() == rawDataSize, "testBzip2CompressDecompress getBytesRead after error");
+      assertTrue(
+      
+         cSize < rawDataSize, "testBzip2CompressDecompress compressed size no less than original size");
       decompressor.setInput(compressedResult, 0, cSize);
       byte[] decompressedBytes = new byte[rawDataSize];
       decompressor.decompress(decompressedBytes, 0, decompressedBytes.length);
-      assertArrayEquals("testBzip2CompressDecompress arrays not equals ",
-          rawData, decompressedBytes);
+      assertArrayEquals(
+         rawData, decompressedBytes, "testBzip2CompressDecompress arrays not equals ");
       compressor.reset();
       decompressor.reset();
     } catch (IOException ex) {

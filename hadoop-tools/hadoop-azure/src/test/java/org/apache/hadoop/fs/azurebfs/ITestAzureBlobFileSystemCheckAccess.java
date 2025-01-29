@@ -25,7 +25,7 @@ import java.util.List;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.util.Lists;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -114,28 +114,34 @@ public class ITestAzureBlobFileSystemCheckAccess
     conf.set(confKeyWithAccountName, confValue);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testCheckAccessWithNullPath() throws IOException {
-    superUserFs.access(null, FsAction.READ);
+    assertThrows(IllegalArgumentException.class, () -> {
+      superUserFs.access(null, FsAction.READ);
+    });
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testCheckAccessForFileWithNullFsAction() throws Exception {
-    Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
-        isHNSEnabled);
-    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
-        isCheckAccessEnabled);
-    //  NPE when trying to convert null FsAction enum
-    superUserFs.access(new Path("test.txt"), null);
+    assertThrows(NullPointerException.class, ()->{
+      Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
+          isHNSEnabled);
+      Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
+          isCheckAccessEnabled);
+      //  NPE when trying to convert null FsAction enum
+      superUserFs.access(new Path("test.txt"), null);
+    });
   }
 
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testCheckAccessForNonExistentFile() throws Exception {
-    checkPrerequisites();
-    Path nonExistentFile = setupTestDirectoryAndUserAccess(
-        "/nonExistentFile1.txt", FsAction.ALL);
-    superUserFs.delete(nonExistentFile, true);
-    testUserFs.access(nonExistentFile, FsAction.READ);
+    assertThrows(FileNotFoundException.class, ()->{
+      checkPrerequisites();
+      Path nonExistentFile = setupTestDirectoryAndUserAccess(
+          "/nonExistentFile1.txt", FsAction.ALL);
+      superUserFs.delete(nonExistentFile, true);
+      testUserFs.access(nonExistentFile, FsAction.READ);
+    });
   }
 
   @Test
@@ -331,15 +337,15 @@ public class ITestAzureBlobFileSystemCheckAccess
   private void assertAccessible(Path testFilePath, FsAction fsAction)
       throws IOException {
     assertTrue(
-        "Should have been given access  " + fsAction + " on " + testFilePath,
-        isAccessible(testUserFs, testFilePath, fsAction));
+    
+       isAccessible(testUserFs, testFilePath, fsAction), "Should have been given access  " + fsAction + " on " + testFilePath);
   }
 
   private void assertInaccessible(Path testFilePath, FsAction fsAction)
       throws IOException {
     assertFalse(
-        "Should have been denied access  " + fsAction + " on " + testFilePath,
-        isAccessible(testUserFs, testFilePath, fsAction));
+    
+       isAccessible(testUserFs, testFilePath, fsAction), "Should have been denied access  " + fsAction + " on " + testFilePath);
   }
 
   private void setExecuteAccessForParentDirs(Path dir) throws IOException {

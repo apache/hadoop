@@ -20,9 +20,9 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
@@ -145,7 +145,7 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
   /***
    * Set up the clusters.
    */
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     JobConf conf = new JobConf();
     assumeSessionTestsEnabled(conf);
@@ -156,7 +156,7 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
   /**
    * Tear down the cluster.
    */
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() throws Exception {
     cluster = terminateService(cluster);
   }
@@ -247,7 +247,7 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
         getConfiguration());
     FileStatus status = resourceFS.getFileStatus(extraJobResourcePath);
     LOG.info("Extra job resource is {}", status);
-    assertTrue("Not encrypted: " + status, status.isEncrypted());
+    assertTrue(status.isEncrypted(), "Not encrypted: " + status);
   }
 
   @Test
@@ -298,10 +298,10 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
 
     job.submit();
     final JobStatus status = job.getStatus();
-    assertEquals("not a mock job",
-        MockJob.NAME, status.getSchedulingInfo());
-    assertEquals("Job State",
-        JobStatus.State.RUNNING, status.getState());
+    assertEquals(
+       MockJob.NAME, status.getSchedulingInfo(), "not a mock job");
+    assertEquals(
+       JobStatus.State.RUNNING, status.getState(), "Job State");
 
     final Credentials submittedCredentials =
         requireNonNull(job.getSubmittedCredentials(),

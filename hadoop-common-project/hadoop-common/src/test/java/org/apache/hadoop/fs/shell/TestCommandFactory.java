@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.fs.shell;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestCommandFactory {
   static CommandFactory factory;
@@ -31,7 +31,7 @@ public class TestCommandFactory {
   static void registerCommands(CommandFactory factory) {
   }
   
-  @Before
+  @BeforeEach
   public void testSetup() {
     factory = new CommandFactory(conf);
     assertNotNull(factory);

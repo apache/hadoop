@@ -25,9 +25,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
-import org.junit.After;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.Assume;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +63,7 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Base for AzureBlobFileSystem Integration tests.
@@ -177,7 +178,7 @@ public abstract class AbstractAbfsIntegrationTest extends
         FSOperationType.TEST_OP, needsPrimaryReqId, format, null);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     //Create filesystem first to make sure getWasbFileSystem() can return an existing filesystem.
     createFileSystem();
@@ -210,7 +211,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     }
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     try {
       IOUtils.closeStream(wasb);
@@ -547,8 +548,8 @@ public abstract class AbstractAbfsIntegrationTest extends
    */
   protected long assertAbfsStatistics(AbfsStatistic statistic,
       long expectedValue, Map<String, Long> metricMap) {
-    assertEquals("Mismatch in " + statistic.getStatName(), expectedValue,
-        (long) metricMap.get(statistic.getStatName()));
+    assertEquals(expectedValue
+,         (long) metricMap.get(statistic.getStatName()), "Mismatch in " + statistic.getStatName());
     return expectedValue;
   }
 

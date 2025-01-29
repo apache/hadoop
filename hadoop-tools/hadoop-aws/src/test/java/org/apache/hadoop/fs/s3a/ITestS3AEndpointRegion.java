@@ -27,7 +27,7 @@ import java.util.List;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.awscore.AwsExecutionAttribute;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.interceptor.Context;

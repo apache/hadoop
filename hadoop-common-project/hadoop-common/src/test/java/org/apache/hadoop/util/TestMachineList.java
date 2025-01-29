@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collection;
@@ -29,7 +24,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestMachineList {
   private static String IP_LIST = "10.119.103.110,10.119.103.112,10.119.103.114";
@@ -186,14 +183,16 @@ public class TestMachineList {
     assertFalse(ml.includes("10.119.103.111"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testNullIpAddress() {
-    //create MachineList with a list of of ip ranges specified in CIDR format
-    MachineList ml = new MachineList(CIDR_LIST, new TestAddressFactory());
+    assertThrows(IllegalArgumentException.class, ()->{
+      //create MachineList with a list of ip ranges specified in CIDR format
+      MachineList ml = new MachineList(CIDR_LIST, new TestAddressFactory());
 
-    //test for exclusion with a null IP
-    assertFalse(ml.includes((String) null));
-    assertFalse(ml.includes((InetAddress) null));
+      //test for exclusion with a null IP
+      assertFalse(ml.includes((String) null));
+      assertFalse(ml.includes((InetAddress) null));
+    });
   }
 
   @Test

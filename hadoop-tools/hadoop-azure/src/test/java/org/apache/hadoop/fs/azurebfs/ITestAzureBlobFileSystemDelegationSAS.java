@@ -28,7 +28,7 @@ import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,9 +104,9 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     fs.setPermission(rootPath, new FsPermission(FsAction.ALL, FsAction.READ_EXECUTE, FsAction.EXECUTE));
     FileStatus rootStatus = fs.getFileStatus(rootPath);
     assertEquals("The directory permissions are not expected.", "rwxr-x--x", rootStatus.getPermission().toString());
-    assertEquals("The directory owner is not expected.",
-        MockDelegationSASTokenProvider.TEST_OWNER,
-        rootStatus.getOwner());
+    assertEquals(
+       MockDelegationSASTokenProvider.TEST_OWNER
+,         rootStatus.getOwner(), "The directory owner is not expected.");
 
     Path dirPath = new Path(UUID.randomUUID().toString());
     fs.mkdirs(dirPath);
@@ -118,8 +118,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     FileStatus dirStatus = fs.getFileStatus(dirPath);
     FileStatus fileStatus = fs.getFileStatus(filePath);
 
-    assertEquals("The owner is not expected.", MockDelegationSASTokenProvider.TEST_OWNER, dirStatus.getOwner());
-    assertEquals("The owner is not expected.", MockDelegationSASTokenProvider.TEST_OWNER, fileStatus.getOwner());
+    assertEquals(MockDelegationSASTokenProvider.TEST_OWNER, dirStatus.getOwner(), "The owner is not expected.");
+    assertEquals(MockDelegationSASTokenProvider.TEST_OWNER, fileStatus.getOwner(), "The owner is not expected.");
     assertEquals("The directory permissions are not expected.", "rwxr-xr-x", dirStatus.getPermission().toString());
     assertEquals("The file permissions are not expected.", "r--r-----", fileStatus.getPermission().toString());
 
@@ -434,9 +434,9 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     assertEquals("The permissions are not expected.",
         "rwxr-x---",
         rootStatus.getPermission().toString());
-    assertNotEquals("The owner is not expected.",
-        MockDelegationSASTokenProvider.TEST_OWNER,
-        rootStatus.getOwner());
+    assertNotEquals(
+       MockDelegationSASTokenProvider.TEST_OWNER
+,         rootStatus.getOwner(), "The owner is not expected.");
 
     // Attempt to set permission without being the owner.
     intercept(AccessDeniedException.class,
@@ -454,9 +454,9 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     assertEquals("The permissions are not expected.",
         "rwxr-x--x",
         rootStatus.getPermission().toString());
-    assertEquals("The directory owner is not expected.",
-        MockDelegationSASTokenProvider.TEST_OWNER,
-        rootStatus.getOwner());
+    assertEquals(
+       MockDelegationSASTokenProvider.TEST_OWNER
+,         rootStatus.getOwner(), "The directory owner is not expected.");
   }
 
   @Test
@@ -470,9 +470,9 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     assertEquals("The permissions are not expected.",
         "rw-r--r--",
         status.getPermission().toString());
-    assertNotEquals("The owner is not expected.",
-        TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID,
-        status.getOwner());
+    assertNotEquals(
+       TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID
+,         status.getOwner(), "The owner is not expected.");
 
     fs.setPermission(path, new FsPermission(FsAction.READ, FsAction.READ, FsAction.NONE));
 

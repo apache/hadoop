@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class TestFsShell {

@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.io.IOUtils;
 
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,7 +125,7 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   /**
    * Dump the filesystem statistics after the class.
    */
-  @AfterClass
+  @AfterAll
   public static void dumpFileSystemIOStatistics() {
     LOG.info("Aggregate FileSystem Statistics {}",
         ioStatisticsToPrettyString(FILESYSTEM_IOSTATS));

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -81,11 +81,11 @@ public class TestS3AInputPolicies {
 
   @Test
   public void testInputPolicies() throws Throwable {
-    Assert.assertEquals(
-        String.format("calculateRequestLimit(%s, %d, %d, %d, %d)",
-            policy, targetPos, length, contentLength, readahead),
-        expectedLimit,
-        S3AInputStream.calculateRequestLimit(policy, targetPos,
-            length, contentLength, readahead));
+    Assertions.assertEquals(
+    
+       expectedLimit
+,         S3AInputStream.calculateRequestLimit(policy, targetPos,
+            length, contentLength, readahead), String.format("calculateRequestLimit(%s, %d, %d, %d, %d)",
+            policy, targetPos, length, contentLength, readahead));
   }
 }

@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.util.Arrays;
 import java.util.Random;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -172,7 +172,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     }
     logIOStatisticsAtLevel(LOG, IOSTATISTICS_LOGGING_LEVEL_INFO, statisticsSource);
 
-    assertNotEquals("data read in final read()", -1, result);
+    assertNotEquals(-1, result, "data read in final read()");
     assertArrayEquals(readBuffer, b);
   }
 

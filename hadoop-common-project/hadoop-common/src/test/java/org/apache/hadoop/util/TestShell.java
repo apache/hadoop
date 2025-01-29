@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.commons.io.FileUtils;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -43,18 +43,14 @@ import static org.apache.hadoop.util.Shell.*;
 import static org.junit.Assume.assumeTrue;
 
 import org.junit.Assume;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
 
-public class TestShell extends Assert {
-  /**
-   * Set the timeout for every test.
-   */
-  @Rule
-  public Timeout testTimeout = new Timeout(30000, TimeUnit.MILLISECONDS);
+@Timeout(value = 30)
+public class TestShell extends Assertions {
 
   @Rule
   public TestName methodName = new TestName();
@@ -94,10 +90,10 @@ public class TestShell extends Assert {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     rootTestDir.mkdirs();
-    assertTrue("Not a directory " + rootTestDir, rootTestDir.isDirectory());
+    assertTrue(rootTestDir.isDirectory(), "Not a directory " + rootTestDir);
     methodDir = new File(rootTestDir, methodName.getMethodName());
   }
 
@@ -115,7 +111,7 @@ public class TestShell extends Assert {
    * @param search what to search for it
    */
   private void assertInString(String string, String search) {
-    assertNotNull("Empty String", string);
+    assertNotNull(string, "Empty String");
     if (!string.contains(search)) {
       fail("Did not find \"" + search + "\" in " + string);
     }
@@ -151,7 +147,7 @@ public class TestShell extends Assert {
       //When timing out exception is thrown.
     }
     shellFile.delete();
-    assertTrue("Script did not timeout" , shexc.isTimedOut());
+    assertTrue( shexc.isTimedOut(), "Script did not timeout");
   }
 
   @Test
@@ -246,7 +242,7 @@ public class TestShell extends Assert {
       expectedCommand = new String[] {"bash", "-c", "kill -0 '" + anyPid +
             "'" };
     }
-    Assert.assertArrayEquals(expectedCommand, checkProcessAliveCommand);
+    Assertions.assertArrayEquals(expectedCommand, checkProcessAliveCommand);
   }
 
   @Test
@@ -268,7 +264,7 @@ public class TestShell extends Assert {
       expectedCommand = new String[]{ "bash", "-c", "kill -9 '" + anyPid +
             "'"};
     }
-    Assert.assertArrayEquals(expectedCommand, checkProcessAliveCommand);
+    Assertions.assertArrayEquals(expectedCommand, checkProcessAliveCommand);
   }
 
   private void testInterval(long interval) throws IOException {
@@ -477,7 +473,8 @@ public class TestShell extends Assert {
     assertEquals("''\\''foo'\\''bar'\\'''", Shell.bashQuote("'foo'bar'"));
   }
 
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testDestroyAllShellProcesses() throws Throwable {
     Assume.assumeFalse(WINDOWS);
     StringBuilder sleepCommand = new StringBuilder();

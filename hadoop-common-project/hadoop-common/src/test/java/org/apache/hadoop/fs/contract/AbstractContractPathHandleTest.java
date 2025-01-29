@@ -44,7 +44,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 
 import org.apache.hadoop.fs.RawPathHandle;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -143,10 +143,10 @@ public abstract class AbstractContractPathHandleTest
     PathHandle fd = getHandleOrSkip(stat);
 
     try (FSDataInputStream in = getFileSystem().open(fd)) {
-      assertTrue("Failed to detect content change", data.allowChange());
+      assertTrue(data.allowChange(), "Failed to detect content change");
       verifyRead(in, b12, 0, b12.length);
     } catch (InvalidPathHandleException e) {
-      assertFalse("Failed to allow content change", data.allowChange());
+      assertFalse(data.allowChange(), "Failed to allow content change");
     }
   }
 
@@ -164,10 +164,10 @@ public abstract class AbstractContractPathHandleTest
     PathHandle fd = getHandleOrSkip(stat);
 
     try (FSDataInputStream in = getFileSystem().open(fd)) {
-      assertTrue("Failed to detect location change", loc.allowChange());
+      assertTrue(loc.allowChange(), "Failed to detect location change");
       verifyRead(in, B1, 0, B1.length);
     } catch (InvalidPathHandleException e) {
-      assertFalse("Failed to allow location change", loc.allowChange());
+      assertFalse(loc.allowChange(), "Failed to allow location change");
     }
   }
 
@@ -189,15 +189,15 @@ public abstract class AbstractContractPathHandleTest
     byte[] b12 = Arrays.copyOf(B1, B1.length + B2.length);
     System.arraycopy(B2, 0, b12, B1.length, B2.length);
     try (FSDataInputStream in = getFileSystem().open(fd)) {
-      assertTrue("Failed to detect location change", loc.allowChange());
-      assertTrue("Failed to detect content change", data.allowChange());
+      assertTrue(loc.allowChange(), "Failed to detect location change");
+      assertTrue(data.allowChange(), "Failed to detect content change");
       verifyRead(in, b12, 0, b12.length);
     } catch (InvalidPathHandleException e) {
       if (data.allowChange()) {
-        assertFalse("Failed to allow location change", loc.allowChange());
+        assertFalse(loc.allowChange(), "Failed to allow location change");
       }
       if (loc.allowChange()) {
-        assertFalse("Failed to allow content change", data.allowChange());
+        assertFalse(data.allowChange(), "Failed to allow content change");
       }
     }
   }
@@ -264,9 +264,9 @@ public abstract class AbstractContractPathHandleTest
                 testFile(B1)))
         .build()
         .thenApply(ContractTestUtils::readStream);
-    assertEquals("Wrong number of bytes read value",
-        TEST_FILE_LEN,
-        (long) readAllBytes.get());
+    assertEquals(
+       TEST_FILE_LEN
+,         (long) readAllBytes.get(), "Wrong number of bytes read value");
   }
 
   @Test
@@ -305,9 +305,9 @@ public abstract class AbstractContractPathHandleTest
                 stat))
         .build()
         .thenApply(ContractTestUtils::readStream);
-    assertEquals("Wrong number of bytes read value",
-        TEST_FILE_LEN,
-        (long) readAllBytes.get());
+    assertEquals(
+       TEST_FILE_LEN
+,         (long) readAllBytes.get(), "Wrong number of bytes read value");
   }
 
 }

@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test whether or not encryption settings propagate by choosing an invalid
@@ -51,11 +51,11 @@ public class ITestS3AEncryptionAlgorithmValidation
       contract.init();
       //extract the test FS
       FileSystem fileSystem = contract.getTestFileSystem();
-      assertNotNull("null filesystem", fileSystem);
+      assertNotNull(fileSystem, "null filesystem");
       URI fsURI = fileSystem.getUri();
       LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
-      assertEquals("wrong filesystem of " + fsURI,
-          contract.getScheme(), fsURI.getScheme());
+      assertEquals(
+         contract.getScheme(), fsURI.getScheme(), "wrong filesystem of " + fsURI);
       fileSystem.initialize(fsURI, conf);
       return fileSystem;
     });
@@ -78,11 +78,11 @@ public class ITestS3AEncryptionAlgorithmValidation
       contract.init();
       //extract the test FS
       FileSystem fileSystem = contract.getTestFileSystem();
-      assertNotNull("null filesystem", fileSystem);
+      assertNotNull(fileSystem, "null filesystem");
       URI fsURI = fileSystem.getUri();
       LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
-      assertEquals("wrong filesystem of " + fsURI,
-          contract.getScheme(), fsURI.getScheme());
+      assertEquals(
+         contract.getScheme(), fsURI.getScheme(), "wrong filesystem of " + fsURI);
       fileSystem.initialize(fsURI, conf);
       return fileSystem;
     });
@@ -102,11 +102,11 @@ public class ITestS3AEncryptionAlgorithmValidation
       contract.init();
       //extract the test FS
       FileSystem fileSystem = contract.getTestFileSystem();
-      assertNotNull("null filesystem", fileSystem);
+      assertNotNull(fileSystem, "null filesystem");
       URI fsURI = fileSystem.getUri();
       LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
-      assertEquals("wrong filesystem of " + fsURI,
-          contract.getScheme(), fsURI.getScheme());
+      assertEquals(
+         contract.getScheme(), fsURI.getScheme(), "wrong filesystem of " + fsURI);
       fileSystem.initialize(fsURI, conf);
       return fileSystem;
     });
@@ -129,11 +129,11 @@ public class ITestS3AEncryptionAlgorithmValidation
       contract.init();
       //extract the test FS
       FileSystem fileSystem = contract.getTestFileSystem();
-      assertNotNull("null filesystem", fileSystem);
+      assertNotNull(fileSystem, "null filesystem");
       URI fsURI = fileSystem.getUri();
       LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
-      assertEquals("wrong filesystem of " + fsURI,
-          contract.getScheme(), fsURI.getScheme());
+      assertEquals(
+         contract.getScheme(), fsURI.getScheme(), "wrong filesystem of " + fsURI);
       fileSystem.initialize(fsURI, conf);
       return fileSystem;
     });

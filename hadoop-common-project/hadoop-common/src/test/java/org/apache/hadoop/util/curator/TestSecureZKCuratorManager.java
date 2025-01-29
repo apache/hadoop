@@ -23,9 +23,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.security.SecurityUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.curator.test.InstanceSpec;
 import org.apache.curator.test.TestingServer;
@@ -38,7 +38,7 @@ import org.apache.zookeeper.common.ClientX509Util;
 import org.apache.zookeeper.server.NettyServerCnxnFactory;
 
 import static org.apache.hadoop.fs.FileContext.LOG;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test the manager for ZooKeeper Curator when SSL/TLS is enabled for the ZK server-client
@@ -59,7 +59,7 @@ public class TestSecureZKCuratorManager {
   public static final int ELECTION_PORT = -1;
   public static final int QUORUM_PORT = -1;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     // inject values to the ZK configuration file for secure connection
     Map<String, Object> customConfiguration = new HashMap<>();
@@ -132,7 +132,7 @@ public class TestSecureZKCuratorManager {
     return conf;
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     this.curator.close();
     if (this.server != null) {
@@ -159,21 +159,21 @@ public class TestSecureZKCuratorManager {
       String truststoreLocation, String truststorePassword, ZooKeeper zk) {
     try (ClientX509Util x509Util = new ClientX509Util()) {
       //testing if custom values are set properly
-      assertEquals("Validate that expected clientConfig is set in ZK config", keystoreLocation,
-          zk.getClientConfig().getProperty(x509Util.getSslKeystoreLocationProperty()));
-      assertEquals("Validate that expected clientConfig is set in ZK config", keystorePassword,
-          zk.getClientConfig().getProperty(x509Util.getSslKeystorePasswdProperty()));
-      assertEquals("Validate that expected clientConfig is set in ZK config", truststoreLocation,
-          zk.getClientConfig().getProperty(x509Util.getSslTruststoreLocationProperty()));
-      assertEquals("Validate that expected clientConfig is set in ZK config", truststorePassword,
-          zk.getClientConfig().getProperty(x509Util.getSslTruststorePasswdProperty()));
+      assertEquals(keystoreLocation
+,           zk.getClientConfig().getProperty(x509Util.getSslKeystoreLocationProperty()), "Validate that expected clientConfig is set in ZK config");
+      assertEquals(keystorePassword
+,           zk.getClientConfig().getProperty(x509Util.getSslKeystorePasswdProperty()), "Validate that expected clientConfig is set in ZK config");
+      assertEquals(truststoreLocation
+,           zk.getClientConfig().getProperty(x509Util.getSslTruststoreLocationProperty()), "Validate that expected clientConfig is set in ZK config");
+      assertEquals(truststorePassword
+,           zk.getClientConfig().getProperty(x509Util.getSslTruststorePasswdProperty()), "Validate that expected clientConfig is set in ZK config");
     }
     //testing if constant values hardcoded into the code are set properly
     assertEquals("Validate that expected clientConfig is set in ZK config", Boolean.TRUE.toString(),
         zk.getClientConfig().getProperty(ZKClientConfig.SECURE_CLIENT));
-    assertEquals("Validate that expected clientConfig is set in ZK config",
-        ClientCnxnSocketNetty.class.getCanonicalName(),
-        zk.getClientConfig().getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET));
+    assertEquals(
+       ClientCnxnSocketNetty.class.getCanonicalName()
+,         zk.getClientConfig().getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET), "Validate that expected clientConfig is set in ZK config");
   }
 
   @Test

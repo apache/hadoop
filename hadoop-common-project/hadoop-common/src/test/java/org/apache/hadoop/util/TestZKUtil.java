@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -30,7 +30,7 @@ import org.apache.hadoop.util.ZKUtil.BadAclFormatException;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.data.ACL;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
@@ -80,7 +80,7 @@ public class TestZKUtil {
     int perms = Perms.ALL;
     int remove = Perms.CREATE;
     int newPerms = ZKUtil.removeSpecificPerms(perms, remove);
-    assertEquals("Removal failed", 0, newPerms & Perms.CREATE);
+    assertEquals(0, newPerms & Perms.CREATE, "Removal failed");
   }
 
   @Test

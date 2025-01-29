@@ -22,7 +22,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * This class tests the local file system via the FileSystem abstraction.
@@ -235,8 +235,8 @@ public class TestLocalFileSystemPermission {
       assertTrue(localfs.mkdirs(dir));
       FsPermission initialPermission = getPermission(localfs, dir);
       assertEquals(
-          "With umask 022 permission should be 755 since the default " +
-              "permission is 777", new FsPermission("755"), initialPermission);
+      new FsPermission("755"), initialPermission, "With umask 022 permission should be 755 since the default " +
+              "permission is 777");
 
       // Modify umask and create a new directory
       // and check if new umask is applied
@@ -248,8 +248,8 @@ public class TestLocalFileSystemPermission {
           "With umask 062 permission should not be 755 since the " +
           "default permission is 777").isNotEqualTo(finalPermission);
       assertEquals(
-          "With umask 062 we expect 715 since the default permission is 777",
-          new FsPermission("715"), finalPermission);
+      
+         new FsPermission("715"), finalPermission, "With umask 062 we expect 715 since the default permission is 777");
     } finally {
       conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "022");
       cleanup(localfs, dir);

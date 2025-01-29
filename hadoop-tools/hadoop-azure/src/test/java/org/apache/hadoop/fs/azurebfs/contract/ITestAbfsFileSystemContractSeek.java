@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -91,8 +91,8 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
       AbfsInputStream inStream = ((AbfsInputStream) in.getWrappedStream());
       AbfsInputStreamStatisticsImpl streamStatistics =
               (AbfsInputStreamStatisticsImpl) inStream.getStreamStatistics();
-      assertEquals(String.format("Value of %s is not set correctly", AZURE_READ_AHEAD_RANGE),
-              MIN_BUFFER_SIZE, inStream.getReadAheadRange());
+      assertEquals(
+             MIN_BUFFER_SIZE, inStream.getReadAheadRange(), String.format("Value of %s is not set correctly", AZURE_READ_AHEAD_RANGE));
 
       long remoteReadOperationsOldVal = streamStatistics.getRemoteReadOperations();
       Assertions.assertThat(remoteReadOperationsOldVal)

@@ -20,10 +20,10 @@ package org.apache.hadoop.metrics2.source;
 
 import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.util.GcTimeMonitor;
-import org.junit.After;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 import static org.mockito.Mockito.*;
@@ -55,7 +55,7 @@ public class TestJvmMetrics {
   /**
    * Robust shutdown of the monitors if they haven't been stopped already.
    */
-  @After
+  @AfterEach
   public void teardown() {
     ServiceOperations.stop(pauseMonitor);
     if (gcTimeMonitor != null) {
@@ -129,7 +129,7 @@ public class TestJvmMetrics {
       pauseMonitor.init(new Configuration());
       pauseMonitor.stop();
       pauseMonitor.start();
-      Assert.fail("Expected an exception, got " + pauseMonitor);
+      Assertions.fail("Expected an exception, got " + pauseMonitor);
     } catch (ServiceStateException e) {
       GenericTestUtils.assertExceptionContains("cannot enter state", e);
     }
@@ -141,7 +141,7 @@ public class TestJvmMetrics {
     try {
       pauseMonitor.stop();
       pauseMonitor.init(new Configuration());
-      Assert.fail("Expected an exception, got " + pauseMonitor);
+      Assertions.fail("Expected an exception, got " + pauseMonitor);
     } catch (ServiceStateException e) {
       GenericTestUtils.assertExceptionContains("cannot enter state", e);
     }
@@ -193,10 +193,10 @@ public class TestJvmMetrics {
       gcCount = gcData.getAccumulatedGcCount();
     }
 
-    Assert.assertTrue(maxGcTimePercentage > 0);
-    Assert.assertTrue(gcCount > 0);
-    Assert.assertTrue(alerter.numAlerts > 0);
-    Assert.assertTrue(alerter.maxGcTimePercentage >= alertGcPerc);
+    Assertions.assertTrue(maxGcTimePercentage > 0);
+    Assertions.assertTrue(gcCount > 0);
+    Assertions.assertTrue(alerter.numAlerts > 0);
+    Assertions.assertTrue(alerter.maxGcTimePercentage >= alertGcPerc);
   }
 
   @Test
@@ -205,8 +205,8 @@ public class TestJvmMetrics {
         .initSingleton("test", null);
     JvmMetrics jvmMetrics2 = org.apache.hadoop.metrics2.source.JvmMetrics
         .initSingleton("test", null);
-    Assert.assertEquals("initSingleton should return the singleton instance",
-        jvmMetrics1, jvmMetrics2);
+    Assertions.assertEquals(
+       jvmMetrics1, jvmMetrics2, "initSingleton should return the singleton instance");
   }
 
   @Test
@@ -217,12 +217,12 @@ public class TestJvmMetrics {
     final String process2Name = "process2";
     JvmMetrics jvmMetrics2 = org.apache.hadoop.metrics2.source.JvmMetrics
         .initSingleton(process2Name, null);
-    Assert.assertEquals("initSingleton should return the singleton instance",
-        jvmMetrics1, jvmMetrics2);
-    Assert.assertEquals("unexpected process name of the singleton instance",
-        process1Name, jvmMetrics1.processName);
-    Assert.assertEquals("unexpected process name of the singleton instance",
-        process1Name, jvmMetrics2.processName);
+    Assertions.assertEquals(
+       jvmMetrics1, jvmMetrics2, "initSingleton should return the singleton instance");
+    Assertions.assertEquals(
+       process1Name, jvmMetrics1.processName, "unexpected process name of the singleton instance");
+    Assertions.assertEquals(
+       process1Name, jvmMetrics2.processName, "unexpected process name of the singleton instance");
   }
 
   /**

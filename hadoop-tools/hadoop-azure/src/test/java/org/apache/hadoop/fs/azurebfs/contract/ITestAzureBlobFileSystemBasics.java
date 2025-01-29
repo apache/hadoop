@@ -24,14 +24,14 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_TIMEOUT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Basic Contract test for Azure BlobFileSystem.
@@ -47,7 +47,7 @@ public class ITestAzureBlobFileSystemBasics extends FileSystemContractBaseTest {
   }
 
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     binding.setup();
     fs = binding.getFileSystem();

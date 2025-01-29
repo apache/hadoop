@@ -28,7 +28,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
 
@@ -196,7 +196,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     Path path = path("/testFile");
     try(FSDataOutputStream ignored = fs.create(path)) {
       FileStatus[] testFiles = fs.listStatus(path);
-      assertEquals("length of test files", 1, testFiles.length);
+      assertEquals(1, testFiles.length, "length of test files");
       FileStatus status = testFiles[0];
       assertIsFileReference(status);
     }
@@ -214,18 +214,20 @@ public class ITestAzureBlobFileSystemListStatus extends
     ContractTestUtils.touch(fs, testFile0Path);
 
     FileStatus[] testFiles = fs.listStatus(testFile0Path);
-    assertEquals("Wrong listing size of file " + testFile0Path,
-        1, testFiles.length);
+    assertEquals(
+       1, testFiles.length, "Wrong listing size of file " + testFile0Path);
     FileStatus file0 = testFiles[0];
-    assertEquals("Wrong path for " + file0, new Path(getTestUrl(),
-        testFolder + "/testFolder2/testFolder3/testFile"), file0.getPath());
+    assertEquals(new Path(getTestUrl(),
+        testFolder + "/testFolder2/testFolder3/testFile"), file0.getPath(), "Wrong path for " + file0);
     assertIsFileReference(file0);
   }
 
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testListNonExistentDir() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    fs.listStatus(new Path("/testFile/"));
+    assertThrows(FileNotFoundException.class, ()->{
+      final AzureBlobFileSystem fs = getFileSystem();
+      fs.listStatus(new Path("/testFile/"));
+    });
   }
 
   @Test
@@ -263,23 +265,23 @@ public class ITestAzureBlobFileSystemListStatus extends
         () -> fs.listFiles(childF, false).next());
 
     // do some final checks on the status (failing due to version checks)
-    assertEquals("Path mismatch of " + locatedChildStatus,
-        childF, locatedChildStatus.getPath());
-    assertEquals("locatedstatus.equals(status)",
-        locatedChildStatus, childStatus);
-    assertEquals("status.equals(locatedstatus)",
-        childStatus, locatedChildStatus);
+    assertEquals(
+       childF, locatedChildStatus.getPath(), "Path mismatch of " + locatedChildStatus);
+    assertEquals(
+       locatedChildStatus, childStatus, "locatedstatus.equals(status)");
+    assertEquals(
+       childStatus, locatedChildStatus, "status.equals(locatedstatus)");
   }
 
   private void assertIsDirectoryReference(FileStatus status) {
-    assertTrue("Not a directory: " + status, status.isDirectory());
-    assertFalse("Not a directory: " + status, status.isFile());
+    assertTrue(status.isDirectory(), "Not a directory: " + status);
+    assertFalse(status.isFile(), "Not a directory: " + status);
     assertEquals(0, status.getLen());
   }
 
   private void assertIsFileReference(FileStatus status) {
-    assertFalse("Not a file: " + status, status.isDirectory());
-    assertTrue("Not a file: " + status, status.isFile());
+    assertFalse(status.isDirectory(), "Not a file: " + status);
+    assertTrue(status.isFile(), "Not a file: " + status);
   }
 
   @Test
@@ -298,8 +300,8 @@ public class ITestAzureBlobFileSystemListStatus extends
     catch(IllegalArgumentException e) {
       exceptionThrown = true;
     }
-    assertTrue("Attempt to create file that ended with a dot should"
-        + " throw IllegalArgumentException", exceptionThrown);
+    assertTrue(exceptionThrown, "Attempt to create file that ended with a dot should"
+        + " throw IllegalArgumentException");
   }
 
   @Test
@@ -320,8 +322,8 @@ public class ITestAzureBlobFileSystemListStatus extends
     catch(IllegalArgumentException e) {
       exceptionThrown = true;
     }
-    assertTrue("Attempt to create file that ended with a dot should"
-        + " throw IllegalArgumentException", exceptionThrown);
+    assertTrue(exceptionThrown, "Attempt to create file that ended with a dot should"
+        + " throw IllegalArgumentException");
   }
 
   @Test
@@ -339,7 +341,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     catch(IllegalArgumentException e) {
       exceptionThrown = true;
     }
-    assertTrue("Attempt to create file that ended with a dot should"
-        + " throw IllegalArgumentException", exceptionThrown);
+    assertTrue(exceptionThrown, "Attempt to create file that ended with a dot should"
+        + " throw IllegalArgumentException");
   }
 }

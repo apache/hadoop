@@ -23,7 +23,7 @@ import java.io.InputStream;
 
 import software.amazon.awssdk.http.Abortable;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.HadoopTestBase;
 

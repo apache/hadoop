@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Random;
@@ -118,7 +118,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
    */
   private void assertMetricsEquality(AzureBlobFileSystem fs, String expectedMetrics) {
     AbfsReadFooterMetrics actualMetrics = fs.getAbfsClient().getAbfsCounters().getAbfsReadFooterMetrics();
-    assertNotNull("AbfsReadFooterMetrics is null", actualMetrics);
+    assertNotNull(actualMetrics, "AbfsReadFooterMetrics is null");
     assertEquals("The computed metrics differs from the actual metrics", expectedMetrics, actualMetrics.toString());
   }
 
@@ -179,7 +179,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
             IOSTATISTICS_LOGGING_LEVEL_INFO, statisticsSource);
 
     // Ensure data is read successfully and matches the written data.
-    assertNotEquals("data read in final read()", -1, result);
+    assertNotEquals(-1, result, "data read in final read()");
     assertArrayEquals(readBuffer, b);
 
     // Get non-Parquet metrics and assert metrics equality.

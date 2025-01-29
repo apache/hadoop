@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.net.URI;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -58,7 +58,7 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
             null,
             null,
             null));
-    assertNotNull("working directory", fs.getWorkingDirectory());
+    assertNotNull(fs.getWorkingDirectory(), "working directory");
   }
 
   @Test
@@ -79,7 +79,7 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
           null,
           null,
           null));
-      assertNotNull("working directory", fs.getWorkingDirectory());
+      assertNotNull(fs.getWorkingDirectory(), "working directory");
     }
   }
 

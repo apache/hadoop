@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.UUID;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -254,8 +254,8 @@ public class TestStagingPartitionedJobCommit
 
     verifyReplaceCommitActions(mockS3);
     verifyDeleted(mockS3, "dateint=20161116/hour=14");
-    assertTrue("Should have aborted",
-        ((PartitionedStagingCommitterForTesting) committer).aborted);
+    assertTrue(
+       ((PartitionedStagingCommitterForTesting) committer).aborted, "Should have aborted");
     verifyCompletion(mockS3);
   }
 

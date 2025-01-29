@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestXDR {
   static final int WRITE_VALUE=23;
@@ -29,7 +29,7 @@ public class TestXDR {
 
     XDR r = w.asReadOnlyWrap();
     for (int i = 0; i < times; ++i)
-      Assert.assertEquals(
+      Assertions.assertEquals(
               WRITE_VALUE,r.readInt());
   }
 
@@ -40,7 +40,7 @@ public class TestXDR {
 
     XDR r = w.asReadOnlyWrap();
     for (int i = 0; i < times; ++i)
-      Assert.assertEquals(WRITE_VALUE, r.readHyper());
+      Assertions.assertEquals(WRITE_VALUE, r.readHyper());
   }
 
   @Test

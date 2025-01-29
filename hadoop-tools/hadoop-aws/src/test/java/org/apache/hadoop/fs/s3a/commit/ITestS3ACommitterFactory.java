@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
@@ -229,9 +229,9 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
       throws Exception {
     describe("Creating committer: expected class \"%s\"", expected);
     if (expected != null) {
-      assertEquals("Wrong Committer from factory",
-          expected,
-          createCommitter().getClass());
+      assertEquals(
+         expected
+,           createCommitter().getClass(), "Wrong Committer from factory");
     } else {
       intercept(PathCommitException.class, this::createCommitter);
     }

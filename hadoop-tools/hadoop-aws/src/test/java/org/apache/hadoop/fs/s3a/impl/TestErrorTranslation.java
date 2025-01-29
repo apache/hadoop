@@ -27,7 +27,7 @@ import java.net.UnknownHostException;
 import java.util.Collections;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.awscore.retry.conditions.RetryOnErrorCodeCondition;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;

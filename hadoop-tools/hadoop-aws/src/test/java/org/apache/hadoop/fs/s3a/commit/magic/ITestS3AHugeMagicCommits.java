@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -144,8 +144,8 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     // as a 0-byte marker is created, there is a file at the end path,
     // it just MUST be 0-bytes long
     FileStatus status = fs.getFileStatus(magicOutputFile);
-    assertEquals("Non empty marker file " + status,
-        0, status.getLen());
+    assertEquals(
+       0, status.getLen(), "Non empty marker file " + status);
     final Map<String, byte[]> xAttr = fs.getXAttrs(magicOutputFile);
     final String header = XA_MAGIC_MARKER;
     Assertions.assertThat(xAttr)
@@ -164,7 +164,7 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     Assertions.assertThat(listMultipartUploads(fs, destDirKey))
         .describedAs("Pending uploads")
         .hasSize(1);
-    assertNotNull("jobDir", jobDir);
+    assertNotNull(jobDir, "jobDir");
     try(CommitContext commitContext
             = operations.createCommitContextForTesting(jobDir, null, COMMITTER_THREADS)) {
       Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>

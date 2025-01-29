@@ -31,8 +31,8 @@ import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -153,7 +153,7 @@ public class TestInvoker extends HadoopTestBase {
       SC_400_BAD_REQUEST,
       "bad request");
 
-  @Before
+  @BeforeEach
   public void setup() {
     resetCounters();
   }
@@ -375,40 +375,48 @@ public class TestInvoker extends HadoopTestBase {
     assertEquals(ACTIVE_RETRY_LIMIT, counter.get());
   }
 
-  @Test(expected = org.apache.hadoop.net.ConnectTimeoutException.class)
+  @Test
   public void testExtractConnectTimeoutException() throws Throwable {
-    throw extractException("", "",
-        new ExecutionException(
-            SdkException.builder()
-                .cause(LOCAL_CONNECTION_TIMEOUT_EX)
-                .build()));
+    assertThrows(ConnectTimeoutException.class, ()->{
+      throw extractException("", "",
+              new ExecutionException(
+                      SdkException.builder()
+                              .cause(LOCAL_CONNECTION_TIMEOUT_EX)
+                              .build()));
+    });
   }
 
-  @Test(expected = SocketTimeoutException.class)
+  @Test
   public void testExtractSocketTimeoutException() throws Throwable {
-    throw extractException("", "",
-        new ExecutionException(
-            SdkException.builder()
-                .cause(SOCKET_TIMEOUT_EX)
-                .build()));
+    assertThrows(SocketTimeoutException.class, ()->{
+      throw extractException("", "",
+              new ExecutionException(
+                      SdkException.builder()
+                              .cause(SOCKET_TIMEOUT_EX)
+                              .build()));
+    });
   }
 
-  @Test(expected = org.apache.hadoop.net.ConnectTimeoutException.class)
+  @Test
   public void testExtractConnectTimeoutExceptionFromCompletionException() throws Throwable {
-    throw extractException("", "",
-        new CompletionException(
-            SdkException.builder()
-                .cause(LOCAL_CONNECTION_TIMEOUT_EX)
-                .build()));
+    assertThrows(ConnectTimeoutException.class,()->{
+      throw extractException("", "",
+              new CompletionException(
+                      SdkException.builder()
+                              .cause(LOCAL_CONNECTION_TIMEOUT_EX)
+                              .build()));
+    });
   }
 
-  @Test(expected = SocketTimeoutException.class)
+  @Test
   public void testExtractSocketTimeoutExceptionFromCompletionException() throws Throwable {
-    throw extractException("", "",
-        new CompletionException(
-            SdkException.builder()
-                .cause(SOCKET_TIMEOUT_EX)
-                .build()));
+    assertThrows(SocketTimeoutException.class,()->{
+      throw extractException("", "",
+              new CompletionException(
+                      SdkException.builder()
+                              .cause(SOCKET_TIMEOUT_EX)
+                              .build()));
+    });
   }
 
   /**
@@ -477,12 +485,14 @@ public class TestInvoker extends HadoopTestBase {
    * Non-idempotent operations fail on anything which isn't a throttle
    * or connectivity problem.
    */
-  @Test(expected = AWSBadRequestException.class)
+  @Test
   public void testNoRetryOfBadRequestNonIdempotent() throws Throwable {
-    invoker.retry("test", null, false,
-        () -> {
-          throw serviceException(400, "bad request");
-        });
+    assertThrows(AWSBadRequestException.class, ()->{
+      invoker.retry("test", null, false,
+              () -> {
+                throw serviceException(400, "bad request");
+              });
+    });
   }
 
   /**
@@ -503,12 +513,12 @@ public class TestInvoker extends HadoopTestBase {
   /**
    * Repeatedly retry until eventually a bad request succeeds.
    */
-  @Test(expected = AWSBadRequestException.class)
+  @Test
   public void testRetryBadRequestNotIdempotent() throws Throwable {
-    invoker.retry("test", null, false,
-        () -> {
-          throw BAD_REQUEST;
-        });
+    assertThrows(AWSBadRequestException.class, () -> {
+      invoker.retry("test", null, false,
+          () -> {throw BAD_REQUEST;});
+    });
   }
 
   @Test
@@ -585,7 +595,7 @@ public class TestInvoker extends HadoopTestBase {
         RETRY_POLICY, RetryPolicy.RetryAction.FAIL,
         new NullPointerException("oops"), 1, true);
     // catch notification didn't see it
-    assertEquals("retry count ", 0, retryCount);
+    assertEquals(0, retryCount, "retry count ");
   }
 
   /**

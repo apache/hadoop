@@ -31,7 +31,7 @@ import java.util.function.Consumer;
 
 import org.junit.Assume;
 import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 import org.junit.runners.Parameterized;
@@ -243,9 +243,9 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
       d.close();
     }
     dumpOutputTree(dest);
-    assertEquals(stage
+    assertEquals(0, result, stage
         + "(" + StringUtils.join(", ", args) + ")"
-        + " failed", 0, result);
+        + " failed");
     validateSuccessFile(dest, committerName(), getFileSystem(), stage,
         minimumFileCount, "");
     completedStage(stage, d);

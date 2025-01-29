@@ -29,7 +29,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
@@ -599,8 +599,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     // as a safety check, verify that one of the deletable files can be deleted
     Path head = deletableFiles.remove(0);
-    assertTrue("delete " + head + " failed",
-        roleFS.delete(head, false));
+    assertTrue(
+       roleFS.delete(head, false), "delete " + head + " failed");
 
     // this set can be deleted by the role FS
     MetricDiff rejectionCount = new MetricDiff(roleFS, FILES_DELETE_REJECTED);

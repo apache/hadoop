@@ -31,8 +31,8 @@ import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.util.Lists;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
@@ -92,7 +92,7 @@ public class TestHeaderProcessing extends HadoopTestBase {
       XA_LAST_MODIFIED
   };
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     CONTEXT_ACCESSORS.len = FILE_LENGTH;
     CONTEXT_ACCESSORS.userHeaders.put(

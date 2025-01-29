@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -250,8 +250,8 @@ public class ITestCommitOperations extends AbstractCommitITest {
         methodPath(),
         new TaskAttemptContextImpl(getConfiguration(),
             new TaskAttemptID(new TaskID(), 1)));
-    assertEquals("Wrong committer",
-        MagicS3GuardCommitter.class, committer.getClass());
+    assertEquals(
+       MagicS3GuardCommitter.class, committer.getClass(), "Wrong committer");
   }
 
   @Test
@@ -429,7 +429,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
         filename + PENDING_SUFFIX);
     FileStatus fileStatus = verifyPathExists(fs, "no pending file",
         pendingDataPath);
-    assertTrue("No data in " + fileStatus, fileStatus.getLen() > 0);
+    assertTrue(fileStatus.getLen() > 0, "No data in " + fileStatus);
     String data = read(fs, pendingDataPath);
     LOG.info("Contents of {}: \n{}", pendingDataPath, data);
     // really read it in and parse
@@ -580,8 +580,8 @@ public class ITestCommitOperations extends AbstractCommitITest {
     Path destFile = path("normal");
     try (FSDataOutputStream out = fs.create(destFile, true)) {
       out.writeChars("data");
-      assertFalse("stream has magic output: " + out,
-          out.hasCapability(STREAM_CAPABILITY_MAGIC_OUTPUT));
+      assertFalse(
+         out.hasCapability(STREAM_CAPABILITY_MAGIC_OUTPUT), "stream has magic output: " + out);
     }
     FileStatus status = fs.getFileStatus(destFile);
     Assertions.assertThat(status.getLen())

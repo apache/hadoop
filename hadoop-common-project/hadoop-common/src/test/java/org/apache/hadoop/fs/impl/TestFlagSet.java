@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.impl;
 import java.util.EnumSet;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.AbstractHadoopTestBase;

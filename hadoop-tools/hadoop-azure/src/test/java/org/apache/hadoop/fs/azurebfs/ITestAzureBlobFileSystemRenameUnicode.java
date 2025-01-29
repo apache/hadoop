@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Arrays;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -33,6 +33,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Parameterized test of rename operations of unicode paths.
@@ -91,8 +92,8 @@ public class ITestAzureBlobFileSystemRenameUnicode extends
 
     FileStatus[] fileStatus = fs.listStatus(folderPath2);
     assertNotNull(fileStatus);
-    assertTrue("Empty listing returned from listStatus(\"" + folderPath2 + "\")",
-        fileStatus.length > 0);
+    assertTrue(
+       fileStatus.length > 0, "Empty listing returned from listStatus(\"" + folderPath2 + "\")");
     assertEquals(fileStatus[0].getPath().getName(), filename);
   }
 }

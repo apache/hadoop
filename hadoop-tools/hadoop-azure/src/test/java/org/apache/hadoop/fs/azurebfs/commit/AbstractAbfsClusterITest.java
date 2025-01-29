@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -88,10 +88,10 @@ public abstract class AbstractAbfsClusterITest extends
     if (getClusterBinding() == null) {
       clusterBinding = demandCreateClusterBinding();
     }
-    assertNotNull("cluster is not bound", getClusterBinding());
+    assertNotNull(getClusterBinding(), "cluster is not bound");
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownClusters() throws IOException {
     terminateCluster(clusterBinding);
     clusterBinding = null;

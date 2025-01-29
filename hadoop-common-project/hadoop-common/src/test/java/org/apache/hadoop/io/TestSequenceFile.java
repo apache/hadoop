@@ -34,13 +34,13 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.conf.*;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,14 +66,14 @@ public class TestSequenceFile {
     // Test to ensure that deprecated properties have no default
     // references anymore.
     Configuration config = new Configuration();
-    assertNull("The deprecated sort memory property "
+    assertNull(
+       config.get(CommonConfigurationKeys.IO_SORT_MB_KEY), "The deprecated sort memory property "
         + CommonConfigurationKeys.IO_SORT_MB_KEY
-        + " must not exist in any core-*.xml files.",
-        config.get(CommonConfigurationKeys.IO_SORT_MB_KEY));
-    assertNull("The deprecated sort factor property "
+        + " must not exist in any core-*.xml files.");
+    assertNull(
+       config.get(CommonConfigurationKeys.IO_SORT_FACTOR_KEY), "The deprecated sort factor property "
         + CommonConfigurationKeys.IO_SORT_FACTOR_KEY
-        + " must not exist in any core-*.xml files.",
-        config.get(CommonConfigurationKeys.IO_SORT_FACTOR_KEY));
+        + " must not exist in any core-*.xml files.");
 
     // Test deprecated property honoring
     // Set different values for old and new property names
@@ -86,10 +86,10 @@ public class TestSequenceFile {
     config.setInt(CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_KEY, 20);
     SequenceFile.Sorter sorter = new SequenceFile.Sorter(
         fs, Text.class, Text.class, config);
-    assertEquals("Deprecated memory conf must be honored over newer property",
-        10*1024*1024, sorter.getMemory());
-    assertEquals("Deprecated factor conf must be honored over newer property",
-        10, sorter.getFactor());
+    assertEquals(
+       10*1024*1024, sorter.getMemory(), "Deprecated memory conf must be honored over newer property");
+    assertEquals(
+       10, sorter.getFactor(), "Deprecated factor conf must be honored over newer property");
 
     // Test deprecated properties (graceful deprecation)
     config = new Configuration();
@@ -98,15 +98,15 @@ public class TestSequenceFile {
     config.setInt(CommonConfigurationKeys.IO_SORT_FACTOR_KEY, 10);
     sorter = new SequenceFile.Sorter(
         fs, Text.class, Text.class, config);
-    assertEquals("Deprecated memory property "
+    assertEquals(
+       10*1024*1024, // In bytes
+        sorter.getMemory(), "Deprecated memory property "
         + CommonConfigurationKeys.IO_SORT_MB_KEY
-        + " must get properly applied.",
-        10*1024*1024, // In bytes
-        sorter.getMemory());
-    assertEquals("Deprecated sort factor property "
+        + " must get properly applied.");
+    assertEquals(
+       10, sorter.getFactor(), "Deprecated sort factor property "
         + CommonConfigurationKeys.IO_SORT_FACTOR_KEY
-        + " must get properly applied.",
-        10, sorter.getFactor());
+        + " must get properly applied.");
 
     // Test regular properties (graceful deprecation)
     config = new Configuration();
@@ -115,15 +115,15 @@ public class TestSequenceFile {
     config.setInt(CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_KEY, 20);
     sorter = new SequenceFile.Sorter(
         fs, Text.class, Text.class, config);
-    assertEquals("Memory property "
+    assertEquals(
+       20*1024*1024, // In bytes
+        sorter.getMemory(), "Memory property "
         + CommonConfigurationKeys.SEQ_IO_SORT_MB_KEY
-        + " must get properly applied if present.",
-        20*1024*1024, // In bytes
-        sorter.getMemory());
-    assertEquals("Merge factor property "
+        + " must get properly applied if present.");
+    assertEquals(
+       20, sorter.getFactor(), "Merge factor property "
         + CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_KEY
-        + " must get properly applied if present.",
-        20, sorter.getFactor());
+        + " must get properly applied if present.");
   }
 
   public void compressedSeqFileTest(CompressionCodec codec) throws Exception {
@@ -605,8 +605,8 @@ public class TestSequenceFile {
       fail("IOException expected.");
     } catch (IOException expected) {}
 
-    assertNotNull(path + " should have been opened.", openedFile[0]);
-    assertTrue("InputStream for " + path + " should have been closed.", openedFile[0].isClosed());
+    assertNotNull(openedFile[0], path + " should have been opened.");
+    assertTrue(openedFile[0].isClosed(), "InputStream for " + path + " should have been closed.");
   }
 
   /**

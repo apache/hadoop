@@ -18,13 +18,6 @@
 
 package org.apache.hadoop.lib.server;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -43,7 +36,9 @@ import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.test.TestException;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestServer extends HTestCase {
 
@@ -283,13 +278,15 @@ public class TestServer extends HTestCase {
     server.destroy();
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   @TestDir
   public void nonSeteableStatus() throws Exception {
-    Configuration conf = new Configuration(false);
-    Server server = createServer(conf);
-    server.init();
-    server.setStatus(Server.Status.SHUTDOWN);
+    assertThrows(IllegalArgumentException.class, ()->{
+      Configuration conf = new Configuration(false);
+      Server server = createServer(conf);
+      server.init();
+      server.setStatus(Server.Status.SHUTDOWN);
+    });
   }
 
   public static class TestService implements Service {
@@ -422,34 +419,42 @@ public class TestServer extends HTestCase {
     }
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   @TestDir
   public void illegalState1() throws Exception {
-    Server server = new Server("server", TestDirHelper.getTestDir().getAbsolutePath(), new Configuration(false));
-    server.destroy();
+    assertThrows(IllegalStateException.class, ()->{
+      Server server = new Server("server", TestDirHelper.getTestDir().getAbsolutePath(), new Configuration(false));
+      server.destroy();
+    });
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   @TestDir
   public void illegalState2() throws Exception {
-    Server server = new Server("server", TestDirHelper.getTestDir().getAbsolutePath(), new Configuration(false));
-    server.get(Object.class);
+    assertThrows(IllegalStateException.class, () -> {
+      Server server = new Server("server", TestDirHelper.getTestDir().getAbsolutePath(), new Configuration(false));
+      server.get(Object.class);
+    });
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   @TestDir
   public void illegalState3() throws Exception {
-    Server server = new Server("server", TestDirHelper.getTestDir().getAbsolutePath(), new Configuration(false));
-    server.setService(null);
+    assertThrows(IllegalStateException.class, () -> {
+      Server server = new Server("server", TestDirHelper.getTestDir().getAbsolutePath(), new Configuration(false));
+      server.setService(null);
+    });
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   @TestDir
   public void illegalState4() throws Exception {
-    String dir = TestDirHelper.getTestDir().getAbsolutePath();
-    Server server = new Server("server", dir, dir, dir, dir, new Configuration(false));
-    server.init();
-    server.init();
+    assertThrows(IllegalStateException.class, () -> {
+      String dir = TestDirHelper.getTestDir().getAbsolutePath();
+      Server server = new Server("server", dir, dir, dir, dir, new Configuration(false));
+      server.init();
+      server.init();
+    });
   }
 
   private static List<String> ORDER = new ArrayList<String>();

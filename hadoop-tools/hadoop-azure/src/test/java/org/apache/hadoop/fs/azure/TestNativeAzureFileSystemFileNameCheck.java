@@ -23,7 +23,7 @@ import java.util.HashMap;
 
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the scenario where a colon is included in the file/directory name.

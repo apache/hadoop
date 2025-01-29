@@ -42,7 +42,7 @@ import org.apache.hadoop.util.StringUtils;
 
 import org.junit.Assume;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.junit.rules.ExpectedException;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -50,7 +50,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_SECURE_MODE;
 import static org.apache.hadoop.fs.azure.CachingAuthorizer.KEY_AUTH_SERVICE_CACHING_ENABLE;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test class to hold all WASB authorization tests.
@@ -2074,13 +2074,13 @@ public class TestNativeAzureFileSystemAuthorization
   private void assertPermissionEquals(Path path, FsPermission newPermission)
       throws IOException {
     FileStatus status = fs.getFileStatus(path);
-    assertEquals("Wrong permissions in " + status,
-        newPermission, status.getPermission());
+    assertEquals(
+       newPermission, status.getPermission(), "Wrong permissions in " + status);
   }
 
   private void assertOwnerEquals(Path path, String owner) throws IOException {
     FileStatus status = fs.getFileStatus(path);
-    assertEquals("Wrong owner in " + status, owner, status.getOwner());
+    assertEquals(owner, status.getOwner(), "Wrong owner in " + status);
   }
 
   private void assertNoAccess(final Path path, final FsAction action)

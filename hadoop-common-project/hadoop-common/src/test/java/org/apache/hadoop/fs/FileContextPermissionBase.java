@@ -24,21 +24,21 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * <p>
@@ -80,22 +80,22 @@ public abstract class FileContextPermissionBase {
   
   protected abstract FileContext getFileContext() throws Exception;
   
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fileContextTestHelper = getFileContextHelper();
     fc = getFileContext();
     fc.mkdir(fileContextTestHelper.getTestRootPath(fc), FileContext.DEFAULT_PERM, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     fc.delete(fileContextTestHelper.getTestRootPath(fc), true);
   }
   
   private void cleanupFile(FileContext fc, Path name) throws IOException {
-    Assert.assertTrue(exists(fc, name));
+    Assertions.assertTrue(exists(fc, name));
     fc.delete(name, true);
-    Assert.assertTrue(!exists(fc, name));
+    Assertions.assertTrue(!exists(fc, name));
   }
 
   @Test
@@ -158,12 +158,12 @@ public abstract class FileContextPermissionBase {
     try {
       String g0 = groups.get(0);
       fc.setOwner(f, null, g0);
-      Assert.assertEquals(g0, fc.getFileStatus(f).getGroup());
+      Assertions.assertEquals(g0, fc.getFileStatus(f).getGroup());
 
       if (groups.size() > 1) {
         String g1 = groups.get(1);
         fc.setOwner(f, null, g1);
-        Assert.assertEquals(g1, fc.getFileStatus(f).getGroup());
+        Assertions.assertEquals(g1, fc.getFileStatus(f).getGroup());
       } else {
         System.out.println("Not testing changing the group since user " +
                            "belongs to only one group.");
@@ -207,7 +207,7 @@ public abstract class FileContextPermissionBase {
   
   
   void doFilePermissionCheck(FsPermission expectedPerm, FsPermission actualPerm) {
-  Assert.assertEquals(expectedPerm.applyUMask(getFileMask()), actualPerm);
+  Assertions.assertEquals(expectedPerm.applyUMask(getFileMask()), actualPerm);
   }
   
   

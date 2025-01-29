@@ -27,7 +27,7 @@ import java.util.Arrays;
 import java.util.Enumeration;
 
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -222,7 +222,7 @@ public class MiniRPCBenchmark {
           }
         });
       } catch (InterruptedException e) {
-        Assert.fail(Arrays.toString(e.getStackTrace()));
+        Assertions.fail(Arrays.toString(e.getStackTrace()));
       }
     } finally {
       RPC.stopProxy(client);

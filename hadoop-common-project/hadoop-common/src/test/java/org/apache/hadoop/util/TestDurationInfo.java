@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.util;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * The class to test DurationInfo.
@@ -31,17 +33,17 @@ public class TestDurationInfo {
   @Test
   public void testDurationInfoCreation() throws Exception {
     DurationInfo info = new DurationInfo(log, "test");
-    Assert.assertTrue(info.value() >= 0);
+    Assertions.assertTrue(info.value() >= 0);
     Thread.sleep(1000);
     info.finished();
-    Assert.assertTrue(info.value() > 0);
+    Assertions.assertTrue(info.value() > 0);
 
     info = new DurationInfo(log, true, "test format %s", "value");
-    Assert.assertEquals("test format value: duration 0:00.000s",
+    Assertions.assertEquals("test format value: duration 0:00.000s",
         info.toString());
 
     info = new DurationInfo(log, false, "test format %s", "value");
-    Assert.assertEquals("test format value: duration 0:00.000s",
+    Assertions.assertEquals("test format value: duration 0:00.000s",
         info.toString());
   }
 
@@ -51,12 +53,14 @@ public class TestDurationInfo {
     Thread.sleep(1000);
     info.close();
     info.close();
-    Assert.assertTrue(info.value() > 0);
+    Assertions.assertTrue(info.value() > 0);
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testDurationInfoCreationWithNullMsg() {
-    DurationInfo info = new DurationInfo(log, null);
-    info.close();
+    assertThrows(NullPointerException.class, ()->{
+      DurationInfo info = new DurationInfo(log, null);
+      info.close();
+    });
   }
 }

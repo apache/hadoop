@@ -30,8 +30,8 @@ import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.test.TestJetty;
 import org.apache.hadoop.test.TestJettyHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
 
@@ -99,9 +99,9 @@ public class TestHttpFSServerNoACLs extends HTestCase {
    */
   private void createHttpFSServer() throws Exception {
     File homeDir = TestDirHelper.getTestDir();
-    Assert.assertTrue(new File(homeDir, "conf").mkdir());
-    Assert.assertTrue(new File(homeDir, "log").mkdir());
-    Assert.assertTrue(new File(homeDir, "temp").mkdir());
+    Assertions.assertTrue(new File(homeDir, "conf").mkdir());
+    Assertions.assertTrue(new File(homeDir, "log").mkdir());
+    Assertions.assertTrue(new File(homeDir, "temp").mkdir());
     HttpFSServerWebApp.setHomeDirForCurrentThread(homeDir.getAbsolutePath());
 
     File secretFile = new File(new File(homeDir, "conf"), "secret");
@@ -182,17 +182,17 @@ public class TestHttpFSServerNoACLs extends HTestCase {
     int resp = conn.getResponseCode();
     BufferedReader reader;
     if (expectOK) {
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, resp);
+      Assertions.assertEquals(HttpURLConnection.HTTP_OK, resp);
       reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
       String res = reader.readLine();
-      Assert.assertTrue(!res.contains("aclBit"));
-      Assert.assertTrue(res.contains("owner")); // basic sanity check
+      Assertions.assertTrue(!res.contains("aclBit"));
+      Assertions.assertTrue(res.contains("owner")); // basic sanity check
     } else {
-      Assert.assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, resp);
+      Assertions.assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, resp);
       reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
       String res = reader.readLine();
-      Assert.assertTrue(res.contains("AclException"));
-      Assert.assertTrue(res.contains("Support for ACLs has been disabled"));
+      Assertions.assertTrue(res.contains("AclException"));
+      Assertions.assertTrue(res.contains("Support for ACLs has been disabled"));
     }
   }
 
@@ -219,14 +219,14 @@ public class TestHttpFSServerNoACLs extends HTestCase {
     conn.connect();
     int resp = conn.getResponseCode();
     if (expectOK) {
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, resp);
+      Assertions.assertEquals(HttpURLConnection.HTTP_OK, resp);
     } else {
-      Assert.assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, resp);
+      Assertions.assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, resp);
       BufferedReader reader;
       reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
       String err = reader.readLine();
-      Assert.assertTrue(err.contains("AclException"));
-      Assert.assertTrue(err.contains("Support for ACLs has been disabled"));
+      Assertions.assertTrue(err.contains("AclException"));
+      Assertions.assertTrue(err.contains("Support for ACLs has been disabled"));
     }
   }
 

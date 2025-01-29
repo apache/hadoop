@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -46,7 +46,7 @@ import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.CONSTRUCTOR
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration tests for {@link Constants#AWS_CREDENTIALS_PROVIDER} logic
@@ -220,8 +220,8 @@ public class ITestS3AAWSCredentialsProvider {
           .isNotNull();
       FileStatus stat = fs.getFileStatus(testFile);
       assertEquals(
-          "The qualified path returned by getFileStatus should be same as the original file",
-          testFile, stat.getPath());
+      
+         testFile, stat.getPath(), "The qualified path returned by getFileStatus should be same as the original file");
     }
   }
 

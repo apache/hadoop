@@ -28,9 +28,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.assertj.core.api.Assertions;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,12 +57,15 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Testing Abfs Rename recovery using Mockito.
@@ -139,14 +141,14 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     // the second rename call should be the recoveredResult due to
     // metaDataIncomplete
-    Assertions.assertThat(resultOfSecondRenameCall)
+    assertThat(resultOfSecondRenameCall)
         .describedAs("This result should be recovered result due to MetaData "
             + "being in incomplete state")
         .isSameAs(recoveredMetaDataIncompleteResult);
     // Verify Incomplete metadata state happened for our second rename call.
-    assertTrue("Metadata incomplete state should be true if a rename is "
-            + "retried after no Parent directory is found",
-        resultOfSecondRenameCall.isIncompleteMetadataState());
+    assertTrue(
+       resultOfSecondRenameCall.isIncompleteMetadataState(), "Metadata incomplete state should be true if a rename is "
+            + "retried after no Parent directory is found");
 
 
     // Verify renamePath occurred two times implying a retry was attempted.
@@ -505,7 +507,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     final ResilientCommitByRename commit = fs.createResilientCommitSupport(source);
     final Pair<Boolean, Duration> outcome =
         commit.commitSingleFileByRename(source, new Path(path2), sourceTag);
-    Assertions.assertThat(outcome.getKey())
+    assertThat(outcome.getKey())
         .describedAs("recovery flag")
         .isTrue();
   }

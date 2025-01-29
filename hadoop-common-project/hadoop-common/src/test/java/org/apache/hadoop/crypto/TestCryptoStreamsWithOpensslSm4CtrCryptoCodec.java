@@ -22,13 +22,13 @@ import org.apache.hadoop.crypto.random.OsSecureRandom;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.
     HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY;
@@ -38,7 +38,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.
 public class TestCryptoStreamsWithOpensslSm4CtrCryptoCodec
     extends TestCryptoStreams {
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     GenericTestUtils.assumeInNativeProfile();
     Assume.assumeTrue(OpensslCipher.isSupported(CipherSuite.SM4_CTR_NOPADDING));
@@ -47,9 +47,9 @@ public class TestCryptoStreamsWithOpensslSm4CtrCryptoCodec
     conf.set(HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_SM4_CTR_NOPADDING_KEY,
             OpensslSm4CtrCryptoCodec.class.getName());
     codec = CryptoCodec.getInstance(conf);
-    assertNotNull("Unable to instantiate codec " +
+    assertNotNull(codec, "Unable to instantiate codec " +
             OpensslSm4CtrCryptoCodec.class.getName() + ", is the required "
-            + "version of OpenSSL installed?", codec);
+            + "version of OpenSSL installed?");
     assertEquals(OpensslSm4CtrCryptoCodec.class.getCanonicalName(),
             codec.getClass().getCanonicalName());
   }
@@ -66,9 +66,9 @@ public class TestCryptoStreamsWithOpensslSm4CtrCryptoCodec
                     HADOOP_SECURITY_SECURE_RANDOM_IMPL_KEY,
             OsSecureRandom.class.getName());
     CryptoCodec codecWithRandom = CryptoCodec.getInstance(conf);
-    assertNotNull("Unable to instantiate codec " +
+    assertNotNull(codecWithRandom, "Unable to instantiate codec " +
             OpensslSm4CtrCryptoCodec.class.getName() + ", is the required "
-            + "version of OpenSSL installed?", codecWithRandom);
+            + "version of OpenSSL installed?");
     OsSecureRandom random = (OsSecureRandom)
             ((OpensslSm4CtrCryptoCodec) codecWithRandom).getRandom();
     // trigger the OsSecureRandom to create an internal FileInputStream

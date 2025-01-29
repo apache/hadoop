@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.conf;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Properties;
 
@@ -35,8 +35,8 @@ public class TestConfigurationSubclass {
   public void testGetProps() {
     SubConf conf = new SubConf(true);
     Properties properties = conf.getProperties();
-    assertNotNull("hadoop.tmp.dir is not set",
-            properties.getProperty("hadoop.tmp.dir"));
+    assertNotNull(
+           properties.getProperty("hadoop.tmp.dir"), "hadoop.tmp.dir is not set");
   }
 
   @Test
@@ -60,7 +60,7 @@ public class TestConfigurationSubclass {
       Properties properties = conf.getProperties();
       fail("Should not have got here");
     } catch (RuntimeException e) {
-      assertTrue(e.toString(),e.getMessage().contains("not found"));
+      assertTrue(e.getMessage().contains("not found"), e.toString());
     }
   }
 

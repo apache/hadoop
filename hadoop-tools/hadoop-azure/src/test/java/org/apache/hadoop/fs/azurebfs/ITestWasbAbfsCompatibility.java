@@ -21,7 +21,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,8 +118,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
       try(BufferedReader br =new BufferedReader(new InputStreamReader(readFs.open(path)))) {
         String line = br.readLine();
-        assertEquals("Wrong text from " + readFs,
-            TEST_CONTEXT, line);
+        assertEquals(
+           TEST_CONTEXT, line, "Wrong text from " + readFs);
       }
 
       // Remove file

@@ -22,7 +22,7 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.HadoopTestBase;
 

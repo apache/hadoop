@@ -25,7 +25,7 @@ import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.TestJettyHelper;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -69,7 +69,7 @@ public class TestHttpFSFWithSWebhdfsFileSystem
         "serverP");
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanUp() throws Exception {
     new File(classpathDir, "ssl-client.xml").delete();
     new File(classpathDir, "ssl-server.xml").delete();

@@ -22,9 +22,9 @@ import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.Arrays;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -110,9 +110,9 @@ public class ITestClientUrlScheme extends AbstractAbfsIntegrationTest{
     String url = ((URL) baseUrlField.get(client)).toString();
 
     if (expectHttpConnection) {
-      Assert.assertTrue(url.startsWith(FileSystemUriSchemes.HTTP_SCHEME));
+      Assertions.assertTrue(url.startsWith(FileSystemUriSchemes.HTTP_SCHEME));
     } else {
-      Assert.assertTrue(url.startsWith(FileSystemUriSchemes.HTTPS_SCHEME));
+      Assertions.assertTrue(url.startsWith(FileSystemUriSchemes.HTTPS_SCHEME));
     }
   }
 }

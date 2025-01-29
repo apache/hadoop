@@ -34,11 +34,11 @@ import org.apache.hadoop.ha.TestNodeFencer.AlwaysFailFencer;
 import static org.apache.hadoop.ha.TestNodeFencer.setupFencer;
 import org.apache.hadoop.security.AccessControlException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.internal.stubbing.answers.ThrowsException;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestFailoverController {
   private InetSocketAddress svc1Addr = new InetSocketAddress("svc1", 1234); 

@@ -22,9 +22,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
 
@@ -45,7 +45,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
  * Tests related to secret providers and AWS credentials are also
  * included, as they share some common setup operations.
  */
-public class TestSSEConfiguration extends Assert {
+public class TestSSEConfiguration extends Assertions {
 
   /** Bucket to use for per-bucket options. */
   public static final String BUCKET = "dataset-1";
@@ -115,8 +115,8 @@ public class TestSSEConfiguration extends Assert {
     conf.set(Constants.S3_ENCRYPTION_KEY, "keyInConfObject");
 
     String sseKey = getS3EncryptionKey(BUCKET, conf);
-    assertNotNull("Proxy password should not retrun null.", sseKey);
-    assertEquals("Proxy password override did NOT work.", key, sseKey);
+    assertNotNull(sseKey, "Proxy password should not retrun null.");
+    assertEquals(key, sseKey, "Proxy password override did NOT work.");
   }
 
   /**
@@ -306,14 +306,14 @@ public class TestSSEConfiguration extends Assert {
   public void testClientEncryptionMethod() throws Throwable {
     S3AEncryptionMethods method = getMethod("CSE-KMS");
     assertEquals(CSE_KMS, method);
-    assertFalse("shouldn't be server side " + method, method.isServerSide());
+    assertFalse(method.isServerSide(), "shouldn't be server side " + method);
   }
 
   @Test
   public void testCSEKMSEncryptionMethod() throws Throwable {
     S3AEncryptionMethods method = getMethod("CSE-CUSTOM");
     assertEquals(CSE_CUSTOM, method);
-    assertFalse("shouldn't be server side " + method, method.isServerSide());
+    assertFalse(method.isServerSide(), "shouldn't be server side " + method);
   }
 
   @Test

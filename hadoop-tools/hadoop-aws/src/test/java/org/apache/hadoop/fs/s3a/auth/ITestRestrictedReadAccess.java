@@ -25,7 +25,7 @@ import java.nio.file.AccessDeniedException;
 import java.util.concurrent.Callable;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

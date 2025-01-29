@@ -19,9 +19,9 @@ package org.apache.hadoop.test;
 
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
@@ -33,7 +33,7 @@ import org.junit.rules.Timeout;
  * Threads are named to the method being executed, for ease of diagnostics
  * in logs and thread dumps.
  */
-public abstract class HadoopTestBase extends Assert {
+public abstract class HadoopTestBase extends Assertions {
 
   /**
    * System property name to set the test timeout: {@value}.
@@ -93,7 +93,7 @@ public abstract class HadoopTestBase extends Assert {
   /**
    * Static initializer names this thread "JUnit".
    */
-  @BeforeClass
+  @BeforeAll
   public static void nameTestThread() {
     Thread.currentThread().setName("JUnit");
   }
@@ -101,7 +101,7 @@ public abstract class HadoopTestBase extends Assert {
   /**
    * Before each method, the thread is renamed to match the method name.
    */
-  @Before
+  @BeforeEach
   public void nameThreadToMethod() {
     Thread.currentThread().setName("JUnit-" + getMethodName());
   }

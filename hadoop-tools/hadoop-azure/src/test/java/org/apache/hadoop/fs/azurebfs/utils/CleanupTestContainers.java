@@ -42,7 +42,7 @@ public class CleanupTestContainers extends AbstractAbfsIntegrationTest {
   public CleanupTestContainers() throws Exception {
   }
 
-  @org.junit.Test
+  @org.junit.jupiter.api.Test
   public void testDeleteContainers() throws Throwable {
     int count = 0;
     AbfsConfiguration abfsConfig = getAbfsStore(getFileSystem()).getAbfsConfiguration();

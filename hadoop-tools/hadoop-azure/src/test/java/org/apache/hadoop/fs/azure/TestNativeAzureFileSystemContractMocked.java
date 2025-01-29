@@ -19,9 +19,9 @@
 package org.apache.hadoop.fs.azure;
 
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Mocked testing of FileSystemContractBaseTest.
@@ -29,7 +29,7 @@ import org.junit.Test;
 public class TestNativeAzureFileSystemContractMocked extends
     FileSystemContractBaseTest {
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fs = AzureBlobStorageTestAccount.createMock().getFileSystem();
   }

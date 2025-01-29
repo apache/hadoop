@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.io;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -43,8 +43,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -211,8 +211,8 @@ public class TestIOUtils {
         new java.lang.InternalError());
 
     try {
-      assertEquals("Check expected value", 1,
-          IOUtils.wrappedReadForCompressedData(mockStream, buf, 0, 1));
+      assertEquals(1
+,           IOUtils.wrappedReadForCompressedData(mockStream, buf, 0, 1), "Check expected value");
     } catch (IOException ioe) {
       fail("Unexpected error while reading");
     }
@@ -285,14 +285,14 @@ public class TestIOUtils {
       List<String> list = IOUtils.listDirectory(dir,
           NoEntry3Filter.INSTANCE);
       for (String entry : list) {
-        Assert.assertTrue(entries.remove(entry));
+        Assertions.assertTrue(entries.remove(entry));
       }
-      Assert.assertTrue(entries.contains("entry3"));
+      Assertions.assertTrue(entries.contains("entry3"));
       list = IOUtils.listDirectory(dir, null);
       for (String entry : list) {
         entries.remove(entry);
       }
-      Assert.assertTrue(entries.isEmpty());
+      Assertions.assertTrue(entries.isEmpty());
     } finally {
       FileUtils.deleteDirectory(dir);
     }

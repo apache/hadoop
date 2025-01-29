@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.CreateOpts.BlockSize;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * Helper class for unit tests.
@@ -220,28 +220,28 @@ public final class FileContextTestHelper {
   public static void checkFileStatus(FileContext aFc, String path,
       fileType expectedType) throws IOException {
     FileStatus s = aFc.getFileStatus(new Path(path));
-    Assert.assertNotNull(s);
+    Assertions.assertNotNull(s);
     if (expectedType == fileType.isDir) {
-      Assert.assertTrue(s.isDirectory());
+      Assertions.assertTrue(s.isDirectory());
     } else if (expectedType == fileType.isFile) {
-      Assert.assertTrue(s.isFile());
+      Assertions.assertTrue(s.isFile());
     } else if (expectedType == fileType.isSymlink) {
-      Assert.assertTrue(s.isSymlink());
+      Assertions.assertTrue(s.isSymlink());
     }
-    Assert.assertEquals(aFc.makeQualified(new Path(path)), s.getPath());
+    Assertions.assertEquals(aFc.makeQualified(new Path(path)), s.getPath());
   }
   
   public static void checkFileLinkStatus(FileContext aFc, String path,
       fileType expectedType) throws IOException {
     FileStatus s = aFc.getFileLinkStatus(new Path(path));
-    Assert.assertNotNull(s);
+    Assertions.assertNotNull(s);
     if (expectedType == fileType.isDir) {
-      Assert.assertTrue(s.isDirectory());
+      Assertions.assertTrue(s.isDirectory());
     } else if (expectedType == fileType.isFile) {
-      Assert.assertTrue(s.isFile());
+      Assertions.assertTrue(s.isFile());
     } else if (expectedType == fileType.isSymlink) {
-      Assert.assertTrue(s.isSymlink());
+      Assertions.assertTrue(s.isSymlink());
     }
-    Assert.assertEquals(aFc.makeQualified(new Path(path)), s.getPath());
+    Assertions.assertEquals(aFc.makeQualified(new Path(path)), s.getPath());
   }
 }

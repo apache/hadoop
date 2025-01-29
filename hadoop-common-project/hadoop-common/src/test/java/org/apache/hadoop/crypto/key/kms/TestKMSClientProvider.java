@@ -24,9 +24,9 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,8 +40,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.crypto.key.kms.KMSDelegationToken.TOKEN_KIND;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Unit test for {@link KMSClientProvider} class.
@@ -64,7 +64,7 @@ public class TestKMSClientProvider {
     GenericTestUtils.setLogLevel(KMSClientProvider.LOG, Level.TRACE);
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     SecurityUtil.setTokenServiceUseIp(false);
     token.setKind(TOKEN_KIND);
@@ -109,7 +109,7 @@ public class TestKMSClientProvider {
       creds.addToken(token.getService(), token);
       creds.addToken(oldToken.getService(), oldToken);
       final Token t = kp.selectDelegationToken(creds);
-      assertEquals("new token should be selected when both exist", token, t);
+      assertEquals(token, t, "new token should be selected when both exist");
     } finally {
       kp.close();
     }

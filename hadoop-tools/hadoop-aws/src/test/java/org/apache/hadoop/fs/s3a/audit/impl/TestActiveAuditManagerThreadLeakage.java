@@ -32,8 +32,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,7 +90,7 @@ public class TestActiveAuditManagerThreadLeakage extends AbstractHadoopTestBase 
   private final List<WeakReference<ActiveAuditManagerS3A>> auditManagers =
       new ArrayList<>();
 
-  @After
+  @AfterEach
   public void teardown() {
     if (workers != null) {
       workers.shutdown();

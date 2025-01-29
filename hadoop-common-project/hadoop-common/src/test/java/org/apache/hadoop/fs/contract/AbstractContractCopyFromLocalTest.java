@@ -25,7 +25,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -65,12 +65,12 @@ public abstract class AbstractContractCopyFromLocalTest extends
     Path dest = copyFromLocal(file, true);
 
     assertPathExists("uploaded file not found", dest);
-    assertTrue("source file deleted", Files.exists(file.toPath()));
+    assertTrue(Files.exists(file.toPath()), "source file deleted");
 
     FileSystem fs = getFileSystem();
     FileStatus status = fs.getFileStatus(dest);
-    assertEquals("File length not equal " + status,
-        message.getBytes(ASCII).length, status.getLen());
+    assertEquals(
+       message.getBytes(ASCII).length, status.getLen(), "File length not equal " + status);
     assertFileTextEquals(dest, message);
   }
 
@@ -109,7 +109,7 @@ public abstract class AbstractContractCopyFromLocalTest extends
     file = createTempFile("test");
     copyFromLocal(file, false, true);
 
-    assertFalse("Source file not deleted", Files.exists(file.toPath()));
+    assertFalse(Files.exists(file.toPath()), "Source file not deleted");
   }
 
   @Test
@@ -215,7 +215,7 @@ public abstract class AbstractContractCopyFromLocalTest extends
     copyFromLocal(source, false, true);
     Path dest = fileToPath(child, source.getParentFile());
 
-    assertFalse("Directory not deleted", Files.exists(source.toPath()));
+    assertFalse(Files.exists(source.toPath()), "Directory not deleted");
     assertFileTextEquals(dest, contents);
   }
 
@@ -258,8 +258,8 @@ public abstract class AbstractContractCopyFromLocalTest extends
     Path dst = path(srcDir.getFileName().toString());
     getFileSystem().copyFromLocalFile(true, true, src, dst);
 
-    assertFalse("Source directory was not deleted",
-        Files.exists(srcDir));
+    assertFalse(
+       Files.exists(srcDir), "Source directory was not deleted");
   }
 
   @Test

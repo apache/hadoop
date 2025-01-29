@@ -24,7 +24,7 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;

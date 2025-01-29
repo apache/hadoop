@@ -30,8 +30,8 @@ import software.amazon.awssdk.core.signer.Signer;
 import software.amazon.awssdk.http.SdkHttpFullRequest;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -61,7 +61,7 @@ public class TestSignerManager extends AbstractHadoopTestBase {
   private static final String TESTUSER1 = "testuser1";
   private static final String TESTUSER2 = "testuser2";
 
-  @Before
+  @BeforeEach
   public void beforeTest() {
     SignerForTest1.reset();
     SignerForTest2.reset();

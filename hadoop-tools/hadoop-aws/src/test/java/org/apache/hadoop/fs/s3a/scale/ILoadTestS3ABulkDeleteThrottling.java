@@ -35,7 +35,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 import org.junit.runners.Parameterized;

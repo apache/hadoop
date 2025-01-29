@@ -23,8 +23,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Random;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -81,7 +81,7 @@ public class ITestAbfsHugeFiles extends AbstractAbfsScaleTest {
     this.blockFactoryName = blockFactoryName;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration configuration = getRawConfiguration();
     configuration.unset(DATA_BLOCKS_BUFFER);
@@ -103,8 +103,8 @@ public class ITestAbfsHugeFiles extends AbstractAbfsScaleTest {
     }
     // Verify correct length was uploaded. Don't want to verify contents
     // here, as this would increase the test time significantly.
-    assertEquals("Mismatch in content length of file uploaded", size,
-        fs.getFileStatus(filePath).getLen());
+    assertEquals(size
+,         fs.getFileStatus(filePath).getLen(), "Mismatch in content length of file uploaded");
   }
 
   /**
@@ -128,7 +128,7 @@ public class ITestAbfsHugeFiles extends AbstractAbfsScaleTest {
     }
     // Verify correct length was uploaded. Don't want to verify contents
     // here, as this would increase the test time significantly.
-    assertEquals("Mismatch in content length of file uploaded", size,
-        fs.getFileStatus(filePath).getLen());
+    assertEquals(size
+,         fs.getFileStatus(filePath).getLen(), "Mismatch in content length of file uploaded");
   }
 }

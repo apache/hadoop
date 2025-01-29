@@ -23,9 +23,9 @@ import java.net.URI;
 import java.util.Collection;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 
 import org.apache.hadoop.conf.Configuration;
@@ -51,8 +51,8 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
 import static org.apache.hadoop.fs.s3a.S3AUtils.patchSecurityCredentialProviders;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.apache.hadoop.fs.s3a.S3AUtils.setBucketOption;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * S3A tests for configuration option propagation.
@@ -69,7 +69,7 @@ public class TestBucketConfiguration extends AbstractHadoopTestBase {
    * Setup: create the contract then init it.
    * @throws Exception on any failure
    */
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     // forces in deprecation wireup, even when this test method is running isolated
     S3AFileSystem.initializeClass();

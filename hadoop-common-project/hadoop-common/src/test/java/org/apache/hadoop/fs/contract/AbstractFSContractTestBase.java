@@ -22,10 +22,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.Rule;
 import org.junit.AssumptionViolatedException;
 import org.junit.rules.TestName;
@@ -43,7 +43,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 /**
  * This is the base class for all the contract tests.
  */
-public abstract class AbstractFSContractTestBase extends Assert
+public abstract class AbstractFSContractTestBase extends Assertions
   implements ContractOptions {
 
   private static final Logger LOG =
@@ -78,12 +78,12 @@ public abstract class AbstractFSContractTestBase extends Assert
   public TestName methodName = new TestName();
 
 
-  @BeforeClass
+  @BeforeAll
   public static void nameTestThread() {
     Thread.currentThread().setName("JUnit");
   }
 
-  @Before
+  @BeforeEach
   public void nameThread() {
     Thread.currentThread().setName("JUnit-" + getMethodName());
   }
@@ -181,7 +181,7 @@ public abstract class AbstractFSContractTestBase extends Assert
    * Setup: create the contract then init it.
    * @throws Exception on any failure
    */
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     Thread.currentThread().setName("setup");
     LOG.debug("== Setup ==");
@@ -191,15 +191,15 @@ public abstract class AbstractFSContractTestBase extends Assert
     assumeEnabled();
     //extract the test FS
     fileSystem = contract.getTestFileSystem();
-    assertNotNull("null filesystem", fileSystem);
+    assertNotNull(fileSystem, "null filesystem");
     URI fsURI = fileSystem.getUri();
     LOG.info("Test filesystem = {} implemented by {}",
         fsURI, fileSystem);
     //sanity check to make sure that the test FS picked up really matches
     //the scheme chosen. This is to avoid defaulting back to the localFS
     //which would be drastic for root FS tests
-    assertEquals("wrong filesystem of " + fsURI,
-                 contract.getScheme(), fsURI.getScheme());
+    assertEquals(
+                contract.getScheme(), fsURI.getScheme(), "wrong filesystem of " + fsURI);
     //create the test path
     testPath = getContract().getTestPath();
     mkdirs(testPath);
@@ -210,7 +210,7 @@ public abstract class AbstractFSContractTestBase extends Assert
    * Teardown.
    * @throws Exception on any failure
    */
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     Thread.currentThread().setName("teardown");
     LOG.debug("== Teardown ==");
@@ -360,7 +360,7 @@ public abstract class AbstractFSContractTestBase extends Assert
    * @throws IOException IO problems during file operations
    */
   protected void mkdirs(Path path) throws IOException {
-    assertTrue("Failed to mkdir " + path, fileSystem.mkdirs(path));
+    assertTrue(fileSystem.mkdirs(path), "Failed to mkdir " + path);
   }
 
   /**
@@ -381,7 +381,7 @@ public abstract class AbstractFSContractTestBase extends Assert
    * @param result read result to validate
    */
   protected void assertMinusOne(String text, int result) {
-    assertEquals(text + " wrong read result " + result, -1, result);
+    assertEquals(-1, result, text + " wrong read result " + result);
   }
 
   protected boolean rename(Path src, Path dst) throws IOException {

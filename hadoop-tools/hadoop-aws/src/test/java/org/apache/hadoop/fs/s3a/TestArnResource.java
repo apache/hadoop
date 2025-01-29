@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import software.amazon.awssdk.regions.Region;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,9 +58,9 @@ public class TestArnResource extends HadoopTestBase {
       String partition = testPair[1];
 
       ArnResource resource = getArnResourceFrom(partition, "s3", region, MOCK_ACCOUNT, accessPoint);
-      assertEquals("Access Point name does not match", accessPoint, resource.getName());
-      assertEquals("Account Id does not match", MOCK_ACCOUNT, resource.getOwnerAccountId());
-      assertEquals("Region does not match", region, resource.getRegion());
+      assertEquals(accessPoint, resource.getName(), "Access Point name does not match");
+      assertEquals(MOCK_ACCOUNT, resource.getOwnerAccountId(), "Account Id does not match");
+      assertEquals(region, resource.getRegion(), "Region does not match");
     }
   }
 

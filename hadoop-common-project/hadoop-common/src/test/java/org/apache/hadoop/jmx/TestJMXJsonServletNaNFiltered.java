@@ -21,9 +21,9 @@ import java.net.URL;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
@@ -35,7 +35,8 @@ public class TestJMXJsonServletNaNFiltered extends HttpServerFunctionalTest {
   private static HttpServer2 server;
   private static URL baseUrl;
 
-  @BeforeClass public static void setup() throws Exception {
+  @BeforeAll
+  public static void setup() throws Exception {
     Configuration configuration = new Configuration();
     configuration.setBoolean(JMX_NAN_FILTER, true);
     server = createTestServer(configuration);
@@ -43,14 +44,15 @@ public class TestJMXJsonServletNaNFiltered extends HttpServerFunctionalTest {
     baseUrl = getServerURL(server);
   }
 
-  @AfterClass public static void cleanup() throws Exception {
+  @AfterAll
+  public static void cleanup() throws Exception {
     server.stop();
   }
 
   public static void assertReFind(String re, String value) {
     Pattern p = Pattern.compile(re);
     Matcher m = p.matcher(value);
-    assertTrue("'"+p+"' does not match "+value, m.find());
+    assertTrue(m.find(), "'"+p+"' does not match "+value);
   }
 
   @Test public void testQuery() throws Exception {

@@ -33,11 +33,11 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,7 +114,7 @@ public abstract class FileContextMainOperationsBaseTest  {
   private static final byte[] data = getFileData(numBlocks,
       getDefaultBlockSize());
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     File testBuildData = GenericTestUtils.getRandomizedTestDir();
     Path rootPath = new Path(testBuildData.getAbsolutePath(), 
@@ -123,7 +123,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     fc.mkdir(getTestRootPath(fc, "test"), FileContext.DEFAULT_PERM, true);
   }
   
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (fc != null) {
       final Path testRoot = fileContextTestHelper.getAbsoluteTestRootPath(fc);
@@ -161,11 +161,11 @@ public abstract class FileContextMainOperationsBaseTest  {
   @Test
   public void testFsStatus() throws Exception {
     FsStatus fsStatus = fc.getFsStatus(null);
-    Assert.assertNotNull(fsStatus);
+    Assertions.assertNotNull(fsStatus);
     //used, free and capacity are non-negative longs
-    Assert.assertTrue(fsStatus.getUsed() >= 0);
-    Assert.assertTrue(fsStatus.getRemaining() >= 0);
-    Assert.assertTrue(fsStatus.getCapacity() >= 0);
+    Assertions.assertTrue(fsStatus.getUsed() >= 0);
+    Assertions.assertTrue(fsStatus.getRemaining() >= 0);
+    Assertions.assertTrue(fsStatus.getCapacity() >= 0);
   }
   
   @Test
@@ -174,31 +174,31 @@ public abstract class FileContextMainOperationsBaseTest  {
     // First we cd to our test root
     Path workDir = new Path(fileContextTestHelper.getAbsoluteTestRootPath(fc), new Path("test"));
     fc.setWorkingDirectory(workDir);
-    Assert.assertEquals(workDir, fc.getWorkingDirectory());
+    Assertions.assertEquals(workDir, fc.getWorkingDirectory());
 
     fc.setWorkingDirectory(new Path("."));
-    Assert.assertEquals(workDir, fc.getWorkingDirectory());
+    Assertions.assertEquals(workDir, fc.getWorkingDirectory());
 
     fc.setWorkingDirectory(new Path(".."));
-    Assert.assertEquals(workDir.getParent(), fc.getWorkingDirectory());
+    Assertions.assertEquals(workDir.getParent(), fc.getWorkingDirectory());
     
     // cd using a relative path
 
     // Go back to our test root
     workDir = new Path(fileContextTestHelper.getAbsoluteTestRootPath(fc), new Path("test"));
     fc.setWorkingDirectory(workDir);
-    Assert.assertEquals(workDir, fc.getWorkingDirectory());
+    Assertions.assertEquals(workDir, fc.getWorkingDirectory());
     
     Path relativeDir = new Path("existingDir1");
     Path absoluteDir = new Path(workDir,"existingDir1");
     fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
     fc.setWorkingDirectory(relativeDir);
-    Assert.assertEquals(absoluteDir, fc.getWorkingDirectory());
+    Assertions.assertEquals(absoluteDir, fc.getWorkingDirectory());
     // cd using a absolute path
     absoluteDir = getTestRootPath(fc, "test/existingDir2");
     fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
     fc.setWorkingDirectory(absoluteDir);
-    Assert.assertEquals(absoluteDir, fc.getWorkingDirectory());
+    Assertions.assertEquals(absoluteDir, fc.getWorkingDirectory());
     
     // Now open a file relative to the wd we just set above.
     Path absolutePath = new Path(absoluteDir, "foo");
@@ -208,12 +208,12 @@ public abstract class FileContextMainOperationsBaseTest  {
     
     // Now mkdir relative to the dir we cd'ed to
     fc.mkdir(new Path("newDir"), FileContext.DEFAULT_PERM, true);
-    Assert.assertTrue(isDir(fc, new Path(absoluteDir, "newDir")));
+    Assertions.assertTrue(isDir(fc, new Path(absoluteDir, "newDir")));
 
     absoluteDir = getTestRootPath(fc, "nonexistingPath");
     try {
       fc.setWorkingDirectory(absoluteDir);
-      Assert.fail("cd to non existing dir should have failed");
+      Assertions.fail("cd to non existing dir should have failed");
     } catch (Exception e) {
       // Exception as expected
     }
@@ -223,7 +223,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     absoluteDir = new Path(localFsRootPath, "existingDir");
     fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
     fc.setWorkingDirectory(absoluteDir);
-    Assert.assertEquals(absoluteDir, fc.getWorkingDirectory());
+    Assertions.assertEquals(absoluteDir, fc.getWorkingDirectory());
 
     Path aRegularFile = new Path("aRegularFile");
     createFile(aRegularFile);
@@ -238,48 +238,48 @@ public abstract class FileContextMainOperationsBaseTest  {
   @Test
   public void testMkdirs() throws Exception {
     Path testDir = getTestRootPath(fc, "test/hadoop");
-    Assert.assertFalse(exists(fc, testDir));
-    Assert.assertFalse(isFile(fc, testDir));
+    Assertions.assertFalse(exists(fc, testDir));
+    Assertions.assertFalse(isFile(fc, testDir));
 
     fc.mkdir(testDir, FsPermission.getDefault(), true);
 
-    Assert.assertTrue(exists(fc, testDir));
-    Assert.assertFalse(isFile(fc, testDir));
+    Assertions.assertTrue(exists(fc, testDir));
+    Assertions.assertFalse(isFile(fc, testDir));
     
     fc.mkdir(testDir, FsPermission.getDefault(), true);
 
-    Assert.assertTrue(exists(fc, testDir));
-    Assert.assertFalse(isFile(fc, testDir));
+    Assertions.assertTrue(exists(fc, testDir));
+    Assertions.assertFalse(isFile(fc, testDir));
 
     Path parentDir = testDir.getParent();
-    Assert.assertTrue(exists(fc, parentDir));
-    Assert.assertFalse(isFile(fc, parentDir));
+    Assertions.assertTrue(exists(fc, parentDir));
+    Assertions.assertFalse(isFile(fc, parentDir));
 
     Path grandparentDir = parentDir.getParent();
-    Assert.assertTrue(exists(fc, grandparentDir));
-    Assert.assertFalse(isFile(fc, grandparentDir));
+    Assertions.assertTrue(exists(fc, grandparentDir));
+    Assertions.assertFalse(isFile(fc, grandparentDir));
     
   }
   
   @Test
   public void testMkdirsFailsForSubdirectoryOfExistingFile() throws Exception {
     Path testDir = getTestRootPath(fc, "test/hadoop");
-    Assert.assertFalse(exists(fc, testDir));
+    Assertions.assertFalse(exists(fc, testDir));
     fc.mkdir(testDir, FsPermission.getDefault(), true);
-    Assert.assertTrue(exists(fc, testDir));
+    Assertions.assertTrue(exists(fc, testDir));
     
     createFile(getTestRootPath(fc, "test/hadoop/file"));
     
     Path testSubDir = getTestRootPath(fc, "test/hadoop/file/subdir");
     try {
       fc.mkdir(testSubDir, FsPermission.getDefault(), true);
-      Assert.fail("Should throw IOException.");
+      Assertions.fail("Should throw IOException.");
     } catch (IOException e) {
       // expected
     }
 
     try {
-      Assert.assertFalse(exists(fc, testSubDir));
+      Assertions.assertFalse(exists(fc, testSubDir));
     } catch (AccessControlException e) {
       // Expected : HDFS-11132 Checks on paths under file may be rejected by
       // file missing execute permission.
@@ -288,13 +288,13 @@ public abstract class FileContextMainOperationsBaseTest  {
     Path testDeepSubDir = getTestRootPath(fc, "test/hadoop/file/deep/sub/dir");
     try {
       fc.mkdir(testDeepSubDir, FsPermission.getDefault(), true);
-      Assert.fail("Should throw IOException.");
+      Assertions.fail("Should throw IOException.");
     } catch (IOException e) {
       // expected
     }
 
     try {
-      Assert.assertFalse(exists(fc, testDeepSubDir));
+      Assertions.assertFalse(exists(fc, testDeepSubDir));
     } catch (AccessControlException e) {
       // Expected : HDFS-11132 Checks on paths under file may be rejected by
       // file missing execute permission.
@@ -307,7 +307,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     throws Exception {
     try {
       fc.getFileStatus(getTestRootPath(fc, "test/hadoop/file"));
-      Assert.fail("Should throw FileNotFoundException");
+      Assertions.fail("Should throw FileNotFoundException");
     } catch (FileNotFoundException e) {
       // expected
     }
@@ -318,7 +318,7 @@ public abstract class FileContextMainOperationsBaseTest  {
                                                     throws Exception {
     try {
       fc.listStatus(getTestRootPath(fc, "test/hadoop/file"));
-      Assert.fail("Should throw FileNotFoundException");
+      Assertions.fail("Should throw FileNotFoundException");
     } catch (FileNotFoundException fnfe) {
       // expected
     }
@@ -330,7 +330,7 @@ public abstract class FileContextMainOperationsBaseTest  {
         getTestRootPath(fc, "test/hadoop/a"),
         getTestRootPath(fc, "test/hadoop/b"),
         getTestRootPath(fc, "test/hadoop/c/1"), };
-    Assert.assertFalse(exists(fc, testDirs[0]));
+    Assertions.assertFalse(exists(fc, testDirs[0]));
 
     for (Path path : testDirs) {
       fc.mkdir(path, FsPermission.getDefault(), true);
@@ -338,28 +338,28 @@ public abstract class FileContextMainOperationsBaseTest  {
 
     // test listStatus that returns an array
     FileStatus[] paths = fc.util().listStatus(getTestRootPath(fc, "test"));
-    Assert.assertEquals(1, paths.length);
-    Assert.assertEquals(getTestRootPath(fc, "test/hadoop"), paths[0].getPath());
+    Assertions.assertEquals(1, paths.length);
+    Assertions.assertEquals(getTestRootPath(fc, "test/hadoop"), paths[0].getPath());
 
     paths = fc.util().listStatus(getTestRootPath(fc, "test/hadoop"));
-    Assert.assertEquals(3, paths.length);
+    Assertions.assertEquals(3, paths.length);
 
-    Assert.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/a"),
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/a"),
         paths));
-    Assert.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/b"),
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/b"),
         paths));
-    Assert.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/c"),
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/c"),
         paths));
 
     paths = fc.util().listStatus(getTestRootPath(fc, "test/hadoop/a"));
-    Assert.assertEquals(0, paths.length);
+    Assertions.assertEquals(0, paths.length);
     
     // test listStatus that returns an iterator
     RemoteIterator<FileStatus> pathsIterator = 
       fc.listStatus(getTestRootPath(fc, "test"));
-    Assert.assertEquals(getTestRootPath(fc, "test/hadoop"), 
+    Assertions.assertEquals(getTestRootPath(fc, "test/hadoop"), 
         pathsIterator.next().getPath());
-    Assert.assertFalse(pathsIterator.hasNext());
+    Assertions.assertFalse(pathsIterator.hasNext());
 
     pathsIterator = fc.listStatus(getTestRootPath(fc, "test/hadoop"));
     FileStatus[] subdirs = new FileStatus[3];
@@ -367,18 +367,18 @@ public abstract class FileContextMainOperationsBaseTest  {
     while(i<3 && pathsIterator.hasNext()) {
       subdirs[i++] = pathsIterator.next();
     }
-    Assert.assertFalse(pathsIterator.hasNext());
-    Assert.assertTrue(i==3);
+    Assertions.assertFalse(pathsIterator.hasNext());
+    Assertions.assertTrue(i==3);
     
-    Assert.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/a"),
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/a"),
         subdirs));
-    Assert.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/b"),
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/b"),
         subdirs));
-    Assert.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/c"),
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/c"),
         subdirs));
 
     pathsIterator = fc.listStatus(getTestRootPath(fc, "test/hadoop/a"));
-    Assert.assertFalse(pathsIterator.hasNext());
+    Assertions.assertFalse(pathsIterator.hasNext());
   }
 
   @Test
@@ -436,7 +436,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     // listStatus with filters returns empty correctly
     FileStatus[] filteredPaths = fc.util().listStatus(
         getTestRootPath(fc, "test"), TEST_X_FILTER);
-    Assert.assertEquals(0,filteredPaths.length);
+    Assertions.assertEquals(0,filteredPaths.length);
     
   }
   
@@ -458,10 +458,10 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fc.util()
         .listStatus(getTestRootPath(fc, "test/hadoop"),
             TEST_X_FILTER);
-    Assert.assertEquals(2,filteredPaths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fc,
+    Assertions.assertEquals(2,filteredPaths.length);
+    Assertions.assertTrue(containsPath(getTestRootPath(fc,
         TEST_DIR_AXA), filteredPaths));
-    Assert.assertTrue(containsPath(getTestRootPath(fc,
+    Assertions.assertTrue(containsPath(getTestRootPath(fc,
         TEST_DIR_AXX), filteredPaths));
   }
   
@@ -469,14 +469,14 @@ public abstract class FileContextMainOperationsBaseTest  {
   public void testGlobStatusNonExistentFile() throws Exception {
     FileStatus[] paths = fc.util().globStatus(
           getTestRootPath(fc, "test/hadoopfsdf"));
-    Assert.assertNull(paths);
+    Assertions.assertNull(paths);
 
     paths = fc.util().globStatus(
         getTestRootPath(fc, "test/hadoopfsdf/?"));
-    Assert.assertEquals(0, paths.length);
+    Assertions.assertEquals(0, paths.length);
     paths = fc.util().globStatus(
         getTestRootPath(fc, "test/hadoopfsdf/xyz*/?"));
-    Assert.assertEquals(0, paths.length);
+    Assertions.assertEquals(0, paths.length);
   }
   
   @Test
@@ -496,7 +496,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     // should return nothing
     FileStatus[] paths = fc.util().globStatus(
         getTestRootPath(fc, "test/hadoop/?"));
-    Assert.assertEquals(0, paths.length);
+    Assertions.assertEquals(0, paths.length);
   }
   
   @Test
@@ -516,10 +516,10 @@ public abstract class FileContextMainOperationsBaseTest  {
     // Should return two items ("/test/hadoop" and "/test/hadoop2")
     FileStatus[] paths = fc.util().globStatus(
         getTestRootPath(fc, "test/hadoop*"));
-    Assert.assertEquals(2, paths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fc,
+    Assertions.assertEquals(2, paths.length);
+    Assertions.assertTrue(containsPath(getTestRootPath(fc,
         "test/hadoop"), paths));
-    Assert.assertTrue(containsPath(getTestRootPath(fc,
+    Assertions.assertTrue(containsPath(getTestRootPath(fc,
         "test/hadoop2"), paths));
   }
   
@@ -541,11 +541,11 @@ public abstract class FileContextMainOperationsBaseTest  {
     //"/test/hadoop/axx", and "/test/hadoop2/axx")
     FileStatus[] paths = fc.util().globStatus(
         getTestRootPath(fc, "test/hadoop*/*"));
-    Assert.assertEquals(4, paths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AAA), paths));
-    Assert.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AXA), paths));
-    Assert.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AXX), paths));
-    Assert.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AAA2), paths));
+    Assertions.assertEquals(4, paths.length);
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AAA), paths));
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AXA), paths));
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AXX), paths));
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AAA2), paths));
   }
   
   @Test
@@ -565,10 +565,10 @@ public abstract class FileContextMainOperationsBaseTest  {
     //Should return only 2 items ("/test/hadoop/axa", "/test/hadoop/axx")
     FileStatus[] paths = fc.util().globStatus(
         getTestRootPath(fc, "test/hadoop/ax?"));
-    Assert.assertEquals(2, paths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fc,
+    Assertions.assertEquals(2, paths.length);
+    Assertions.assertTrue(containsPath(getTestRootPath(fc,
         TEST_DIR_AXA), paths));
-    Assert.assertTrue(containsPath(getTestRootPath(fc,
+    Assertions.assertTrue(containsPath(getTestRootPath(fc,
         TEST_DIR_AXX), paths));
   }
   
@@ -590,7 +590,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fc.util().globStatus(
         getTestRootPath(fc, "test/hadoop/?"),
         DEFAULT_FILTER);
-    Assert.assertEquals(0,filteredPaths.length);
+    Assertions.assertEquals(0,filteredPaths.length);
   }
   
   @Test
@@ -612,12 +612,12 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fc.util().globStatus(
         getTestRootPath(fc, "test/hadoop/*"),
         DEFAULT_FILTER);
-    Assert.assertEquals(3, filteredPaths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fc,
+    Assertions.assertEquals(3, filteredPaths.length);
+    Assertions.assertTrue(containsPath(getTestRootPath(fc,
         TEST_DIR_AAA), filteredPaths));
-    Assert.assertTrue(containsPath(getTestRootPath(fc,
+    Assertions.assertTrue(containsPath(getTestRootPath(fc,
         TEST_DIR_AXA), filteredPaths));
-    Assert.assertTrue(containsPath(getTestRootPath(fc,
+    Assertions.assertTrue(containsPath(getTestRootPath(fc,
         TEST_DIR_AXX), filteredPaths));
   }
   
@@ -640,12 +640,12 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fc.util().globStatus(
         getTestRootPath(fc, "test/hadoop/a??"),
         DEFAULT_FILTER);
-    Assert.assertEquals(3, filteredPaths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AAA),
+    Assertions.assertEquals(3, filteredPaths.length);
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AAA),
         filteredPaths));
-    Assert.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AXA),
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AXA),
         filteredPaths));
-    Assert.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AXX),
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AXX),
         filteredPaths));
   }
   
@@ -668,10 +668,10 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fc.util().globStatus(
         getTestRootPath(fc, "test/hadoop/*"),
         TEST_X_FILTER);
-    Assert.assertEquals(2, filteredPaths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fc,
+    Assertions.assertEquals(2, filteredPaths.length);
+    Assertions.assertTrue(containsPath(getTestRootPath(fc,
         TEST_DIR_AXA), filteredPaths));
-    Assert.assertTrue(containsPath(getTestRootPath(fc,
+    Assertions.assertTrue(containsPath(getTestRootPath(fc,
         TEST_DIR_AXX), filteredPaths));
   }
   
@@ -694,7 +694,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fc.util().globStatus(
         getTestRootPath(fc, "test/hadoop/?"),
         TEST_X_FILTER);
-    Assert.assertEquals(0,filteredPaths.length);
+    Assertions.assertEquals(0,filteredPaths.length);
   }
   
   @Test
@@ -716,10 +716,10 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus[] filteredPaths = fc.util().globStatus(
         getTestRootPath(fc, "test/hadoop/a??"),
         TEST_X_FILTER);
-    Assert.assertEquals(2, filteredPaths.length);
-    Assert.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AXA),
+    Assertions.assertEquals(2, filteredPaths.length);
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AXA),
         filteredPaths));
-    Assert.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AXX),
+    Assertions.assertTrue(containsPath(getTestRootPath(fc, TEST_DIR_AXX),
         filteredPaths));
   }
   
@@ -760,52 +760,60 @@ public abstract class FileContextMainOperationsBaseTest  {
     out.write(data, 0, len);
     out.close();
 
-    Assert.assertTrue("Exists", exists(fc, path));
-    Assert.assertEquals("Length", len, fc.getFileStatus(path).getLen());
+    Assertions.assertTrue(exists(fc, path), "Exists");
+    Assertions.assertEquals(len, fc.getFileStatus(path).getLen(), "Length");
 
     FSDataInputStream in = fc.open(path);
     byte[] buf = new byte[len];
     in.readFully(0, buf);
     in.close();
 
-    Assert.assertEquals(len, buf.length);
+    Assertions.assertEquals(len, buf.length);
     for (int i = 0; i < buf.length; i++) {
-      Assert.assertEquals("Position " + i, data[i], buf[i]);
+      Assertions.assertEquals(data[i], buf[i], "Position " + i);
     }
     
-    Assert.assertTrue("Deleted", fc.delete(path, false));
+    Assertions.assertTrue(fc.delete(path, false), "Deleted");
     
-    Assert.assertFalse("No longer exists", exists(fc, path));
+    Assertions.assertFalse(exists(fc, path), "No longer exists");
 
   }
-  
-  @Test(expected=HadoopIllegalArgumentException.class)
+
+  @Test
   public void testNullCreateFlag() throws IOException {
-    Path p = getTestRootPath(fc, "test/file");
-    fc.create(p, null);
-    Assert.fail("Excepted exception not thrown");
+    assertThrows(HadoopIllegalArgumentException.class, () -> {
+      Path p = getTestRootPath(fc, "test/file");
+      fc.create(p, null);
+      Assertions.fail("Excepted exception not thrown");
+    });
   }
   
-  @Test(expected=HadoopIllegalArgumentException.class)
+  @Test
   public void testEmptyCreateFlag() throws IOException {
-    Path p = getTestRootPath(fc, "test/file");
-    fc.create(p, EnumSet.noneOf(CreateFlag.class));
-    Assert.fail("Excepted exception not thrown");
+    assertThrows(HadoopIllegalArgumentException.class, ()->{
+      Path p = getTestRootPath(fc, "test/file");
+      fc.create(p, EnumSet.noneOf(CreateFlag.class));
+      Assertions.fail("Excepted exception not thrown");
+    });
   }
-  
-  @Test(expected=FileAlreadyExistsException.class)
+
+  @Test
   public void testCreateFlagCreateExistingFile() throws IOException {
-    Path p = getTestRootPath(fc, "test/testCreateFlagCreateExistingFile");
-    createFile(p);
-    fc.create(p, EnumSet.of(CREATE));
-    Assert.fail("Excepted exception not thrown");
+    assertThrows(FileAlreadyExistsException.class, () -> {
+      Path p = getTestRootPath(fc, "test/testCreateFlagCreateExistingFile");
+      createFile(p);
+      fc.create(p, EnumSet.of(CREATE));
+      Assertions.fail("Excepted exception not thrown");
+    });
   }
-  
-  @Test(expected=FileNotFoundException.class)
+
+  @Test
   public void testCreateFlagOverwriteNonExistingFile() throws IOException {
-    Path p = getTestRootPath(fc, "test/testCreateFlagOverwriteNonExistingFile");
-    fc.create(p, EnumSet.of(OVERWRITE));
-    Assert.fail("Excepted exception not thrown");
+    assertThrows(FileNotFoundException.class, () -> {
+      Path p = getTestRootPath(fc, "test/testCreateFlagOverwriteNonExistingFile");
+      fc.create(p, EnumSet.of(OVERWRITE));
+      Assertions.fail("Excepted exception not thrown");
+    });
   }
   
   @Test
@@ -815,12 +823,14 @@ public abstract class FileContextMainOperationsBaseTest  {
     FSDataOutputStream out = fc.create(p, EnumSet.of(OVERWRITE));
     writeData(fc, p, out, data, data.length);
   }
-  
-  @Test(expected=FileNotFoundException.class)
+
+  @Test
   public void testCreateFlagAppendNonExistingFile() throws IOException {
-    Path p = getTestRootPath(fc, "test/testCreateFlagAppendNonExistingFile");
-    fc.create(p, EnumSet.of(APPEND));
-    Assert.fail("Excepted exception not thrown");
+    assertThrows(FileNotFoundException.class, () -> {
+      Path p = getTestRootPath(fc, "test/testCreateFlagAppendNonExistingFile");
+      fc.create(p, EnumSet.of(APPEND));
+      Assertions.fail("Excepted exception not thrown");
+    });
   }
   
   @Test
@@ -846,18 +856,22 @@ public abstract class FileContextMainOperationsBaseTest  {
     writeData(fc, p, out, data, 2*data.length);
   }
   
-  @Test(expected=HadoopIllegalArgumentException.class)
+  @Test
   public void testCreateFlagAppendOverwrite() throws IOException {
-    Path p = getTestRootPath(fc, "test/nonExistent");
-    fc.create(p, EnumSet.of(APPEND, OVERWRITE));
-    Assert.fail("Excepted exception not thrown");
+    assertThrows(HadoopIllegalArgumentException.class, () -> {
+      Path p = getTestRootPath(fc, "test/nonExistent");
+      fc.create(p, EnumSet.of(APPEND, OVERWRITE));
+      Assertions.fail("Excepted exception not thrown");
+    });
   }
   
-  @Test(expected=HadoopIllegalArgumentException.class)
+  @Test
   public void testCreateFlagAppendCreateOverwrite() throws IOException {
-    Path p = getTestRootPath(fc, "test/nonExistent");
-    fc.create(p, EnumSet.of(CREATE, APPEND, OVERWRITE));
-    Assert.fail("Excepted exception not thrown");
+    assertThrows(HadoopIllegalArgumentException.class, () -> {
+      Path p = getTestRootPath(fc, "test/nonExistent");
+      fc.create(p, EnumSet.of(CREATE, APPEND, OVERWRITE));
+      Assertions.fail("Excepted exception not thrown");
+    });
   }
 
   @Test
@@ -906,26 +920,26 @@ public abstract class FileContextMainOperationsBaseTest  {
       byte[] data, long expectedLen) throws IOException {
     out.write(data, 0, data.length);
     out.close();
-    Assert.assertTrue("Exists", exists(fc, p));
-    Assert.assertEquals("Length", expectedLen, fc.getFileStatus(p).getLen());
+    Assertions.assertTrue(exists(fc, p), "Exists");
+    Assertions.assertEquals(expectedLen, fc.getFileStatus(p).getLen(), "Length");
   }
   
   @Test
   public void testWriteInNonExistentDirectory() throws IOException {
     Path path = getTestRootPath(fc, "test/hadoop/file");
-    Assert.assertFalse("Parent doesn't exist", exists(fc, path.getParent()));
+    Assertions.assertFalse(exists(fc, path.getParent()), "Parent doesn't exist");
     createFile(path);
     
-    Assert.assertTrue("Exists", exists(fc, path));
-    Assert.assertEquals("Length", data.length, fc.getFileStatus(path).getLen());
-    Assert.assertTrue("Parent exists", exists(fc, path.getParent()));
+    Assertions.assertTrue(exists(fc, path), "Exists");
+    Assertions.assertEquals(data.length, fc.getFileStatus(path).getLen(), "Length");
+    Assertions.assertTrue(exists(fc, path.getParent()), "Parent exists");
   }
 
   @Test
   public void testDeleteNonExistentFile() throws IOException {
     Path path = getTestRootPath(fc, "test/hadoop/file");    
-    Assert.assertFalse("Doesn't exist", exists(fc, path));
-    Assert.assertFalse("No deletion", fc.delete(path, true));
+    Assertions.assertFalse(exists(fc, path), "Doesn't exist");
+    Assertions.assertFalse(fc.delete(path, true), "No deletion");
   }
   
   @Test
@@ -937,33 +951,33 @@ public abstract class FileContextMainOperationsBaseTest  {
     createFile(file);
     fc.mkdir(subdir,FsPermission.getDefault(), true);
     
-    Assert.assertTrue("File exists", exists(fc, file));
-    Assert.assertTrue("Dir exists", exists(fc, dir));
-    Assert.assertTrue("Subdir exists", exists(fc, subdir));
+    Assertions.assertTrue(exists(fc, file), "File exists");
+    Assertions.assertTrue(exists(fc, dir), "Dir exists");
+    Assertions.assertTrue(exists(fc, subdir), "Subdir exists");
     
     try {
       fc.delete(dir, false);
-      Assert.fail("Should throw IOException.");
+      Assertions.fail("Should throw IOException.");
     } catch (IOException e) {
       // expected
     }
-    Assert.assertTrue("File still exists", exists(fc, file));
-    Assert.assertTrue("Dir still exists", exists(fc, dir));
-    Assert.assertTrue("Subdir still exists", exists(fc, subdir));
+    Assertions.assertTrue(exists(fc, file), "File still exists");
+    Assertions.assertTrue(exists(fc, dir), "Dir still exists");
+    Assertions.assertTrue(exists(fc, subdir), "Subdir still exists");
     
-    Assert.assertTrue("Deleted", fc.delete(dir, true));
-    Assert.assertFalse("File doesn't exist", exists(fc, file));
-    Assert.assertFalse("Dir doesn't exist", exists(fc, dir));
-    Assert.assertFalse("Subdir doesn't exist", exists(fc, subdir));
+    Assertions.assertTrue(fc.delete(dir, true), "Deleted");
+    Assertions.assertFalse(exists(fc, file), "File doesn't exist");
+    Assertions.assertFalse(exists(fc, dir), "Dir doesn't exist");
+    Assertions.assertFalse(exists(fc, subdir), "Subdir doesn't exist");
   }
   
   @Test
   public void testDeleteEmptyDirectory() throws IOException {
     Path dir = getTestRootPath(fc, "test/hadoop");
     fc.mkdir(dir, FsPermission.getDefault(), true);
-    Assert.assertTrue("Dir exists", exists(fc, dir));
-    Assert.assertTrue("Deleted", fc.delete(dir, false));
-    Assert.assertFalse("Dir doesn't exist", exists(fc, dir));
+    Assertions.assertTrue(exists(fc, dir), "Dir exists");
+    Assertions.assertTrue(fc.delete(dir, false), "Deleted");
+    Assertions.assertFalse(exists(fc, dir), "Dir doesn't exist");
   }
   
   @Test
@@ -973,16 +987,16 @@ public abstract class FileContextMainOperationsBaseTest  {
     Path dst = getTestRootPath(fc, "test/new/newpath");
     try {
       rename(src, dst, false, false, Rename.NONE);
-      Assert.fail("Should throw FileNotFoundException");
+      Assertions.fail("Should throw FileNotFoundException");
     } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
+      Assertions.assertTrue(unwrapException(e) instanceof FileNotFoundException);
     }
 
     try {
       rename(src, dst, false, false, Rename.OVERWRITE);
-      Assert.fail("Should throw FileNotFoundException");
+      Assertions.fail("Should throw FileNotFoundException");
     } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
+      Assertions.assertTrue(unwrapException(e) instanceof FileNotFoundException);
     }
   }
 
@@ -996,16 +1010,16 @@ public abstract class FileContextMainOperationsBaseTest  {
     
     try {
       rename(src, dst, true, false, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
+      Assertions.fail("Expected exception was not thrown");
     } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
+      Assertions.assertTrue(unwrapException(e) instanceof FileNotFoundException);
     }
 
     try {
       rename(src, dst, true, false, Rename.OVERWRITE);
-      Assert.fail("Expected exception was not thrown");
+      Assertions.fail("Expected exception was not thrown");
     } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
+      Assertions.assertTrue(unwrapException(e) instanceof FileNotFoundException);
     }
   }
 
@@ -1020,13 +1034,13 @@ public abstract class FileContextMainOperationsBaseTest  {
     
     try {
       rename(src, dst, true, false, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
+      Assertions.fail("Expected exception was not thrown");
     } catch (IOException e) {
     }
 
     try {
       rename(src, dst, true, false, Rename.OVERWRITE);
-      Assert.fail("Expected exception was not thrown");
+      Assertions.fail("Expected exception was not thrown");
     } catch (IOException e) {
     }
   }
@@ -1049,16 +1063,16 @@ public abstract class FileContextMainOperationsBaseTest  {
     createFile(src);
     try {
       rename(src, src, true, true, Rename.NONE);
-      Assert.fail("Renamed file to itself");
+      Assertions.fail("Renamed file to itself");
     } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+      Assertions.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
     }
     // Also fails with overwrite
     try {
       rename(src, src, true, true, Rename.OVERWRITE);
-      Assert.fail("Renamed file to itself");
+      Assertions.fail("Renamed file to itself");
     } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+      Assertions.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
     }
   }
   
@@ -1074,9 +1088,9 @@ public abstract class FileContextMainOperationsBaseTest  {
     // Fails without overwrite option
     try {
       rename(src, dst, true, true, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
+      Assertions.fail("Expected exception was not thrown");
     } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+      Assertions.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
     }
     
     // Succeeds with overwrite option
@@ -1095,14 +1109,14 @@ public abstract class FileContextMainOperationsBaseTest  {
     // Fails without overwrite option
     try {
       rename(src, dst, true, true, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
+      Assertions.fail("Expected exception was not thrown");
     } catch (IOException e) {
     }
     
     // File cannot be renamed as directory
     try {
       rename(src, dst, true, true, Rename.OVERWRITE);
-      Assert.fail("Expected exception was not thrown");
+      Assertions.fail("Expected exception was not thrown");
     } catch (IOException e) {
     }
   }
@@ -1114,16 +1128,16 @@ public abstract class FileContextMainOperationsBaseTest  {
     fc.mkdir(src, FileContext.DEFAULT_PERM, true);
     try {
       rename(src, src, true, true, Rename.NONE);
-      Assert.fail("Renamed directory to itself");
+      Assertions.fail("Renamed directory to itself");
     } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+      Assertions.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
     }
     // Also fails with overwrite
     try {
       rename(src, src, true, true, Rename.OVERWRITE);
-      Assert.fail("Renamed directory to itself");
+      Assertions.fail("Renamed directory to itself");
     } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);      
+      Assertions.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);      
     }
   }
 
@@ -1137,16 +1151,16 @@ public abstract class FileContextMainOperationsBaseTest  {
     
     try {
       rename(src, dst, true, false, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
+      Assertions.fail("Expected exception was not thrown");
     } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
+      Assertions.assertTrue(unwrapException(e) instanceof FileNotFoundException);
     }
 
     try {
       rename(src, dst, true, false, Rename.OVERWRITE);
-      Assert.fail("Expected exception was not thrown");
+      Assertions.fail("Expected exception was not thrown");
     } catch (IOException e) {
-      Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
+      Assertions.assertTrue(unwrapException(e) instanceof FileNotFoundException);
     }
   }
 
@@ -1169,14 +1183,14 @@ public abstract class FileContextMainOperationsBaseTest  {
     fc.mkdir(dst.getParent(), FileContext.DEFAULT_PERM, true);
     
     rename(src, dst, false, true, options);
-    Assert.assertFalse("Nested file1 exists", 
-        exists(fc, getTestRootPath(fc, "test/hadoop/dir/file1")));
-    Assert.assertFalse("Nested file2 exists", 
-        exists(fc, getTestRootPath(fc, "test/hadoop/dir/subdir/file2")));
-    Assert.assertTrue("Renamed nested file1 exists",
-        exists(fc, getTestRootPath(fc, "test/new/newdir/file1")));
-    Assert.assertTrue("Renamed nested exists", 
-        exists(fc, getTestRootPath(fc, "test/new/newdir/subdir/file2")));
+    Assertions.assertFalse(
+        exists(fc, getTestRootPath(fc, "test/hadoop/dir/file1")), "Nested file1 exists");
+    Assertions.assertFalse(
+        exists(fc, getTestRootPath(fc, "test/hadoop/dir/subdir/file2")), "Nested file2 exists");
+    Assertions.assertTrue(
+       exists(fc, getTestRootPath(fc, "test/new/newdir/file1")), "Renamed nested file1 exists");
+    Assertions.assertTrue(
+        exists(fc, getTestRootPath(fc, "test/new/newdir/subdir/file2")), "Renamed nested exists");
   }
 
   @Test
@@ -1194,10 +1208,10 @@ public abstract class FileContextMainOperationsBaseTest  {
     // Fails without overwrite option
     try {
       rename(src, dst, true, true, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
+      Assertions.fail("Expected exception was not thrown");
     } catch (IOException e) {
       // Expected (cannot over-write non-empty destination)
-      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+      Assertions.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
     }
     // Succeeds with the overwrite option
     rename(src, dst, false, true, Rename.OVERWRITE);
@@ -1218,15 +1232,15 @@ public abstract class FileContextMainOperationsBaseTest  {
     // Fails without overwrite option
     try {
       rename(src, dst, true, true, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
+      Assertions.fail("Expected exception was not thrown");
     } catch (IOException e) {
       // Expected (cannot over-write non-empty destination)
-      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+      Assertions.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
     }
     // Fails even with the overwrite option
     try {
       rename(src, dst, true, true, Rename.OVERWRITE);
-      Assert.fail("Expected exception was not thrown");
+      Assertions.fail("Expected exception was not thrown");
     } catch (IOException ex) {
       // Expected (cannot over-write non-empty destination)
     }
@@ -1243,13 +1257,13 @@ public abstract class FileContextMainOperationsBaseTest  {
     // Fails without overwrite option
     try {
       rename(src, dst, true, true, Rename.NONE);
-      Assert.fail("Expected exception was not thrown");
+      Assertions.fail("Expected exception was not thrown");
     } catch (IOException e) {
     }
     // Directory cannot be renamed as existing file
     try {
       rename(src, dst, true, true, Rename.OVERWRITE);
-      Assert.fail("Expected exception was not thrown");
+      Assertions.fail("Expected exception was not thrown");
     } catch (IOException ex) {
     }
   }
@@ -1286,7 +1300,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     if (!fc.getDefaultFileSystem().supportsSymlinks()) {
       try {
         fc.createSymlink(file, link, false);
-        Assert.fail("Created a symlink on a file system that "+
+        Assertions.fail("Created a symlink on a file system that "+
                     "does not support symlinks.");
       } catch (UnsupportedOperationException e) {
         // Expected
@@ -1294,12 +1308,12 @@ public abstract class FileContextMainOperationsBaseTest  {
       createFile(file);
       try {
         fc.getLinkTarget(file);
-        Assert.fail("Got a link target on a file system that "+
+        Assertions.fail("Got a link target on a file system that "+
                     "does not support symlinks.");
       } catch (IOException e) {
         // Expected
       }
-      Assert.assertEquals(fc.getFileStatus(file), fc.getFileLinkStatus(file));
+      Assertions.assertEquals(fc.getFileStatus(file), fc.getFileLinkStatus(file));
     }
   }
   
@@ -1315,8 +1329,8 @@ public abstract class FileContextMainOperationsBaseTest  {
     try {
       fc.rename(src, dst, options);
     } finally {
-      Assert.assertEquals("Source exists", srcExists, exists(fc, src));
-      Assert.assertEquals("Destination exists", dstExists, exists(fc, dst));
+      Assertions.assertEquals(srcExists, exists(fc, src), "Source exists");
+      Assertions.assertEquals(dstExists, exists(fc, dst), "Destination exists");
     }
   }
   
@@ -1526,9 +1540,9 @@ public abstract class FileContextMainOperationsBaseTest  {
     CompletableFuture<Long> readAllBytes = fc.openFile(path)
         .build()
         .thenApply(ContractTestUtils::readStream);
-    assertEquals("Wrong number of bytes read from stream",
-        data.length,
-        (long)readAllBytes.get());
+    assertEquals(
+       data.length
+,         (long)readAllBytes.get(), "Wrong number of bytes read from stream");
   }
 
   @Test
@@ -1539,8 +1553,8 @@ public abstract class FileContextMainOperationsBaseTest  {
     CompletableFuture<FSDataInputStream> future = fc.openFile(path).build();
     AtomicBoolean accepted = new AtomicBoolean(false);
     future.thenAcceptAsync(i -> accepted.set(true)).get();
-    assertTrue("async accept operation not invoked",
-        accepted.get());
+    assertTrue(
+       accepted.get(), "async accept operation not invoked");
   }
 
 }

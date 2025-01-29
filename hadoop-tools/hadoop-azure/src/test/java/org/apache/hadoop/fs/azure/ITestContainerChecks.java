@@ -31,10 +31,10 @@ import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.CreateOptions;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
-import org.junit.After;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.microsoft.azure.storage.blob.BlobOutputStream;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
@@ -47,12 +47,12 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
   private AzureBlobStorageTestAccount testAccount;
   private boolean runningInSASMode = false;
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     testAccount = AzureTestUtils.cleanup(testAccount);
   }
 
-  @Before
+  @BeforeEach
   public void setMode() {
     runningInSASMode = AzureBlobStorageTestAccount.createTestConfiguration().
         getBoolean(AzureNativeFileSystemStore.KEY_USE_SECURE_MODE, false);
@@ -72,10 +72,10 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
     // state to DoesNotExist
     try {
       fs.listStatus(new Path("/"));
-      assertTrue("Should've thrown.", false);
+      assertTrue(false, "Should've thrown.");
     } catch (FileNotFoundException ex) {
-      assertTrue("Unexpected exception: " + ex,
-          ex.getMessage().contains("is not found"));
+      assertTrue(
+         ex.getMessage().contains("is not found"), "Unexpected exception: " + ex);
     }
     assertFalse(container.exists());
 
@@ -112,10 +112,10 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
     // state to DoesNotExist
     try {
       assertNull(fs.listStatus(new Path("/")));
-      assertTrue("Should've thrown.", false);
+      assertTrue(false, "Should've thrown.");
     } catch (FileNotFoundException ex) {
-      assertTrue("Unexpected exception: " + ex,
-          ex.getMessage().contains("is not found"));
+      assertTrue(
+         ex.getMessage().contains("is not found"), "Unexpected exception: " + ex);
     }
     assertFalse(container.exists());
 
@@ -137,10 +137,10 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
     // A list shouldn't create the container.
     try {
       fs.listStatus(new Path("/"));
-      assertTrue("Should've thrown.", false);
+      assertTrue(false, "Should've thrown.");
     } catch (FileNotFoundException ex) {
-      assertTrue("Unexpected exception: " + ex,
-          ex.getMessage().contains("is not found"));
+      assertTrue(
+         ex.getMessage().contains("is not found"), "Unexpected exception: " + ex);
     }
     assertFalse(container.exists());
 
@@ -183,7 +183,7 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
     // A write should just fail
     try {
       fs.createNewFile(new Path("/testContainerChecksWithSas-foo"));
-      assertFalse("Should've thrown.", true);
+      assertFalse(true, "Should've thrown.");
     } catch (AzureException ex) {
     }
     assertFalse(container.exists());

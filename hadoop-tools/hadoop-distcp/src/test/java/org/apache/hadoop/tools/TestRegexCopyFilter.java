@@ -19,8 +19,8 @@
 package org.apache.hadoop.tools;
 
 import org.apache.hadoop.fs.Path;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -38,7 +38,7 @@ public class TestRegexCopyFilter {
     regexCopyFilter.setFilters(filters);
 
     Path shouldCopyPath = new Path("/user/bar");
-    Assert.assertTrue(regexCopyFilter.shouldCopy(shouldCopyPath));
+    Assertions.assertTrue(regexCopyFilter.shouldCopy(shouldCopyPath));
   }
 
   @Test
@@ -50,7 +50,7 @@ public class TestRegexCopyFilter {
     regexCopyFilter.setFilters(filters);
 
     Path shouldNotCopyPath = new Path("/user/testing");
-    Assert.assertFalse(regexCopyFilter.shouldCopy(shouldNotCopyPath));
+    Assertions.assertFalse(regexCopyFilter.shouldCopy(shouldNotCopyPath));
   }
 
   @Test
@@ -73,7 +73,7 @@ public class TestRegexCopyFilter {
       }
     }
 
-    Assert.assertEquals(2, shouldCopyCount);
+    Assertions.assertEquals(2, shouldCopyCount);
   }
 
   @Test
@@ -96,7 +96,7 @@ public class TestRegexCopyFilter {
       }
     }
 
-    Assert.assertEquals(0, shouldCopyCount);
+    Assertions.assertEquals(0, shouldCopyCount);
   }
 
   private List<Path> getTestPaths() {

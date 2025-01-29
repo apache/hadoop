@@ -29,9 +29,10 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.AsyncGetFuture;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,8 +44,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class TestAsyncIPC {
 
@@ -56,7 +57,7 @@ public class TestAsyncIPC {
     return new AsyncGetFuture<>(Client.getAsyncRpcResponse());
   }
 
-  @Before
+  @BeforeEach
   public void setupConf() {
     conf = new Configuration();
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY, 10000);
@@ -102,10 +103,10 @@ public class TestAsyncIPC {
     void assertReturnValues() throws InterruptedException, ExecutionException {
       for (int i = 0; i < count; i++) {
         LongWritable value = returnFutures.get(i).get();
-        Assert.assertEquals("call" + i + " failed.",
-            expectedValues.get(i).longValue(), value.get());
+        Assertions.assertEquals(
+           expectedValues.get(i).longValue(), value.get(), "call" + i + " failed.");
       }
-      Assert.assertFalse(failed);
+      Assertions.assertFalse(failed);
     }
 
     void assertReturnValues(long timeout, TimeUnit unit)
@@ -128,12 +129,12 @@ public class TestAsyncIPC {
             continue;
           }
 
-          Assert.assertEquals("call" + i + " failed.",
-              expectedValues.get(i).longValue(), value.get());
+          Assertions.assertEquals(
+             expectedValues.get(i).longValue(), value.get(), "call" + i + " failed.");
           checked[i] = true;
         }
       }
-      Assert.assertFalse(failed);
+      Assertions.assertFalse(failed);
     }
   }
 
@@ -227,14 +228,16 @@ public class TestAsyncIPC {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testAsyncCall() throws IOException, InterruptedException,
       ExecutionException {
     internalTestAsyncCall(3, false, 2, 5, 100);
     internalTestAsyncCall(3, true, 2, 5, 10);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testAsyncCallLimit() throws IOException,
       InterruptedException, ExecutionException {
     internalTestAsyncCallLimit(100, false, 5, 10, 500);
@@ -267,7 +270,8 @@ public class TestAsyncIPC {
     server.stop();
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testCallGetReturnRpcResponseMultipleTimes() throws IOException,
       InterruptedException, ExecutionException {
     int handlerCount = 10, callCount = 100;
@@ -284,14 +288,15 @@ public class TestAsyncIPC {
       caller.assertReturnValues();
       caller.assertReturnValues();
       caller.assertReturnValues();
-      Assert.assertEquals(asyncCallCount, client.getAsyncCallCount());
+      Assertions.assertEquals(asyncCallCount, client.getAsyncCallCount());
     } finally {
       client.stop();
       server.stop();
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testFutureGetWithTimeout() throws IOException,
       InterruptedException, ExecutionException {
 //    GenericTestUtils.setLogLevel(AsyncGetFuture.LOG, Level.ALL);
@@ -340,7 +345,7 @@ public class TestAsyncIPC {
           callers[i].getCount());
       String msg = String.format("Expected not failed for caller-%d: %s.", i,
           callers[i]);
-      assertFalse(msg, callers[i].failed);
+      assertFalse(callers[i].failed, msg);
     }
     for (int i = 0; i < clientCount; i++) {
       clients[i].stop();
@@ -356,7 +361,8 @@ public class TestAsyncIPC {
    * @throws ExecutionException
    * @throws InterruptedException
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testCallIdAndRetry() throws IOException, InterruptedException,
       ExecutionException {
     final Map<Integer, CallInfo> infoMap = new HashMap<Integer, CallInfo>();
@@ -382,7 +388,7 @@ public class TestAsyncIPC {
       @Override
       void checkResponse(RpcResponseHeaderProto header) throws IOException {
         super.checkResponse(header);
-        Assert.assertEquals(infoMap.get(header.getCallId()).retry,
+        Assertions.assertEquals(infoMap.get(header.getCallId()).retry,
             header.getRetryCount());
       }
     };
@@ -392,7 +398,7 @@ public class TestAsyncIPC {
     server.callListener = new Runnable() {
       @Override
       public void run() {
-        Assert.assertEquals(infoMap.get(Server.getCallId()).retry,
+        Assertions.assertEquals(infoMap.get(Server.getCallId()).retry,
             Server.getCallRetryCount());
       }
     };
@@ -415,7 +421,8 @@ public class TestAsyncIPC {
    * @throws ExecutionException
    * @throws InterruptedException
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testCallRetryCount() throws IOException, InterruptedException,
       ExecutionException {
     final int retryCount = 255;
@@ -430,7 +437,7 @@ public class TestAsyncIPC {
       public void run() {
         // we have not set the retry count for the client, thus on the server
         // side we should see retry count as 0
-        Assert.assertEquals(retryCount, Server.getCallRetryCount());
+        Assertions.assertEquals(retryCount, Server.getCallRetryCount());
       }
     };
 
@@ -452,7 +459,8 @@ public class TestAsyncIPC {
    * @throws ExecutionException
    * @throws InterruptedException
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testInitialCallRetryCount() throws IOException,
       InterruptedException, ExecutionException {
     // Override client to store the call id
@@ -465,7 +473,7 @@ public class TestAsyncIPC {
       public void run() {
         // we have not set the retry count for the client, thus on the server
         // side we should see retry count as 0
-        Assert.assertEquals(0, Server.getCallRetryCount());
+        Assertions.assertEquals(0, Server.getCallRetryCount());
       }
     };
 
@@ -488,7 +496,8 @@ public class TestAsyncIPC {
    * @throws InterruptedException
    * @throws ExecutionException
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testUniqueSequentialCallIds() throws IOException,
       InterruptedException, ExecutionException {
     int serverThreads = 10, callerCount = 100, perCallerCallCount = 100;

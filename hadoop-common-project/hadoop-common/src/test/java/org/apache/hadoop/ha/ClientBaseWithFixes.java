@@ -44,9 +44,9 @@ import org.apache.zookeeper.server.ServerCnxnFactory;
 import org.apache.zookeeper.server.ZKDatabase;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -186,12 +186,12 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
         TestableZooKeeper zk = new TestableZooKeeper(hp, timeout, watcher);
         if (!watcher.clientConnected.await(timeout, TimeUnit.MILLISECONDS))
         {
-            Assert.fail("Unable to connect to server");
+            Assertions.fail("Unable to connect to server");
         }
         synchronized(this) {
             if (!allClientsSetup) {
                 LOG.error("allClients never setup");
-                Assert.fail("allClients never setup");
+                Assertions.fail("allClients never setup");
             }
             if (allClients != null) {
                 allClients.add(zk);
@@ -323,8 +323,8 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
         // don't delete tmpFile - this ensures we don't attempt to create
         // a tmpDir with a duplicate name
         File tmpDir = new File(tmpFile + ".dir");
-        Assert.assertFalse(tmpDir.exists()); // never true if tmpfile does it's job
-        Assert.assertTrue(tmpDir.mkdirs());
+        Assertions.assertFalse(tmpDir.exists()); // never true if tmpfile does it's job
+        Assertions.assertTrue(tmpDir.mkdirs());
 
         return tmpDir;
     }
@@ -349,9 +349,9 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
             factory = ServerCnxnFactory.createFactory(PORT, maxCnxns);
         }
         factory.startup(zks);
-        Assert.assertTrue("waiting for server up",
-                   ClientBaseWithFixes.waitForServerUp("127.0.0.1:" + PORT,
-                                              CONNECTION_TIMEOUT));
+        Assertions.assertTrue(
+                  ClientBaseWithFixes.waitForServerUp("127.0.0.1:" + PORT,
+                                              CONNECTION_TIMEOUT), "waiting for server up");
 
         return factory;
     }
@@ -374,9 +374,9 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
             }
             final int PORT = getPort(hostPort);
 
-            Assert.assertTrue("waiting for server down",
-                       ClientBaseWithFixes.waitForServerDown("127.0.0.1:" + PORT,
-                                                    CONNECTION_TIMEOUT));
+            Assertions.assertTrue(
+                      ClientBaseWithFixes.waitForServerDown("127.0.0.1:" + PORT,
+                                                    CONNECTION_TIMEOUT), "waiting for server down");
         }
     }
 
@@ -386,7 +386,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
     public static void setupTestEnv() {
         // during the tests we run with 100K prealloc in the logs.
         // on windows systems prealloc of 64M was seen to take ~15seconds
-        // resulting in test Assert.failure (client timeout on first session).
+        // resulting in test Assertions.failure (client timeout on first session).
         // set env and directly in order to handle static init/gc issues
         System.setProperty("zookeeper.preAllocSize", "100");
         FileTxnLog.setPreallocSize(100 * 1024);
@@ -397,7 +397,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
         allClientsSetup = true;
     }
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         BASETEST.mkdirs();
 
@@ -453,7 +453,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
         }
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         LOG.info("tearDown starting");
 
@@ -462,7 +462,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
         stopServer();
 
         if (tmpDir != null) {
-            Assert.assertTrue("delete " + tmpDir.toString(), recursiveDelete(tmpDir));
+            Assertions.assertTrue(recursiveDelete(tmpDir), "delete " + tmpDir.toString());
         }
 
         // This has to be set to null when the same instance of this class is reused between test cases
@@ -473,7 +473,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
         if (d.isDirectory()) {
             File children[] = d.listFiles();
             for (File f : children) {
-                Assert.assertTrue("delete " + f.toString(), recursiveDelete(f));
+                Assertions.assertTrue(recursiveDelete(f), "delete " + f.toString());
             }
         }
         return d.delete();

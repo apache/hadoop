@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.fs.azure;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
  * Base class for any Wasb test with timeouts & named threads.
  * This class does not attempt to bind to Azure.
  */
-public class AbstractWasbTestWithTimeout extends Assert {
+public class AbstractWasbTestWithTimeout extends Assertions {
 
   /**
    * The name of the current method.
@@ -49,7 +49,7 @@ public class AbstractWasbTestWithTimeout extends Assert {
    * Name the junit thread for the class. This will overridden
    * before the individual test methods are run.
    */
-  @BeforeClass
+  @BeforeAll
   public static void nameTestThread() {
     Thread.currentThread().setName("JUnit");
   }
@@ -57,7 +57,7 @@ public class AbstractWasbTestWithTimeout extends Assert {
   /**
    * Name the thread to the current test method.
    */
-  @Before
+  @BeforeEach
   public void nameThread() {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
   }

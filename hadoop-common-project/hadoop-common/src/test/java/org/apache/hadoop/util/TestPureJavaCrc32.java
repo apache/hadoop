@@ -29,8 +29,8 @@ import java.util.Random;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit test to verify that the pure-Java CRC32 algorithm gives
@@ -96,7 +96,7 @@ public class TestPureJavaCrc32 {
   }
 
   private void checkSame() {
-    Assert.assertEquals(theirs.getValue(), ours.getValue());
+    Assertions.assertEquals(theirs.getValue(), ours.getValue());
   }
 
   /**

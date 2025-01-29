@@ -22,8 +22,8 @@ import java.time.Duration;
 import java.util.Arrays;
 
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +62,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAwsClientConfig.class);
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     AWSClientConfig.resetMinimumOperationDuration();
   }

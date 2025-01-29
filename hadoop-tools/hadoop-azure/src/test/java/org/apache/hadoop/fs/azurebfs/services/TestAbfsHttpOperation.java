@@ -24,7 +24,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 

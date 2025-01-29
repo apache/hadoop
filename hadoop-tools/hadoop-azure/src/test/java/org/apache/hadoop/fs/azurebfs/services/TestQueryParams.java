@@ -20,8 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.azurebfs.oauth2.QueryParams;
 /**
@@ -41,7 +41,7 @@ public class TestQueryParams {
 
     QueryParams qp = new QueryParams();
     qp.add(key, value);
-    Assert.assertEquals(key + "=" + value, qp.serialize());
+    Assertions.assertEquals(key + "=" + value, qp.serialize());
   }
 
   @Test
@@ -51,11 +51,11 @@ public class TestQueryParams {
       qp.add(entry[0], entry[1]);
     }
     Map<String, String> paramMap = constructMap(qp.serialize());
-    Assert.assertEquals(PARAM_ARRAY.length, paramMap.size());
+    Assertions.assertEquals(PARAM_ARRAY.length, paramMap.size());
 
     for (String[] entry : PARAM_ARRAY) {
-      Assert.assertTrue(paramMap.containsKey(entry[0]));
-      Assert.assertEquals(entry[1], paramMap.get(entry[0]));
+      Assertions.assertTrue(paramMap.containsKey(entry[0]));
+      Assertions.assertEquals(entry[1], paramMap.get(entry[0]));
     }
   }
 

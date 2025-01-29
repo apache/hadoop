@@ -26,10 +26,11 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.rules.TestName;
 import static org.mockito.Mockito.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * A test class for InstrumentedLock.
@@ -44,7 +45,8 @@ public class TestInstrumentedLock {
    * Test exclusive access of the lock.
    * @throws Exception
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testMultipleThread() throws Exception {
     String testname = name.getMethodName();
     InstrumentedLock lock = new InstrumentedLock(testname, LOG, 0, 300);
@@ -67,7 +69,8 @@ public class TestInstrumentedLock {
    * Test the correctness with try-with-resource syntax.
    * @throws Exception
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testTryWithResourceSyntax() throws Exception {
     String testname = name.getMethodName();
     final AtomicReference<Thread> lockThread = new AtomicReference<>(null);
@@ -105,7 +108,8 @@ public class TestInstrumentedLock {
    * and not log warning otherwise.
    * @throws Exception
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testLockLongHoldingReport() throws Exception {
     String testname = name.getMethodName();
     final AtomicLong time = new AtomicLong(0);
@@ -172,7 +176,8 @@ public class TestInstrumentedLock {
    * threshold and not log warning otherwise.
    * @throws Exception
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testLockLongWaitReport() throws Exception {
     String testname = name.getMethodName();
     final AtomicLong time = new AtomicLong(0);

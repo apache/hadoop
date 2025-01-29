@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a.yarn;
 import java.util.EnumSet;
 
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 import org.apache.hadoop.fs.CreateFlag;
@@ -51,13 +51,13 @@ public class ITestS3A  extends AbstractS3ATestBase {
   public void testS3AStatus() throws Exception {
     FsStatus fsStatus = fc.getFsStatus(null);
     assertNotNull(fsStatus);
-    assertTrue("Used capacity should be positive: " + fsStatus.getUsed(),
-        fsStatus.getUsed() >= 0);
-    assertTrue("Remaining capacity should be positive: " + fsStatus
-            .getRemaining(),
-        fsStatus.getRemaining() >= 0);
-    assertTrue("Capacity should be positive: " + fsStatus.getCapacity(),
-        fsStatus.getCapacity() >= 0);
+    assertTrue(
+       fsStatus.getUsed() >= 0, "Used capacity should be positive: " + fsStatus.getUsed());
+    assertTrue(
+       fsStatus.getRemaining() >= 0, "Remaining capacity should be positive: " + fsStatus
+            .getRemaining());
+    assertTrue(
+       fsStatus.getCapacity() >= 0, "Capacity should be positive: " + fsStatus.getCapacity());
   }
 
   @Test

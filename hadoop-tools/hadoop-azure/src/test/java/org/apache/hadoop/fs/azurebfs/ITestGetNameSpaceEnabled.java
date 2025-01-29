@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.assertj.core.api.Assertions;
 import org.mockito.Mockito;
 
@@ -78,8 +78,8 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
   public void testXNSAccount() throws IOException {
     Assume.assumeTrue("Skip this test because the account being used for test is a non XNS account",
             isUsingXNSAccount);
-    assertTrue("Expecting getIsNamespaceEnabled() return true",
-        getIsNamespaceEnabled(getFileSystem()));
+    assertTrue(
+       getIsNamespaceEnabled(getFileSystem()), "Expecting getIsNamespaceEnabled() return true");
   }
 
   @Test
@@ -87,8 +87,8 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
     Assume.assumeFalse("Skip this test because the account being used for test is a XNS account",
             isUsingXNSAccount);
-    assertFalse("Expecting getIsNamespaceEnabled() return false",
-        getIsNamespaceEnabled(getFileSystem()));
+    assertFalse(
+       getIsNamespaceEnabled(getFileSystem()), "Expecting getIsNamespaceEnabled() return false");
   }
 
   @Test

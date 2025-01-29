@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.test;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.regex.Pattern;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.MethodRule;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;

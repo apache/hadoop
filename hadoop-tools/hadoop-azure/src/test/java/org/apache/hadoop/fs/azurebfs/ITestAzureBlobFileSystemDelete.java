@@ -28,7 +28,7 @@ import java.util.concurrent.Future;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -97,7 +97,7 @@ public class ITestAzureBlobFileSystemDelete extends
 
     fs.delete(root, true);
     ls = fs.listStatus(root);
-    assertEquals("listing size", 0, ls.length);
+    assertEquals(0, ls.length, "listing size");
   }
 
   @Test()

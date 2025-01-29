@@ -19,14 +19,14 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.junit.Assume;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Test raw Reed-solomon coder implemented in Java.
  */
 public class TestRSRawCoderInteroperable1 extends TestRSRawCoderBase {
 
-  @Before
+  @BeforeEach
   public void setup() {
     Assume.assumeTrue(ErasureCodeNative.isNativeCodeLoaded());
 

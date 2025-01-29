@@ -23,7 +23,7 @@ import java.util.Arrays;
 import java.util.UUID;
 
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 

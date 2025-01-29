@@ -20,8 +20,8 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -110,12 +110,12 @@ public class ITestAzureBlobFileSystemStoreListStatusWithRange extends
       FileStatus[] listResult = store.listStatus(new Path(path), startFrom,
           getTestTracingContext(fs, true));
       if (!expectedResult) {
-        Assert.fail("Excepting failure with IllegalArgumentException");
+        Assertions.fail("Excepting failure with IllegalArgumentException");
       }
       verifyFileStatus(listResult, new Path(path), expectedStartIndexInArray);
     } catch (IllegalArgumentException ex) {
       if (expectedResult) {
-        Assert.fail("Excepting success");
+        Assertions.fail("Excepting success");
       }
     }
   }
@@ -123,16 +123,16 @@ public class ITestAzureBlobFileSystemStoreListStatusWithRange extends
   // compare the file status
   private void verifyFileStatus(FileStatus[] listResult, Path parentPath, int startIndexInSortedName) throws IOException {
     if (startIndexInSortedName == -1) {
-      Assert.assertEquals("Expected empty FileStatus array", 0, listResult.length);
+      Assertions.assertEquals(0, listResult.length, "Expected empty FileStatus array");
       return;
     }
 
     FileStatus[] allFileStatuses = fs.listStatus(parentPath);
-    Assert.assertEquals("number of dir/file doesn't match",
-            SORTED_ENTRY_NAMES.length, allFileStatuses.length);
+    Assertions.assertEquals(
+           SORTED_ENTRY_NAMES.length, allFileStatuses.length, "number of dir/file doesn't match");
     int indexInResult = 0;
     for (int index = startIndexInSortedName; index < SORTED_ENTRY_NAMES.length; index++) {
-      Assert.assertEquals("fileStatus doesn't match", allFileStatuses[index], listResult[indexInResult++]);
+      Assertions.assertEquals(allFileStatuses[index], listResult[indexInResult++], "fileStatus doesn't match");
     }
   }
 
@@ -141,7 +141,7 @@ public class ITestAzureBlobFileSystemStoreListStatusWithRange extends
     // created 2 level file structures
     for (String levelOneFolder : SORTED_ENTRY_NAMES) {
       Path levelOnePath = new Path("/" + levelOneFolder);
-      Assert.assertTrue(fs.mkdirs(levelOnePath));
+      Assertions.assertTrue(fs.mkdirs(levelOnePath));
       for (String fileName : SORTED_ENTRY_NAMES) {
         Path filePath = new Path(levelOnePath, fileName);
         ContractTestUtils.touch(fs, filePath);

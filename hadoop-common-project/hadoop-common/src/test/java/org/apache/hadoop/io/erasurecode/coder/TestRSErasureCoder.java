@@ -20,9 +20,9 @@ package org.apache.hadoop.io.erasurecode.coder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 import java.util.concurrent.TimeUnit;
@@ -34,7 +34,7 @@ public class TestRSErasureCoder extends TestErasureCoderBase {
   @Rule
   public Timeout globalTimeout = new Timeout(300000, TimeUnit.MILLISECONDS);
 
-  @Before
+  @BeforeEach
   public void setup() {
     this.encoderClass = RSErasureEncoder.class;
     this.decoderClass = RSErasureDecoder.class;

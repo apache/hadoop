@@ -25,8 +25,8 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.hadoop.metrics2.lib.MutableInverseQuantiles;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -39,7 +39,7 @@ public class TestSampleQuantiles {
   SampleQuantiles estimator;
   final static int NUM_REPEATS = 10;
 
-  @Before
+  @BeforeEach
   public void init() {
     estimator = new SampleQuantiles(quantiles);
   }

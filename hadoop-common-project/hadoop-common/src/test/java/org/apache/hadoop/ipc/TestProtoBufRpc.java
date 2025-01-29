@@ -38,9 +38,10 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -54,7 +55,7 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.Assume.assumeFalse;
 
 /**
@@ -160,7 +161,7 @@ public class TestProtoBufRpc extends TestRpcBase {
     return params;
   }
 
-  @Before
+  @BeforeEach
   @SuppressWarnings("deprecation")
   public void setUp() throws IOException { // Setup server for both protocols
     conf = new Configuration();
@@ -218,7 +219,7 @@ public class TestProtoBufRpc extends TestRpcBase {
   }
   
   
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     server.stop();
   }
@@ -231,7 +232,8 @@ public class TestProtoBufRpc extends TestRpcBase {
     return RPC.getProxy(TestRpcService2Legacy.class, 0, addr, conf);
   }
 
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testProtoBufRpc() throws Exception {
     TestRpcService client = getClient(addr, conf);
     testProtoBufRpc(client);
@@ -262,7 +264,8 @@ public class TestProtoBufRpc extends TestRpcBase {
     }
   }
   
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testProtoBufRpc2() throws Exception {
     TestRpcService2 client = getClient2();
     
@@ -311,7 +314,8 @@ public class TestProtoBufRpc extends TestRpcBase {
     assertCounterGt("Echo2NumOps", 0L, rpcDetailedMetrics);
   }
 
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testProtoBufRandomException() throws Exception {
     //No test with legacy
     assumeFalse(testWithLegacy);
@@ -330,7 +334,8 @@ public class TestProtoBufRpc extends TestRpcBase {
     }
   }
   
-  @Test(timeout=6000)
+  @Test
+  @Timeout(value = 6)
   public void testExtraLongRpc() throws Exception {
     //No test with legacy
     assumeFalse(testWithLegacy);
@@ -350,7 +355,8 @@ public class TestProtoBufRpc extends TestRpcBase {
     }
   }
 
-  @Test(timeout = 12000)
+  @Test
+  @Timeout(value = 12)
   public void testLogSlowRPC() throws IOException, ServiceException,
       TimeoutException, InterruptedException {
     //No test with legacy
@@ -385,7 +391,8 @@ public class TestProtoBufRpc extends TestRpcBase {
         -> rpcMetrics.getRpcSlowCalls() == before + 1L, 10, 1000);
   }
 
-  @Test(timeout = 12000)
+  @Test
+  @Timeout(value = 12)
   public void testEnsureNoLogIfDisabled() throws IOException, ServiceException {
     //No test with legacy
     assumeFalse(testWithLegacy);

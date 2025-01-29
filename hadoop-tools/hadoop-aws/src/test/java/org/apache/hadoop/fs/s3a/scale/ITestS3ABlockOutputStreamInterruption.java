@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -484,7 +484,7 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
      * Assert that the trigger took place.
      */
     private void assertTriggered() {
-      assertTrue("Not triggered", triggered.get());
+      assertTrue(triggered.get(), "Not triggered");
     }
   }
 

@@ -38,11 +38,11 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.io.nativeio.NativeIO;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * This tests timeout out from SocketInputStream and

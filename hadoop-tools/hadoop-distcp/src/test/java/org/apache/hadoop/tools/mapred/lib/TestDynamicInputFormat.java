@@ -20,7 +20,7 @@ package org.apache.hadoop.tools.mapred.lib;
 
 import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpContext;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -36,9 +36,9 @@ import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.StubContext;
 import org.apache.hadoop.security.Credentials;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -55,7 +55,7 @@ public class TestDynamicInputFormat {
 
   private static List<String> expectedFilePaths = new ArrayList<String>(N_FILES);
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     cluster = new MiniDFSCluster.Builder(getConfigurationForCluster())
                   .numDataNodes(1).format(true).build();
@@ -104,7 +104,7 @@ public class TestDynamicInputFormat {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     cluster.shutdown();
   }
@@ -142,28 +142,28 @@ public class TestDynamicInputFormat {
         CopyListingFileStatus fileStatus = recordReader.getCurrentValue();
         String source = fileStatus.getPath().toString();
         System.out.println(source);
-        Assert.assertTrue(expectedFilePaths.contains(source));
+        Assertions.assertTrue(expectedFilePaths.contains(source));
         final float progress = recordReader.getProgress();
-        Assert.assertTrue(progress >= previousProgressValue);
-        Assert.assertTrue(progress >= 0.0f);
-        Assert.assertTrue(progress <= 1.0f);
+        Assertions.assertTrue(progress >= previousProgressValue);
+        Assertions.assertTrue(progress >= 0.0f);
+        Assertions.assertTrue(progress <= 1.0f);
         previousProgressValue = progress;
         ++nFiles;
       }
-      Assert.assertTrue(recordReader.getProgress() == 1.0f);
+      Assertions.assertTrue(recordReader.getProgress() == 1.0f);
 
       ++taskId;
     }
 
-    Assert.assertEquals(expectedFilePaths.size(), nFiles);
+    Assertions.assertEquals(expectedFilePaths.size(), nFiles);
   }
 
   @Test
   public void testGetSplitRatio() throws Exception {
-    Assert.assertEquals(1, DynamicInputFormat.getSplitRatio(1, 1000000000));
-    Assert.assertEquals(2, DynamicInputFormat.getSplitRatio(11000000, 10));
-    Assert.assertEquals(4, DynamicInputFormat.getSplitRatio(30, 700));
-    Assert.assertEquals(2, DynamicInputFormat.getSplitRatio(30, 200));
+    Assertions.assertEquals(1, DynamicInputFormat.getSplitRatio(1, 1000000000));
+    Assertions.assertEquals(2, DynamicInputFormat.getSplitRatio(11000000, 10));
+    Assertions.assertEquals(4, DynamicInputFormat.getSplitRatio(30, 700));
+    Assertions.assertEquals(2, DynamicInputFormat.getSplitRatio(30, 200));
 
     // Tests with negative value configuration
     Configuration conf = new Configuration();
@@ -171,19 +171,19 @@ public class TestDynamicInputFormat {
     conf.setInt(DistCpConstants.CONF_LABEL_MAX_CHUNKS_IDEAL, -1);
     conf.setInt(DistCpConstants.CONF_LABEL_MIN_RECORDS_PER_CHUNK, -1);
     conf.setInt(DistCpConstants.CONF_LABEL_SPLIT_RATIO, -1);
-    Assert.assertEquals(1,
+    Assertions.assertEquals(1,
         DynamicInputFormat.getSplitRatio(1, 1000000000, conf));
-    Assert.assertEquals(2,
+    Assertions.assertEquals(2,
         DynamicInputFormat.getSplitRatio(11000000, 10, conf));
-    Assert.assertEquals(4, DynamicInputFormat.getSplitRatio(30, 700, conf));
-    Assert.assertEquals(2, DynamicInputFormat.getSplitRatio(30, 200, conf));
+    Assertions.assertEquals(4, DynamicInputFormat.getSplitRatio(30, 700, conf));
+    Assertions.assertEquals(2, DynamicInputFormat.getSplitRatio(30, 200, conf));
 
     // Tests with valid configuration
     conf.setInt(DistCpConstants.CONF_LABEL_MAX_CHUNKS_TOLERABLE, 100);
     conf.setInt(DistCpConstants.CONF_LABEL_MAX_CHUNKS_IDEAL, 30);
     conf.setInt(DistCpConstants.CONF_LABEL_MIN_RECORDS_PER_CHUNK, 10);
     conf.setInt(DistCpConstants.CONF_LABEL_SPLIT_RATIO, 53);
-    Assert.assertEquals(53, DynamicInputFormat.getSplitRatio(3, 200, conf));
+    Assertions.assertEquals(53, DynamicInputFormat.getSplitRatio(3, 200, conf));
   }
 
   @Test
@@ -201,11 +201,11 @@ public class TestDynamicInputFormat {
         secondInputFormat.getChunkContext(configuration);
     DynamicInputChunkContext fourthContext =
         secondInputFormat.getChunkContext(configuration);
-    Assert.assertTrue("Chunk contexts from the same DynamicInputFormat " +
-        "object should be the same.",firstContext.equals(secondContext));
-    Assert.assertTrue("Chunk contexts from the same DynamicInputFormat " +
-        "object should be the same.",thirdContext.equals(fourthContext));
-    Assert.assertTrue("Contexts from different DynamicInputFormat " +
-        "objects should be different.",!firstContext.equals(thirdContext));
+    Assertions.assertTrue(firstContext.equals(secondContext), "Chunk contexts from the same DynamicInputFormat " +
+        "object should be the same.");
+    Assertions.assertTrue(thirdContext.equals(fourthContext), "Chunk contexts from the same DynamicInputFormat " +
+        "object should be the same.");
+    Assertions.assertTrue(!firstContext.equals(thirdContext), "Contexts from different DynamicInputFormat " +
+        "objects should be different.");
   }
 }

@@ -67,8 +67,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.FutureIO;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
 import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
@@ -120,7 +119,8 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.buildEncryptionSecrets;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
 import static org.apache.hadoop.util.functional.RemoteIterators.toList;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Utilities for the S3A tests.
@@ -465,7 +465,7 @@ public final class S3ATestUtils {
   public static <E extends Throwable> E verifyExceptionClass(Class<E> clazz,
       Exception ex)
       throws Exception {
-    Assertions.assertThat(ex)
+    assertThat(ex)
         .describedAs("Exception expected of class %s", clazz)
         .isNotNull();
     if (!(ex.getClass().equals(clazz))) {
@@ -1237,8 +1237,7 @@ public final class S3ATestUtils {
         // Log in error ensures that the details appear in the test output
         LOG.error(text + " expected {}, actual {}", expected, diff);
       }
-      Assert.assertEquals(text,
-          expected, diff);
+      assertEquals(expected, diff, text);
     }
 
     /**
@@ -1255,8 +1254,8 @@ public final class S3ATestUtils {
      * @param that the other metric diff instance.
      */
     public void assertDiffEquals(MetricDiff that) {
-      Assert.assertEquals(this.toString() + " != " + that,
-          this.diff(), that.diff());
+      Assertions.assertEquals(
+         this.diff(), that.diff(), this.toString() + " != " + that);
     }
 
     /**
@@ -1310,9 +1309,9 @@ public final class S3ATestUtils {
    * @param obj object to check
    */
   public static void assertInstanceOf(Class<?> expectedClass, Object obj) {
-    Assert.assertTrue(String.format("Expected instance of class %s, but is %s.",
-        expectedClass, obj.getClass()),
-        expectedClass.isAssignableFrom(obj.getClass()));
+    Assertions.assertTrue(
+       expectedClass.isAssignableFrom(obj.getClass()), String.format("Expected instance of class %s, but is %s.",
+        expectedClass, obj.getClass()));
   }
 
   /**
@@ -1372,27 +1371,27 @@ public final class S3ATestUtils {
       String group,
       FsPermission permission) {
     String details = status.toString();
-    assertFalse("Not a dir: " + details, status.isDirectory());
-    assertEquals("Mod time: " + details, modTime, status.getModificationTime());
-    assertEquals("File size: " + details, size, status.getLen());
-    assertEquals("Block size: " + details, blockSize, status.getBlockSize());
+    assertFalse(status.isDirectory(), "Not a dir: " + details);
+    assertEquals(modTime, status.getModificationTime(), "Mod time: " + details);
+    assertEquals(size, status.getLen(), "File size: " + details);
+    assertEquals(blockSize, status.getBlockSize(), "Block size: " + details);
     if (replication > 0) {
-      assertEquals("Replication value: " + details, replication,
-          status.getReplication());
+      assertEquals(replication
+,           status.getReplication(), "Replication value: " + details);
     }
     if (accessTime != 0) {
-      assertEquals("Access time: " + details, accessTime,
-          status.getAccessTime());
+      assertEquals(accessTime
+,           status.getAccessTime(), "Access time: " + details);
     }
     if (owner != null) {
-      assertEquals("Owner: " + details, owner, status.getOwner());
+      assertEquals(owner, status.getOwner(), "Owner: " + details);
     }
     if (group != null) {
-      assertEquals("Group: " + details, group, status.getGroup());
+      assertEquals(group, status.getGroup(), "Group: " + details);
     }
     if (permission != null) {
-      assertEquals("Permission: " + details, permission,
-          status.getPermission());
+      assertEquals(permission
+,           status.getPermission(), "Permission: " + details);
     }
   }
 
@@ -1406,19 +1405,19 @@ public final class S3ATestUtils {
       int replication,
       String owner) {
     String details = status.toString();
-    assertTrue("Is a dir: " + details, status.isDirectory());
-    assertEquals("zero length: " + details, 0, status.getLen());
+    assertTrue(status.isDirectory(), "Is a dir: " + details);
+    assertEquals(0, status.getLen(), "zero length: " + details);
     // S3AFileStatus always assigns modTime = System.currentTimeMillis()
-    assertTrue("Mod time: " + details, status.getModificationTime() > 0);
-    assertEquals("Replication value: " + details, replication,
-        status.getReplication());
-    assertEquals("Access time: " + details, 0, status.getAccessTime());
-    assertEquals("Owner: " + details, owner, status.getOwner());
+    assertTrue(status.getModificationTime() > 0, "Mod time: " + details);
+    assertEquals(replication
+,         status.getReplication(), "Replication value: " + details);
+    assertEquals(0, status.getAccessTime(), "Access time: " + details);
+    assertEquals(owner, status.getOwner(), "Owner: " + details);
     // S3AFileStatus always assigns group=owner
-    assertEquals("Group: " + details, owner, status.getGroup());
+    assertEquals(owner, status.getGroup(), "Group: " + details);
     // S3AFileStatus always assigns permission = default
-    assertEquals("Permission: " + details,
-        FsPermission.getDefault(), status.getPermission());
+    assertEquals(
+       FsPermission.getDefault(), status.getPermission(), "Permission: " + details);
   }
 
   /**
@@ -1434,7 +1433,7 @@ public final class S3ATestUtils {
     String origin = actual == null
         ? "(none)"
         : "[" + StringUtils.join(conf.getPropertySources(key), ", ") + "]";
-    Assertions.assertThat(actual)
+    assertThat(actual)
         .describedAs("Value of %s with origin %s", key, origin)
         .isEqualTo(expected);
   }
@@ -1561,15 +1560,15 @@ public final class S3ATestUtils {
         fs.listFiles(filePath.getParent(), false);
     while (listIter.hasNext()) {
       final LocatedFileStatus lfs = listIter.next();
-      assertNotEquals("Listing was not supposed to include " + filePath,
-            filePath, lfs.getPath());
+      assertNotEquals(
+           filePath, lfs.getPath(), "Listing was not supposed to include " + filePath);
     }
     LOG.info("{}; file omitted from listFiles listing as expected.", filePath);
 
     final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
     for (FileStatus fileStatus : fileStatuses) {
-      assertNotEquals("Listing was not supposed to include " + filePath,
-            filePath, fileStatus.getPath());
+      assertNotEquals(
+           filePath, fileStatus.getPath(), "Listing was not supposed to include " + filePath);
     }
     LOG.info("{}; file omitted from listStatus as expected.", filePath);
   }
@@ -1597,10 +1596,10 @@ public final class S3ATestUtils {
         listStatusHasIt = true;
       }
     }
-    assertTrue("fs.listFiles didn't include " + filePath,
-          listFilesHasIt);
-    assertTrue("fs.listStatus didn't include " + filePath,
-          listStatusHasIt);
+    assertTrue(
+         listFilesHasIt, "fs.listFiles didn't include " + filePath);
+    assertTrue(
+         listStatusHasIt, "fs.listStatus didn't include " + filePath);
   }
 
   /**
@@ -1766,12 +1765,12 @@ public final class S3ATestUtils {
   public static void assertStreamIsNotChecksummed(final S3AInputStream wrappedS3A) {
     final ResponseInputStream<GetObjectResponse> wrappedStream =
         wrappedS3A.getWrappedStream();
-    Assertions.assertThat(wrappedStream)
+    assertThat(wrappedStream)
         .describedAs("wrapped stream is not open: call read() on %s", wrappedS3A)
         .isNotNull();
 
     final InputStream inner = getInnermostStream(wrappedStream);
-    Assertions.assertThat(inner)
+    assertThat(inner)
         .describedAs("innermost stream of %s", wrappedS3A)
         .isNotInstanceOf(ChecksumValidatingInputStream.class)
         .isNotInstanceOf(S3ChecksumValidatingInputStream.class);

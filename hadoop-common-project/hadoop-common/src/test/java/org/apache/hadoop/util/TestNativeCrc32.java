@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.Assume.*;
 
 import java.nio.ByteBuffer;
@@ -27,8 +27,8 @@ import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -61,12 +61,12 @@ public class TestNativeCrc32 {
     this.checksumType = checksumType;
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     assumeTrue(NativeCrc32.isAvailable());
     assertEquals(
-      "These tests assume they can write a checksum value as a 4-byte int.", 4,
-      checksumType.size);
+    4
+,       checksumType.size, "These tests assume they can write a checksum value as a 4-byte int.");
     Configuration conf = new Configuration();
     bytesPerChecksum = conf.getInt(IO_BYTES_PER_CHECKSUM_KEY,
       IO_BYTES_PER_CHECKSUM_DEFAULT);

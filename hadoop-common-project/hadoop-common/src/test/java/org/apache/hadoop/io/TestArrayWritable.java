@@ -18,13 +18,11 @@
 
 package org.apache.hadoop.io;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 
 /** Unit tests for ArrayWritable */
@@ -73,7 +71,7 @@ public class TestArrayWritable {
     arrayWritable.set(elements);
     Object array = arrayWritable.toArray();
   
-    assertTrue("TestArrayWritable testArrayWritableToArray error!!! ", array instanceof Text[]);
+    assertTrue(array instanceof Text[], "TestArrayWritable testArrayWritableToArray error!!! ");
     Text[] destElements = (Text[]) array;
   
     for (int i = 0; i < elements.length; i++) {
@@ -84,9 +82,11 @@ public class TestArrayWritable {
   /**
    * test {@link ArrayWritable} constructor with null
    */
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testNullArgument() {
-    new ArrayWritable((Class<? extends Writable>) null);
+      assertThrows(IllegalArgumentException.class, () -> {
+          new ArrayWritable((Class<? extends Writable>) null);
+      });
   }
 
   /**
@@ -96,10 +96,10 @@ public class TestArrayWritable {
   public void testArrayWritableStringConstructor() {
     String[] original = { "test1", "test2", "test3" };
     ArrayWritable arrayWritable = new ArrayWritable(original);
-    assertEquals("testArrayWritableStringConstructor class error!!!", 
-        Text.class, arrayWritable.getValueClass());
-    assertArrayEquals("testArrayWritableStringConstructor toString error!!!",
-      original, arrayWritable.toStrings());
+    assertEquals(
+        Text.class, arrayWritable.getValueClass(), "testArrayWritableStringConstructor class error!!!");
+    assertArrayEquals(
+     original, arrayWritable.toStrings(), "testArrayWritableStringConstructor toString error!!!");
   }
   
 }

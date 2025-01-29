@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Hashtable;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -95,32 +95,35 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
     assertEquals(properties, fetchedProperties);
   }
 
-  @Test (expected = Exception.class)
+  @Test
   public void testBase64InvalidFileSystemProperties() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final Hashtable<String, String> properties = new Hashtable<>();
-    properties.put("key", "{ value: value歲 }");
-    TracingContext tracingContext = getTestTracingContext(fs, true);
-    fs.getAbfsStore().setFilesystemProperties(properties, tracingContext);
-    Hashtable<String, String> fetchedProperties = fs.getAbfsStore()
-        .getFilesystemProperties(tracingContext);
-
-    assertEquals(properties, fetchedProperties);
+    assertThrows(Exception.class, ()->{
+      final AzureBlobFileSystem fs = getFileSystem();
+      final Hashtable<String, String> properties = new Hashtable<>();
+      properties.put("key", "{ value: value歲 }");
+      TracingContext tracingContext = getTestTracingContext(fs, true);
+      fs.getAbfsStore().setFilesystemProperties(properties, tracingContext);
+      Hashtable<String, String> fetchedProperties = fs.getAbfsStore()
+         .getFilesystemProperties(tracingContext);
+      assertEquals(properties, fetchedProperties);
+    });
   }
 
-  @Test (expected = Exception.class)
+  @Test
   public void testBase64InvalidPathProperties() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final Hashtable<String, String> properties = new Hashtable<>();
-    properties.put("key", "{ value: valueTest兩 }");
-    Path testPath = path(TEST_PATH);
-    touch(testPath);
-    TracingContext tracingContext = getTestTracingContext(fs, true);
-    fs.getAbfsStore().setPathProperties(testPath, properties, tracingContext);
-    Hashtable<String, String> fetchedProperties = fs.getAbfsStore()
-        .getPathStatus(testPath, tracingContext);
+    assertThrows(Exception.class, ()->{
+      final AzureBlobFileSystem fs = getFileSystem();
+      final Hashtable<String, String> properties = new Hashtable<>();
+      properties.put("key", "{ value: valueTest兩 }");
+      Path testPath = path(TEST_PATH);
+      touch(testPath);
+      TracingContext tracingContext = getTestTracingContext(fs, true);
+      fs.getAbfsStore().setPathProperties(testPath, properties, tracingContext);
+      Hashtable<String, String> fetchedProperties = fs.getAbfsStore()
+          .getPathStatus(testPath, tracingContext);
 
-    assertEquals(properties, fetchedProperties);
+      assertEquals(properties, fetchedProperties);
+    });
   }
 
   @Test

@@ -18,7 +18,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;

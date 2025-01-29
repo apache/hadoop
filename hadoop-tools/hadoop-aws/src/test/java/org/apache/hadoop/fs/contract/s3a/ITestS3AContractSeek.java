@@ -24,8 +24,8 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
@@ -191,10 +191,10 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
       int length) {
     for (int i = 0; i < length; i++) {
       int o = readOffset + i;
-      assertEquals(operation + " with seek policy " + seekPolicy
+      assertEquals(
+         DATASET[o], data[i], operation + " with seek policy " + seekPolicy
           + "and read offset " + readOffset
-          + ": data[" + i + "] != DATASET[" + o + "]",
-          DATASET[o], data[i]);
+          + ": data[" + i + "] != DATASET[" + o + "]");
     }
   }
 
@@ -203,7 +203,7 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
     return (S3AFileSystem) super.getFileSystem();
   }
 
-  @Before
+  @BeforeEach
   public void validateSSLChannelMode() {
     if (this.sslChannelMode == OpenSSL) {
       assumeTrue(NativeCodeLoader.isNativeCodeLoaded() &&
@@ -243,7 +243,7 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
     try (FSDataInputStream in = fs.open(path)) {
       final byte[] temp = new byte[5];
       readAtEndAndReturn(in);
-      assertEquals("current position", 1, (int)(in.getPos()));
+      assertEquals(1, (int)(in.getPos()), "current position");
       in.readFully(READAHEAD, temp);
       assertDatasetEquals(READAHEAD, "read exactly on boundary",
           temp, temp.length);
@@ -289,7 +289,7 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
       in.seek(offset);
       // expect to read at least one byte.
       int l = in.read(temp);
-      assertTrue("Reading in temp data", l > 0);
+      assertTrue(l > 0, "Reading in temp data");
       LOG.info("Read of byte array at offset {} returned {} bytes", offset, l);
       assertDatasetEquals(offset, "read at end of boundary", temp, l);
     }
@@ -310,7 +310,7 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
       // expect to read at least one byte.
       int l = in.read(temp);
       LOG.info("Read of byte array at offset {} returned {} bytes", offset, l);
-      assertTrue("Reading in temp data", l > 0);
+      assertTrue(l > 0, "Reading in temp data");
       assertDatasetEquals(offset, "read at end of boundary", temp, l);
     }
   }

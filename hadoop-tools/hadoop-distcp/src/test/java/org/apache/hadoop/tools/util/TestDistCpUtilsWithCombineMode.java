@@ -25,11 +25,11 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +50,7 @@ public class TestDistCpUtilsWithCombineMode {
   @Rule
   public TestName testName = new TestName();
 
-  @Before
+  @BeforeEach
   public void create() throws IOException {
     config = new Configuration();
     if (testName.getMethodName().contains("WithCombineMode")) {
@@ -64,7 +64,7 @@ public class TestDistCpUtilsWithCombineMode {
         .build();
   }
 
-  @After
+  @AfterEach
   public void destroy() {
     if (cluster != null) {
       cluster.shutdown();
@@ -85,7 +85,7 @@ public class TestDistCpUtilsWithCombineMode {
   public void testChecksumsComparisonWithoutCombineMode() {
     try {
       compareSameContentButDiffBlockSizes();
-      Assert.fail("Expected comparison to fail");
+      Assertions.fail("Expected comparison to fail");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains(
           "Checksum mismatch", e);

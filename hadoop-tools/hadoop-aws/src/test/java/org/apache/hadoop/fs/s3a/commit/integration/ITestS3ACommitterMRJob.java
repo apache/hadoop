@@ -39,7 +39,7 @@ import org.apache.hadoop.util.Sets;
 import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
@@ -516,9 +516,9 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
      * @throws Throwable failure.
      */
     public void validate() throws Throwable {
-      assertNotNull("Not bound to a cluster", binding);
-      assertNotNull("No cluster filesystem", getClusterFS());
-      assertNotNull("No yarn cluster", binding.getYarn());
+      assertNotNull(binding, "Not bound to a cluster");
+      assertNotNull(getClusterFS(), "No cluster filesystem");
+      assertNotNull(binding.getYarn(), "No yarn cluster");
     }
   }
 

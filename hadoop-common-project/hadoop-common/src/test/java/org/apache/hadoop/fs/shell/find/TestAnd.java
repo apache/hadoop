@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.shell.find;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.fs.shell.PathData;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestAnd {
 

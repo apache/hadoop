@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.util.UUID;
 
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -68,8 +68,8 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     assertMkdirs(fs, path); //checks that mkdirs returns true
     long timeCreated = fs.getFileStatus(path).getModificationTime();
     assertMkdirs(fs, path); //call to existing dir should return success
-    assertEquals("LMT should not be updated for existing dir", timeCreated,
-        fs.getFileStatus(path).getModificationTime());
+    assertEquals(timeCreated
+,         fs.getFileStatus(path).getModificationTime(), "LMT should not be updated for existing dir");
   }
 
   @Test

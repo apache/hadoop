@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
@@ -38,7 +38,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 public class TestCallQueueManager {
@@ -261,7 +262,8 @@ public class TestCallQueueManager {
     assertCanPut(manager, 0, 1);
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testSwapUnderContention() throws InterruptedException {
     manager = new CallQueueManager<FakeCall>(queueClass, schedulerClass, false,
         5000, "", conf);
@@ -473,7 +475,7 @@ public class TestCallQueueManager {
       cqm.add(call);
       fail("didn't throw");
     } catch (Exception ex) {
-      assertTrue(ex.toString(), ex instanceof CallQueueOverflowException);
+      assertTrue(ex instanceof CallQueueOverflowException, ex.toString());
     }
 
     // backoff disabled, put is put to queue.
@@ -500,7 +502,7 @@ public class TestCallQueueManager {
       cqm.put(call);
       fail("didn't fail");
     } catch (Exception ex) {
-      assertTrue(ex.toString(), ex instanceof CallQueueOverflowException);
+      assertTrue(ex instanceof CallQueueOverflowException, ex.toString());
     }
     verify(queue, times(0)).put(call);
     verify(queue, times(0)).add(call);
@@ -513,7 +515,7 @@ public class TestCallQueueManager {
       cqm.add(call);
       fail("didn't fail");
     } catch (Exception ex) {
-      assertTrue(ex.toString(), ex instanceof CallQueueOverflowException);
+      assertTrue(ex instanceof CallQueueOverflowException, ex.toString());
     }
     verify(queue, times(0)).put(call);
     verify(queue, times(0)).add(call);

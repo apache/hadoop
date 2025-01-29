@@ -22,8 +22,8 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.*;
 
@@ -33,7 +33,7 @@ import static org.mockito.Mockito.*;
 public class TestCryptoOutputStreamClosing {
   private static CryptoCodec codec;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     codec = CryptoCodec.getInstance(new Configuration());
   }

@@ -26,7 +26,7 @@ import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -161,7 +161,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
             readStream(in),
         always(NO_HEAD_OR_LIST),
         with(STREAM_READ_OPENED, 1));
-    assertEquals("bytes read from file", fileLength, readLen);
+    assertEquals(fileLength, readLen, "bytes read from file");
   }
 
   @Test
@@ -223,7 +223,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
 
     LOG.info("Statistics of read stream {}", statsString);
 
-    assertEquals("bytes read from file", shortLen, r2);
+    assertEquals(shortLen, r2, "bytes read from file");
     // no bytes were discarded.
     bytesDiscarded.assertDiffEquals(0);
   }
@@ -249,7 +249,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
           return in;
         });
         in.seek(longLen - 1);
-        assertEquals("read past real EOF on " + in, -1, in.read());
+        assertEquals(-1, in.read(), "read past real EOF on " + in);
         return in.toString();
       }
     },

@@ -25,9 +25,10 @@ import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.mapred.CopyMapper.FileAction;
 
-import org.junit.Assert;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.io.File;
@@ -57,11 +58,12 @@ public class TestRetriableFileCopyCommand {
     } catch (Exception e) {
       actualEx = e;
     }
-    assertNotNull("close didn't fail", actualEx);
+    assertNotNull(actualEx, "close didn't fail");
     assertEquals(expectedEx, actualEx);
   }
 
-  @Test(timeout = 40000)
+  @Test
+  @Timeout(value = 40)
   public void testGetNumBytesToRead() {
     long pos = 100;
     long buffLength = 1024;
@@ -71,14 +73,14 @@ public class TestRetriableFileCopyCommand {
                     FileAction.OVERWRITE);
     long numBytes = retriableFileCopyCommand
             .getNumBytesToRead(fileLength, pos, buffLength);
-    Assert.assertEquals(1024, numBytes);
+    Assertions.assertEquals(1024, numBytes);
     pos += numBytes;
     numBytes = retriableFileCopyCommand
             .getNumBytesToRead(fileLength, pos, buffLength);
-    Assert.assertEquals(934, numBytes);
+    Assertions.assertEquals(934, numBytes);
     pos += numBytes;
     numBytes = retriableFileCopyCommand
             .getNumBytesToRead(fileLength, pos, buffLength);
-    Assert.assertEquals(0, numBytes);
+    Assertions.assertEquals(0, numBytes);
   }
 }

@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.util.Set;
 
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.Path;
 
@@ -54,7 +54,7 @@ public class ITestS3AClosedFS extends AbstractS3ATestBase {
   private static final Set<String> THREAD_SET =
       listInitialThreadsForLifecycleChecks();
 
-  @AfterClass
+  @AfterAll
   public static void checkForThreadLeakage() {
     Assertions.assertThat(getCurrentThreadNames())
         .describedAs("The threads at the end of the test run")

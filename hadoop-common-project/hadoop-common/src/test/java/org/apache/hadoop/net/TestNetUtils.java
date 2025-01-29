@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.net;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -48,9 +48,9 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Shell;
 
 import org.junit.Assume;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -193,8 +193,8 @@ public class TestNetUtils {
     long durationNano = System.nanoTime() - startNanos;
     long millis = TimeUnit.MILLISECONDS.convert(
         durationNano, TimeUnit.NANOSECONDS);
-    assertTrue("Expected " + expectedMillis + "ms, but took " + millis,
-        Math.abs(millis - expectedMillis) < TIME_FUDGE_MILLIS);
+    assertTrue(
+       Math.abs(millis - expectedMillis) < TIME_FUDGE_MILLIS, "Expected " + expectedMillis + "ms, but took " + millis);
   }
   
   /**
@@ -209,10 +209,12 @@ public class TestNetUtils {
     assertNull(NetUtils.getLocalInetAddress(null));
   }
 
-  @Test(expected=UnknownHostException.class)
+  @Test
   public void testVerifyHostnamesException() throws UnknownHostException {
-    String[] names = {"valid.host.com", "1.com", "invalid host here"};
-    NetUtils.verifyHostnames(names);
+    assertThrows(UnknownHostException.class, ()->{
+      String[] names = {"valid.host.com", "1.com", "invalid host here"};
+      NetUtils.verifyHostnames(names);
+    });
   }  
 
   @Test
@@ -440,7 +442,7 @@ public class TestNetUtils {
   }
 
   private String extractExceptionMessage(Exception e) throws Throwable {
-    assertNotNull("Null Exception", e);
+    assertNotNull(e, "Null Exception");
     String message = e.getMessage();
     if (message == null) {
       throw new AssertionError("Empty text in exception " + e)
@@ -463,7 +465,7 @@ public class TestNetUtils {
   private IOException verifyExceptionClass(IOException e,
                                            Class expectedClass)
       throws Throwable {
-    assertNotNull("Null Exception", e);
+    assertNotNull(e, "Null Exception");
     IOException wrapped = NetUtils.wrapException("desthost", DEST_PORT,
          "localhost", LOCAL_PORT, e);
     LOG.info(wrapped.toString(), wrapped);
@@ -478,12 +480,12 @@ public class TestNetUtils {
   static NetUtilsTestResolver resolver;
   static Configuration config;
   
-  @BeforeClass
+  @BeforeAll
   public static void setupResolver() {
     resolver = NetUtilsTestResolver.install();
   }
   
-  @Before
+  @BeforeEach
   public void resetResolver() {
     resolver.reset();
     config = new Configuration();
@@ -739,13 +741,13 @@ public class TestNetUtils {
     // when ipaddress is normalized, same address is expected in return
     assertEquals(summary, hosts.get(0), normalizedHosts.get(0));
     // for normalizing a resolvable hostname, resolved ipaddress is expected in return
-    assertFalse("Element 1 equal "+ summary,
-        normalizedHosts.get(1).equals(hosts.get(1)));
+    assertFalse(
+       normalizedHosts.get(1).equals(hosts.get(1)), "Element 1 equal "+ summary);
     assertEquals(summary, hosts.get(0), normalizedHosts.get(1));
     // this address HADOOP-8372: when normalizing a valid resolvable hostname start with numeric, 
     // its ipaddress is expected to return
-    assertFalse("Element 2 equal " + summary,
-        normalizedHosts.get(2).equals(hosts.get(2)));
+    assertFalse(
+       normalizedHosts.get(2).equals(hosts.get(2)), "Element 2 equal " + summary);
     // return the same hostname after normalizing a irresolvable hostname.
     assertEquals(summary, hosts.get(3), normalizedHosts.get(3));
   }

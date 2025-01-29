@@ -20,10 +20,10 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test {@link DecodingValidator} under various decoders.
@@ -68,7 +68,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
     this.erasedParityIndexes = erasedParityIndexes;
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     if (encoderFactoryClass == NativeRSRawErasureCoderFactory.class
         || encoderFactoryClass == NativeXORRawErasureCoderFactory.class) {
@@ -119,7 +119,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
     try {
       encoder.encode(dataChunks, parityChunks);
     } catch (Exception e) {
-      Assert.fail("Should not get Exception: " + e.getMessage());
+      Assertions.fail("Should not get Exception: " + e.getMessage());
     }
 
     // decode
@@ -133,7 +133,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
     try {
       decoder.decode(inputChunks, erasedIndexes, recoveredChunks);
     } catch (Exception e) {
-      Assert.fail("Should not get Exception: " + e.getMessage());
+      Assertions.fail("Should not get Exception: " + e.getMessage());
     }
 
     // validate
@@ -146,7 +146,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
       validator.validate(clonedInputChunks, clonedErasedIndexes,
           clonedRecoveredChunks);
     } catch (Exception e) {
-      Assert.fail("Should not get Exception: " + e.getMessage());
+      Assertions.fail("Should not get Exception: " + e.getMessage());
     }
 
     // Check if input buffers' positions are moved to the end
@@ -154,8 +154,8 @@ public class TestDecodingValidator extends TestRawCoderBase {
 
     // Check if validator does not change recovered chunks and erased indexes
     verifyChunksEqual(recoveredChunks, clonedRecoveredChunks);
-    Assert.assertArrayEquals("Erased indexes should not be changed",
-        erasedIndexes, clonedErasedIndexes);
+    Assertions.assertArrayEquals(
+       erasedIndexes, clonedErasedIndexes, "Erased indexes should not be changed");
 
     // Check if validator uses correct indexes for validation
     List<Integer> validIndexesList =
@@ -167,23 +167,23 @@ public class TestDecodingValidator extends TestRawCoderBase {
     List<Integer> erasedIndexesList =
         IntStream.of(erasedIndexes).boxed().collect(Collectors.toList());
     int newErasedIndex = validator.getNewErasedIndex();
-    Assert.assertTrue(
-        "Valid indexes for validation should contain"
-        + " erased indexes for decoding",
-        newValidIndexesList.containsAll(erasedIndexesList));
-    Assert.assertTrue(
-        "An erased index for validation should be contained"
-        + " in valid indexes for decoding",
-        validIndexesList.contains(newErasedIndex));
-    Assert.assertFalse(
-        "An erased index for validation should not be contained"
-        + " in valid indexes for validation",
-        newValidIndexesList.contains(newErasedIndex));
+    Assertions.assertTrue(
+    
+       newValidIndexesList.containsAll(erasedIndexesList), "Valid indexes for validation should contain"
+        + " erased indexes for decoding");
+    Assertions.assertTrue(
+    
+       validIndexesList.contains(newErasedIndex), "An erased index for validation should be contained"
+        + " in valid indexes for decoding");
+    Assertions.assertFalse(
+    
+       newValidIndexesList.contains(newErasedIndex), "An erased index for validation should not be contained"
+        + " in valid indexes for validation");
   }
 
   private void verifyChunksEqual(ECChunk[] chunks1, ECChunk[] chunks2) {
     boolean result = Arrays.deepEquals(toArrays(chunks1), toArrays(chunks2));
-    assertTrue("Recovered chunks should not be changed", result);
+    assertTrue(result, "Recovered chunks should not be changed");
   }
 
   /**
@@ -206,7 +206,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
     try {
       encoder.encode(dataChunks, parityChunks);
     } catch (Exception e) {
-      Assert.fail("Should not get Exception: " + e.getMessage());
+      Assertions.fail("Should not get Exception: " + e.getMessage());
     }
 
     // decode
@@ -220,7 +220,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
     try {
       decoder.decode(inputChunks, erasedIndexes, recoveredChunks);
     } catch (Exception e) {
-      Assert.fail("Should not get Exception: " + e.getMessage());
+      Assertions.fail("Should not get Exception: " + e.getMessage());
     }
 
     // validate
@@ -228,7 +228,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
     polluteSomeChunk(recoveredChunks);
     try {
       validator.validate(inputChunks, erasedIndexes, recoveredChunks);
-      Assert.fail("Validation should fail due to bad decoding");
+      Assertions.fail("Validation should fail due to bad decoding");
     } catch (InvalidDecodingException e) {
       String expected = "Failed to validate decoding";
       GenericTestUtils.assertExceptionContains(expected, e);

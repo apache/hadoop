@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
@@ -56,8 +56,8 @@ public class TestMultithreadedTestUtil {
     assertEquals(3, threadsRun.get());
     // Test shouldn't have waited the full 30 seconds, since
     // the threads exited faster than that.
-    assertTrue("Test took " + (et - st) + "ms",
-        et - st < 5000);
+    assertTrue(
+       et - st < 5000, "Test took " + (et - st) + "ms");
   }
 
   @Test
@@ -81,8 +81,8 @@ public class TestMultithreadedTestUtil {
     long et = Time.now();
     // Test shouldn't have waited the full 30 seconds, since
     // the thread throws faster than that
-    assertTrue("Test took " + (et - st) + "ms",
-        et - st < 5000);
+    assertTrue(
+       et - st < 5000, "Test took " + (et - st) + "ms");
   }
 
   @Test
@@ -106,8 +106,8 @@ public class TestMultithreadedTestUtil {
     long et = Time.now();
     // Test shouldn't have waited the full 30 seconds, since
     // the thread throws faster than that
-    assertTrue("Test took " + (et - st) + "ms",
-        et - st < 5000);
+    assertTrue(
+       et - st < 5000, "Test took " + (et - st) + "ms");
   }
 
   @Test
@@ -129,11 +129,11 @@ public class TestMultithreadedTestUtil {
     long elapsed = et - st;
 
     // Test should have waited just about 3 seconds
-    assertTrue("Test took " + (et - st) + "ms",
-        Math.abs(elapsed - 3000) < 500);
+    assertTrue(
+       Math.abs(elapsed - 3000) < 500, "Test took " + (et - st) + "ms");
     // Counter should have been incremented lots of times in 3 full seconds
-    assertTrue("Counter value = " + counter.get(),
-        counter.get() > 1000);
+    assertTrue(
+       counter.get() > 1000, "Counter value = " + counter.get());
   }
 
 }

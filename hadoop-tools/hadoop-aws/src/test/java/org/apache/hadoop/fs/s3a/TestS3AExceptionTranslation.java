@@ -27,7 +27,7 @@ import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.maybeTranslateAudi
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractChannelException;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.*;
 import static org.apache.hadoop.test.LambdaTestUtils.verifyCause;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -38,7 +38,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
@@ -47,7 +47,7 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.api.UnsupportedRequestException;
@@ -77,7 +77,7 @@ public class TestS3AExceptionTranslation extends AbstractHadoopTestBase {
    */
   private S3ARetryPolicy retryPolicy;
 
-  @Before
+  @BeforeEach
   public void setup() {
     retryPolicy = new S3ARetryPolicy(new Configuration(false));
   }
@@ -106,8 +106,8 @@ public class TestS3AExceptionTranslation extends AbstractHadoopTestBase {
   }
 
   protected void assertContained(String text, String contained) {
-    assertTrue("string \""+ contained + "\" not found in \"" + text + "\"",
-        text != null && text.contains(contained));
+    assertTrue(
+       text != null && text.contains(contained), "string \""+ contained + "\" not found in \"" + text + "\"");
   }
 
   protected <E extends Throwable> E verifyTranslated(
@@ -192,7 +192,7 @@ public class TestS3AExceptionTranslation extends AbstractHadoopTestBase {
   }
 
   protected void assertStatusCode(int expected, AWSServiceIOException ex) {
-    assertNotNull("Null exception", ex);
+    assertNotNull(ex, "Null exception");
     if (expected != ex.statusCode()) {
       throw new AssertionError("Expected status code " + expected
           + "but got " + ex.statusCode(),
@@ -260,22 +260,27 @@ public class TestS3AExceptionTranslation extends AbstractHadoopTestBase {
         new InterruptedIOException("ioirq"));
   }
 
-  @Test(expected = InterruptedIOException.class)
+  @Test
   public void testExtractInterrupted() throws Throwable {
-    throw extractException("", "",
-        new ExecutionException(
-            SdkException.builder()
-                .cause(new InterruptedException(""))
-                .build()));
+    assertThrows(InterruptedIOException.class, ()->{
+      throw extractException("", "",
+              new ExecutionException(
+                      SdkException.builder()
+                              .cause(new InterruptedException(""))
+                              .build()));
+    });
   }
 
-  @Test(expected = InterruptedIOException.class)
+  @Test
   public void testExtractInterruptedIO() throws Throwable {
-    throw extractException("", "",
-        new ExecutionException(
-            SdkException.builder()
-                .cause(new InterruptedIOException(""))
-                .build()));
+    assertThrows(InterruptedIOException.class, () -> {
+      throw extractException("", "",
+              new ExecutionException(
+                      SdkException.builder()
+                              .cause(new InterruptedIOException(""))
+                              .build()));
+
+    });
   }
 
   @Test

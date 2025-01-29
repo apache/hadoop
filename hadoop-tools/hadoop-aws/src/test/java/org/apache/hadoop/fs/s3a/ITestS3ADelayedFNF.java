@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
 

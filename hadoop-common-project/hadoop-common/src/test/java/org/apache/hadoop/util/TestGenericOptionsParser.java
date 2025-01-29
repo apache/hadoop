@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -45,9 +45,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
@@ -69,7 +69,7 @@ public class TestGenericOptionsParser {
     args[1] = tmpFile.toURI().toString();
     new GenericOptionsParser(conf, args);
     String files = conf.get("tmpfiles");
-    assertNotNull("files is null", files);
+    assertNotNull(files, "files is null");
     assertEquals("files option does not match",
       localFs.makeQualified(tmpPath).toString(), files);
     
@@ -80,7 +80,7 @@ public class TestGenericOptionsParser {
     args[1] = tmpURI.toString();
     new GenericOptionsParser(conf1, args);
     files = conf1.get("tmpfiles");
-    assertNotNull("files is null", files);
+    assertNotNull(files, "files is null");
     assertEquals("files option does not match", 
       localFs.makeQualified(new Path(tmpURI)).toString(), files);
    
@@ -95,11 +95,11 @@ public class TestGenericOptionsParser {
     } catch (Exception e) {
       th = e;
     }
-    assertNotNull("throwable is null", th);
-    assertTrue("FileNotFoundException is not thrown",
-      th instanceof FileNotFoundException);
+    assertNotNull(th, "throwable is null");
+    assertTrue(
+     th instanceof FileNotFoundException, "FileNotFoundException is not thrown");
     files = conf2.get("tmpfiles");
-    assertNull("files is not null", files);
+    assertNull(files, "files is not null");
   }
 
   @Test
@@ -116,7 +116,7 @@ public class TestGenericOptionsParser {
     args[1] = tmpJar.toURI().toString();
     new GenericOptionsParser(conf, args);
     String libjars = conf.get("tmpjars");
-    assertNotNull("libjars is null", libjars);
+    assertNotNull(libjars, "libjars is null");
     assertEquals("libjars does not match",
         localFs.makeQualified(tmpJarPath).toString(), libjars);
 
@@ -124,7 +124,7 @@ public class TestGenericOptionsParser {
     args[1] = testDir.toURI().toString() + "*";
     new GenericOptionsParser(conf, args);
     libjars = conf.get("tmpjars");
-    assertNotNull("libjars is null", libjars);
+    assertNotNull(libjars, "libjars is null");
     assertEquals("libjars does not match",
         localFs.makeQualified(tmpJarPath).toString(), libjars);
   }
@@ -229,7 +229,7 @@ public class TestGenericOptionsParser {
       "bar", g.getCommandLine().getOptionValues("conf")[1]);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     localFs = FileSystem.getLocal(conf);
@@ -238,7 +238,7 @@ public class TestGenericOptionsParser {
       localFs.delete(new Path(testDir.toString()), true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if(testDir.exists()) {
       localFs.delete(new Path(testDir.toString()), true);
@@ -270,8 +270,8 @@ public class TestGenericOptionsParser {
       th = e;
     }
     assertNotNull(th);
-    assertTrue("FileNotFoundException is not thrown",
-        th instanceof FileNotFoundException);
+    assertTrue(
+       th instanceof FileNotFoundException, "FileNotFoundException is not thrown");
     
     // create file
     Path tmpPath = localFs.makeQualified(new Path(tmpFile.toString()));
@@ -284,7 +284,7 @@ public class TestGenericOptionsParser {
 
     new GenericOptionsParser(conf, args);
     String fileName = conf.get("mapreduce.job.credentials.binary");
-    assertNotNull("files is null", fileName);
+    assertNotNull(fileName, "files is null");
     assertEquals("files option does not match", tmpPath.toString(), fileName);
     
     Credentials ugiCreds =
@@ -380,8 +380,8 @@ public class TestGenericOptionsParser {
     }
 
     assertArrayEquals(
-      Arrays.toString(remainingArgs) + Arrays.toString(expectedRemainingArgs),
-      expectedRemainingArgs, remainingArgs);
+    
+     expectedRemainingArgs, remainingArgs, Arrays.toString(remainingArgs) + Arrays.toString(expectedRemainingArgs));
   }
 
   /** Test passing null as args. Some classes still call

@@ -35,11 +35,12 @@ import org.apache.hadoop.fs.azurebfs.utils.Base64;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SSL_CHANNEL_MODE_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test ConfigurationServiceFieldsValidation.
@@ -174,13 +175,15 @@ public class TestAbfsConfigurationFieldsValidation {
             .isEqualTo(this.encodedAccountKey);
   }
 
-  @Test(expected = KeyProviderException.class)
+  @Test
   public void testGetAccountKeyWithNonExistingAccountName() throws Exception {
-    Configuration configuration = new Configuration();
-    configuration.addResource(TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME);
-    configuration.unset(ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME);
-    AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
-    abfsConfig.getStorageAccountKey();
+    assertThrows(KeyProviderException.class, () -> {
+      Configuration configuration = new Configuration();
+      configuration.addResource(TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME);
+      configuration.unset(ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME);
+      AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, "bogusAccountName");
+      abfsConfig.getStorageAccountKey();
+    });
   }
 
   @Test

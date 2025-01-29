@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.Path;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 

@@ -19,7 +19,7 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the raw erasure coder benchmark tool.

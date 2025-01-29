@@ -26,7 +26,7 @@ import java.util.Random;
 import java.util.Set;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -58,12 +58,14 @@ public class ITestAzureBlobFileSystemAppend extends
     super();
   }
 
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testAppendDirShouldFail() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final Path filePath = path(TEST_FILE_PATH);
-    fs.mkdirs(filePath);
-    fs.append(filePath, 0).close();
+    assertThrows(FileNotFoundException.class, ()->{
+      final AzureBlobFileSystem fs = getFileSystem();
+      final Path filePath = path(TEST_FILE_PATH);
+      fs.mkdirs(filePath);
+      fs.append(filePath, 0).close();
+    });
   }
 
   @Test
@@ -78,22 +80,26 @@ public class ITestAzureBlobFileSystemAppend extends
   }
 
 
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testAppendFileAfterDelete() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final Path filePath = path(TEST_FILE_PATH);
-    ContractTestUtils.touch(fs, filePath);
-    fs.delete(filePath, false);
+    assertThrows(FileNotFoundException.class, () -> {
+      final AzureBlobFileSystem fs = getFileSystem();
+      final Path filePath = path(TEST_FILE_PATH);
+      ContractTestUtils.touch(fs, filePath);
+      fs.delete(filePath, false);
 
-    fs.append(filePath).close();
+      fs.append(filePath).close();
+    });
   }
 
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testAppendDirectory() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final Path folderPath = path(TEST_FOLDER_PATH);
-    fs.mkdirs(folderPath);
-    fs.append(folderPath).close();
+    assertThrows(FileNotFoundException.class, () -> {
+      final AzureBlobFileSystem fs = getFileSystem();
+      final Path folderPath = path(TEST_FOLDER_PATH);
+      fs.mkdirs(folderPath);
+      fs.append(folderPath).close();
+    });
   }
 
   @Test

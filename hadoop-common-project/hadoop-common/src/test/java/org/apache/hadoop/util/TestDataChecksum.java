@@ -22,9 +22,9 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.ChecksumException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestDataChecksum {
 

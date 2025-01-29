@@ -14,10 +14,10 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.*;
 import java.net.URL;
@@ -43,7 +43,7 @@ public class TestFsUrlConnectionPath {
   private static final Configuration CONFIGURATION = new Configuration();
 
 
-  @BeforeClass
+  @BeforeAll
   public static void initialize() throws IOException{
     write(ABSOLUTE_PATH.substring(5), DATA);
     write(RELATIVE_PATH.substring(5), DATA);
@@ -52,7 +52,7 @@ public class TestFsUrlConnectionPath {
     URL.setURLStreamHandlerFactory(new FsUrlStreamHandlerFactory());
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup(){
     delete(ABSOLUTE_PATH.substring(5));
     delete(RELATIVE_PATH.substring(5));
@@ -83,25 +83,25 @@ public class TestFsUrlConnectionPath {
   @Test
   public void testAbsolutePath() throws Exception{
     int length = readStream(ABSOLUTE_PATH);
-    Assert.assertTrue(length > 1);
+    Assertions.assertTrue(length > 1);
   }
 
   @Test
   public void testRelativePath() throws Exception{
     int length = readStream(RELATIVE_PATH);
-    Assert.assertTrue(length > 1);
+    Assertions.assertTrue(length > 1);
   }
 
   @Test
   public void testAbsolutePathWithSpace() throws Exception{
     int length = readStream(ABSOLUTE_PATH_W_ENCODED_SPACE);
-    Assert.assertTrue(length > 1);
+    Assertions.assertTrue(length > 1);
   }
 
   @Test
   public void testRelativePathWithSpace() throws Exception{
     int length = readStream(RELATIVE_PATH_W_ENCODED_SPACE);
-    Assert.assertTrue(length > 1);
+    Assertions.assertTrue(length > 1);
   }
 
 }

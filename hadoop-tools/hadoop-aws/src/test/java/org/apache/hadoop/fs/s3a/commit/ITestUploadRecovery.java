@@ -27,7 +27,7 @@ import java.util.function.Function;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;

@@ -21,8 +21,8 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.net.URI;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -50,7 +50,7 @@ public class TestMetastoreChecking extends AbstractHadoopTestBase {
 
   private static final String BASE = "s3a://bucket";
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     fsUri = new URI(BASE +"/");
   }

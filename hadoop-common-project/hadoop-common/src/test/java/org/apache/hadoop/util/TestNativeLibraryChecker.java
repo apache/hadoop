@@ -19,8 +19,8 @@ package org.apache.hadoop.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.apache.hadoop.util.ExitUtil.ExitException;
 

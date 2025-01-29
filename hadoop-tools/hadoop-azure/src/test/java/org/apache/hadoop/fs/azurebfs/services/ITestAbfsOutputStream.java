@@ -26,7 +26,8 @@ import java.net.URL;
 import java.util.Arrays;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
@@ -50,7 +51,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 @RunWith(Parameterized.class)
 public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
 
-  private static final int TEST_EXECUTION_TIMEOUT = 2 * 60 * 1000;
+  private static final int TEST_EXECUTION_TIMEOUT = 2 * 60;
   private static final String TEST_FILE_PATH = "testfile";
 
   @Parameterized.Parameter
@@ -128,7 +129,8 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
    * Verify the passing of AzureBlobFileSystem reference to AbfsOutputStream
    * to make sure that the FS instance is not eligible for GC while writing.
    */
-  @Test(timeout = TEST_EXECUTION_TIMEOUT)
+  @Test
+  @Timeout(TEST_EXECUTION_TIMEOUT)
   public void testAzureBlobFileSystemBackReferenceInOutputStream()
       throws Exception {
     byte[] testBytes = new byte[5 * 1024];

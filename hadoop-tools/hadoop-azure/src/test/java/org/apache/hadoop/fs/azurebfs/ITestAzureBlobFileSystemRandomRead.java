@@ -25,7 +25,7 @@ import java.util.UUID;
 
 import org.junit.Assume;
 import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,7 +95,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
       // forward seek and read a kilobyte into first kilobyte of bufferV2
       inputStream.seek(5 * MEGABYTE);
       int numBytesRead = inputStream.read(buffer, 0, KILOBYTE);
-      assertEquals("Wrong number of bytes read", KILOBYTE, numBytesRead);
+      assertEquals(KILOBYTE, numBytesRead, "Wrong number of bytes read");
 
       int len = MEGABYTE;
       int offset = buffer.length - len;
@@ -103,7 +103,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
       // reverse seek and read a megabyte into last megabyte of bufferV1
       inputStream.seek(3 * MEGABYTE);
       numBytesRead = inputStream.read(buffer, offset, len);
-      assertEquals("Wrong number of bytes read after seek", len, numBytesRead);
+      assertEquals(len, numBytesRead, "Wrong number of bytes read after seek");
     }
   }
 
@@ -216,10 +216,10 @@ public class ITestAzureBlobFileSystemRandomRead extends
       );
       long elapsedTimeMs = timer.elapsedTimeMs();
       assertTrue(
-              String.format(
+      
+             elapsedTimeMs < MAX_ELAPSEDTIMEMS, String.format(
                       "There should not be any network I/O (elapsedTimeMs=%1$d).",
-                      elapsedTimeMs),
-              elapsedTimeMs < MAX_ELAPSEDTIMEMS);
+                      elapsedTimeMs));
     }
   }
 
@@ -250,7 +250,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
               }
       );
 
-      assertTrue("Test file length only " + testFileLength, testFileLength > 0);
+      assertTrue(testFileLength > 0, "Test file length only " + testFileLength);
       inputStream.seek(testFileLength);
       assertEquals(testFileLength, inputStream.getPos());
 
@@ -267,10 +267,10 @@ public class ITestAzureBlobFileSystemRandomRead extends
 
       long elapsedTimeMs = timer.elapsedTimeMs();
       assertTrue(
-              String.format(
+      
+             elapsedTimeMs < MAX_ELAPSEDTIMEMS, String.format(
                       "There should not be any network I/O (elapsedTimeMs=%1$d).",
-                      elapsedTimeMs),
-              elapsedTimeMs < MAX_ELAPSEDTIMEMS);
+                      elapsedTimeMs));
     }
   }
 
@@ -432,14 +432,14 @@ public class ITestAzureBlobFileSystemRandomRead extends
               (long) afterSeekElapsedMs,
               ratio)));
     }
-    assertTrue(String.format(
+    assertTrue(
+           ratio < maxAcceptableRatio, String.format(
             "Performance of ABFS stream after reverse seek is not acceptable:"
                     + " beforeSeekElapsedMs=%1$d, afterSeekElapsedMs=%2$d,"
                     + " ratio=%3$.2f",
             (long) beforeSeekElapsedMs,
             (long) afterSeekElapsedMs,
-            ratio),
-            ratio < maxAcceptableRatio);
+            ratio));
   }
 
   @Test
@@ -469,13 +469,13 @@ public class ITestAzureBlobFileSystemRandomRead extends
               (long) v2ElapsedMs,
               ratio));
     }
-    assertTrue(String.format(
+    assertTrue(
+           ratio < maxAcceptableRatio, String.format(
             "Performance of version 2 is not acceptable: v1ElapsedMs=%1$d,"
                     + " v2ElapsedMs=%2$d, ratio=%3$.2f",
             (long) v1ElapsedMs,
             (long) v2ElapsedMs,
-            ratio),
-            ratio < maxAcceptableRatio);
+            ratio));
   }
 
   /**
@@ -715,7 +715,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
     ContractTestUtils.assertPathExists(this.getFileSystem(), "huge file not created", testPath);
     FileStatus status = fs.getFileStatus(testPath);
     ContractTestUtils.assertIsFile(testPath, status);
-    assertTrue("File " + testPath + " is not of expected size " + fileSize + ":actual=" + status.getLen(), status.getLen() == fileSize);
+    assertTrue(status.getLen() == fileSize, "File " + testPath + " is not of expected size " + fileSize + ":actual=" + status.getLen());
     return fileSize;
   }
 
@@ -725,12 +725,12 @@ public class ITestAzureBlobFileSystemRandomRead extends
                                      byte[] bufferV2) throws IOException {
     int size = bufferV1.length;
     final int numBytesReadV1 = inputStreamV1.read(bufferV1, 0, size);
-    assertEquals("Bytes read from wasb stream", size, numBytesReadV1);
+    assertEquals(size, numBytesReadV1, "Bytes read from wasb stream");
 
     final int numBytesReadV2 = inputStreamV2.read(bufferV2, 0, size);
-    assertEquals("Bytes read from abfs stream", size, numBytesReadV2);
+    assertEquals(size, numBytesReadV2, "Bytes read from abfs stream");
 
-    assertArrayEquals("Mismatch in read data", bufferV1, bufferV2);
+    assertArrayEquals(bufferV1, bufferV2, "Mismatch in read data");
   }
 
 }

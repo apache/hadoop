@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;

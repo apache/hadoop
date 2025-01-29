@@ -27,10 +27,10 @@ import org.apache.hadoop.test.StatUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
 
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.Assume.assumeTrue;
 
 import org.slf4j.Logger;
@@ -60,7 +60,7 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
     return HAS_DRIVE_LETTER_SPECIFIER.matcher(filesys).find();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     fs = FileSystem.getLocal(conf).getRawFileSystem();

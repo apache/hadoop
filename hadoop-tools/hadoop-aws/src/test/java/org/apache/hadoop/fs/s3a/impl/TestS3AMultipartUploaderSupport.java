@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.EOFException;
 import java.io.IOException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.HadoopTestBase;
 

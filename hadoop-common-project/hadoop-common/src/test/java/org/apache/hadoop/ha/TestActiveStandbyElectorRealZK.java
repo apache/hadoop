@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.ha;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
 import java.util.UUID;
@@ -33,7 +33,8 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.server.ZooKeeperServer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.AdditionalMatchers;
 import org.mockito.Mockito;
 
@@ -88,7 +89,8 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
    * Upon becoming active the leader quits election and the test verifies that
    * the standby now becomes active.
    */
-  @Test(timeout=20000)
+  @Test
+  @Timeout(value = 20)
   public void testActiveStandbyTransition() throws Exception {
     LOG.info("starting test with parentDir:" + PARENT_DIR);
 
@@ -157,7 +159,8 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     checkFatalsAndReset();
   }
   
-  @Test(timeout=15000)
+  @Test
+  @Timeout(value = 15)
   public void testHandleSessionExpiration() throws Exception {
     ActiveStandbyElectorCallback cb = cbs[0];
     byte[] appData = appDatas[0];
@@ -199,7 +202,8 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     checkFatalsAndReset();
   }
   
-  @Test(timeout=15000)
+  @Test
+  @Timeout(value = 15)
   public void testHandleSessionExpirationOfStandby() throws Exception {
     // Let elector 0 be active
     electors[0].ensureParentZNode();
@@ -242,7 +246,8 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     checkFatalsAndReset();
   }
 
-  @Test(timeout=15000)
+  @Test
+  @Timeout(value = 15)
   public void testDontJoinElectionOnDisconnectAndReconnect() throws Exception {
     electors[0].ensureParentZNode();
 
@@ -262,7 +267,8 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
    * Test to verify that proper ZooKeeper ACLs can be updated on
    * ActiveStandbyElector's parent znode.
    */
-  @Test(timeout = 15000)
+  @Test
+  @Timeout(value = 15)
   public void testSetZooKeeperACLsOnParentZnodeName()
       throws Exception {
     ActiveStandbyElectorCallback cb =

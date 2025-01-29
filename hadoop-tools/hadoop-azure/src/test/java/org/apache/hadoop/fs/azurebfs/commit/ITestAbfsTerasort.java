@@ -28,7 +28,7 @@ import java.util.function.Consumer;
 
 import org.junit.Assume;
 import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -218,9 +218,9 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
       d.close();
     }
     dumpOutputTree(dest);
-    assertEquals(stage
+    assertEquals(0, result, stage
         + "(" + StringUtils.join(", ", args) + ")"
-        + " failed", 0, result);
+        + " failed");
     final ManifestSuccessData successFile = validateSuccessFile(getFileSystem(), dest,
         minimumFileCount, "");
     final IOStatistics iostats = successFile.getIOStatistics();

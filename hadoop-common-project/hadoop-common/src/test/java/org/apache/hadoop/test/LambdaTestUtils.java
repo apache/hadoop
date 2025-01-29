@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.test;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -699,9 +699,9 @@ public final class LambdaTestUtils {
   public static <T> void assertOptionalEquals(String message,
       T expected,
       Optional<T> actual) {
-    Assert.assertNotNull(message, actual);
-    Assert.assertTrue(message +" -not present", actual.isPresent());
-    Assert.assertEquals(message, expected, actual.get());
+    Assertions.assertNotNull(actual, message);
+    Assertions.assertTrue(actual.isPresent(), message +" -not present");
+    Assertions.assertEquals(expected, actual.get(), message);
   }
 
   /**
@@ -713,9 +713,9 @@ public final class LambdaTestUtils {
    */
   public static <T> void assertOptionalUnset(String message,
       Optional<T> actual) {
-    Assert.assertNotNull(message, actual);
+    Assertions.assertNotNull(actual, message);
     actual.ifPresent(
-        t -> Assert.fail("Expected empty option, got " + t.toString()));
+        t -> Assertions.fail("Expected empty option, got " + t.toString()));
   }
 
   /**
@@ -766,7 +766,7 @@ public final class LambdaTestUtils {
   public static<T> T notNull(String message, Callable<T> eval)
       throws Exception {
     T t = eval.call();
-    Assert.assertNotNull(message, t);
+    Assertions.assertNotNull(t, message);
     return t;
   }
 

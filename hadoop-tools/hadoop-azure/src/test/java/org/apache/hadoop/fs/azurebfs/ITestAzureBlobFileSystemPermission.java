@@ -23,9 +23,9 @@ import java.util.Collection;
 import java.util.UUID;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -87,7 +87,7 @@ public class ITestAzureBlobFileSystemPermission extends AbstractAbfsIntegrationT
     fs.create(path, permission, true, KILOBYTE, (short) 1, KILOBYTE - 1,
         null).close();
     FileStatus status = fs.getFileStatus(path);
-    Assert.assertEquals(permission.applyUMask(DEFAULT_UMASK_PERMISSION), status.getPermission());
+    Assertions.assertEquals(permission.applyUMask(DEFAULT_UMASK_PERMISSION), status.getPermission());
   }
 
   @Test
@@ -104,6 +104,6 @@ public class ITestAzureBlobFileSystemPermission extends AbstractAbfsIntegrationT
 
     fs.mkdirs(path, permission);
     FileStatus status = fs.getFileStatus(path);
-    Assert.assertEquals(permission.applyUMask(DEFAULT_UMASK_PERMISSION), status.getPermission());
+    Assertions.assertEquals(permission.applyUMask(DEFAULT_UMASK_PERMISSION), status.getPermission());
   }
 }

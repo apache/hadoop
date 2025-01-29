@@ -25,8 +25,8 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,8 +51,7 @@ public class TestShellDecryptionKeyProvider
     conf.set(SimpleKeyProvider.KEY_ACCOUNT_KEY_PREFIX + account, key);
     try {
       provider.getStorageAccountKey(account, conf);
-      Assert
-          .fail("fs.azure.shellkeyprovider.script is not specified, we should throw");
+      fail("fs.azure.shellkeyprovider.script is not specified, we should throw");
     } catch (KeyProviderException e) {
       LOG.info("Received an expected exception: " + e.getMessage());
     }

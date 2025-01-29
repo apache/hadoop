@@ -23,7 +23,7 @@ import java.nio.file.AccessDeniedException;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -69,9 +69,9 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
     Path root = new Path(uri);
 
     //See HADOOP-17323.
-    assertTrue("root path should always exist", fs.exists(root));
-    assertTrue("getFileStatus on root should always return a directory",
-            fs.getFileStatus(root).isDirectory());
+    assertTrue(fs.exists(root), "root path should always exist");
+    assertTrue(
+           fs.getFileStatus(root).isDirectory(), "getFileStatus on root should always return a directory");
 
     try {
       expectUnknownStore(
@@ -91,9 +91,9 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
     expectUnknownStore(() -> fs.exists(src));
     // now that isFile() only does a HEAD, it will get a 404 without
     // the no-such-bucket error.
-    assertFalse("isFile(" + src + ")"
-            + " was expected to complete by returning false",
-        fs.isFile(src));
+    assertFalse(
+       fs.isFile(src), "isFile(" + src + ")"
+            + " was expected to complete by returning false");
     expectUnknownStore(() -> fs.isDirectory(src));
     expectUnknownStore(() -> fs.mkdirs(src));
     expectUnknownStore(() -> fs.delete(src));
@@ -171,9 +171,9 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
     fs = FileSystem.get(uri, configuration);
     Path root = new Path(uri);
 
-    assertTrue("root path should always exist", fs.exists(root));
-    assertTrue("getFileStatus on root should always return a directory",
-        fs.getFileStatus(root).isDirectory());
+    assertTrue(fs.exists(root), "root path should always exist");
+    assertTrue(
+       fs.getFileStatus(root).isDirectory(), "getFileStatus on root should always return a directory");
   }
 
   @Test

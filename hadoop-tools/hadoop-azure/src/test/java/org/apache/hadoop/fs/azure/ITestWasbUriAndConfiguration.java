@@ -48,12 +48,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.CreateOptions;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import org.junit.After;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 
 import com.microsoft.azure.storage.StorageException;
@@ -75,12 +75,12 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
 
   private AzureBlobStorageTestAccount testAccount;
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     testAccount = AzureTestUtils.cleanupTestAccount(testAccount);
   }
 
-  @Before
+  @BeforeEach
   public void setMode() {
     runningInSASMode = AzureBlobStorageTestAccount.createTestConfiguration().
         getBoolean(AzureNativeFileSystemStore.KEY_USE_SECURE_MODE, false);
@@ -303,7 +303,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
     } catch (Exception e) {
       String errMsg = String.format(
           "Expected AzureException but got %s instead.", e);
-      assertTrue(errMsg, false);
+      assertTrue(false, errMsg);
     }
   }
 
@@ -336,11 +336,11 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
       int expectedValue) throws Exception {
     InputStream inputStream = fs.open(testFile);
     int byteRead = inputStream.read();
-    assertTrue("File unexpectedly empty: " + testFile, byteRead >= 0);
-    assertTrue("File has more than a single byte: " + testFile,
-        inputStream.read() < 0);
+    assertTrue(byteRead >= 0, "File unexpectedly empty: " + testFile);
+    assertTrue(
+       inputStream.read() < 0, "File has more than a single byte: " + testFile);
     inputStream.close();
-    assertEquals("Unxpected content in: " + testFile, expectedValue, byteRead);
+    assertEquals(expectedValue, byteRead, "Unxpected content in: " + testFile);
   }
 
   @Test
@@ -403,7 +403,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
     String result = AzureNativeFileSystemStore.getAccountKeyFromConfiguration(
         account, conf);
     // result should contain the credential provider key not the config key
-    assertEquals("AccountKey incorrect.", key, result);
+    assertEquals(key, result, "AccountKey incorrect.");
   }
 
   void provisionAccountKey(
@@ -439,7 +439,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
         "org.apache.Nonexistant.Class");
     try {
       AzureNativeFileSystemStore.getAccountKeyFromConfiguration(account, conf);
-      Assert.fail("Nonexistant key provider class should have thrown a "
+      Assertions.fail("Nonexistant key provider class should have thrown a "
           + "KeyProviderException");
     } catch (KeyProviderException e) {
     }
@@ -453,7 +453,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
     conf.set("fs.azure.account.keyprovider." + account, "java.lang.String");
     try {
       AzureNativeFileSystemStore.getAccountKeyFromConfiguration(account, conf);
-      Assert.fail("Key provider class that doesn't implement KeyProvider "
+      Assertions.fail("Key provider class that doesn't implement KeyProvider "
           + "should have thrown a KeyProviderException");
     } catch (KeyProviderException e) {
     }
@@ -659,7 +659,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
 
       conf.setBoolean(RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME, true);
       FileSystem fs1 = FileSystem.newInstance(defaultUri, conf);
-      Assert.assertEquals("getCanonicalServiceName() should return URI",
+      Assertions.assertEquals("getCanonicalServiceName() should return URI",
               fs1.getUri().toString(), fs1.getCanonicalServiceName());
     } finally {
       testAccount.cleanup();

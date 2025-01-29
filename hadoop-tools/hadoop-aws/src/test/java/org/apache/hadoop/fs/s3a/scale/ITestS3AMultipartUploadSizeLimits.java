@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a.scale;
 import java.io.File;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;

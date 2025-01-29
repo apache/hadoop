@@ -29,10 +29,10 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
 import org.apache.hadoop.security.Credentials;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -48,7 +48,7 @@ public class TestFileBasedCopyListing {
   private static MiniDFSCluster cluster;
   private static FileSystem fs;
 
-  @BeforeClass
+  @BeforeAll
   public static void create() throws IOException {
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).format(true)
                                                 .build();
@@ -56,7 +56,7 @@ public class TestFileBasedCopyListing {
     buildExpectedValuesMap();
   }
 
-  @AfterClass
+  @AfterAll
   public static void destroy() {
     if (cluster != null) {
       cluster.shutdown();
@@ -116,7 +116,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 0);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
@@ -142,7 +142,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 0);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
@@ -169,7 +169,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 1);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
@@ -195,7 +195,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 1);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
@@ -217,7 +217,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 1);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
@@ -239,7 +239,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 1);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
@@ -266,7 +266,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 3);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
@@ -292,7 +292,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 3);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
@@ -314,7 +314,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 4);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
@@ -336,7 +336,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 4);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
@@ -363,7 +363,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 4);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
@@ -390,7 +390,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 5);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
       TestDistCpUtils.delete(fs, "/tmp1");
@@ -419,7 +419,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 6);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
       TestDistCpUtils.delete(fs, "/tmp1");
@@ -444,7 +444,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 6);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
       TestDistCpUtils.delete(fs, "/tmp1");
@@ -469,7 +469,7 @@ public class TestFileBasedCopyListing {
       checkResult(listFile, 6);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing build listing", e);
-      Assert.fail("build listing failure");
+      Assertions.fail("build listing failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
       TestDistCpUtils.delete(fs, "/tmp1");
@@ -538,13 +538,13 @@ public class TestFileBasedCopyListing {
           // used for preserving root attributes etc.
           continue;
         }
-        Assert.assertEquals(fileStatus.getPath().toUri().getPath(), map.get(relPath.toString()));
+        Assertions.assertEquals(fileStatus.getPath().toUri().getPath(), map.get(relPath.toString()));
         recCount++;
       }
     } finally {
       IOUtils.closeStream(reader);
     }
-    Assert.assertEquals(recCount, count);
+    Assertions.assertEquals(recCount, count);
   }
 
 }

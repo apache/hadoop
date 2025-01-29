@@ -19,9 +19,9 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
@@ -32,12 +32,13 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_TIMEOUT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Base class for any ABFS test with timeouts & named threads.
  * This class does not attempt to bind to Azure.
  */
-public class AbstractAbfsTestWithTimeout extends Assert {
+public class AbstractAbfsTestWithTimeout extends Assertions {
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractAbfsTestWithTimeout.class);
 
@@ -57,7 +58,7 @@ public class AbstractAbfsTestWithTimeout extends Assert {
    * Name the junit thread for the class. This will overridden
    * before the individual test methods are run.
    */
-  @BeforeClass
+  @BeforeAll
   public static void nameTestThread() {
     Thread.currentThread().setName("JUnit");
   }
@@ -65,7 +66,7 @@ public class AbstractAbfsTestWithTimeout extends Assert {
   /**
    * Name the thread to the current test method.
    */
-  @Before
+  @BeforeEach
   public void nameThread() {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
   }
@@ -110,15 +111,16 @@ public class AbstractAbfsTestWithTimeout extends Assert {
 
       while (valueOfContentAtPos != -1 && pos < lenOfOriginalByteArray) {
         if (originalByteArray[pos] != valueOfContentAtPos) {
-          assertEquals("Mismatch in content validation at position {}", pos,
-              originalByteArray[pos], valueOfContentAtPos);
+          assertEquals(
+               originalByteArray[pos], valueOfContentAtPos,
+               "Mismatch in content validation at position " + pos);
           return false;
         }
         valueOfContentAtPos = (byte) in.read();
         pos++;
       }
       if (valueOfContentAtPos != -1) {
-        assertEquals("Expected end of file", -1, valueOfContentAtPos);
+        assertEquals(-1, valueOfContentAtPos, "Expected end of file");
         return false;
       }
       return true;

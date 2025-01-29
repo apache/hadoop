@@ -21,16 +21,16 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.permission.FsPermission;
 
 public class TestLocalFSFileContextMainOperations extends FileContextMainOperationsBaseTest {
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fc = FileContext.getLocalFSFileContext();
     super.setUp();
@@ -47,7 +47,7 @@ public class TestLocalFSFileContextMainOperations extends FileContextMainOperati
   @Test
   public void testFileContextNoCache() throws UnsupportedFileSystemException {
     FileContext fc1 = FileContext.getLocalFSFileContext();
-    Assert.assertTrue(fc1 != fc);
+    Assertions.assertTrue(fc1 != fc);
   }
   
   @Override
@@ -61,7 +61,7 @@ public class TestLocalFSFileContextMainOperations extends FileContextMainOperati
         "testDefaultFilePermission");
     FileContextTestHelper.createFile(fc, file);
     FsPermission expect = FileContext.FILE_DEFAULT_PERM.applyUMask(fc.getUMask());
-    Assert.assertEquals(expect, fc.getFileStatus(file)
+    Assertions.assertEquals(expect, fc.getFileStatus(file)
         .getPermission());
   }
 }

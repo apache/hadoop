@@ -21,7 +21,7 @@ package org.apache.hadoop.security;
 import static org.apache.hadoop.security.LdapGroupsMapping.LDAP_CTX_FACTORY_CLASS_DEFAULT;
 import static org.apache.hadoop.security.LdapGroupsMapping.LDAP_CTX_FACTORY_CLASS_KEY;
 import static org.apache.hadoop.security.LdapGroupsMapping.LDAP_URL_KEY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -39,7 +39,7 @@ import javax.naming.ldap.InitialLdapContext;
 import javax.naming.spi.InitialContextFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -67,7 +67,7 @@ public class TestLdapGroupsMappingBase {
   private String[] testParentGroups =
       new String[] {"group1", "group2", "group1_1"};
 
-  @Before
+  @BeforeEach
   public void setupMocksBase() throws NamingException {
     DummyLdapCtxFactory.reset();
     MockitoAnnotations.initMocks(this);

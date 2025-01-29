@@ -22,7 +22,8 @@ import static org.junit.Assume.assumeTrue;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Separate class to ensure forked Tests load the static blocks again.
@@ -40,7 +41,8 @@ public class TestNativeIoInit {
    * Expected: Loading these two static blocks separately should not result in
    * deadlock.
    */
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDeadlockLinux() throws Exception {
     Thread one = new Thread() {
       @Override
@@ -60,7 +62,8 @@ public class TestNativeIoInit {
     two.join();
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDeadlockWindows() throws Exception {
     assumeTrue("Expected windows", Path.WINDOWS);
     Thread one = new Thread() {
