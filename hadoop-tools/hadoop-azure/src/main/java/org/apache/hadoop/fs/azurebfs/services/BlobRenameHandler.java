@@ -497,8 +497,8 @@ public class BlobRenameHandler extends ListActionTaker {
         == BlobCopyProgress.PENDING) {
       if (System.currentTimeMillis() - startTime > maxWait) {
         throw new TimeoutException(
-            String.format("Blob copy progress wait time exceeded " +
-                "for source: %s and destination: %s", src, dst));
+            String.format("Blob copy progress wait time exceeded "
+                + "for source: %s and destination: %s", src, dst));
       }
       try {
         Thread.sleep(pollWait);

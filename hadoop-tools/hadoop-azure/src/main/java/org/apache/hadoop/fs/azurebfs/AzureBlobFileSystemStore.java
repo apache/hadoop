@@ -26,7 +26,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -68,6 +67,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -141,6 +141,7 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.http.client.utils.URIBuilder;
 
+import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.METADATA_INCOMPLETE_RENAME_FAILURES;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
@@ -162,6 +163,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.INFINITE_LEASE_DURATION;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_CREATE_ON_ROOT;
+import static org.apache.hadoop.fs.azurebfs.utils.UriUtils.isKeyForDirectorySet;
 
 /**
  * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage.
@@ -649,11 +652,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws IOException if there is an issue with the operation.
    */
   public void createNonRecursivePreCheck(final Path path,
-                                            TracingContext tracingContext)
-          throws IOException {
+      TracingContext tracingContext)
+      throws IOException {
     if (path.getParent() != null) {
       getClient().createNonRecursivePreCheck(path.getParent(),
-              tracingContext);
+          tracingContext);
+    } else {
+      throw new AbfsRestOperationException(HTTP_CONFLICT,
+          AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
+          ERR_CREATE_ON_ROOT,
+          null);
     }
   }
 
@@ -688,9 +696,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
 
       final ContextEncryptionAdapter contextEncryptionAdapter;
-      if (createClient.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
+      if (getClient().getEncryptionType()
+          == EncryptionType.ENCRYPTION_CONTEXT) {
         contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
-            createClient.getEncryptionContextProvider(), getRelativePath(path));
+            getClient().getEncryptionContextProvider(), getRelativePath(path));
       } else {
         contextEncryptionAdapter = NoContextEncryptionAdapter.getInstance();
       }
@@ -705,7 +714,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         );
 
       } else {
-        op = createClient.createPath(relativePath, true,
+        op = getClient().createPath(relativePath, true,
             overwrite,
             new Permissions(isNamespaceEnabled, permission, umask),
             isAppendBlob,
@@ -754,7 +763,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // Trigger a create with overwrite=false first so that eTag fetch can be
       // avoided for cases when no pre-existing file is present (major portion
       // of create file traffic falls into the case of no pre-existing file).
-      op = createClient.createPath(relativePath, true, false, permissions,
+      op = getClient().createPath(relativePath, true, false, permissions,
           isAppendBlob, null, contextEncryptionAdapter, tracingContext);
 
     } catch (AbfsRestOperationException e) {
@@ -778,7 +787,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
         try {
           // overwrite only if eTag matches with the file properties fetched befpre
-          op = createClient.createPath(relativePath, true, true, permissions,
+          op = getClient().createPath(relativePath, true, true, permissions,
               isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
         } catch (AbfsRestOperationException ex) {
           if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
@@ -1028,10 +1037,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       if (getClient().checkIsDir(op.getResult())) {
         throw new AbfsRestOperationException(
-                AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
-                AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-                "openFileForWrite must be used with files and not directories",
-                null);
+            AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+            AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+            "openFileForWrite must be used with files and not directories",
+            null);
       }
 
       final long contentLength = extractContentLength(op.getResult());
@@ -1105,15 +1114,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final Path destination,
       final TracingContext tracingContext,
       final String sourceEtag) throws
-    IOException {
+      IOException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
     boolean shouldContinue;
 
     LOG.debug("renameAsync filesystem: {} source: {} destination: {}",
-            getClient().getFileSystem(),
-            source,
-            destination);
+        getClient().getFileSystem(),
+        source,
+        destination);
 
     String continuation = null;
 
@@ -1128,13 +1137,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         final AbfsClientRenameResult abfsClientRenameResult =
             getClient().renamePath(sourceRelativePath, destinationRelativePath,
                 continuation, tracingContext, sourceEtag, false,
-                  isNamespaceEnabled);
+                isNamespaceEnabled);
 
         AbfsRestOperation op = abfsClientRenameResult.getOp();
         if (op != null) {
           perfInfo.registerResult(op.getResult());
           continuation = op.getResult()
-                  .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+              .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         }
         perfInfo.registerSuccess(true);
         countAggregate++;
@@ -1157,9 +1166,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     boolean shouldContinue = true;
 
     LOG.debug("delete filesystem: {} path: {} recursive: {}",
-            getClient().getFileSystem(),
-            path,
-            String.valueOf(recursive));
+        getClient().getFileSystem(),
+        path,
+        String.valueOf(recursive));
 
     String continuation = null;
 
@@ -1168,11 +1177,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     do {
       try (AbfsPerfInfo perfInfo = startTracking("delete", "deletePath")) {
         AbfsRestOperation op = getClient().deletePath(relativePath, recursive,
-            continuation, tracingContext, getIsNamespaceEnabled(tracingContext));
+            continuation, tracingContext,
+            getIsNamespaceEnabled(tracingContext));
         if (op != null) {
           perfInfo.registerResult(op.getResult());
           continuation = op.getResult()
-                  .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+              .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         }
         perfInfo.registerSuccess(true);
         countAggregate++;
@@ -1966,27 +1976,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
 
     return properties;
-  }
-
-  public static boolean isKeyForDirectorySet(String key, Set<String> dirSet) {
-    for (String dir : dirSet) {
-      if (dir.isEmpty() || key.startsWith(dir + AbfsHttpConstants.FORWARD_SLASH)) {
-        return true;
-      }
-
-      try {
-        URI uri = new URI(dir);
-        if (null == uri.getAuthority()) {
-          if (key.startsWith(dir + "/")){
-            return true;
-          }
-        }
-      } catch (URISyntaxException e) {
-        LOG.info("URI syntax error creating URI for {}", dir);
-      }
-    }
-
-    return false;
   }
 
   private AbfsPerfInfo startTracking(String callerName, String calleeName) {

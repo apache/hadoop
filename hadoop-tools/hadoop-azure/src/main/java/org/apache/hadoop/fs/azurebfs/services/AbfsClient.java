@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.FileNotFoundException;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
@@ -92,7 +91,6 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APN_VERSION;
@@ -609,7 +607,7 @@ public abstract class AbfsClient implements Closeable {
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**
-   * Performs a pre-check for a createNonRecursive operation. Checks if parentPath
+   * Performs a pre-check for a createNonRecursivePreCheck operation. Checks if parentPath
    * exists or not.
    *
    * @param parentPath parent path of the file to be created.
@@ -617,23 +615,9 @@ public abstract class AbfsClient implements Closeable {
    *
    * @throws IOException if parentPath does not exist or server error.
    */
-  public void createNonRecursivePreCheck(Path parentPath,
+  public abstract void createNonRecursivePreCheck(Path parentPath,
       TracingContext tracingContext)
-      throws IOException {
-    try {
-      getPathStatus(parentPath.toUri().getPath(), false,
-          tracingContext, null);
-    } catch (AbfsRestOperationException ex) {
-      if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-        throw new FileNotFoundException("Cannot create file "
-            + parentPath.toUri().getPath()
-            + " because parent folder does not exist.");
-      }
-      throw ex;
-    } finally {
-      abfsCounters.incrementCounter(CALL_GET_FILE_STATUS, 1);
-    }
-  }
+      throws IOException;
 
   /**
    * Acquire lease on specified path.

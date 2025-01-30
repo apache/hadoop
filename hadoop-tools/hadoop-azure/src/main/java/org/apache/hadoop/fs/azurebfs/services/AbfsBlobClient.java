@@ -164,7 +164,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_MAX_RESULTS;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_PREFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_RESTYPE;
-import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.isKeyForDirectorySet;
+import static org.apache.hadoop.fs.azurebfs.utils.UriUtils.isKeyForDirectorySet;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ATOMIC_DIR_RENAME_RECOVERY_ON_GET_PATH_EXCEPTION;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_DELETE_BLOB;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_RENAME_BLOB;
@@ -1813,15 +1813,15 @@ public class AbfsBlobClient extends AbfsClient {
    * @return True if empty results without continuation token.
    */
   private boolean isEmptyListResults(AbfsHttpOperation result) {
-    boolean isEmptyList = result != null && result.getStatusCode() == HTTP_OK &&
+    boolean isEmptyList = result != null && result.getStatusCode() == HTTP_OK
         // List Call was successful
-        result.getListResultSchema() != null &&
+        && result.getListResultSchema() != null
         // Parsing of list response was successful
-        result.getListResultSchema().paths().isEmpty() &&
+        && result.getListResultSchema().paths().isEmpty()
         // No paths were returned
-        result.getListResultSchema() instanceof BlobListResultSchema &&
+        && result.getListResultSchema() instanceof BlobListResultSchema
         // It is safe to typecast to BlobListResultSchema
-        ((BlobListResultSchema) result.getListResultSchema()).getNextMarker()
+        && ((BlobListResultSchema) result.getListResultSchema()).getNextMarker()
             == null; // No continuation token was returned
     if (isEmptyList) {
       LOG.debug(

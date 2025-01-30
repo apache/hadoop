@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -30,7 +32,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
@@ -48,15 +54,28 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
  * Utility class to help with Abfs url transformation to blob urls.
  */
 public final class UriUtils {
-  private static final String ABFS_URI_REGEX = "[^.]+\\.dfs\\.(preprod\\.){0,1}core\\.windows\\.net";
-  private static final Pattern ABFS_URI_PATTERN = Pattern.compile(ABFS_URI_REGEX);
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      UriUtils.class);
+
+  private static final String ABFS_URI_REGEX
+      = "[^.]+\\.dfs\\.(preprod\\.){0,1}core\\.windows\\.net";
+
+  private static final Pattern ABFS_URI_PATTERN = Pattern.compile(
+      ABFS_URI_REGEX);
+
   private static final Set<String> FULL_MASK_PARAM_KEYS = new HashSet<>(
       Collections.singleton(QUERY_PARAM_SIGNATURE));
+
   private static final Set<String> PARTIAL_MASK_PARAM_KEYS = new HashSet<>(
       Arrays.asList(QUERY_PARAM_SKOID, QUERY_PARAM_SAOID, QUERY_PARAM_SUOID));
+
   private static final Character CHAR_MASK = 'X';
+
   private static final String FULL_MASK = "XXXXX";
+
   private static final int DEFAULT_QUERY_STRINGBUILDER_CAPACITY = 550;
+
   private static final int PARTIAL_MASK_VISIBLE_LEN = 18;
 
   /**
@@ -102,7 +121,9 @@ public final class UriUtils {
    */
   public static String generateUniqueTestPath() {
     String testUniqueForkId = System.getProperty("test.unique.fork.id");
-    return testUniqueForkId == null ? "/test" : "/" + testUniqueForkId + "/test";
+    return testUniqueForkId == null
+        ? "/test"
+        : "/" + testUniqueForkId + "/test";
   }
 
   public static String maskUrlQueryParameters(List<NameValuePair> keyValueList,
@@ -129,7 +150,8 @@ public final class UriUtils {
     for (NameValuePair keyValuePair : keyValueList) {
       String key = keyValuePair.getName();
       if (key.isEmpty()) {
-        throw new IllegalArgumentException("Query param key should not be empty");
+        throw new IllegalArgumentException(
+            "Query param key should not be empty");
       }
       String value = keyValuePair.getValue();
       maskedUrl.append(key);
@@ -182,7 +204,8 @@ public final class UriUtils {
    */
   public static URL changeUrlFromBlobToDfs(URL url) throws InvalidUriException {
     try {
-      url = new URL(replacedUrl(url.toString(), ABFS_BLOB_DOMAIN_NAME, ABFS_DFS_DOMAIN_NAME));
+      url = new URL(replacedUrl(url.toString(), ABFS_BLOB_DOMAIN_NAME,
+          ABFS_DFS_DOMAIN_NAME));
     } catch (MalformedURLException ex) {
       throw new InvalidUriException(url.toString());
     }
@@ -198,7 +221,8 @@ public final class UriUtils {
    */
   public static URL changeUrlFromDfsToBlob(URL url) throws InvalidUriException {
     try {
-      url = new URL(replacedUrl(url.toString(), ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME));
+      url = new URL(replacedUrl(url.toString(), ABFS_DFS_DOMAIN_NAME,
+          ABFS_BLOB_DOMAIN_NAME));
     } catch (MalformedURLException ex) {
       throw new InvalidUriException(url.toString());
     }
@@ -214,10 +238,12 @@ public final class UriUtils {
    * @param newString the string to be replaced with.
    * @return updated URL
    */
-  private static String replacedUrl(String baseUrl, String oldString, String newString) {
+  private static String replacedUrl(String baseUrl,
+      String oldString,
+      String newString) {
     int startIndex = baseUrl.toString().indexOf("//") + 2;
     int endIndex = baseUrl.toString().indexOf("/", startIndex);
-    if (oldString == null || newString == null|| startIndex < 0
+    if (oldString == null || newString == null || startIndex < 0
         || endIndex > baseUrl.length() || startIndex > endIndex) {
       throw new IllegalArgumentException("Invalid input or indices");
     }
@@ -228,6 +254,28 @@ public final class UriUtils {
     }
     sb.replace(targetIndex, targetIndex + oldString.length(), newString);
     return sb.toString();
+  }
+
+  public static boolean isKeyForDirectorySet(String key, Set<String> dirSet) {
+    for (String dir : dirSet) {
+      if (dir.isEmpty() || key.startsWith(
+          dir + AbfsHttpConstants.FORWARD_SLASH)) {
+        return true;
+      }
+
+      try {
+        URI uri = new URI(dir);
+        if (null == uri.getAuthority()) {
+          if (key.startsWith(dir + "/")) {
+            return true;
+          }
+        }
+      } catch (URISyntaxException e) {
+        LOG.info("URI syntax error creating URI for {}", dir);
+      }
+    }
+
+    return false;
   }
 
   private UriUtils() {

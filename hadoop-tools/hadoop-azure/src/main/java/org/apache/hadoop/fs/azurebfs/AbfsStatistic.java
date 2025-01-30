@@ -40,7 +40,7 @@ public enum AbfsStatistic {
   CALL_APPEND(CommonStatisticNames.OP_APPEND,
       "Calls of append()."),
   CALL_CREATE_NON_RECURSIVE(CommonStatisticNames.OP_CREATE_NON_RECURSIVE,
-      "Calls of createNonRecursive()."),
+      "Calls of createNonRecursivePreCheck()."),
   CALL_DELETE(CommonStatisticNames.OP_DELETE,
       "Calls of delete()."),
   CALL_EXIST(CommonStatisticNames.OP_EXISTS,
