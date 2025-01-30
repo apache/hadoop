@@ -44,15 +44,15 @@ public class RenamePendingJsonFormat {
     return eTag;
   }
 
-  void setOldFolderName(String oldFolderName) {
+  public void setOldFolderName(String oldFolderName) {
     this.oldFolderName = oldFolderName;
   }
 
-  void setNewFolderName(String newFolderName) {
+  public void setNewFolderName(String newFolderName) {
     this.newFolderName = newFolderName;
   }
 
-  void setETag(String eTag) {
+  public void setETag(String eTag) {
     this.eTag = eTag;
   }
 }

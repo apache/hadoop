@@ -106,7 +106,7 @@ public class TracingHeaderValidator implements Listener {
 
   private void validateBasicFormat(String[] idList) {
     if (format == TracingHeaderFormat.ALL_ID_FORMAT) {
-      int expectedSize = 8;
+      int expectedSize = operatedBlobCount == null ? 8 : 9;
       if (ingressHandler != null) {
         expectedSize += 2;
       }

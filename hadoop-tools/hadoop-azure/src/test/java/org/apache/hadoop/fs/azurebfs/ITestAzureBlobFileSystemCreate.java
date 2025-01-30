@@ -21,6 +21,9 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.FileNotFoundException;
 import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +32,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -36,51 +40,50 @@ import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
-import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
-import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
-import org.apache.hadoop.fs.azurebfs.utils.DirectoryStateHelper;
-import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.ReflectionUtils;
-
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperationDetectedException;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.RenamePendingJsonFormat;
+import org.apache.hadoop.fs.azurebfs.utils.DirectoryStateHelper;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.test.ReflectionUtils;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
-
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 
 /**
  * Test create operation.
@@ -177,6 +180,40 @@ public class ITestAzureBlobFileSystemCreate extends
         () -> fs.createNonRecursive(path("A/B/C"), FsPermission
             .getDefault(), false, 1024, (short) 1, 1024, null));
     Assertions.assertThat(fs.exists(path("A/B/C"))).isFalse();
+    fs.close();
+  }
+
+  @Test
+  public void testCreateNonRecursiveWhenParentNotExistAndRenamePendingExist() throws Exception {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    AzureBlobFileSystem fs = getFileSystem();
+    Assume.assumeTrue(fs.getAbfsClient() instanceof AbfsBlobClient);
+    AbfsBlobClient abfsBlobClient = (AbfsBlobClient) fs.getAbfsClient();
+    AbfsBlobClient spiedClient = Mockito.spy(abfsBlobClient);
+    fs.getAbfsStore().setClient(spiedClient);
+    Mockito.doReturn(true)
+        .when(spiedClient).isAtomicRenameKey(anyString());
+    Path createRequestPath = new Path("hbase/A/B");
+    Path jsonFilePath = new Path("hbase/A-RenamePending.json");
+    Path createDirectoryPath = new Path("hbase/");
+    fs.mkdirs(createDirectoryPath);
+    OutputStream os = fs.create(jsonFilePath);
+    RenamePendingJsonFormat renamePendingJsonFormat = new RenamePendingJsonFormat();
+    renamePendingJsonFormat.setOldFolderName("hbase/A");
+    renamePendingJsonFormat.setNewFolderName("hbase/C");
+    renamePendingJsonFormat.setETag("12345");
+    try {
+      os.write(objectMapper.writeValueAsString(renamePendingJsonFormat).getBytes(
+          StandardCharsets.UTF_8));
+    } finally {
+      os.close();
+    }
+    Assertions.assertThat(fs.exists(jsonFilePath)).isTrue();
+    intercept(FileNotFoundException.class,
+        () -> fs.createNonRecursive(createRequestPath, FsPermission
+            .getDefault(), false, 1024, (short) 1, 1024, null));
+    Assertions.assertThat(fs.exists(createRequestPath)).isFalse();
+    Assertions.assertThat(fs.exists(jsonFilePath)).isFalse();
     fs.close();
   }
 
