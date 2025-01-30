@@ -231,7 +231,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   /**
    * Configuration key to indicate the set of directories in WASB where
-   * we should do atomic folder rename synchronized with createNonRecursivePreCheck.
+   * we should do atomic folder rename synchronized with createNonRecursive.
    */
   public static final String KEY_ATOMIC_RENAME_DIRECTORIES =
       "fs.azure.atomic.rename.dir";
@@ -254,7 +254,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   /**
    * The set of directories where we should apply atomic folder rename
-   * synchronized with createNonRecursivePreCheck.
+   * synchronized with createNonRecursive.
    */
   private Set<String> atomicRenameDirs;
 
@@ -1237,7 +1237,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   /**
    * Checks if the given key in Azure storage should have synchronized
-   * atomic folder rename createNonRecursivePreCheck implemented.
+   * atomic folder rename createNonRecursive implemented.
    */
   @Override
   public boolean isAtomicRenameKey(String key) {
