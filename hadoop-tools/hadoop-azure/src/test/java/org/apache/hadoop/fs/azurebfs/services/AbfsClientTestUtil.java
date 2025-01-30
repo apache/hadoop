@@ -23,8 +23,10 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -41,7 +43,17 @@ import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_XML;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCKLIST;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.IF_MATCH;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_BLOB_CONTENT_MD5;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_CLOSE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_COMP;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.PutBlockList;
 import static org.apache.hadoop.fs.azurebfs.services.AuthType.OAuth;
 import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.EXPONENTIAL_RETRY_POLICY_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.STATIC_RETRY_POLICY_ABBREVIATION;
@@ -88,6 +100,53 @@ public final class AbfsClientTestUtil {
   }
 
   /**
+   * Sets up a mocked AbfsRestOperation for a flush operation in the Azure Blob File System (ABFS).
+   * This method is primarily used in testing scenarios where specific behavior needs to be simulated
+   * during a flush operation, such as returning a particular status code or triggering an exception.
+   *
+   * The method creates a mock AbfsRestOperation configured with the appropriate request headers
+   * and parameters for a "PutBlockList" operation. It then uses the provided
+   * {@code functionRaisingIOE} to modify the behavior of the mock AbfsRestOperation during execution.
+   *
+   * @param spiedClient          The spied instance of the AbfsClient used for making HTTP requests.
+   * @param eTag                 The ETag of the blob, used in the If-Match header to ensure
+   *                             conditional requests.
+   * @param blockListXml         The XML string representing the block list to be uploaded.
+   * @param functionRaisingIOE   A function that modifies the behavior of the AbfsRestOperation,
+   *                             allowing the simulation of specific outcomes, such as HTTP errors
+   *                             or connection resets.
+   * @throws Exception           If an error occurs while setting up the mock operation.
+   */
+  public static void setMockAbfsRestOperationForFlushOperation(
+      final AbfsClient spiedClient, String eTag, String blockListXml, FunctionRaisingIOE<AbfsHttpOperation, AbfsHttpOperation> functionRaisingIOE)
+      throws Exception {
+    List<AbfsHttpHeader> requestHeaders = ITestAbfsClient.getTestRequestHeaders(spiedClient);
+    byte[] buffer = blockListXml.getBytes(StandardCharsets.UTF_8);
+    requestHeaders.add(new AbfsHttpHeader(CONTENT_LENGTH, String.valueOf(buffer.length)));
+    requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, APPLICATION_XML));
+    requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
+    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, spiedClient.computeMD5Hash(buffer, 0, buffer.length)));
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = spiedClient.createDefaultUriQueryBuilder();
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(false));
+    final URL url = spiedClient.createRequestUrl("/test/file", abfsUriQueryBuilder.toString());
+    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
+        PutBlockList, spiedClient, HTTP_METHOD_PUT,
+        url,
+        requestHeaders, buffer, 0, buffer.length, null,
+        spiedClient.getAbfsConfiguration()));
+
+    Mockito.doReturn(abfsRestOperation)
+        .when(spiedClient)
+        .getAbfsRestOperation(eq(AbfsRestOperationType.PutBlockList),
+            Mockito.anyString(), Mockito.any(URL.class), Mockito.anyList(),
+            Mockito.nullable(byte[].class), Mockito.anyInt(), Mockito.anyInt(),
+            Mockito.nullable(String.class));
+
+    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, functionRaisingIOE);
+  }
+
+  /**
    * Adding general mock behaviour to AbfsRestOperation and AbfsHttpOperation
    * to avoid any NPE occurring. These will avoid any network call made and
    * will return the relevant exception or return value directly.
@@ -102,6 +161,34 @@ public final class AbfsClientTestUtil {
         .setRequestProperty(nullable(String.class), nullable(String.class));
     Mockito.doReturn("").when(abfsRestOperation).getClientLatency();
     Mockito.doReturn(httpOperation).when(abfsRestOperation).createHttpOperation();
+  }
+
+  /**
+   * Adds custom mock behavior to an {@link AbfsRestOperation} and its associated {@link AbfsHttpOperation}.
+   * This method is primarily used in testing scenarios where specific behavior needs to be simulated
+   * during an HTTP operation, such as triggering an exception or modifying the HTTP response.
+   *
+   * The method intercepts the creation of an {@link AbfsHttpOperation} within the provided
+   * {@link AbfsRestOperation} and applies a given function to modify the behavior of the
+   * {@link AbfsHttpOperation}.
+   *
+   * @param abfsRestOperation    The spied instance of {@link AbfsRestOperation} to which the mock
+   *                             behavior is added.
+   * @param functionRaisingIOE   A function that modifies the behavior of the created
+   *                             {@link AbfsHttpOperation}, allowing the simulation of specific
+   *                             outcomes, such as HTTP errors or connection resets.
+   * @throws IOException         If an I/O error occurs while applying the function to the
+   *                             {@link AbfsHttpOperation}.
+   */
+  public static void addMockBehaviourToRestOpAndHttpOp(final AbfsRestOperation abfsRestOperation,
+      FunctionRaisingIOE<AbfsHttpOperation, AbfsHttpOperation> functionRaisingIOE)
+      throws IOException {
+    Mockito.doAnswer(answer -> {
+      AbfsHttpOperation httpOp = (AbfsHttpOperation) Mockito.spy(
+          answer.callRealMethod());
+      functionRaisingIOE.apply(httpOp);
+      return httpOp;
+    }).when(abfsRestOperation).createHttpOperation();
   }
 
   /**

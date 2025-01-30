@@ -49,6 +49,8 @@ public interface SASTokenProvider {
   String SET_PERMISSION_OPERATION = "set-permission";
   String SET_PROPERTIES_OPERATION = "set-properties";
   String WRITE_OPERATION = "write";
+  // Generic HTTP operation can be used with FixedSASTokenProvider.
+  String FIXED_SAS_STORE_OPERATION = "fixed-sas";
 
   /**
    * Initialize authorizer for Azure Blob File System.

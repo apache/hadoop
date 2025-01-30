@@ -43,4 +43,12 @@ public class BlobAppendRequestParameters {
   public String getETag() {
     return eTag;
   }
+
+  public void setBlockId(final String blockId) {
+    this.blockId = blockId;
+  }
+
+  public void setETag(final String eTag) {
+    this.eTag = eTag;
+  }
 }

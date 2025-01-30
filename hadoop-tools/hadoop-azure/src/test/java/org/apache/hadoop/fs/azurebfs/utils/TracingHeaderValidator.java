@@ -38,6 +38,8 @@ public class TracingHeaderValidator implements Listener {
   private TracingHeaderFormat format;
 
   private static final String GUID_PATTERN = "^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$";
+  private String ingressHandler = null;
+  private String position = null;
 
   @Override
   public void callTracingHeaderValidator(String tracingContextHeader,
@@ -52,6 +54,8 @@ public class TracingHeaderValidator implements Listener {
         clientCorrelationId, fileSystemId, operation, needsPrimaryRequestId,
         retryNum, streamID);
     tracingHeaderValidator.primaryRequestId = primaryRequestId;
+    tracingHeaderValidator.ingressHandler = ingressHandler;
+    tracingHeaderValidator.position = position;
     return tracingHeaderValidator;
   }
 
@@ -92,8 +96,13 @@ public class TracingHeaderValidator implements Listener {
 
   private void validateBasicFormat(String[] idList) {
     if (format == TracingHeaderFormat.ALL_ID_FORMAT) {
+      int expectedSize = 8;
+      if (ingressHandler != null) {
+        expectedSize += 2;
+      }
       Assertions.assertThat(idList)
-          .describedAs("header should have 8 elements").hasSize(8);
+          .describedAs("header should have " + expectedSize + " elements")
+          .hasSize(expectedSize);
     } else if (format == TracingHeaderFormat.TWO_ID_FORMAT) {
       Assertions.assertThat(idList)
           .describedAs("header should have 2 elements").hasSize(2);
@@ -151,5 +160,15 @@ public class TracingHeaderValidator implements Listener {
   @Override
   public void updatePrimaryRequestID(String primaryRequestId) {
     this.primaryRequestId = primaryRequestId;
+  }
+
+  @Override
+  public void updateIngressHandler(String ingressHandler) {
+    this.ingressHandler = ingressHandler;
+  }
+
+  @Override
+  public void updatePosition(String position) {
+    this.position = position;
   }
 }

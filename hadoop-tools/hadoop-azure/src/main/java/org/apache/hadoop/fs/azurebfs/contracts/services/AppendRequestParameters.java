@@ -36,7 +36,7 @@ public class AppendRequestParameters {
   private final String leaseId;
   private boolean isExpectHeaderEnabled;
   private boolean isRetryDueToExpect;
-  private final BlobAppendRequestParameters blobParams;
+  private BlobAppendRequestParameters blobParams;
 
 
   /**
@@ -130,26 +130,64 @@ public class AppendRequestParameters {
   }
 
   /**
+   * Retrieves the parameters specific to the append operation on the Blob Endpoint.
+   *
+   * @return the {@link BlobAppendRequestParameters} for the append operation.
+   */
+  public BlobAppendRequestParameters getBlobParams() {
+    return blobParams;
+  }
+
+  /**
    * Returns BlockId of the block blob to be appended.
    * @return blockId
    */
   public String getBlockId() {
-    return blobParams.getBlockId();
+    return getBlobParams().getBlockId();
   }
 
   /**
-   * Returns ETag of the block blob.
-   * @return eTag
+   * Sets whether the retry is due to the Expect header.
+   *
+   * @param retryDueToExpect true if the retry is due to the Expect header, false otherwise
    */
-  public String getETag() {
-    return blobParams.getETag();
-  }
-
   public void setRetryDueToExpect(boolean retryDueToExpect) {
     isRetryDueToExpect = retryDueToExpect;
   }
 
+  /**
+   * Sets whether the Expect header is enabled.
+   *
+   * @param expectHeaderEnabled true if the Expect header is enabled, false otherwise
+   */
   public void setExpectHeaderEnabled(boolean expectHeaderEnabled) {
     isExpectHeaderEnabled = expectHeaderEnabled;
+  }
+
+  /**
+   * Sets the Block ID for the block blob to be appended.
+   *
+   * @param blockId the Block ID to set
+   */
+  public void setBlockId(final String blockId) {
+    this.getBlobParams().setBlockId(blockId);
+  }
+
+  /**
+   * Sets the ETag for the block blob.
+   *
+   * @param eTag the ETag to set
+   */
+  public void setEtag(final String eTag) {
+    this.getBlobParams().setETag(eTag);
+  }
+
+  /**
+   * Sets the parameters specific to the append operation on the Blob Endpoint.
+   *
+   * @param blobParams the {@link BlobAppendRequestParameters} to set
+   */
+  public void setBlobParams(BlobAppendRequestParameters blobParams) {
+    this.blobParams = blobParams;
   }
 }

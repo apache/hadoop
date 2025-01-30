@@ -28,6 +28,9 @@ import org.junit.Test;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
@@ -37,6 +40,7 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_RECEIVED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.GET_RESPONSES;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SEND_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 
 public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
 
@@ -45,6 +49,21 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
   private static final int WRITE_OPERATION_LOOP_COUNT = 10;
 
   public ITestAbfsNetworkStatistics() throws Exception {
+  }
+
+  /**
+   * Counts the number of directories in the given path.
+   *
+   * @param path The path to be checked.
+   * @return The number of directories in the path.
+   */
+  private int countDirectory(String path) {
+    int index = path.indexOf(getFileSystemName());
+    if (index == -1) {
+      return 0;
+    }
+    return (int) path.substring(index + getFileSystemName().length()).chars()
+        .filter(ch -> ch == FORWARD_SLASH.charAt(0)).count();
   }
 
   /**
@@ -59,12 +78,15 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     Map<String, Long> metricMap;
     Path sendRequestPath = path(getMethodName());
+    String path = sendRequestPath.toString();
+    int directory = countDirectory(path);
     String testNetworkStatsString = "http_send";
 
-    metricMap = fs.getInstrumentationMap();
+    metricMap = getInstrumentationMap(fs);
     long expectedConnectionsMade = metricMap.get(CONNECTIONS_MADE.getStatName());
     long expectedRequestsSent = metricMap.get(SEND_REQUESTS.getStatName());
     long expectedBytesSent = 0;
+    AbfsClient client = fs.getAbfsStore().getClientHandler().getIngressClient();
 
     // --------------------------------------------------------------------
      // Operation: Creating AbfsOutputStream
@@ -72,8 +94,14 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
         sendRequestPath)) {
        // Network stats calculation: For Creating AbfsOutputStream:
        // 1 create request = 1 connection made and 1 send request
-      expectedConnectionsMade++;
-      expectedRequestsSent++;
+      if (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)) {
+        expectedRequestsSent += (directory);
+        // Per directory, we have 2 calls :- GetBlobProperties and PutBlob and 1 ListBlobs call (implicit check) for the path.
+        expectedConnectionsMade += ((directory * 2) + 1);
+      } else {
+        expectedRequestsSent++;
+        expectedConnectionsMade++;
+      }
       // --------------------------------------------------------------------
 
       // Operation: Write small data
@@ -103,7 +131,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        *   1 append = 1 connection and 1 send request
        */
       if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(sendRequestPath).toString())
-          || (this.getConfiguration().isSmallWriteOptimizationEnabled())) {
+          || (fs.getAbfsStore().getAbfsConfiguration().isSmallWriteOptimizationEnabled())) {
         expectedConnectionsMade++;
         expectedRequestsSent++;
       } else {
@@ -114,7 +142,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       // --------------------------------------------------------------------
 
       // Assertions
-      metricMap = fs.getInstrumentationMap();
+      metricMap = getInstrumentationMap(fs);
       assertAbfsStatistics(CONNECTIONS_MADE,
           expectedConnectionsMade, metricMap);
       assertAbfsStatistics(SEND_REQUESTS, expectedRequestsSent,
@@ -127,8 +155,11 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     // Operation: AbfsOutputStream close.
     // Network Stats calculation: 1 flush (with close) is send.
     // 1 flush request = 1 connection and 1 send request
-    expectedConnectionsMade++;
-    expectedRequestsSent++;
+    // Flush with no data is a no-op for blob endpoint, hence update only for dfs endpoint.
+    if (client instanceof AbfsDfsClient) {
+      expectedConnectionsMade++;
+      expectedRequestsSent++;
+    }
     // --------------------------------------------------------------------
 
     // Operation: Re-create the file / create overwrite scenario
@@ -144,11 +175,17 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        *    create overwrite=false (will fail in this case as file is indeed present)
        *    + getFileStatus to fetch the file ETag
        *    + create overwrite=true
-       *    = 3 connections and 2 send requests
+       *    = 3 connections and 2 send requests in case of Dfs Client
+       *    = 7 connections (5 GBP and 2 PutBlob calls) in case of Blob Client
        */
-      if (this.getConfiguration().isConditionalCreateOverwriteEnabled()) {
-        expectedConnectionsMade += 3;
-        expectedRequestsSent += 2;
+      if (fs.getAbfsStore().getAbfsConfiguration().isConditionalCreateOverwriteEnabled()) {
+        if (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)) {
+          expectedRequestsSent += 2;
+          expectedConnectionsMade += 7;
+        } else {
+          expectedConnectionsMade += 3;
+          expectedRequestsSent += 2;
+        }
       } else {
         expectedConnectionsMade += 1;
         expectedRequestsSent += 1;

@@ -146,6 +146,11 @@ public final class FileSystemConfigurations {
   public static final int BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT = 20;
 
   /**
+   * Length of the block ID used for appends.
+   */
+  public static final int BLOCK_ID_LENGTH = 60;
+
+  /**
    * Buffer blocks to disk.
    * Capacity is limited to available disk space.
    */

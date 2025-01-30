@@ -35,6 +35,7 @@ The API includes the operations listed in the following table.
 | [Delete Blob](#delete-blob)                           | Path          | Deletes the blob at specified path.                                                         |
 | [Get Block List](#get-block-list)                     | Path          | Retrieves the list of blocks that have been uploaded as part of a block blob.               |
 | [Copy Blob](#copy-blob)                               | Path          | Copies a blob to a destination within the storage account.                                  |
+| [Append Block](#append-block)                         | Path          | Commits a new block of data to the end of an existing append blob.                          |
 
 ## Create Container
 The Create Container operation creates a new container under the specified account. If the container with the same name
@@ -100,3 +101,7 @@ Rest API Documentation: [Get Block List](https://docs.microsoft.com/en-us/rest/a
 ## Copy Blob
 The Copy Blob operation copies a blob to a destination within the storage account.
 Rest API Documentation: [Copy Blob](https://docs.microsoft.com/en-us/rest/api/storageservices/copy-blob)
+
+## Append Block
+The Append Block operation commits a new block of data to the end of an existing append blob.
+Rest API Documentaion: [Append Block](https://learn.microsoft.com/en-us/rest/api/storageservices/append-block)

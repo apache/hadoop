@@ -104,5 +104,11 @@ public final class HttpHeaderConfigurations {
    */
   public static final String X_MS_BLOB_CONTENT_MD5 = "x-ms-blob-content-md5";
 
+  /**
+   * Http Request Header for denoting blob type.
+   * {@value}
+   */
+  public static final String X_MS_BLOB_TYPE = "x-ms-blob-type";
+
   private HttpHeaderConfigurations() {}
 }
