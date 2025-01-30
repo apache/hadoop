@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class RenamePendingJsonFormat {
+class RenamePendingJsonFormat {
 
   @JsonProperty(value = "OldFolderName")
   private String oldFolderName;
@@ -44,15 +44,15 @@ public class RenamePendingJsonFormat {
     return eTag;
   }
 
-  public void setOldFolderName(String oldFolderName) {
+  void setOldFolderName(String oldFolderName) {
     this.oldFolderName = oldFolderName;
   }
 
-  public void setNewFolderName(String newFolderName) {
+  void setNewFolderName(String newFolderName) {
     this.newFolderName = newFolderName;
   }
 
-  public void setETag(String eTag) {
+  void setETag(String eTag) {
     this.eTag = eTag;
   }
 }

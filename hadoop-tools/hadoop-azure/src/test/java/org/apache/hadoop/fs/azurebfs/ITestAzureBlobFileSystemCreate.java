@@ -21,8 +21,6 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.FileNotFoundException;
 import java.io.FilterOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -32,7 +30,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -57,7 +54,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.RenamePendingJsonFormat;
+import org.apache.hadoop.fs.azurebfs.services.RenameAtomicity;
 import org.apache.hadoop.fs.azurebfs.utils.DirectoryStateHelper;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
@@ -73,12 +70,13 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doThrow;
@@ -171,50 +169,130 @@ public class ITestAzureBlobFileSystemCreate extends
     assertIsFile(fs, testFile);
   }
 
+  private void assumeNonHnsAccountBlobEndpoint(final AzureBlobFileSystem fs) {
+    Assume.assumeTrue(fs.getAbfsStore().getClient() instanceof AbfsBlobClient);
+  }
+
+  /**
+   * Test createNonRecursive when parent exist.
+   *
+   * @throws Exception in case of failure
+   */
   @Test
-  public void testCreateNonRecursiveWhenParentNotExist() throws Exception {
+  public void testCreateNonRecursiveWhenParentExist() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    Path createDirectoryPath = path("A/");
+    assumeNonHnsAccountBlobEndpoint(fs);
+    fs.setWorkingDirectory(new Path(ROOT_PATH));
+    Path createDirectoryPath = new Path("hbase/A");
     fs.mkdirs(createDirectoryPath);
-    intercept(FileNotFoundException.class,
-        () -> fs.createNonRecursive(path("A/B/C"), FsPermission
-            .getDefault(), false, 1024, (short) 1, 1024, null));
-    Assertions.assertThat(fs.exists(path("A/B/C"))).isFalse();
+    fs.createNonRecursive(new Path(createDirectoryPath, "B"), FsPermission
+        .getDefault(), false, 1024, (short) 1, 1024, null);
+    Assertions.assertThat(fs.exists(new Path(createDirectoryPath, "B"))).isTrue();
     fs.close();
   }
 
+  /**
+   * Test createNonRecursive when parent does not exist.
+   *
+   * @throws Exception in case of failure
+   */
+  @Test
+  public void testCreateNonRecursiveWhenParentNotExist() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
+    fs.setWorkingDirectory(new Path(ROOT_PATH));
+    Path createDirectoryPath = new Path("A/");
+    fs.mkdirs(createDirectoryPath);
+    intercept(FileNotFoundException.class,
+        () -> fs.createNonRecursive(new Path("A/B/C"), FsPermission
+            .getDefault(), false, 1024, (short) 1, 1024, null));
+    Assertions.assertThat(fs.exists(new Path("A/B/C"))).isFalse();
+    fs.close();
+  }
+
+  /**
+   * Helper method to create a json file.
+   * @param path parent path
+   * @param renameJson rename json path
+   *
+   * @return file system
+   * @throws IOException in case of failure
+   */
+  private AzureBlobFileSystem createJsonFile(Path path, Path renameJson) throws IOException {
+    final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
+    assumeNonHnsAccountBlobEndpoint(fs);
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    Mockito.doReturn(store).when(fs).getAbfsStore();
+    AbfsClient client = Mockito.spy(store.getClient());
+    Mockito.doReturn(client).when(store).getClient();
+    fs.setWorkingDirectory(new Path(ROOT_PATH));
+    fs.mkdirs(new Path(path, "test3"));
+    AzureBlobFileSystemStore.VersionedFileStatus fileStatus
+        = (AzureBlobFileSystemStore.VersionedFileStatus) fs.getFileStatus(path);
+    new RenameAtomicity(path,
+        new Path("/hbase/test4"), renameJson,
+        getTestTracingContext(fs, true), fileStatus.getEtag(),
+        client).preRename();
+    Assertions.assertThat(fs.exists(renameJson)).isTrue();
+    return fs;
+  }
+
+  /**
+   * Test createNonRecursive when parent does not exist and rename pending exists.
+   * Rename redo should fail.
+   * Json file should be deleted.
+   * No new File creation.
+   *
+   * @throws Exception in case of failure
+   */
   @Test
   public void testCreateNonRecursiveWhenParentNotExistAndRenamePendingExist() throws Exception {
-    final ObjectMapper objectMapper = new ObjectMapper();
-    AzureBlobFileSystem fs = getFileSystem();
-    Assume.assumeTrue(fs.getAbfsClient() instanceof AbfsBlobClient);
-    AbfsBlobClient abfsBlobClient = (AbfsBlobClient) fs.getAbfsClient();
-    AbfsBlobClient spiedClient = Mockito.spy(abfsBlobClient);
-    fs.getAbfsStore().setClient(spiedClient);
-    Mockito.doReturn(true)
-        .when(spiedClient).isAtomicRenameKey(anyString());
-    Path createRequestPath = new Path("hbase/A/B");
-    Path jsonFilePath = new Path("hbase/A-RenamePending.json");
-    Path createDirectoryPath = new Path("hbase/");
-    fs.mkdirs(createDirectoryPath);
-    OutputStream os = fs.create(jsonFilePath);
-    RenamePendingJsonFormat renamePendingJsonFormat = new RenamePendingJsonFormat();
-    renamePendingJsonFormat.setOldFolderName("hbase/A");
-    renamePendingJsonFormat.setNewFolderName("hbase/C");
-    renamePendingJsonFormat.setETag("12345");
+    AzureBlobFileSystem fs = null;
     try {
-      os.write(objectMapper.writeValueAsString(renamePendingJsonFormat).getBytes(
-          StandardCharsets.UTF_8));
+      Path path = new Path("/hbase/test1/test2");
+      Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
+      fs = createJsonFile(path, renameJson);
+      fs.delete(path, true);
+      Assertions.assertThat(fs.exists(renameJson)).isTrue();
+      AzureBlobFileSystem finalFs = fs;
+      intercept(FileNotFoundException.class,
+          () -> finalFs.createNonRecursive(new Path(path, "test4"), FsPermission
+              .getDefault(), false, 1024, (short) 1, 1024, null));
+      Assertions.assertThat(fs.exists(new Path(path, "test4"))).isFalse();
+      Assertions.assertThat(fs.exists(renameJson)).isFalse();
     } finally {
-      os.close();
+      if (fs != null) {
+        fs.close();
+      }
     }
-    Assertions.assertThat(fs.exists(jsonFilePath)).isTrue();
-    intercept(FileNotFoundException.class,
-        () -> fs.createNonRecursive(createRequestPath, FsPermission
-            .getDefault(), false, 1024, (short) 1, 1024, null));
-    Assertions.assertThat(fs.exists(createRequestPath)).isFalse();
-    Assertions.assertThat(fs.exists(jsonFilePath)).isFalse();
-    fs.close();
+  }
+
+  /**
+   * Test createNonRecursive when parent and rename pending exist.
+   * Rename redo should be successful.
+   * Json file should be deleted.
+   * No file should be created.
+   *
+   * @throws Exception in case of failure
+   */
+  @Test
+  public void testCreateNonRecursiveWhenParentAndRenamePendingExist() throws Exception {
+    AzureBlobFileSystem fs = null;
+    try {
+      Path path = new Path("/hbase/test1/test2");
+      Path renameJson = new Path(path.getParent(), path.getName() + SUFFIX);
+      fs = createJsonFile(path, renameJson);
+      AzureBlobFileSystem finalFs = fs;
+      intercept(FileNotFoundException.class,
+          () -> finalFs.createNonRecursive(new Path(path, "test4"), FsPermission
+              .getDefault(), false, 1024, (short) 1, 1024, null));
+      Assertions.assertThat(fs.exists(path)).isFalse();
+      Assertions.assertThat(fs.exists(new Path("/hbase/test4"))).isTrue();
+    } finally {
+      if (fs != null) {
+        fs.close();
+      }
+    }
   }
 
   @Test

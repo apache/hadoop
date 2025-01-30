@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.assertj.core.api.Assertions;
+
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 
@@ -106,7 +107,10 @@ public class TracingHeaderValidator implements Listener {
 
   private void validateBasicFormat(String[] idList) {
     if (format == TracingHeaderFormat.ALL_ID_FORMAT) {
-      int expectedSize = operatedBlobCount == null ? 8 : 9;
+      int expectedSize = 8;
+      if (operatedBlobCount != null) {
+        expectedSize += 1;
+      }
       if (ingressHandler != null) {
         expectedSize += 2;
       }
