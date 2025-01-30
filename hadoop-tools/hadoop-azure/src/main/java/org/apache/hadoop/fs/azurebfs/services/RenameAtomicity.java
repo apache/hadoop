@@ -22,9 +22,9 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-//import java.util.ArrayList;
-//import java.util.Collections;
-//import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -46,7 +46,7 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_ID_LENGTH;
-//import static org.apache.hadoop.fs.azurebfs.services.AzureIngressHandler.generateBlockListXml;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient.generateBlockListXml;
 
 /**
  * For a directory enabled for atomic-rename, before rename starts, a file with
@@ -222,10 +222,9 @@ public class RenameAtomicity {
     abfsClient.append(path.toUri().getPath(), bytes,
         appendRequestParameters, null, null, tracingContext);
 
-//        List<String> blockIdList = new ArrayList<>(Collections.singleton(blockId));
-//        String blockList = generateBlockListXml(blockIdList);
+        List<String> blockIdList = new ArrayList<>(Collections.singleton(blockId));
+        String blockList = generateBlockListXml(blockIdList);
     // PutBlockList on the path.
-    String blockList = "";
     abfsClient.flush(blockList.getBytes(StandardCharsets.UTF_8),
         path.toUri().getPath(), true, null, null, eTag, null, tracingContext);
   }
