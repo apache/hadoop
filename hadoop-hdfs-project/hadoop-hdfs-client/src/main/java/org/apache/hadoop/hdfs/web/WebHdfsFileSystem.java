@@ -31,7 +31,6 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -876,9 +875,7 @@ public class WebHdfsFileSystem extends FileSystem
             }
             newIoe.setStackTrace(ioe.getStackTrace());
             ioe = newIoe;
-          } catch (NoSuchMethodException | SecurityException 
-                   | InstantiationException | IllegalAccessException
-                   | IllegalArgumentException | InvocationTargetException e) {
+          } catch (NoSuchMethodException | SecurityException | IllegalArgumentException e) {
           }
           shouldRetry(ioe, retry);
         }
