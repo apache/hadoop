@@ -359,5 +359,21 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE = "fs.azure.apache.http.client.max.cache.connection.size";
   /**Maximum idle time for a ApacheHttpClient-connection: {@value}*/
   public static final String FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL = "fs.azure.apache.http.client.idle.connection.ttl";
+
+  /**
+   * Blob copy API is an async API, this configuration defines polling duration
+   * for checking copy status {@value}
+   */
+  public static final String FS_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS = "fs.azure.blob.copy.progress.wait.millis";
+  /**Blob rename lease refresh duration {@value}*/
+  public static final String FS_AZURE_BLOB_ATOMIC_RENAME_LEASE_REFRESH_DURATION
+          = "fs.azure.blob.atomic.rename.lease.refresh.duration";
+  /**Maximum number of blob information enqueued in memory for rename or delete orchestration {@value}*/
+  public static final String FS_AZURE_PRODUCER_QUEUE_MAX_SIZE = "fs.azure.blob.dir.list.producer.queue.max.size";
+  /**Maximum number of thread per blob-rename orchestration {@value}*/
+  public static final String FS_AZURE_BLOB_DIR_RENAME_MAX_THREAD = "fs.azure.blob.dir.rename.max.thread";
+  /**Maximum number of thread per blob-delete orchestration {@value}*/
+  public static final String FS_AZURE_BLOB_DIR_DELETE_MAX_THREAD = "fs.azure.blob.dir.delete.max.thread";
+
   private ConfigurationKeys() {}
 }

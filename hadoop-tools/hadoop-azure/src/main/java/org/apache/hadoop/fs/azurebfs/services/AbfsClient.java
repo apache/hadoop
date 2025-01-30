@@ -558,8 +558,10 @@ public abstract class AbfsClient implements Closeable {
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
-  public abstract AbfsRestOperation acquireLease(String path, int duration,
-      TracingContext tracingContext) throws AzureBlobFileSystemException;
+  public abstract AbfsRestOperation acquireLease(String path,
+                                                 int duration,
+                                                 final String eTag,
+                                                 TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**
    * Renew lease on specified path.

@@ -45,6 +45,8 @@ public enum AzureServiceErrorCode {
   INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE("InvalidSourceOrDestinationResourceType", HttpURLConnection.HTTP_CONFLICT, null),
   RENAME_DESTINATION_PARENT_PATH_NOT_FOUND("RenameDestinationParentPathNotFound", HttpURLConnection.HTTP_NOT_FOUND, null),
   INVALID_RENAME_SOURCE_PATH("InvalidRenameSourcePath", HttpURLConnection.HTTP_CONFLICT, null),
+  DIRECTORY_NOT_EMPTY_DELETE("DirectoryNotEmpty", HttpURLConnection.HTTP_CONFLICT,
+          "The recursive query parameter value must be true to delete a non-empty directory"),
   INGRESS_OVER_ACCOUNT_LIMIT("ServerBusy", HttpURLConnection.HTTP_UNAVAILABLE,
           "Ingress is over the account limit."),
   EGRESS_OVER_ACCOUNT_LIMIT("ServerBusy", HttpURLConnection.HTTP_UNAVAILABLE,
@@ -54,12 +56,15 @@ public enum AzureServiceErrorCode {
   OTHER_SERVER_THROTTLING("ServerBusy", HttpURLConnection.HTTP_UNAVAILABLE,
           "The server is currently unable to receive requests. Please retry your request."),
   INVALID_QUERY_PARAMETER_VALUE("InvalidQueryParameterValue", HttpURLConnection.HTTP_BAD_REQUEST, null),
+  INVALID_RENAME_DESTINATION("InvalidRenameDestinationPath", HttpURLConnection.HTTP_BAD_REQUEST, null),
   AUTHORIZATION_PERMISSION_MISS_MATCH("AuthorizationPermissionMismatch", HttpURLConnection.HTTP_FORBIDDEN, null),
   ACCOUNT_REQUIRES_HTTPS("AccountRequiresHttps", HttpURLConnection.HTTP_BAD_REQUEST, null),
   MD5_MISMATCH("Md5Mismatch", HttpURLConnection.HTTP_BAD_REQUEST,
           "The MD5 value specified in the request did not match with the MD5 value calculated by the server."),
   BLOB_OPERATION_NOT_SUPPORTED("BlobOperationNotSupported", HttpURLConnection.HTTP_CONFLICT, null),
   INVALID_APPEND_OPERATION("InvalidAppendOperation", HttpURLConnection.HTTP_CONFLICT, null),
+  COPY_BLOB_FAILED("COPY_BLOB_FAILED", HttpURLConnection.HTTP_INTERNAL_ERROR, null),
+  COPY_BLOB_ABORTED("COPY_BLOB_ABORTED", HttpURLConnection.HTTP_INTERNAL_ERROR, null),
   UNKNOWN(null, -1, null);
 
   private final String errorCode;
