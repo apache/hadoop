@@ -861,8 +861,11 @@ public class WebHdfsFileSystem extends FileSystem
               }
             }
             if (newIoe == null) {
-              newIoe = ioe.getClass().getConstructor(String.class)
-                  .newInstance(node + ": " + ioe.getMessage());
+              DynConstructors.Ctor<? extends IOException> ctor =
+                  new DynConstructors.Builder()
+                      .impl(ioe.getClass(), String.class)
+                      .buildChecked();
+              newIoe = ctor.newInstance(node + ": " + ioe.getMessage());
               if (cause != null) {
                 try {
                   newIoe.initCause(cause);
