@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers;
@@ -142,6 +144,8 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testRecursiveDeleteWithPagination() throws Exception {
+    Assume.assumeTrue(
+        getFileSystem().getAbfsStore().getClient() instanceof AbfsDfsClient);
     testRecursiveDeleteWithPaginationInternal(false, true,
         AbfsHttpConstants.ApiVersion.DEC_12_2019);
     testRecursiveDeleteWithPaginationInternal(false, true,
@@ -164,6 +168,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testNonRecursiveDeleteWithPagination() throws Exception {
+    Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.DFS);
     testNonRecursiveDeleteWithPaginationInternal(true);
     testNonRecursiveDeleteWithPaginationInternal(false);
   }
@@ -174,6 +179,8 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testRecursiveDeleteWithInvalidCT() throws Exception {
+    Assume.assumeTrue(
+        getFileSystem().getAbfsStore().getClient() instanceof AbfsDfsClient);
     testRecursiveDeleteWithInvalidCTInternal(true);
     testRecursiveDeleteWithInvalidCTInternal(false);
   }

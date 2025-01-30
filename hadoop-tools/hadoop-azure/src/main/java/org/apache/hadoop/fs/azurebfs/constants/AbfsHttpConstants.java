@@ -51,6 +51,8 @@ public final class AbfsHttpConstants {
   public static final String DEFAULT_TIMEOUT = "90";
   public static final String APPEND_BLOB_TYPE = "appendblob";
   public static final String LIST = "list";
+  public static final String BLOCK_BLOB_TYPE = "BlockBlob";
+  public static final String APPEND_BLOCK = "appendblock";
 
   //Abfs Http Client Constants for Blob Endpoint APIs.
 
@@ -238,7 +240,7 @@ public final class AbfsHttpConstants {
   public static final String PUT_BLOCK_LIST = "PutBlockList";
 
   /**
-   * Value that differentiates categories of the http_status.
+   * Value that differentiates categories of the HTTP status.
    * <pre>
    * 100 - 199 : Informational responses
    * 200 - 299 : Successful responses
@@ -248,6 +250,28 @@ public final class AbfsHttpConstants {
    * </pre>
    */
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
+
+  /**
+   * XML version declaration for the block list.
+   */
+  public static final String XML_VERSION = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>%n";
+
+  /**
+   * Start tag for the block list XML.
+   */
+  public static final String BLOCK_LIST_START_TAG = "<BlockList>%n";
+
+  /**
+   * End tag for the block list XML.
+   */
+  public static final String BLOCK_LIST_END_TAG = "</BlockList>%n";
+
+  /**
+   * Format string for the latest block in the block list XML.
+   * The placeholder will be replaced with the block identifier.
+   */
+  public static final String LATEST_BLOCK_FORMAT = "<Latest>%s</Latest>%n";
+
 
   /**
    * List of configurations that are related to Customer-Provided-Keys.
@@ -289,6 +313,12 @@ public final class AbfsHttpConstants {
   public static final String APACHE_IMPL = "Apache";
   public static final String JDK_FALLBACK = "JDK_fallback";
   public static final String KEEP_ALIVE_CACHE_CLOSED = "KeepAliveCache is closed";
+  public static final String DFS_FLUSH = "D";
+  public static final String DFS_APPEND = "D";
+  public static final String BLOB_FLUSH = "B";
+  public static final String BLOB_APPEND = "B";
+  public static final String FALLBACK_FLUSH = "FB";
+  public static final String FALLBACK_APPEND = "FB";
 
   private AbfsHttpConstants() {}
 }

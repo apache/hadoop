@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,20 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.utils;
-
-import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+package org.apache.hadoop.fs.azurebfs.services;
 
 /**
- * Interface for testing identifiers tracked via TracingContext
- * Implemented in TracingHeaderValidator
+ * Enum representing the status of an ABFS block.
+ *
+ * <p>This enum is used to indicate the current status of a block in the Azure Blob File System (ABFS).
+ * The possible statuses are:</p>
+ * <ul>
+ *   <li>NEW - The block is newly created and has not been processed yet.</li>
+ *   <li>SUCCESS - The block has been successfully processed.</li>
+ *   <li>FAILED - The block processing has failed.</li>
+ * </ul>
  */
+public enum AbfsBlockStatus {
+  /**
+   * The block is newly created and has not been processed yet.
+   */
+  NEW,
 
-public interface Listener {
-  void callTracingHeaderValidator(String header, TracingHeaderFormat format);
-  void updatePrimaryRequestID(String primaryRequestID);
-  Listener getClone();
-  void setOperation(FSOperationType operation);
-  void updateIngressHandler(String ingressHandler);
-  void updatePosition(String position);
+  /**
+   * The block has been successfully processed.
+   */
+  SUCCESS,
+
+  /**
+   * The block processing has failed.
+   */
+  FAILED
 }

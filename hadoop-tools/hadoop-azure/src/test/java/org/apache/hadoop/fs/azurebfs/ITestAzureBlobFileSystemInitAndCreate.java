@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -28,10 +27,10 @@ import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
@@ -39,12 +38,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.accountProperty;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
 
@@ -77,8 +71,8 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
     AzureBlobFileSystem fs = ((AzureBlobFileSystem) FileSystem.newInstance(
         getRawConfiguration()));
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
-    AbfsClient client = Mockito.spy(fs.getAbfsClient());
-    Mockito.doReturn(client).when(store).getClient();
+    AbfsClient client = Mockito.spy(fs.getAbfsStore().getClient(AbfsServiceType.DFS));
+    Mockito.doReturn(client).when(store).getClient(AbfsServiceType.DFS);
 
     Mockito.doThrow(TrileanConversionException.class)
         .when(store)
@@ -112,22 +106,6 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
 
     Mockito.verify(client, Mockito.times(0))
         .getAclStatus(Mockito.anyString(), any(TracingContext.class));
-  }
-
-  // TODO: [FnsOverBlob][HADOOP-19179] Remove this test case once Blob Endpoint Support is enabled.
-  @Test
-  public void testFileSystemInitFailsWithBlobEndpointUrl() throws Exception {
-    Configuration configuration = new Configuration(getRawConfiguration());
-    String defaultUri = configuration.get(FS_DEFAULT_NAME_KEY);
-    String accountKey = configuration.get(
-        accountProperty(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, getAccountName()),
-        configuration.get(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME));
-    configuration.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME,
-        accountKey.replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME));
-    String blobUri = defaultUri.replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME);
-    intercept(InvalidConfigurationValueException.class,
-        "Blob Endpoint Support not yet available", () ->
-            FileSystem.newInstance(new Path(blobUri).toUri(), configuration));
   }
 
   @Test

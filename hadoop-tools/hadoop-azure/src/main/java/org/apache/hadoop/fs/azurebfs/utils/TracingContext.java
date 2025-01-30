@@ -63,6 +63,8 @@ public class TracingContext {
   private Listener listener = null;  // null except when testing
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
+  private String ingressHandler = EMPTY_STRING;
+  private String position = EMPTY_STRING;
   private String metricResults = EMPTY_STRING;
   private String metricHeader = EMPTY_STRING;
 
@@ -131,6 +133,8 @@ public class TracingContext {
     this.retryCount = 0;
     this.primaryRequestId = originalTracingContext.primaryRequestId;
     this.format = originalTracingContext.format;
+    this.position = originalTracingContext.getPosition();
+    this.ingressHandler = originalTracingContext.getIngressHandler();
     if (originalTracingContext.listener != null) {
       this.listener = originalTracingContext.listener.getClone();
     }
@@ -193,6 +197,12 @@ public class TracingContext {
               + ":" + opType + ":" + retryCount;
       header = addFailureReasons(header, previousFailure, retryPolicyAbbreviation);
       header += (":" + httpOperation.getTracingContextSuffix());
+      if (!(ingressHandler.equals(EMPTY_STRING))) {
+        header += ":" + ingressHandler;
+      }
+      if (!(position.equals(EMPTY_STRING))) {
+        header += ":" + position;
+      }
       metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : "";
       break;
     case TWO_ID_FORMAT:
@@ -257,4 +267,45 @@ public class TracingContext {
     return header;
   }
 
+  /**
+   * Gets the ingress handler.
+   *
+   * @return the ingress handler as a String.
+   */
+  public String getIngressHandler() {
+    return ingressHandler;
+  }
+
+  /**
+   * Gets the position.
+   *
+   * @return the position as a String.
+   */
+  public String getPosition() {
+    return position;
+  }
+
+  /**
+   * Sets the ingress handler.
+   *
+   * @param ingressHandler the ingress handler to set, must not be null.
+   */
+  public void setIngressHandler(final String ingressHandler) {
+    this.ingressHandler = ingressHandler;
+    if (listener != null) {
+      listener.updateIngressHandler(ingressHandler);
+    }
+  }
+
+  /**
+   * Sets the position.
+   *
+   * @param position the position to set, must not be null.
+   */
+  public void setPosition(final String position) {
+    this.position = position;
+    if (listener != null) {
+      listener.updatePosition(position);
+    }
+  }
 }

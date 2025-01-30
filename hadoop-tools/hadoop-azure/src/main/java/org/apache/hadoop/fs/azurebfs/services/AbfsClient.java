@@ -177,6 +177,7 @@ public abstract class AbfsClient implements Closeable {
   private KeepAliveCache keepAliveCache;
 
   private AbfsApacheHttpClient abfsApacheHttpClient;
+  private static boolean isNamespaceEnabled = false;
 
   /**
    * logging the rename failure if metadata is in an incomplete state.
@@ -1620,6 +1621,24 @@ public abstract class AbfsClient implements Closeable {
 
   protected String getUserAgent() {
     return userAgent;
+  }
+
+  /**
+   * Checks if the namespace is enabled.
+   *
+   * @return True if the namespace is enabled, false otherwise.
+   */
+  public static boolean getIsNamespaceEnabled() {
+    return isNamespaceEnabled;
+  }
+
+  /**
+   * Sets the namespace enabled status.
+   *
+   * @param namespaceEnabled True to enable the namespace, false to disable it.
+   */
+  public static void setIsNamespaceEnabled(final boolean namespaceEnabled) {
+    isNamespaceEnabled = namespaceEnabled;
   }
 
   protected boolean isRenameResilience() {
