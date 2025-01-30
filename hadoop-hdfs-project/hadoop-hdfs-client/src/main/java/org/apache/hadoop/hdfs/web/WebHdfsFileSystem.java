@@ -133,6 +133,7 @@ import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.dynamic.DynConstructors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -850,8 +851,11 @@ public class WebHdfsFileSystem extends FileSystem
             IOException newIoe = null;
             if (cause != null) {
               try {
-                ioe.getClass().getConstructor(String.class, Throwable.class)
-                    .newInstance(node + ": " + ioe.getMessage(), cause);
+                DynConstructors.Ctor<? extends IOException> ctor =
+                    new DynConstructors.Builder()
+                        .impl(ioe.getClass(), String.class, Throwable.class)
+                        .buildChecked();
+                newIoe = ctor.newInstance(node + ": " + ioe.getMessage(), cause);
               } catch (NoSuchMethodException e) {
                 // no matching constructor - try next approach below
               }
