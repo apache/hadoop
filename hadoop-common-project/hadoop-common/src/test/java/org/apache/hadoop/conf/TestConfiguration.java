@@ -38,6 +38,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -48,21 +49,36 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
-import static java.util.concurrent.TimeUnit.*;
+import static java.util.concurrent.TimeUnit.DAYS;
+import static java.util.concurrent.TimeUnit.HOURS;
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.conf.StorageUnit.BYTES;
 import static org.apache.hadoop.conf.StorageUnit.GB;
 import static org.apache.hadoop.conf.StorageUnit.KB;
 import static org.apache.hadoop.conf.StorageUnit.MB;
 import static org.apache.hadoop.conf.StorageUnit.TB;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
@@ -110,12 +126,12 @@ public class TestConfiguration {
 
   private BufferedWriter out;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if(out != null) {
       out.close();
@@ -231,13 +247,13 @@ public class TestConfiguration {
       assertEquals("should see the first value", "A", conf.get("prop"));
 
       List<LoggingEvent> events = appender.getLog();
-      assertEquals("overriding a final parameter should cause logging", 1,
-          events.size());
+      assertEquals(1, events.size(),
+          "overriding a final parameter should cause logging");
       LoggingEvent loggingEvent = events.get(0);
       String renderedMessage = loggingEvent.getRenderedMessage();
-      assertTrue("did not see expected string inside message "+ renderedMessage,
-          renderedMessage.contains("an attempt to override final parameter: "
-              + "prop;  Ignoring."));
+      assertTrue(renderedMessage.contains("an attempt to override final parameter: " +
+          "prop;  Ignoring."),
+          "did not see expected string inside message "+ renderedMessage);
     } finally {
       // Make sure the appender is removed
       logger.removeAppender(appender);
@@ -272,8 +288,7 @@ public class TestConfiguration {
       for (LoggingEvent loggingEvent : events) {
         System.out.println("Event = " + loggingEvent.getRenderedMessage());
       }
-      assertTrue("adding same resource twice should not cause logging",
-          events.isEmpty());
+      assertTrue(events.isEmpty(), "adding same resource twice should not cause logging");
     } finally {
       // Make sure the appender is removed
       logger.removeAppender(appender);
@@ -308,8 +323,7 @@ public class TestConfiguration {
       for (LoggingEvent loggingEvent : events) {
         System.out.println("Event = " + loggingEvent.getRenderedMessage());
       }
-      assertTrue("adding same resource twice should not cause logging",
-          events.isEmpty());
+      assertTrue(events.isEmpty(), "adding same resource twice should not cause logging");
     } finally {
       // Make sure the appender is removed
       logger.removeAppender(appender);
@@ -339,13 +353,12 @@ public class TestConfiguration {
       assertEquals("should see the value", "A", conf.get("prop"));
 
       List<LoggingEvent> events = appender.getLog();
-      assertEquals("overriding a final parameter should cause logging", 1,
-          events.size());
+      assertEquals(1, events.size(), "overriding a final parameter should cause logging");
       LoggingEvent loggingEvent = events.get(0);
       String renderedMessage = loggingEvent.getRenderedMessage();
-      assertTrue("did not see expected string inside message "+ renderedMessage,
-          renderedMessage.contains("an attempt to override final parameter: "
-              + "prop;  Ignoring."));
+      assertTrue(
+         renderedMessage.contains("an attempt to override final parameter: " +
+             "prop;  Ignoring."), "did not see expected string inside message "+ renderedMessage);
     } finally {
       // Make sure the appender is removed
       logger.removeAppender(appender);
@@ -442,8 +455,8 @@ public class TestConfiguration {
     }
 
     // check that expansion also occurs for getInt()
-    assertTrue(mock.getInt("intvar", -1) == 42);
-    assertTrue(mock.getInt("my.int", -1) == 42);
+    assertEquals(42, mock.getInt("intvar", -1));
+    assertEquals(42, mock.getInt("my.int", -1));
   }
 
   /**
@@ -563,7 +576,7 @@ public class TestConfiguration {
     Path fileResource = new Path(CONFIG);
     Configuration conf1 = new Configuration();
     conf1.addResource(fileResource);
-    assertNull("my var is not null", conf1.get("my.var"));
+    assertNull(conf1.get("my.var"), "my var is not null");
 
     out=new BufferedWriter(new FileWriter(CONFIG2));
     startConfig();
@@ -573,7 +586,7 @@ public class TestConfiguration {
 
     Configuration conf2 = new Configuration(conf1);
     conf2.addResource(fileResource);
-    assertNull("my var is not final", conf2.get("my.var"));
+    assertNull(conf2.get("my.var"), "my var is not final");
   }
 
   @Test
@@ -613,7 +626,7 @@ public class TestConfiguration {
     String expectEval;
   }
 
-  ArrayList<Prop> props = new ArrayList<Prop>();
+  ArrayList<Prop> props = new ArrayList<>();
 
   void declareProperty(String name, String val, String expectEval)
     throws IOException {
@@ -808,10 +821,10 @@ public class TestConfiguration {
     conf.set("dirs", StringUtils.join(dirs, ","));
     for (int i = 0; i < 1000; i++) {
       String localPath = conf.getLocalPath("dirs", "dir" + i).toString();
-      assertTrue("Path doesn't end in specified dir: " + localPath,
-        localPath.endsWith("dir" + i));
-      assertFalse("Path has internal whitespace: " + localPath,
-        localPath.contains(" "));
+      assertTrue(localPath.endsWith("dir" + i),
+          "Path doesn't end in specified dir: " + localPath);
+      assertFalse(localPath.contains(" "),
+          "Path has internal whitespace: " + localPath);
     }
   }
 
@@ -825,10 +838,10 @@ public class TestConfiguration {
     conf.set("dirs", StringUtils.join(dirs, ","));
     for (int i = 0; i < 1000; i++) {
       String localPath = conf.getFile("dirs", "dir" + i).toString();
-      assertTrue("Path doesn't end in specified dir: " + localPath,
-        localPath.endsWith("dir" + i));
-      assertFalse("Path has internal whitespace: " + localPath,
-        localPath.contains(" "));
+      assertTrue(localPath.endsWith("dir" + i),
+          "Path doesn't end in specified dir: " + localPath);
+      assertFalse(localPath.contains(" "),
+          "Path has internal whitespace: " + localPath);
     }
   }
 
@@ -841,8 +854,7 @@ public class TestConfiguration {
     conf.addResource(fileResource);
 
     String expectedOutput =
-      "Configuration: core-default.xml, core-site.xml, " +
-      fileResource.toString();
+      "Configuration: core-default.xml, core-site.xml, " + fileResource;
     assertEquals(expectedOutput, conf.toString());
   }
 
@@ -852,9 +864,9 @@ public class TestConfiguration {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     conf.writeXml(baos);
     String result = baos.toString();
-    assertTrue("Result has proper header", result.startsWith(XMLHEADER));
+    assertTrue(result.startsWith(XMLHEADER), "Result has proper header");
 
-    assertTrue("Result has proper footer", result.endsWith("</configuration>"));
+    assertTrue(result.endsWith("</configuration>"), "Result has proper footer");
   }
 
   @Test
@@ -999,7 +1011,7 @@ public class TestConfiguration {
   // properties are saved within the config. However, the included properties
   // are not cached in the resource object. So, if an additional resource is
   // added after the config is parsed the first time, the config loses the
-  // prperties that were included from the first resource.
+  // properties that were included from the first resource.
   @Test
   public void testIncludesFromInputStreamWhenResourceAdded() throws Exception {
     tearDown();
@@ -1166,54 +1178,54 @@ public class TestConfiguration {
     conf.set("third", "34-");
     Configuration.IntegerRanges range = conf.getRange("first", null);
     System.out.println("first = " + range);
-    assertEquals(true, range.isIncluded(0));
-    assertEquals(true, range.isIncluded(1));
-    assertEquals(true, range.isIncluded(100));
-    assertEquals(false, range.isIncluded(101));
+    assertTrue(range.isIncluded(0));
+    assertTrue(range.isIncluded(1));
+    assertTrue(range.isIncluded(100));
+    assertFalse(range.isIncluded(101));
     range = conf.getRange("second", null);
     System.out.println("second = " + range);
-    assertEquals(false, range.isIncluded(3));
-    assertEquals(true, range.isIncluded(4));
-    assertEquals(true, range.isIncluded(6));
-    assertEquals(false, range.isIncluded(7));
-    assertEquals(false, range.isIncluded(8));
-    assertEquals(true, range.isIncluded(9));
-    assertEquals(true, range.isIncluded(10));
-    assertEquals(false, range.isIncluded(11));
-    assertEquals(false, range.isIncluded(26));
-    assertEquals(true, range.isIncluded(27));
-    assertEquals(false, range.isIncluded(28));
+    assertFalse(range.isIncluded(3));
+    assertTrue(range.isIncluded(4));
+    assertTrue(range.isIncluded(6));
+    assertFalse(range.isIncluded(7));
+    assertFalse(range.isIncluded(8));
+    assertTrue(range.isIncluded(9));
+    assertTrue(range.isIncluded(10));
+    assertFalse(range.isIncluded(11));
+    assertFalse(range.isIncluded(26));
+    assertTrue(range.isIncluded(27));
+    assertFalse(range.isIncluded(28));
     range = conf.getRange("third", null);
     System.out.println("third = " + range);
-    assertEquals(false, range.isIncluded(33));
-    assertEquals(true, range.isIncluded(34));
-    assertEquals(true, range.isIncluded(100000000));
+    assertFalse(range.isIncluded(33));
+    assertTrue(range.isIncluded(34));
+    assertTrue(range.isIncluded(100000000));
   }
 
   @Test
   public void testGetRangeIterator() throws Exception {
     Configuration config = new Configuration(false);
     IntegerRanges ranges = config.getRange("Test", "");
-    assertFalse("Empty range has values", ranges.iterator().hasNext());
+    assertFalse(ranges.iterator().hasNext(), "Empty range has values");
     ranges = config.getRange("Test", "5");
-    Set<Integer> expected = new HashSet<Integer>(Arrays.asList(5));
-    Set<Integer> found = new HashSet<Integer>();
+    Set<Integer> expected = new HashSet<>(Collections.singletonList(5));
+    Set<Integer> found = new HashSet<>();
     for(Integer i: ranges) {
       found.add(i);
     }
     assertEquals(expected, found);
 
     ranges = config.getRange("Test", "5-10,13-14");
-    expected = new HashSet<Integer>(Arrays.asList(5,6,7,8,9,10,13,14));
-    found = new HashSet<Integer>();
+    expected = new HashSet<>(Arrays.asList(5,6,7,8,9,10,13,14));
+    found = new HashSet<>();
     for(Integer i: ranges) {
       found.add(i);
     }
     assertEquals(expected, found);
 
     ranges = config.getRange("Test", "8-12, 5- 7");
-    expected = new HashSet<Integer>(Arrays.asList(5,6,7,8,9,10,11,12));
-    found = new HashSet<Integer>();
+    expected = new HashSet<>(Arrays.asList(5,6,7,8,9,10,11,12));
+    found = new HashSet<>();
     for(Integer i: ranges) {
       found.add(i);
     }
@@ -1320,14 +1332,14 @@ public class TestConfiguration {
     endConfig();
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
-    assertEquals(true, conf.getBoolean("test.bool1", false));
-    assertEquals(false, conf.getBoolean("test.bool2", true));
-    assertEquals(true, conf.getBoolean("test.bool3", false));
-    assertEquals(false, conf.getBoolean("test.bool4", true));
-    assertEquals(true, conf.getBoolean("test.bool5", true));
-    assertEquals(true, conf.getBoolean("test.bool6", false));
-    assertEquals(false, conf.getBoolean("test.bool7", true));
-    assertEquals(false, conf.getBoolean("test.bool8", false));
+    assertTrue(conf.getBoolean("test.bool1", false));
+    assertFalse(conf.getBoolean("test.bool2", true));
+    assertTrue(conf.getBoolean("test.bool3", false));
+    assertFalse(conf.getBoolean("test.bool4", true));
+    assertTrue(conf.getBoolean("test.bool5", true));
+    assertTrue(conf.getBoolean("test.bool6", false));
+    assertFalse(conf.getBoolean("test.bool7", true));
+    assertFalse(conf.getBoolean("test.bool8", false));
   }
 
   @Test
@@ -1454,8 +1466,8 @@ public class TestConfiguration {
     return classNames;
   }
 
-  enum Dingo { FOO, BAR };
-  enum Yak { RAB, FOO };
+  enum Dingo { FOO, BAR }
+  enum Yak { RAB, FOO }
   @Test
   public void testEnum() {
     Configuration conf = new Configuration();
@@ -1689,18 +1701,15 @@ public class TestConfiguration {
     conf.set("fs.defaultFS", "value");
     String [] sources = conf.getPropertySources("test.foo");
     assertEquals(1, sources.length);
-    assertEquals(
-        "Resource string returned for a file-loaded property" +
-            " must be a proper absolute path",
-        fileResource,
-        new Path(sources[0]));
-    assertArrayEquals("Resource string returned for a set() property must be " +
-            "\"programmatically\"",
-        new String[]{"programmatically"},
-        conf.getPropertySources("fs.defaultFS"));
-    assertArrayEquals("Resource string returned for an unset property must "
-            + "be null",
-        null, conf.getPropertySources("fs.defaultFoo"));
+    assertEquals(fileResource, new Path(sources[0]),
+        "Resource string returned for a file-loaded property " +
+        "must be a proper absolute path");
+    assertArrayEquals(new String[]{"programmatically"},
+        conf.getPropertySources("fs.defaultFS"),
+        "Resource string returned for a set() property must be " +
+        "\"programmatically\"");
+    assertArrayEquals(null, conf.getPropertySources("fs.defaultFoo"),
+        "Resource string returned for an unset property must be null");
   }
 
   @Test
@@ -1716,11 +1725,9 @@ public class TestConfiguration {
     assertEquals("a", sources[0]);
     assertEquals("b", sources[1]);
     assertEquals("c", sources[2]);
-    assertEquals(
+    assertEquals(fileResource, new Path(sources[3]),
         "Resource string returned for a file-loaded property" +
-            " must be a proper absolute path",
-        fileResource,
-        new Path(sources[3]));
+        " must be a proper absolute path");
   }
 
   @Test
@@ -1728,7 +1735,7 @@ public class TestConfiguration {
     Configuration conf = new Configuration();
     final String defaultAddr = "host:1";
     final int defaultPort = 2;
-    InetSocketAddress addr = null;
+    InetSocketAddress addr;
 
     addr = conf.getSocketAddr("myAddress", defaultAddr, defaultPort);
     assertEquals(defaultAddr, NetUtils.getHostPortString(addr));
@@ -1821,7 +1828,7 @@ public class TestConfiguration {
     assertEquals("value1", conf.get("test.key1"));
     // overlayed property overrides.
     assertEquals("value4", conf.get("test.key3"));
-    assertEquals(null, conf.get("test.key2"));
+    assertNull(conf.get("test.key2"));
     assertEquals("value5", conf.get("test.key4"));
   }
 
@@ -1852,7 +1859,7 @@ public class TestConfiguration {
     conf.setQuietMode(false);
     conf.setClassLoader(new Fake_ClassLoader());
     Configuration other = new Configuration(conf);
-    assertTrue(other.getClassLoader() instanceof Fake_ClassLoader);
+    assertInstanceOf(Fake_ClassLoader.class, other.getClassLoader());
   }
 
   static class JsonConfiguration {
@@ -1930,8 +1937,8 @@ public class TestConfiguration {
   public void testDumpProperty() throws IOException {
     StringWriter outWriter = new StringWriter();
     ObjectMapper mapper = new ObjectMapper();
-    String jsonStr = null;
-    String xmlStr = null;
+    String jsonStr;
+    String xmlStr;
     try {
       Configuration testConf = new Configuration(false);
       out = new BufferedWriter(new FileWriter(CONFIG));
@@ -1956,7 +1963,7 @@ public class TestConfiguration {
       JsonProperty jp1 = jconf1.getProperty();
       assertEquals("test.key2", jp1.getKey());
       assertEquals("value2", jp1.getValue());
-      assertEquals(true, jp1.isFinal);
+      assertTrue(jp1.isFinal);
       assertEquals(fileResource.toString(), jp1.getResource());
 
       // test xml format
@@ -1979,7 +1986,7 @@ public class TestConfiguration {
             "test.unknown.key", outWriter);
         outWriter.close();
       } catch (Exception e) {
-        assertTrue(e instanceof IllegalArgumentException);
+        assertInstanceOf(IllegalArgumentException.class, e);
         assertTrue(e.getMessage().contains("test.unknown.key") &&
             e.getMessage().contains("not found"));
       }
@@ -1989,7 +1996,7 @@ public class TestConfiguration {
         testConf.writeXml("test.unknown.key", outWriter);
         outWriter.close();
       } catch (Exception e) {
-        assertTrue(e instanceof IllegalArgumentException);
+        assertInstanceOf(IllegalArgumentException.class, e);
         assertTrue(e.getMessage().contains("test.unknown.key") &&
             e.getMessage().contains("not found"));
       }
@@ -2089,24 +2096,24 @@ public class TestConfiguration {
 
     // put the keys and their corresponding attributes into a hashmap for their
     // efficient retrieval
-    HashMap<String,JsonProperty> confDump = new HashMap<String,JsonProperty>();
+    HashMap<String,JsonProperty> confDump = new HashMap<>();
     for(JsonProperty prop : jconf.getProperties()) {
       confDump.put(prop.getKey(), prop);
     }
     // check if the value and resource of test.key1 is changed
     assertEquals("newValue1", confDump.get("test.key1").getValue());
-    assertEquals(false, confDump.get("test.key1").getIsFinal());
+    assertFalse(confDump.get("test.key1").getIsFinal());
     assertEquals(fileResource1.toString(),
         confDump.get("test.key1").getResource());
     // check if final parameter test.key2 is not changed, since it is first
     // loaded as final parameter
     assertEquals("value2", confDump.get("test.key2").getValue());
-    assertEquals(true, confDump.get("test.key2").getIsFinal());
+    assertTrue(confDump.get("test.key2").getIsFinal());
     assertEquals(fileResource.toString(),
         confDump.get("test.key2").getResource());
     // check for other keys which are not modified later
     assertEquals("value3", confDump.get("test.key3").getValue());
-    assertEquals(false, confDump.get("test.key3").getIsFinal());
+    assertFalse(confDump.get("test.key3").getIsFinal());
     assertEquals(fileResource.toString(),
         confDump.get("test.key3").getResource());
     // check for resource to be "Unknown" for keys which are loaded using 'set'
@@ -2119,17 +2126,17 @@ public class TestConfiguration {
     jsonStr = outWriter.toString();
     mapper = new ObjectMapper();
     jconf = mapper.readValue(jsonStr, JsonConfiguration.class);
-    confDump = new HashMap<String, JsonProperty>();
+    confDump = new HashMap<>();
     for(JsonProperty prop : jconf.getProperties()) {
       confDump.put(prop.getKey(), prop);
     }
-    assertEquals("value5",confDump.get("test.key6").getValue());
+    assertEquals("value5", confDump.get("test.key6").getValue());
     assertEquals("programmatically", confDump.get("test.key4").getResource());
     outWriter.close();
   }
 
   @Test
-  public void testDumpConfiguratioWithoutDefaults() throws IOException {
+  public void testDumpConfigurationWithoutDefaults() throws IOException {
     // check for case when default resources are not loaded
     Configuration config = new Configuration(false);
     StringWriter outWriter = new StringWriter();
@@ -2158,7 +2165,7 @@ public class TestConfiguration {
     mapper = new ObjectMapper();
     jconf = mapper.readValue(jsonStr, JsonConfiguration.class);
 
-    HashMap<String, JsonProperty>confDump = new HashMap<String, JsonProperty>();
+    HashMap<String, JsonProperty>confDump = new HashMap<>();
     for (JsonProperty prop : jconf.getProperties()) {
       confDump.put(prop.getKey(), prop);
     }
@@ -2168,8 +2175,8 @@ public class TestConfiguration {
     assertEquals(confDump.get("test.key1").getValue(),"value1");
     assertEquals(confDump.get("test.key2").getValue(),"value2");
     //check the final tag
-    assertEquals(false, confDump.get("test.key1").getIsFinal());
-    assertEquals(true, confDump.get("test.key2").getIsFinal());
+    assertFalse(confDump.get("test.key1").getIsFinal());
+    assertTrue(confDump.get("test.key2").getIsFinal());
     //check the resource for each property
     for (JsonProperty prop : jconf.getProperties()) {
       assertEquals(fileResource.toString(),prop.getResource());
@@ -2225,10 +2232,10 @@ public class TestConfiguration {
     conf.set(key4, "value3");
 
     Map<String,String> res = conf.getValByRegex("^t\\..*\\.key\\d");
-    assertTrue("Conf didn't get key " + key1, res.containsKey(key1));
-    assertTrue("Conf didn't get key " + key2, res.containsKey(key2));
-    assertTrue("Picked out wrong key " + key3, !res.containsKey(key3));
-    assertTrue("Picked out wrong key " + key4, !res.containsKey(key4));
+    assertTrue(res.containsKey(key1), "Conf didn't get key " + key1);
+    assertTrue(res.containsKey(key2), "Conf didn't get key " + key2);
+    assertFalse(res.containsKey(key3), "Picked out wrong key " + key3);
+    assertFalse(res.containsKey(key4), "Picked out wrong key " + key4);
   }
 
   @Test
@@ -2237,10 +2244,9 @@ public class TestConfiguration {
     Class<?>[] classes =
         config.getClasses("testClassName", Configuration.class);
     assertEquals(
-        "Not returning expected number of classes. Number of returned classes ="
-            + classes.length, 1, classes.length);
-    assertEquals("Not returning the default class Name", Configuration.class,
-        classes[0]);
+    1, classes.length, "Not returning expected number of classes. Number of returned classes ="
+            + classes.length);
+    assertEquals(Configuration.class, classes[0], "Not returning the default class Name");
   }
 
   @Test
@@ -2250,8 +2256,8 @@ public class TestConfiguration {
     config.set("testClassName", "");
     Class<?>[] classes = config.getClasses("testClassName", Configuration.class);
     assertEquals(
-        "Not returning expected number of classes. Number of returned classes ="
-            + classes.length, 0, classes.length);
+    0, classes.length, "Not returning expected number of classes. Number of returned classes ="
+            + classes.length);
   }
 
   @Test
@@ -2261,7 +2267,7 @@ public class TestConfiguration {
       config.set("testClassName", null);
       fail("Should throw an IllegalArgumentException exception ");
     } catch (Exception e) {
-      assertTrue(e instanceof IllegalArgumentException);
+      assertInstanceOf(IllegalArgumentException.class, e);
       assertEquals(e.getMessage(),
           "The value of property testClassName must not be null");
     }
@@ -2274,7 +2280,7 @@ public class TestConfiguration {
       config.set(null, "test");
       fail("Should throw an IllegalArgumentException exception ");
     } catch (Exception e) {
-      assertTrue(e instanceof IllegalArgumentException);
+      assertInstanceOf(IllegalArgumentException.class, e);
       assertEquals(e.getMessage(), "Property name must not be null");
     }
   }
@@ -2292,7 +2298,7 @@ public class TestConfiguration {
         "foo${" + key + "}bar",
         "${" + key + "}bar")) {
       configuration.set(key, keyExpression);
-      assertEquals("Unexpected value", keyExpression, configuration.get(key));
+      assertEquals(keyExpression, configuration.get(key), "Unexpected value");
     }
   }
 
@@ -2311,7 +2317,7 @@ public class TestConfiguration {
         "${" + key + "bar")) {
       configuration.set(key, keyExpression);
       String value = configuration.get(key);
-      assertTrue("Unexpected value " + value, value.equals(keyExpression));
+      assertEquals(value, keyExpression, "Unexpected value " + value);
     }
   }
 
@@ -2401,19 +2407,19 @@ public class TestConfiguration {
     Path fileResource = new Path(CONFIG);
     Configuration conf = new Configuration();
     Set<String> finalParameters = conf.getFinalParameters();
-    assertFalse("my.var already exists", finalParameters.contains("my.var"));
+    assertFalse(finalParameters.contains("my.var"), "my.var already exists");
     conf.addResource(fileResource);
     assertEquals("my.var is undefined", "x", conf.get("my.var"));
-    assertFalse("finalparams not copied", finalParameters.contains("my.var"));
+    assertFalse(finalParameters.contains("my.var"), "finalparams not copied");
     finalParameters = conf.getFinalParameters();
-    assertTrue("my.var is not final", finalParameters.contains("my.var"));
+    assertTrue(finalParameters.contains("my.var"), "my.var is not final");
   }
 
   /**
    * A test to check whether this thread goes into infinite loop because of
    * destruction of data structure by resize of Map. This problem was reported
    * by SPARK-2546.
-   * @throws Exception
+   * @throws Exception If the test encounters any errors during execution.
    */
   @Test
   public void testConcurrentAccesses() throws Exception {
@@ -2592,7 +2598,7 @@ public class TestConfiguration {
 
     Properties properties = conf.getAllPropertiesByTags(tagList);
     String[] sources = conf.getPropertySources("dfs.replication");
-    assertTrue(sources.length == 1);
+    assertEquals(1, sources.length);
     assertTrue(Arrays.toString(sources).contains("core-site.xml"));
 
     assertEq(3, properties.size());
@@ -2714,6 +2720,6 @@ public class TestConfiguration {
 
     Thread.sleep(1000); //give enough time for threads to run
 
-    assertFalse("ConcurrentModificationException occurred", exceptionOccurred.get());
+    assertFalse(exceptionOccurred.get(), "ConcurrentModificationException occurred");
   }
 }

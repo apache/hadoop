@@ -41,9 +41,10 @@ import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertCapabilities;
 
@@ -56,13 +57,13 @@ public class TestCryptoStreams extends CryptoStreamsTestBase {
   private byte[] buf;
   private int bufLen;
   
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     Configuration conf = new Configuration();
     codec = CryptoCodec.getInstance(conf);
   }
   
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws Exception {
   }
   
@@ -228,7 +229,7 @@ public class TestCryptoStreams extends CryptoStreamsTestBase {
       checkStream();
       
       if (pos < length) {
-        int n = (int) Math.min(len, length - pos);
+        int n = Math.min(len, length - pos);
         System.arraycopy(data, pos, b, off, n);
         pos += n;
         return n;
@@ -247,7 +248,7 @@ public class TestCryptoStreams extends CryptoStreamsTestBase {
     public int read(ByteBuffer buf) throws IOException {
       checkStream();
       if (pos < length) {
-        int n = (int) Math.min(buf.remaining(), length - pos);
+        int n = Math.min(buf.remaining(), length - pos);
         if (n > 0) {
           buf.put(data, pos, n);
         }
@@ -463,10 +464,11 @@ public class TestCryptoStreams extends CryptoStreamsTestBase {
   }
 
   /**
-   * This tests {@link StreamCapabilities#hasCapability(String)} for the
+   * This tests {@link StreamCapabilities#hasCapability(String)} for
    * the underlying streams.
    */
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testHasCapability() throws Exception {
     // verify hasCapability returns what FakeOutputStream is set up for
     CryptoOutputStream cos =

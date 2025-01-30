@@ -18,7 +18,13 @@
 
 package org.apache.hadoop.cli;
 
-import org.apache.hadoop.cli.util.*;
+import org.apache.hadoop.cli.util.CLICommand;
+import org.apache.hadoop.cli.util.CLICommandFS;
+import org.apache.hadoop.cli.util.CLITestCmd;
+import org.apache.hadoop.cli.util.CLITestData;
+import org.apache.hadoop.cli.util.ComparatorBase;
+import org.apache.hadoop.cli.util.ComparatorData;
+import org.apache.hadoop.cli.util.CommandExecutor;
 import org.apache.hadoop.cli.util.CommandExecutor.Result;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -26,8 +32,8 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.XMLUtils;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,7 +80,7 @@ public class CLITestHelper {
   protected void readTestConfigFile() {
     String testConfigFile = getTestFile();
     if (testsFromConfigFile == null) {
-      boolean success = false;
+      boolean success;
       testConfigFile = TEST_CACHE_DATA_DIR + File.separator + testConfigFile;
       try {
         SAXParser p = XMLUtils.newSecureSAXParserFactory().newSAXParser();
@@ -85,7 +91,7 @@ public class CLITestHelper {
             testConfigFile, e);
         success = false;
       }
-      assertTrue("Error reading test config file", success);
+      assertTrue(success, "Error reading test config file");
     }
   }
 
@@ -113,8 +119,7 @@ public class CLITestHelper {
     readTestConfigFile();
     
     conf = new Configuration();
-    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, 
-                    true);
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
 
     clitestDataDir = new File(TEST_CACHE_DATA_DIR).
     toURI().toString().replace(' ', '+');
@@ -129,7 +134,7 @@ public class CLITestHelper {
   
   /**
    * Expand the commands from the test config xml file
-   * @param cmd
+   * @param cmd command.
    * @return String expanded command
    */
   protected String expandCommand(final String cmd) {
@@ -155,31 +160,27 @@ public class CLITestHelper {
       // Display the details only if there is a failure
       if (!testResult) {
         LOG.info("-------------------------------------------");
-        LOG.info("                    Test ID: [" + (i + 1) + "]");
-        LOG.info("           Test Description: [" + td.getTestDesc() + "]");
+        LOG.info("                    Test ID: [ {} ]", (i + 1));
+        LOG.info("           Test Description: [ {} ]", td.getTestDesc());
         LOG.info("");
 
         ArrayList<CLICommand> testCommands = td.getTestCommands();
         for (CLICommand cmd : testCommands) {
-          LOG.info("              Test Commands: [" + 
-                   expandCommand(cmd.getCmd()) + "]");
+          LOG.info("              Test Commands: [ {} ] ", expandCommand(cmd.getCmd()));
         }
 
         LOG.info("");
         ArrayList<CLICommand> cleanupCommands = td.getCleanupCommands();
         for (CLICommand cmd : cleanupCommands) {
-          LOG.info("           Cleanup Commands: [" +
-                   expandCommand(cmd.getCmd()) + "]");
+          LOG.info("           Cleanup Commands: [ {} ]", expandCommand(cmd.getCmd()));
         }
 
         LOG.info("");
         ArrayList<ComparatorData> compdata = td.getComparatorData();
         for (ComparatorData cd : compdata) {
           boolean resultBoolean = cd.getTestResult();
-          LOG.info("                 Comparator: [" + 
-                   cd.getComparatorType() + "]");
-          LOG.info("         Comparision result:   [" + 
-                   (resultBoolean ? "pass" : "fail") + "]");
+          LOG.info("                 Comparator: [ {} ]", cd.getComparatorType());
+          LOG.info("         Comparison result:   [ {} ]",  (resultBoolean ? "pass" : "fail"));
           LOG.info("            Expected output:   [" + 
                    expandCommand(cd.getExpectedOutput()) + "]");
           LOG.info("              Actual output:   [" + 
@@ -210,35 +211,34 @@ public class CLITestHelper {
     }
     
     
-    LOG.info("               Testing mode: " + testMode);
+    LOG.info("               Testing mode: {}.", testMode);
     LOG.info("");
-    LOG.info("             Overall result: " + 
-    		(overallResults ? "+++ PASS +++" : "--- FAIL ---"));
+    LOG.info("             Overall result: {}.",
+        (overallResults ? "+++ PASS +++" : "--- FAIL ---"));
     if ((totalPass + totalFail) == 0) {
-      LOG.info("               # Tests pass: " + 0);
-      LOG.info("               # Tests fail: " + 0);
+      LOG.info("               # Tests pass: {}.", 0);
+      LOG.info("               # Tests fail: {}.", 0);
     }
     else 
     {
-      LOG.info("               # Tests pass: " + totalPass +
-          " (" + (100 * totalPass / (totalPass + totalFail)) + "%)");
-      LOG.info("               # Tests fail: " + totalFail + 
-          " (" + (100 * totalFail / (totalPass + totalFail)) + "%)");
+      LOG.info("               # Tests pass: {} ({}%)",
+          totalPass, (100 * totalPass / (totalPass + totalFail)));
+      LOG.info("               # Tests fail: {} ({}%)",
+          totalFail, (100 * totalFail / (totalPass + totalFail)));
     }
     
-    LOG.info("         # Validations done: " + totalComparators + 
-    		" (each test may do multiple validations)");
+    LOG.info("         # Validations done: {} (each test may do multiple validations)",
+        totalComparators);
     
     LOG.info("");
     LOG.info("Failing tests:");
     LOG.info("--------------");
-    int i = 0;
+    int i;
     boolean foundTests = false;
     for (i = 0; i < testsFromConfigFile.size(); i++) {
       boolean resultBoolean = testsFromConfigFile.get(i).getTestResult();
       if (!resultBoolean) {
-        LOG.info((i + 1) + ": " + 
-        		testsFromConfigFile.get(i).getTestDesc());
+        LOG.info("{}: {}.", (i + 1), testsFromConfigFile.get(i).getTestDesc());
         foundTests = true;
       }
     }
@@ -253,8 +253,7 @@ public class CLITestHelper {
     for (i = 0; i < testsFromConfigFile.size(); i++) {
       boolean resultBoolean = testsFromConfigFile.get(i).getTestResult();
       if (resultBoolean) {
-        LOG.info((i + 1) + ": " + 
-        		testsFromConfigFile.get(i).getTestDesc());
+        LOG.info("{}: {}.", (i + 1), testsFromConfigFile.get(i).getTestDesc());
         foundTests = true;
       }
     }
@@ -262,21 +261,22 @@ public class CLITestHelper {
     	LOG.info("NONE");
     }
 
-    assertTrue("One of the tests failed. " +
-    		"See the Detailed results to identify " +
-    		"the command that failed", overallResults);
-    
+    assertTrue(overallResults, "One of the tests failed. " +
+    	"See the Detailed results to identify " +
+    	"the command that failed");
   }
   
   /**
-   * Compare the actual output with the expected output
-   * @param compdata
-   * @return
+   * Compare the actual output with the expected output.
+   *
+   * @param compdata The ComparatorData object containing the expected output and comparator type.
+   * @param cmdResult The Result object containing the actual command output.
+   * @return true if the outputs match according to the comparator; false otherwise.
    */
   private boolean compareTestOutput(ComparatorData compdata, Result cmdResult) {
     // Compare the output based on the comparator
     String comparatorType = compdata.getComparatorType();
-    Class<?> comparatorClass = null;
+    Class<?> comparatorClass;
     
     // If testMode is "test", then run the command and compare the output
     // If testMode is "nocompare", then run the command and dump the output.
@@ -293,7 +293,7 @@ public class CLITestHelper {
         compareOutput = comp.compare(cmdResult.getCommandOutput(), 
           expandCommand(compdata.getExpectedOutput()));
       } catch (Exception e) {
-        LOG.info("Error in instantiating the comparator" + e);
+        LOG.info("Error in instantiating the comparator", e);
       }
     }
     
@@ -310,8 +310,8 @@ public class CLITestHelper {
    *********************************/
   
   public void testAll() {
-    assertTrue("Number of tests has to be greater then zero",
-      testsFromConfigFile.size() > 0);
+    assertTrue(
+     testsFromConfigFile.size() > 0, "Number of tests has to be greater then zero");
     LOG.info("TestAll");
     // Run the tests defined in the testConf.xml config file.
     for (int index = 0; index < testsFromConfigFile.size(); index++) {
@@ -336,9 +336,9 @@ public class CLITestHelper {
         final String comptype = cd.getComparatorType();
         
         boolean compareOutput = false;
-        boolean compareExitCode = false;
-        
-        if (! comptype.equalsIgnoreCase("none")) {
+        boolean compareExitCode;
+
+        if (!comptype.equalsIgnoreCase("none")) {
           compareOutput = compareTestOutput(cd, cmdResult);
           if (cd.getExitCode() == -1) {
             // No need to check exit code if not specified
@@ -371,7 +371,7 @@ public class CLITestHelper {
    * this method has to be overridden by an ancestor
    */
   protected CommandExecutor.Result execute(CLICommand cmd) throws Exception {
-    throw new Exception("Unknown type of test command:"+ cmd.getType());
+    throw new Exception("Unknown type of test command:" + cmd.getType());
   }
   
   /*
@@ -386,7 +386,7 @@ public class CLITestHelper {
     
     @Override
     public void startDocument() throws SAXException {
-      testsFromConfigFile = new ArrayList<CLITestData>();
+      testsFromConfigFile = new ArrayList<>();
     }
     
     @Override
@@ -397,11 +397,11 @@ public class CLITestHelper {
       if (qName.equals("test")) {
         td = new CLITestData();
       } else if (qName.equals("test-commands")) {
-        testCommands = new ArrayList<CLICommand>();
+        testCommands = new ArrayList<>();
       } else if (qName.equals("cleanup-commands")) {
-        cleanupCommands = new ArrayList<CLICommand>();
+        cleanupCommands = new ArrayList<>();
       } else if (qName.equals("comparators")) {
-        testComparators = new ArrayList<ComparatorData>();
+        testComparators = new ArrayList<>();
       } else if (qName.equals("comparator")) {
         comparatorData = new ComparatorData();
         comparatorData.setExitCode(-1);
@@ -437,7 +437,7 @@ public class CLITestHelper {
       } else if (qName.equals("expected-output")) {
         comparatorData.setExpectedOutput(charString);
       } else if (qName.equals("expected-exit-code")) {
-        comparatorData.setExitCode(Integer.valueOf(charString));
+        comparatorData.setExitCode(Integer.parseInt(charString));
       } else if (qName.equals("test")) {
         if (!Shell.WINDOWS || runOnWindows) {
           testsFromConfigFile.add(td);

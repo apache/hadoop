@@ -43,13 +43,16 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.util.XMLUtils;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Basic test case that the ConfServlet can write configuration
@@ -58,13 +61,11 @@ import static org.junit.Assert.*;
 public class TestConfServlet {
   private static final String TEST_KEY = "testconfservlet.key";
   private static final String TEST_VAL = "testval";
-  private static final Map<String, String> TEST_PROPERTIES =
-      new HashMap<String, String>();
-  private static final Map<String, String> TEST_FORMATS =
-      new HashMap<String, String>();
+  private static final Map<String, String> TEST_PROPERTIES = new HashMap<>();
+  private static final Map<String, String> TEST_FORMATS = new HashMap<>();
   private static final Map<String, String> MASK_PROPERTIES = new HashMap<>();
 
-  @BeforeClass
+  @BeforeAll
   public static void initTestProperties() {
     TEST_PROPERTIES.put("test.key1", "value1");
     TEST_PROPERTIES.put("test.key2", "value2");
@@ -94,7 +95,7 @@ public class TestConfServlet {
 
   @Test
   public void testParseHeaders() throws Exception {
-    HashMap<String, String> verifyMap = new HashMap<String, String>();
+    HashMap<String, String> verifyMap = new HashMap<>();
     verifyMap.put("text/plain", ConfServlet.FORMAT_XML);
     verifyMap.put(null, ConfServlet.FORMAT_XML);
     verifyMap.put("text/xml", ConfServlet.FORMAT_XML);
@@ -103,10 +104,10 @@ public class TestConfServlet {
 
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     for(String contentTypeExpected : verifyMap.keySet()) {
-      String contenTypeActual = verifyMap.get(contentTypeExpected);
+      String contentTypeActual = verifyMap.get(contentTypeExpected);
       Mockito.when(request.getHeader(HttpHeaders.ACCEPT))
           .thenReturn(contentTypeExpected);
-      assertEquals(contenTypeActual,
+      assertEquals(contentTypeActual,
           ConfServlet.parseAcceptHeader(request));
     }
   }
