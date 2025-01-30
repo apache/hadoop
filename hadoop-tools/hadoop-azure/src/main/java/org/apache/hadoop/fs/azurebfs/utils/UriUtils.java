@@ -58,24 +58,15 @@ public final class UriUtils {
   private static final Logger LOG = LoggerFactory.getLogger(
       UriUtils.class);
 
-  private static final String ABFS_URI_REGEX
-      = "[^.]+\\.dfs\\.(preprod\\.){0,1}core\\.windows\\.net";
-
-  private static final Pattern ABFS_URI_PATTERN = Pattern.compile(
-      ABFS_URI_REGEX);
-
+  private static final String ABFS_URI_REGEX = "[^.]+\\.dfs\\.(preprod\\.){0,1}core\\.windows\\.net";
+  private static final Pattern ABFS_URI_PATTERN = Pattern.compile(ABFS_URI_REGEX);
   private static final Set<String> FULL_MASK_PARAM_KEYS = new HashSet<>(
       Collections.singleton(QUERY_PARAM_SIGNATURE));
-
   private static final Set<String> PARTIAL_MASK_PARAM_KEYS = new HashSet<>(
       Arrays.asList(QUERY_PARAM_SKOID, QUERY_PARAM_SAOID, QUERY_PARAM_SUOID));
-
   private static final Character CHAR_MASK = 'X';
-
   private static final String FULL_MASK = "XXXXX";
-
   private static final int DEFAULT_QUERY_STRINGBUILDER_CAPACITY = 550;
-
   private static final int PARTIAL_MASK_VISIBLE_LEN = 18;
 
   /**
@@ -121,9 +112,7 @@ public final class UriUtils {
    */
   public static String generateUniqueTestPath() {
     String testUniqueForkId = System.getProperty("test.unique.fork.id");
-    return testUniqueForkId == null
-        ? "/test"
-        : "/" + testUniqueForkId + "/test";
+    return testUniqueForkId == null ? "/test" : "/" + testUniqueForkId + "/test";
   }
 
   public static String maskUrlQueryParameters(List<NameValuePair> keyValueList,
@@ -150,8 +139,7 @@ public final class UriUtils {
     for (NameValuePair keyValuePair : keyValueList) {
       String key = keyValuePair.getName();
       if (key.isEmpty()) {
-        throw new IllegalArgumentException(
-            "Query param key should not be empty");
+        throw new IllegalArgumentException("Query param key should not be empty");
       }
       String value = keyValuePair.getValue();
       maskedUrl.append(key);
@@ -204,8 +192,7 @@ public final class UriUtils {
    */
   public static URL changeUrlFromBlobToDfs(URL url) throws InvalidUriException {
     try {
-      url = new URL(replacedUrl(url.toString(), ABFS_BLOB_DOMAIN_NAME,
-          ABFS_DFS_DOMAIN_NAME));
+      url = new URL(replacedUrl(url.toString(), ABFS_BLOB_DOMAIN_NAME, ABFS_DFS_DOMAIN_NAME));
     } catch (MalformedURLException ex) {
       throw new InvalidUriException(url.toString());
     }
@@ -221,8 +208,7 @@ public final class UriUtils {
    */
   public static URL changeUrlFromDfsToBlob(URL url) throws InvalidUriException {
     try {
-      url = new URL(replacedUrl(url.toString(), ABFS_DFS_DOMAIN_NAME,
-          ABFS_BLOB_DOMAIN_NAME));
+      url = new URL(replacedUrl(url.toString(), ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME));
     } catch (MalformedURLException ex) {
       throw new InvalidUriException(url.toString());
     }
@@ -238,9 +224,7 @@ public final class UriUtils {
    * @param newString the string to be replaced with.
    * @return updated URL
    */
-  private static String replacedUrl(String baseUrl,
-      String oldString,
-      String newString) {
+  private static String replacedUrl(String baseUrl, String oldString, String newString) {
     int startIndex = baseUrl.toString().indexOf("//") + 2;
     int endIndex = baseUrl.toString().indexOf("/", startIndex);
     if (oldString == null || newString == null || startIndex < 0

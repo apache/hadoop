@@ -109,6 +109,11 @@ public final class HttpHeaderConfigurations {
    * {@value}
    */
   public static final String X_MS_BLOB_TYPE = "x-ms-blob-type";
+
+  /**
+   * Http Request Header for copy id.
+   * {@value}
+   */
   public static final String X_MS_COPY_ID = "x-ms-copy-id";
 
     /**
