@@ -360,7 +360,7 @@ public class AbfsBlobClient extends AbfsClient {
       abfsUriQueryBuilder.addQuery(QUERY_PARAM_DELIMITER, FORWARD_SLASH);
     }
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAX_RESULTS, String.valueOf(listMaxResults));
-    appendSASTokenToQuery(relativePath, SASTokenProvider.LIST_OPERATION, abfsUriQueryBuilder);
+    appendSASTokenToQuery(relativePath, SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -694,12 +694,10 @@ public class AbfsBlobClient extends AbfsClient {
   public AbfsRestOperation renewLease(final String path, final String leaseId,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    requestHeaders.add(
-        new AbfsHttpHeader(X_MS_LEASE_ACTION, RENEW_LEASE_ACTION));
+    requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, RENEW_LEASE_ACTION));
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
 
-    final AbfsUriQueryBuilder abfsUriQueryBuilder
-        = createDefaultUriQueryBuilder();
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, LEASE);
     appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilder);
 
@@ -724,12 +722,10 @@ public class AbfsBlobClient extends AbfsClient {
   public AbfsRestOperation releaseLease(final String path, final String leaseId,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    requestHeaders.add(
-        new AbfsHttpHeader(X_MS_LEASE_ACTION, RELEASE_LEASE_ACTION));
+    requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, RELEASE_LEASE_ACTION));
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
 
-    final AbfsUriQueryBuilder abfsUriQueryBuilder
-        = createDefaultUriQueryBuilder();
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, LEASE);
     appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilder);
 
@@ -753,13 +749,10 @@ public class AbfsBlobClient extends AbfsClient {
   public AbfsRestOperation breakLease(final String path,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    requestHeaders.add(
-        new AbfsHttpHeader(X_MS_LEASE_ACTION, BREAK_LEASE_ACTION));
-    requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_BREAK_PERIOD,
-        DEFAULT_LEASE_BREAK_PERIOD));
+    requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, BREAK_LEASE_ACTION));
+    requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_BREAK_PERIOD, DEFAULT_LEASE_BREAK_PERIOD));
 
-    final AbfsUriQueryBuilder abfsUriQueryBuilder
-        = createDefaultUriQueryBuilder();
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, LEASE);
     appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION, abfsUriQueryBuilder);
 
@@ -801,8 +794,7 @@ public class AbfsBlobClient extends AbfsClient {
       final String continuation,
       final TracingContext tracingContext,
       String sourceEtag,
-      boolean isMetadataIncompleteState,
-      boolean isNamespaceEnabled)
+      boolean isMetadataIncompleteState)
       throws IOException {
     BlobRenameHandler blobRenameHandler = getBlobRenameHandler(source,
         destination, sourceEtag, isAtomicRenameKey(source), tracingContext
@@ -922,7 +914,8 @@ public class AbfsBlobClient extends AbfsClient {
       }
 
       throw e;
-    } catch (AzureBlobFileSystemException e) {
+    }
+    catch (AzureBlobFileSystemException e) {
       // Any server side issue will be returned as AbfsRestOperationException and will be handled above.
       LOG.debug("Append request failed with non server issues for path: {}, offset: {}, position: {}",
           path, reqParams.getoffset(), reqParams.getPosition());
@@ -1189,7 +1182,7 @@ public class AbfsBlobClient extends AbfsClient {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN,
         String.valueOf(getAbfsConfiguration().isUpnUsed()));
-    appendSASTokenToQuery(path, SASTokenProvider.GET_PROPERTIES_OPERATION,
+    appendSASTokenToQuery(path, SASTokenProvider.FIXED_SAS_STORE_OPERATION,
         abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
@@ -1286,7 +1279,7 @@ public class AbfsBlobClient extends AbfsClient {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/delete></a>.
+   * Orchestration of delete path over Blob endpoint.
    * Delete the file or directory at specified path.
    * @param path to be deleted.
    * @param recursive if the path is a directory, delete recursively.
@@ -1721,6 +1714,11 @@ public class AbfsBlobClient extends AbfsClient {
     return directory;
   }
 
+  /**
+   * Check if the path is present in the set of atomic rename keys.
+   * @param key path to be checked.
+   * @return true if path is present in the set else false.
+   */
   public boolean isAtomicRenameKey(String key) {
     return isKeyForDirectorySet(key, azureAtomicRenameDirSet);
   }

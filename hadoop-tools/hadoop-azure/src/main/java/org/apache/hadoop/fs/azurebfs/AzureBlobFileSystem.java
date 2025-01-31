@@ -219,7 +219,7 @@ public class AzureBlobFileSystem extends FileSystem
     this.setWorkingDirectory(this.getHomeDirectory());
 
     TracingContext initFSTracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.INIT, tracingHeaderFormat, listener);
+            fileSystemId, FSOperationType.INIT, tracingHeaderFormat, listener);
 
     /*
      * Validate the service type configured in the URI is valid for account type used.
@@ -790,10 +790,10 @@ public class AzureBlobFileSystem extends FileSystem
     }
     if (abfsStore.getClient().isMetricCollectionEnabled()) {
       TracingContext tracingMetricContext = new TracingContext(
-          clientCorrelationId,
-          fileSystemId, FSOperationType.GET_ATTR, true,
-          tracingHeaderFormat,
-          listener, abfsCounters.toString());
+            clientCorrelationId,
+            fileSystemId, FSOperationType.GET_ATTR, true,
+            tracingHeaderFormat,
+            listener, abfsCounters.toString());
       try {
         getAbfsClient().getMetricCall(tracingMetricContext);
       } catch (IOException e) {
@@ -1467,7 +1467,7 @@ public class AzureBlobFileSystem extends FileSystem
    * @throws AzureBlobFileSystemException if any other error occurs.
    */
   private boolean tryGetIsNamespaceEnabled(TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
+      throws AzureBlobFileSystemException{
     try {
       return getIsNamespaceEnabled(tracingContext);
     } catch (AbfsRestOperationException ex) {
@@ -1783,10 +1783,10 @@ public class AzureBlobFileSystem extends FileSystem
     case CommonPathCapabilities.VIRTUAL_BLOCK_LOCATIONS:
       return true;
 
-    // etags are always available on HEAD requests.
+      // etags are always available on HEAD requests.
     case CommonPathCapabilities.ETAGS_AVAILABLE:
       return true;
-    // but etags are only preserved on hns stores.
+      // but etags are only preserved on hns stores.
     case CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME:
     case CommonPathCapabilities.FS_ACLS:
       return getIsNamespaceEnabled(
@@ -1794,7 +1794,7 @@ public class AzureBlobFileSystem extends FileSystem
               FSOperationType.HAS_PATH_CAPABILITY, tracingHeaderFormat,
               listener));
 
-    // probe for presence of the HADOOP-18546 readahead fix.
+      // probe for presence of the HADOOP-18546 readahead fix.
     case CAPABILITY_SAFE_READAHEAD:
       return true;
 

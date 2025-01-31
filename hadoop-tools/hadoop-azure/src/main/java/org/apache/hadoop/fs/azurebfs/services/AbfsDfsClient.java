@@ -555,8 +555,7 @@ public class AbfsDfsClient extends AbfsClient {
    * @param continuation continuation.
    * @param tracingContext for tracing the server calls.
    * @param sourceEtag etag of source file. may be null or empty
-   * @param isMetadataIncompleteState was there a rename failure due to incomplete metadata state?
-   * @param isNamespaceEnabled whether namespace enabled account or not
+   * @param isMetadataIncompleteState was there a rename failure due to incomplete metadata state
    * @return executed rest operation containing response from server.
    * @throws IOException if rest operation fails.
    */
@@ -567,13 +566,12 @@ public class AbfsDfsClient extends AbfsClient {
       final String continuation,
       final TracingContext tracingContext,
       String sourceEtag,
-      boolean isMetadataIncompleteState,
-      boolean isNamespaceEnabled) throws IOException {
+      boolean isMetadataIncompleteState) throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final boolean hasEtag = !isEmpty(sourceEtag);
 
-    boolean shouldAttemptRecovery = isRenameResilience() && isNamespaceEnabled;
+    boolean shouldAttemptRecovery = isRenameResilience() && getIsNamespaceEnabled();
     if (!hasEtag && shouldAttemptRecovery) {
       // in case eTag is already not supplied to the API
       // and rename resilience is expected and it is an HNS enabled account
@@ -661,8 +659,7 @@ public class AbfsDfsClient extends AbfsClient {
           sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
         }
         renamePath(source, destination, continuation, tracingContext,
-            sourceEtagAfterFailure, isMetadataIncompleteState,
-            isNamespaceEnabled);
+            sourceEtagAfterFailure, isMetadataIncompleteState);
       }
       // if we get out of the condition without a successful rename, then
       // it isn't metadata incomplete state issue.

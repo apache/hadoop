@@ -694,8 +694,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
 
       final ContextEncryptionAdapter contextEncryptionAdapter;
-      if (getClient().getEncryptionType()
-          == EncryptionType.ENCRYPTION_CONTEXT) {
+      if (getClient().getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
         contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
             createClient.getEncryptionContextProvider(), getRelativePath(path));
       } else {
@@ -973,10 +972,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       if (parseIsDirectory(resourceType)) {
         throw new AbfsRestOperationException(
-            AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
-            AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-            "openFileForRead must be used with files and not directories",
-            null);
+              AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+              AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+              "openFileForRead must be used with files and not directories",
+              null);
       }
 
       perfInfo.registerSuccess(true);
@@ -1131,18 +1130,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     do {
       try (AbfsPerfInfo perfInfo = startTracking("rename", "renamePath")) {
-        boolean isNamespaceEnabled = getIsNamespaceEnabled(tracingContext);
         final AbfsClientRenameResult abfsClientRenameResult =
             getClient().renamePath(sourceRelativePath, destinationRelativePath,
-                continuation, tracingContext, sourceEtag, false,
-                isNamespaceEnabled);
+                continuation, tracingContext, sourceEtag, false);
 
         AbfsRestOperation op = abfsClientRenameResult.getOp();
-        if (op != null) {
-          perfInfo.registerResult(op.getResult());
-          continuation = op.getResult()
-              .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
-        }
+        perfInfo.registerResult(op.getResult());
+        continuation = op.getResult()
+            .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         perfInfo.registerSuccess(true);
         countAggregate++;
         shouldContinue = continuation != null && !continuation.isEmpty();
@@ -1177,11 +1172,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         AbfsRestOperation op = getClient().deletePath(relativePath, recursive,
             continuation, tracingContext,
             getIsNamespaceEnabled(tracingContext));
-        if (op != null) {
-          perfInfo.registerResult(op.getResult());
-          continuation = op.getResult()
-              .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
-        }
+        perfInfo.registerResult(op.getResult());
+        continuation = op.getResult()
+            .getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         perfInfo.registerSuccess(true);
         countAggregate++;
         shouldContinue = continuation != null && !continuation.isEmpty();

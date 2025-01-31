@@ -42,26 +42,42 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ApiVersion;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidFileSystemPropertyException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
-import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
-import org.apache.hadoop.fs.store.LogExactlyOnce;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
+import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
+import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -71,23 +87,6 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningS
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Preconditions;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ApiVersion;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
-import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
-import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
-import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -136,75 +135,43 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNEC
  * AbfsClient.
  */
 public abstract class AbfsClient implements Closeable {
-
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
-
-  public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE
-      + HUNDRED_CONTINUE + SEMICOLON;
-
-  public static final String ABFS_CLIENT_TIMER_THREAD_NAME
-      = "abfs-timer-client";
+  public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
+  public static final String ABFS_CLIENT_TIMER_THREAD_NAME = "abfs-timer-client";
 
   private final URL baseUrl;
-
   private final SharedKeyCredentials sharedKeyCredentials;
-
   private ApiVersion xMsVersion = ApiVersion.getCurrentVersion();
-
   private final ExponentialRetryPolicy exponentialRetryPolicy;
-
   private final StaticRetryPolicy staticRetryPolicy;
-
   private final String filesystem;
-
   private final AbfsConfiguration abfsConfiguration;
-
   private final String userAgent;
-
   private final AbfsPerfTracker abfsPerfTracker;
-
   private String clientProvidedEncryptionKey = null;
-
   private String clientProvidedEncryptionKeySHA = null;
 
   private final String accountName;
-
   private final AuthType authType;
-
   private AccessTokenProvider tokenProvider;
-
   private SASTokenProvider sasTokenProvider;
-
   private final AbfsCounters abfsCounters;
-
   private Timer timer;
-
   private final String abfsMetricUrl;
-
   private boolean isMetricCollectionEnabled = false;
-
   private final MetricFormat metricFormat;
-
   private final AtomicBoolean isMetricCollectionStopped;
-
   private final int metricAnalysisPeriod;
-
   private final int metricIdlePeriod;
-
   private EncryptionContextProvider encryptionContextProvider = null;
-
   private EncryptionType encryptionType = EncryptionType.NONE;
-
   private final AbfsThrottlingIntercept intercept;
 
   private final ListeningScheduledExecutorService executorService;
 
   private boolean renameResilience;
-
   private TimerTask runningTimerTask;
-
   private boolean isSendMetricCall;
-
   private SharedKeyCredentials metricSharedkeyCredentials = null;
 
   private KeepAliveCache keepAliveCache;
@@ -215,8 +182,7 @@ public abstract class AbfsClient implements Closeable {
   /**
    * logging the rename failure if metadata is in an incomplete state.
    */
-  protected static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE
-      = new LogExactlyOnce(LOG);
+  protected static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE = new LogExactlyOnce(LOG);
 
   private AbfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
@@ -226,26 +192,20 @@ public abstract class AbfsClient implements Closeable {
     this.baseUrl = baseUrl;
     this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
-    this.filesystem = baseUrlString.substring(
-        baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
+    this.filesystem = baseUrlString.substring(baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
     this.abfsConfiguration = abfsConfiguration;
     this.exponentialRetryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.staticRetryPolicy = abfsClientContext.getStaticRetryPolicy();
-    this.accountName = abfsConfiguration.getAccountName()
-        .substring(0,
-            abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
+    this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
-    this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName,
-        abfsConfiguration);
+    this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
     this.renameResilience = abfsConfiguration.getRenameResilience();
 
     if (encryptionContextProvider != null) {
       this.encryptionContextProvider = encryptionContextProvider;
-      xMsVersion
-          = ApiVersion.APR_10_2021; // will be default once server change deployed
+      xMsVersion = ApiVersion.APR_10_2021; // will be default once server change deployed
       encryptionType = EncryptionType.ENCRYPTION_CONTEXT;
-    } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey()
-        != null) {
+    } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
       clientProvidedEncryptionKey =
           abfsConfiguration.getEncodedClientProvidedEncryptionKey();
       this.clientProvidedEncryptionKeySHA =
@@ -257,13 +217,9 @@ public abstract class AbfsClient implements Closeable {
 
     if (this.baseUrl.toString().startsWith(HTTPS_SCHEME)) {
       try {
-        LOG.trace("Initializing DelegatingSSLSocketFactory with {} SSL "
-                + "Channel Mode",
-            this.abfsConfiguration.getPreferredSSLFactoryOption());
-        DelegatingSSLSocketFactory.initializeDefaultFactory(
-            this.abfsConfiguration.getPreferredSSLFactoryOption());
-        sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory()
-            .getProviderName();
+        LOG.trace("Initializing DelegatingSSLSocketFactory with {} SSL " + "Channel Mode", this.abfsConfiguration.getPreferredSSLFactoryOption());
+        DelegatingSSLSocketFactory.initializeDefaultFactory(this.abfsConfiguration.getPreferredSSLFactoryOption());
+        sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory().getProviderName();
       } catch (IOException e) {
         // Suppress exception, failure to init DelegatingSSLSocketFactory would have only performance impact.
         LOG.trace("NonCritFailure: DelegatingSSLSocketFactory Init failed : "
@@ -289,8 +245,7 @@ public abstract class AbfsClient implements Closeable {
             .setDaemon(true)
             .build();
     this.executorService = MoreExecutors.listeningDecorator(
-        HadoopExecutors.newScheduledThreadPool(
-            this.abfsConfiguration.getNumLeaseThreads(), tf));
+        HadoopExecutors.newScheduledThreadPool(this.abfsConfiguration.getNumLeaseThreads(), tf));
     this.metricFormat = abfsConfiguration.getMetricFormat();
     this.isMetricCollectionStopped = new AtomicBoolean(false);
     this.metricAnalysisPeriod = abfsConfiguration.getMetricAnalysisTimeout();
@@ -682,7 +637,6 @@ public abstract class AbfsClient implements Closeable {
    * @param sourceEtag                etag of source file. may be null or empty
    * @param isMetadataIncompleteState was there a rename failure due to
    *                                  incomplete metadata state?
-   * @param isNamespaceEnabled        whether namespace enabled account or not
    * @return AbfsClientRenameResult result of rename operation indicating the
    * AbfsRest operation, rename recovery and incomplete metadata state failure.
    * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
@@ -693,8 +647,7 @@ public abstract class AbfsClient implements Closeable {
       String continuation,
       TracingContext tracingContext,
       String sourceEtag,
-      boolean isMetadataIncompleteState,
-      boolean isNamespaceEnabled)
+      boolean isMetadataIncompleteState)
       throws IOException;
 
   /**
