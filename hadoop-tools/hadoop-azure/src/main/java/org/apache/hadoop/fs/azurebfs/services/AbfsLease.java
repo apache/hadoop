@@ -19,24 +19,23 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 import java.util.Timer;
 import java.util.TimerTask;
-
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableScheduledFuture;
-import org.apache.hadoop.thirdparty.org.checkerframework.checker.nullness.qual.Nullable;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableScheduledFuture;
+import org.apache.hadoop.thirdparty.org.checkerframework.checker.nullness.qual.Nullable;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.INFINITE_LEASE_DURATION;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ACQUIRING_LEASE;
@@ -48,10 +47,10 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation.ONE_THOUS
  * AbfsLease manages an Azure blob lease. It acquires an infinite lease on instantiation and
  * releases the lease when free() is called. Use it to prevent writes to the blob by other
  * processes that don't have the lease.
- * <p>
+ *
  * Creating a new Lease object blocks the caller until the Azure blob lease is acquired. It will
  * retry a fixed number of times before failing if there is a problem acquiring the lease.
- * <p>
+ *
  * Call free() to release the Lease. If the holder process dies, AzureBlobFileSystem breakLease
  * will need to be called before another client will be able to write to the file.
  */

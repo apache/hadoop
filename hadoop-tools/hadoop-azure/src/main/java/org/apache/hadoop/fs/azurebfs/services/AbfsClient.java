@@ -218,7 +218,7 @@ public abstract class AbfsClient implements Closeable {
     if (this.baseUrl.toString().startsWith(HTTPS_SCHEME)) {
       try {
         LOG.trace("Initializing DelegatingSSLSocketFactory with {} SSL "
-            + "Channel Mode", this.abfsConfiguration.getPreferredSSLFactoryOption());
+                + "Channel Mode", this.abfsConfiguration.getPreferredSSLFactoryOption());
         DelegatingSSLSocketFactory.initializeDefaultFactory(this.abfsConfiguration.getPreferredSSLFactoryOption());
         sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory().getProviderName();
       } catch (IOException e) {
@@ -653,8 +653,7 @@ public abstract class AbfsClient implements Closeable {
    * @return un-executed rest operation.
    */
   @VisibleForTesting
-  AbfsRestOperation createRenameRestOperation(URL url,
-      List<AbfsHttpHeader> requestHeaders) {
+  AbfsRestOperation createRenameRestOperation(URL url, List<AbfsHttpHeader> requestHeaders) {
     AbfsRestOperation op = getAbfsRestOperation(
             AbfsRestOperationType.RenamePath,
             HTTP_METHOD_PUT,
@@ -771,7 +770,7 @@ public abstract class AbfsClient implements Closeable {
   // Hence, we pass/succeed the appendblob append call
   // in case we are doing a retry after checking the length of the file.
   public boolean appendSuccessCheckOp(AbfsRestOperation op, final String path,
-                                        final long length, TracingContext tracingContext)
+                                       final long length, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
@@ -990,7 +989,7 @@ public abstract class AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   public AbfsRestOperation getAclStatus(final String path, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
+          throws AzureBlobFileSystemException {
     return getAclStatus(path, abfsConfiguration.isUpnUsed(), tracingContext);
   }
 
@@ -1086,7 +1085,8 @@ public abstract class AbfsClient implements Closeable {
         queryBuilder.setSASToken(sasToken);
         LOG.trace("SAS token fetch complete for {} on {}", operation, path);
       } catch (Exception ex) {
-        throw new SASTokenProviderException(String.format("Failed to acquire a SAS token for %s on %s due to %s", operation, path,
+        throw new SASTokenProviderException(String.format(
+            "Failed to acquire a SAS token for %s on %s due to %s", operation, path,
             ex.toString()));
       }
     }
@@ -1456,8 +1456,7 @@ public abstract class AbfsClient implements Closeable {
       case SUSPEND:
         long now = System.currentTimeMillis();
         long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
-        if (isMetricCollectionEnabled && (now - lastExecutionTime
-            >= metricAnalysisPeriod)) {
+        if (isMetricCollectionEnabled && (now - lastExecutionTime >= metricAnalysisPeriod)) {
           synchronized (this) {
             if (!isMetricCollectionStopped.get()) {
               timerTask.cancel();
@@ -1517,11 +1516,9 @@ public abstract class AbfsClient implements Closeable {
   }
 
   class TimerTaskImpl extends TimerTask {
-
     TimerTaskImpl() {
       runningTimerTask = this;
     }
-
     @Override
     public void run() {
       try {

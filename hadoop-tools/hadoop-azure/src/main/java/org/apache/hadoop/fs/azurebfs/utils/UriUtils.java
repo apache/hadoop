@@ -227,7 +227,7 @@ public final class UriUtils {
   private static String replacedUrl(String baseUrl, String oldString, String newString) {
     int startIndex = baseUrl.toString().indexOf("//") + 2;
     int endIndex = baseUrl.toString().indexOf("/", startIndex);
-    if (oldString == null || newString == null || startIndex < 0
+    if (oldString == null || newString == null|| startIndex < 0
         || endIndex > baseUrl.length() || startIndex > endIndex) {
       throw new IllegalArgumentException("Invalid input or indices");
     }
