@@ -240,6 +240,12 @@ public final class UriUtils {
     return sb.toString();
   }
 
+  /**
+   * Checks if the key is for a directory in the set of directories.
+   * @param key the key to check.
+   * @param dirSet the set of directories.
+   * @return true if the key is for a directory in the set of directories.
+   */
   public static boolean isKeyForDirectorySet(String key, Set<String> dirSet) {
     for (String dir : dirSet) {
       if (dir.isEmpty() || key.startsWith(

@@ -781,7 +781,6 @@ public class AbfsBlobClient extends AbfsClient {
    * @param sourceEtag                etag of source file. may be null or empty
    * @param isMetadataIncompleteState was there a rename failure due to
    *                                  incomplete metadata state?
-   * @param isNamespaceEnabled        whether namespace enabled account or not
    *
    * @return AbfsClientRenameResult result of rename operation indicating the
    * AbfsRest operation, rename recovery and incomplete metadata state failure.
@@ -1285,7 +1284,6 @@ public class AbfsBlobClient extends AbfsClient {
    * @param recursive if the path is a directory, delete recursively.
    * @param continuation to specify continuation token.
    * @param tracingContext TracingContext instance to track identifiers
-   * @param isNamespaceEnabled whether namespace enabled account or not
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -1293,8 +1291,7 @@ public class AbfsBlobClient extends AbfsClient {
   public AbfsRestOperation deletePath(final String path,
       final boolean recursive,
       final String continuation,
-      final TracingContext tracingContext,
-      final boolean isNamespaceEnabled) throws AzureBlobFileSystemException {
+      final TracingContext tracingContext) throws AzureBlobFileSystemException {
     BlobDeleteHandler blobDeleteHandler = getBlobDeleteHandler(path, recursive,
         tracingContext);
     if (blobDeleteHandler.execute()) {

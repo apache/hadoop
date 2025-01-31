@@ -257,8 +257,7 @@ public class ITestAzureBlobFileSystemDelete extends
         "/NonExistingPath",
         false,
         null,
-        getTestTracingContext(fs, true),
-        fs.getIsNamespaceEnabled(getTestTracingContext(fs, true))));
+        getTestTracingContext(fs, true)));
 
     // mock idempotency check to mimic retried case
     AbfsClient mockClient = ITestAbfsClient.getMockAbfsClient(
@@ -306,14 +305,14 @@ public class ITestAzureBlobFileSystemDelete extends
                       Mockito.nullable(ContextEncryptionAdapter.class), Mockito.anyBoolean());
     }
     when(mockClient.deletePath("/NonExistingPath", false, null,
-        tracingContext, fs.getIsNamespaceEnabled(tracingContext)))
+        tracingContext))
         .thenCallRealMethod();
 
     Assertions.assertThat(mockClient.deletePath(
         "/NonExistingPath",
         false,
         null,
-        tracingContext, fs.getIsNamespaceEnabled(tracingContext))
+        tracingContext)
         .getResult()
         .getStatusCode())
         .describedAs("Idempotency check reports successful "

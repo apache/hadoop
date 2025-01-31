@@ -885,14 +885,12 @@ public abstract class AbfsClient implements Closeable {
    * @param recursive if the path is a directory, delete recursively.
    * @param continuation to specify continuation token.
    * @param tracingContext for tracing the server calls.
-   * @param isNamespaceEnabled specify if the namespace is enabled.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   public abstract AbfsRestOperation deletePath(String path, boolean recursive,
       String continuation,
-      TracingContext tracingContext,
-      boolean isNamespaceEnabled)
+      TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
   /**

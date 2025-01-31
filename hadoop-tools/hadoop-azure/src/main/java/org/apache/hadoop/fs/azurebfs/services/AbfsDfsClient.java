@@ -412,6 +412,7 @@ public class AbfsDfsClient extends AbfsClient {
     return op;
   }
 
+  /** {@inheritDoc} */
   public void createNonRecursivePreCheck(Path parentPath,
       TracingContext tracingContext)
       throws IOException {
@@ -1037,7 +1038,6 @@ public class AbfsDfsClient extends AbfsClient {
    * @param recursive if the path is a directory, delete recursively.
    * @param continuation to specify continuation token.
    * @param tracingContext for tracing the server calls.
-   * @param isNamespaceEnabled specify if the namespace is enabled.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -1045,8 +1045,7 @@ public class AbfsDfsClient extends AbfsClient {
   public AbfsRestOperation deletePath(final String path,
       final boolean recursive,
       final String continuation,
-      TracingContext tracingContext,
-      final boolean isNamespaceEnabled) throws AzureBlobFileSystemException {
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
     /*
      * If Pagination is enabled and current API version is old,
      * use the minimum required version for pagination.
@@ -1055,14 +1054,14 @@ public class AbfsDfsClient extends AbfsClient {
      * If pagination is disabled, use the current API version only.
      */
     final List<AbfsHttpHeader> requestHeaders = (isPaginatedDelete(recursive,
-        isNamespaceEnabled) && getxMsVersion().compareTo(
+        getIsNamespaceEnabled()) && getxMsVersion().compareTo(
         ApiVersion.AUG_03_2023) < 0)
         ? createDefaultHeaders(ApiVersion.AUG_03_2023)
         : createDefaultHeaders();
     final AbfsUriQueryBuilder abfsUriQueryBuilder
         = createDefaultUriQueryBuilder();
 
-    if (isPaginatedDelete(recursive, isNamespaceEnabled)) {
+    if (isPaginatedDelete(recursive, getIsNamespaceEnabled())) {
       // Add paginated query parameter
       abfsUriQueryBuilder.addQuery(QUERY_PARAM_PAGINATED, TRUE);
     }
