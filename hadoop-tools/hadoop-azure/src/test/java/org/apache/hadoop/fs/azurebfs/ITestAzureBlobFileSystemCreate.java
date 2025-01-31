@@ -75,6 +75,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.O
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -432,8 +433,6 @@ public class ITestAzureBlobFileSystemCreate extends
 
     ReflectionUtils.setFinalField(AzureBlobFileSystemStore.class, abfsStore, "clientHandler", clientHandler);
     ReflectionUtils.setFinalField(AzureBlobFileSystemStore.class, abfsStore, "client", mockClient);
-    boolean isNamespaceEnabled = abfsStore
-        .getIsNamespaceEnabled(getTestTracingContext(fs, false));
 
     AbfsRestOperation successOp = mock(
         AbfsRestOperation.class);
@@ -450,6 +449,12 @@ public class ITestAzureBlobFileSystemCreate extends
         = getMockAbfsRestOperationException(HTTP_NOT_FOUND);
     AbfsRestOperationException preConditionResponseEx
         = getMockAbfsRestOperationException(HTTP_PRECON_FAILED);
+
+    doCallRealMethod().when(mockClient)
+        .conditionalCreateOverwriteFile(any(String.class),
+            any(FileSystem.Statistics.class),
+            any(AzureBlobFileSystemStore.Permissions.class), any(boolean.class),
+            any(ContextEncryptionAdapter.class), any(TracingContext.class));
 
     // mock for overwrite=false
     doThrow(conflictResponseEx) // Scn1: GFS fails with Http404
@@ -482,6 +487,19 @@ public class ITestAzureBlobFileSystemCreate extends
         .createPath(any(String.class), eq(true), eq(true),
             any(AzureBlobFileSystemStore.Permissions.class), any(boolean.class), eq(null), any(),
             any(TracingContext.class));
+
+    if (mockClient instanceof  AbfsBlobClient) {
+      AbfsBlobClient mockBlobClient = (AbfsBlobClient) mockClient;
+      doThrow(
+          preConditionResponseEx) // Scn3: create overwrite=true fails with Http412
+          .doThrow(
+              serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
+          .when(mockBlobClient)
+          .createPath(any(String.class), eq(true), eq(true),
+              any(AzureBlobFileSystemStore.Permissions.class),
+              any(boolean.class), eq(null), any(ContextEncryptionAdapter.class),
+              any(TracingContext.class), eq(true));
+    }
 
     // Scn1: GFS fails with Http404
     // Sequence of events expected:
