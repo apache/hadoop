@@ -43,6 +43,7 @@ public class TestCLI extends CLITestHelper {
   @Override
   protected CommandExecutor.Result execute(CLICommand cmd) throws Exception {
     return cmd.getExecutor("", conf).executeCommand(cmd.getCmd());
+
   }
   
   @Override

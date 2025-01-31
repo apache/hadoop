@@ -49,10 +49,7 @@ import org.mockito.Mockito;
 
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Basic test case that the ConfServlet can write configuration
@@ -61,8 +58,10 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class TestConfServlet {
   private static final String TEST_KEY = "testconfservlet.key";
   private static final String TEST_VAL = "testval";
-  private static final Map<String, String> TEST_PROPERTIES = new HashMap<>();
-  private static final Map<String, String> TEST_FORMATS = new HashMap<>();
+  private static final Map<String, String> TEST_PROPERTIES =
+      new HashMap<String, String>();
+  private static final Map<String, String> TEST_FORMATS =
+      new HashMap<String, String>();
   private static final Map<String, String> MASK_PROPERTIES = new HashMap<>();
 
   @BeforeAll
@@ -95,7 +94,7 @@ public class TestConfServlet {
 
   @Test
   public void testParseHeaders() throws Exception {
-    HashMap<String, String> verifyMap = new HashMap<>();
+    HashMap<String, String> verifyMap = new HashMap<String, String>();
     verifyMap.put("text/plain", ConfServlet.FORMAT_XML);
     verifyMap.put(null, ConfServlet.FORMAT_XML);
     verifyMap.put("text/xml", ConfServlet.FORMAT_XML);
@@ -104,10 +103,10 @@ public class TestConfServlet {
 
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     for(String contentTypeExpected : verifyMap.keySet()) {
-      String contentTypeActual = verifyMap.get(contentTypeExpected);
+      String contenTypeActual = verifyMap.get(contentTypeExpected);
       Mockito.when(request.getHeader(HttpHeaders.ACCEPT))
           .thenReturn(contentTypeExpected);
-      assertEquals(contentTypeActual,
+      assertEquals(contenTypeActual,
           ConfServlet.parseAcceptHeader(request));
     }
   }

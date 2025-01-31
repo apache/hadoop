@@ -19,7 +19,6 @@
 package org.apache.hadoop.conf;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -31,6 +30,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -122,8 +122,7 @@ public class TestConfigurationDeprecation {
   /**
    * This test checks the correctness of loading/setting the properties in terms
    * of occurrence of deprecated keys.
-   *
-   * @throws IOException If an I/O error occurs during the test.
+   * @throws IOException
    */
   @Test
   public void testDeprecation() throws IOException {
@@ -189,8 +188,7 @@ public class TestConfigurationDeprecation {
   /**
    * This test is to ensure the correctness of loading of keys with respect to
    * being marked as final and that are related to deprecation.
-   *
-   * @throws IOException If an I/O error occurs during the test.
+   * @throws IOException
    */
   @Test
   public void testDeprecationForFinalParameters() throws IOException {
@@ -367,35 +365,41 @@ public class TestConfigurationDeprecation {
       build());
     final CountDownLatch latch = new CountDownLatch(1);
     final AtomicInteger highestModificationThreadId = new AtomicInteger(1);
-    List<Future<Void>> futures = new LinkedList<>();
+    List<Future<Void>> futures = new LinkedList<Future<Void>>();
     for (int i = 0; i < NUM_THREAD_IDS; i++) {
-      futures.add(executor.schedule(() -> {
-        latch.await();
-        int threadIndex = highestModificationThreadId.addAndGet(1);
-        for (int i1 = 0; i1 < NUM_KEYS_PER_THREAD; i1++) {
-          String testKey = getTestKeyName(threadIndex, i1);
-          String testNewKey = testKey + ".new";
-          Configuration.addDeprecations(
-            new DeprecationDelta[] {
-              new DeprecationDelta(testKey, testNewKey)
-            });
+      futures.add(executor.schedule(new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          latch.await();
+          int threadIndex = highestModificationThreadId.addAndGet(1);
+          for (int i = 0; i < NUM_KEYS_PER_THREAD; i++) {
+            String testKey = getTestKeyName(threadIndex, i);
+            String testNewKey = testKey + ".new";
+            Configuration.addDeprecations(
+              new DeprecationDelta[] {
+                new DeprecationDelta(testKey, testNewKey)
+              });
+          }
+          return null;
         }
-        return null;
       }, 0, TimeUnit.SECONDS));
     }
     final AtomicInteger highestAccessThreadId = new AtomicInteger(1);
     for (int i = 0; i < NUM_THREAD_IDS; i++) {
-      futures.add(executor.schedule(() -> {
-        Configuration conf = new Configuration();
-        latch.await();
-        int threadIndex = highestAccessThreadId.addAndGet(1);
-        for (int i12 = 0; i12 < NUM_KEYS_PER_THREAD; i12++) {
-          String testNewKey = getTestKeyName(threadIndex, i12) + ".new";
-          String value = "value." + threadIndex + "." + i12;
-          conf.set(testNewKey, value);
-          assertEquals(value, conf.get(testNewKey));
+      futures.add(executor.schedule(new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          Configuration conf = new Configuration();
+          latch.await();
+          int threadIndex = highestAccessThreadId.addAndGet(1);
+          for (int i = 0; i < NUM_KEYS_PER_THREAD; i++) {
+            String testNewKey = getTestKeyName(threadIndex, i) + ".new";
+            String value = "value." + threadIndex + "." + i;
+            conf.set(testNewKey, value);
+            assertEquals(value, conf.get(testNewKey));
+          }
+          return null;
         }
-        return null;
       }, 0, TimeUnit.SECONDS));
     }
     latch.countDown(); // allow all threads to proceed
@@ -411,9 +415,9 @@ public class TestConfigurationDeprecation {
     conf.set("BB", "bb");
     conf.get("BB");
     conf.writeXml(new ByteArrayOutputStream());
-    assertFalse(Configuration.hasWarnedDeprecation("AA"));
+    assertEquals(false, Configuration.hasWarnedDeprecation("AA"));
     conf.set("AA", "aa");
-    assertTrue(Configuration.hasWarnedDeprecation("AA"));
+    assertEquals(true, Configuration.hasWarnedDeprecation("AA"));
   }
   
   @Test
@@ -426,8 +430,8 @@ public class TestConfigurationDeprecation {
     conf.set("X", "x");
     assertEquals("x", conf.get("Z"));
     conf.unset("Y");
-    assertNull(conf.get("Z"));
-    assertNull(conf.get("X"));
+    assertEquals(null, conf.get("Z"));
+    assertEquals(null, conf.get("X"));
   }
 
   @Test

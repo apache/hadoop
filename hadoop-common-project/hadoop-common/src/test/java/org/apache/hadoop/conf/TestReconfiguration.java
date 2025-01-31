@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.conf;
 
+import java.util.function.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
@@ -41,7 +42,6 @@ import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -456,7 +456,7 @@ public class TestReconfiguration {
   /**
    * Ensure that {@link ReconfigurableBase#reconfigureProperty} updates the
    * parent's cached configuration on success.
-   * @throws IOException If an I/O error occurs during the test.
+   * @throws IOException
    */
   @Test
   @Timeout(value = 300)
@@ -471,7 +471,7 @@ public class TestReconfiguration {
     newConf.set(property, value2);
 
     final ReconfigurableBase reconfigurable = makeReconfigurable(
-        conf, newConf, Collections.singletonList(property));
+        conf, newConf, Arrays.asList(property));
 
     reconfigurable.reconfigureProperty(property, value2);
     assertThat(reconfigurable.getConf().get(property)).isEqualTo(value2);
@@ -480,7 +480,7 @@ public class TestReconfiguration {
   /**
    * Ensure that {@link ReconfigurableBase#startReconfigurationTask} updates
    * its parent's cached configuration on success.
-   * @throws IOException If an I/O error occurs during the test.
+   * @throws IOException
    */
   @Test
   @Timeout(value = 300)
@@ -496,19 +496,23 @@ public class TestReconfiguration {
     newConf.set(property, value2);
 
     final ReconfigurableBase reconfigurable = makeReconfigurable(
-        conf, newConf, Collections.singletonList(property));
+        conf, newConf, Arrays.asList(property));
 
     // Kick off a reconfiguration task and wait until it completes.
     reconfigurable.startReconfigurationTask();
-    GenericTestUtils.waitFor(() -> reconfigurable.getReconfigurationTaskStatus().stopped(),
-        100, 60000);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return reconfigurable.getReconfigurationTaskStatus().stopped();
+      }
+    }, 100, 60000);
     assertThat(reconfigurable.getConf().get(property)).isEqualTo(value2);
   }
 
   /**
    * Ensure that {@link ReconfigurableBase#reconfigureProperty} unsets the
    * property in its parent's configuration when the new value is null.
-   * @throws IOException If an I/O error occurs during the test.
+   * @throws IOException
    */
   @Test
   @Timeout(value = 300)
@@ -521,7 +525,7 @@ public class TestReconfiguration {
     final Configuration newConf = new Configuration();
 
     final ReconfigurableBase reconfigurable = makeReconfigurable(
-        conf, newConf, Collections.singletonList(property));
+        conf, newConf, Arrays.asList(property));
 
     reconfigurable.reconfigureProperty(property, null);
     assertNull(reconfigurable.getConf().get(property));
@@ -530,7 +534,7 @@ public class TestReconfiguration {
   /**
    * Ensure that {@link ReconfigurableBase#startReconfigurationTask} unsets the
    * property in its parent's configuration when the new value is null.
-   * @throws IOException If an I/O error occurs during the test.
+   * @throws IOException
    */
   @Test
   @Timeout(value = 300)
@@ -544,12 +548,16 @@ public class TestReconfiguration {
     final Configuration newConf = new Configuration();
 
     final ReconfigurableBase reconfigurable = makeReconfigurable(
-        conf, newConf, Collections.singletonList(property));
+        conf, newConf, Arrays.asList(property));
 
     // Kick off a reconfiguration task and wait until it completes.
     reconfigurable.startReconfigurationTask();
-    GenericTestUtils.waitFor(() -> reconfigurable.getReconfigurationTaskStatus().stopped(),
-        100, 60000);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return reconfigurable.getReconfigurationTaskStatus().stopped();
+      }
+    }, 100, 60000);
     assertNull(reconfigurable.getConf().get(property));
   }
 
