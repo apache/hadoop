@@ -169,10 +169,6 @@ public class ITestAzureBlobFileSystemCreate extends
     assertIsFile(fs, testFile);
   }
 
-  private void assumeNonHnsAccountBlobEndpoint(final AzureBlobFileSystem fs) {
-    Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB);
-  }
-
   /**
    * Test createNonRecursive when parent exist.
    *
@@ -181,7 +177,7 @@ public class ITestAzureBlobFileSystemCreate extends
   @Test
   public void testCreateNonRecursiveWhenParentExist() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     Path createDirectoryPath = new Path("hbase/A");
     fs.mkdirs(createDirectoryPath);
@@ -201,7 +197,7 @@ public class ITestAzureBlobFileSystemCreate extends
   @Test
   public void testCreateNonRecursiveWhenParentNotExist() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     Path createDirectoryPath = new Path("A/");
     fs.mkdirs(createDirectoryPath);
@@ -223,7 +219,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   private AzureBlobFileSystem createJsonFile(Path path, Path renameJson) throws IOException {
     final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     Mockito.doReturn(store).when(fs).getAbfsStore();
     AbfsClient client = Mockito.spy(store.getClient());

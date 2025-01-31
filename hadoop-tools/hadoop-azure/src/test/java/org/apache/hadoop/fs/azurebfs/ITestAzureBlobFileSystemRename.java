@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -85,7 +84,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcom
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assume.assumeTrue;
 
 /**
  * Test rename operation.
@@ -285,18 +283,6 @@ public class ITestAzureBlobFileSystemRename extends
   }
 
   /**
-   * Assumes the AzureBlobFileSystem client is an instance of `AbfsBlobClient`, ensuring that
-   * the test only proceeds if the underlying client is of the expected type.
-   * This assumption is typically used to validate that the file system is not using
-   * an HNS (Hierarchical Namespace) account, as it expects an `AbfsBlobClient` type client.
-   *
-   * @param fs the AzureBlobFileSystem instance to check
-   */
-  private void assumeNonHnsAccountBlobEndpoint(final AzureBlobFileSystem fs) {
-    assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB);
-  }
-
-  /**
    * Tests renaming a source path to a destination path that contains a colon in the path.
    * This verifies that the rename operation handles paths with special characters like a colon.
    *
@@ -308,7 +294,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test(expected = IOException.class)
   public void testRenameBlobToDstWithColonInPath() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     fs.create(new Path("/src"));
     fs.rename(new Path("/src"), new Path("/dst:file"));
   }
@@ -325,7 +311,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameBlobInSameDirectoryWithNoMarker() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) fs.getAbfsStore().getClient();
     fs.create(new Path("/srcDir/dir/file"));
     client.deleteBlobPath(new Path("/srcDir/dir"), null,
@@ -421,9 +407,8 @@ public class ITestAzureBlobFileSystemRename extends
   public void testRenamePendingJsonIsRemovedPostSuccessfulRename()
       throws Exception {
     final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
-    assumeNonHnsAccountBlobEndpoint(fs);
     fs.setWorkingDirectory(new Path("/"));
     fs.mkdirs(new Path("hbase/test1/test2/test3"));
     fs.create(new Path("hbase/test1/test2/test3/file"));
@@ -509,7 +494,7 @@ public class ITestAzureBlobFileSystemRename extends
   public void testHBaseHandlingForFailedRenameWithListRecovery()
       throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     String srcPath = "hbase/test1/test2";
     final String failedCopyPath = srcPath + "/test3/file1";
@@ -533,7 +518,7 @@ public class ITestAzureBlobFileSystemRename extends
   public void testHBaseHandlingForFailedRenameWithGetFileStatusRecovery()
       throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     String srcPath = "hbase/test1/test2";
     final String failedCopyPath = srcPath + "/test3/file1";
@@ -638,7 +623,7 @@ public class ITestAzureBlobFileSystemRename extends
   public void testHbaseListStatusBeforeRenamePendingFileAppendedWithIngressOnBlob()
       throws Exception {
     final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     testRenamePreRenameFailureResolution(fs);
     testAtomicityRedoInvalidFile(fs);
@@ -739,7 +724,7 @@ public class ITestAzureBlobFileSystemRename extends
   public void testRenameJsonDeletedBeforeRenameAtomicityCanDelete()
       throws Exception {
     final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     Path path = new Path("/hbase/test1/test2");
@@ -785,7 +770,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameCompleteBeforeRenameAtomicityRedo() throws Exception {
     final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     Path path = new Path("/hbase/test1/test2");
@@ -836,7 +821,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testCopyBlobIdempotency() throws Exception {
     final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     Path src = new Path("/srcDir/src");
@@ -887,7 +872,7 @@ public class ITestAzureBlobFileSystemRename extends
   public void testRenameBlobIdempotencyWhereDstIsCreatedFromSomeOtherProcess()
       throws IOException {
     final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     Path src = new Path("/src");
@@ -920,7 +905,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameDirWhenMarkerBlobIsAbsentOnDstDir() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     fs.mkdirs(new Path("/test1"));
     fs.mkdirs(new Path("/test1/test2"));
     fs.mkdirs(new Path("/test1/test2/test3"));
@@ -944,7 +929,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testBlobRenameSrcDirHasNoMarker() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     fs.create(new Path("/test1/test2/file1"));
     ((AbfsBlobClient) fs.getAbfsStore().getClient())
         .deleteBlobPath(new Path("/test1"), null,
@@ -995,7 +980,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testCopyBlobTakeTime() throws Exception {
     AzureBlobFileSystem fileSystem = Mockito.spy(getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fileSystem);
+    assumeBlobServiceType();
     AbfsBlobClient spiedClient = (AbfsBlobClient) addSpyHooksOnClient(
         fileSystem);
     addMockForProgressStatusOnCopyOperation(spiedClient);
@@ -1068,7 +1053,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testCopyBlobTakeTimeAndEventuallyFail() throws Exception {
     AzureBlobFileSystem fileSystem = Mockito.spy(getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fileSystem);
+    assumeBlobServiceType();
     AbfsBlobClient spiedClient = (AbfsBlobClient) addSpyHooksOnClient(
         fileSystem);
     addMockForProgressStatusOnCopyOperation(spiedClient);
@@ -1101,7 +1086,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testCopyBlobTakeTimeAndEventuallyAborted() throws Exception {
     AzureBlobFileSystem fileSystem = Mockito.spy(getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fileSystem);
+    assumeBlobServiceType();
     AbfsBlobClient spiedClient = (AbfsBlobClient) addSpyHooksOnClient(
         fileSystem);
     addMockForProgressStatusOnCopyOperation(spiedClient);
@@ -1134,7 +1119,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testCopyBlobTakeTimeAndBlobIsDeleted() throws Exception {
     AzureBlobFileSystem fileSystem = Mockito.spy(getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fileSystem);
+    assumeBlobServiceType();
     AbfsBlobClient spiedClient = (AbfsBlobClient) addSpyHooksOnClient(
         fileSystem);
     String srcFile = "/test1/file";
@@ -1171,7 +1156,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testCopyAfterSourceHasBeenDeleted() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) fs.getAbfsClient();
     fs.create(new Path("/src"));
     TracingContext tracingContext = new TracingContext("clientCorrelationId",
@@ -1209,7 +1194,7 @@ public class ITestAzureBlobFileSystemRename extends
     config.set(FS_AZURE_LEASE_THREADS, "2");
     AzureBlobFileSystem fs = Mockito.spy(
         (AzureBlobFileSystem) FileSystem.newInstance(config));
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     Path src = new Path("/hbase/src");
@@ -1264,7 +1249,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testAppendAtomicBlobDuringRename() throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     Path src = new Path("/hbase/src");
     Path dst = new Path("/hbase/dst");
@@ -1311,7 +1296,7 @@ public class ITestAzureBlobFileSystemRename extends
   public void testBlobRenameOfDirectoryHavingNeighborWithSamePrefix()
       throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     fs.mkdirs(new Path("/testDir/dir"));
     fs.mkdirs(new Path("/testDir/dirSamePrefix"));
     fs.create(new Path("/testDir/dir/file1"));
@@ -1346,7 +1331,7 @@ public class ITestAzureBlobFileSystemRename extends
   public void testBlobRenameWithListGivingPaginatedResultWithOneObjectPerList()
       throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient spiedClient = (AbfsBlobClient) addSpyHooksOnClient(fs);
     fs.mkdirs(new Path("/testDir/dir1"));
     for (int i = 0; i < 10; i++) {
@@ -1388,7 +1373,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testProducerStopOnRenameFailure() throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     fs.mkdirs(new Path("/src"));
     ExecutorService executorService = Executors.newFixedThreadPool(10);
     List<Future> futureList = new ArrayList<>();
@@ -1474,7 +1459,7 @@ public class ITestAzureBlobFileSystemRename extends
   public void testRenameResumeThroughListStatusWithSrcDirDeletedJustBeforeResume()
       throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     Path srcPath = new Path("hbase/test1/");
@@ -1511,7 +1496,7 @@ public class ITestAzureBlobFileSystemRename extends
   public void testRenameResumeThroughListStatusWithSrcDirETagChangedJustBeforeResume()
       throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     Path srcPath = new Path("hbase/test1/");
@@ -1559,7 +1544,7 @@ public class ITestAzureBlobFileSystemRename extends
   public void testRenameResumeThroughGetStatusWithSrcDirETagChangedJustBeforeResume()
       throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     Path srcPath = new Path("hbase/test1/");
@@ -1608,7 +1593,7 @@ public class ITestAzureBlobFileSystemRename extends
   public void testRenameSrcDirDeleteEmitDeletionCountInClientRequestId()
       throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    assumeNonHnsAccountBlobEndpoint(fs);
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
     String dirPathStr = "/testDir/dir1";
     fs.mkdirs(new Path(dirPathStr));
