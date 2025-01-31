@@ -36,11 +36,12 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -66,7 +67,6 @@ import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static org.junit.Assume.assumeTrue;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_ABORTED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_FAILED;
@@ -85,6 +85,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcom
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Test rename operation.
@@ -292,7 +293,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @param fs the AzureBlobFileSystem instance to check
    */
   private void assumeNonHnsAccountBlobEndpoint(final AzureBlobFileSystem fs) {
-    assumeTrue(fs.getAbfsStore().getClient() instanceof AbfsBlobClient);
+    assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB);
   }
 
   /**

@@ -972,10 +972,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       if (parseIsDirectory(resourceType)) {
         throw new AbfsRestOperationException(
-              AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
-              AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-              "openFileForRead must be used with files and not directories",
-              null);
+            AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+            AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+            "openFileForRead must be used with files and not directories",
+            null);
       }
 
       perfInfo.registerSuccess(true);
@@ -1034,10 +1034,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       if (getClient().checkIsDir(op.getResult())) {
         throw new AbfsRestOperationException(
-            AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
-            AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-            "openFileForWrite must be used with files and not directories",
-            null);
+              AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+              AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+              "openFileForWrite must be used with files and not directories",
+              null);
       }
 
       final long contentLength = extractContentLength(op.getResult());
@@ -1110,8 +1110,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   public boolean rename(final Path source,
       final Path destination,
       final TracingContext tracingContext,
-      final String sourceEtag) throws
-      IOException {
+      final String sourceEtag) throws IOException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
     boolean shouldContinue;

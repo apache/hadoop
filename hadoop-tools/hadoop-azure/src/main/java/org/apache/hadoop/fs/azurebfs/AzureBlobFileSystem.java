@@ -267,7 +267,7 @@ public class AzureBlobFileSystem extends FileSystem
     try {
       if ((isEncryptionContextCPK(abfsConfiguration) || isGlobalKeyCPK(
           abfsConfiguration)) && !tryGetIsNamespaceEnabled(new TracingContext(
-            initFSTracingContext))) {
+              initFSTracingContext))) {
         throw new PathIOException(uri.getPath(),
             CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE);
       }
@@ -790,10 +790,10 @@ public class AzureBlobFileSystem extends FileSystem
     }
     if (abfsStore.getClient().isMetricCollectionEnabled()) {
       TracingContext tracingMetricContext = new TracingContext(
-            clientCorrelationId,
-            fileSystemId, FSOperationType.GET_ATTR, true,
-            tracingHeaderFormat,
-            listener, abfsCounters.toString());
+              clientCorrelationId,
+              fileSystemId, FSOperationType.GET_ATTR, true,
+              tracingHeaderFormat,
+              listener, abfsCounters.toString());
       try {
         getAbfsClient().getMetricCall(tracingMetricContext);
       } catch (IOException e) {
@@ -1786,7 +1786,7 @@ public class AzureBlobFileSystem extends FileSystem
       // etags are always available on HEAD requests.
     case CommonPathCapabilities.ETAGS_AVAILABLE:
       return true;
-      // but etags are only preserved on hns stores.
+    // but etags are only preserved on hns stores.
     case CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME:
     case CommonPathCapabilities.FS_ACLS:
       return getIsNamespaceEnabled(

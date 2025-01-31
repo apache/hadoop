@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
@@ -44,7 +45,6 @@ import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
-import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
@@ -240,7 +240,7 @@ public class ITestAzureBlobFileSystemDelete extends
      * endpoint, the orchestration would be done by the client. The idempotency
      * issue would not happen for blob endpoint.
      */
-    Assume.assumeTrue(fs.getAbfsClient() instanceof AbfsDfsClient);
+    Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.DFS);
     AbfsClient client = ITestAbfsClient.createTestClientFromCurrentContext(
         fs.getAbfsStore().getClient(),
         this.getConfiguration());

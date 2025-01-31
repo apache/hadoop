@@ -170,7 +170,7 @@ public class ITestAzureBlobFileSystemCreate extends
   }
 
   private void assumeNonHnsAccountBlobEndpoint(final AzureBlobFileSystem fs) {
-    Assume.assumeTrue(fs.getAbfsStore().getClient() instanceof AbfsBlobClient);
+    Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB);
   }
 
   /**
@@ -186,8 +186,10 @@ public class ITestAzureBlobFileSystemCreate extends
     Path createDirectoryPath = new Path("hbase/A");
     fs.mkdirs(createDirectoryPath);
     fs.createNonRecursive(new Path(createDirectoryPath, "B"), FsPermission
-        .getDefault(), false, 1024, (short) 1, 1024, null);
-    Assertions.assertThat(fs.exists(new Path(createDirectoryPath, "B"))).isTrue();
+        .getDefault(), false, 1024,
+        (short) 1, 1024, null);
+    Assertions.assertThat(fs.exists(new Path(createDirectoryPath, "B")))
+        .describedAs("File should be created").isTrue();
     fs.close();
   }
 
@@ -206,7 +208,8 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(FileNotFoundException.class,
         () -> fs.createNonRecursive(new Path("A/B/C"), FsPermission
             .getDefault(), false, 1024, (short) 1, 1024, null));
-    Assertions.assertThat(fs.exists(new Path("A/B/C"))).isFalse();
+    Assertions.assertThat(fs.exists(new Path("A/B/C")))
+        .describedAs("New File should not be created.").isFalse();
     fs.close();
   }
 
@@ -233,7 +236,9 @@ public class ITestAzureBlobFileSystemCreate extends
         new Path("/hbase/test4"), renameJson,
         getTestTracingContext(fs, true), fileStatus.getEtag(),
         client).preRename();
-    Assertions.assertThat(fs.exists(renameJson)).isTrue();
+    Assertions.assertThat(fs.exists(renameJson))
+        .describedAs("Rename Pending Json file should exist.")
+        .isTrue();
     return fs;
   }
 
@@ -258,8 +263,12 @@ public class ITestAzureBlobFileSystemCreate extends
       intercept(FileNotFoundException.class,
           () -> finalFs.createNonRecursive(new Path(path, "test4"), FsPermission
               .getDefault(), false, 1024, (short) 1, 1024, null));
-      Assertions.assertThat(fs.exists(new Path(path, "test4"))).isFalse();
-      Assertions.assertThat(fs.exists(renameJson)).isFalse();
+      Assertions.assertThat(finalFs.exists(new Path(path, "test4")))
+          .describedAs("New File should not be created.")
+          .isFalse();
+      Assertions.assertThat(finalFs.exists(renameJson))
+          .describedAs("Rename Pending Json file should be deleted.")
+          .isFalse();
     } finally {
       if (fs != null) {
         fs.close();
@@ -286,8 +295,18 @@ public class ITestAzureBlobFileSystemCreate extends
       intercept(FileNotFoundException.class,
           () -> finalFs.createNonRecursive(new Path(path, "test4"), FsPermission
               .getDefault(), false, 1024, (short) 1, 1024, null));
-      Assertions.assertThat(fs.exists(path)).isFalse();
-      Assertions.assertThat(fs.exists(new Path("/hbase/test4"))).isTrue();
+      Assertions.assertThat(finalFs.exists(path))
+          .describedAs("Old path should be deleted.")
+          .isFalse();
+      Assertions.assertThat(finalFs.exists(new Path(path, "test4")))
+          .describedAs("New File should not be created.")
+          .isFalse();
+      Assertions.assertThat(finalFs.exists(renameJson))
+          .describedAs("Rename Pending Json file should be deleted.")
+          .isFalse();
+      Assertions.assertThat(finalFs.exists(new Path("/hbase/test4")))
+          .describedAs("Rename should be successful.")
+          .isTrue();
     } finally {
       if (fs != null) {
         fs.close();
