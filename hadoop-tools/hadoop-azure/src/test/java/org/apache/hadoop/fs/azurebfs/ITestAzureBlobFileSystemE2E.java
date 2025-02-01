@@ -234,7 +234,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
       fs.delete(testFilePath, true);
       assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
-
+      stream.write(20);
       if (client instanceof AbfsDfsClient) {
         intercept(FileNotFoundException.class, stream::close);
       } else {
