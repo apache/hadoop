@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Tests the JSON parsing for the listfilestatus response to ListResultSchema
  */
-public class ListResultSchemaTest {
+public class TestDfsListJsonParser {
 
   /**
    * Test parsing a JSON which matches the properties in the ListResultSchema
