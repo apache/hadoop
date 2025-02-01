@@ -558,6 +558,9 @@ public class AzureBlobFileSystem extends FileSystem
       Path adjustedDst = dst;
 
       if (dstFileStatus != null) {
+        if (!dstFileStatus.isDirectory()) {
+          return qualifiedSrcPath.equals(qualifiedDstPath);
+        }
         adjustedDst = new Path(dst, sourceFileName);
       }
 

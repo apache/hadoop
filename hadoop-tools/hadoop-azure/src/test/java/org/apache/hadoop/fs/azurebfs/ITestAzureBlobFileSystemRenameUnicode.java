@@ -24,8 +24,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
@@ -90,7 +90,7 @@ public class ITestAzureBlobFileSystemRenameUnicode extends
     assertIsFile(fs, filePath);
 
     Path folderPath2 = new Path(destDir);
-    if (getFileSystem().getAbfsClient() instanceof AbfsBlobClient
+    if (getAbfsServiceType() == AbfsServiceType.BLOB
         && destDir.contains(COLON)) {
       AbfsRestOperationException ex = intercept(
           AbfsRestOperationException.class, () -> {

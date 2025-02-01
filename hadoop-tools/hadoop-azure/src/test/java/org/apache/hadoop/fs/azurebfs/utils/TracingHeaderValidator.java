@@ -186,6 +186,10 @@ public class TracingHeaderValidator implements Listener {
     this.position = position;
   }
 
+  /**
+   * Sets the value of the number of blobs operated on
+   * @param operatedBlobCount number of blobs operated on
+   */
   public void setOperatedBlobCount(Integer operatedBlobCount) {
     this.operatedBlobCount = operatedBlobCount;
   }

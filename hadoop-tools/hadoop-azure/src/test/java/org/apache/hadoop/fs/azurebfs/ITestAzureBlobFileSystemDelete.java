@@ -346,16 +346,6 @@ public class ITestAzureBlobFileSystemDelete extends
   }
 
   /**
-   * Assumes that the AzureBlobFileSystem's client is an instance of `AbfsBlobClient`.
-   * This assumption is used to ensure that the test runs only if the correct client type is present.
-   *
-   * @throws IOException if the file system client cannot be retrieved
-   */
-  private void assumeBlobClient() throws IOException {
-    Assume.assumeTrue(getFileSystem().getAbfsClient() instanceof AbfsBlobClient);
-  }
-
-  /**
    * Tests deleting an implicit directory and its contents. The test verifies that after deletion,
    * both the directory and its child file no longer exist.
    *
@@ -364,7 +354,7 @@ public class ITestAzureBlobFileSystemDelete extends
   @Test
   public void testDeleteImplicitDir() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    assumeBlobClient();
+    assumeBlobServiceType();
     fs.mkdirs(new Path("/testDir/dir1"));
     fs.create(new Path("/testDir/dir1/file1"));
     AbfsBlobClient client = (AbfsBlobClient) fs.getAbfsClient();
@@ -389,7 +379,7 @@ public class ITestAzureBlobFileSystemDelete extends
   public void testDeleteImplicitDirWithSingleListResults() throws Exception {
     AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
             getRawConfiguration());
-    assumeBlobClient();
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) fs.getAbfsClient();
     AbfsBlobClient spiedClient = Mockito.spy(client);
     fs.getAbfsStore().setClient(spiedClient);
@@ -425,7 +415,7 @@ public class ITestAzureBlobFileSystemDelete extends
   @Test
   public void testDeleteExplicitDirInImplicitParentDir() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    assumeBlobClient();
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) fs.getAbfsClient();
     fs.mkdirs(new Path("/testDir/dir1"));
     fs.create(new Path("/testDir/dir1/file1"));
@@ -453,7 +443,7 @@ public class ITestAzureBlobFileSystemDelete extends
   @Test
   public void testDeleteParallelBlobFailure() throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    assumeBlobClient();
+    assumeBlobServiceType();
     AbfsBlobClient client = Mockito.spy((AbfsBlobClient) fs.getAbfsClient());
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     store.setClient(client);
@@ -497,7 +487,7 @@ public class ITestAzureBlobFileSystemDelete extends
    */
   @Test
   public void testProducerStopOnDeleteFailure() throws Exception {
-    assumeBlobClient();
+    assumeBlobServiceType();
     Configuration configuration = Mockito.spy(getRawConfiguration());
     AzureBlobFileSystem fs = Mockito.spy(
             (AzureBlobFileSystem) FileSystem.get(configuration));
@@ -575,7 +565,7 @@ public class ITestAzureBlobFileSystemDelete extends
   @Test
   public void testDeleteEmitDeletionCountInClientRequestId() throws Exception {
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    assumeBlobClient();
+    assumeBlobServiceType();
     AbfsBlobClient client = (AbfsBlobClient) fs.getAbfsClient();
     AbfsBlobClient spiedClient = Mockito.spy(client);
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
