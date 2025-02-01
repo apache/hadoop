@@ -343,7 +343,7 @@ public class ResourceLocalizationService extends CompositeService
       LocalResourceTrackerState state) throws URISyntaxException, IOException {
     try (RecoveryIterator<LocalizedResourceProto> it =
              state.getCompletedResourcesIterator()) {
-      while (it != null && it.hasNext()) {
+      while (it.hasNext()) {
         LocalizedResourceProto proto = it.next();
         LocalResource rsrc = new LocalResourcePBImpl(proto.getResource());
         LocalResourceRequest req = new LocalResourceRequest(rsrc);
@@ -356,7 +356,7 @@ public class ResourceLocalizationService extends CompositeService
 
     try (RecoveryIterator<Map.Entry<LocalResourceProto, Path>> it =
              state.getStartedResourcesIterator()) {
-      while (it != null && it.hasNext()) {
+      while (it.hasNext()) {
         Map.Entry<LocalResourceProto, Path> entry = it.next();
         LocalResource rsrc = new LocalResourcePBImpl(entry.getKey());
         LocalResourceRequest req = new LocalResourceRequest(rsrc);
