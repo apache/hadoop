@@ -645,13 +645,19 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   protected void assumeHnsEnabled() throws IOException {
-    Assume.assumeTrue("HNS-Enabled account must be used for this test",
-        getIsNamespaceEnabled(getFileSystem()));
+    assumeHnsEnabled("HNS-Enabled account must be used for this test");
+  }
+
+  protected void assumeHnsEnabled(String errorMessage) throws IOException {
+    Assume.assumeTrue(errorMessage, getIsNamespaceEnabled(getFileSystem()));
   }
 
   protected void assumeHnsDisabled() throws IOException {
-    Assume.assumeFalse("HNS-Enabled account must not be used for this test",
-        getIsNamespaceEnabled(getFileSystem()));
+    assumeHnsDisabled("HNS-Enabled account must not be used for this test");
+  }
+
+  protected void assumeHnsDisabled(String message) throws IOException {
+    Assume.assumeFalse(message, getIsNamespaceEnabled(getFileSystem()));
   }
 
   /**
