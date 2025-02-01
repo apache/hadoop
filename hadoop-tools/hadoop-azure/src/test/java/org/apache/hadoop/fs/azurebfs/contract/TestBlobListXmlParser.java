@@ -126,7 +126,7 @@ public class TestBlobListXmlParser {
     Assertions.assertThat(paths.size()).isEqualTo(0);
   }
 
-  private static final ThreadLocal<SAXParser> saxParserThreadLocal
+  private static final ThreadLocal<SAXParser> SAX_PARSER_THREAD_LOCAL
       = new ThreadLocal<SAXParser>() {
     @Override
     public SAXParser initialValue() {
@@ -144,8 +144,8 @@ public class TestBlobListXmlParser {
 
   private BlobListResultSchema getResultSchema(String xmlResponse) throws Exception {
     byte[] bytes = xmlResponse.getBytes();
-    final InputStream stream = new ByteArrayInputStream(bytes);;
-    final SAXParser saxParser = saxParserThreadLocal.get();
+    final InputStream stream = new ByteArrayInputStream(bytes);
+    final SAXParser saxParser = SAX_PARSER_THREAD_LOCAL.get();
     saxParser.reset();
     BlobListResultSchema listResultSchema = new BlobListResultSchema();
     saxParser.parse(stream, new BlobListXmlParser(listResultSchema, "https://sample.url"));
