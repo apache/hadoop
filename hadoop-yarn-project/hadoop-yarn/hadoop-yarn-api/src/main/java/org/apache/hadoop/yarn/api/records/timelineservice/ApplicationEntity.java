@@ -43,7 +43,12 @@ public class ApplicationEntity extends HierarchicalTimelineEntity {
   }
 
   public String getQueue() {
-    return getInfo().get(QUEUE_INFO_KEY).toString();
+    if (getInfo() != null) {
+      if (getInfo().containsKey(QUEUE_INFO_KEY)) {
+        return getInfo().get(QUEUE_INFO_KEY).toString();
+      }
+    }
+    return "";
   }
 
   public void setQueue(String queue) {
