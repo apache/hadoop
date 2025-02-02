@@ -300,8 +300,7 @@ public class GlobalPolicyGenerator extends CompositeService {
     LOG.info("Instantiating GPGWebApp at {}.", webAppAddress);
     GPGWebApp gpgWebApp = new GPGWebApp(this);
     webApp = WebApps.$for("gpg", GPGContext.class, this.gpgContext,
-        "gpg-ws").at(webAppAddress).
-         withResourceConfig(gpgWebApp.resourceConfig()).start(gpgWebApp);
+        "ws").at(webAppAddress).withResourceConfig(gpgWebApp.resourceConfig()).start(gpgWebApp);
   }
 
   @SuppressWarnings("resource")

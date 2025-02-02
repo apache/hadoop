@@ -92,7 +92,7 @@ import org.eclipse.jetty.util.log.Log;
  * Test application master client class to resource manager.
  */
 @RunWith(value = Parameterized.class)
-public class TestAMRMClient extends BaseAMRMClientTest {
+public class TestAMRMClient extends BaseAMRMClientTest{
 
   private final static int DEFAULT_ITERATION = 3;
 
@@ -123,10 +123,6 @@ public class TestAMRMClient extends BaseAMRMClientTest {
     List<? extends Collection<ContainerRequest>> matches =
         amClient.getMatchingRequests(priority, node, testCapability1);
     assertEquals("Expected no matching requests.", matches.size(), 0);
-    amClient.close();
-    if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
-      amClient.stop();
-    }
   }
   
   @Test (timeout=60000)
@@ -261,7 +257,6 @@ public class TestAMRMClient extends BaseAMRMClientTest {
           null, null);
 
     } finally {
-      amClient.close();
       if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
         amClient.stop();
       }
@@ -395,7 +390,6 @@ public class TestAMRMClient extends BaseAMRMClientTest {
           null, null);
 
     } finally {
-      amClient.close();
       if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
         amClient.stop();
       }
@@ -450,7 +444,6 @@ public class TestAMRMClient extends BaseAMRMClientTest {
               null);
 
     } finally {
-      amClient.close();
       if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
         amClient.stop();
       }
@@ -567,20 +560,18 @@ public class TestAMRMClient extends BaseAMRMClientTest {
         }
       }
       
-      assertTrue(allocatedContainerCount <= 2);
+      assertEquals(2, allocatedContainerCount);
       AllocateResponse allocResponse = amClient.allocate(0.1f);
       assertEquals(0, amClient.release.size());
       assertEquals(0, amClient.ask.size());
-      assertTrue(allocResponse.getAllocatedContainers().size() >= 0);
-
+      assertEquals(0, allocResponse.getAllocatedContainers().size());
       // 0 requests left. everything got cleaned up
-      // assertTrue(remoteRequestsTable.isEmpty());
+      assertTrue(remoteRequestsTable.isEmpty());
       
       amClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED,
           null, null);
 
     } finally {
-      amClient.close();
       if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
         amClient.stop();
       }
@@ -646,7 +637,7 @@ public class TestAMRMClient extends BaseAMRMClientTest {
       amClient.addContainerRequest(storedContainer2);
       allocatedContainerCount = getAllocatedContainersNumber(amClient,
           DEFAULT_ITERATION);
-      assertTrue(allocatedContainerCount <= 2);
+      assertEquals(2, allocatedContainerCount);
       
       // Test in case exception in allocate(), blacklist is kept
       assertTrue(amClient.blacklistAdditions.isEmpty());
@@ -666,7 +657,6 @@ public class TestAMRMClient extends BaseAMRMClientTest {
         assertEquals(1, amClient.blacklistAdditions.size());
       }
     } finally {
-      amClient.close();
       if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
         amClient.stop();
       }
@@ -719,7 +709,6 @@ public class TestAMRMClient extends BaseAMRMClientTest {
       assertEquals(2, amClient.blacklistAdditions.size());
       assertEquals(1, amClient.blacklistRemovals.size());
     } finally {
-      amClient.close();
       if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
         amClient.stop();
       }
@@ -748,13 +737,13 @@ public class TestAMRMClient extends BaseAMRMClientTest {
     return allocatedContainerCount;
   }
 
-  @Test (timeout=90000)
-  public void testAMRMClient() throws YarnException, IOException, InterruptedException, TimeoutException {
+  @Test (timeout=60000)
+  public void testAMRMClient() throws YarnException, IOException {
     initAMRMClientAndTest(false);
   }
 
   @Test (timeout=60000)
-  public void testAMRMClientAllocReqId() throws Exception {
+  public void testAMRMClientAllocReqId() throws YarnException, IOException {
     initAMRMClientAndTest(true);
   }
 
@@ -770,7 +759,7 @@ public class TestAMRMClient extends BaseAMRMClientTest {
   }
 
   protected void initAMRMClientAndTest(boolean useAllocReqId)
-      throws YarnException, IOException, InterruptedException, TimeoutException {
+      throws YarnException, IOException {
     AMRMClient<ContainerRequest> amClient = null;
     try {
       // start am rm client
@@ -788,16 +777,15 @@ public class TestAMRMClient extends BaseAMRMClientTest {
       amClient.registerApplicationMaster("Host", 10000, "");
 
       if (useAllocReqId) {
-        testAllocRequestId((AMRMClientImpl<ContainerRequest>) amClient);
+        testAllocRequestId((AMRMClientImpl<ContainerRequest>)amClient);
       } else {
         testAllocation((AMRMClientImpl<ContainerRequest>) amClient);
       }
 
       amClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED,
-      null, null);
+          null, null);
 
     } finally {
-      amClient.close();
       if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
         amClient.stop();
       }
@@ -805,7 +793,7 @@ public class TestAMRMClient extends BaseAMRMClientTest {
   }
   
   @Test(timeout=30000)
-  public void testAskWithNodeLabels() throws IOException {
+  public void testAskWithNodeLabels() {
     AMRMClientImpl<ContainerRequest> client =
         new AMRMClientImpl<ContainerRequest>();
 
@@ -850,11 +838,6 @@ public class TestAMRMClient extends BaseAMRMClientTest {
         Assert.assertNull(req.getNodeLabelExpression());
       }
     }
-
-    client.close();
-    if (client != null && client.getServiceState() == STATE.STARTED) {
-      client.stop();
-    }
   }
   
   private void verifyAddRequestFailed(AMRMClient<ContainerRequest> client,
@@ -868,7 +851,7 @@ public class TestAMRMClient extends BaseAMRMClientTest {
   }
   
   @Test(timeout=30000)
-  public void testAskWithInvalidNodeLabels() throws IOException {
+  public void testAskWithInvalidNodeLabels() {
     AMRMClientImpl<ContainerRequest> client =
         new AMRMClientImpl<ContainerRequest>();
 
@@ -876,11 +859,6 @@ public class TestAMRMClient extends BaseAMRMClientTest {
     verifyAddRequestFailed(client,
         new ContainerRequest(Resource.newInstance(1024, 1), null, null,
             Priority.UNDEFINED, true, "x && y"));
-
-    client.close();
-    if (client != null && client.getServiceState() == STATE.STARTED) {
-      client.stop();
-    }
   }
 
   @Test(timeout=60000)
@@ -919,7 +897,6 @@ public class TestAMRMClient extends BaseAMRMClientTest {
       amClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED,
           null, null);
     } finally {
-      amClient.close();
       if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
         amClient.stop();
       }
@@ -934,21 +911,13 @@ public class TestAMRMClient extends BaseAMRMClientTest {
       amClient.addContainerRequest(
           new ContainerRequest(capability, nodes, racks, priority));
     }
-    int iterationsLeft = 15;
-    int allocatedContainerCount = 0;
-    List<Container> containers = new ArrayList<>();
-    while (allocatedContainerCount <= num && iterationsLeft-- > 0) {
-      AllocateResponse allocResponse = amClient.allocate(0.1f);
-      allocatedContainerCount += allocResponse.getAllocatedContainers().size();
-      for (Container container : allocResponse.getAllocatedContainers()) {
-        containers.add(container);
-      }
-      if (iterationsLeft > 0) {
-        // let NM heartbeat to RM and trigger allocations
-        triggerSchedulingWithNMHeartBeat();
-      }
-    }
-
+    // send allocation requests
+    amClient.allocate(0.1f);
+    // let NM heartbeat to RM and trigger allocations
+    triggerSchedulingWithNMHeartBeat();
+    // get allocations
+    AllocateResponse allocResponse = amClient.allocate(0.1f);
+    List<Container> containers = allocResponse.getAllocatedContainers();
     assertEquals(num, containers.size());
 
     // build container launch context
@@ -1139,10 +1108,6 @@ public class TestAMRMClient extends BaseAMRMClientTest {
     waitForNMContextUpdate(updatedContainer, ExecutionType.OPPORTUNISTIC);
 
     amClient.close();
-
-    if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
-      amClient.stop();
-    }
   }
 
   private AllocateResponse waitForAllocation(AMRMClient amrmClient,
@@ -1557,7 +1522,7 @@ public class TestAMRMClient extends BaseAMRMClientTest {
 
     // RM should allocate container within 2 calls to allocate()
     int allocatedContainerCount = 0;
-    int iterationsLeft = 15;
+    int iterationsLeft = 3;
     Set<ContainerId> releases = new TreeSet<ContainerId>();
     
     amClient.getNMTokenCache().clearCache();
@@ -1596,8 +1561,8 @@ public class TestAMRMClient extends BaseAMRMClientTest {
     assertTrue(receivedNMTokens.size() > 0
         && receivedNMTokens.size() <= nodeCount);
     
-    assertTrue(allocatedContainerCount <= containersRequestedAny);
-    assertTrue(releases.size() <= 2);
+    assertEquals(allocatedContainerCount, containersRequestedAny);
+    assertEquals(2, releases.size());
     assertEquals(0, amClient.ask.size());
     
     // need to tell the AMRMClient that we dont need these resources anymore
@@ -1640,14 +1605,14 @@ public class TestAMRMClient extends BaseAMRMClientTest {
       amClient.rmClient = realRM;
     }
 
-    assertTrue(amClient.release.size() <= 2);
+    assertEquals(2, amClient.release.size());
     assertEquals(3, amClient.ask.size());
     snoopRequest = amClient.ask.iterator().next();
     // verify that the remove request made in between makeRequest and allocate 
     // has not been lost
     assertEquals(0, snoopRequest.getNumContainers());
 
-    // waitForContainerCompletion(15, amClient, releases);
+    waitForContainerCompletion(3, amClient, releases);
   }
 
   private void waitForContainerCompletion(int numIterations,
@@ -1658,7 +1623,7 @@ public class TestAMRMClient extends BaseAMRMClientTest {
       // inform RM of rejection
       AllocateResponse allocResponse = amClient.allocate(0.1f);
       // RM did not send new containers because AM does not need any
-      // assertEquals(0, allocResponse.getAllocatedContainers().size());
+      assertEquals(0, allocResponse.getAllocatedContainers().size());
       if(allocResponse.getCompletedContainersStatuses().size() > 0) {
         for(ContainerStatus cStatus :allocResponse
             .getCompletedContainersStatuses()) {
@@ -1669,7 +1634,7 @@ public class TestAMRMClient extends BaseAMRMClientTest {
           }
         }
       }
-      if (numIterations > 0) {
+      if(numIterations > 0) {
         // let NM heartbeat to RM and trigger allocations
         triggerSchedulingWithNMHeartBeat();
       }
@@ -1680,7 +1645,7 @@ public class TestAMRMClient extends BaseAMRMClientTest {
 
   private void testAllocRequestId(
       final AMRMClientImpl<ContainerRequest> amClient) throws YarnException,
-          IOException, InterruptedException, TimeoutException {
+      IOException {
     // setup container request
 
     assertEquals(0, amClient.ask.size());
@@ -1734,19 +1699,18 @@ public class TestAMRMClient extends BaseAMRMClientTest {
       }
     }
 
-    assertTrue(allocatedContainers.size() <= containersRequestedAny);
+    assertEquals(containersRequestedAny, allocatedContainers.size());
     Set<Long> expAllocIds = new HashSet<>(
         Arrays.asList(Long.valueOf(0), Long.valueOf(1), Long.valueOf(2)));
     Set<Long> actAllocIds = new HashSet<>();
     for (Container ac : allocatedContainers) {
       actAllocIds.add(Long.valueOf(ac.getAllocationRequestId()));
     }
-
-    assertTrue(expAllocIds.containsAll(actAllocIds));
-    assertTrue(releases.size() <= 3);
+    assertEquals(expAllocIds, actAllocIds);
+    assertEquals(3, amClient.release.size());
     assertEquals(0, amClient.ask.size());
 
-    // waitForContainerCompletion(15, amClient, releases);
+    waitForContainerCompletion(3, amClient, releases);
   }
 
   private void assertNumContainers(AMRMClientImpl<ContainerRequest> amClient,
@@ -1785,7 +1749,7 @@ public class TestAMRMClient extends BaseAMRMClientTest {
   };
 
   @Test
-  public void testWaitFor() throws InterruptedException, IOException {
+  public void testWaitFor() throws InterruptedException {
     AMRMClientImpl<ContainerRequest> amClient = null;
     CountDownSupplier countDownChecker = new CountDownSupplier();
 
@@ -1799,7 +1763,6 @@ public class TestAMRMClient extends BaseAMRMClientTest {
       amClient.waitFor(countDownChecker, 1000);
       assertEquals(3, countDownChecker.counter);
     } finally {
-      amClient.close();
       if (amClient != null) {
         amClient.stop();
       }
@@ -1933,7 +1896,6 @@ public class TestAMRMClient extends BaseAMRMClientTest {
         null, null);
 
     } finally {
-      amClient.close();
       if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
         amClient.stop();
       }
@@ -2042,7 +2004,6 @@ public class TestAMRMClient extends BaseAMRMClientTest {
       matches = amClient.getMatchingRequests(priority, node, testCapability4);
       assertEquals(1, matches.size());
     } finally {
-      amClient.close();
       if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
         amClient.stop();
       }
