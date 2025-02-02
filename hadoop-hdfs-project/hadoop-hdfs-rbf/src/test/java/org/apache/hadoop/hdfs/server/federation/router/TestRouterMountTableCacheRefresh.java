@@ -73,7 +73,7 @@ public class TestRouterMountTableCacheRefresh {
 
   @Parameterized.Parameters
   public static Collection<Object> data() {
-    return Arrays.asList(new Object[]{ true, false});
+    return Arrays.asList(new Object[] {true, false});
   }
 
   public TestRouterMountTableCacheRefresh(boolean useIpForHeartbeats) throws Exception {
