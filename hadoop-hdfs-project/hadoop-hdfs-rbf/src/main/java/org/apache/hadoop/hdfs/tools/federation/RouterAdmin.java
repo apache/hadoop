@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -77,6 +78,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.LeaveSafeModeRequ
 import org.apache.hadoop.hdfs.server.federation.store.protocol.LeaveSafeModeResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
@@ -383,17 +386,12 @@ public class RouterAdmin extends Configured implements Tool {
           exitCode = -1;
         }
       } else if ("-rm".equals(cmd)) {
-        while (i < argv.length) {
-          try {
-            if (removeMount(argv[i])) {
-              System.out.println("Successfully removed mount point " + argv[i]);
-            }
-          } catch (IOException e) {
-            exitCode = -1;
-            System.err
-                .println(cmd.substring(1) + ": " + e.getLocalizedMessage());
-          }
-          i++;
+        try {
+          removeMounts(argv, i);
+        } catch (IOException e) {
+          exitCode = -1;
+          System.err
+              .println(cmd.substring(1) + ": " + e.getLocalizedMessage());
         }
       } else if ("-ls".equals(cmd)) {
         listMounts(argv, i);
@@ -862,24 +860,69 @@ public class RouterAdmin extends Configured implements Tool {
   }
 
   /**
-   * Remove mount point.
+   * Remove one or multiple mount points.
    *
-   * @param path Path to remove.
-   * @return If the mount point was removed successfully.
+   * @param params parameters, should contain paths to remove
+   * @param paramIdx starting param index
    * @throws IOException If it cannot be removed.
    */
-  public boolean removeMount(String path) throws IOException {
-    path = normalizeFileSystemPath(path);
-    MountTableManager mountTable = client.getMountTableManager();
-    RemoveMountTableEntryRequest request =
-        RemoveMountTableEntryRequest.newInstance(path);
-    RemoveMountTableEntryResponse response =
-        mountTable.removeMountTableEntry(request);
-    boolean removed = response.getStatus();
-    if (!removed) {
-      System.out.println("Cannot remove mount point " + path);
+  public void removeMounts(String[] params, int paramIdx) throws IOException {
+    List<String> pathsToRemove = new ArrayList<>();
+    while (paramIdx < params.length) {
+      pathsToRemove.add(normalizeFileSystemPath(params[paramIdx]));
+      paramIdx++;
     }
-    return removed;
+    MountTableManager mountTable = client.getMountTableManager();
+    if (pathsToRemove.isEmpty()) {
+      return;
+    }
+    if (pathsToRemove.size() == 1) {
+      String path = pathsToRemove.get(0);
+      RemoveMountTableEntryRequest request = RemoveMountTableEntryRequest.newInstance(path);
+      RemoveMountTableEntryResponse response = mountTable.removeMountTableEntry(request);
+      boolean removed = response.getStatus();
+      if (!removed) {
+        System.err.println("Cannot remove mount point " + path);
+      } else {
+        System.out.println("Successfully removed mount point " + path);
+      }
+      return;
+    }
+    RemoveMountTableEntriesRequest request =
+        RemoveMountTableEntriesRequest.newInstance(pathsToRemove);
+    RemoveMountTableEntriesResponse response = mountTable.removeMountTableEntries(request);
+    Map<String, RemoveMountTableEntriesResponse.FailureReason> failures = new HashMap<>();
+    for (RemoveMountTableEntriesResponse.EntryFailure failedEntry : response.getFailedEntries()) {
+      failures.put(failedEntry.getSrcPath(), failedEntry.getReason());
+    }
+    // Print all successful removals first
+    StringBuilder failureMsgBuilder = new StringBuilder("Cannot remove mount points:\n");
+    for (String path : pathsToRemove) {
+      RemoveMountTableEntriesResponse.FailureReason failureReason = failures.get(path);
+      if (failureReason != null) {
+        failureMsgBuilder.append("\t");
+        failureMsgBuilder.append(path);
+        failureMsgBuilder.append(": ");
+        failureMsgBuilder.append(getFailureReasonString(failureReason));
+        failureMsgBuilder.append("\n");
+      } else {
+        System.out.println("Successfully removed mount point " + path);
+      }
+    }
+    // Then print all failures
+    if (!failures.isEmpty()) {
+      System.err.println(failureMsgBuilder);
+    }
+  }
+
+  private static String getFailureReasonString(
+      RemoveMountTableEntriesResponse.FailureReason reason) {
+    return switch (reason) {
+      case NONEXISTENT_MOUNT_POINT -> "mount point doesn't exist";
+      case DRIVER_FAILURE -> "driver failed";
+      case ACCESS_DENIED -> "access denied";
+      default -> "unknown failure";
+    };
   }
 
   /**
