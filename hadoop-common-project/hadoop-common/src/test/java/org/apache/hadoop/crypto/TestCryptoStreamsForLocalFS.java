@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.crypto;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,7 +69,7 @@ public class TestCryptoStreamsForLocalFS extends CryptoStreamsTestBase {
   public void cleanUp() throws IOException {
     FileUtil.setWritable(base, true);
     FileUtil.fullyDelete(base);
-    assertFalse(base.exists());
+    assertTrue(!base.exists());
   }
   
   @Override

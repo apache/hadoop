@@ -161,7 +161,7 @@ public class CLITestHelper {
 
         ArrayList<CLICommand> testCommands = td.getTestCommands();
         for (CLICommand cmd : testCommands) {
-          LOG.info("              Test Commands: [" +
+          LOG.info("              Test Commands: [" + 
                    expandCommand(cmd.getCmd()) + "]");
         }
 
@@ -176,9 +176,9 @@ public class CLITestHelper {
         ArrayList<ComparatorData> compdata = td.getComparatorData();
         for (ComparatorData cd : compdata) {
           boolean resultBoolean = cd.getTestResult();
-          LOG.info("                 Comparator: [" +
+          LOG.info("                 Comparator: [" + 
                    cd.getComparatorType() + "]");
-          LOG.info("         Comparision result:   [" +
+          LOG.info("         Comparision result:   [" + 
                    (resultBoolean ? "pass" : "fail") + "]");
           LOG.info("            Expected output:   [" + 
                    expandCommand(cd.getExpectedOutput()) + "]");
@@ -212,7 +212,7 @@ public class CLITestHelper {
     
     LOG.info("               Testing mode: " + testMode);
     LOG.info("");
-    LOG.info("             Overall result: " +
+    LOG.info("             Overall result: " + 
     		(overallResults ? "+++ PASS +++" : "--- FAIL ---"));
     if ((totalPass + totalFail) == 0) {
       LOG.info("               # Tests pass: " + 0);
@@ -222,11 +222,11 @@ public class CLITestHelper {
     {
       LOG.info("               # Tests pass: " + totalPass +
           " (" + (100 * totalPass / (totalPass + totalFail)) + "%)");
-      LOG.info("               # Tests fail: " + totalFail +
+      LOG.info("               # Tests fail: " + totalFail + 
           " (" + (100 * totalFail / (totalPass + totalFail)) + "%)");
     }
     
-    LOG.info("         # Validations done: " + totalComparators +
+    LOG.info("         # Validations done: " + totalComparators + 
     		" (each test may do multiple validations)");
     
     LOG.info("");
@@ -237,7 +237,7 @@ public class CLITestHelper {
     for (i = 0; i < testsFromConfigFile.size(); i++) {
       boolean resultBoolean = testsFromConfigFile.get(i).getTestResult();
       if (!resultBoolean) {
-        LOG.info((i + 1) + ": " +
+        LOG.info((i + 1) + ": " + 
         		testsFromConfigFile.get(i).getTestDesc());
         foundTests = true;
       }
@@ -253,7 +253,7 @@ public class CLITestHelper {
     for (i = 0; i < testsFromConfigFile.size(); i++) {
       boolean resultBoolean = testsFromConfigFile.get(i).getTestResult();
       if (resultBoolean) {
-        LOG.info((i + 1) + ": " +
+        LOG.info((i + 1) + ": " + 
         		testsFromConfigFile.get(i).getTestDesc());
         foundTests = true;
       }
@@ -336,7 +336,7 @@ public class CLITestHelper {
         
         boolean compareOutput = false;
         boolean compareExitCode = false;
-
+        
         if (! comptype.equalsIgnoreCase("none")) {
           compareOutput = compareTestOutput(cd, cmdResult);
           if (cd.getExitCode() == -1) {

@@ -90,7 +90,7 @@ public class TestCryptoCodec {
       LOG.warn("Skipping test since openSSL library not loaded");
       assumeTrue(false);
     }
-    assertNull(OpensslCipher.getLoadingFailureReason());
+    assertEquals(null, OpensslCipher.getLoadingFailureReason());
     cryptoCodecTest(conf, seed, 0,
         jceAesCodecClass, jceAesCodecClass, iv);
     cryptoCodecTest(conf, seed, count,
@@ -135,7 +135,7 @@ public class TestCryptoCodec {
       LOG.warn("Skipping test since openSSL library not loaded");
       assumeTrue(false);
     }
-    assertNull(OpensslCipher.getLoadingFailureReason());
+    assertEquals(null, OpensslCipher.getLoadingFailureReason());
     cryptoCodecTest(conf, seed, 0,
         opensslAesCodecClass, opensslAesCodecClass, iv);
     cryptoCodecTest(conf, seed, count,
@@ -163,7 +163,7 @@ public class TestCryptoCodec {
     assumeTrue(OpensslCipher.isSupported(CipherSuite.SM4_CTR_NOPADDING));
     conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY,
         BouncyCastleProvider.PROVIDER_NAME);
-    assertNull(OpensslCipher.getLoadingFailureReason());
+    assertEquals(null, OpensslCipher.getLoadingFailureReason());
     cryptoCodecTest(conf, seed, 0,
         opensslSm4CodecClass, opensslSm4CodecClass, iv);
     cryptoCodecTest(conf, seed, count,
@@ -185,7 +185,7 @@ public class TestCryptoCodec {
   private void cryptoCodecTest(Configuration conf, int seed, int count, 
       String encCodecClass, String decCodecClass, byte[] iv) throws IOException, 
       GeneralSecurityException {
-    CryptoCodec encCodec;
+    CryptoCodec encCodec = null;
     try {
       encCodec = (CryptoCodec)ReflectionUtils.newInstance(
           conf.getClassByName(encCodecClass), conf);

@@ -283,7 +283,7 @@ public class TestReconfiguration {
   @Test
   public void testThread() throws ReconfigurationException { 
     ReconfigurableDummy dummy = new ReconfigurableDummy(conf1);
-    assertEquals(VAL1, dummy.getConf().get(PROP1));
+    assertTrue(dummy.getConf().get(PROP1).equals(VAL1));
     Thread dummyThread = new Thread(dummy);
     dummyThread.start();
     try {
@@ -309,7 +309,7 @@ public class TestReconfiguration {
     } catch (InterruptedException ignore) {
       // do nothing
     }
-    assertEquals(VAL2, dummy.getConf().get(PROP1), PROP1 + " is set to wrong value");
+    assertTrue(dummy.getConf().get(PROP1).equals(VAL2), PROP1 + " is set to wrong value");
   }
 
   private static class AsyncReconfigurableDummy extends ReconfigurableBase {
