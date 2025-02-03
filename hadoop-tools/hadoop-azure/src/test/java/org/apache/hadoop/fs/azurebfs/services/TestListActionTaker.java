@@ -79,9 +79,9 @@ public class TestListActionTaker extends AbstractAbfsTestWithTimeout {
     TracingContext tracingContext = Mockito.mock(TracingContext.class);
     ListActionTaker listActionTaker = new ListActionTaker(path, client,
         tracingContext) {
-      ListBlobQueue listBlobQueue;
-      boolean isListAndEnqueueInProgress;
-      boolean completed;
+      private ListBlobQueue listBlobQueue;
+      private boolean isListAndEnqueueInProgress;
+      private boolean completed;
 
       @Override
       protected ListBlobQueue createListBlobQueue(final AbfsConfiguration configuration)
@@ -99,7 +99,9 @@ public class TestListActionTaker extends AbstractAbfsTestWithTimeout {
       boolean takeAction(final Path path) throws AzureBlobFileSystemException {
         while (!isListAndEnqueueInProgress
             && listBlobQueue.size() < DEFAULT_AZURE_LIST_MAX_RESULTS
-            && !completed) ;
+            && !completed) {
+          // wait for the producer to produce more items
+        }
         return true;
       }
 

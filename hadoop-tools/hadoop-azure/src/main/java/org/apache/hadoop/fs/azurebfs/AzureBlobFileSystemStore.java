@@ -643,6 +643,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * Checks existence of parent of the given path.
    *
    * @param path Path to check.
+   * @param statistics FileSystem statistics.
+   * @param overwrite Overwrite flag.
+   * @param permission Permission of tha path.
+   * @param umask Umask of the path.
    * @param tracingContext tracing context
    *
    * @throws IOException if there is an issue with the operation.
@@ -652,11 +656,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final FsPermission permission, final FsPermission umask,
       TracingContext tracingContext)
       throws IOException {
+    LOG.debug("CreateNonRecursive for filesystem: {} path: {} overwrite: {} permission: {} umask: {}",
+            getClient().getFileSystem(),
+            path,
+            overwrite,
+            permission,
+            umask);
     getClient().createNonRecursivePreCheck(path.getParent(),
         tracingContext);
    return createFile(path, statistics, overwrite, permission,
        umask, tracingContext);
-
   }
 
   public OutputStream createFile(final Path path,

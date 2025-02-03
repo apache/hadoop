@@ -278,7 +278,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // +2 for getPathStatus calls
     assertThatStatisticCounter(ioStats,
             CONNECTIONS_MADE.getStatName())
-            .isEqualTo(4 + connMadeBeforeRename);
+            .isEqualTo(5 + connMadeBeforeRename);
     // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
     // retries happen internally within AbfsRestOperation execute()
     // the stat for RENAME_PATH_ATTEMPTS is updated only once before execute() is called
@@ -356,7 +356,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // last getPathStatus call should be skipped
     assertThatStatisticCounter(ioStats,
             CONNECTIONS_MADE.getStatName())
-            .isEqualTo(3 + connMadeBeforeRename);
+            .isEqualTo(4 + connMadeBeforeRename);
 
     // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
     // retries happen internally within AbfsRestOperation execute()

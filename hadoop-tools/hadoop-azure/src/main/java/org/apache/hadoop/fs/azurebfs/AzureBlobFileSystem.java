@@ -545,7 +545,7 @@ public class AzureBlobFileSystem extends FileSystem
     Path adjustedDst = dst;
     if (qualifiedSrcPath.equals(qualifiedDstPath)) {
       return dstFileStatus != null && !dstFileStatus.isDirectory();
-    } else if (dstFileStatus != null) {
+    } else if (!getIsNamespaceEnabled(tracingContext) && dstFileStatus != null) {
       if (!dstFileStatus.isDirectory()) {
         return false;
       }
@@ -575,6 +575,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
   }
+
 
   /**
    * Private method to create resilient commit support.

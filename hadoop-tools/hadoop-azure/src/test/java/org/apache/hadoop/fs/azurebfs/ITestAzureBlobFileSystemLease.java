@@ -70,6 +70,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   private static final int LONG_TEST_EXECUTION_TIMEOUT = 90 * 1000;
   private static final String TEST_FILE = "testfile";
   private final boolean isHNSEnabled;
+  private final int TEST_BYTES = 20;
 
   public ITestAzureBlobFileSystemLease() throws Exception {
     super();
@@ -262,7 +263,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     LambdaTestUtils.intercept(IOException.class, client instanceof AbfsBlobClient
         ? ERR_LEASE_EXPIRED_BLOB : ERR_LEASE_EXPIRED, () -> {
       if (isAppendBlobEnabled() && getIngressServiceType() == AbfsServiceType.BLOB) {
-        out.write(20);
+        out.write(TEST_BYTES);
       }
       out.close();
       return "Expected exception on close after lease break but got " + out;
