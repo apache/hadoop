@@ -21,25 +21,24 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.lang.reflect.Field;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
-import org.apache.hadoop.fs.azurebfs.services.FixedSASTokenProvider;
-import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
-import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
-import org.apache.hadoop.util.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
+import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.Base64StringConfigurationValidatorAnnotation;
+import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.BooleanConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerWithOutlierConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.LongConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.StringConfigurationValidatorAnnotation;
-import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.Base64StringConfigurationValidatorAnnotation;
-import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.BooleanConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
@@ -65,15 +64,15 @@ import org.apache.hadoop.fs.azurebfs.oauth2.WorkloadIdentityTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
+import org.apache.hadoop.fs.azurebfs.services.FixedSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
-import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ReflectionUtils;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
@@ -398,6 +397,34 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_ENABLE_PAGINATED_DELETE, DefaultValue = DEFAULT_ENABLE_PAGINATED_DELETE)
   private boolean isPaginatedDeleteEnabled;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS, DefaultValue = DEFAULT_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS)
+  private long blobCopyProgressPollWaitMillis;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey =
+          FS_AZURE_BLOB_COPY_MAX_WAIT_MILLIS, DefaultValue = DEFAULT_AZURE_BLOB_COPY_MAX_WAIT_MILLIS)
+  private long blobCopyProgressMaxWaitMillis;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_BLOB_ATOMIC_RENAME_LEASE_REFRESH_DURATION, DefaultValue = DEFAULT_AZURE_BLOB_ATOMIC_RENAME_LEASE_REFRESH_DURATION)
+  private long blobAtomicRenameLeaseRefreshDuration;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_PRODUCER_QUEUE_MAX_SIZE, DefaultValue = DEFAULT_FS_AZURE_PRODUCER_QUEUE_MAX_SIZE)
+  private int producerQueueMaxSize;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+          FS_AZURE_CONSUMER_MAX_LAG, DefaultValue = DEFAULT_FS_AZURE_CONSUMER_MAX_LAG)
+  private int listingMaxConsumptionLag;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_BLOB_DIR_RENAME_MAX_THREAD, DefaultValue = DEFAULT_FS_AZURE_BLOB_RENAME_THREAD)
+  private int blobRenameDirConsumptionParallelism;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_BLOB_DIR_DELETE_MAX_THREAD, DefaultValue = DEFAULT_FS_AZURE_BLOB_DELETE_THREAD)
+  private int blobDeleteDirConsumptionParallelism;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
@@ -1514,5 +1541,33 @@ public class AbfsConfiguration{
   @VisibleForTesting
   public void setIsChecksumValidationEnabled(boolean isChecksumValidationEnabled) {
     this.isChecksumValidationEnabled = isChecksumValidationEnabled;
+  }
+
+  public long getBlobCopyProgressPollWaitMillis() {
+    return blobCopyProgressPollWaitMillis;
+  }
+
+  public long getBlobCopyProgressMaxWaitMillis() {
+    return blobCopyProgressMaxWaitMillis;
+  }
+
+  public long getAtomicRenameLeaseRefreshDuration() {
+    return blobAtomicRenameLeaseRefreshDuration;
+  }
+
+  public int getProducerQueueMaxSize() {
+    return producerQueueMaxSize;
+  }
+
+  public int getListingMaxConsumptionLag() {
+    return listingMaxConsumptionLag;
+  }
+
+  public int getBlobRenameDirConsumptionParallelism() {
+    return blobRenameDirConsumptionParallelism;
+  }
+
+  public int getBlobDeleteDirConsumptionParallelism() {
+    return blobDeleteDirConsumptionParallelism;
   }
 }

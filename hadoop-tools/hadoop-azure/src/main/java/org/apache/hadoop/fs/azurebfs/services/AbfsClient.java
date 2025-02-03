@@ -42,25 +42,42 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ApiVersion;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidFileSystemPropertyException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
-import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
-import org.apache.hadoop.fs.store.LogExactlyOnce;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
+import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
+import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -70,23 +87,6 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningS
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Preconditions;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ApiVersion;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
-import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
-import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
-import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -203,7 +203,9 @@ public abstract class AbfsClient implements Closeable {
 
     if (encryptionContextProvider != null) {
       this.encryptionContextProvider = encryptionContextProvider;
-      xMsVersion = ApiVersion.APR_10_2021; // will be default once server change deployed
+      // Version update needed to support x-ms-encryption-context header
+      // @link https://learn.microsoft.com/en-us/rest/api/storageservices/put-block?tabs=microsoft-entra-id}
+      xMsVersion = ApiVersion.AUG_03_2023; // will be default once server change deployed
       encryptionType = EncryptionType.ENCRYPTION_CONTEXT;
     } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
       clientProvidedEncryptionKey =
@@ -555,14 +557,30 @@ public abstract class AbfsClient implements Closeable {
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**
+   * Performs a pre-check for a createNonRecursivePreCheck operation. Checks if parentPath
+   * exists or not.
+   *
+   * @param parentPath parent path of the file to be created.
+   * @param tracingContext trace context
+   *
+   * @throws IOException if parentPath does not exist or server error.
+   */
+  public abstract void createNonRecursivePreCheck(Path parentPath,
+      TracingContext tracingContext)
+      throws IOException;
+
+  /**
    * Acquire lease on specified path.
    * @param path on which lease has to be acquired.
    * @param duration for which lease has to be acquired.
+   * @param eTag required to acquire lease on the path.
    * @param tracingContext for tracing the server calls.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
-  public abstract AbfsRestOperation acquireLease(String path, int duration,
+  public abstract AbfsRestOperation acquireLease(String path,
+      int duration,
+      String eTag,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**
@@ -614,7 +632,6 @@ public abstract class AbfsClient implements Closeable {
    * @param sourceEtag                etag of source file. may be null or empty
    * @param isMetadataIncompleteState was there a rename failure due to
    *                                  incomplete metadata state?
-   * @param isNamespaceEnabled        whether namespace enabled account or not
    * @return AbfsClientRenameResult result of rename operation indicating the
    * AbfsRest operation, rename recovery and incomplete metadata state failure.
    * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
@@ -625,8 +642,7 @@ public abstract class AbfsClient implements Closeable {
       String continuation,
       TracingContext tracingContext,
       String sourceEtag,
-      boolean isMetadataIncompleteState,
-      boolean isNamespaceEnabled)
+      boolean isMetadataIncompleteState)
       throws IOException;
 
   /**
@@ -875,14 +891,12 @@ public abstract class AbfsClient implements Closeable {
    * @param recursive if the path is a directory, delete recursively.
    * @param continuation to specify continuation token.
    * @param tracingContext for tracing the server calls.
-   * @param isNamespaceEnabled specify if the namespace is enabled.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   public abstract AbfsRestOperation deletePath(String path, boolean recursive,
       String continuation,
-      TracingContext tracingContext,
-      boolean isNamespaceEnabled)
+      TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
   /**

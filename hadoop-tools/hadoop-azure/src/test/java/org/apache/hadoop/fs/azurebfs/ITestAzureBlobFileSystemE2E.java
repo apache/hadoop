@@ -58,6 +58,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
   private static final int TEST_STABLE_DEFAULT_CONNECTION_TIMEOUT_MS = 500;
   private static final int TEST_STABLE_DEFAULT_READ_TIMEOUT_MS = 30000;
   private static final int TEST_UNSTABLE_READ_TIMEOUT_MS = 1;
+  private static final int TEST_WRITE_BYTE_VALUE = 20;
 
   public ITestAzureBlobFileSystemE2E() throws Exception {
     super();
@@ -234,7 +235,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
       fs.delete(testFilePath, true);
       assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
-
+      stream.write(TEST_WRITE_BYTE_VALUE);
       if (client instanceof AbfsDfsClient) {
         intercept(FileNotFoundException.class, stream::close);
       } else {

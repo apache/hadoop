@@ -28,15 +28,6 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.contracts.services.BlobAppendRequestParameters;
-import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
-import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
 import org.junit.Test;
@@ -46,16 +37,25 @@ import org.junit.runners.Parameterized;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
+import org.apache.hadoop.fs.azurebfs.contracts.services.BlobAppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.MockEncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
+import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -63,10 +63,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK_LIST_END_TAG;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK_LIST_START_TAG;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA;
@@ -77,6 +74,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.ENCRYPTION_KEY_LEN;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.APPEND_MODE;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient.generateBlockListXml;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.fs.azurebfs.utils.EncryptionType.ENCRYPTION_CONTEXT;
 import static org.apache.hadoop.fs.azurebfs.utils.EncryptionType.GLOBAL_KEY;
@@ -189,12 +187,6 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     try (AzureBlobFileSystem fs = getOrCreateFS()) {
       validateCpkResponseHeadersForCombination(fs);
     }
-  }
-
-  protected static String generateBlockListXml() {
-    return XML_VERSION
-        + BLOCK_LIST_START_TAG
-        + BLOCK_LIST_END_TAG;
   }
 
   private void validateCpkResponseHeadersForCombination(final AzureBlobFileSystem fs)
@@ -328,7 +320,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
           return ingressClient.flush(path, 3, false, false, null,
               null, encryptionAdapter, getTestTracingContext(fs, false));
         } else {
-          byte[] buffer = generateBlockListXml().getBytes(StandardCharsets.UTF_8);
+          byte[] buffer = generateBlockListXml(new ArrayList<>()).getBytes(StandardCharsets.UTF_8);
           return ingressClient.flush(buffer, path, false, null,
               null, null, encryptionAdapter, getTestTracingContext(fs, false));
         }
@@ -354,11 +346,11 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       case RENAME:
         TracingContext tc = getTestTracingContext(fs, true);
         return client.renamePath(path, new Path(path + "_2").toString(),
-          null, tc, null, false, fs.getIsNamespaceEnabled(tc)).getOp();
+          null, tc, null, false).getOp();
       case DELETE:
         TracingContext testTC = getTestTracingContext(fs, false);
         return client.deletePath(path, false, null,
-            testTC, fs.getIsNamespaceEnabled(testTC));
+            testTC);
       case GET_ATTR:
         return client.getPathStatus(path, true,
             getTestTracingContext(fs, false),
