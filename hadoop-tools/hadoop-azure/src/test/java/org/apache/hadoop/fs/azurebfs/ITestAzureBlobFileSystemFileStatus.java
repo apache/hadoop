@@ -258,6 +258,11 @@ public class ITestAzureBlobFileSystemFileStatus extends
     Mockito.verify(abfsClient, Mockito.times(1)).listPath(any(), eq(false), eq(1), any(), any(), eq(false));
   }
 
+  /**
+   * Verifies the file status indicates a file present in the path.
+   * @param fileStatus
+   * @param isDir
+   */
   private void verifyFileStatus(FileStatus fileStatus, boolean isDir) {
     Assertions.assertThat(fileStatus).isNotNull();
     if (isDir) {
@@ -269,6 +274,11 @@ public class ITestAzureBlobFileSystemFileStatus extends
     assertPathDns(fileStatus.getPath());
   }
 
+  /**
+   * Verifies the file not found exception is thrown with the expected message.
+   * @param ex
+   * @param key
+   */
   private void verifyFileNotFound(FileNotFoundException ex, String key) {
     Assertions.assertThat(ex).isNotNull();
     Assertions.assertThat(ex.getMessage()).contains(key);
