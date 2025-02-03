@@ -170,7 +170,7 @@ class ListBlobQueue {
     return pathListForConsumption;
   }
 
-  private synchronized int size() {
+  synchronized int size() {
     return pathQueue.size();
   }
 

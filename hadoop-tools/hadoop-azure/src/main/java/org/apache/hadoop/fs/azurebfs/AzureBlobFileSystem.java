@@ -447,15 +447,21 @@ public class AzureBlobFileSystem extends FileSystem
           ERR_CREATE_ON_ROOT,
           null);
     }
-
-    TracingContext tracingContext = new TracingContext(clientCorrelationId,
-        fileSystemId, FSOperationType.CREATE_NON_RECURSIVE, tracingHeaderFormat,
-        listener);
-
     Path qualifiedPath = makeQualified(f);
-    getAbfsStore().createNonRecursivePreCheck(qualifiedPath, tracingContext);
-    return create(f, permission, overwrite, bufferSize, replication,
-        blockSize, progress);
+    try {
+      TracingContext tracingContext = new TracingContext(clientCorrelationId,
+          fileSystemId, FSOperationType.CREATE_NON_RECURSIVE, tracingHeaderFormat,
+          listener);
+      OutputStream outputStream =  getAbfsStore().createNonRecursive(qualifiedPath, statistics,
+          overwrite,
+          permission == null ? FsPermission.getFileDefault() : permission,
+          FsPermission.getUMask(getConf()), tracingContext);
+      statIncrement(FILES_CREATED);
+      return new FSDataOutputStream(outputStream, statistics);
+    } catch (AzureBlobFileSystemException ex) {
+      checkException(f, ex);
+      return null;
+    }
   }
 
   @Override
@@ -535,37 +541,20 @@ public class AzureBlobFileSystem extends FileSystem
       return tryGetFileStatus(qualifiedSrcPath, tracingContext) != null;
     }
 
-    FileStatus dstFileStatus = null;
+    FileStatus dstFileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
+    Path adjustedDst = dst;
     if (qualifiedSrcPath.equals(qualifiedDstPath)) {
-      // rename to itself
-      // - if it doesn't exist, return false
-      // - if it is file, return true
-      // - if it is dir, return false.
-      dstFileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
-      if (dstFileStatus == null) {
+      return dstFileStatus != null && !dstFileStatus.isDirectory();
+    } else if (dstFileStatus != null) {
+      if (!dstFileStatus.isDirectory()) {
         return false;
       }
-      return dstFileStatus.isDirectory() ? false : true;
-    }
-
-    // Non-HNS account need to check dst status on driver side.
-    if (!getIsNamespaceEnabled(tracingContext) && dstFileStatus == null) {
-      dstFileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
+      String sourceFileName = src.getName();
+      adjustedDst = new Path(dst, sourceFileName);
     }
 
     try {
-      String sourceFileName = src.getName();
-      Path adjustedDst = dst;
-
-      if (dstFileStatus != null) {
-        if (!dstFileStatus.isDirectory()) {
-          return qualifiedSrcPath.equals(qualifiedDstPath);
-        }
-        adjustedDst = new Path(dst, sourceFileName);
-      }
-
       qualifiedDstPath = makeQualified(adjustedDst);
-
       getAbfsStore().rename(qualifiedSrcPath, qualifiedDstPath, tracingContext,
           null);
       return true;

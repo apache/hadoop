@@ -139,7 +139,6 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.http.client.utils.URIBuilder;
 
-import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.METADATA_INCOMPLETE_RENAME_FAILURES;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
@@ -161,7 +160,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.INFINITE_LEASE_DURATION;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_CREATE_ON_ROOT;
 import static org.apache.hadoop.fs.azurebfs.utils.UriUtils.isKeyForDirectorySet;
 
 /**
@@ -649,18 +647,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    *
    * @throws IOException if there is an issue with the operation.
    */
-  public void createNonRecursivePreCheck(final Path path,
+  public OutputStream createNonRecursive(final Path path,
+      final FileSystem.Statistics statistics, final boolean overwrite,
+      final FsPermission permission, final FsPermission umask,
       TracingContext tracingContext)
       throws IOException {
-    if (path.getParent() != null) {
-      getClient().createNonRecursivePreCheck(path.getParent(),
-          tracingContext);
-    } else {
-      throw new AbfsRestOperationException(HTTP_CONFLICT,
-          AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
-          ERR_CREATE_ON_ROOT,
-          null);
-    }
+    getClient().createNonRecursivePreCheck(path.getParent(),
+        tracingContext);
+   return createFile(path, statistics, overwrite, permission,
+       umask, tracingContext);
+
   }
 
   public OutputStream createFile(final Path path,

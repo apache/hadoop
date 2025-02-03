@@ -254,8 +254,8 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     fs.registerListener(null);
     LambdaTestUtils.intercept(IOException.class, client instanceof AbfsBlobClient
         ? ERR_LEASE_EXPIRED_BLOB : ERR_LEASE_EXPIRED, () -> {
-      out.write(2);
-      out.close();
+      out.write(1);
+      out.hsync();
       return "Expected exception on write after lease break but got " + out;
     });
 
