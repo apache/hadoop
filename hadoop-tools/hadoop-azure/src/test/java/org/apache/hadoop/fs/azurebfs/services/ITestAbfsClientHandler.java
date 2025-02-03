@@ -51,6 +51,5 @@ public class ITestAbfsClientHandler extends AbstractAbfsIntegrationTest {
     }
     Assertions.assertThat(clientHandler.getClient(AbfsServiceType.DFS)).isInstanceOf(AbfsDfsClient.class);
     Assertions.assertThat(clientHandler.getClient(AbfsServiceType.BLOB)).isInstanceOf(AbfsBlobClient.class);
-
   }
 }
