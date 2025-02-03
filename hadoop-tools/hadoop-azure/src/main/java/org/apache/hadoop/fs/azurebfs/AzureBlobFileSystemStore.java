@@ -649,6 +649,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param umask Umask of the path.
    * @param tracingContext tracing context
    *
+   * @return OutputStream output stream of the created file.
    * @throws IOException if there is an issue with the operation.
    */
   public OutputStream createNonRecursive(final Path path,

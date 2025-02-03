@@ -544,8 +544,18 @@ public class AzureBlobFileSystem extends FileSystem
     FileStatus dstFileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
     Path adjustedDst = dst;
     if (qualifiedSrcPath.equals(qualifiedDstPath)) {
-      return dstFileStatus != null && !dstFileStatus.isDirectory();
-    } else if (!getIsNamespaceEnabled(tracingContext) && dstFileStatus != null) {
+      // rename to itself
+      // - if it doesn't exist, return false
+      // - if it is file, return true
+      // - if it is dir, return false.
+      if (dstFileStatus == null) {
+        return false;
+      }
+      return !dstFileStatus.isDirectory();
+    }
+    // adjust the destination path in case of FNS account.
+    if (!getIsNamespaceEnabled(tracingContext) && dstFileStatus != null) {
+      // return false if the destination is a file.
       if (!dstFileStatus.isDirectory()) {
         return false;
       }
@@ -575,7 +585,6 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
   }
-
 
   /**
    * Private method to create resilient commit support.

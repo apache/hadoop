@@ -70,7 +70,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   private static final int LONG_TEST_EXECUTION_TIMEOUT = 90 * 1000;
   private static final String TEST_FILE = "testfile";
   private final boolean isHNSEnabled;
-  private final int TEST_BYTES = 20;
+  private static final int TEST_BYTES = 20;
 
   public ITestAzureBlobFileSystemLease() throws Exception {
     super();
