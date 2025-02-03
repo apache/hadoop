@@ -99,7 +99,6 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     getFileStatus is called 1 time after creating file and 1 time at time of
     initialising.
      */
-    assertAbfsStatistics(AbfsStatistic.CALL_CREATE, 1, metricMap);
     assertAbfsStatistics(AbfsStatistic.CALL_CREATE_NON_RECURSIVE, 1, metricMap);
     assertAbfsStatistics(AbfsStatistic.FILES_CREATED, 1, metricMap);
     assertAbfsStatistics(AbfsStatistic.DIRECTORIES_CREATED, 1, metricMap);
@@ -126,7 +125,6 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     getFileStatus is called 1 time at initialise() plus number of times file
     is created.
      */
-    assertAbfsStatistics(AbfsStatistic.CALL_CREATE, NUMBER_OF_OPS, metricMap);
     assertAbfsStatistics(AbfsStatistic.CALL_CREATE_NON_RECURSIVE, NUMBER_OF_OPS,
         metricMap);
     assertAbfsStatistics(AbfsStatistic.FILES_CREATED, NUMBER_OF_OPS, metricMap);

@@ -110,5 +110,27 @@ public final class HttpHeaderConfigurations {
    */
   public static final String X_MS_BLOB_TYPE = "x-ms-blob-type";
 
+  /**
+   * Http Request Header for copy id.
+   * {@value}
+   */
+  public static final String X_MS_COPY_ID = "x-ms-copy-id";
+
+    /**
+     * Http Response Header for denoting the copy status description of the operation.
+     * {@value}
+     */
+  public static final String X_MS_COPY_STATUS_DESCRIPTION = "x-ms-copy-status-description";
+
+    /**
+     * Http Response Header for denoting the copy status of the operation.
+     * Expected Values:
+     * {@link AbfsHttpConstants#COPY_STATUS_SUCCESS}
+     * {@link AbfsHttpConstants#COPY_STATUS_FAILED}
+     * {@link AbfsHttpConstants#COPY_STATUS_PENDING}
+     * {@link AbfsHttpConstants#COPY_STATUS_ABORTED}
+     */
+  public static final String X_MS_COPY_STATUS = "x-ms-copy-status";
+
   private HttpHeaderConfigurations() {}
 }
