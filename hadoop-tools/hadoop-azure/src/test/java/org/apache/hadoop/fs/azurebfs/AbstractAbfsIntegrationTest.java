@@ -634,28 +634,56 @@ public abstract class AbstractAbfsIntegrationTest extends
         + accountName + FORWARD_SLASH + fileSystemName + pathFromContainerRoot;
   }
 
+  /**
+   * Utility method to assume that the test is running against a Blob service.
+   * Otherwise, the test will be skipped.
+   */
   protected void assumeBlobServiceType() {
     Assume.assumeTrue("Blob service type is required for this test",
         getAbfsServiceType() == AbfsServiceType.BLOB);
   }
 
+  /**
+   * Utility method to assume that the test is running against a DFS service.
+   * Otherwise, the test will be skipped.
+   */
   protected void assumeDfsServiceType() {
     Assume.assumeTrue("DFS service type is required for this test",
         getAbfsServiceType() == AbfsServiceType.DFS);
   }
 
+  /**
+   * Utility method to assume that the test is running against a HNS Enabled account.
+   * Otherwise, the test will be skipped.
+   * @throws IOException if an error occurs while checking the account type.
+   */
   protected void assumeHnsEnabled() throws IOException {
     assumeHnsEnabled("HNS-Enabled account must be used for this test");
   }
 
+  /**
+   * Utility method to assume that the test is running against a HNS Enabled account.
+   * @param errorMessage error message to be displayed if the test is skipped.
+   * @throws IOException if an error occurs while checking the account type.
+   */
   protected void assumeHnsEnabled(String errorMessage) throws IOException {
     Assume.assumeTrue(errorMessage, getIsNamespaceEnabled(getFileSystem()));
   }
 
+  /**
+   * Utility method to assume that the test is running against a HNS Disabled account.
+   * Otherwise, the test will be skipped.
+   * @throws IOException if an error occurs while checking the account type.
+   */
   protected void assumeHnsDisabled() throws IOException {
     assumeHnsDisabled("HNS-Enabled account must not be used for this test");
   }
 
+  /**
+   * Utility method to assume that the test is running against a HNS Disabled account.
+   * @param message error message to be displayed if the test is skipped.
+   * @throws IOException if an error occurs while checking the account type.
+   */
   protected void assumeHnsDisabled(String message) throws IOException {
     Assume.assumeFalse(message, getIsNamespaceEnabled(getFileSystem()));
   }
