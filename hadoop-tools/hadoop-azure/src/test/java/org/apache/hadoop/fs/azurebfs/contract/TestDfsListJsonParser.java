@@ -25,7 +25,6 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.DfsListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
