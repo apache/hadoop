@@ -288,6 +288,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "safemode.checkperiod";
   public static final long DFS_ROUTER_SAFEMODE_CHECKPERIOD_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(5);
+  public static final String DFS_ROUTER_HEARTBEAT_WITH_IP_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "heartbeat.with.ip.enable";
+  public static final boolean DFS_ROUTER_HEARTBEAT_WITH_IP_ENABLE_DEFAULT = false;
 
   // HDFS Router-based federation mount table entries
   /** Maximum number of cache entries to have. */
