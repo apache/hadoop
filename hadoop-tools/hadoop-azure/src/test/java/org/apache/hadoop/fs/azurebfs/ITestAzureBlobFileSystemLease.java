@@ -28,6 +28,7 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
@@ -260,6 +261,9 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
 
     LambdaTestUtils.intercept(IOException.class, client instanceof AbfsBlobClient
         ? ERR_LEASE_EXPIRED_BLOB : ERR_LEASE_EXPIRED, () -> {
+      if (isAppendBlobEnabled() && getIngressServiceType() == AbfsServiceType.BLOB) {
+        out.write(20);
+      }
       out.close();
       return "Expected exception on close after lease break but got " + out;
     });
