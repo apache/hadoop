@@ -45,11 +45,15 @@ import org.apache.hadoop.util.XMLUtils;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Basic test case that the ConfServlet can write configuration
@@ -101,10 +105,10 @@ public class TestConfServlet {
     verifyMap.put("application/xml", ConfServlet.FORMAT_XML);
     verifyMap.put("application/json", ConfServlet.FORMAT_JSON);
 
-    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    HttpServletRequest request = mock(HttpServletRequest.class);
     for(String contentTypeExpected : verifyMap.keySet()) {
       String contenTypeActual = verifyMap.get(contentTypeExpected);
-      Mockito.when(request.getHeader(HttpHeaders.ACCEPT))
+      when(request.getHeader(HttpHeaders.ACCEPT))
           .thenReturn(contentTypeExpected);
       assertEquals(contenTypeActual,
           ConfServlet.parseAcceptHeader(request));
@@ -160,9 +164,9 @@ public class TestConfServlet {
         } else {
           // if property name is not empty, and it's not in configuration
           // expect proper error code and error message is set to the response
-          Mockito.verify(response).sendError(
-              Mockito.eq(HttpServletResponse.SC_NOT_FOUND),
-              Mockito.eq("Property " + propertyName + " not found"));
+          verify(response).sendError(
+              eq(HttpServletResponse.SC_NOT_FOUND),
+              eq("Property " + propertyName + " not found"));
         }
       }
     } finally {

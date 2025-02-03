@@ -245,9 +245,8 @@ public class TestKeyProviderCryptoExtension {
     for (int i = 0; i < ekvs.size(); ++i) {
       final EncryptedKeyVersion ekv = ekvs.get(i);
       final EncryptedKeyVersion orig = ekvsOrig.get(i);
-      assertEquals(
-         KeyProviderCryptoExtension.EEK,
-         ekv.getEncryptedKeyVersion().getVersionName(), "Version name should be EEK");
+      assertEquals(KeyProviderCryptoExtension.EEK,
+          ekv.getEncryptedKeyVersion().getVersionName(), "Version name should be EEK");
       assertEquals(ENCRYPTION_KEY_NAME, ekv.getEncryptionKeyName(),
           "Encryption key name should be " + ENCRYPTION_KEY_NAME);
       assertNotNull(ekv.getEncryptedKeyVersion().getMaterial(), "Expected encrypted key material");
@@ -279,7 +278,7 @@ public class TestKeyProviderCryptoExtension {
       // Verify decrypting the new EEK and orig EEK gives the same material.
       final KeyVersion origKv = kpExt.decryptEncryptedKey(orig);
       assertTrue(Arrays.equals(origKv.getMaterial(), kv.getMaterial()),
-         "Returned EEK and original EEK should both decrypt to the same kv.");
+          "Returned EEK and original EEK should both decrypt to the same kv.");
     }
   }
 

@@ -59,7 +59,8 @@ public class TestValueQueue {
   }
 
   private static class MockFiller implements QueueRefiller<String> {
-    final LinkedBlockingQueue<FillInfo> fillCalls = new LinkedBlockingQueue<>();
+    final LinkedBlockingQueue<FillInfo> fillCalls =
+        new LinkedBlockingQueue<FillInfo>();
     @Override
     public void fillQueueForKey(String keyName, Queue<String> keyQueue,
         int numValues) throws IOException {
@@ -93,8 +94,8 @@ public class TestValueQueue {
   public void testInitFill() throws Exception {
     MockFiller filler = new MockFiller();
     ValueQueue<String> vq =
-        new ValueQueue<>(10, 0.1f, 30000, 1,
-        SyncGenerationPolicy.ALL, filler);
+        new ValueQueue<String>(10, 0.1f, 30000, 1,
+            SyncGenerationPolicy.ALL, filler);
     assertEquals("test", vq.getNext("k1"));
     assertEquals(1, filler.getTop().num);
     vq.shutdown();
@@ -108,8 +109,8 @@ public class TestValueQueue {
   public void testWarmUp() throws Exception {
     MockFiller filler = new MockFiller();
     ValueQueue<String> vq =
-        new ValueQueue<>(10, 0.5f, 30000, 1,
-        SyncGenerationPolicy.ALL, filler);
+        new ValueQueue<String>(10, 0.5f, 30000, 1,
+            SyncGenerationPolicy.ALL, filler);
     vq.initializeQueuesForKeys("k1", "k2", "k3");
     FillInfo[] fillInfos =
       {filler.getTop(), filler.getTop(), filler.getTop()};
@@ -168,8 +169,8 @@ public class TestValueQueue {
   public void testRefill() throws Exception {
     MockFiller filler = new MockFiller();
     ValueQueue<String> vq =
-        new ValueQueue<>(100, 0.1f, 30000, 1,
-        SyncGenerationPolicy.ALL, filler);
+        new ValueQueue<String>(100, 0.1f, 30000, 1,
+            SyncGenerationPolicy.ALL, filler);
     // Trigger a prefill (10) and an async refill (91)
     assertEquals("test", vq.getNext("k1"));
     assertEquals(10, filler.getTop().num);
@@ -191,8 +192,8 @@ public class TestValueQueue {
   public void testNoRefill() throws Exception {
     MockFiller filler = new MockFiller();
     ValueQueue<String> vq =
-        new ValueQueue<>(10, 0.5f, 30000, 1,
-        SyncGenerationPolicy.ALL, filler);
+        new ValueQueue<String>(10, 0.5f, 30000, 1,
+            SyncGenerationPolicy.ALL, filler);
     // Trigger a prefill (5) and an async refill (6)
     assertEquals("test", vq.getNext("k1"));
     assertEquals(5, filler.getTop().num);
@@ -212,7 +213,7 @@ public class TestValueQueue {
     } catch (TimeoutException ignored) {
       // This is the correct outcome - no refill is expected
     }
-    assertNull(filler.getTop());
+    assertEquals(null, filler.getTop());
     vq.shutdown();
   }
 
@@ -224,8 +225,8 @@ public class TestValueQueue {
   public void testGetAtMostPolicyALL() throws Exception {
     MockFiller filler = new MockFiller();
     final ValueQueue<String> vq =
-        new ValueQueue<>(10, 0.1f, 30000, 1,
-        SyncGenerationPolicy.ALL, filler);
+        new ValueQueue<String>(10, 0.1f, 30000, 1,
+            SyncGenerationPolicy.ALL, filler);
     // Trigger a prefill (1) and an async refill (10)
     assertEquals("test", vq.getNext("k1"));
     assertEquals(1, filler.getTop().num);
@@ -273,11 +274,11 @@ public class TestValueQueue {
    */
   @Test
   @Timeout(value = 30)
-  public void testGetAtMostPolicyATLEAST_ONE() throws Exception {
+  public void testgetAtMostPolicyATLEAST_ONE() throws Exception {
     MockFiller filler = new MockFiller();
     ValueQueue<String> vq =
-        new ValueQueue<>(10, 0.3f, 30000, 1,
-        SyncGenerationPolicy.ATLEAST_ONE, filler);
+        new ValueQueue<String>(10, 0.3f, 30000, 1,
+            SyncGenerationPolicy.ATLEAST_ONE, filler);
     // Trigger a prefill (3) and an async refill (8)
     assertEquals("test", vq.getNext("k1"));
     assertEquals(3, filler.getTop().num);
@@ -307,11 +308,11 @@ public class TestValueQueue {
    */
   @Test
   @Timeout(value = 30)
-  public void testGetAtMostPolicyLOW_WATERMARK() throws Exception {
+  public void testgetAtMostPolicyLOW_WATERMARK() throws Exception {
     MockFiller filler = new MockFiller();
     ValueQueue<String> vq =
-        new ValueQueue<>(10, 0.3f, 30000, 1,
-        SyncGenerationPolicy.LOW_WATERMARK, filler);
+        new ValueQueue<String>(10, 0.3f, 30000, 1,
+            SyncGenerationPolicy.LOW_WATERMARK, filler);
     // Trigger a prefill (3) and an async refill (8)
     assertEquals("test", vq.getNext("k1"));
     assertEquals(3, filler.getTop().num);
@@ -341,8 +342,8 @@ public class TestValueQueue {
   public void testDrain() throws Exception {
     MockFiller filler = new MockFiller();
     ValueQueue<String> vq =
-        new ValueQueue<>(10, 0.1f, 30000, 1,
-        SyncGenerationPolicy.ALL, filler);
+        new ValueQueue<String>(10, 0.1f, 30000, 1,
+            SyncGenerationPolicy.ALL, filler);
     // Trigger a prefill (1) and an async refill (10)
     assertEquals("test", vq.getNext("k1"));
     assertEquals(1, filler.getTop().num);

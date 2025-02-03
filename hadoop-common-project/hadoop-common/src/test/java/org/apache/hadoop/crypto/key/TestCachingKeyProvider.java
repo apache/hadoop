@@ -53,9 +53,9 @@ public class TestCachingKeyProvider {
 
     // asserting no caching when key is not known
     cache = new CachingKeyProvider(mockProv, 100, 100);
-    assertNull(cache.getCurrentKey("k2"));
+    assertEquals(null, cache.getCurrentKey("k2"));
     verify(mockProv, times(1)).getCurrentKey(eq("k2"));
-    assertNull(cache.getCurrentKey("k2"));
+    assertEquals(null, cache.getCurrentKey("k2"));
     verify(mockProv, times(2)).getCurrentKey(eq("k2"));
   }
 
@@ -83,10 +83,10 @@ public class TestCachingKeyProvider {
 
     // asserting no caching when key is not known
     cache = new CachingKeyProvider(mockProv, 100, 100);
-    assertNull(cache.getKeyVersion("k2@0"));
+    assertEquals(null, cache.getKeyVersion("k2@0"));
     verify(mockProv, times(1))
         .getKeyVersion(eq("k2@0"));
-    assertNull(cache.getKeyVersion("k2@0"));
+    assertEquals(null, cache.getKeyVersion("k2@0"));
     verify(mockProv, times(2))
         .getKeyVersion(eq("k2@0"));
   }
@@ -111,9 +111,9 @@ public class TestCachingKeyProvider {
 
     // asserting no caching when key is not known
     cache = new CachingKeyProvider(mockProv, 100, 100);
-    assertNull(cache.getMetadata("k2"));
+    assertEquals(null, cache.getMetadata("k2"));
     verify(mockProv, times(1)).getMetadata(eq("k2"));
-    assertNull(cache.getMetadata("k2"));
+    assertEquals(null, cache.getMetadata("k2"));
     verify(mockProv, times(2)).getMetadata(eq("k2"));
   }
 

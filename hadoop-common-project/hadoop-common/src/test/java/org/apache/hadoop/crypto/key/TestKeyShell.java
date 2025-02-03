@@ -72,7 +72,7 @@ public class TestKeyShell {
    * Delete a key from the default jceksProvider
    * @param ks The KeyShell instance
    * @param keyName The key to delete
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   private void deleteKey(KeyShell ks, String keyName) throws Exception {
     int rc;
@@ -90,7 +90,7 @@ public class TestKeyShell {
    * @param ks The KeyShell instance
    * @param wantMetadata True if you want metadata returned with the keys
    * @return The output from the "list" call
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   private String listKeys(KeyShell ks, boolean wantMetadata) throws Exception {
     int rc;
@@ -104,7 +104,7 @@ public class TestKeyShell {
 
   @Test
   public void testKeySuccessfulKeyLifecycle() throws Exception {
-    int rc;
+    int rc = 0;
     String keyName = "key1";
 
     KeyShell ks = new KeyShell();
@@ -158,8 +158,8 @@ public class TestKeyShell {
   public void testKeySuccessfulCreationWithDescription() throws Exception {
     outContent.reset();
     final String[] args1 = {"create", "key1", "-provider", jceksProvider,
-       "-description", "someDescription"};
-    int rc;
+                      "-description", "someDescription"};
+    int rc = 0;
     KeyShell ks = new KeyShell();
     ks.setConf(new Configuration());
     rc = ks.run(args1);
@@ -177,7 +177,7 @@ public class TestKeyShell {
     final String[] args1 = {"create", "key1", "-size", "56", "-provider",
             jceksProvider};
 
-    int rc;
+    int rc = 0;
     KeyShell ks = new KeyShell();
     ks.setConf(new Configuration());
     rc = ks.run(args1);
@@ -190,7 +190,7 @@ public class TestKeyShell {
     final String[] args1 = {"create", "key1", "-cipher", "LJM", "-provider",
             jceksProvider};
 
-    int rc;
+    int rc = 0;
     KeyShell ks = new KeyShell();
     ks.setConf(new Configuration());
     rc = ks.run(args1);
@@ -203,7 +203,7 @@ public class TestKeyShell {
     final String[] args1 = {"create", "key1", "-cipher", "AES", "-provider",
       "sdff://file/tmp/keystore.jceks"};
     
-    int rc;
+    int rc = 0;
     KeyShell ks = new KeyShell();
     ks.setConf(new Configuration());
     rc = ks.run(args1);
@@ -216,7 +216,7 @@ public class TestKeyShell {
     final String[] args1 = {"create", "key1", "-cipher", "AES", "-provider",
       "user:///"};
     
-    int rc;
+    int rc = 0;
     KeyShell ks = new KeyShell();
     ks.setConf(new Configuration());
     rc = ks.run(args1);
@@ -229,7 +229,7 @@ public class TestKeyShell {
   public void testTransientProviderOnlyConfig() throws Exception {
     final String[] args1 = {"create", "key1"};
     
-    int rc;
+    int rc = 0;
     KeyShell ks = new KeyShell();
     Configuration config = new Configuration();
     config.set(KeyProviderFactory.KEY_PROVIDER_PATH, "user:///");
@@ -242,7 +242,7 @@ public class TestKeyShell {
   @Test
   public void testStrict() throws Exception {
     outContent.reset();
-    int rc;
+    int rc = 0;
     KeyShell ks = new KeyShell();
     ks.setConf(new Configuration());
     final String[] args1 = {"create", "hello", "-provider", jceksProvider,
@@ -261,7 +261,7 @@ public class TestKeyShell {
     final String[] args1 = {"create", keyName, "-cipher", "AES/CBC/pkcs5Padding",
         "-provider", jceksProvider};
     
-    int rc;
+    int rc = 0;
     KeyShell ks = new KeyShell();
     ks.setConf(new Configuration());
     rc = ks.run(args1);

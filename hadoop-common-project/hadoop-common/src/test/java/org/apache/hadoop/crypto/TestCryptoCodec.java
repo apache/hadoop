@@ -205,7 +205,7 @@ public class TestCryptoCodec {
       key.write(data);
       value.write(data);
     }
-    LOG.info("Generated {} records", count);
+    LOG.info("Generated " + count + " records");
     
     // Encrypt data
     DataOutputBuffer encryptedDataBuffer = new DataOutputBuffer();
@@ -216,7 +216,7 @@ public class TestCryptoCodec {
     out.close();
     LOG.info("Finished encrypting data");
     
-    CryptoCodec decCodec;
+    CryptoCodec decCodec = null;
     try {
       decCodec = (CryptoCodec)ReflectionUtils.newInstance(
           conf.getClassByName(decCodecClass), conf);
@@ -253,7 +253,7 @@ public class TestCryptoCodec {
           "original and encrypted-then-decrypted-output not equal");
       
       // original and encrypted-then-decrypted-output have the same hashCode
-      Map<RandomDatum, String> m = new HashMap<>();
+      Map<RandomDatum, String> m = new HashMap<RandomDatum, String>();
       m.put(k1, k1.toString());
       m.put(v1, v1.toString());
       String result = m.get(k2);
@@ -297,7 +297,7 @@ public class TestCryptoCodec {
           "Decrypted stream read by byte does not match");
     } while (expected != -1);
 
-    LOG.info("SUCCESS! Completed checking {} records", count);
+    LOG.info("SUCCESS! Completed checking " + count + " records");
     
     // Check secure random generator
     testSecureRandom(encCodec);

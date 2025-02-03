@@ -27,7 +27,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestOpensslCipher {
@@ -41,7 +43,7 @@ public class TestOpensslCipher {
   public void testGetInstance() throws Exception {
     assumeTrue(OpensslCipher.getLoadingFailureReason() == null);
     OpensslCipher cipher = OpensslCipher.getInstance("AES/CTR/NoPadding");
-    assertNotNull(cipher);
+    assertTrue(cipher != null);
     
     try {
       cipher = OpensslCipher.getInstance("AES2/CTR/NoPadding");
@@ -63,7 +65,7 @@ public class TestOpensslCipher {
   public void testUpdateArguments() throws Exception {
     assumeTrue(OpensslCipher.getLoadingFailureReason() == null);
     OpensslCipher cipher = OpensslCipher.getInstance("AES/CTR/NoPadding");
-    assertNotNull(cipher);
+    assertTrue(cipher != null);
     
     cipher.init(OpensslCipher.ENCRYPT_MODE, key, iv);
     
@@ -76,7 +78,7 @@ public class TestOpensslCipher {
       fail("Input and output buffer should be direct buffer.");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains(
-         "Direct buffers are required", e);
+          "Direct buffers are required", e);
     }
     
     // Output buffer length should be sufficient to store output data 
@@ -87,7 +89,7 @@ public class TestOpensslCipher {
       fail("Output buffer length should be sufficient to store output data");
     } catch (ShortBufferException e) {
       GenericTestUtils.assertExceptionContains(
-         "Output buffer is not sufficient", e);
+          "Output buffer is not sufficient", e);
     }
   }
   
@@ -96,7 +98,7 @@ public class TestOpensslCipher {
   public void testDoFinalArguments() throws Exception {
     assumeTrue(OpensslCipher.getLoadingFailureReason() == null);
     OpensslCipher cipher = OpensslCipher.getInstance("AES/CTR/NoPadding");
-    assertNotNull(cipher);
+    assertTrue(cipher != null);
     
     cipher.init(OpensslCipher.ENCRYPT_MODE, key, iv);
     
@@ -115,9 +117,9 @@ public class TestOpensslCipher {
   @Timeout(value = 120)
   public void testIsSupportedSuite() throws Exception {
     assumeTrue(OpensslCipher.getLoadingFailureReason() == null,
-       "Skipping due to failure of loading OpensslCipher.");
+        "Skipping due to failure of loading OpensslCipher.");
     assertFalse(OpensslCipher.isSupported(CipherSuite.UNKNOWN),
-       "Unknown suite must not be supported.");
+        "Unknown suite must not be supported.");
     assertTrue(OpensslCipher.isSupported(CipherSuite.AES_CTR_NOPADDING),
         "AES/CTR/NoPadding is not an optional suite.");
   }

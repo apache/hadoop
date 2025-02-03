@@ -70,7 +70,8 @@ public class TestCryptoOutputStreamClosing {
     doThrow(new IOException("problem flushing wrapped stream"))
         .when(cos).flush();
 
-    intercept(IOException.class, cos::close);
+    intercept(IOException.class,
+        () -> cos.close());
 
     // We expect that the close of the CryptoOutputStream closes the
     // wrapped OutputStream even though we got an exception

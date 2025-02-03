@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.conf;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests the tool (and the default expression) for deciding which config
@@ -75,7 +76,7 @@ public class TestConfigRedactor {
     );
     for (String key : sensitiveKeys) {
       processedText = redactor.redact(key, ORIGINAL_VALUE);
-      Assertions.assertEquals(REDACTED_TEXT, processedText,
+      assertEquals(REDACTED_TEXT, processedText,
           "Config parameter wasn't redacted and should be: " + key);
     }
 
@@ -89,7 +90,7 @@ public class TestConfigRedactor {
     );
     for (String key : normalKeys) {
       processedText = redactor.redact(key, ORIGINAL_VALUE);
-      Assertions.assertEquals(ORIGINAL_VALUE, processedText,
+      assertEquals(ORIGINAL_VALUE, processedText,
           "Config parameter was redacted and shouldn't be: " + key);
     }
   }

@@ -61,9 +61,8 @@ public class TestCryptoStreamsWithOpensslAesCtrCryptoCodec
         OsSecureRandom.class.getName());
     CryptoCodec codecWithRandom = CryptoCodec.getInstance(conf);
     assertNotNull(
-    
        codecWithRandom, "Unable to instantiate codec " + OpensslAesCtrCryptoCodec.class
-            .getName() + ", is the required " + "version of OpenSSL installed?");
+       .getName() + ", is the required " + "version of OpenSSL installed?");
     OsSecureRandom random = (OsSecureRandom)
             ((OpensslAesCtrCryptoCodec) codecWithRandom).getRandom();
     // trigger the OsSecureRandom to create an internal FileInputStream

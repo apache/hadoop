@@ -263,8 +263,8 @@ public class CLITestHelper {
     }
 
     assertTrue(overallResults, "One of the tests failed. " +
-    	"See the Detailed results to identify " +
-    	"the command that failed");
+        "See the Detailed results to identify " +
+        "the command that failed");
   }
   
   /**

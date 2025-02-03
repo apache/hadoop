@@ -229,7 +229,7 @@ public class TestCryptoStreams extends CryptoStreamsTestBase {
       checkStream();
       
       if (pos < length) {
-        int n = Math.min(len, length - pos);
+        int n = (int) Math.min(len, length - pos);
         System.arraycopy(data, pos, b, off, n);
         pos += n;
         return n;
@@ -248,7 +248,7 @@ public class TestCryptoStreams extends CryptoStreamsTestBase {
     public int read(ByteBuffer buf) throws IOException {
       checkStream();
       if (pos < length) {
-        int n = Math.min(buf.remaining(), length - pos);
+        int n = (int) Math.min(buf.remaining(), length - pos);
         if (n > 0) {
           buf.put(data, pos, n);
         }
@@ -464,7 +464,7 @@ public class TestCryptoStreams extends CryptoStreamsTestBase {
   }
 
   /**
-   * This tests {@link StreamCapabilities#hasCapability(String)} for
+   * This tests {@link StreamCapabilities#hasCapability(String)} for the
    * the underlying streams.
    */
   @Test

@@ -38,7 +38,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -63,7 +62,15 @@ import static org.apache.hadoop.conf.StorageUnit.GB;
 import static org.apache.hadoop.conf.StorageUnit.KB;
 import static org.apache.hadoop.conf.StorageUnit.MB;
 import static org.apache.hadoop.conf.StorageUnit.TB;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
@@ -2228,8 +2235,8 @@ public class TestConfiguration {
     Configuration config = new Configuration();
     Class<?>[] classes =
         config.getClasses("testClassName", Configuration.class);
-    assertEquals(1, classes.length, "Not returning expected number of classes. Number of returned classes ="
-        + classes.length);
+    assertEquals(1, classes.length,
+        "Not returning expected number of classes. Number of returned classes =" + classes.length);
     assertEquals(Configuration.class, classes[0], "Not returning the default class Name");
   }
 
@@ -2239,8 +2246,8 @@ public class TestConfiguration {
     Configuration config = new Configuration();
     config.set("testClassName", "");
     Class<?>[] classes = config.getClasses("testClassName", Configuration.class);
-    assertEquals(0, classes.length, "Not returning expected number of classes. Number of returned classes ="
-        + classes.length);
+    assertEquals(0, classes.length,
+        "Not returning expected number of classes. Number of returned classes =" + classes.length);
   }
 
   @Test
@@ -2546,11 +2553,11 @@ public class TestConfiguration {
     assertTrue(prefixedProps.isEmpty());
   }
 
-  /*public static void main(String[] argv) throws Exception {
+  public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{
       TestConfiguration.class.getName()
     });
-  }*/
+  }
 
   @Test
   public void testGetAllPropertiesByTags() throws Exception {

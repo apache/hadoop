@@ -79,7 +79,7 @@ public class TestLoadBalancingKMSClientProvider {
     Configuration conf = new Configuration();
     KeyProvider kp = new KMSClientProvider.Factory().createProvider(new URI(
         "kms://http@host1:9600/kms/foo"), conf);
-    assertInstanceOf(LoadBalancingKMSClientProvider.class, kp);
+    assertTrue(kp instanceof LoadBalancingKMSClientProvider);
     KMSClientProvider[] providers =
         ((LoadBalancingKMSClientProvider) kp).getProviders();
     assertEquals(1, providers.length);
@@ -88,7 +88,7 @@ public class TestLoadBalancingKMSClientProvider {
 
     kp = new KMSClientProvider.Factory().createProvider(new URI(
         "kms://http@host1;host2;host3:9600/kms/foo"), conf);
-    assertInstanceOf(LoadBalancingKMSClientProvider.class, kp);
+    assertTrue(kp instanceof LoadBalancingKMSClientProvider);
     providers =
         ((LoadBalancingKMSClientProvider) kp).getProviders();
     assertEquals(3, providers.length);
@@ -101,7 +101,7 @@ public class TestLoadBalancingKMSClientProvider {
 
     kp = new KMSClientProvider.Factory().createProvider(new URI(
         "kms://http@host1;host2;host3:9600/kms/foo"), conf);
-    assertInstanceOf(LoadBalancingKMSClientProvider.class, kp);
+    assertTrue(kp instanceof LoadBalancingKMSClientProvider);
     providers =
         ((LoadBalancingKMSClientProvider) kp).getProviders();
     assertEquals(3, providers.length);
@@ -168,7 +168,7 @@ public class TestLoadBalancingKMSClientProvider {
       kp.createKey("test1", new Options(conf)).getName();
       fail("Should fail since its not an IOException");
     } catch (Exception e) {
-      assertInstanceOf(NoSuchAlgorithmException.class, e);
+      assertTrue(e instanceof NoSuchAlgorithmException);
     }
     assertEquals("p3", kp.createKey("test2", new Options(conf)).getName());
     // IOException will trigger retry in next provider
@@ -200,7 +200,7 @@ public class TestLoadBalancingKMSClientProvider {
       kp.createKey("test3", new Options(conf)).getName();
       fail("Should fail since all providers threw an IOException");
     } catch (Exception e) {
-      assertInstanceOf(IOException.class, e);
+      assertTrue(e instanceof IOException);
     }
   }
 
@@ -297,7 +297,7 @@ public class TestLoadBalancingKMSClientProvider {
   /**
    * tests {@link LoadBalancingKMSClientProvider#warmUpEncryptedKeys(String...)}
    * error handling in case when all the providers throws {@link IOException}.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testWarmUpEncryptedKeysWhenAllProvidersFail() throws Exception {
@@ -319,7 +319,7 @@ public class TestLoadBalancingKMSClientProvider {
       kp.warmUpEncryptedKeys(keyName);
       fail("Should fail since both providers threw IOException");
     } catch (Exception e) {
-      assertInstanceOf(IOException.class, e.getCause());
+      assertTrue(e.getCause() instanceof IOException);
     }
     Mockito.verify(p1, Mockito.times(1)).warmUpEncryptedKeys(keyName);
     Mockito.verify(p2, Mockito.times(1)).warmUpEncryptedKeys(keyName);
@@ -328,7 +328,7 @@ public class TestLoadBalancingKMSClientProvider {
   /**
    * tests {@link LoadBalancingKMSClientProvider#warmUpEncryptedKeys(String...)}
    * error handling in case atleast one provider succeeds.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testWarmUpEncryptedKeysWhenOneProviderSucceeds()
@@ -360,7 +360,7 @@ public class TestLoadBalancingKMSClientProvider {
    * Tests whether retryPolicy fails immediately on non-idempotent operations,
    * after trying each provider once,
    * on encountering IOException which is not SocketException.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testClientRetriesNonIdempotentOpWithIOExceptionFailsImmediately()
@@ -389,7 +389,7 @@ public class TestLoadBalancingKMSClientProvider {
       kp.createKey(keyName, new Options(conf));
       fail("Should fail since all providers threw an IOException");
     } catch (Exception e) {
-      assertInstanceOf(IOException.class, e);
+      assertTrue(e instanceof IOException);
     }
     verify(kp.getProviders()[0], Mockito.times(1))
         .createKey(Mockito.eq(keyName), Mockito.any(Options.class));
@@ -402,7 +402,7 @@ public class TestLoadBalancingKMSClientProvider {
   /**
    * Tests whether retryPolicy retries on idempotent operations
    * when encountering IOException.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testClientRetriesIdempotentOpWithIOExceptionSucceedsSecondTime()
@@ -448,7 +448,7 @@ public class TestLoadBalancingKMSClientProvider {
    * from first provider.
    * This assumes all the kms servers are configured with identical access to
    * keys.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testClientRetriesWithAccessControlException() throws Exception {
@@ -474,7 +474,7 @@ public class TestLoadBalancingKMSClientProvider {
       kp.createKey("test3", new Options(conf));
       fail("Should fail because provider p1 threw an AccessControlException");
     } catch (Exception e) {
-      assertInstanceOf(AccessControlException.class, e);
+      assertTrue(e instanceof AccessControlException);
     }
     verify(p1, Mockito.times(1)).createKey(Mockito.eq("test3"),
             Mockito.any(Options.class));
@@ -489,7 +489,7 @@ public class TestLoadBalancingKMSClientProvider {
    * from first provider.
    * This assumes all the kms servers are configured with identical access to
    * keys.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testClientRetriesWithRuntimeException() throws Exception {
@@ -512,7 +512,7 @@ public class TestLoadBalancingKMSClientProvider {
       kp.createKey("test3", new Options(conf));
       fail("Should fail since provider p1 threw RuntimeException");
     } catch (Exception e) {
-      assertInstanceOf(RuntimeException.class, e);
+      assertTrue(e instanceof RuntimeException);
     }
     verify(p1, Mockito.times(1)).createKey(Mockito.eq("test3"),
             Mockito.any(Options.class));
@@ -522,7 +522,7 @@ public class TestLoadBalancingKMSClientProvider {
 
   /**
    * Tests the client retries until it finds a good provider.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testClientRetriesWithTimeoutsException() throws Exception {
@@ -565,7 +565,7 @@ public class TestLoadBalancingKMSClientProvider {
 
   /**
    * Tests the operation succeeds second time after ConnectTimeoutException.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testClientRetriesSucceedsSecondTime() throws Exception {
@@ -599,7 +599,7 @@ public class TestLoadBalancingKMSClientProvider {
 
   /**
    * Tests whether retryPolicy retries specified number of times.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testClientRetriesSpecifiedNumberOfTimes() throws Exception {
@@ -633,7 +633,7 @@ public class TestLoadBalancingKMSClientProvider {
   /**
    * Tests whether retryPolicy retries number of times equals to number of
    * providers if conf kms.client.failover.max.attempts is not set.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testClientRetriesIfMaxAttemptsNotSet() throws Exception {
@@ -665,7 +665,7 @@ public class TestLoadBalancingKMSClientProvider {
   /**
    * Tests that client reties each provider once, when it encounters
    * AuthenticationException wrapped in an IOException from first provider.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testClientRetriesWithAuthenticationExceptionWrappedinIOException()
@@ -689,17 +689,17 @@ public class TestLoadBalancingKMSClientProvider {
       kp.createKey("test3", new Options(conf));
       fail("Should fail since provider p1 threw AuthenticationException");
     } catch (Exception e) {
-      assertInstanceOf(AuthenticationException.class, e.getCause());
+      assertTrue(e.getCause() instanceof AuthenticationException);
     }
     verify(p1, Mockito.times(1)).createKey(Mockito.eq("test3"),
-        Mockito.any(Options.class));
+            Mockito.any(Options.class));
     verify(p2, Mockito.times(1)).createKey(Mockito.eq("test3"),
-        Mockito.any(Options.class));
+            Mockito.any(Options.class));
   }
 
   /**
    * Tests the operation succeeds second time after SSLHandshakeException.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testClientRetriesWithSSLHandshakeExceptionSucceedsSecondTime()
@@ -734,7 +734,7 @@ public class TestLoadBalancingKMSClientProvider {
 
   /**
    * Tests the operation fails at every attempt after SSLHandshakeException.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testClientRetriesWithSSLHandshakeExceptionFailsAtEveryAttempt()
@@ -772,7 +772,7 @@ public class TestLoadBalancingKMSClientProvider {
   /**
    * Tests that if an idempotent operation succeeds second time after
    * SocketTimeoutException, then the operation is successful.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testClientRetriesIdempotentOpWithSocketTimeoutExceptionSucceeds()
@@ -780,7 +780,7 @@ public class TestLoadBalancingKMSClientProvider {
     Configuration conf = new Configuration();
     conf.setInt(
         CommonConfigurationKeysPublic.KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY, 3);
-    final List<String> keys = Collections.singletonList("testKey");
+    final List<String> keys = Arrays.asList("testKey");
     KMSClientProvider p1 = mock(KMSClientProvider.class);
     when(p1.getKeys())
         .thenThrow(new SocketTimeoutException("p1"))
@@ -803,7 +803,7 @@ public class TestLoadBalancingKMSClientProvider {
   /**
    * Tests that if a non idempotent operation fails at every attempt
    * after SocketTimeoutException, then SocketTimeoutException is thrown.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testClientRetriesIdempotentOpWithSocketTimeoutExceptionFails()
@@ -841,7 +841,7 @@ public class TestLoadBalancingKMSClientProvider {
   /**
    * Tests whether retryPolicy fails immediately on non-idempotent operations,
    * after trying each provider once, on encountering SocketTimeoutException.
-   * @throws Exception If the test encounters any errors during execution.
+   * @throws Exception
    */
   @Test
   public void testClientRetriesNonIdempotentOpWithSocketTimeoutExceptionFails()
@@ -870,7 +870,7 @@ public class TestLoadBalancingKMSClientProvider {
       kp.createKey(keyName, new Options(conf));
       fail("Should fail since all providers threw a SocketTimeoutException");
     } catch (Exception e) {
-      assertInstanceOf(SocketTimeoutException.class, e);
+      assertTrue(e instanceof SocketTimeoutException);
     }
     verify(kp.getProviders()[0], Mockito.times(1))
         .createKey(Mockito.eq(keyName), Mockito.any(Options.class));
@@ -890,7 +890,7 @@ public class TestLoadBalancingKMSClientProvider {
     URI kmsUri = URI.create("kms://http@" + authority + "/kms/foo");
     KeyProvider kp =
         new KMSClientProvider.Factory().createProvider(kmsUri, conf);
-    assertInstanceOf(LoadBalancingKMSClientProvider.class, kp);
+    assertTrue(kp instanceof LoadBalancingKMSClientProvider);
     LoadBalancingKMSClientProvider lbkp = (LoadBalancingKMSClientProvider) kp;
     assertEquals(1, lbkp.getProviders().length);
     assertEquals(authority, lbkp.getCanonicalServiceName());
@@ -905,7 +905,7 @@ public class TestLoadBalancingKMSClientProvider {
     final URI kmsUri = URI.create("kms://http@host1;host2;host3:9600/kms/foo");
     final KeyProvider kp =
         new KMSClientProvider.Factory().createProvider(kmsUri, conf);
-    assertInstanceOf(LoadBalancingKMSClientProvider.class, kp);
+    assertTrue(kp instanceof LoadBalancingKMSClientProvider);
     final LoadBalancingKMSClientProvider lbkp =
         (LoadBalancingKMSClientProvider) kp;
     assertEquals(kmsUri.toString(), lbkp.getCanonicalServiceName());
@@ -952,9 +952,9 @@ public class TestLoadBalancingKMSClientProvider {
           }
         });
     // make sure getActualUgi() returns the current user, not login user.
-    assertEquals(
-    ugi, actualUgi, "testTokenSelectionWithConf() should return the" +
-            " current user, not login user");
+    assertEquals(ugi, actualUgi,
+        "testTokenSelectionWithConf() should return the" +
+        " current user, not login user");
   }
 
   @Test

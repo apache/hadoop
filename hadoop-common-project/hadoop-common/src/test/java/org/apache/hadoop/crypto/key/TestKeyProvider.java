@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.crypto.key;
 
-// import org.junit.jupiter.api.Assertions;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.Path;
@@ -60,7 +59,7 @@ public class TestKeyProvider {
     assertEquals("/aaa", KeyProvider.getBaseName("/aaa@112"));
     try {
       KeyProvider.getBaseName("no-slashes");
-      fail("should have thrown");
+      assertTrue(false, "should have thrown");
     } catch (IOException e) {
       assertTrue(true);
     }
@@ -103,7 +102,7 @@ public class TestKeyProvider {
     //Metadata with description
     format = new SimpleDateFormat("y/m/d");
     date = format.parse("2013/12/25");
-    Map<String, String> attributes = new HashMap<>();
+    Map<String, String> attributes = new HashMap<String, String>();
     attributes.put("a", "A");
     meta = new KeyProvider.Metadata("myCipher", 100,
         "description", attributes, date, 123);
@@ -131,7 +130,7 @@ public class TestKeyProvider {
     Configuration conf = new Configuration();
     conf.set(KeyProvider.DEFAULT_CIPHER_NAME, "myCipher");
     conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 512);
-    Map<String, String> attributes = new HashMap<>();
+    Map<String, String> attributes = new HashMap<String, String>();
     attributes.put("a", "A");
     KeyProvider.Options options = KeyProvider.options(conf);
     assertEquals("myCipher", options.getCipher());
