@@ -20,9 +20,11 @@ package org.apache.hadoop.hdfs.server.federation.store.impl;
 import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -44,6 +46,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
@@ -53,6 +57,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Time;
 import static org.apache.hadoop.hdfs.server.federation.router.Quota.eachByStorageType;
+import static org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils.filterMultiple;
 
 /**
  * Implementation of the {@link MountTableStore} state store API.
@@ -204,6 +209,56 @@ public class MountTableStoreImpl extends MountTableStore {
         RemoveMountTableEntryResponse.newInstance();
     response.setStatus(status);
     if (status) {
+      updateCacheAllRouters();
+    }
+    return response;
+  }
+
+  @Override
+  public RemoveMountTableEntriesResponse removeMountTableEntries(
+      RemoveMountTableEntriesRequest request) throws IOException {
+    List<String> failedPaths = new ArrayList<>();
+    List<MountTable> entriesToRemove = new ArrayList<>();
+    List<MountTable> allEntries = getDriver().get(getRecordClass()).getRecords();
+    for (String path : request.getSrcPaths()) {
+      final MountTable partial = MountTable.newInstance();
+      partial.setSourcePath(path);
+      final Query<MountTable> query = new Query<>(partial);
+      List<MountTable> filtered = filterMultiple(query, allEntries);
+      MountTable deleteEntry = null;
+      if (filtered.size() == 1) {
+        deleteEntry = filtered.get(0);
+      }
+
+      if (deleteEntry != null) {
+        RouterPermissionChecker pc = RouterAdminServer.getPermissionChecker();
+        if (pc != null) {
+          try {
+            pc.checkPermission(deleteEntry, FsAction.WRITE);
+            entriesToRemove.add(deleteEntry);
+          } catch (IOException ioe) {
+            failedPaths.add(path);
+          }
+        }
+      } else {
+        failedPaths.add(path);
+      }
+    }
+
+    boolean anyRemoved = false;
+    Map<MountTable, Boolean> statuses = getDriver().removeMultiple(entriesToRemove);
+    for (Map.Entry<MountTable, Boolean> mapEntry : statuses.entrySet()) {
+      if (!mapEntry.getValue()) {
+        failedPaths.add(mapEntry.getKey().getSourcePath());
+      } else {
+        anyRemoved = true;
+      }
+    }
+
+    RemoveMountTableEntriesResponse response = RemoveMountTableEntriesResponse.newInstance();
+    response.setStatus(failedPaths.isEmpty());
+    response.setFailedRecordsKeys(failedPaths);
+    if (anyRemoved) {
       updateCacheAllRouters();
     }
     return response;

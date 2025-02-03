@@ -33,6 +33,8 @@ import java.util.Set;
 
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntriesResponse;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
@@ -512,6 +514,22 @@ public class RouterAdminServer extends AbstractService
           request.getSrcPath(), e.getMessage());
     }
     return getMountTableStore().removeMountTableEntry(request);
+  }
+
+  @Override
+  public RemoveMountTableEntriesResponse removeMountTableEntries(
+      RemoveMountTableEntriesRequest request) throws IOException {
+    // clear sub-cluster's quota definition
+    for (String path : request.getSrcPaths()) {
+      try {
+        synchronizeQuota(path, HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_RESET, null);
+      } catch (Exception e) {
+        // Ignore exception, if any while reseting quota. Specifically to handle
+        // if the actual destination doesn't exist.
+        LOG.warn("Unable to clear quota at the destinations for {}: {}", path, e.getMessage());
+      }
+    }
+    return getMountTableStore().removeMountTableEntries(request);
   }
 
   @Override

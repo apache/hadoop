@@ -189,6 +189,15 @@ message RemoveMountTableEntryResponseProto{
   optional bool status = 1;
 }
 
+message RemoveMountTableEntriesRequestProto {
+  repeated string srcPaths = 1;
+}
+
+message RemoveMountTableEntriesResponseProto{
+  optional bool status = 1;
+  repeated string failedEntriesKeys = 2;
+}
+
 message GetMountTableEntriesRequestProto {
   optional string srcPath = 1;
 }

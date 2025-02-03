@@ -46,6 +46,8 @@ import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProt
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshMountTableEntriesResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshSuperUserGroupsConfigurationRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshSuperUserGroupsConfigurationResponseProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RemoveMountTableEntriesRequestProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RemoveMountTableEntriesResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RemoveMountTableEntryRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RemoveMountTableEntryResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.UpdateMountTableEntryRequestProto;
@@ -76,6 +78,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.LeaveSafeModeRequ
 import org.apache.hadoop.hdfs.server.federation.store.protocol.LeaveSafeModeResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
@@ -99,6 +103,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.LeaveSafe
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RefreshMountTableEntriesRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RefreshMountTableEntriesResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RefreshSuperUserGroupsConfigurationResponsePBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RemoveMountTableEntriesRequestPBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RemoveMountTableEntriesResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RemoveMountTableEntryRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.RemoveMountTableEntryResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.UpdateMountTableEntryRequestPBImpl;
@@ -201,6 +207,22 @@ public class RouterAdminProtocolTranslatorPB
       RemoveMountTableEntryResponseProto responseProto =
           rpcProxy.removeMountTableEntry(null, proto);
       return new RemoveMountTableEntryResponsePBImpl(responseProto);
+    } catch (ServiceException e) {
+
+      throw new IOException(getRemoteException(e).getMessage());
+    }
+  }
+
+  @Override
+  public RemoveMountTableEntriesResponse removeMountTableEntries(
+      RemoveMountTableEntriesRequest request) throws IOException {
+    RemoveMountTableEntriesRequestPBImpl requestPB =
+        (RemoveMountTableEntriesRequestPBImpl)request;
+    RemoveMountTableEntriesRequestProto proto = requestPB.getProto();
+    try {
+      RemoveMountTableEntriesResponseProto responseProto =
+          rpcProxy.removeMountTableEntries(null, proto);
+      return new RemoveMountTableEntriesResponsePBImpl(responseProto);
     } catch (ServiceException e) {
 
       throw new IOException(getRemoteException(e).getMessage());

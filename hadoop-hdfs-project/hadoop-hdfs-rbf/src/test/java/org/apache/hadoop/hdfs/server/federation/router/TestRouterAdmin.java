@@ -22,11 +22,13 @@ import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStor
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -56,6 +58,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDisabledNamese
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDisabledNameservicesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
@@ -325,6 +329,46 @@ public class TestRouterAdmin {
     // New mount table size
     List<MountTable> entries2 = getMountTableEntries(mountTable);
     assertEquals(entries2.size(), mockMountTable.size() - 1);
+  }
+
+  @Test
+  public void testRemoveMountTables() throws IOException {
+    RouterClient client = routerContext.getAdminClient();
+    MountTableManager mountTable = client.getMountTableManager();
+
+    // Add a few mounts
+    for (int i = 0; i < 5; i++) {
+      MountTable newEntry =
+          MountTable.newInstance("/batch-remove/" + i, Collections.singletonMap("ns0", "/testdir"),
+              Time.now(), Time.now());
+      AddMountTableEntryRequest addRequest = AddMountTableEntryRequest.newInstance(newEntry);
+      AddMountTableEntryResponse addResponse = mountTable.addMountTableEntry(addRequest);
+      assertTrue(addResponse.getStatus());
+    }
+
+    assertEquals(getMountTableEntries(mountTable).size(), mockMountTable.size() + 5);
+
+    // Remove existing entries
+    RemoveMountTableEntriesRequest removeRequest = RemoveMountTableEntriesRequest.newInstance(
+        Arrays.asList("/batch-remove/0", "/batch-remove/1"));
+    RemoveMountTableEntriesResponse res = mountTable.removeMountTableEntries(removeRequest);
+    assertTrue(res.getStatus());
+    assertTrue(res.getFailedRecordsKeys().isEmpty());
+    assertEquals(getMountTableEntries(mountTable).size(), mockMountTable.size() + 3);
+
+    // Remove existing entry and non-existent entries
+    removeRequest = RemoveMountTableEntriesRequest.newInstance(
+        Arrays.asList("/batch-remove/2", "/batch-remove/20"));
+    res = mountTable.removeMountTableEntries(removeRequest);
+    assertFalse(res.getStatus());
+    assertEquals(1, res.getFailedRecordsKeys().size());
+    assertEquals("/batch-remove/20", res.getFailedRecordsKeys().get(0));
+    assertEquals(getMountTableEntries(mountTable).size(), mockMountTable.size() + 2);
+
+    // Remove non-existent entries
+    RemoveMountTableEntriesRequest removeRequest2 = RemoveMountTableEntriesRequest.newInstance(
+        Arrays.asList("/batch-remove/404", "/batch-remove/4000"));
+    assertThrows(IOException.class, () -> mountTable.removeMountTableEntries(removeRequest2));
   }
 
   @Test
