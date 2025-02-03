@@ -21,7 +21,6 @@ import static org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedK
 import static org.apache.hadoop.crypto.key.kms.KMSDelegationToken.TOKEN_KIND;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
