@@ -19,8 +19,8 @@ package org.apache.hadoop.fs.viewfs;
 
 import java.io.IOException;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.viewfs.RegexMountPointInterceptorType.REPLACE_RESOLVED_DST_PATH;
 
@@ -43,11 +43,11 @@ public class TestRegexMountPointResolvedDstPathReplaceInterceptor {
     RegexMountPointResolvedDstPathReplaceInterceptor interceptor =
         RegexMountPointResolvedDstPathReplaceInterceptor
             .deserializeFromString(serializedString);
-    Assert.assertEquals(srcRegex, interceptor.getSrcRegexString());
-    Assert.assertEquals(replaceString, interceptor.getReplaceString());
-    Assert.assertNull(interceptor.getSrcRegexPattern());
+    Assertions.assertEquals(srcRegex, interceptor.getSrcRegexString());
+    Assertions.assertEquals(replaceString, interceptor.getReplaceString());
+    Assertions.assertNull(interceptor.getSrcRegexPattern());
     interceptor.initialize();
-    Assert.assertEquals(srcRegex,
+    Assertions.assertEquals(srcRegex,
         interceptor.getSrcRegexPattern().toString());
   }
 
@@ -60,7 +60,7 @@ public class TestRegexMountPointResolvedDstPathReplaceInterceptor {
     RegexMountPointResolvedDstPathReplaceInterceptor interceptor =
         RegexMountPointResolvedDstPathReplaceInterceptor
             .deserializeFromString(serializedString);
-    Assert.assertNull(interceptor);
+    Assertions.assertNull(interceptor);
   }
 
   @Test
@@ -71,7 +71,7 @@ public class TestRegexMountPointResolvedDstPathReplaceInterceptor {
     RegexMountPointResolvedDstPathReplaceInterceptor interceptor =
         new RegexMountPointResolvedDstPathReplaceInterceptor(srcRegex,
             replaceString);
-    Assert.assertEquals(interceptor.serializeToString(), serializedString);
+    Assertions.assertEquals(interceptor.serializeToString(), serializedString);
   }
 
   @Test
@@ -82,7 +82,7 @@ public class TestRegexMountPointResolvedDstPathReplaceInterceptor {
         new RegexMountPointResolvedDstPathReplaceInterceptor(srcRegex,
             replaceString);
     String sourcePath = "/a/b/l3/dd";
-    Assert.assertEquals(sourcePath, interceptor.interceptSource(sourcePath));
+    Assertions.assertEquals(sourcePath, interceptor.interceptSource(sourcePath));
   }
 
   @Test
@@ -95,7 +95,7 @@ public class TestRegexMountPointResolvedDstPathReplaceInterceptor {
         new RegexMountPointResolvedDstPathReplaceInterceptor(srcRegex,
             replaceString);
     interceptor.initialize();
-    Assert.assertEquals("/user-hdfs",
+    Assertions.assertEquals("/user-hdfs",
         interceptor.interceptResolvedDestPathStr(pathAfterResolution));
   }
 }

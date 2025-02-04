@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test Regex Mount Point Interceptor Factory.
@@ -34,7 +34,7 @@ public class TestRegexMountPointInterceptorFactory {
             .toString(RegexMountPoint.INTERCEPTOR_INTERNAL_SEP) + "replace";
     RegexMountPointInterceptor interceptor =
         RegexMountPointInterceptorFactory.create(replaceInterceptorStr);
-    Assert.assertTrue(
+    Assertions.assertTrue(
         interceptor
             instanceof RegexMountPointResolvedDstPathReplaceInterceptor);
   }
@@ -49,6 +49,6 @@ public class TestRegexMountPointInterceptorFactory {
             + "replace";
     RegexMountPointInterceptor interceptor =
         RegexMountPointInterceptorFactory.create(replaceInterceptorStr);
-    Assert.assertTrue(interceptor == null);
+    Assertions.assertTrue(interceptor == null);
   }
 }

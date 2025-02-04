@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
@@ -36,8 +36,8 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.Progressable;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 
 public class TestFilterFileSystem {
@@ -45,7 +45,7 @@ public class TestFilterFileSystem {
   private static final Logger LOG = FileSystem.LOG;
   private static final Configuration conf = new Configuration();
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() {
     conf.set("fs.flfs.impl", FilterLocalFileSystem.class.getName());
     conf.setBoolean("fs.flfs.impl.disable.cache", true);
@@ -179,8 +179,8 @@ public class TestFilterFileSystem {
         }
       }
     }
-    assertTrue((errors + " methods were not overridden correctly - see" +
-        " log"), errors <= 0);
+    assertTrue(errors <= 0, (errors + " methods were not overridden correctly - see" +
+            " log"));
   }
   
   @Test
@@ -300,10 +300,10 @@ public class TestFilterFileSystem {
       flfs.initialize(URI.create("filter:/"), conf);
       Path src = new Path("/src");
       assertFalse(
-          "hasPathCapability(FS_MULTIPART_UPLOADER) should have failed for "
-              + flfs,
-          flfs.hasPathCapability(src,
-              CommonPathCapabilities.FS_MULTIPART_UPLOADER));
+      
+         flfs.hasPathCapability(src,
+              CommonPathCapabilities.FS_MULTIPART_UPLOADER), "hasPathCapability(FS_MULTIPART_UPLOADER) should have failed for "
+              + flfs);
     }
   }
 
@@ -325,7 +325,7 @@ public class TestFilterFileSystem {
     int depth = 0;
     while (true) {
       depth++; 
-      assertFalse("depth "+depth+">"+expectDepth, depth > expectDepth);
+      assertFalse(depth > expectDepth, "depth "+depth+">"+expectDepth);
       assertEquals(conf, fs.getConf());
       if (!(fs instanceof FilterFileSystem)) {
         break;

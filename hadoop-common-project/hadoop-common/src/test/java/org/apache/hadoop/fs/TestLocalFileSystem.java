@@ -45,18 +45,18 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.*;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 import javax.annotation.Nonnull;
@@ -87,7 +87,7 @@ public class TestLocalFileSystem {
     assertTrue(!fs.exists(name));
   }
   
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf = new Configuration(false);
     conf.set("fs.file.impl", LocalFileSystem.class.getName());
@@ -95,7 +95,7 @@ public class TestLocalFileSystem {
     fileSys.delete(new Path(TEST_ROOT_DIR), true);
   }
   
-  @After
+  @AfterEach
   public void after() throws IOException {
     FileUtil.setWritable(base, true);
     FileUtil.fullyDelete(base);
@@ -248,9 +248,9 @@ public class TestLocalFileSystem {
     {
       //check FileStatus and ContentSummary 
       final FileStatus status = fileSys.getFileStatus(test_file);
-      Assert.assertEquals(fileSize, status.getLen());
+      Assertions.assertEquals(fileSize, status.getLen());
       final ContentSummary summary = fileSys.getContentSummary(test_dir);
-      Assert.assertEquals(fileSize, summary.getLength());
+      Assertions.assertEquals(fileSize, summary.getLength());
     }
     
     // creating dir over a file
@@ -281,10 +281,10 @@ public class TestLocalFileSystem {
     assertTrue(fileSys.mkdirs(dir1));
     writeFile(fileSys, file1, 1);
     writeFile(fileSys, file2, 1);
-    assertFalse("Returned true deleting non-existant path", 
-            fileSys.delete(file3));
-    assertTrue("Did not delete file", fileSys.delete(file1));
-    assertTrue("Did not delete non-empty dir", fileSys.delete(dir1));
+    assertFalse(
+            fileSys.delete(file3), "Returned true deleting non-existant path");
+    assertTrue(fileSys.delete(file1), "Did not delete file");
+    assertTrue(fileSys.delete(dir1), "Did not delete non-empty dir");
   }
   
   @Test
@@ -318,9 +318,9 @@ public class TestLocalFileSystem {
     File colonFile = new File(TEST_ROOT_DIR, "foo:bar");
     colonFile.mkdirs();
     FileStatus[] stats = fileSys.listStatus(new Path(TEST_ROOT_DIR));
-    assertEquals("Unexpected number of stats", 1, stats.length);
-    assertEquals("Bad path from stat", colonFile.getAbsolutePath(),
-        stats[0].getPath().toUri().getPath());
+    assertEquals(1, stats.length, "Unexpected number of stats");
+    assertEquals(colonFile.getAbsolutePath()
+,         stats[0].getPath().toUri().getPath(), "Bad path from stat");
   }
   
   @Test
@@ -333,9 +333,9 @@ public class TestLocalFileSystem {
     File file = new File(dirNoDriveSpec, "foo");
     file.mkdirs();
     FileStatus[] stats = fileSys.listStatus(new Path(dirNoDriveSpec));
-    assertEquals("Unexpected number of stats", 1, stats.length);
-    assertEquals("Bad path from stat", new Path(file.getPath()).toUri().getPath(),
-        stats[0].getPath().toUri().getPath());
+    assertEquals(1, stats.length, "Unexpected number of stats");
+    assertEquals(new Path(file.getPath()).toUri().getPath()
+,         stats[0].getPath().toUri().getPath(), "Bad path from stat");
   }
   
   @Test
@@ -429,8 +429,8 @@ public class TestLocalFileSystem {
     long newAccTime = 23456000;
 
     FileStatus status = fileSys.getFileStatus(path);
-    assertTrue("check we're actually changing something", newModTime != status.getModificationTime());
-    assertTrue("check we're actually changing something", newAccTime != status.getAccessTime());
+    assertTrue(newModTime != status.getModificationTime(), "check we're actually changing something");
+    assertTrue(newAccTime != status.getAccessTime(), "check we're actually changing something");
 
     fileSys.setTimes(path, newModTime, newAccTime);
     checkTimesStatus(path, newModTime, newAccTime);
@@ -606,8 +606,8 @@ public class TestLocalFileSystem {
     // Create test file with fragment
     FileSystemTestHelper.createFile(fs, pathWithFragment);
     Path resolved = fs.resolvePath(pathWithFragment);
-    assertEquals("resolvePath did not strip fragment from Path", pathQualified,
-        resolved);
+    assertEquals(pathQualified
+,         resolved, "resolvePath did not strip fragment from Path");
   }
 
   @Test
@@ -683,8 +683,8 @@ public class TestLocalFileSystem {
           new byte[(int) (fileSys.getFileStatus(path).getLen())];
       input.readFully(0, buffer);
       input.close();
-      Assert.assertArrayEquals("The data be read should equals with the "
-          + "data written.", contentOrigin, buffer);
+      Assertions.assertArrayEquals(contentOrigin, buffer, "The data be read should equals with the "
+          + "data written.");
     } catch (IOException e) {
       throw e;
     }
@@ -799,8 +799,8 @@ public class TestLocalFileSystem {
         .stream()
         .filter(s -> s.getScheme().equals("file"))
         .collect(Collectors.toList());
-    assertEquals("Number of statistics counters for file://",
-        1, fileStats.size());
+    assertEquals(
+       1, fileStats.size(), "Number of statistics counters for file://");
     // this should be used for local and rawLocal, as they share the
     // same schema (although their class is different)
     return fileStats.get(0);
@@ -832,8 +832,8 @@ public class TestLocalFileSystem {
     final long bytesOut0 = stats.getBytesWritten();
     try {
       callable.call();
-      assertEquals("Bytes written in " + operation + "; stats=" + stats,
-          CRC_SIZE + DATA.length, stats.getBytesWritten() - bytesOut0);
+      assertEquals(
+         CRC_SIZE + DATA.length, stats.getBytesWritten() - bytesOut0, "Bytes written in " + operation + "; stats=" + stats);
     } finally {
       if (delete) {
         // clean up
@@ -862,8 +862,8 @@ public class TestLocalFileSystem {
     final long bytesRead0 = stats.getBytesRead();
     fileSys.open(file).close();
     final long bytesRead1 = stats.getBytesRead();
-    assertEquals("Bytes read in open() call with stats " + stats,
-        CRC_SIZE, bytesRead1 - bytesRead0);
+    assertEquals(
+       CRC_SIZE, bytesRead1 - bytesRead0, "Bytes read in open() call with stats " + stats);
   }
 
   /**
@@ -974,8 +974,8 @@ public class TestLocalFileSystem {
     // now read back the data, again with the builder API
     final long bytesRead0 = stats.getBytesRead();
     fileSys.openFile(file).build().get().close();
-    assertEquals("Bytes read in openFile() call with stats " + stats,
-        CRC_SIZE, stats.getBytesRead() - bytesRead0);
+    assertEquals(
+       CRC_SIZE, stats.getBytesRead() - bytesRead0, "Bytes read in openFile() call with stats " + stats);
     // now write with overwrite = true
     assertWritesCRC("createFileNonRecursive()",
         file,

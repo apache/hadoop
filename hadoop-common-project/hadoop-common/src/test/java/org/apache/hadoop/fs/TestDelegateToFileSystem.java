@@ -21,8 +21,8 @@ import java.net.URI;
 
 import org.apache.commons.net.ftp.FTP;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestDelegateToFileSystem {
 
@@ -37,7 +37,7 @@ public class TestDelegateToFileSystem {
     FileSystem.setDefaultUri(conf, defaultUri);
     final AbstractFileSystem ftpFs =
         AbstractFileSystem.get(FTP_URI_NO_PORT, conf);
-    Assert.assertEquals(FTP_URI_WITH_PORT, ftpFs.getUri());
+    Assertions.assertEquals(FTP_URI_WITH_PORT, ftpFs.getUri());
   }
 
   @Test

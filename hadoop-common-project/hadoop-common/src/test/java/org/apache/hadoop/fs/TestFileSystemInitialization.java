@@ -27,11 +27,11 @@ import java.net.URI;
 import java.net.URL;
 import java.util.ServiceConfigurationError;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests related to filesystem creation and lifecycle.

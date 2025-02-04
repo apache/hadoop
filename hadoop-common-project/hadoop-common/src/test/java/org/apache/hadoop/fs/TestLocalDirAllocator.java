@@ -33,10 +33,11 @@ import org.apache.hadoop.util.Shell;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /** This test LocalDirAllocator works correctly;
  * Every test case uses different buffer dirs to
@@ -107,8 +108,8 @@ public class TestLocalDirAllocator {
 
   private static void validateTempDirCreation(String dir) throws IOException {
     File result = createTempFile(SMALL_FILE_SIZE);
-    assertTrue("Checking for " + dir + " in " + result + " - FAILED!",
-        result.getPath().startsWith(new Path(dir, FILENAME).toUri().getPath()));
+    assertTrue(
+       result.getPath().startsWith(new Path(dir, FILENAME).toUri().getPath()), "Checking for " + dir + " in " + result + " - FAILED!");
   }
 
   private static File createTempFile() throws IOException {
@@ -129,7 +130,8 @@ public class TestLocalDirAllocator {
    * The second dir exists & is RW
    * @throws Exception
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void test0() throws Exception {
     assumeNotWindows();
     String dir0 = buildBufferDir(ROOT, 0);
@@ -151,7 +153,8 @@ public class TestLocalDirAllocator {
    * The second dir exists & is RW
    * @throws Exception
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testROBufferDirAndRWBufferDir() throws Exception {
     assumeNotWindows();
     String dir1 = buildBufferDir(ROOT, 1);
@@ -171,7 +174,8 @@ public class TestLocalDirAllocator {
   /** Two buffer dirs. Both do not exist but on a RW disk.
    * Check if tmp dirs are allocated in a round-robin
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testDirsNotExist() throws Exception {
     assumeNotWindows();
     String dir2 = buildBufferDir(ROOT, 2);
@@ -197,7 +201,8 @@ public class TestLocalDirAllocator {
    * Later disk1 becomes read-only.
    * @throws Exception
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRWBufferDirBecomesRO() throws Exception {
     assumeNotWindows();
     String dir3 = buildBufferDir(ROOT, 3);
@@ -235,7 +240,8 @@ public class TestLocalDirAllocator {
    * @throws Exception
    */
   static final int TRIALS = 100;
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testCreateManyFiles() throws Exception {
     assumeNotWindows();
     String dir5 = buildBufferDir(ROOT, 5);
@@ -278,7 +284,8 @@ public class TestLocalDirAllocator {
    *
    * @throws Exception
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testCreateManyFilesRandom() throws Exception {
     assumeNotWindows();
     final int numDirs = 5;
@@ -331,7 +338,8 @@ public class TestLocalDirAllocator {
    * directory. With checkAccess true, the directory should not be created.
    * @throws Exception
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testLocalPathForWriteDirCreation() throws IOException {
     String dir0 = buildBufferDir(ROOT, 0);
     String dir1 = buildBufferDir(ROOT, 1);
@@ -362,7 +370,8 @@ public class TestLocalDirAllocator {
    * Test when mapred.local.dir not configured and called
    * getLocalPathForWrite
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testShouldNotthrowNPE() throws Exception {
     Configuration conf1 = new Configuration();
     try {
@@ -404,7 +413,8 @@ public class TestLocalDirAllocator {
    * are mistakenly created from fully qualified path strings.
    * @throws IOException
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testNoSideEffects() throws IOException {
     assumeNotWindows();
     String dir = buildBufferDir(ROOT, 0);
@@ -426,7 +436,8 @@ public class TestLocalDirAllocator {
    *
    * @throws IOException
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetLocalPathToRead() throws IOException {
     assumeNotWindows();
     String dir = buildBufferDir(ROOT, 0);
@@ -451,7 +462,8 @@ public class TestLocalDirAllocator {
    *
    * @throws IOException
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetAllLocalPathsToRead() throws IOException {
     assumeNotWindows();
     
@@ -478,8 +490,8 @@ public class TestLocalDirAllocator {
       // test #next() while no element to iterate any more: 
       try {
         Path p = pathIterable.iterator().next();
-        assertFalse("NoSuchElementException must be thrown, but returned ["+p
-            +"] instead.", true); // exception expected
+        assertFalse(true, "NoSuchElementException must be thrown, but returned ["+p
+            +"] instead."); // exception expected
       } catch (NoSuchElementException nsee) {
         // okay
       }
@@ -499,7 +511,8 @@ public class TestLocalDirAllocator {
     }
   }
   
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testRemoveContext() throws IOException {
     String dir = buildBufferDir(ROOT, 0);
     try {
@@ -521,7 +534,8 @@ public class TestLocalDirAllocator {
    *
    * @throws Exception
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetLocalPathForWriteForInvalidPaths() throws Exception {
     conf.set(CONTEXT, " ");
     try {
@@ -538,7 +552,8 @@ public class TestLocalDirAllocator {
    *
    * @throws Exception
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetLocalPathForWriteForLessSpace() throws Exception {
     String dir0 = buildBufferDir(ROOT, 0);
     String dir1 = buildBufferDir(ROOT, 1);
@@ -552,7 +567,8 @@ public class TestLocalDirAllocator {
   /**
    * Test for HADOOP-18636 LocalDirAllocator cannot recover from directory tree deletion.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testDirectoryRecovery() throws Throwable {
     String dir0 = buildBufferDir(ROOT, 0);
     String subdir = dir0 + "/subdir1/subdir2";

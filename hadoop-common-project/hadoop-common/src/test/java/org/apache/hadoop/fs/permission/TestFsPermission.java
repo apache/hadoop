@@ -21,8 +21,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import static org.apache.hadoop.fs.permission.FsAction.*;
 
@@ -252,8 +252,8 @@ public class TestFsPermission {
         FsPermission.getUMask(conf);
         fail("Shouldn't have been able to parse bad umask");
       } catch(IllegalArgumentException iae) {
-        assertTrue("Exception should specify parsing error and invalid umask: " 
-            + iae.getMessage(), isCorrectExceptionMessage(iae.getMessage(), b));
+        assertTrue(isCorrectExceptionMessage(iae.getMessage(), b), "Exception should specify parsing error and invalid umask: " 
+            + iae.getMessage());
       }
     }
   }

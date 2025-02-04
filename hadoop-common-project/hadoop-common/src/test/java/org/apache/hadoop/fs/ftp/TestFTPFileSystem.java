@@ -39,16 +39,15 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test basic @{link FTPFileSystem} class methods. Contract tests are in
@@ -61,7 +60,7 @@ public class TestFTPFileSystem {
   @Rule
   public Timeout testTimeout = new Timeout(180000, TimeUnit.MILLISECONDS);
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     testDir = Files.createTempDirectory(
         GenericTestUtils.getTestDir().toPath(), getClass().getName()
@@ -69,7 +68,7 @@ public class TestFTPFileSystem {
     server = new FtpTestServer(testDir).start();
   }
 
-  @After
+  @AfterEach
   @SuppressWarnings("ResultOfMethodCallIgnored")
   public void tearDown() throws Exception {
     if (server != null) {
@@ -98,7 +97,7 @@ public class TestFTPFileSystem {
       outputStream.write(bytesExpected);
     }
     try (FSDataInputStream input = fs.open(new Path("test1.txt"))) {
-      assertThat(bytesExpected, equalTo(IOUtils.readFullyToByteArray(input)));
+      assertThat(bytesExpected).isEqualTo(IOUtils.readFullyToByteArray(input));
     }
   }
 
@@ -193,7 +192,7 @@ public class TestFTPFileSystem {
     String errorMessageFormat = "expect FsAction is %s, whereas it is %s now.";
     String notEqualErrorMessage = String.format(errorMessageFormat,
         actionA.name(), actionB.name());
-    assertEquals(notEqualErrorMessage, actionA, actionB);
+    assertEquals(actionA, actionB, notEqualErrorMessage);
   }
 
   private FTPFile getFTPFileOf(int access, FsAction action) {

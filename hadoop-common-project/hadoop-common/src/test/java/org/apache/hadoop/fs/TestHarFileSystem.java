@@ -28,8 +28,8 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -277,7 +277,7 @@ public class TestHarFileSystem {
     final Path p = new Path(s);
     try {
       p.getFileSystem(conf);
-      Assert.fail(p + " is an invalid path.");
+      Assertions.fail(p + " is an invalid path.");
     } catch (IOException e) {
       // Expected
     }

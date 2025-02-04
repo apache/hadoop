@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.shell;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
@@ -37,9 +37,9 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.shell.CopyCommands.Put;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.OngoingStubbing;
 
 public class TestCopy {
@@ -51,7 +51,7 @@ public class TestCopy {
   static PathData target;
   static FileStatus fileStat;
   
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
@@ -60,7 +60,7 @@ public class TestCopy {
     when(fileStat.isDirectory()).thenReturn(false);
   }
   
-  @Before
+  @BeforeEach
   public void resetMock() throws IOException {
     reset(mockFs);
     target = new PathData(path.toString(), conf);

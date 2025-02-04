@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs.shell;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.io.PrintStream;
@@ -35,9 +35,9 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.shell.CommandFormat.NotEnoughArgumentsException;
-import org.junit.Test;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 
 /**
  * JUnit test class for {@link org.apache.hadoop.fs.shell.Count}
@@ -53,7 +53,7 @@ public class TestCount {
   private static FileSystem mockFs;
   private static FileStatus fileStat;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() {
     conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
@@ -62,7 +62,7 @@ public class TestCount {
     when(fileStat.isFile()).thenReturn(true);
   }
 
-  @Before
+  @BeforeEach
   public void resetMock() {
     reset(mockFs);
   }
@@ -436,7 +436,7 @@ public class TestCount {
     Count count = new Count();
     String actual = count.getCommandName();
     String expected = "count";
-    assertEquals("Count.getCommandName", expected, actual);
+    assertEquals(expected, actual, "Count.getCommandName");
   }
 
   @Test
@@ -444,7 +444,7 @@ public class TestCount {
     Count count = new Count();
     boolean actual = count.isDeprecated();
     boolean expected = false;
-    assertEquals("Count.isDeprecated", expected, actual);
+    assertEquals(expected, actual, "Count.isDeprecated");
   }
 
   @Test
@@ -452,7 +452,7 @@ public class TestCount {
     Count count = new Count();
     String actual = count.getReplacementCommand();
     String expected = null;
-    assertEquals("Count.getReplacementCommand", expected, actual);
+    assertEquals(expected, actual, "Count.getReplacementCommand");
   }
 
   @Test
@@ -460,7 +460,7 @@ public class TestCount {
     Count count = new Count();
     String actual = count.getName();
     String expected = "count";
-    assertEquals("Count.getName", expected, actual);
+    assertEquals(expected, actual, "Count.getName");
   }
 
   @Test
@@ -470,7 +470,7 @@ public class TestCount {
     String expected =
         "-count [-q] [-h] [-v] [-t [<storage type>]]"
         + " [-u] [-x] [-e] [-s] <path> ...";
-    assertEquals("Count.getUsage", expected, actual);
+    assertEquals(expected, actual, "Count.getUsage");
   }
 
   // check the correct description is returned
@@ -504,7 +504,7 @@ public class TestCount {
         + "The -e option shows the erasure coding policy."
         + "The -s option shows snapshot counts.";
 
-    assertEquals("Count.getDescription", expected, actual);
+    assertEquals(expected, actual, "Count.getDescription");
   }
 
   @Test

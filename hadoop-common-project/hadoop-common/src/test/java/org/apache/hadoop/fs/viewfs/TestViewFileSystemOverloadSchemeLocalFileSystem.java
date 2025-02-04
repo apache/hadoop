@@ -29,12 +29,14 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  *
@@ -51,7 +53,7 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
   private FileSystemTestHelper fileSystemTestHelper =
       new FileSystemTestHelper();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.set(String.format("fs.%s.impl", FILE),
@@ -94,7 +96,7 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
       }
 
       try (FSDataInputStream lViewIs = lViewFs.open(testPath)) {
-        Assert.assertEquals(testString, lViewIs.readUTF());
+        Assertions.assertEquals(testString, lViewIs.readUTF());
       }
     }
   }
@@ -111,9 +113,9 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
     try (FileSystem lViewFS = FileSystem.get(mountURI, conf)) {
       Path testPath = new Path(mountURI.toString() + "/lfsroot/test");
       lViewFS.createNewFile(testPath);
-      Assert.assertTrue(lViewFS.exists(testPath));
+      Assertions.assertTrue(lViewFS.exists(testPath));
       lViewFS.delete(testPath, true);
-      Assert.assertFalse(lViewFS.exists(testPath));
+      Assertions.assertFalse(lViewFS.exists(testPath));
     }
   }
 
@@ -131,7 +133,7 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
     try (FileSystem lViewFS = FileSystem.get(mountURI, conf)) {
       Path fileOnRoot = new Path(mountURI.toString() + "/NewFile");
       lViewFS.createNewFile(fileOnRoot);
-      Assert.assertTrue(lViewFS.exists(fileOnRoot));
+      Assertions.assertTrue(lViewFS.exists(fileOnRoot));
     }
   }
 
@@ -139,18 +141,20 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
    * Tests with linkMergeSlash and other mounts in
    * ViewFileSystemOverloadScheme.
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testLocalFsLinkSlashMergeWithOtherMountLinks() throws Exception {
-    LOG.info("Starting testLocalFsLinkSlashMergeWithOtherMountLinks");
-    addMountLinks("mt",
-        new String[] {"/lfsroot", Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH },
-        new String[] {targetTestRoot + "/wd2", targetTestRoot + "/wd2" }, conf);
-    final URI mountURI = URI.create("file://mt/");
-    FileSystem.get(mountURI, conf);
-    Assert.fail("A merge slash cannot be configured with other mount links.");
+    assertThrows(IOException.class, ()->{
+      LOG.info("Starting testLocalFsLinkSlashMergeWithOtherMountLinks");
+      addMountLinks("mt",
+          new String[] {"/lfsroot", Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH },
+          new String[] {targetTestRoot + "/wd2", targetTestRoot + "/wd2" }, conf);
+      final URI mountURI = URI.create("file://mt/");
+      FileSystem.get(mountURI, conf);
+      Assertions.fail("A merge slash cannot be configured with other mount links.");
+    });
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (null != fsTarget) {
       fsTarget.delete(fileSystemTestHelper.getTestRootPath(fsTarget), true);

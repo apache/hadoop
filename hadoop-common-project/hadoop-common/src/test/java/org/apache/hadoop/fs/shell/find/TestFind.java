@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs.shell.find;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
@@ -39,10 +39,10 @@ import org.apache.hadoop.fs.shell.find.Expression;
 import org.apache.hadoop.fs.shell.find.Find;
 import org.apache.hadoop.fs.shell.find.FindOptions;
 import org.apache.hadoop.fs.shell.find.Result;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -56,7 +56,7 @@ public class TestFind {
   private static FileSystem mockFs;
   private static Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     mockFs = MockFileSystem.setup();
     conf = mockFs.getConf();
