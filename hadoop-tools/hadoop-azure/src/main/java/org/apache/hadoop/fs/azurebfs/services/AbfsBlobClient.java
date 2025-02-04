@@ -664,14 +664,30 @@ public class AbfsBlobClient extends AbfsClient {
         LOG.error("Path exists as file {} : {}", path, ex.getMessage());
         throw ex;
       }
-      Path parentPath = new Path(path).getParent();
-      if (parentPath != null && !parentPath.isRoot()) {
-        createMarkers(parentPath, overwrite, permissions, isAppendBlob, eTag,
-            contextEncryptionAdapter, tracingContext);
-      }
+      createParentMarkersIfNeeded(path, overwrite, permissions, isAppendBlob,
+          eTag, contextEncryptionAdapter, tracingContext);
     }
     return createPathRestOp(path, false, overwrite, permissions,
         isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
+  }
+
+  /**
+   * Creates markers for the parent path if needed.
+   *
+   * @param path the path for which to create parent markers.
+   * @param overwrite whether to overwrite if the path already exists.
+   * @param permissions the permissions to set on the path.
+   * @param isAppendBlob whether the path is an append blob.
+   * @param eTag the eTag of the path.
+   * @param contextEncryptionAdapter the context encryption adapter.
+   * @param tracingContext the tracing context.
+   * @throws AzureBlobFileSystemException if the creation of markers fails.
+   */
+  private void createParentMarkersIfNeeded(String path, boolean overwrite, AzureBlobFileSystemStore.Permissions permissions, boolean isAppendBlob, String eTag, ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext) throws AzureBlobFileSystemException {
+    Path parentPath = new Path(path).getParent();
+    if (parentPath != null && !parentPath.isRoot()) {
+      createMarkers(parentPath, overwrite, permissions, isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
+    }
   }
 
   /**
@@ -701,11 +717,8 @@ public class AbfsBlobClient extends AbfsClient {
             PATH_EXISTS,
             null);
       }
-      Path parentPath = new Path(path).getParent();
-      if (parentPath != null && !parentPath.isRoot()) {
-        createMarkers(parentPath, overwrite, permissions, isAppendBlob, eTag,
-            contextEncryptionAdapter, tracingContext);
-      }
+      createParentMarkersIfNeeded(path, overwrite, permissions, isAppendBlob,
+          eTag, contextEncryptionAdapter, tracingContext);
     }
   }
 
@@ -730,8 +743,7 @@ public class AbfsBlobClient extends AbfsClient {
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
     try {
-      validatePathAndCreateMarkersIfNeeded(path, overwrite, permissions,
-          isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
+      checkDirectoryByList(path, tracingContext);
     } catch (AzureBlobFileSystemException ex) {
       LOG.error("Path exists as directory {} : {}", path, ex.getMessage());
       throw ex;
@@ -744,6 +756,8 @@ public class AbfsBlobClient extends AbfsClient {
             null);
       }
     }
+    createParentMarkersIfNeeded(path, overwrite, permissions, isAppendBlob,
+        eTag, contextEncryptionAdapter, tracingContext);
     return createPathRestOp(path, true, overwrite, permissions,
         isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
   }
