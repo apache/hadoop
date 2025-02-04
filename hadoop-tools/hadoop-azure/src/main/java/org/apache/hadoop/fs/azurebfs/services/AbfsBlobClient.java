@@ -657,7 +657,7 @@ public class AbfsBlobClient extends AbfsClient {
               AbfsRestOperationType.PutBlob,
               HTTP_METHOD_PUT, createRequestUrl(path, EMPTY_STRING),
               createDefaultHeaders());
-          successOp.hardSetResult(HttpURLConnection.HTTP_OK);
+          successOp.hardSetResult(HttpURLConnection.HTTP_CREATED);
           return successOp;
         }
       } catch (AzureBlobFileSystemException ex) {
