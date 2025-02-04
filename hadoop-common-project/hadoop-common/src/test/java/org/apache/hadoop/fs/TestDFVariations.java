@@ -70,8 +70,7 @@ public class TestDFVariations {
     XXDF df = new XXDF();
     String expectedMount =
         Shell.WINDOWS ? df.getDirPath().substring(0, 2) : "/foo/bar";
-    assertEquals(
-       expectedMount, df.getMount(), "Invalid mount point");
+    assertEquals(expectedMount, df.getMount(), "Invalid mount point");
   }
 
   @Test
@@ -80,8 +79,7 @@ public class TestDFVariations {
     XXDF df = new XXDF();
     String expectedFileSystem =
         Shell.WINDOWS ? df.getDirPath().substring(0, 2) : "/dev/sda3";
-    assertEquals(
-       expectedFileSystem, df.getFilesystem(), "Invalid filesystem");
+    assertEquals(expectedFileSystem, df.getFilesystem(), "Invalid filesystem");
   }
 
   @Test

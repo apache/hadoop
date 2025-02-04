@@ -91,9 +91,8 @@ public class TestDU {
     long duSize = du.getUsed();
     du.close();
 
-    assertTrue(
-       duSize >= writtenSize &&
-        writtenSize <= (duSize + slack), "Invalid on-disk size");
+    assertTrue(duSize >= writtenSize && writtenSize <= (duSize + slack), 
+        "Invalid on-disk size");
 
     //test with 0 interval, will not launch thread
     du = new DU(file, 0, 1, -1);
@@ -101,18 +100,16 @@ public class TestDU {
     duSize = du.getUsed();
     du.close();
 
-    assertTrue(
-       duSize >= writtenSize &&
-        writtenSize <= (duSize + slack), "Invalid on-disk size");
+    assertTrue(duSize >= writtenSize && writtenSize <= (duSize + slack), 
+        "Invalid on-disk size");
 
     //test without launching thread
     du = new DU(file, 10000, 0, -1);
     du.init();
     duSize = du.getUsed();
 
-    assertTrue(
-       duSize >= writtenSize &&
-        writtenSize <= (duSize + slack), "Invalid on-disk size");
+    assertTrue(duSize >= writtenSize && writtenSize <= (duSize + slack), 
+        "Invalid on-disk size");
   }
 
   @Test

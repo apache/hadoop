@@ -276,8 +276,7 @@ public class TestLocalFileSystem {
     assertTrue(fileSys.mkdirs(dir1));
     writeFile(fileSys, file1, 1);
     writeFile(fileSys, file2, 1);
-    assertFalse(
-            fileSys.delete(file3), "Returned true deleting non-existant path");
+    assertFalse(fileSys.delete(file3), "Returned true deleting non-existant path");
     assertTrue(fileSys.delete(file1), "Did not delete file");
     assertTrue(fileSys.delete(dir1), "Did not delete non-empty dir");
   }
@@ -314,8 +313,8 @@ public class TestLocalFileSystem {
     colonFile.mkdirs();
     FileStatus[] stats = fileSys.listStatus(new Path(TEST_ROOT_DIR));
     assertEquals(1, stats.length, "Unexpected number of stats");
-    assertEquals(colonFile.getAbsolutePath()
-,         stats[0].getPath().toUri().getPath(), "Bad path from stat");
+    assertEquals(colonFile.getAbsolutePath(),
+        stats[0].getPath().toUri().getPath(), "Bad path from stat");
   }
   
   @Test
@@ -329,8 +328,8 @@ public class TestLocalFileSystem {
     file.mkdirs();
     FileStatus[] stats = fileSys.listStatus(new Path(dirNoDriveSpec));
     assertEquals(1, stats.length, "Unexpected number of stats");
-    assertEquals(new Path(file.getPath()).toUri().getPath()
-,         stats[0].getPath().toUri().getPath(), "Bad path from stat");
+    assertEquals(new Path(file.getPath()).toUri().getPath(),
+        stats[0].getPath().toUri().getPath(), "Bad path from stat");
   }
   
   @Test
@@ -601,8 +600,8 @@ public class TestLocalFileSystem {
     // Create test file with fragment
     FileSystemTestHelper.createFile(fs, pathWithFragment);
     Path resolved = fs.resolvePath(pathWithFragment);
-    assertEquals(pathQualified
-,         resolved, "resolvePath did not strip fragment from Path");
+    assertEquals(pathQualified, 
+        resolved, "resolvePath did not strip fragment from Path");
   }
 
   @Test
@@ -794,8 +793,8 @@ public class TestLocalFileSystem {
         .stream()
         .filter(s -> s.getScheme().equals("file"))
         .collect(Collectors.toList());
-    assertEquals(
-       1, fileStats.size(), "Number of statistics counters for file://");
+    assertEquals(1, fileStats.size(), 
+        "Number of statistics counters for file://");
     // this should be used for local and rawLocal, as they share the
     // same schema (although their class is different)
     return fileStats.get(0);
@@ -827,8 +826,8 @@ public class TestLocalFileSystem {
     final long bytesOut0 = stats.getBytesWritten();
     try {
       callable.call();
-      assertEquals(
-         CRC_SIZE + DATA.length, stats.getBytesWritten() - bytesOut0, "Bytes written in " + operation + "; stats=" + stats);
+      assertEquals(CRC_SIZE + DATA.length, stats.getBytesWritten() - bytesOut0, 
+          "Bytes written in " + operation + "; stats=" + stats);
     } finally {
       if (delete) {
         // clean up
@@ -857,8 +856,8 @@ public class TestLocalFileSystem {
     final long bytesRead0 = stats.getBytesRead();
     fileSys.open(file).close();
     final long bytesRead1 = stats.getBytesRead();
-    assertEquals(
-       CRC_SIZE, bytesRead1 - bytesRead0, "Bytes read in open() call with stats " + stats);
+    assertEquals(CRC_SIZE, bytesRead1 - bytesRead0, 
+        "Bytes read in open() call with stats " + stats);
   }
 
   /**
@@ -969,8 +968,8 @@ public class TestLocalFileSystem {
     // now read back the data, again with the builder API
     final long bytesRead0 = stats.getBytesRead();
     fileSys.openFile(file).build().get().close();
-    assertEquals(
-       CRC_SIZE, stats.getBytesRead() - bytesRead0, "Bytes read in openFile() call with stats " + stats);
+    assertEquals(CRC_SIZE, stats.getBytesRead() - bytesRead0, 
+        "Bytes read in openFile() call with stats " + stats);
     // now write with overwrite = true
     assertWritesCRC("createFileNonRecursive()",
         file,

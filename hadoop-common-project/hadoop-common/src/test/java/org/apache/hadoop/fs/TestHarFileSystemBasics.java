@@ -274,9 +274,8 @@ public class TestHarFileSystemBasics {
         + harPath.toUri().getPath().toString();
     Path path = new Path(harPathWithUserinfo);
     Path qualifiedPath = path.getFileSystem(conf).makeQualified(path);
-    assertTrue(
-       qualifiedPath.toString().equals(harPathWithUserinfo), String.format(
-        "The qualified path (%s) did not match the expected path (%s).",
+    assertTrue(qualifiedPath.toString().equals(harPathWithUserinfo), 
+        String.format("The qualified path (%s) did not match the expected path (%s).",
         qualifiedPath.toString(), harPathWithUserinfo));
   }
 

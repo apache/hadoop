@@ -108,8 +108,8 @@ public class TestLocalDirAllocator {
 
   private static void validateTempDirCreation(String dir) throws IOException {
     File result = createTempFile(SMALL_FILE_SIZE);
-    assertTrue(
-       result.getPath().startsWith(new Path(dir, FILENAME).toUri().getPath()), "Checking for " + dir + " in " + result + " - FAILED!");
+    assertTrue(result.getPath().startsWith(new Path(dir, FILENAME).toUri().getPath()), 
+        "Checking for " + dir + " in " + result + " - FAILED!");
   }
 
   private static File createTempFile() throws IOException {

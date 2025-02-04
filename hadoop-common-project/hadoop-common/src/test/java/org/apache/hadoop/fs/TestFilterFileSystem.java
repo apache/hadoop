@@ -188,7 +188,7 @@ public class TestFilterFileSystem {
       }
     }
     assertTrue(errors <= 0, (errors + " methods were not overridden correctly - see" +
-            " log"));
+        " log"));
   }
   
   @Test
@@ -307,11 +307,8 @@ public class TestFilterFileSystem {
     try (FilterFileSystem flfs = new FilterLocalFileSystem()) {
       flfs.initialize(URI.create("filter:/"), conf);
       Path src = new Path("/src");
-      assertFalse(
-      
-         flfs.hasPathCapability(src,
-              CommonPathCapabilities.FS_MULTIPART_UPLOADER), "hasPathCapability(FS_MULTIPART_UPLOADER) should have failed for "
-              + flfs);
+      assertFalse(flfs.hasPathCapability(src, CommonPathCapabilities.FS_MULTIPART_UPLOADER), 
+         "hasPathCapability(FS_MULTIPART_UPLOADER) should have failed for " + flfs);
     }
   }
 

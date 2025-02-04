@@ -87,8 +87,7 @@ public class TestFileStatus {
     int iterator = 0;
     for (FileStatus fs : tests) {
       dest.readFields(in);
-      assertEquals(
-         dest, fs, "Different FileStatuses in iteration " + iterator);
+      assertEquals(dest, fs, "Different FileStatuses in iteration " + iterator);
       iterator++;
     }
   }

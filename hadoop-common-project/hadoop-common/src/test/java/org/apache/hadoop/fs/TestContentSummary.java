@@ -58,11 +58,11 @@ public class TestContentSummary {
         spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).build();
     assertEquals(length, contentSummary.getLength(), "getLength");
     assertEquals(fileCount, contentSummary.getFileCount(), "getFileCount");
-    assertEquals(directoryCount
-,         contentSummary.getDirectoryCount(), "getDirectoryCount");
+    assertEquals(directoryCount, 
+        contentSummary.getDirectoryCount(), "getDirectoryCount");
     assertEquals(quota, contentSummary.getQuota(), "getQuota");
-    assertEquals(spaceConsumed
-,         contentSummary.getSpaceConsumed(), "getSpaceConsumed");
+    assertEquals(spaceConsumed,
+        contentSummary.getSpaceConsumed(), "getSpaceConsumed");
     assertEquals(spaceQuota, contentSummary.getSpaceQuota(), "getSpaceQuota");
   }
 
@@ -78,8 +78,8 @@ public class TestContentSummary {
         spaceConsumed(length).build();
     assertEquals(length, contentSummary.getLength(), "getLength");
     assertEquals(fileCount, contentSummary.getFileCount(), "getFileCount");
-    assertEquals(directoryCount
-,         contentSummary.getDirectoryCount(), "getDirectoryCount");
+    assertEquals(directoryCount,
+        contentSummary.getDirectoryCount(), "getDirectoryCount");
     assertEquals(-1, contentSummary.getQuota(), "getQuota");
     assertEquals(length, contentSummary.getSpaceConsumed(), "getSpaceConsumed");
     assertEquals(-1, contentSummary.getSpaceQuota(), "getSpaceQuota");
@@ -131,11 +131,11 @@ public class TestContentSummary {
     contentSummary.readFields(in);
     assertEquals(length, contentSummary.getLength(), "getLength");
     assertEquals(fileCount, contentSummary.getFileCount(), "getFileCount");
-    assertEquals(directoryCount
-,         contentSummary.getDirectoryCount(), "getDirectoryCount");
+    assertEquals(directoryCount, 
+        contentSummary.getDirectoryCount(), "getDirectoryCount");
     assertEquals(quota, contentSummary.getQuota(), "getQuota");
-    assertEquals(spaceConsumed
-,         contentSummary.getSpaceConsumed(), "getSpaceConsumed");
+    assertEquals(spaceConsumed, 
+        contentSummary.getSpaceConsumed(), "getSpaceConsumed");
     assertEquals(spaceQuota, contentSummary.getSpaceQuota(), "getSpaceQuota");
   }
 
