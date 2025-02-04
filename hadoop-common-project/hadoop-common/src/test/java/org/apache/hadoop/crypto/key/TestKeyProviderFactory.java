@@ -191,7 +191,7 @@ public class TestKeyProviderFactory {
 
     List<KeyVersion> kvl = provider.getKeyVersions("key3");
     assertEquals(1, kvl.size(), "KeyVersions should have been returned for key3.");
-    assertEquals("key3@0", kvl.get(0).getVersionName(), 
+    assertEquals("key3@0", kvl.get(0).getVersionName(),
         "KeyVersions should have included key3@0.");
     assertArrayEquals(key3, kvl.get(0).getMaterial());
   }
@@ -373,7 +373,7 @@ public class TestKeyProviderFactory {
 
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
-    assertEquals("rwxrwxrwx", s.getPermission().toString(), 
+    assertEquals("rwxrwxrwx", s.getPermission().toString(),
         "Permissions should have been retained from the preexisting keystore.");
   }
 
