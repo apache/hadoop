@@ -64,7 +64,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperationDetectedException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.PathConflictException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultEntrySchema;
@@ -622,6 +621,8 @@ public class AbfsBlobClient extends AbfsClient {
             AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
             PATH_EXISTS,
             null);
+      } else {
+        return true;
       }
     }
     return false;
@@ -671,13 +672,26 @@ public class AbfsBlobClient extends AbfsClient {
         isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
   }
 
-  public AbfsRestOperation createFile(final String path,
+  /**
+   * Validates the path and creates markers if necessary when the namespace is disabled.
+   *
+   * @param path the path to validate and create markers for.
+   * @param overwrite whether to overwrite if the path already exists.
+   * @param permissions the permissions to set on the path.
+   * @param isAppendBlob whether the path is an append blob.
+   * @param eTag the eTag of the path.
+   * @param contextEncryptionAdapter the context encryption adapter.
+   * @param tracingContext the tracing context for the service call.
+   * @throws AbfsRestOperationException if a conflict is detected.
+   * @throws AzureBlobFileSystemException if the creation of markers fails.
+   */
+  public void validatePathAndCreateMarkersIfNeeded(final String path,
       final boolean overwrite,
       final AzureBlobFileSystemStore.Permissions permissions,
       final boolean isAppendBlob,
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
-      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final TracingContext tracingContext) throws AbfsRestOperationException, AzureBlobFileSystemException {
     if (!getIsNamespaceEnabled()) {
       if (checkDirectoryByList(path, tracingContext)) {
         throw new AbfsRestOperationException(HTTP_CONFLICT,
@@ -690,6 +704,35 @@ public class AbfsBlobClient extends AbfsClient {
         createMarkers(parentPath, overwrite, permissions, isAppendBlob, eTag,
             contextEncryptionAdapter, tracingContext);
       }
+    }
+  }
+
+  /**
+   * Creates a file at the specified path.
+   *
+   * @param path the path of the file to be created.
+   * @param overwrite whether to overwrite if the file already exists.
+   * @param permissions the permissions to set on the file.
+   * @param isAppendBlob whether the file is an append blob.
+   * @param eTag the eTag of the file.
+   * @param contextEncryptionAdapter the context encryption adapter.
+   * @param tracingContext the tracing context for the service call.
+   * @return the executed rest operation containing the response from the server.
+   * @throws AzureBlobFileSystemException if the rest operation fails.
+   */
+  public AbfsRestOperation createFile(final String path,
+      final boolean overwrite,
+      final AzureBlobFileSystemStore.Permissions permissions,
+      final boolean isAppendBlob,
+      final String eTag,
+      final ContextEncryptionAdapter contextEncryptionAdapter,
+      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+    try {
+      validatePathAndCreateMarkersIfNeeded(path, overwrite, permissions,
+          isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
+    } catch (AzureBlobFileSystemException ex) {
+      LOG.error("Path exists as directory {} : {}", path, ex.getMessage());
+      throw ex;
     }
     return createPathRestOp(path, true, overwrite, permissions,
         isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
@@ -718,8 +761,11 @@ public class AbfsBlobClient extends AbfsClient {
     checkParentChainForFile(path, tracingContext,
         keysToCreateAsFolder);
     for (Path pathToCreate : keysToCreateAsFolder) {
-      createPathRestOp(pathToCreate.toUri().getPath(), false, overwrite, permissions,
-          isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
+      try {
+        createPathRestOp(pathToCreate.toUri().getPath(), false, overwrite,
+            permissions,
+            isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
+      } catch (AbfsRestOperationException ignored) {}
     }
   }
 
@@ -779,15 +825,16 @@ public class AbfsBlobClient extends AbfsClient {
       boolean isAppendBlob,
       ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) throws IOException {
-    if (checkDirectoryByList(relativePath, tracingContext)) {
-      throw new AbfsRestOperationException(HTTP_CONFLICT,
-          AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
-          PATH_EXISTS,
-          null);
-    }
-    AbfsRestOperation op = null;
     try {
-      // Trigger a create with overwrite=false first so that eTag fetch can be
+      validatePathAndCreateMarkersIfNeeded(relativePath, false, permissions,
+          isAppendBlob, null, contextEncryptionAdapter, tracingContext);
+    } catch (AzureBlobFileSystemException ex) {
+      LOG.error("Path exists as directory {} : {}", relativePath, ex.getMessage());
+      throw ex;
+    }
+    AbfsRestOperation op;
+    try {
+      // Trigger a creation with overwrite=false first so that eTag fetch can be
       // avoided for cases when no pre-existing file is present (major portion
       // of create file traffic falls into the case of no pre-existing file).
       op = createPathRestOp(relativePath, true, false, permissions,
