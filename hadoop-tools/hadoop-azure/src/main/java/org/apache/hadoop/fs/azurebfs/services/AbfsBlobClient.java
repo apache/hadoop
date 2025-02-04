@@ -736,6 +736,14 @@ public class AbfsBlobClient extends AbfsClient {
       LOG.error("Path exists as directory {} : {}", path, ex.getMessage());
       throw ex;
     }
+    if (overwrite) {
+      if (checkEmptyDirectoryPathExists(path, tracingContext)) {
+        throw new AbfsRestOperationException(HTTP_CONFLICT,
+            AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
+            PATH_EXISTS,
+            null);
+      }
+    }
     return createPathRestOp(path, true, overwrite, permissions,
         isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
   }

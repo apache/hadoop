@@ -849,6 +849,40 @@ public class ITestAzureBlobFileSystemCreate extends
         .isTrue();
   }
 
+  @Test
+  public void testCreationWithoutConditionalOverwrite()
+      throws Throwable {
+    final AzureBlobFileSystem currentFs = getFileSystem();
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.set("fs.azure.enable.conditional.create.overwrite",
+        String.valueOf(false));
+    AzureBlobFileSystemStore store = currentFs.getAbfsStore();
+    AbfsClient client = store.getClientHandler().getIngressClient();
+
+    final AzureBlobFileSystem fs =
+        (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
+            config);
+    fs.mkdirs(new Path("a/b/c"));
+    intercept(IOException.class, () -> fs.create(new Path("a/b/c"), true));
+  }
+
+  @Test
+  public void testCreationOverwriteFalseWithoutConditionalOverwrite()
+      throws Throwable {
+    final AzureBlobFileSystem currentFs = getFileSystem();
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.set("fs.azure.enable.conditional.create.overwrite",
+        String.valueOf(false));
+    AzureBlobFileSystemStore store = currentFs.getAbfsStore();
+    AbfsClient client = store.getClientHandler().getIngressClient();
+
+    final AzureBlobFileSystem fs =
+        (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
+            config);
+    fs.mkdirs(new Path("a/b/c"));
+    intercept(IOException.class, () -> fs.create(new Path("a/b/c"), false));
+  }
+
   /**
    * Creating same file with overwrite flag set to false.
    * @throws Exception
