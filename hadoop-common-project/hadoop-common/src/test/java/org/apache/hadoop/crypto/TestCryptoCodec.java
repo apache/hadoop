@@ -256,9 +256,9 @@ public class TestCryptoCodec {
       m.put(k1, k1.toString());
       m.put(v1, v1.toString());
       String result = m.get(k2);
-      assertEquals("k1 and k2 hashcode not equal", result, k1.toString());
+      assertEquals(result, k1.toString(), "k1 and k2 hashcode not equal");
       result = m.get(v2);
-      assertEquals("v1 and v2 hashcode not equal", result, v1.toString());
+      assertEquals(result, v1.toString(), "v1 and v2 hashcode not equal");
     }
 
     // Decrypt data byte-at-a-time
