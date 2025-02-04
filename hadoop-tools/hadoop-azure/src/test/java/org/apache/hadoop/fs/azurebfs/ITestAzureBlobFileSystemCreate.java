@@ -638,45 +638,51 @@ public class ITestAzureBlobFileSystemCreate extends
             any(AzureBlobFileSystemStore.Permissions.class), any(boolean.class), eq(null), any(),
             any(TracingContext.class));
 
-    // Mock for validatePathAndCreateMarkers to do nothing
-    doNothing().when((AbfsBlobClient) mockClient)
-        .validatePathAndCreateMarkersIfNeeded(any(String.class), any(Boolean.class),
-            any(AzureBlobFileSystemStore.Permissions.class), any(Boolean.class),
-            any(String.class), any(ContextEncryptionAdapter.class),
-            any(TracingContext.class));
+    if (mockClient instanceof  AbfsBlobClient) {
+      // Mock for validatePathAndCreateMarkers to do nothing
+      doNothing().when((AbfsBlobClient) mockClient)
+          .validatePathAndCreateMarkersIfNeeded(any(String.class),
+              any(Boolean.class),
+              any(AzureBlobFileSystemStore.Permissions.class),
+              any(Boolean.class),
+              any(String.class), any(ContextEncryptionAdapter.class),
+              any(TracingContext.class));
 
-    // mock for overwrite=false
-    doThrow(conflictResponseEx) // Scn1: GFS fails with Http404
-        .doThrow(conflictResponseEx) // Scn2: GFS fails with Http500
-        .doThrow(
-            conflictResponseEx) // Scn3: create overwrite=true fails with Http412
-        .doThrow(
-            conflictResponseEx) // Scn4: create overwrite=true fails with Http500
-        .doThrow(
-            serverErrorResponseEx)
-        // Scn5: create overwrite=false fails with Http500
-        .when((AbfsBlobClient) mockClient)
-        .createPathRestOp(any(String.class), eq(true), eq(false),
-            any(AzureBlobFileSystemStore.Permissions.class), any(boolean.class), eq(null), any(),
-            any(TracingContext.class));
+      // mock for overwrite=true
+      doThrow(
+          preConditionResponseEx) // Scn3: create overwrite=true fails with Http412
+          .doThrow(
+              serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
+          .when((AbfsBlobClient) mockClient)
+          .createPathRestOp(any(String.class), eq(true), eq(true),
+              any(AzureBlobFileSystemStore.Permissions.class),
+              any(boolean.class), eq(null), any(),
+              any(TracingContext.class));
 
-    doThrow(fileNotFoundResponseEx) // Scn1: GFS fails with Http404
-        .doThrow(serverErrorResponseEx) // Scn2: GFS fails with Http500
-        .doReturn(successOp) // Scn3: create overwrite=true fails with Http412
-        .doReturn(successOp) // Scn4: create overwrite=true fails with Http500
-        .when((AbfsBlobClient) mockClient)
-        .getPathStatus(any(String.class), any(TracingContext.class), nullable(
-            ContextEncryptionAdapter.class), eq(false));
+      // mock for overwrite=false
+      doThrow(conflictResponseEx) // Scn1: GFS fails with Http404
+          .doThrow(conflictResponseEx) // Scn2: GFS fails with Http500
+          .doThrow(
+              conflictResponseEx) // Scn3: create overwrite=true fails with Http412
+          .doThrow(
+              conflictResponseEx) // Scn4: create overwrite=true fails with Http500
+          .doThrow(
+              serverErrorResponseEx)
+          // Scn5: create overwrite=false fails with Http500
+          .when((AbfsBlobClient) mockClient)
+          .createPathRestOp(any(String.class), eq(true), eq(false),
+              any(AzureBlobFileSystemStore.Permissions.class),
+              any(boolean.class), eq(null), any(),
+              any(TracingContext.class));
 
-    // mock for overwrite=true
-    doThrow(
-        preConditionResponseEx) // Scn3: create overwrite=true fails with Http412
-        .doThrow(
-            serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
-        .when((AbfsBlobClient) mockClient)
-        .createPathRestOp(any(String.class), eq(true), eq(true),
-            any(AzureBlobFileSystemStore.Permissions.class), any(boolean.class), eq(null), any(),
-            any(TracingContext.class));
+      doThrow(fileNotFoundResponseEx) // Scn1: GFS fails with Http404
+          .doThrow(serverErrorResponseEx) // Scn2: GFS fails with Http500
+          .doReturn(successOp) // Scn3: create overwrite=true fails with Http412
+          .doReturn(successOp) // Scn4: create overwrite=true fails with Http500
+          .when((AbfsBlobClient) mockClient)
+          .getPathStatus(any(String.class), any(TracingContext.class), nullable(
+              ContextEncryptionAdapter.class), eq(false));
+    }
 
     // Scn1: GFS fails with Http404
     // Sequence of events expected:

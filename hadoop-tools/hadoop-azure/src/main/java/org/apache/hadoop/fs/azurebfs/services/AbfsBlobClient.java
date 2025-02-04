@@ -482,9 +482,11 @@ public class AbfsBlobClient extends AbfsClient {
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsRestOperation op;
     if (isFileCreation) {
+      // Create a file with the specified parameters
       op = createFile(path, overwrite, permissions, isAppendBlob, eTag,
           contextEncryptionAdapter, tracingContext);
     } else {
+      // Create a directory with the specified parameters
       op = createDirectory(path, overwrite, permissions, isAppendBlob, eTag,
           contextEncryptionAdapter, tracingContext);
     }
@@ -613,7 +615,7 @@ public class AbfsBlobClient extends AbfsClient {
       }
     }
     if (getPathStatusOp != null) {
-      // If path exists and is a directory, return.
+      // If path exists and is a directory, return true.
       boolean isDirectory = checkIsDir(getPathStatusOp.getResult());
       if (!isDirectory) {
         // This indicates path exists as a file, hence throw conflict.
@@ -641,7 +643,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @return the executed rest operation containing the response from the server.
    * @throws AzureBlobFileSystemException if the rest operation fails.
    */
-  public AbfsRestOperation createDirectory(final String path,
+  private AbfsRestOperation createDirectory(final String path,
       final boolean overwrite,
       final AzureBlobFileSystemStore.Permissions permissions,
       final boolean isAppendBlob,
@@ -720,7 +722,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @return the executed rest operation containing the response from the server.
    * @throws AzureBlobFileSystemException if the rest operation fails.
    */
-  public AbfsRestOperation createFile(final String path,
+  private AbfsRestOperation createFile(final String path,
       final boolean overwrite,
       final AzureBlobFileSystemStore.Permissions permissions,
       final boolean isAppendBlob,
@@ -819,6 +821,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @return An AbfsRestOperation object containing the result of the operation.
    * @throws IOException If an I/O error occurs during the operation.
    */
+  @Override
   public AbfsRestOperation conditionalCreateOverwriteFile(String relativePath,
       FileSystem.Statistics statistics,
       AzureBlobFileSystemStore.Permissions permissions,
