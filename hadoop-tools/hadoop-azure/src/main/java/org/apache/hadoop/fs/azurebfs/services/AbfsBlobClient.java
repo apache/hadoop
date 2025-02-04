@@ -586,7 +586,7 @@ public class AbfsBlobClient extends AbfsClient {
       return true;
     } else {
       // If the directory does not contain any entries, check if it exists as an empty directory.
-      return checkEmptyDirectoryPathExists(path, tracingContext);
+      return checkEmptyDirectoryPathExists(path, tracingContext, true);
     }
   }
 
@@ -600,7 +600,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @throws AbfsRestOperationException if the path exists as a file
    */
   private boolean checkEmptyDirectoryPathExists(final String path,
-      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final TracingContext tracingContext, boolean isDirCheck) throws AzureBlobFileSystemException {
     // If the call is to create a directory, there are 3 possible cases:
     // a) a file exists at that path
     // b) an empty directory exists
@@ -617,14 +617,14 @@ public class AbfsBlobClient extends AbfsClient {
     if (getPathStatusOp != null) {
       // If path exists and is a directory, return true.
       boolean isDirectory = checkIsDir(getPathStatusOp.getResult());
-      if (!isDirectory) {
+      if (!isDirectory && isDirCheck) {
         // This indicates path exists as a file, hence throw conflict.
         throw new AbfsRestOperationException(HTTP_CONFLICT,
             AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
             PATH_EXISTS,
             null);
       } else {
-        return true;
+        return isDirectory;
       }
     }
     return false;
@@ -742,22 +742,22 @@ public class AbfsBlobClient extends AbfsClient {
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
-    try {
-      checkDirectoryByList(path, tracingContext);
-    } catch (AzureBlobFileSystemException ex) {
-      LOG.error("Path exists as directory {} : {}", path, ex.getMessage());
-      throw ex;
-    }
-    if (overwrite) {
-      if (checkEmptyDirectoryPathExists(path, tracingContext)) {
+    if (!getIsNamespaceEnabled()) {
+      if (checkDirectoryByList(path, tracingContext)) {
         throw new AbfsRestOperationException(HTTP_CONFLICT,
             AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
             PATH_EXISTS,
             null);
       }
+      if (overwrite && checkEmptyDirectoryPathExists(path, tracingContext, false)) {
+        throw new AbfsRestOperationException(HTTP_CONFLICT,
+            AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
+            PATH_EXISTS,
+            null);
+      }
+      createParentMarkersIfNeeded(path, overwrite, permissions, isAppendBlob,
+          eTag, contextEncryptionAdapter, tracingContext);
     }
-    createParentMarkersIfNeeded(path, overwrite, permissions, isAppendBlob,
-        eTag, contextEncryptionAdapter, tracingContext);
     return createPathRestOp(path, true, overwrite, permissions,
         isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
   }

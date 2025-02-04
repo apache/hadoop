@@ -465,7 +465,8 @@ public class ITestAzureBlobFileSystemCreate extends
     // 1. getFileStatus on DFS endpoint : 1
     //    getFileStatus on Blob endpoint: 1 ListBlobcall
     // 2. actual create call: 1
-    createRequestCount += (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs) ? 2: 1);
+    createRequestCount += (
+        client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs) ? 2 : 1);
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
@@ -485,7 +486,8 @@ public class ITestAzureBlobFileSystemCreate extends
     // 1. getFileStatus on DFS endpoint : 1
     //    getFileStatus on Blob endpoint: 1 (No Additional List blob call as file exists)
 
-    createRequestCount += (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs) ? 2: 1);
+    createRequestCount += (
+        client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs) ? 2 : 1);
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
@@ -502,9 +504,17 @@ public class ITestAzureBlobFileSystemCreate extends
     /// One request to server to create path should be issued
     // two calls added for -
     // 1. getFileStatus on DFS endpoint : 1
-    //    getFileStatus on Blob endpoint: 1 ListBlobCall
+    //    getFileStatus on Blob endpoint: 1 ListBlobCall + 1 GPS
     // 2. actual create call: 1
-    createRequestCount += (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs) ? 2: 1);
+    if (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)) {
+      if (enableConditionalCreateOverwrite) {
+        createRequestCount += 2;
+      } else {
+        createRequestCount += 3;
+      }
+    } else {
+      createRequestCount += 1;
+    }
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
@@ -520,15 +530,14 @@ public class ITestAzureBlobFileSystemCreate extends
 
     createRequestCount += (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs) ? 1: 0);
 
-    // Second actual create call will hap
-    if (enableConditionalCreateOverwrite) {
-      // Three requests will be sent to server to create path,
-      // 1. create without overwrite
-      // 2. GetFileStatus to get eTag
-      // 3. create with overwrite
-      createRequestCount += 3;
+    if (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)) {
+      if (enableConditionalCreateOverwrite) {
+        createRequestCount += 3;
+      } else {
+        createRequestCount += 2;
+      }
     } else {
-      createRequestCount++;
+      createRequestCount += 1;
     }
 
     assertAbfsStatistics(
