@@ -478,6 +478,31 @@ public class AbfsBlobClient extends AbfsClient {
         contextEncryptionAdapter, tracingContext, false);
   }
 
+  public AbfsRestOperation createFile(final String path,
+      final boolean overwrite,
+      final AzureBlobFileSystemStore.Permissions permissions,
+      final boolean isAppendBlob,
+      final String eTag,
+      final ContextEncryptionAdapter contextEncryptionAdapter,
+      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+    checkForDirectoryExistence();
+
+  }
+
+  public boolean checkForDirectoryExistence(String path, TracingContext tracingContext)
+      throws AzureBlobFileSystemException {
+    AbfsRestOperation listPathOp = listPath(path, false, 1, null,
+        tracingContext, false);
+    AbfsHttpOperation listPathResult = listPathOp.getResult();
+    if (listPathResult != null) {
+      // Determine if the path is a directory by checking if the list result schema has any paths
+      return !listPathResult.getListResultSchema().paths().isEmpty();
+    } else {
+      checkDirectoryPathExists()
+    }
+    return false;
+  }
+
   /**
    * Get Rest Operation for API
    * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob">Put Blob</a>.
@@ -589,7 +614,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @return the AbfsRestOperation if the path exists and is a directory, null otherwise
    * @throws AbfsRestOperationException if the path exists as a file
    */
-  private AbfsRestOperation checkDirectoryPathExists(final String path,
+  private AbfsRestOperation checkEmptyDirectoryPathExists(final String path,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
     // If the call is to create a directory, there are 3 possible cases:
     // a) a file exists at that path
@@ -600,7 +625,6 @@ public class AbfsBlobClient extends AbfsClient {
       // GetPathStatus call to check if path already exists.
       getPathStatusOp = getPathStatus(path, tracingContext, null, false);
     } catch (AbfsRestOperationException ex) {
-      // If path does not exist, go ahead with marker creation.
       if (ex.getStatusCode() != HTTP_NOT_FOUND) {
         throw ex;
       }
