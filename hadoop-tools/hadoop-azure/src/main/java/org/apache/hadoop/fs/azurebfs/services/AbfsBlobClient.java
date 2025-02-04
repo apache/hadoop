@@ -779,21 +779,19 @@ public class AbfsBlobClient extends AbfsClient {
       boolean isAppendBlob,
       ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) throws IOException {
+    if (checkDirectoryByList(relativePath, tracingContext)) {
+      throw new AbfsRestOperationException(HTTP_CONFLICT,
+          AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
+          PATH_EXISTS,
+          null);
+    }
     AbfsRestOperation op = null;
     try {
       // Trigger a create with overwrite=false first so that eTag fetch can be
       // avoided for cases when no pre-existing file is present (major portion
       // of create file traffic falls into the case of no pre-existing file).
-      op = createPath(relativePath, true, false, permissions,
+      op = createPathRestOp(relativePath, true, false, permissions,
           isAppendBlob, null, contextEncryptionAdapter, tracingContext);
-    } catch (PathConflictException e) {
-      // Path already exists as a directory and hence we throw conflict exception.
-      if (e.isDirectory()) {
-        throw new AbfsRestOperationException(HTTP_CONFLICT,
-            AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
-            PATH_EXISTS,
-            null);
-      }
     } catch (AbfsRestOperationException e) {
       if (e.getStatusCode() == HTTP_CONFLICT) {
         // File pre-exists, fetch eTag
@@ -803,9 +801,7 @@ public class AbfsBlobClient extends AbfsClient {
           if (ex.getStatusCode() == HTTP_NOT_FOUND) {
             // Is a parallel access case, as file which was found to be
             // present went missing by this request.
-            throw new ConcurrentWriteOperationDetectedException(
-                "Parallel access to the create path detected. Failing request "
-                    + "to honor single writer semantics");
+            throw new ConcurrentWriteOperationDetectedException();
           } else {
             throw ex;
           }
@@ -824,16 +820,14 @@ public class AbfsBlobClient extends AbfsClient {
 
         try {
           // overwrite only if eTag matches with the file properties fetched before
-          op = createPath(relativePath, true, true, permissions,
-              isAppendBlob, eTag, contextEncryptionAdapter, tracingContext, true);
+          op = createPathRestOp(relativePath, true, true, permissions,
+              isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
         } catch (AbfsRestOperationException ex) {
           if (ex.getStatusCode() == HTTP_PRECON_FAILED) {
             // Is a parallel access case, as file with eTag was just queried
             // and precondition failure can happen only when another file with
             // different etag got created.
-            throw new ConcurrentWriteOperationDetectedException(
-                "Parallel access to the create path detected. Failing request "
-                    + "to honor single writer semantics");
+            throw new ConcurrentWriteOperationDetectedException();
           } else {
             throw ex;
           }
@@ -1314,8 +1308,8 @@ public class AbfsBlobClient extends AbfsClient {
       // This path could be present as an implicit directory in FNS.
       if (op.getResult().getStatusCode() == HTTP_NOT_FOUND && isNonEmptyListing(path, tracingContext)) {
         // Implicit path found, create a marker blob at this path and set properties.
-        this.createPath(path, false, false, null, false, null,
-            contextEncryptionAdapter, tracingContext, false);
+        this.createPathRestOp(path, false, false, null, false, null,
+            contextEncryptionAdapter, tracingContext);
         // Make sure hdi_isFolder is added to the list of properties to be set.
         boolean hdiIsFolderExists = properties.containsKey(XML_TAG_HDI_ISFOLDER);
         if (!hdiIsFolderExists) {

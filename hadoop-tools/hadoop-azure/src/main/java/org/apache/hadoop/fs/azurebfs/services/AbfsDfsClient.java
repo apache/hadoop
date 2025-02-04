@@ -469,9 +469,7 @@ public class AbfsDfsClient extends AbfsClient {
           if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
             // Is a parallel access case, as file which was found to be
             // present went missing by this request.
-            throw new ConcurrentWriteOperationDetectedException(
-                "Parallel access to the create path detected. Failing request "
-                    + "to honor single writer semantics");
+            throw new ConcurrentWriteOperationDetectedException();
           } else {
             throw ex;
           }
@@ -488,9 +486,7 @@ public class AbfsDfsClient extends AbfsClient {
             // Is a parallel access case, as file with eTag was just queried
             // and precondition failure can happen only when another file with
             // different etag got created.
-            throw new ConcurrentWriteOperationDetectedException(
-                "Parallel access to the create path detected. Failing request "
-                    + "to honor single writer semantics");
+            throw new ConcurrentWriteOperationDetectedException();
           } else {
             throw ex;
           }

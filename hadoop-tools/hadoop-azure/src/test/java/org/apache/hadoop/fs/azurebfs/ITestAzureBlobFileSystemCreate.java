@@ -632,19 +632,6 @@ public class ITestAzureBlobFileSystemCreate extends
             any(AzureBlobFileSystemStore.Permissions.class), any(boolean.class), eq(null), any(),
             any(TracingContext.class));
 
-    if (mockClient instanceof  AbfsBlobClient) {
-      AbfsBlobClient mockBlobClient = (AbfsBlobClient) mockClient;
-      doThrow(
-          preConditionResponseEx) // Scn3: create overwrite=true fails with Http412
-          .doThrow(
-              serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
-          .when(mockBlobClient)
-          .createPath(any(String.class), eq(true), eq(true),
-              any(AzureBlobFileSystemStore.Permissions.class),
-              any(boolean.class), eq(null), any(ContextEncryptionAdapter.class),
-              any(TracingContext.class), eq(true));
-    }
-
     // Scn1: GFS fails with Http404
     // Sequence of events expected:
     // 1. create overwrite=false - fail with conflict
@@ -1463,12 +1450,6 @@ public class ITestAzureBlobFileSystemCreate extends
       fs.mkdirs(path);
     });
 
-    // Asserting that path created by azcopy becomes explicit.
-    Assertions.assertThat(DirectoryStateHelper.isExplicitDirectory(implicitPath,
-            fs, getTestTracingContext(fs, true)))
-        .describedAs("Path created by azcopy did not become explicit")
-        .isTrue();
-
     // Asserting that the file still exists at path.
     Assertions.assertThat(DirectoryStateHelper.isExplicitDirectory(path,
             fs, getTestTracingContext(fs, true)))
@@ -1492,9 +1473,8 @@ public class ITestAzureBlobFileSystemCreate extends
 
     Path path = makeQualified(new Path("a/b"));
     AbfsBlobClient blobClient = (AbfsBlobClient) fs.getAbfsStore().getClient(AbfsServiceType.BLOB);
-    blobClient.createPath(path.toUri().getPath(), false, true,
-        null, false, null, null, getTestTracingContext(fs, true),
-        true);
+    blobClient.createPathRestOp(path.toUri().getPath(), false, true,
+        null, false, null, null, getTestTracingContext(fs, true));
 
     fs.mkdirs(new Path("a/b/c/d"));
 
@@ -1532,12 +1512,12 @@ public class ITestAzureBlobFileSystemCreate extends
 
     Path path = makeQualified(new Path("a"));
     AbfsBlobClient blobClient = (AbfsBlobClient) fs.getAbfsStore().getClient(AbfsServiceType.BLOB);
-    blobClient.createPath(path.toUri().getPath(), false, true,
-        null, false, null, null, getTestTracingContext(fs, true), true);
+    blobClient.createPathRestOp(path.toUri().getPath(), false, true,
+        null, false, null, null, getTestTracingContext(fs, true));
 
     Path newPath = makeQualified(new Path("a/b/c"));
-    blobClient.createPath(newPath.toUri().getPath(), false, true,
-        null, false, null, null, getTestTracingContext(fs, true), true);
+    blobClient.createPathRestOp(newPath.toUri().getPath(), false, true,
+        null, false, null, null, getTestTracingContext(fs, true));
 
     fs.mkdirs(new Path("a/b/c/d"));
 

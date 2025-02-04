@@ -26,7 +26,10 @@ package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
 public class ConcurrentWriteOperationDetectedException
     extends AzureBlobFileSystemException {
 
-  public ConcurrentWriteOperationDetectedException(String message) {
-    super(message);
+  private static final String ERROR_MESSAGE = "Parallel access to the create path detected. Failing request "
+      + "to honor single writer semantics";
+
+  public ConcurrentWriteOperationDetectedException() {
+    super(ERROR_MESSAGE);
   }
 }

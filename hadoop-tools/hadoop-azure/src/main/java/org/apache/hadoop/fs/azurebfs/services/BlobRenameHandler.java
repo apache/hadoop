@@ -127,7 +127,7 @@ public class BlobRenameHandler extends ListActionTaker {
       RenameAtomicity renameAtomicity = null;
       if (pathInformation.getIsDirectory()
           && pathInformation.getIsImplicit()) {
-        AbfsRestOperation createMarkerOp = getAbfsClient().createPath(
+        AbfsRestOperation createMarkerOp = getAbfsClient().createPathRestOp(
             src.toUri().getPath(),
             false, false, null,
             false, null, null, tracingContext);
