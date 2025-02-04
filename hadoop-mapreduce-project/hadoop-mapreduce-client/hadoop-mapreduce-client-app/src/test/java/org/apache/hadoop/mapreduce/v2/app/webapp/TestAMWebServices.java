@@ -28,13 +28,14 @@ import java.io.StringReader;
 import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.NotAcceptableException;
 import javax.ws.rs.NotFoundException;
-import javax.ws.rs.ServiceUnavailableException;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.Response;
+
+import static javax.ws.rs.core.Response.Status.NOT_ACCEPTABLE;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
-import static javax.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -231,15 +232,15 @@ public class TestAMWebServices extends JerseyTestBase {
 
   @Test
   public void testInvalidAccept() throws JSONException, Exception {
-    WebTarget r = target();
+    WebTarget r = targetWithJsonObject();
     String responseStr = "";
     try {
       responseStr = r.path("ws").path("v1").path("mapreduce")
           .request(MediaType.TEXT_PLAIN).get(String.class);
       fail("should have thrown exception on invalid uri");
-    } catch (ServiceUnavailableException sue) {
+    } catch (NotAcceptableException sue) {
       Response response = sue.getResponse();
-      assertResponseStatusCode(SERVICE_UNAVAILABLE, response.getStatusInfo());
+      assertResponseStatusCode(NOT_ACCEPTABLE, response.getStatusInfo());
       WebServicesTestUtils.checkStringMatch(
           "error string exists and shouldn't", "", responseStr);
     }
