@@ -506,15 +506,10 @@ public class ITestAzureBlobFileSystemCreate extends
     // 1. getFileStatus on DFS endpoint : 1
     //    getFileStatus on Blob endpoint: 1 ListBlobCall + 1 GPS
     // 2. actual create call: 1
-    if (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)) {
-      if (enableConditionalCreateOverwrite) {
-        createRequestCount += 2;
-      } else {
-        createRequestCount += 3;
-      }
-    } else {
-      createRequestCount += 1;
-    }
+    // 1 extra call when conditional overwrite is not enabled to check for empty directory
+    createRequestCount += (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs))
+        ? (enableConditionalCreateOverwrite ? 2 : 3)
+        : 1;
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
@@ -530,14 +525,10 @@ public class ITestAzureBlobFileSystemCreate extends
 
     createRequestCount += (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs) ? 1: 0);
 
-    if (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)) {
-      if (enableConditionalCreateOverwrite) {
-        createRequestCount += 3;
-      } else {
-        createRequestCount += 2;
-      }
+    if (enableConditionalCreateOverwrite) {
+      createRequestCount += 3;
     } else {
-      createRequestCount += 1;
+      createRequestCount += (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)) ? 2 : 1;
     }
 
     assertAbfsStatistics(
