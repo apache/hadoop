@@ -124,7 +124,7 @@ public class ITestAzureBlobFileSystemListStatus extends
    */
   @Test
   public void testListPathTracingContext() throws Exception {
-    Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.DFS);
+    assumeDfsServiceType();
     final AzureBlobFileSystem fs = getFileSystem();
     final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
     final AzureBlobFileSystemStore spiedStore = Mockito.spy(fs.getAbfsStore());
