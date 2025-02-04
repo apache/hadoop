@@ -69,7 +69,8 @@ public class ITestApacheClientConnectionPool extends
     configuration.set(FS_AZURE_NETWORKING_LIBRARY, APACHE_HTTP_CLIENT.name());
     try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
         configuration)) {
-      KeepAliveCache kac = fs.getAbfsStore().getClient().getKeepAliveCache();
+      KeepAliveCache kac = fs.getAbfsStore().getClientHandler().getIngressClient()
+          .getKeepAliveCache();
       kac.close();
       AbfsDriverException ex = intercept(AbfsDriverException.class,
           KEEP_ALIVE_CACHE_CLOSED, () -> {

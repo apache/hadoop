@@ -974,4 +974,12 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.federation.router.heartbeat.with.ip.enable</name>
+    <description>
+      Make router use IP instead of host when communicating with router state state store.
+    </description>
+    <value>false</value>
+  </property>
+
 </configuration>

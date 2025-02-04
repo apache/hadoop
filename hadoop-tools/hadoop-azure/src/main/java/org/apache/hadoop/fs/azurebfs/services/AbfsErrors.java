@@ -62,5 +62,11 @@ public final class AbfsErrors {
    * Exception message on filesystem init if token-provider-auth-type configs are provided
    */
   public static final String UNAUTHORIZED_SAS = "Incorrect SAS token provider configured for non-hierarchical namespace account.";
+  public static final String ERR_RENAME_BLOB =
+      "FNS-Blob rename was not successful for source and destination path: ";
+  public static final String ERR_DELETE_BLOB =
+      "FNS-Blob delete was not successful for path: ";
+  public static final String ATOMIC_DIR_RENAME_RECOVERY_ON_GET_PATH_EXCEPTION =
+      "Path had to be recovered from atomic rename operation.";
   private AbfsErrors() {}
 }

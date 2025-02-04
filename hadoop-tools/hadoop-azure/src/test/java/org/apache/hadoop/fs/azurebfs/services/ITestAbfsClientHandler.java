@@ -42,7 +42,6 @@ public class ITestAbfsClientHandler extends AbstractAbfsIntegrationTest {
   public void testAbfsClientHandlerInitialization() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     AbfsClientHandler clientHandler = fs.getAbfsStore().getClientHandler();
-    Assertions.assertThat(clientHandler.getClient()).isInstanceOf(AbfsDfsClient.class);
     Assertions.assertThat(clientHandler.getClient(AbfsServiceType.DFS)).isInstanceOf(AbfsDfsClient.class);
     Assertions.assertThat(clientHandler.getClient(AbfsServiceType.BLOB)).isInstanceOf(AbfsBlobClient.class);
   }
