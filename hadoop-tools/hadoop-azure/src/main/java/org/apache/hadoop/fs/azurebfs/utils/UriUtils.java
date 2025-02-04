@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -30,7 +32,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
@@ -48,6 +54,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
  * Utility class to help with Abfs url transformation to blob urls.
  */
 public final class UriUtils {
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      UriUtils.class);
+
   private static final String ABFS_URI_REGEX = "[^.]+\\.dfs\\.(preprod\\.){0,1}core\\.windows\\.net";
   private static final Pattern ABFS_URI_PATTERN = Pattern.compile(ABFS_URI_REGEX);
   private static final Set<String> FULL_MASK_PARAM_KEYS = new HashSet<>(
@@ -228,6 +238,34 @@ public final class UriUtils {
     }
     sb.replace(targetIndex, targetIndex + oldString.length(), newString);
     return sb.toString();
+  }
+
+  /**
+   * Checks if the key is for a directory in the set of directories.
+   * @param key the key to check.
+   * @param dirSet the set of directories.
+   * @return true if the key is for a directory in the set of directories.
+   */
+  public static boolean isKeyForDirectorySet(String key, Set<String> dirSet) {
+    for (String dir : dirSet) {
+      if (dir.isEmpty() || key.startsWith(
+          dir + AbfsHttpConstants.FORWARD_SLASH)) {
+        return true;
+      }
+
+      try {
+        URI uri = new URI(dir);
+        if (null == uri.getAuthority()) {
+          if (key.startsWith(dir + "/")) {
+            return true;
+          }
+        }
+      } catch (URISyntaxException e) {
+        LOG.info("URI syntax error creating URI for {}", dir);
+      }
+    }
+
+    return false;
   }
 
   private UriUtils() {
