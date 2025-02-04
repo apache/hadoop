@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -237,7 +236,7 @@ public class TestPathData {
     fs.setPermission(obscuredDir, new FsPermission((short)0)); //no access
     try {
       PathData.expandAsGlob("foo/*", conf);
-      Assertions.fail("Should throw IOException");
+      fail("Should throw IOException");
     } catch (IOException ioe) {
       // expected
     } finally {
@@ -262,7 +261,7 @@ public class TestPathData {
 
   public void checkPathData(String dirString, PathData item) throws Exception {
     assertEquals(fs, item.fs, "checking fs");
-    assertEquals("checking string", dirString, item.toString());
+    assertEquals(dirString, item.toString(), "checking string");
     assertEquals(
        fs.makeQualified(new Path(item.toString())), item.path, "checking path"
     );

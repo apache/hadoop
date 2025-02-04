@@ -23,7 +23,12 @@ import java.net.URI;
 import java.util.EnumSet;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
@@ -35,7 +40,6 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.viewfs.ChRootedFs;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -73,11 +77,11 @@ public class TestChRootedFs {
   @Test
   public void testBasicPaths() {
     URI uri = fc.getDefaultFileSystem().getUri();
-    Assertions.assertEquals(chrootedTo.toUri(), uri);
-    Assertions.assertEquals(fc.makeQualified(
+    assertEquals(chrootedTo.toUri(), uri);
+    assertEquals(fc.makeQualified(
         new Path(System.getProperty("user.home"))),
         fc.getWorkingDirectory());
-    Assertions.assertEquals(fc.makeQualified(
+    assertEquals(fc.makeQualified(
         new Path(System.getProperty("user.home"))),
         fc.getHomeDirectory());
     /*
@@ -87,13 +91,13 @@ public class TestChRootedFs {
      * But if we were to fix Path#makeQualified() then  the next test should
      *  have been:
 
-    Assertions.assertEquals(
+    assertEquals(
         new Path(chrootedTo + "/foo/bar").makeQualified(
             FsConstants.LOCAL_FS_URI, null),
         fc.makeQualified(new Path( "/foo/bar")));
     */
     
-    Assertions.assertEquals(
+    assertEquals(
         new Path("/foo/bar").makeQualified(FsConstants.LOCAL_FS_URI, null),
         fc.makeQualified(new Path("/foo/bar")));
   }
@@ -111,50 +115,50 @@ public class TestChRootedFs {
 
     // Create file 
     fileContextTestHelper.createFileNonRecursive(fc, "/foo");
-    Assertions.assertTrue(isFile(fc, new Path("/foo")));
-    Assertions.assertTrue(isFile(fcTarget, new Path(chrootedTo, "foo")));
+    assertTrue(isFile(fc, new Path("/foo")));
+    assertTrue(isFile(fcTarget, new Path(chrootedTo, "foo")));
     
     // Create file with recursive dir
     fileContextTestHelper.createFile(fc, "/newDir/foo");
-    Assertions.assertTrue(isFile(fc, new Path("/newDir/foo")));
-    Assertions.assertTrue(isFile(fcTarget, new Path(chrootedTo,"newDir/foo")));
+    assertTrue(isFile(fc, new Path("/newDir/foo")));
+    assertTrue(isFile(fcTarget, new Path(chrootedTo,"newDir/foo")));
     
     // Delete the created file
-    Assertions.assertTrue(fc.delete(new Path("/newDir/foo"), false));
-    Assertions.assertFalse(exists(fc, new Path("/newDir/foo")));
-    Assertions.assertFalse(exists(fcTarget, new Path(chrootedTo,"newDir/foo")));
+    assertTrue(fc.delete(new Path("/newDir/foo"), false));
+    assertFalse(exists(fc, new Path("/newDir/foo")));
+    assertFalse(exists(fcTarget, new Path(chrootedTo,"newDir/foo")));
     
     // Create file with a 2 component dirs recursively
     fileContextTestHelper.createFile(fc, "/newDir/newDir2/foo");
-    Assertions.assertTrue(isFile(fc, new Path("/newDir/newDir2/foo")));
-    Assertions.assertTrue(isFile(fcTarget, new Path(chrootedTo,"newDir/newDir2/foo")));
+    assertTrue(isFile(fc, new Path("/newDir/newDir2/foo")));
+    assertTrue(isFile(fcTarget, new Path(chrootedTo,"newDir/newDir2/foo")));
     
     // Delete the created file
-    Assertions.assertTrue(fc.delete(new Path("/newDir/newDir2/foo"), false));
-    Assertions.assertFalse(exists(fc, new Path("/newDir/newDir2/foo")));
-    Assertions.assertFalse(exists(fcTarget, new Path(chrootedTo,"newDir/newDir2/foo")));
+    assertTrue(fc.delete(new Path("/newDir/newDir2/foo"), false));
+    assertFalse(exists(fc, new Path("/newDir/newDir2/foo")));
+    assertFalse(exists(fcTarget, new Path(chrootedTo,"newDir/newDir2/foo")));
   }
   
   
   @Test
   public void testMkdirDelete() throws IOException {
     fc.mkdir(fileContextTestHelper.getTestRootPath(fc, "/dirX"), FileContext.DEFAULT_PERM, false);
-    Assertions.assertTrue(isDir(fc, new Path("/dirX")));
-    Assertions.assertTrue(isDir(fcTarget, new Path(chrootedTo,"dirX")));
+    assertTrue(isDir(fc, new Path("/dirX")));
+    assertTrue(isDir(fcTarget, new Path(chrootedTo,"dirX")));
     
     fc.mkdir(fileContextTestHelper.getTestRootPath(fc, "/dirX/dirY"), FileContext.DEFAULT_PERM, false);
-    Assertions.assertTrue(isDir(fc, new Path("/dirX/dirY")));
-    Assertions.assertTrue(isDir(fcTarget, new Path(chrootedTo,"dirX/dirY")));
+    assertTrue(isDir(fc, new Path("/dirX/dirY")));
+    assertTrue(isDir(fcTarget, new Path(chrootedTo,"dirX/dirY")));
     
 
     // Delete the created dir
-    Assertions.assertTrue(fc.delete(new Path("/dirX/dirY"), false));
-    Assertions.assertFalse(exists(fc, new Path("/dirX/dirY")));
-    Assertions.assertFalse(exists(fcTarget, new Path(chrootedTo,"dirX/dirY")));
+    assertTrue(fc.delete(new Path("/dirX/dirY"), false));
+    assertFalse(exists(fc, new Path("/dirX/dirY")));
+    assertFalse(exists(fcTarget, new Path(chrootedTo,"dirX/dirY")));
     
-    Assertions.assertTrue(fc.delete(new Path("/dirX"), false));
-    Assertions.assertFalse(exists(fc, new Path("/dirX")));
-    Assertions.assertFalse(exists(fcTarget, new Path(chrootedTo,"dirX")));
+    assertTrue(fc.delete(new Path("/dirX"), false));
+    assertFalse(exists(fc, new Path("/dirX")));
+    assertFalse(exists(fcTarget, new Path(chrootedTo,"dirX")));
     
   }
   @Test
@@ -162,19 +166,19 @@ public class TestChRootedFs {
     // Rename a file
     fileContextTestHelper.createFile(fc, "/newDir/foo");
     fc.rename(new Path("/newDir/foo"), new Path("/newDir/fooBar"));
-    Assertions.assertFalse(exists(fc, new Path("/newDir/foo")));
-    Assertions.assertFalse(exists(fcTarget, new Path(chrootedTo,"newDir/foo")));
-    Assertions.assertTrue(isFile(fc, fileContextTestHelper.getTestRootPath(fc,"/newDir/fooBar")));
-    Assertions.assertTrue(isFile(fcTarget, new Path(chrootedTo,"newDir/fooBar")));
+    assertFalse(exists(fc, new Path("/newDir/foo")));
+    assertFalse(exists(fcTarget, new Path(chrootedTo,"newDir/foo")));
+    assertTrue(isFile(fc, fileContextTestHelper.getTestRootPath(fc,"/newDir/fooBar")));
+    assertTrue(isFile(fcTarget, new Path(chrootedTo,"newDir/fooBar")));
     
     
     // Rename a dir
     fc.mkdir(new Path("/newDir/dirFoo"), FileContext.DEFAULT_PERM, false);
     fc.rename(new Path("/newDir/dirFoo"), new Path("/newDir/dirFooBar"));
-    Assertions.assertFalse(exists(fc, new Path("/newDir/dirFoo")));
-    Assertions.assertFalse(exists(fcTarget, new Path(chrootedTo,"newDir/dirFoo")));
-    Assertions.assertTrue(isDir(fc, fileContextTestHelper.getTestRootPath(fc,"/newDir/dirFooBar")));
-    Assertions.assertTrue(isDir(fcTarget, new Path(chrootedTo,"newDir/dirFooBar")));
+    assertFalse(exists(fc, new Path("/newDir/dirFoo")));
+    assertFalse(exists(fcTarget, new Path(chrootedTo,"newDir/dirFoo")));
+    assertTrue(isDir(fc, fileContextTestHelper.getTestRootPath(fc,"/newDir/dirFooBar")));
+    assertTrue(isDir(fcTarget, new Path(chrootedTo,"newDir/dirFooBar")));
   }
   
   
@@ -195,15 +199,15 @@ public class TestChRootedFs {
   public void testList() throws IOException {
     
     FileStatus fs = fc.getFileStatus(new Path("/"));
-    Assertions.assertTrue(fs.isDirectory());
+    assertTrue(fs.isDirectory());
     //  should return the full path not the chrooted path
-    Assertions.assertEquals(fs.getPath(), chrootedTo);
+    assertEquals(fs.getPath(), chrootedTo);
     
     // list on Slash
     
     FileStatus[] dirPaths = fc.util().listStatus(new Path("/"));
 
-    Assertions.assertEquals(0, dirPaths.length);
+    assertEquals(0, dirPaths.length);
     
     
 
@@ -215,21 +219,21 @@ public class TestChRootedFs {
     fc.mkdir(new Path("/dirX/dirXX"), FileContext.DEFAULT_PERM, false);
     
     dirPaths = fc.util().listStatus(new Path("/"));
-    Assertions.assertEquals(4, dirPaths.length);
+    assertEquals(4, dirPaths.length);
     
     // Note the the file status paths are the full paths on target
     fs = fileContextTestHelper.containsPath(fcTarget, "foo", dirPaths);
-      Assertions.assertNotNull(fs);
-      Assertions.assertTrue(fs.isFile());
+      assertNotNull(fs);
+      assertTrue(fs.isFile());
     fs = fileContextTestHelper.containsPath(fcTarget, "bar", dirPaths);
-      Assertions.assertNotNull(fs);
-      Assertions.assertTrue(fs.isFile());
+      assertNotNull(fs);
+      assertTrue(fs.isFile());
     fs = fileContextTestHelper.containsPath(fcTarget, "dirX", dirPaths);
-      Assertions.assertNotNull(fs);
-      Assertions.assertTrue(fs.isDirectory());
+      assertNotNull(fs);
+      assertTrue(fs.isDirectory());
     fs = fileContextTestHelper.containsPath(fcTarget, "dirY", dirPaths);
-      Assertions.assertNotNull(fs);
-      Assertions.assertTrue(fs.isDirectory());
+      assertNotNull(fs);
+      assertTrue(fs.isDirectory());
   }
   
   @Test
@@ -240,13 +244,13 @@ public class TestChRootedFs {
     Path workDir = new Path("/testWd");
     Path fqWd = fc.makeQualified(workDir);
     fc.setWorkingDirectory(workDir);
-    Assertions.assertEquals(fqWd, fc.getWorkingDirectory());
+    assertEquals(fqWd, fc.getWorkingDirectory());
 
     fc.setWorkingDirectory(new Path("."));
-    Assertions.assertEquals(fqWd, fc.getWorkingDirectory());
+    assertEquals(fqWd, fc.getWorkingDirectory());
 
     fc.setWorkingDirectory(new Path(".."));
-    Assertions.assertEquals(fqWd.getParent(), fc.getWorkingDirectory());
+    assertEquals(fqWd.getParent(), fc.getWorkingDirectory());
     
     // cd using a relative path
 
@@ -254,20 +258,20 @@ public class TestChRootedFs {
     workDir = new Path("/testWd");
     fqWd = fc.makeQualified(workDir);
     fc.setWorkingDirectory(workDir);
-    Assertions.assertEquals(fqWd, fc.getWorkingDirectory());
+    assertEquals(fqWd, fc.getWorkingDirectory());
     
     Path relativeDir = new Path("existingDir1");
     Path absoluteDir = new Path(workDir,"existingDir1");
     fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
     Path fqAbsoluteDir = fc.makeQualified(absoluteDir);
     fc.setWorkingDirectory(relativeDir);
-    Assertions.assertEquals(fqAbsoluteDir, fc.getWorkingDirectory());
+    assertEquals(fqAbsoluteDir, fc.getWorkingDirectory());
     // cd using a absolute path
     absoluteDir = new Path("/test/existingDir2");
     fqAbsoluteDir = fc.makeQualified(absoluteDir);
     fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
     fc.setWorkingDirectory(absoluteDir);
-    Assertions.assertEquals(fqAbsoluteDir, fc.getWorkingDirectory());
+    assertEquals(fqAbsoluteDir, fc.getWorkingDirectory());
     
     // Now open a file relative to the wd we just set above.
     Path absolutePath = new Path(absoluteDir, "foo");
@@ -276,12 +280,12 @@ public class TestChRootedFs {
     
     // Now mkdir relative to the dir we cd'ed to
     fc.mkdir(new Path("newDir"), FileContext.DEFAULT_PERM, true);
-    Assertions.assertTrue(isDir(fc, new Path(absoluteDir, "newDir")));
+    assertTrue(isDir(fc, new Path(absoluteDir, "newDir")));
 
     absoluteDir = fileContextTestHelper.getTestRootPath(fc, "nonexistingPath");
     try {
       fc.setWorkingDirectory(absoluteDir);
-      Assertions.fail("cd to non existing dir should have failed");
+      fail("cd to non existing dir should have failed");
     } catch (Exception e) {
       // Exception as expected
     }
@@ -291,7 +295,7 @@ public class TestChRootedFs {
     absoluteDir = new Path(LOCAL_FS_ROOT_URI + "/existingDir");
     fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
     fc.setWorkingDirectory(absoluteDir);
-    Assertions.assertEquals(absoluteDir, fc.getWorkingDirectory());
+    assertEquals(absoluteDir, fc.getWorkingDirectory());
 
   }
   
@@ -301,9 +305,9 @@ public class TestChRootedFs {
   
   @Test
   public void testResolvePath() throws IOException {
-    Assertions.assertEquals(chrootedTo, fc.getDefaultFileSystem().resolvePath(new Path("/"))); 
+    assertEquals(chrootedTo, fc.getDefaultFileSystem().resolvePath(new Path("/"))); 
     fileContextTestHelper.createFile(fc, "/foo");
-    Assertions.assertEquals(new Path(chrootedTo, "foo"),
+    assertEquals(new Path(chrootedTo, "foo"),
         fc.getDefaultFileSystem().resolvePath(new Path("/foo"))); 
   }
 
@@ -319,7 +323,7 @@ public class TestChRootedFs {
     AbstractFileSystem baseFs = Mockito.spy(fc.getDefaultFileSystem());
     ChRootedFs chRootedFs = new ChRootedFs(baseFs, new Path("/chroot"));
     Mockito.doReturn(true).when(baseFs).isValidName(Mockito.anyString());
-    Assertions.assertTrue(chRootedFs.isValidName("/test"));
+    assertTrue(chRootedFs.isValidName("/test"));
     Mockito.verify(baseFs).isValidName("/chroot/test");
   }
 
@@ -328,7 +332,7 @@ public class TestChRootedFs {
     AbstractFileSystem baseFs = Mockito.spy(fc.getDefaultFileSystem());
     ChRootedFs chRootedFs = new ChRootedFs(baseFs, new Path("/chroot"));
     Mockito.doReturn(false).when(baseFs).isValidName(Mockito.anyString());
-    Assertions.assertFalse(chRootedFs.isValidName("/test"));
+    assertFalse(chRootedFs.isValidName("/test"));
     Mockito.verify(baseFs).isValidName("/chroot/test");
   }
 
@@ -342,7 +346,7 @@ public class TestChRootedFs {
     ChRootedFs chRootedFs = new ChRootedFs(baseFs, chrootedTo);
     Mockito.doReturn(snapRootPath).when(baseFs)
         .createSnapshot(chRootedSnapRootPath, "snap1");
-    Assertions.assertEquals(snapRootPath,
+    assertEquals(snapRootPath,
         chRootedFs.createSnapshot(snapRootPath, "snap1"));
     Mockito.verify(baseFs).createSnapshot(chRootedSnapRootPath, "snap1");
   }

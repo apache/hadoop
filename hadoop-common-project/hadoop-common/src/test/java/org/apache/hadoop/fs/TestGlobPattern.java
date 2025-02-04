@@ -20,7 +20,7 @@ package org.apache.hadoop.fs;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.re2j.PatternSyntaxException;
 /**
@@ -32,8 +32,7 @@ public class TestGlobPattern {
 
     for (String s : input) {
       boolean result = pattern.matches(s);
-      assertTrue(
-                yes ? result : !result, glob +" should"+ (yes ? "" : " not") +" match "+ s);
+      assertTrue(yes ? result : !result, glob +" should"+ (yes ? "" : " not") +" match "+ s);
     }
   }
 

@@ -22,7 +22,6 @@ import java.util.LinkedList;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -40,6 +39,7 @@ import org.apache.hadoop.fs.shell.CopyCommands.CopyToLocal;
 
 import static org.apache.hadoop.fs.shell.CopyCommandWithMultiThread.DEFAULT_QUEUE_SIZE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestCopyToLocal {
 
@@ -193,9 +193,9 @@ public class TestCopyToLocal {
     protected void processArguments(LinkedList<PathData> args)
         throws IOException {
       // Check if the number of threads are same as expected
-      Assertions.assertEquals(expectedThreads, getThreadCount());
+      assertEquals(expectedThreads, getThreadCount());
       // Check if the queue pool size of executor is same as expected
-      Assertions.assertEquals(expectedQueuePoolSize, getThreadPoolQueueSize());
+      assertEquals(expectedQueuePoolSize, getThreadPoolQueueSize());
 
       super.processArguments(args);
 
@@ -205,10 +205,10 @@ public class TestCopyToLocal {
         // 2) There are no active tasks in the executor
         // 3) Executor has shutdown correctly
         ThreadPoolExecutor executor = getExecutor();
-        Assertions.assertEquals(expectedCompletedTaskCount,
+        assertEquals(expectedCompletedTaskCount,
             executor.getCompletedTaskCount());
-        Assertions.assertEquals(0, executor.getActiveCount());
-        Assertions.assertTrue(executor.isTerminated());
+        assertEquals(0, executor.getActiveCount());
+        assertTrue(executor.isTerminated());
       } else {
         assert getExecutor() == null;
       }

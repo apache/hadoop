@@ -77,8 +77,8 @@ public class TestFsShellList {
   }
 
   /*
-   * UGI params should take effect when we pass.
-   */
+  UGI params should take effect when we pass.
+ */
   @Test
   public void testListWithUGI() throws Exception {
     assertThrows(IllegalArgumentException.class, () -> {

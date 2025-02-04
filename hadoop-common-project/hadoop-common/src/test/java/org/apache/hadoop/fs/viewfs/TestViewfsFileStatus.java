@@ -39,7 +39,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The FileStatus is being serialized in MR as jobs are submitted.
@@ -83,8 +85,8 @@ public class TestViewfsFileStatus {
       FileStatus stat = vfs.getFileStatus(path);
       assertEquals(content.length, stat.getLen());
       ContractTestUtils.assertNotErasureCoded(vfs, path);
-      assertTrue(
-         stat.toString().contains("isErasureCoded=false"), path + " should have erasure coding unset in " +
+      assertTrue(stat.toString().contains("isErasureCoded=false"), 
+          path + " should have erasure coding unset in " +
           "FileStatus#toString(): " + stat);
 
       // check serialization/deserialization

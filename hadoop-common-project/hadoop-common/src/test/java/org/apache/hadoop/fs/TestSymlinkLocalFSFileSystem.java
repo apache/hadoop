@@ -22,18 +22,17 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options.Rename;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.Test;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class TestSymlinkLocalFSFileSystem extends TestSymlinkLocalFS {
 
-  @BeforeAll
+  @BeforeClass
   public static void testSetup() throws Exception {
     FileSystem filesystem = FileSystem.getLocal(new Configuration());
     wrapper = new FileSystemTestWrapper(filesystem);
@@ -42,28 +41,24 @@ public class TestSymlinkLocalFSFileSystem extends TestSymlinkLocalFS {
   @Ignore("RawLocalFileSystem#mkdir does not treat existence of directory" +
       " as an error")
   @Override
-  @Test
-  @Timeout(value = 10)
+  @Test(timeout=10000)
   public void testMkdirExistingLink() throws IOException {}
 
   @Ignore("FileSystem#create defaults to creating parents," +
       " throwing an IOException instead of FileNotFoundException")
   @Override
-  @Test
-  @Timeout(value = 10)
+  @Test(timeout=10000)
   public void testCreateFileViaDanglingLinkParent() throws IOException {}
 
   @Ignore("RawLocalFileSystem does not throw an exception if the path" +
       " already exists")
   @Override
-  @Test
-  @Timeout(value = 10)
+  @Test(timeout=10000)
   public void testCreateFileDirExistingLink() throws IOException {}
   
   @Ignore("ChecksumFileSystem does not support append")
   @Override
-  @Test
-  @Timeout(value = 10)
+  @Test(timeout=10000)
   public void testAccessFileViaInterSymlinkAbsTarget() throws IOException {}
 
   @Override
@@ -73,8 +68,7 @@ public class TestSymlinkLocalFSFileSystem extends TestSymlinkLocalFS {
   }
 
   @Override
-  @Test
-  @Timeout(value = 10)
+  @Test(timeout=10000)
   /** Rename a symlink to itself */
   public void testRenameSymlinkToItself() throws IOException {
     Path file = new Path(testBaseDir1(), "file");

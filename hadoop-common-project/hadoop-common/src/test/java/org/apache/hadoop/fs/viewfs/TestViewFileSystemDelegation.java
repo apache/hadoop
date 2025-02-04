@@ -35,8 +35,8 @@ import org.apache.hadoop.fs.viewfs.TestChRootedFileSystem.MockFileSystem;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeAll;
 import static org.apache.hadoop.fs.viewfs.TestChRootedFileSystem.getChildFileSystem;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.verify;
 
 /**
  * Verify that viewfs propagates certain methods to the underlying fs 

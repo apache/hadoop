@@ -18,8 +18,17 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.atMost;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegationTokenRenewer.Renewable;
@@ -70,8 +79,8 @@ public class TestDelegationTokenRenewer {
 
     renewer.addRenewAction(fs);
     
-    assertEquals(1
-,         renewer.getRenewQueueLength(), "FileSystem not added to DelegationTokenRenewer");
+    assertEquals(1, renewer.getRenewQueueLength(), 
+        "FileSystem not added to DelegationTokenRenewer");
     
     Thread.sleep(RENEW_CYCLE*2);
     verify(token, atLeast(2)).renew(eq(conf));
@@ -83,8 +92,8 @@ public class TestDelegationTokenRenewer {
     verify(fs, never()).getDelegationToken(null);
     verify(fs, never()).setDelegationToken(any());
     
-    assertEquals(0
-,         renewer.getRenewQueueLength(), "FileSystem not removed from DelegationTokenRenewer");
+    assertEquals(0, renewer.getRenewQueueLength(), 
+        "FileSystem not removed from DelegationTokenRenewer");
   }
 
   @Test

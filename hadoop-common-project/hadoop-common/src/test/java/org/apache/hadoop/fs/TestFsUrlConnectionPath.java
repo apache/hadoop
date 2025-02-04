@@ -15,13 +15,14 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.*;
 import java.net.URL;
 import java.nio.file.Paths;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test case for FsUrlConnection with relativePath and SPACE.
@@ -83,25 +84,25 @@ public class TestFsUrlConnectionPath {
   @Test
   public void testAbsolutePath() throws Exception{
     int length = readStream(ABSOLUTE_PATH);
-    Assertions.assertTrue(length > 1);
+    assertTrue(length > 1);
   }
 
   @Test
   public void testRelativePath() throws Exception{
     int length = readStream(RELATIVE_PATH);
-    Assertions.assertTrue(length > 1);
+    assertTrue(length > 1);
   }
 
   @Test
   public void testAbsolutePathWithSpace() throws Exception{
     int length = readStream(ABSOLUTE_PATH_W_ENCODED_SPACE);
-    Assertions.assertTrue(length > 1);
+    assertTrue(length > 1);
   }
 
   @Test
   public void testRelativePathWithSpace() throws Exception{
     int length = readStream(RELATIVE_PATH_W_ENCODED_SPACE);
-    Assertions.assertTrue(length > 1);
+    assertTrue(length > 1);
   }
 
 }

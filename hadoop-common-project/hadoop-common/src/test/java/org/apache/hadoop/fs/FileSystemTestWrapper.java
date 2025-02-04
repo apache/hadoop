@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
-import org.junit.jupiter.api.Assertions;
+import org.junit.Assert;
 
 /**
  * Helper class for unit tests.
@@ -170,29 +170,29 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
   public void checkFileStatus(String path, fileType expectedType)
       throws IOException {
     FileStatus s = fs.getFileStatus(new Path(path));
-    Assertions.assertNotNull(s);
+    Assert.assertNotNull(s);
     if (expectedType == fileType.isDir) {
-      Assertions.assertTrue(s.isDirectory());
+      Assert.assertTrue(s.isDirectory());
     } else if (expectedType == fileType.isFile) {
-      Assertions.assertTrue(s.isFile());
+      Assert.assertTrue(s.isFile());
     } else if (expectedType == fileType.isSymlink) {
-      Assertions.assertTrue(s.isSymlink());
+      Assert.assertTrue(s.isSymlink());
     }
-    Assertions.assertEquals(fs.makeQualified(new Path(path)), s.getPath());
+    Assert.assertEquals(fs.makeQualified(new Path(path)), s.getPath());
   }
 
   public void checkFileLinkStatus(String path, fileType expectedType)
       throws IOException {
     FileStatus s = fs.getFileLinkStatus(new Path(path));
-    Assertions.assertNotNull(s);
+    Assert.assertNotNull(s);
     if (expectedType == fileType.isDir) {
-      Assertions.assertTrue(s.isDirectory());
+      Assert.assertTrue(s.isDirectory());
     } else if (expectedType == fileType.isFile) {
-      Assertions.assertTrue(s.isFile());
+      Assert.assertTrue(s.isFile());
     } else if (expectedType == fileType.isSymlink) {
-      Assertions.assertTrue(s.isSymlink());
+      Assert.assertTrue(s.isSymlink());
     }
-    Assertions.assertEquals(fs.makeQualified(new Path(path)), s.getPath());
+    Assert.assertEquals(fs.makeQualified(new Path(path)), s.getPath());
   }
 
   //

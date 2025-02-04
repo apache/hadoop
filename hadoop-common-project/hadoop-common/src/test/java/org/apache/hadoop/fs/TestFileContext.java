@@ -51,7 +51,7 @@ public class TestFileContext {
 
     String defaultlUMask =
         conf.get(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY);
-    assertEquals("Default UMask changed!", "022", defaultlUMask);
+    assertEquals("022", defaultlUMask, "Default UMask changed!");
 
     URI uri1 = new URI("file://mydfs:50070/");
     URI uri2 = new URI("file://tmp");

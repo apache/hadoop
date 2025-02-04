@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.fs.shell;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.URI;
@@ -43,54 +45,48 @@ import org.apache.hadoop.ipc.RpcNoSuchMethodException;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.io.TempDir;
 
 public class TestAclCommands {
-  @Rule
-  public TemporaryFolder testFolder = new TemporaryFolder();
 
   private String path;
 
   private Configuration conf = null;
 
   @BeforeEach
-  public void setup() throws IOException {
+  public void setup(@TempDir java.nio.file.Path testFolder) throws IOException {
     conf = new Configuration();
-    path = testFolder.newFile("file").getPath();
+    path = testFolder.resolve("file").toFile().getPath();
   }
 
   @Test
   public void testGetfaclValidations() throws Exception {
-    assertFalse(
-       0 == runCommand(new String[] {"-getfacl"}), "getfacl should fail without path");
-    assertFalse(
-       0 == runCommand(new String[] {"-getfacl", path, "extraArg"}), "getfacl should fail with extra argument");
+    assertFalse(0 == runCommand(new String[] {"-getfacl"}), "getfacl should fail without path");
+    assertFalse(0 == runCommand(new String[] {"-getfacl", path, "extraArg"}), 
+        "getfacl should fail with extra argument");
   }
 
   @Test
   public void testSetfaclValidations() throws Exception {
-    assertFalse(
-       0 == runCommand(new String[] {"-setfacl", path}), "setfacl should fail without options");
-    assertFalse(
-       0 == runCommand(new String[] {"-setfacl", "-R", path}), "setfacl should fail without options -b, -k, -m, -x or --set");
-    assertFalse(
-       0 == runCommand(new String[] {"-setfacl"}), "setfacl should fail without path");
-    assertFalse(
-       0 == runCommand(new String[] {"-setfacl", "-m", path}), "setfacl should fail without aclSpec");
-    assertFalse(
-       0 == runCommand(new String[] {"-setfacl", "-m", path}), "setfacl should fail with conflicting options");
-    assertFalse(
-       0 == runCommand(new String[] {"-setfacl", path, "extra"}), "setfacl should fail with extra arguments");
-    assertFalse(
-       0 == runCommand(new String[] {"-setfacl", "--set",
-            "default:user::rwx", path, "extra"}), "setfacl should fail with extra arguments");
-    assertFalse(
-       0 == runCommand(new String[] {"-setfacl", "-x", "user:user1:rwx",
-            path}), "setfacl should fail with permissions for -x");
-    assertFalse(
-       0 == runCommand(new String[] {"-setfacl", "-m", "", path}), "setfacl should fail ACL spec missing");
+    assertFalse(0 == runCommand(new String[] {"-setfacl", path}), 
+        "setfacl should fail without options");
+    assertFalse(0 == runCommand(new String[] {"-setfacl", "-R", path}), 
+        "setfacl should fail without options -b, -k, -m, -x or --set");
+    assertFalse(0 == runCommand(new String[] {"-setfacl"}), 
+        "setfacl should fail without path");
+    assertFalse(0 == runCommand(new String[] {"-setfacl", "-m", path}), 
+        "setfacl should fail without aclSpec");
+    assertFalse(0 == runCommand(new String[] {"-setfacl", "-m", path}), 
+        "setfacl should fail with conflicting options");
+    assertFalse(0 == runCommand(new String[] {"-setfacl", path, "extra"}), 
+        "setfacl should fail with extra arguments");
+    assertFalse(0 == runCommand(new String[] {"-setfacl", "--set",
+        "default:user::rwx", path, "extra"}), "setfacl should fail with extra arguments");
+    assertFalse(0 == runCommand(new String[] {"-setfacl", "-x", "user:user1:rwx",
+        path}), "setfacl should fail with permissions for -x");
+    assertFalse(0 == runCommand(new String[] {"-setfacl", "-m", "", path}), 
+        "setfacl should fail ACL spec missing");
   }
 
   @Test
@@ -101,9 +97,8 @@ public class TestAclCommands {
     } catch (IllegalArgumentException e) {
     }
     assertTrue(parsedList.size() == 0);
-    assertFalse(
-       0 == runCommand(new String[] { "-setfacl", "-m", "user:user1:",
-            "/path" }), "setfacl should fail with less arguments");
+    assertFalse(0 == runCommand(new String[] { "-setfacl", "-m", "user:user1:",
+        "/path" }), "setfacl should fail with less arguments");
   }
 
   @Test
@@ -169,8 +164,8 @@ public class TestAclCommands {
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "stubfs:///");
     conf.setClass("fs.stubfs.impl", StubFileSystem.class, FileSystem.class);
     conf.setBoolean("stubfs.noRpcForGetAclStatus", true);
-    assertEquals(
-     0, ToolRunner.run(conf, new FsShell(), new String[] { "-ls", "/" }), "ls must succeed even if getAclStatus RPC does not exist.");
+    assertEquals(0, ToolRunner.run(conf, new FsShell(), new String[] { "-ls", "/" }), 
+        "ls must succeed even if getAclStatus RPC does not exist.");
   }
 
   @Test
@@ -178,8 +173,8 @@ public class TestAclCommands {
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "stubfs:///");
     conf.setClass("fs.stubfs.impl", StubFileSystem.class, FileSystem.class);
-    assertEquals(
-     0, ToolRunner.run(conf, new FsShell(), new String[] { "-ls", "/" }), "ls must succeed even if FileSystem does not implement ACLs.");
+    assertEquals(0, ToolRunner.run(conf, new FsShell(), new String[] { "-ls", "/" }), 
+        "ls must succeed even if FileSystem does not implement ACLs.");
   }
 
   public static class StubFileSystem extends FileSystem {

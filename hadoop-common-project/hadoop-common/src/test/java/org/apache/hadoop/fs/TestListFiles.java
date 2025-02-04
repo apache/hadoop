@@ -25,7 +25,9 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.event.Level;
@@ -160,18 +162,18 @@ public class TestListFiles {
     itor = fs.listFiles(TEST_DIR, true);
     stat = itor.next();
     assertTrue(stat.isFile());
-    assertTrue(
-     filesToFind.remove(stat.getPath()), "Path " + stat.getPath() + " unexpected");
+    assertTrue(filesToFind.remove(stat.getPath()), 
+        "Path " + stat.getPath() + " unexpected");
 
     stat = itor.next();
     assertTrue(stat.isFile());
-    assertTrue(
-     filesToFind.remove(stat.getPath()), "Path " + stat.getPath() + " unexpected");
+    assertTrue(filesToFind.remove(stat.getPath()), 
+        "Path " + stat.getPath() + " unexpected");
 
     stat = itor.next();
     assertTrue(stat.isFile());
-    assertTrue(
-     filesToFind.remove(stat.getPath()), "Path " + stat.getPath() + " unexpected");
+    assertTrue(filesToFind.remove(stat.getPath()), 
+        "Path " + stat.getPath() + " unexpected");
     assertFalse(itor.hasNext());
     assertTrue(filesToFind.isEmpty());
     

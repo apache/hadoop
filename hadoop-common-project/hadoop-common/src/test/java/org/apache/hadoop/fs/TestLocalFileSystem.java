@@ -40,32 +40,33 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 
 import javax.annotation.Nonnull;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * This class tests the local file system via the FileSystem abstraction.
  */
+@Timeout(60)
 public class TestLocalFileSystem {
   private static final File base =
       GenericTestUtils.getTestDir("work-dir/localfs");
@@ -74,13 +75,7 @@ public class TestLocalFileSystem {
   private final Path TEST_PATH = new Path(TEST_ROOT_DIR, "test-file");
   private Configuration conf;
   private LocalFileSystem fileSys;
-
-  /**
-   * Set the timeout for every test.
-   */
-  @Rule
-  public Timeout testTimeout = new Timeout(60, TimeUnit.SECONDS);
-
+  
   private void cleanupFile(FileSystem fs, Path name) throws IOException {
     assertTrue(fs.exists(name));
     fs.delete(name, true);
@@ -248,9 +243,9 @@ public class TestLocalFileSystem {
     {
       //check FileStatus and ContentSummary 
       final FileStatus status = fileSys.getFileStatus(test_file);
-      Assertions.assertEquals(fileSize, status.getLen());
+      assertEquals(fileSize, status.getLen());
       final ContentSummary summary = fileSys.getContentSummary(test_dir);
-      Assertions.assertEquals(fileSize, summary.getLength());
+      assertEquals(fileSize, summary.getLength());
     }
     
     // creating dir over a file
@@ -683,7 +678,7 @@ public class TestLocalFileSystem {
           new byte[(int) (fileSys.getFileStatus(path).getLen())];
       input.readFully(0, buffer);
       input.close();
-      Assertions.assertArrayEquals(contentOrigin, buffer, "The data be read should equals with the "
+      assertArrayEquals(contentOrigin, buffer, "The data be read should equals with the "
           + "data written.");
     } catch (IOException e) {
       throw e;
@@ -770,8 +765,8 @@ public class TestLocalFileSystem {
     builder.must("strM", "value");
     builder.must("unsupported", 12.34);
 
-    assertEquals("Optional value should be overwrite by a mandatory value",
-        "value", builder.getOptions().get("strM"));
+    assertEquals("value", builder.getOptions().get("strM"), 
+        "Optional value should be overwrite by a mandatory value");
 
     Set<String> mandatoryKeys = builder.getMandatoryKeys();
     Set<String> expectedKeys = new HashSet<>();

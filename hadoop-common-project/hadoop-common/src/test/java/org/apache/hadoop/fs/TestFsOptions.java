@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.util.DataChecksum;

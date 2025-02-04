@@ -24,10 +24,11 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests resolution of AbstractFileSystems for a given path with symlinks.
@@ -62,7 +63,7 @@ public class TestFileContextResolveAfs {
     
     fc.createSymlink(localPath, linkPath, true);
     Set<AbstractFileSystem> afsList = fc.resolveAbstractFileSystems(linkPath);
-    Assertions.assertEquals(1, afsList.size());
+    assertEquals(1, afsList.size());
     localFs.delete(linkPath, true);
     localFs.delete(localPath, true);
     localFs.close();

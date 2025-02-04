@@ -34,7 +34,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 import static org.apache.hadoop.fs.viewfs.Constants.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 public class TestViewFsTrash {
   FileSystem fsTarget;  // the target file system - the mount will point here

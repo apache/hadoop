@@ -44,24 +44,26 @@ import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.sftp.server.SftpSubsystemFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.TestInfo;
 
 public class TestSFTPFileSystem {
 
   private static final String TEST_SFTP_DIR = "testsftp";
   private static final String TEST_ROOT_DIR =
       GenericTestUtils.getTestDir().getAbsolutePath();
-
-  @Rule public TestName name = new TestName();
-
+  
   private static final String connection = "sftp://user:password@localhost";
   private static Path localDir = null;
   private static FileSystem localFs = null;
@@ -182,8 +184,8 @@ public class TestSFTPFileSystem {
    * @throws Exception
    */
   @Test
-  public void testCreateFile() throws Exception {
-    Path file = touch(sftpFs, name.getMethodName().toLowerCase());
+  public void testCreateFile(TestInfo testInfo) throws Exception {
+    Path file = touch(sftpFs, testInfo.getDisplayName().toLowerCase());
     assertTrue(localFs.exists(file));
     assertTrue(sftpFs.delete(file, false));
     assertFalse(localFs.exists(file));
@@ -198,8 +200,8 @@ public class TestSFTPFileSystem {
    * @throws Exception
    */
   @Test
-  public void testFileExists() throws Exception {
-    Path file = touch(localFs, name.getMethodName().toLowerCase());
+  public void testFileExists(TestInfo testInfo) throws Exception {
+    Path file = touch(localFs, testInfo.getDisplayName().toLowerCase());
     assertTrue(sftpFs.exists(file));
     assertTrue(localFs.exists(file));
     assertTrue(sftpFs.delete(file, false));
@@ -216,9 +218,9 @@ public class TestSFTPFileSystem {
    * @throws Exception
    */
   @Test
-  public void testReadFile() throws Exception {
+  public void testReadFile(TestInfo testInfo) throws Exception {
     byte[] data = "yaks".getBytes();
-    Path file = touch(localFs, name.getMethodName().toLowerCase(), data);
+    Path file = touch(localFs, testInfo.getDisplayName().toLowerCase(), data);
     FSDataInputStream is = null;
     try {
       is = sftpFs.open(file);
@@ -242,9 +244,9 @@ public class TestSFTPFileSystem {
    * @throws Exception
    */
   @Test
-  public void testStatFile() throws Exception {
+  public void testStatFile(TestInfo testInfo) throws Exception {
     byte[] data = "yaks".getBytes();
-    Path file = touch(localFs, name.getMethodName().toLowerCase(), data);
+    Path file = touch(localFs, testInfo.getDisplayName().toLowerCase(), data);
 
     FileStatus lstat = localFs.getFileStatus(file);
     FileStatus sstat = sftpFs.getFileStatus(file);
@@ -266,9 +268,9 @@ public class TestSFTPFileSystem {
    * @throws Exception
    */
   @Test
-  public void testDeleteNonEmptyDir() throws Exception {
+  public void testDeleteNonEmptyDir(TestInfo testInfo) throws Exception {
     assertThrows(IOException.class, () -> {
-      Path file = touch(localFs, name.getMethodName().toLowerCase());
+      Path file = touch(localFs, testInfo.getDisplayName().toLowerCase());
       sftpFs.delete(localDir, false);
       assertThat(((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount()).
           isEqualTo(1);
@@ -281,8 +283,8 @@ public class TestSFTPFileSystem {
    * @throws Exception
    */
   @Test
-  public void testDeleteNonExistFile() throws Exception {
-    Path file = new Path(localDir, name.getMethodName().toLowerCase());
+  public void testDeleteNonExistFile(TestInfo testInfo) throws Exception {
+    Path file = new Path(localDir, testInfo.getDisplayName().toLowerCase());
     assertFalse(sftpFs.delete(file, false));
     assertThat(
         ((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount())
@@ -295,10 +297,10 @@ public class TestSFTPFileSystem {
    * @throws Exception
    */
   @Test
-  public void testRenameFile() throws Exception {
+  public void testRenameFile(TestInfo testInfo) throws Exception {
     byte[] data = "dingos".getBytes();
-    Path file1 = touch(localFs, name.getMethodName().toLowerCase() + "1");
-    Path file2 = new Path(localDir, name.getMethodName().toLowerCase() + "2");
+    Path file1 = touch(localFs, testInfo.getDisplayName().toLowerCase() + "1");
+    Path file2 = new Path(localDir, testInfo.getDisplayName().toLowerCase() + "2");
 
     assertTrue(sftpFs.rename(file1, file2));
 
@@ -320,10 +322,10 @@ public class TestSFTPFileSystem {
    * @throws Exception
    */
   @Test
-  public void testRenameNonExistFile() throws Exception {
+  public void testRenameNonExistFile(TestInfo testInfo) throws Exception {
     assertThrows(IOException.class, ()->{
-      Path file1 = new Path(localDir, name.getMethodName().toLowerCase() + "1");
-      Path file2 = new Path(localDir, name.getMethodName().toLowerCase() + "2");
+      Path file1 = new Path(localDir, testInfo.getDisplayName().toLowerCase() + "1");
+      Path file2 = new Path(localDir, testInfo.getDisplayName().toLowerCase() + "2");
       sftpFs.rename(file1, file2);
     });
   }
@@ -334,17 +336,17 @@ public class TestSFTPFileSystem {
    * @throws Exception
    */
   @Test
-  public void testRenamingFileOntoExistingFile() throws Exception {
+  public void testRenamingFileOntoExistingFile(TestInfo testInfo) throws Exception {
     assertThrows(IOException.class, ()->{
-      Path file1 = touch(localFs, name.getMethodName().toLowerCase() + "1");
-      Path file2 = touch(localFs, name.getMethodName().toLowerCase() + "2");
+      Path file1 = touch(localFs, testInfo.getDisplayName().toLowerCase() + "1");
+      Path file2 = touch(localFs, testInfo.getDisplayName().toLowerCase() + "2");
       sftpFs.rename(file1, file2);
     });
   }
 
   @Test
-  public void testGetAccessTime() throws IOException {
-    Path file = touch(localFs, name.getMethodName().toLowerCase());
+  public void testGetAccessTime(TestInfo testInfo) throws IOException {
+    Path file = touch(localFs, testInfo.getDisplayName().toLowerCase());
     LocalFileSystem local = (LocalFileSystem)localFs;
     java.nio.file.Path path = (local).pathToFile(file).toPath();
     long accessTime1 = Files.readAttributes(path, BasicFileAttributes.class)
@@ -359,8 +361,8 @@ public class TestSFTPFileSystem {
   }
 
   @Test
-  public void testGetModifyTime() throws IOException {
-    Path file = touch(localFs, name.getMethodName().toLowerCase() + "1");
+  public void testGetModifyTime(TestInfo testInfo) throws IOException {
+    Path file = touch(localFs, testInfo.getDisplayName().toLowerCase() + "1");
     java.io.File localFile = ((LocalFileSystem) localFs).pathToFile(file);
     long modifyTime1 = localFile.lastModified();
     // SFTPFileSystem doesn't have milliseconds. Excluding it.
@@ -373,9 +375,9 @@ public class TestSFTPFileSystem {
   }
 
   @Test
-  public void testMkDirs() throws IOException {
+  public void testMkDirs(TestInfo testInfo) throws IOException {
     Path path = new Path(localDir.toUri().getPath(),
-        new Path(name.getMethodName(), "subdirectory"));
+        new Path(testInfo.getDisplayName(), "subdirectory"));
     sftpFs.mkdirs(path);
     assertTrue(localFs.exists(path));
     assertTrue(localFs.getFileStatus(path).isDirectory());

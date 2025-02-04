@@ -18,8 +18,8 @@
 package org.apache.hadoop.fs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -33,8 +33,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class TestDFVariations {
   private static final String TEST_ROOT_DIR =
@@ -165,12 +163,11 @@ public class TestDFVariations {
     DF df = new DF(new File(workingDir), 0L);
     String mountPath = df.getMount();
     File mountDir = new File(mountPath);
-    assertTrue(
-        mountDir.exists(), "Mount dir ["+mountDir.getAbsolutePath()+"] should exist.");
-    assertTrue(
-        mountDir.isDirectory(), "Mount dir ["+mountDir.getAbsolutePath()+"] should be directory.");
-    assertTrue(
-       workingDir.startsWith(mountPath), "Working dir ["+workingDir+"] should start with ["+mountPath+"].");
+    assertTrue(mountDir.exists(), "Mount dir ["+mountDir.getAbsolutePath()+"] should exist.");
+    assertTrue(mountDir.isDirectory(), 
+        "Mount dir ["+mountDir.getAbsolutePath()+"] should be directory.");
+    assertTrue(workingDir.startsWith(mountPath), 
+        "Working dir ["+workingDir+"] should start with ["+mountPath+"].");
   }
 }
 

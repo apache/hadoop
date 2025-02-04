@@ -30,13 +30,16 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  *
@@ -96,7 +99,7 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
       }
 
       try (FSDataInputStream lViewIs = lViewFs.open(testPath)) {
-        Assertions.assertEquals(testString, lViewIs.readUTF());
+        assertEquals(testString, lViewIs.readUTF());
       }
     }
   }
@@ -113,9 +116,9 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
     try (FileSystem lViewFS = FileSystem.get(mountURI, conf)) {
       Path testPath = new Path(mountURI.toString() + "/lfsroot/test");
       lViewFS.createNewFile(testPath);
-      Assertions.assertTrue(lViewFS.exists(testPath));
+      assertTrue(lViewFS.exists(testPath));
       lViewFS.delete(testPath, true);
-      Assertions.assertFalse(lViewFS.exists(testPath));
+      assertFalse(lViewFS.exists(testPath));
     }
   }
 
@@ -133,7 +136,7 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
     try (FileSystem lViewFS = FileSystem.get(mountURI, conf)) {
       Path fileOnRoot = new Path(mountURI.toString() + "/NewFile");
       lViewFS.createNewFile(fileOnRoot);
-      Assertions.assertTrue(lViewFS.exists(fileOnRoot));
+      assertTrue(lViewFS.exists(fileOnRoot));
     }
   }
 
@@ -150,7 +153,7 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
           new String[] {targetTestRoot + "/wd2", targetTestRoot + "/wd2" }, conf);
       final URI mountURI = URI.create("file://mt/");
       FileSystem.get(mountURI, conf);
-      Assertions.fail("A merge slash cannot be configured with other mount links.");
+      fail("A merge slash cannot be configured with other mount links.");
     });
   }
 

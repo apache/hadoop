@@ -20,13 +20,15 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 import java.util.Set;
 
-import org.junit.jupiter.api.Assertions;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests {@link FileContext#deleteOnExit(Path)} functionality.
@@ -50,11 +52,11 @@ public class TestFileContextDeleteOnExit {
   
   
   private void checkDeleteOnExitData(int size, FileContext fc, Path... paths) {
-    Assertions.assertEquals(size, FileContext.DELETE_ON_EXIT.size());
+    assertEquals(size, FileContext.DELETE_ON_EXIT.size());
     Set<Path> set = FileContext.DELETE_ON_EXIT.get(fc);
-    Assertions.assertEquals(paths.length, (set == null ? 0 : set.size()));
+    assertEquals(paths.length, (set == null ? 0 : set.size()));
     for (Path path : paths) {
-      Assertions.assertTrue(set.contains(path));
+      assertTrue(set.contains(path));
     }
   }
   
@@ -67,7 +69,7 @@ public class TestFileContextDeleteOnExit {
     checkDeleteOnExitData(1, fc, file1);
     
     // Ensure shutdown hook is added
-    Assertions.assertTrue(ShutdownHookManager.get().hasShutdownHook(FileContext.FINALIZER));
+    assertTrue(ShutdownHookManager.get().hasShutdownHook(FileContext.FINALIZER));
     
     Path file2 = helper.getTestRootPath(fc, "dir1/file2");
     createFile(fc, file2, numBlocks, blockSize);
@@ -83,8 +85,8 @@ public class TestFileContextDeleteOnExit {
     // paths are cleaned up
     FileContext.FINALIZER.run();
     checkDeleteOnExitData(0, fc, new Path[0]);
-    Assertions.assertFalse(exists(fc, file1));
-    Assertions.assertFalse(exists(fc, file2));
-    Assertions.assertFalse(exists(fc, dir));
+    assertFalse(exists(fc, file1));
+    assertFalse(exists(fc, file2));
+    assertFalse(exists(fc, dir));
   }
 }

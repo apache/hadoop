@@ -88,8 +88,7 @@ public class TestDataBlocks {
     // Verify that the DataBlock has data written.
     assertTrue(dataBlock.hasData(), "Expected Data block to have data");
     // Verify the size of data.
-    assertEquals(ONE_KB
-,         dataBlock.dataSize(), "Mismatch in data size in block");
+    assertEquals(ONE_KB, dataBlock.dataSize(), "Mismatch in data size in block");
     // Verify that no capacity is left in the data block to write more.
     assertFalse(dataBlock.hasCapacity(1), "Expected the data block to have no capacity to write 1 byte "
         + "of data");

@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.fs.shell;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.BeforeEach;

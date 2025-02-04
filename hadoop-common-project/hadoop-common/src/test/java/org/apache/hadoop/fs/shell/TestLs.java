@@ -19,9 +19,17 @@ package org.apache.hadoop.fs.shell;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.reset;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -1329,6 +1337,10 @@ public class TestLs {
      *
      * @param lineFormat
      *          format mask
+     * @param fileStatus
+     *          file status
+     * @param fileName
+     *          file name
      * @return formated line
      */
     private String formatLineMtime(String lineFormat) {
@@ -1344,7 +1356,11 @@ public class TestLs {
      *
      * @param lineFormat
      *          format mask
-     * @return formatted line
+     * @param fileStatus
+     *          file status
+     * @param fileName
+     *          file name
+     * @return formated line
      */
     private String formatLineAtime(String lineFormat) {
       return String.format(lineFormat, (isDir() ? "d" : "-"), getPermission(),

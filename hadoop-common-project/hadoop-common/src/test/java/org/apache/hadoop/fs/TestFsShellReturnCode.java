@@ -106,14 +106,10 @@ public class TestFsShellReturnCode {
       FileStatus[] stats = fileSys.globStatus(new Path(files[i]));
       if (stats != null) {
         for (int j=0; j < stats.length; j++) {
-          assertEquals(
-             ((owner != null) ? "STUB-"+owner : oldStats[i][j].getOwner())
-,               stats[j].getOwner(), "check owner of " + files[i]
-          );
-          assertEquals(
-             ((group != null) ? "STUB-"+group : oldStats[i][j].getGroup())
-,               stats[j].getGroup(), "check group of " + files[i]
-          );        
+          assertEquals(((owner != null) ? "STUB-"+owner : oldStats[i][j].getOwner()),
+              stats[j].getOwner(), "check owner of " + files[i]);
+          assertEquals(((group != null) ? "STUB-"+group : oldStats[i][j].getGroup()),
+              stats[j].getGroup(), "check group of " + files[i]);        
         }
       }
     }

@@ -41,9 +41,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,12 +52,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Test basic @{link FTPFileSystem} class methods. Contract tests are in
  * TestFTPContractXXXX.
  */
+@Timeout(180)
 public class TestFTPFileSystem {
 
   private FtpTestServer server;
   private java.nio.file.Path testDir;
-  @Rule
-  public Timeout testTimeout = new Timeout(180000, TimeUnit.MILLISECONDS);
 
   @BeforeEach
   public void setUp() throws Exception {
