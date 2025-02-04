@@ -543,11 +543,6 @@ public class AbfsConfiguration{
    */
   public void validateConfiguredServiceType(boolean isHNSEnabled)
       throws InvalidConfigurationValueException {
-    // TODO: [FnsOverBlob][HADOOP-19179] Remove this check when FNS over Blob is ready.
-    if (getFsConfiguredServiceType() == AbfsServiceType.BLOB) {
-      throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY,
-          "Blob Endpoint Support not yet available");
-    }
     if (isHNSEnabled && getConfiguredServiceTypeForFNSAccounts() == AbfsServiceType.BLOB) {
       throw new InvalidConfigurationValueException(
           FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, "Service Type Cannot be BLOB for HNS Account");
