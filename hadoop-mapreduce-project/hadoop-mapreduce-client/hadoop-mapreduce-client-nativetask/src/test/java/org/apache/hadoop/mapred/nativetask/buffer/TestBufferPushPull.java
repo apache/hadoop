@@ -179,7 +179,7 @@ public class TestBufferPushPull {
     public void reset() {
       count = 0;
     }
-  }
+  };
 
   public static class NativeHandlerForPull implements NativeDataSource, NativeDataTarget {
 
@@ -275,5 +275,5 @@ public class TestBufferPushPull {
     public Progress getProgress() {
       return null;
     }
-  }
+  };
 }

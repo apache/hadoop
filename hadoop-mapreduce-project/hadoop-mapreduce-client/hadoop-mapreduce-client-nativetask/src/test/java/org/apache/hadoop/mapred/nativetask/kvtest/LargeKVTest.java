@@ -103,7 +103,7 @@ public class LargeKVTest {
       // if output file exists ,then delete it
       fs.delete(new Path(nativeOutputPath), true);
       final KVJob nativeJob = new KVJob("Test Large Value Size:"
-          + i, nativeConf, keyClass, valueClass, inputPath,
+          + String.valueOf(i), nativeConf, keyClass, valueClass, inputPath,
           nativeOutputPath);
       assertTrue(nativeJob.runJob(), "job should complete successfully");
 
@@ -111,7 +111,7 @@ public class LargeKVTest {
           + "/LargeKV/" + keyClass.getName() + "/" + valueClass.getName();
       // if output file exists ,then delete it
       fs.delete(new Path(normalOutputPath), true);
-      final KVJob normalJob = new KVJob("Test Large Key Size:" + i,
+      final KVJob normalJob = new KVJob("Test Large Key Size:" + String.valueOf(i),
           normalConf, keyClass, valueClass, inputPath, normalOutputPath);
       assertTrue(normalJob.runJob(), "job should complete successfully");
 

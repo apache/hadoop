@@ -73,9 +73,9 @@ public class ResultVerifier {
         }
       }
       if (samplepath == null) {
-        throw new Exception("could not find file " +
-            samplepaths[0].getParent() + "/" + sourcepath.getName() +
-            " , as sourcepaths has such file");
+        throw new Exception("cound not find file " +
+                            samplepaths[0].getParent() + "/" + sourcepath.getName()
+                            + " , as sourcepaths has such file");
       }
 
       // compare
@@ -92,7 +92,7 @@ public class ResultVerifier {
         samplecrc = new CRC32();
         sourcecrc = new CRC32();
         final byte[] bufin = new byte[1 << 16];
-        int readnum;
+        int readnum = 0;
         int totalRead = 0;
         while (samplein.available() > 0) {
           readnum = samplein.read(bufin);
@@ -114,7 +114,9 @@ public class ResultVerifier {
           throw new Exception("source " + sample + " is empty file");
         }
 
-        if (!(samplecrc.getValue() == sourcecrc.getValue())) {
+        if (samplecrc.getValue() == sourcecrc.getValue()) {
+          ;
+        } else {
           return false;
         }
       } catch (final IOException e) {
@@ -143,14 +145,15 @@ public class ResultVerifier {
     Counters nativeCounters = nativeJob.getCounters();
     assertEquals(
         normalCounters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue(),
-        nativeCounters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue(), "Counter MAP_OUTPUT_RECORDS should be equal");
-    assertEquals(
-        normalCounters.findCounter(TaskCounter.REDUCE_INPUT_GROUPS).getValue(),
-        nativeCounters.findCounter(TaskCounter.REDUCE_INPUT_GROUPS).getValue(), "Counter REDUCE_INPUT_GROUPS should be equal");
+        nativeCounters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue(), 
+        "Counter MAP_OUTPUT_RECORDS should be equal");
+    assertEquals(normalCounters.findCounter(TaskCounter.REDUCE_INPUT_GROUPS).getValue(),
+        nativeCounters.findCounter(TaskCounter.REDUCE_INPUT_GROUPS).getValue(), 
+        "Counter REDUCE_INPUT_GROUPS should be equal");
     if (!hasCombiner) {
-      assertEquals(
-          normalCounters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).getValue(),
-          nativeCounters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).getValue(), "Counter REDUCE_INPUT_RECORDS should be equal");
+      assertEquals(normalCounters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).getValue(),
+          nativeCounters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).getValue(), 
+          "Counter REDUCE_INPUT_RECORDS should be equal");
     }
   }
 
