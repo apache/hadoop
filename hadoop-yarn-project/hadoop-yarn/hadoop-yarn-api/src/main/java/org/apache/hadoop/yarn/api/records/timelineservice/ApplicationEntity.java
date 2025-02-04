@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.api.records.timelineservice;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -42,8 +43,12 @@ public class ApplicationEntity extends HierarchicalTimelineEntity {
     }
   }
 
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getQueue() {
-    return getInfo().get(QUEUE_INFO_KEY).toString();
+    if (getInfo() != null && getInfo().containsKey(QUEUE_INFO_KEY)) {
+      return getInfo().get(QUEUE_INFO_KEY).toString();
+    }
+    return null;
   }
 
   public void setQueue(String queue) {

@@ -20,13 +20,14 @@ package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
 import java.io.StringReader;
 
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.NotAcceptableException;
 import javax.ws.rs.NotFoundException;
-import javax.ws.rs.ServiceUnavailableException;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
@@ -232,12 +233,12 @@ public class TestHsWebServices extends JerseyTestBase {
     WebTarget r = target();
     String responseStr = "";
     try {
-      Response response =
-          r.path("ws").path("v1").path("history").request(MediaType.TEXT_PLAIN).get();
-      throw new ServiceUnavailableException(response);
-    } catch (ServiceUnavailableException ue) {
+      responseStr = r.path("ws").path("v1").path("history").
+          request(MediaType.TEXT_PLAIN).get(String.class);
+      fail("should have thrown exception on invalid uri");
+    } catch (NotAcceptableException ue) {
       Response response = ue.getResponse();
-      assertResponseStatusCode(Response.Status.SERVICE_UNAVAILABLE,
+      assertResponseStatusCode(Response.Status.NOT_ACCEPTABLE,
           response.getStatusInfo());
       WebServicesTestUtils.checkStringMatch(
           "error string exists and shouldn't", "", responseStr);
