@@ -139,13 +139,13 @@ The following configs are related to rename and delete operations.
 
 ## Features currently not supported
 
-1. User Delegation SAS is currently not supported but we
+1. **User Delegation SAS** feature is currently not supported but we
    plan to bring support for it in the future.
    Jira to track this
    workitem : https://issues.apache.org/jira/browse/HADOOP-19406.
 
 
-2. Context Provider Key (CPK) support is currently not available. It refers to the ability to use a
+2. **Context Provider Key (CPK)** support is currently not available. It refers to the ability to use a
 customer-provided encryption key to encrypt and decrypt data in Azure Blob
 Storage. This feature allows users to manage their own encryption keys,
 providing an additional layer of security and control over their data.
