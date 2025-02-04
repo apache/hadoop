@@ -115,22 +115,6 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
         .getAclStatus(Mockito.anyString(), any(TracingContext.class));
   }
 
-  // TODO: [FnsOverBlob][HADOOP-19179] Remove this test case once Blob Endpoint Support is enabled.
-  @Test
-  public void testFileSystemInitFailsWithBlobEndpointUrl() throws Exception {
-    Configuration configuration = new Configuration(getRawConfiguration());
-    String defaultUri = configuration.get(FS_DEFAULT_NAME_KEY);
-    String accountKey = configuration.get(
-        accountProperty(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, getAccountName()),
-        configuration.get(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME));
-    configuration.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME,
-        accountKey.replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME));
-    String blobUri = defaultUri.replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME);
-    intercept(InvalidConfigurationValueException.class,
-        "Blob Endpoint Support not yet available", () ->
-            FileSystem.newInstance(new Path(blobUri).toUri(), configuration));
-  }
-
   @Test
   public void testFileSystemInitFailsIfNotAbleToDetermineAccountType() throws Exception {
     AzureBlobFileSystem fs = ((AzureBlobFileSystem) FileSystem.newInstance(

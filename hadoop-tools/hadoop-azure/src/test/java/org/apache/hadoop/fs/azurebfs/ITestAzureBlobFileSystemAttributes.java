@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.azurebfs.utils.DirectoryStateHelper;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -95,6 +96,10 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
         decodedAttribute2);
   }
 
+  /**
+   * Test get and set xattr fails fine on root.
+   * @throws Exception if test fails
+   */
   @Test
   public void testGetSetXAttrOnRoot() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
@@ -118,6 +123,11 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
         .describedAs("SetXAttr() on root should fail with Bad Request")
         .isEqualTo(HTTP_BAD_REQUEST);
   }
+
+  /**
+   * Test get and set xattr works fine on marker blobs for directory.
+   * @throws Exception if test fails
+   */
   @Test
   public void testGetSetXAttrOnExplicitDir() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
@@ -128,12 +138,18 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     // Assert that the folder is now explicit
     DirectoryStateHelper.isExplicitDirectory(testPath, fs, getTestTracingContext(fs, true));
   }
+
+  /**
+   * Test get and set xattr fails fine on non-existing path.
+   * @throws Exception if test fails
+   */
   @Test
   public void testGetSetXAttrOnNonExistingPath() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     final Path testPath = path(getMethodName());
-    intercept(
-        FileNotFoundException.class, () -> testGetSetXAttrHelper(fs, testPath));
+    intercept(FileNotFoundException.class, String.valueOf(HTTP_NOT_FOUND),
+        "get/set XAttr() should fail for non-existing files",
+        () -> testGetSetXAttrHelper(fs, testPath));
   }
 
   /**
@@ -163,6 +179,10 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     assertAttributeEqual(rv, attributeValue, decodedAttributeValue);
   }
 
+  /**
+   * Test get and set xattr works fine on implicit directory and ends up creating marker blobs.
+   * @throws Exception if test fails
+   */
   @Test
   public void testGetSetXAttrOnImplicitDir() throws Exception {
     assumeBlobServiceType();
