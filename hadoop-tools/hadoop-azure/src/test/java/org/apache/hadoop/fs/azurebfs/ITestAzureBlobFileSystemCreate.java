@@ -25,11 +25,13 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -72,6 +74,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
@@ -923,6 +926,96 @@ public class ITestAzureBlobFileSystemCreate extends
         .describedAs("Path does not exist")
         .isTrue();
     intercept(IOException.class, () -> fs.create(new Path("a/b")));
+  }
+
+  /**
+   * Test create path in parallel with overwrite false.
+   **/
+  @Test
+  public void testParallelCreateOverwriteFalse()
+      throws Exception {
+    Configuration configuration = getRawConfiguration();
+    configuration.set(FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE, "false");
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+        configuration)) {
+      ExecutorService executorService = Executors.newFixedThreadPool(5);
+      List<Future<?>> futures = new ArrayList<>();
+
+      final byte[] b = new byte[8 * ONE_MB];
+      new Random().nextBytes(b);
+      final Path filePath = path("/testPath");
+
+      futures.add(executorService.submit(() -> {
+        try {
+          fs.create(filePath, false);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }));
+
+      futures.add(executorService.submit(() -> {
+        try {
+          fs.create(filePath, false);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }));
+
+      futures.add(executorService.submit(() -> {
+        try {
+          fs.create(filePath, false);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }));
+
+      checkFuturesForExceptions(futures, 2);
+    }
+  }
+
+  /**
+   * Test create path in parallel with overwrite true.
+   **/
+  @Test
+  public void testParallelCreateOverwriteTrue()
+      throws Exception {
+    Configuration configuration = getRawConfiguration();
+    configuration.set(FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE, "false");
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+        configuration)) {
+      ExecutorService executorService = Executors.newFixedThreadPool(5);
+      List<Future<?>> futures = new ArrayList<>();
+
+      final byte[] b = new byte[8 * ONE_MB];
+      new Random().nextBytes(b);
+      final Path filePath = path("/testPath");
+
+      futures.add(executorService.submit(() -> {
+        try {
+          fs.create(filePath);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }));
+
+      futures.add(executorService.submit(() -> {
+        try {
+          fs.create(filePath);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }));
+
+      futures.add(executorService.submit(() -> {
+        try {
+          fs.create(filePath);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }));
+
+      checkFuturesForExceptions(futures, 0);
+    }
   }
 
   /**
