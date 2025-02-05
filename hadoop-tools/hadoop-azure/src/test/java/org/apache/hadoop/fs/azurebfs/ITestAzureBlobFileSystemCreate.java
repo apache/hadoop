@@ -645,10 +645,9 @@ public class ITestAzureBlobFileSystemCreate extends
             any(TracingContext.class));
 
     if (mockClient instanceof  AbfsBlobClient) {
-      // Mock for validatePathAndCreateMarkers to do nothing
+      // Mock for checkDirectoryAndCreateMarkersIfNeeded to do nothing
       doNothing().when((AbfsBlobClient) mockClient)
-          .validatePathAndCreateMarkersIfNeeded(any(String.class),
-              any(Boolean.class),
+          .checkDirectoryAndCreateMarkersIfNeeded(any(String.class),
               any(AzureBlobFileSystemStore.Permissions.class),
               any(Boolean.class),
               any(String.class), any(ContextEncryptionAdapter.class),
