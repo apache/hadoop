@@ -2235,7 +2235,7 @@
     abstract="true"
     static="false" final="false" visibility="public"
     deprecated="not deprecated">
-    <constructor name="AbstractLivelinessMonitor" type="java.lang.String, org.apache.hadoop.util.Clock"
+    <constructor name="AbstractLivelinessMonitor" type="java.lang.String, org.apache.hadoop.yarn.util.Clock"
       static="false" final="false" visibility="public"
       deprecated="not deprecated">
     </constructor>
@@ -2443,7 +2443,7 @@
     </doc>
   </class>
   <!-- end class org.apache.hadoop.yarn.util.BoundedAppender -->
-  <!-- start interface org.apache.hadoop.util.Clock -->
+  <!-- start interface org.apache.hadoop.yarn.util.Clock -->
   <interface name="Clock"    abstract="true"
     static="false" final="false" visibility="public"
     deprecated="not deprecated">
@@ -2456,7 +2456,7 @@
     <![CDATA[A simple clock interface that gives you time.]]>
     </doc>
   </interface>
-  <!-- end interface org.apache.hadoop.util.Clock -->
+  <!-- end interface org.apache.hadoop.yarn.util.Clock -->
   <!-- start class org.apache.hadoop.yarn.util.ConverterUtils -->
   <class name="ConverterUtils" extends="java.lang.Object"
     abstract="false"
@@ -2589,12 +2589,12 @@
     </doc>
   </class>
   <!-- end class org.apache.hadoop.yarn.util.ConverterUtils -->
-  <!-- start class org.apache.hadoop.util.MonotonicClock -->
+  <!-- start class org.apache.hadoop.yarn.util.MonotonicClock -->
   <class name="MonotonicClock" extends="java.lang.Object"
     abstract="false"
     static="false" final="false" visibility="public"
     deprecated="not deprecated">
-    <implements name="org.apache.hadoop.util.Clock"/>
+    <implements name="org.apache.hadoop.yarn.util.Clock"/>
     <constructor name="MonotonicClock"
       static="false" final="false" visibility="public"
       deprecated="not deprecated">
@@ -2620,7 +2620,7 @@
  by callers. See the documentation of System#nanoTime for caveats.]]>
     </doc>
   </class>
-  <!-- end class org.apache.hadoop.util.MonotonicClock -->
+  <!-- end class org.apache.hadoop.yarn.util.MonotonicClock -->
   <!-- start class org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree -->
   <class name="ResourceCalculatorProcessTree" extends="org.apache.hadoop.conf.Configured"
     abstract="true"
@@ -2794,17 +2794,17 @@
     </doc>
   </class>
   <!-- end class org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree -->
-  <!-- start class org.apache.hadoop.util.SystemClock -->
+  <!-- start class org.apache.hadoop.yarn.util.SystemClock -->
   <class name="SystemClock" extends="java.lang.Object"
     abstract="false"
     static="false" final="true" visibility="public"
     deprecated="not deprecated">
-    <implements name="org.apache.hadoop.util.Clock"/>
+    <implements name="org.apache.hadoop.yarn.util.Clock"/>
     <constructor name="SystemClock"
       static="false" final="false" visibility="public"
       deprecated="not deprecated">
     </constructor>
-    <method name="getInstance" return="org.apache.hadoop.util.SystemClock"
+    <method name="getInstance" return="org.apache.hadoop.yarn.util.SystemClock"
       abstract="false" native="false" synchronized="false"
       static="true" final="false" visibility="public"
       deprecated="not deprecated">
@@ -2823,13 +2823,13 @@
  instead.]]>
     </doc>
   </class>
-  <!-- end class org.apache.hadoop.util.SystemClock -->
-  <!-- start class org.apache.hadoop.util.UTCClock -->
+  <!-- end class org.apache.hadoop.yarn.util.SystemClock -->
+  <!-- start class org.apache.hadoop.yarn.util.UTCClock -->
   <class name="UTCClock" extends="java.lang.Object"
     abstract="false"
     static="false" final="false" visibility="public"
     deprecated="not deprecated">
-    <implements name="org.apache.hadoop.util.Clock"/>
+    <implements name="org.apache.hadoop.yarn.util.Clock"/>
     <constructor name="UTCClock"
       static="false" final="false" visibility="public"
       deprecated="not deprecated">
@@ -2844,7 +2844,7 @@
  milliseconds.]]>
     </doc>
   </class>
-  <!-- end class org.apache.hadoop.util.UTCClock -->
+  <!-- end class org.apache.hadoop.yarn.util.UTCClock -->
 </package>
 <package name="org.apache.hadoop.yarn.util.resource">
 </package>

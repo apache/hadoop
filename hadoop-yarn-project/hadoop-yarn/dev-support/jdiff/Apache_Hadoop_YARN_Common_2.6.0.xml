@@ -2620,7 +2620,7 @@
     abstract="true"
     static="false" final="false" visibility="public"
     deprecated="not deprecated">
-    <constructor name="AbstractLivelinessMonitor" type="java.lang.String, org.apache.hadoop.util.Clock"
+    <constructor name="AbstractLivelinessMonitor" type="java.lang.String, org.apache.hadoop.yarn.util.Clock"
       static="false" final="false" visibility="public"
       deprecated="not deprecated">
     </constructor>
@@ -2736,7 +2736,7 @@
     </field>
   </class>
   <!-- end class org.apache.hadoop.yarn.util.AuxiliaryServiceHelper -->
-  <!-- start interface org.apache.hadoop.util.Clock -->
+  <!-- start interface org.apache.hadoop.yarn.util.Clock -->
   <interface name="Clock"    abstract="true"
     static="false" final="false" visibility="public"
     deprecated="not deprecated">
@@ -2749,13 +2749,13 @@
     <![CDATA[A simple clock interface that gives you time.]]>
     </doc>
   </interface>
-  <!-- end interface org.apache.hadoop.util.Clock -->
-  <!-- start class org.apache.hadoop.util.SystemClock -->
+  <!-- end interface org.apache.hadoop.yarn.util.Clock -->
+  <!-- start class org.apache.hadoop.yarn.util.SystemClock -->
   <class name="SystemClock" extends="java.lang.Object"
     abstract="false"
     static="false" final="false" visibility="public"
     deprecated="not deprecated">
-    <implements name="org.apache.hadoop.util.Clock"/>
+    <implements name="org.apache.hadoop.yarn.util.Clock"/>
     <constructor name="SystemClock"
       static="false" final="false" visibility="public"
       deprecated="not deprecated">
@@ -2770,13 +2770,13 @@
  clock in milliseconds.]]>
     </doc>
   </class>
-  <!-- end class org.apache.hadoop.util.SystemClock -->
-  <!-- start class org.apache.hadoop.util.UTCClock -->
+  <!-- end class org.apache.hadoop.yarn.util.SystemClock -->
+  <!-- start class org.apache.hadoop.yarn.util.UTCClock -->
   <class name="UTCClock" extends="java.lang.Object"
     abstract="false"
     static="false" final="false" visibility="public"
     deprecated="not deprecated">
-    <implements name="org.apache.hadoop.util.Clock"/>
+    <implements name="org.apache.hadoop.yarn.util.Clock"/>
     <constructor name="UTCClock"
       static="false" final="false" visibility="public"
       deprecated="not deprecated">
@@ -2791,7 +2791,7 @@
  milliseconds.]]>
     </doc>
   </class>
-  <!-- end class org.apache.hadoop.util.UTCClock -->
+  <!-- end class org.apache.hadoop.yarn.util.UTCClock -->
 </package>
 <package name="org.apache.hadoop.yarn.util.resource">
 </package>
