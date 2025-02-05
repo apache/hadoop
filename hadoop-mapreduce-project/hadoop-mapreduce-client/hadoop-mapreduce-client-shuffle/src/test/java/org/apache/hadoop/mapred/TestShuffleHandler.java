@@ -200,7 +200,7 @@ public class TestShuffleHandler extends TestShuffleHandlerBase {
     }
 
     assertEquals(
-       Sets.newHashSet(
+        Sets.newHashSet(
             HttpURLConnection.HTTP_OK,
             ShuffleHandler.TOO_MANY_REQ_STATUS.code()),
             mapOfConnections.keySet(), String.format("Expected only %s and %s response",
