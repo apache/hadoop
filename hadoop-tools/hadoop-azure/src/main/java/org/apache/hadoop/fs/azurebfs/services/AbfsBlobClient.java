@@ -667,7 +667,7 @@ public class AbfsBlobClient extends AbfsClient {
       createParentMarkersIfNeeded(path, overwrite, permissions, isAppendBlob,
           eTag, contextEncryptionAdapter, tracingContext);
     }
-    return createPathRestOp(path, false, overwrite, permissions,
+    return createPathRestOp(path, false, true, permissions,
         isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
   }
 
@@ -789,7 +789,9 @@ public class AbfsBlobClient extends AbfsClient {
         createPathRestOp(pathToCreate.toUri().getPath(), false, overwrite,
             permissions,
             isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
-      } catch (AbfsRestOperationException ignored) {}
+      } catch (AbfsRestOperationException e) {
+        LOG.debug("No exception to be thrown if marker creation fails");
+      }
     }
   }
 
