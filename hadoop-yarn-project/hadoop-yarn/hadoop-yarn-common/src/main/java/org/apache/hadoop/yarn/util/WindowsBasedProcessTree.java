@@ -23,13 +23,11 @@ import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.util.CpuTimeTracker;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
-import org.apache.hadoop.util.StringUtils;
 
 @Private
 public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {

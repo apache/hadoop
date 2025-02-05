@@ -1,3 +1,4 @@
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -15,32 +16,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.util;
+package org.apache.hadoop.util;
+
+import java.util.Calendar;
+import java.util.TimeZone;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.Clock;
 
 /**
- * A monotonic clock from some arbitrary time base in the past, counting in
- * milliseconds, and not affected by settimeofday or similar system clock
- * changes.
- * This is appropriate to use when computing how much longer to wait for an
- * interval to expire.
- * This function can return a negative value and it must be handled correctly
- * by callers. See the documentation of System#nanoTime for caveats.
+ * Implementation of {@link Clock} that gives the current UTC time in
+ * milliseconds.
  */
 @Public
 @Evolving
-public class MonotonicClock implements Clock {
+public class UTCClock implements Clock {
 
-  /**
-   * Get current time from some arbitrary time base in the past, counting in
-   * milliseconds, and not affected by settimeofday or similar system clock
-   * changes.
-   * @return a monotonic clock that counts in milliseconds.
-   */
+  private final TimeZone utcZone = TimeZone.getTimeZone("UTC");
+
   public long getTime() {
-    return Time.monotonicNow();
+    return Calendar.getInstance(utcZone).getTimeInMillis();
   }
 }

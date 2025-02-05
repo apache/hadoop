@@ -31,8 +31,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.yarn.metrics.EventTypeMetrics;
-import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;

@@ -114,9 +114,9 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationRouterRMTo
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
-import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.util.SystemClock;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.ACL;
 import org.slf4j.Logger;

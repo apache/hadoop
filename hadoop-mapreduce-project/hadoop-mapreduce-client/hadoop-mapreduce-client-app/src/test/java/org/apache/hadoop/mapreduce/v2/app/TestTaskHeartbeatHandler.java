@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.util.SystemClock;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
