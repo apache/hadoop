@@ -34,10 +34,11 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.*;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -81,13 +82,13 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
 import static org.apache.hadoop.security.SaslRpcServer.AuthMethod.KERBEROS;
 import static org.apache.hadoop.security.SaslRpcServer.AuthMethod.SIMPLE;
 import static org.apache.hadoop.security.SaslRpcServer.AuthMethod.TOKEN;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /** Unit tests for using Sasl over RPC. */
 @RunWith(Parameterized.class)
@@ -142,14 +143,14 @@ public class TestSaslRPC extends TestRpcBase {
     OTHER()
   }
   
-  @BeforeClass
+  @BeforeAll
   public static void setupKerb() {
     System.setProperty("java.security.krb5.kdc", "");
     System.setProperty("java.security.krb5.realm", "NONE");
     Security.addProvider(new SaslPlainServer.SecurityProvider());
   }    
 
-  @Before
+  @BeforeEach
   public void setup() {
     LOG.info("---------------------------------");
     LOG.info("Testing QOP:"+ getQOPNames(qop));
@@ -301,8 +302,8 @@ public class TestSaslRPC extends TestRpcBase {
       for (Connection connection : server.getConnections()) {
         // only qop auth should dispose of the sasl server
         boolean hasServer = (connection.saslServer != null);
-        assertTrue("qop:" + expectedQop + " hasServer:" + hasServer,
-            (expectedQop == QualityOfProtection.AUTHENTICATION) ^ hasServer);
+        assertTrue(
+           (expectedQop == QualityOfProtection.AUTHENTICATION) ^ hasServer, "qop:" + expectedQop + " hasServer:" + hasServer);
         n++;
       }
       assertTrue(n > 0);
@@ -359,16 +360,16 @@ public class TestSaslRPC extends TestRpcBase {
       proxy1.getAuthMethod(null, newEmptyRequest());
       client = ProtobufRpcEngine2.getClient(newConf);
       Set<ConnectionId> conns = client.getConnectionIds();
-      assertEquals("number of connections in cache is wrong", 1, conns.size());
+      assertEquals(1, conns.size(), "number of connections in cache is wrong");
       // same conf, connection should be re-used
       proxy2 = getClient(addr, newConf);
       proxy2.getAuthMethod(null, newEmptyRequest());
-      assertEquals("number of connections in cache is wrong", 1, conns.size());
+      assertEquals(1, conns.size(), "number of connections in cache is wrong");
       // different conf, new connection should be set up
       newConf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY, timeouts[1]);
       proxy3 = getClient(addr, newConf);
       proxy3.getAuthMethod(null, newEmptyRequest());
-      assertEquals("number of connections in cache is wrong", 2, conns.size());
+      assertEquals(2, conns.size(), "number of connections in cache is wrong");
       // now verify the proxies have the correct connection ids and timeouts
       ConnectionId[] connsArray = {
           RPC.getConnectionIdForProxy(proxy1),
@@ -436,9 +437,9 @@ public class TestSaslRPC extends TestRpcBase {
   }
 
   private void assertContains(String expected, String text) {
-    assertNotNull("null text", text );
-    assertTrue("No {" + expected + "} in {" + text + "}",
-        text.contains(expected));
+    assertNotNull(text, "null text" );
+    assertTrue(
+       text.contains(expected), "No {" + expected + "} in {" + text + "}");
   }
 
   private void runNegotiation(CallbackHandler clientCbh,
@@ -452,7 +453,7 @@ public class TestSaslRPC extends TestRpcBase {
 
     SaslServer saslServer = Sasl.createSaslServer(
         mechanism, null, "localhost", null, serverCbh);
-    assertNotNull("failed to find PLAIN server", saslServer);
+    assertNotNull(saslServer, "failed to find PLAIN server");
     
     byte[] response = saslClient.evaluateChallenge(new byte[0]);
     assertNotNull(response);
@@ -632,8 +633,8 @@ public class TestSaslRPC extends TestRpcBase {
       server.stop();
     }
 
-    assertTrue("First client does not set to fall back properly.", fallbackToSimpleAuth1.get());
-    assertTrue("Second client does not set to fall back properly.", fallbackToSimpleAuth2.get());
+    assertTrue(fallbackToSimpleAuth1.get(), "First client does not set to fall back properly.");
+    assertTrue(fallbackToSimpleAuth2.get(), "Second client does not set to fall back properly.");
   }
 
   @Test
@@ -788,7 +789,8 @@ public class TestSaslRPC extends TestRpcBase {
   // ensure that for all qop settings, client can handle postponed rpc
   // responses.  basically ensures that the rpc server isn't encrypting
   // and queueing the responses out of order.
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testSaslResponseOrdering() throws Exception {
     SecurityUtil.setAuthenticationMethod(
         AuthenticationMethod.TOKEN, conf);
@@ -834,7 +836,7 @@ public class TestSaslRPC extends TestRpcBase {
               } catch (TimeoutException te) {
                 continue; // expected.
               }
-              Assert.fail("future"+i+" did not block");
+              Assertions.fail("future"+i+" did not block");
             }
             // triggers responses to be unblocked in a random order.  having
             // only 1 handler ensures that the prior calls are already

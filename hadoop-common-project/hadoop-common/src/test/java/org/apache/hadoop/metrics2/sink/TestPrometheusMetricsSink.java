@@ -35,8 +35,8 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.Interns;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -69,10 +69,10 @@ public class TestPrometheusMetricsSink {
     //THEN
     String writtenMetrics = stream.toString(UTF_8.name());
     System.out.println(writtenMetrics);
-    Assert.assertTrue(
-        "The expected metric line is missing from prometheus metrics output",
-        writtenMetrics.contains(
-            "test_metrics_num_bucket_create_fails{context=\"dfs\"")
+    Assertions.assertTrue(
+    
+       writtenMetrics.contains(
+            "test_metrics_num_bucket_create_fails{context=\"dfs\""), "The expected metric line is missing from prometheus metrics output"
     );
 
     metrics.unregisterSource("TestMetrics");
@@ -110,15 +110,15 @@ public class TestPrometheusMetricsSink {
     //THEN
     String writtenMetrics = stream.toString(UTF_8.name());
     System.out.println(writtenMetrics);
-    Assert.assertTrue(
-        "The expected first metric line is missing from prometheus metrics output",
-        writtenMetrics.contains(
-            "test_metrics_num_bucket_create_fails{context=\"dfs\",testtag=\"testTagValue1\"")
+    Assertions.assertTrue(
+    
+       writtenMetrics.contains(
+            "test_metrics_num_bucket_create_fails{context=\"dfs\",testtag=\"testTagValue1\""), "The expected first metric line is missing from prometheus metrics output"
     );
-    Assert.assertTrue(
-        "The expected second metric line is missing from prometheus metrics output",
-        writtenMetrics.contains(
-            "test_metrics_num_bucket_create_fails{context=\"dfs\",testtag=\"testTagValue2\"")
+    Assertions.assertTrue(
+    
+       writtenMetrics.contains(
+            "test_metrics_num_bucket_create_fails{context=\"dfs\",testtag=\"testTagValue2\""), "The expected second metric line is missing from prometheus metrics output"
     );
 
     metrics.unregisterSource("TestMetrics1");
@@ -161,15 +161,15 @@ public class TestPrometheusMetricsSink {
     //THEN
     String writtenMetrics = stream.toString(UTF_8.name());
     System.out.println(writtenMetrics);
-    Assert.assertFalse(
-        "The first metric should not exist after flushing",
-        writtenMetrics.contains(
-            "test_metrics_num_bucket_create_fails{context=\"dfs\",testtag=\"testTagValue1\"")
+    Assertions.assertFalse(
+    
+       writtenMetrics.contains(
+            "test_metrics_num_bucket_create_fails{context=\"dfs\",testtag=\"testTagValue1\""), "The first metric should not exist after flushing"
     );
-    Assert.assertTrue(
-        "The expected metric line is missing from prometheus metrics output",
-        writtenMetrics.contains(
-            "test_metrics_num_bucket_create_fails{context=\"dfs\",testtag=\"testTagValue2\"")
+    Assertions.assertTrue(
+    
+       writtenMetrics.contains(
+            "test_metrics_num_bucket_create_fails{context=\"dfs\",testtag=\"testTagValue2\""), "The expected metric line is missing from prometheus metrics output"
     );
 
     metrics.unregisterSource("TestMetrics");
@@ -181,13 +181,13 @@ public class TestPrometheusMetricsSink {
   public void testNamingCamelCase() {
     PrometheusMetricsSink sink = new PrometheusMetricsSink();
 
-    Assert.assertEquals("rpc_time_some_metrics",
+    Assertions.assertEquals("rpc_time_some_metrics",
         sink.prometheusName("RpcTime", "SomeMetrics"));
 
-    Assert.assertEquals("om_rpc_time_om_info_keys",
+    Assertions.assertEquals("om_rpc_time_om_info_keys",
         sink.prometheusName("OMRpcTime", "OMInfoKeys"));
 
-    Assert.assertEquals("rpc_time_small",
+    Assertions.assertEquals("rpc_time_small",
         sink.prometheusName("RpcTime", "small"));
   }
 
@@ -198,7 +198,7 @@ public class TestPrometheusMetricsSink {
     String recordName = "SCMPipelineMetrics";
     String metricName = "NumBlocksAllocated-"
         + "RATIS-THREE-47659e3d-40c9-43b3-9792-4982fc279aba";
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "scm_pipeline_metrics_"
             + "num_blocks_allocated_"
             + "ratis_three_47659e3d_40c9_43b3_9792_4982fc279aba",
@@ -211,7 +211,7 @@ public class TestPrometheusMetricsSink {
 
     String recordName = "org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetImpl";
     String metricName = "DfsUsed";
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "org_apache_hadoop_hdfs_server_datanode_fsdataset_impl_fs_dataset_impl_dfs_used",
         sink.prometheusName(recordName, metricName));
   }
@@ -222,7 +222,7 @@ public class TestPrometheusMetricsSink {
 
     String recordName = "JvmMetrics";
     String metricName = "GcCount" + "G1 Old Generation";
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "jvm_metrics_gc_count_g1_old_generation",
         sink.prometheusName(recordName, metricName));
   }

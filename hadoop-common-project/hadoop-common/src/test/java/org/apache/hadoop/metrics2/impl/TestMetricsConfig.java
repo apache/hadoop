@@ -20,8 +20,8 @@ package org.apache.hadoop.metrics2.impl;
 
 import java.util.Map;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.apache.commons.configuration2.Configuration;
 import org.slf4j.Logger;
@@ -71,11 +71,11 @@ public class TestMetricsConfig {
     Map<String, MetricsConfig> map = c.getInstanceConfigs("t1");
     Map<String, MetricsConfig> map2 = c.getInstanceConfigs("t2");
 
-    assertEquals("number of t1 instances", 2, map.size());
-    assertEquals("number of t2 instances", 1, map2.size());
-    assertTrue("contains t1 instance i1", map.containsKey("i1"));
-    assertTrue("contains t1 instance 42", map.containsKey("42"));
-    assertTrue("contains t2 instance i1", map2.containsKey("i1"));
+    assertEquals(2, map.size(), "number of t1 instances");
+    assertEquals(1, map2.size(), "number of t2 instances");
+    assertTrue(map.containsKey("i1"), "contains t1 instance i1");
+    assertTrue(map.containsKey("42"), "contains t1 instance 42");
+    assertTrue(map2.containsKey("i1"), "contains t2 instance i1");
 
     MetricsConfig t1i1 = map.get("i1");
     MetricsConfig t1i42 = map.get("42");

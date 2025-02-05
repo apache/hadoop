@@ -18,9 +18,10 @@
 package org.apache.hadoop.ipc;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +42,7 @@ public class TestRPCWaitForProxy extends TestRpcBase {
 
   private static final Configuration conf = new Configuration();
 
-  @Before
+  @BeforeEach
   public void setupProtocolEngine() {
     RPC.setProtocolEngine(conf, TestRpcService.class,
         ProtobufRpcEngine2.class);
@@ -53,14 +54,15 @@ public class TestRPCWaitForProxy extends TestRpcBase {
    *
    * @throws Throwable any exception other than that which was expected
    */
-  @Test(timeout = 50000)
+  @Test
+  @Timeout(value = 50)
   public void testWaitForProxy() throws Throwable {
     RpcThread worker = new RpcThread(0);
     worker.start();
     worker.join();
     Throwable caught = worker.getCaught();
     Throwable cause = caught.getCause();
-    Assert.assertNotNull("No exception was raised", cause);
+    Assertions.assertNotNull(cause, "No exception was raised");
     if (!(cause instanceof ConnectException)) {
       throw caught;
     }
@@ -72,16 +74,17 @@ public class TestRPCWaitForProxy extends TestRpcBase {
    *
    * @throws Throwable any exception other than that which was expected
    */
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testInterruptedWaitForProxy() throws Throwable {
     RpcThread worker = new RpcThread(100);
     worker.start();
     Thread.sleep(1000);
-    Assert.assertTrue("worker hasn't started", worker.waitStarted);
+    Assertions.assertTrue(worker.waitStarted, "worker hasn't started");
     worker.interrupt();
     worker.join();
     Throwable caught = worker.getCaught();
-    Assert.assertNotNull("No exception was raised", caught);
+    Assertions.assertNotNull(caught, "No exception was raised");
     // looking for the root cause here, which can be wrapped
     // as part of the NetUtils work. Having this test look
     // a the type of exception there would be brittle to improvements

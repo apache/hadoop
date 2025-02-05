@@ -21,13 +21,14 @@ package org.apache.hadoop.ipc;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProcessingDetails.Timing;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.ipc.WeightedTimeCostProvider.DEFAULT_LOCKEXCLUSIVE_WEIGHT;
 import static org.apache.hadoop.ipc.WeightedTimeCostProvider.DEFAULT_LOCKFREE_WEIGHT;
 import static org.apache.hadoop.ipc.WeightedTimeCostProvider.DEFAULT_LOCKSHARED_WEIGHT;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /** Tests for {@link WeightedTimeCostProvider}. */
 public class TestWeightedTimeCostProvider {
@@ -40,7 +41,7 @@ public class TestWeightedTimeCostProvider {
   private WeightedTimeCostProvider costProvider;
   private ProcessingDetails processingDetails;
 
-  @Before
+  @BeforeEach
   public void setup() {
     costProvider = new WeightedTimeCostProvider();
     processingDetails = new ProcessingDetails(TimeUnit.MILLISECONDS);
@@ -50,9 +51,11 @@ public class TestWeightedTimeCostProvider {
     processingDetails.set(Timing.LOCKEXCLUSIVE, LOCKEXCLUSIVE_TIME);
   }
 
-  @Test(expected = AssertionError.class)
+  @Test
   public void testGetCostBeforeInit() {
-    costProvider.getCost(null);
+    assertThrows(AssertionError.class, () -> {
+      costProvider.getCost(null);
+    });
   }
 
   @Test

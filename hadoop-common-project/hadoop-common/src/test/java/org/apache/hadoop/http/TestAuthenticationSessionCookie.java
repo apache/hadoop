@@ -13,15 +13,15 @@
  */
 package org.apache.hadoop.http;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.eclipse.jetty.util.log.Log;
 
 import javax.servlet.*;
@@ -149,10 +149,10 @@ public class TestAuthenticationSessionCookie {
 
     String header = conn.getHeaderField("Set-Cookie");
     List<HttpCookie> cookies = HttpCookie.parse(header);
-    Assert.assertTrue(!cookies.isEmpty());
+    Assertions.assertTrue(!cookies.isEmpty());
     Log.getLog().info(header);
-    Assert.assertFalse(header.contains("; Expires="));
-    Assert.assertTrue("token".equals(cookies.get(0).getValue()));
+    Assertions.assertFalse(header.contains("; Expires="));
+    Assertions.assertTrue("token".equals(cookies.get(0).getValue()));
   }
   
   @Test
@@ -171,13 +171,13 @@ public class TestAuthenticationSessionCookie {
 
     String header = conn.getHeaderField("Set-Cookie");
     List<HttpCookie> cookies = HttpCookie.parse(header);
-    Assert.assertTrue(!cookies.isEmpty());
+    Assertions.assertTrue(!cookies.isEmpty());
     Log.getLog().info(header);
-    Assert.assertTrue(header.contains("; Expires="));
-    Assert.assertTrue("token".equals(cookies.get(0).getValue()));
+    Assertions.assertTrue(header.contains("; Expires="));
+    Assertions.assertTrue("token".equals(cookies.get(0).getValue()));
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws Exception {
     server.stop();
     FileUtil.fullyDelete(new File(BASEDIR));

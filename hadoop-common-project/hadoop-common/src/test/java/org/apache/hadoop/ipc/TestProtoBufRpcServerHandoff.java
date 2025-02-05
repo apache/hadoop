@@ -34,9 +34,10 @@ import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.protobuf.TestProtos;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcHandoffProto;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +54,7 @@ public class TestProtoBufRpcServerHandoff {
   private static RPC.Server server = null;
   private static InetSocketAddress address = null;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = new Configuration();
 
@@ -77,7 +78,8 @@ public class TestProtoBufRpcServerHandoff {
     LOG.info("Server started at: " + address + " at time: " + serverStartTime);
   }
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void test() throws Exception {
     final TestProtoBufRpcServerHandoffProtocol client = RPC.getProxy(
         TestProtoBufRpcServerHandoffProtocol.class, 1, address, conf);
@@ -102,12 +104,13 @@ public class TestProtoBufRpcServerHandoff {
 
     // Ensure the 5 second sleep responses are within a reasonable time of each
     // other.
-    Assert.assertTrue(Math.abs(callable1.endTime - callable2.endTime) < 2000l);
-    Assert.assertTrue(System.currentTimeMillis() - submitTime < 7000l);
+    Assertions.assertTrue(Math.abs(callable1.endTime - callable2.endTime) < 2000l);
+    Assertions.assertTrue(System.currentTimeMillis() - submitTime < 7000l);
 
   }
 
-  @Test(timeout = 20000)
+  @Test
+  @Timeout(value = 20)
   public void testHandoffMetrics() throws Exception {
     final TestProtoBufRpcServerHandoffProtocol client = RPC.getProxy(
         TestProtoBufRpcServerHandoffProtocol.class, 1, address, conf);
@@ -132,8 +135,8 @@ public class TestProtoBufRpcServerHandoff {
 
     // Ensure the 5 second sleep responses are within a reasonable time of each
     // other.
-    Assert.assertTrue(Math.abs(callable1.endTime - callable2.endTime) < 2000L);
-    Assert.assertTrue(System.currentTimeMillis() - submitTime < 7000L);
+    Assertions.assertTrue(Math.abs(callable1.endTime - callable2.endTime) < 2000L);
+    Assertions.assertTrue(System.currentTimeMillis() - submitTime < 7000L);
 
     // Check rpcMetrics
     MetricsRecordBuilder rb = getMetrics(server.rpcMetrics.name());
