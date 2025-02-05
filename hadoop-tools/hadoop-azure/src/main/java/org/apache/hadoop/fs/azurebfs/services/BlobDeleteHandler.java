@@ -151,7 +151,7 @@ public class BlobDeleteHandler extends ListActionTaker {
       throws AzureBlobFileSystemException {
     if (!path.isRoot() && !path.getParent().isRoot()) {
       try {
-        getAbfsClient().createPath(path.getParent().toUri().getPath(),
+        getAbfsClient().createPathRestOp(path.getParent().toUri().getPath(),
             false,
             false,
             null,
