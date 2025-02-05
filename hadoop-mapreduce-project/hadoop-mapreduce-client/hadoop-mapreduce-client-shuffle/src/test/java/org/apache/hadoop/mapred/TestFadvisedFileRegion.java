@@ -28,11 +28,13 @@ import java.util.Random;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestFadvisedFileRegion {
   private final int FILE_SIZE = 16*1024*1024;
@@ -86,7 +88,7 @@ public class TestFadvisedFileRegion {
       targetFile = new RandomAccessFile(outFile.getAbsolutePath(), "rw");
       target = targetFile.getChannel();
       
-      Assertions.assertEquals(FILE_SIZE, inputFile.length());
+      assertEquals(FILE_SIZE, inputFile.length());
       
       //create FadvisedFileRegion
       fileRegion = new FadvisedFileRegion(
@@ -102,8 +104,8 @@ public class TestFadvisedFileRegion {
       }
     
       //assert size
-      Assertions.assertEquals(count, (int)pos);
-      Assertions.assertEquals(count, targetFile.length());
+      assertEquals(count, (int)pos);
+      assertEquals(count, targetFile.length());
     } finally {
       if (fileRegion != null) {
         fileRegion.deallocate();
@@ -119,10 +121,10 @@ public class TestFadvisedFileRegion {
     try {
       int total = in.read(buff, 0, count);
     
-      Assertions.assertEquals(count, total);
+      assertEquals(count, total);
     
       for(int i = 0; i < count; i++) {
-        Assertions.assertEquals(initBuff[position+i], buff[i]);
+        assertEquals(initBuff[position+i], buff[i]);
       }
     } finally {
       IOUtils.cleanupWithLogger(LOG, in);
@@ -139,21 +141,21 @@ public class TestFadvisedFileRegion {
       FadvisedFileRegion fileRegion, WritableByteChannel target, int count) {
     try {
       fileRegion.customShuffleTransfer(target, -1);
-      Assertions.fail("Expected a IllegalArgumentException");
+      fail("Expected a IllegalArgumentException");
     } catch (IllegalArgumentException ie) {
       LOG.info("Expected - illegal argument is passed.");
     } catch (Exception e) {
-      Assertions.fail("Expected a IllegalArgumentException");
+      fail("Expected a IllegalArgumentException");
     }
 
     //test corner cases
     try {
       fileRegion.customShuffleTransfer(target, count + 1);
-      Assertions.fail("Expected a IllegalArgumentException");
+      fail("Expected a IllegalArgumentException");
     } catch (IllegalArgumentException ie) {
       LOG.info("Expected - illegal argument is passed.");
     } catch (Exception e) {
-      Assertions.fail("Expected a IllegalArgumentException");
+      fail("Expected a IllegalArgumentException");
     }
   }
 }

@@ -437,8 +437,8 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
           assertEquals(response.toString(), resp.toString());
         }
         if (i > 0 && i <= content.size()) {
-          assertEquals(
-             ByteBufUtil.prettyHexDump(content.get(i - 1)), actualHexdump, "data should match");
+          assertEquals(ByteBufUtil.prettyHexDump(content.get(i - 1)),
+              actualHexdump, "data should match");
         }
 
         i++;
