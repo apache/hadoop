@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapred.nativetask.testutil;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.zip.CRC32;
@@ -143,16 +143,16 @@ public class ResultVerifier {
       throws IOException {
     Counters normalCounters = normalJob.getCounters();
     Counters nativeCounters = nativeJob.getCounters();
-    assertEquals("Counter MAP_OUTPUT_RECORDS should be equal",
-        normalCounters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue(),
-        nativeCounters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue());
-    assertEquals("Counter REDUCE_INPUT_GROUPS should be equal",
-        normalCounters.findCounter(TaskCounter.REDUCE_INPUT_GROUPS).getValue(),
-        nativeCounters.findCounter(TaskCounter.REDUCE_INPUT_GROUPS).getValue());
+    assertEquals(normalCounters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue(),
+        nativeCounters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue(),
+        "Counter MAP_OUTPUT_RECORDS should be equal");
+    assertEquals(normalCounters.findCounter(TaskCounter.REDUCE_INPUT_GROUPS).getValue(),
+        nativeCounters.findCounter(TaskCounter.REDUCE_INPUT_GROUPS).getValue(),
+        "Counter REDUCE_INPUT_GROUPS should be equal");
     if (!hasCombiner) {
-      assertEquals("Counter REDUCE_INPUT_RECORDS should be equal",
-          normalCounters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).getValue(),
-          nativeCounters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).getValue());
+      assertEquals(normalCounters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).getValue(),
+          nativeCounters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).getValue(),
+          "Counter REDUCE_INPUT_RECORDS should be equal");
     }
   }
 
