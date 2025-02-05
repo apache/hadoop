@@ -90,7 +90,7 @@ public class TestDataBlocks {
     // Verify the size of data.
     assertEquals(ONE_KB, dataBlock.dataSize(), "Mismatch in data size in block");
     // Verify that no capacity is left in the data block to write more.
-    assertFalse(dataBlock.hasCapacity(1), 
+    assertFalse(dataBlock.hasCapacity(1),
         "Expected the data block to have no capacity to write 1 byte of data");
   }
 
@@ -109,7 +109,7 @@ public class TestDataBlocks {
     byte[] bytesWritten = blockUploadData.toByteArray();
     // Verify that we can call toByteArray() more than once and gives the
     // same byte[].
-    assertEquals(bytesWritten, blockUploadData.toByteArray(), 
+    assertEquals(bytesWritten, blockUploadData.toByteArray(),
         "Mismatch in byteArray provided by toByteArray() the second time");
     IOUtils.close(blockUploadData);
     // Verify that after closing blockUploadData, we can't call toByteArray().

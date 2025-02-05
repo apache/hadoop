@@ -310,7 +310,7 @@ public class TestFsShellReturnCode {
       results = bytes.toString();
       assertEquals(1, run, "Return code should be 1");
       assertTrue(!results.contains("get: null"), " Null is coming when source path is invalid. ");
-      assertTrue(results.contains("get: `" + args[1] + "': No such file or directory"), 
+      assertTrue(results.contains("get: `" + args[1] + "': No such file or directory"),
           " Not displaying the intended message ");
     } finally {
       IOUtils.closeStream(out);

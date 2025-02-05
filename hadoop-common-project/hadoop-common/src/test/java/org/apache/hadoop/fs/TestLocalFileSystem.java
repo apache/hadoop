@@ -423,7 +423,7 @@ public class TestLocalFileSystem {
     long newAccTime = 23456000;
 
     FileStatus status = fileSys.getFileStatus(path);
-    assertTrue(newModTime != status.getModificationTime(), 
+    assertTrue(newModTime != status.getModificationTime(),
         "check we're actually changing something");
     assertTrue(newAccTime != status.getAccessTime(), "check we're actually changing something");
 
