@@ -426,7 +426,7 @@ public class TestJobImpl {
       TaskState.FAILED));
     //Verify abort job hasn't been called
     verify(committer, never())
-       .abortJob((JobContext) any(), (State) any());
+        .abortJob((JobContext) any(), (State) any());
     assertJobState(job, JobStateInternal.FAIL_WAIT);
 
     //Verify abortJob is called once and the job failed

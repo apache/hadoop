@@ -661,7 +661,8 @@ public class TestJobHistoryEventHandler {
       assertEquals(EventType.JOB_SUBMITTED.toString(), tEntity.getEvents().get(0).getEventType());
       assertEquals(EventType.JOB_FINISHED.toString(), tEntity.getEvents().get(1).getEventType());
       assertEquals(EventType.AM_STARTED.toString(), tEntity.getEvents().get(2).getEventType());
-      assertEquals(EventType.JOB_QUEUE_CHANGED.toString(), tEntity.getEvents().get(3).getEventType());
+      assertEquals(EventType.JOB_QUEUE_CHANGED.toString(),
+          tEntity.getEvents().get(3).getEventType());
       assertEquals(currentTime + 10, tEntity.getEvents().get(0).getTimestamp());
       assertEquals(currentTime, tEntity.getEvents().get(1).getTimestamp());
       assertEquals(currentTime - 10, tEntity.getEvents().get(2).getTimestamp());

@@ -479,8 +479,8 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
       boolean found = false;
       for (int i = 0; i < nodes.getLength(); i++) {
         Element element = (Element) nodes.item(i);
-        assertFalse(element.hasAttributes(),
-            "task attempt should not contain any attributes, it can lead to incorrect JSON marshaling");
+        assertFalse(element.hasAttributes(), "task attempt should not contain any attributes, " +
+            "it can lead to incorrect JSON marshaling");
 
         if (attid.matches(WebServicesTestUtils.getXmlString(element, "id"))) {
           found = true;
