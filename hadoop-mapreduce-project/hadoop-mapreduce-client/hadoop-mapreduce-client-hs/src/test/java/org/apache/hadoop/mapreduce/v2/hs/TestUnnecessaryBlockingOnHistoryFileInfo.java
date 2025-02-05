@@ -28,10 +28,11 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,13 +56,13 @@ public class TestUnnecessaryBlockingOnHistoryFileInfo {
    */
   private final static File INTERMEDIATE_DIR = new File("target",
       TestUnnecessaryBlockingOnHistoryFileInfo.class.getName() +
-          "/intermediate");
+      "/intermediate");
   /**
    * A test user directory under intermediate done directory.
    */
   private final static File USER_DIR = new File(INTERMEDIATE_DIR, "test");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws IOException {
     if(USER_DIR.exists()) {
       FileUtils.cleanDirectory(USER_DIR);
@@ -69,7 +70,7 @@ public class TestUnnecessaryBlockingOnHistoryFileInfo {
     USER_DIR.mkdirs();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanUp() throws IOException {
     FileUtils.deleteDirectory(INTERMEDIATE_DIR);
   }
@@ -83,7 +84,8 @@ public class TestUnnecessaryBlockingOnHistoryFileInfo {
    * blocked by the other while the other thread is holding the lock on its
    * associated job files and hanging up parsing the files.
    */
-  @Test(timeout = 600000)
+  @Test
+  @Timeout(value = 600)
   public void testTwoThreadsQueryingDifferentJobOfSameUser()
       throws InterruptedException, IOException {
     final Configuration config = new Configuration();
@@ -105,16 +107,13 @@ public class TestUnnecessaryBlockingOnHistoryFileInfo {
        */
       createJhistFile(job1);
       webRequest1 = new Thread(
-          new Runnable() {
-            @Override
-            public void run() {
-              try {
-                HistoryFileManager.HistoryFileInfo historyFileInfo =
-                    historyFileManager.getFileInfo(job1);
-                historyFileInfo.loadJob();
-              } catch (IOException e) {
-                e.printStackTrace();
-              }
+          () -> {
+            try {
+              HistoryFileManager.HistoryFileInfo historyFileInfo =
+                  historyFileManager.getFileInfo(job1);
+              historyFileInfo.loadJob();
+            } catch (IOException e) {
+              e.printStackTrace();
             }
           }
       );
@@ -135,16 +134,13 @@ public class TestUnnecessaryBlockingOnHistoryFileInfo {
        */
       createJhistFile(job2);
       webRequest2 = new Thread(
-          new Runnable() {
-            @Override
-            public void run() {
-              try {
-                HistoryFileManager.HistoryFileInfo historyFileInfo =
-                    historyFileManager.getFileInfo(job2);
-                historyFileInfo.loadJob();
-              } catch (IOException e) {
-                e.printStackTrace();
-              }
+          () -> {
+            try {
+              HistoryFileManager.HistoryFileInfo historyFileInfo =
+                  historyFileManager.getFileInfo(job2);
+              historyFileInfo.loadJob();
+            } catch (IOException e) {
+              e.printStackTrace();
             }
           }
       );
@@ -158,9 +154,9 @@ public class TestUnnecessaryBlockingOnHistoryFileInfo {
        * is hanging up parsing the job history files, so it was able to proceed
        * with parsing job history files of job2.
        */
-      Assert.assertTrue("Thread 2 is blocked while it is trying to " +
-          "load job2 by Thread 1 which is loading job1.",
-          webRequest2.getState() != Thread.State.BLOCKED);
+      Assertions.assertTrue(webRequest2.getState() != Thread.State.BLOCKED,
+          "Thread 2 is blocked while it is trying to " +
+          "load job2 by Thread 1 which is loading job1.");
     } finally {
       if(webRequest1 != null) {
         webRequest1.interrupt();

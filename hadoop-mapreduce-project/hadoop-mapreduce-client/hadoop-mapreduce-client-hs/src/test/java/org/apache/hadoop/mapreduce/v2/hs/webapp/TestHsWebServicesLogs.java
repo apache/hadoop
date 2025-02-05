@@ -52,9 +52,9 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -76,7 +76,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -243,7 +243,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, REMOTE_LOG_ROOT_DIR);
@@ -287,7 +287,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   public TestHsWebServicesLogs() {
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws Exception {
     fs.delete(new Path(REMOTE_LOG_ROOT_DIR), true);
     fs.delete(new Path(LOCAL_ROOT_LOG_DIR), true);

@@ -56,22 +56,27 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.RackResolver;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /*
-test JobHistoryServer protocols....
+ * test JobHistoryServer protocols....
  */
 public class TestJobHistoryServer {
   private static RecordFactory recordFactory = RecordFactoryProvider
-          .getRecordFactory(null);
+      .getRecordFactory(null);
 
-  JobHistoryServer historyServer=null;
+  JobHistoryServer historyServer = null;
 
   // simple test init/start/stop   JobHistoryServer. Status should change.
-  @Test (timeout= 50000 )
+  @Test
+  @Timeout(value = 50)
   public void testStartStopServer() throws Exception {
     historyServer = new JobHistoryServer();
     Configuration config = new Configuration();
@@ -90,17 +95,17 @@ public class TestJobHistoryServer {
   }
 
   //Test reports of  JobHistoryServer. History server should get log files from  MRApp and read them
-  @Test (timeout= 50000 )
+  @Test
+  @Timeout(value = 50)
   public void testReports() throws Exception {
     Configuration config = new Configuration();
-    config
-            .setClass(
-                    CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
-                    MyResolver.class, DNSToSwitchMapping.class);
+    config.setClass(
+        CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+        MyResolver.class, DNSToSwitchMapping.class);
 
     RackResolver.init(config);
     MRApp app = new MRAppWithHistory(1, 1, true, this.getClass().getName(),
-            true);
+        true);
     app.submit(config);
     Job job = app.getContext().getAllJobs().values().iterator().next();
     app.waitForState(job, JobState.SUCCEEDED);
@@ -116,12 +121,12 @@ public class TestJobHistoryServer {
       if (service instanceof JobHistory) {
         jobHistory = (JobHistory) service;
       }
-    };
-    
+    }
+
     Map<JobId, Job> jobs= jobHistory.getAllJobs();
     
     assertEquals(1, jobs.size());
-    assertEquals("job_0_0000",jobs.keySet().iterator().next().toString());
+    assertEquals("job_0_0000", jobs.keySet().iterator().next().toString());
     
     Task task = job.getTasks().values().iterator().next();
     TaskAttempt attempt = task.getAttempts().values().iterator().next();
@@ -130,39 +135,38 @@ public class TestJobHistoryServer {
     MRClientProtocol protocol = historyService.getClientHandler();
 
     GetTaskAttemptReportRequest gtarRequest = recordFactory
-            .newRecordInstance(GetTaskAttemptReportRequest.class);
+        .newRecordInstance(GetTaskAttemptReportRequest.class);
     // test getTaskAttemptReport
     TaskAttemptId taId = attempt.getID();
     taId.setTaskId(task.getID());
     taId.getTaskId().setJobId(job.getID());
     gtarRequest.setTaskAttemptId(taId);
     GetTaskAttemptReportResponse response = protocol
-            .getTaskAttemptReport(gtarRequest);
+        .getTaskAttemptReport(gtarRequest);
     assertEquals("container_0_0000_01_000000", response.getTaskAttemptReport()
-            .getContainerId().toString());
+        .getContainerId().toString());
     assertTrue(response.getTaskAttemptReport().getDiagnosticInfo().isEmpty());
     // counters
     assertNotNull(response.getTaskAttemptReport().getCounters()
-            .getCounter(TaskCounter.PHYSICAL_MEMORY_BYTES));
+        .getCounter(TaskCounter.PHYSICAL_MEMORY_BYTES));
     assertEquals(taId.toString(), response.getTaskAttemptReport()
-            .getTaskAttemptId().toString());
+        .getTaskAttemptId().toString());
     // test getTaskReport
     GetTaskReportRequest request = recordFactory
-            .newRecordInstance(GetTaskReportRequest.class);
+        .newRecordInstance(GetTaskReportRequest.class);
     TaskId taskId = task.getID();
     taskId.setJobId(job.getID());
     request.setTaskId(taskId);
     GetTaskReportResponse reportResponse = protocol.getTaskReport(request);
     assertEquals("", reportResponse.getTaskReport().getDiagnosticsList()
-            .iterator().next());
+        .iterator().next());
     // progress
     assertEquals(1.0f, reportResponse.getTaskReport().getProgress(), 0.01);
     // report has corrected taskId
-    assertEquals(taskId.toString(), reportResponse.getTaskReport().getTaskId()
-            .toString());
+    assertEquals(taskId.toString(), reportResponse.getTaskReport().getTaskId().toString());
     // Task state should be SUCCEEDED
     assertEquals(TaskState.SUCCEEDED, reportResponse.getTaskReport()
-            .getTaskState());
+        .getTaskState());
 
     // For invalid jobid, throw IOException
     GetTaskReportsRequest gtreportsRequest =
@@ -179,18 +183,18 @@ public class TestJobHistoryServer {
 
     // test getTaskAttemptCompletionEvents
     GetTaskAttemptCompletionEventsRequest taskAttemptRequest = recordFactory
-            .newRecordInstance(GetTaskAttemptCompletionEventsRequest.class);
+        .newRecordInstance(GetTaskAttemptCompletionEventsRequest.class);
     taskAttemptRequest.setJobId(job.getID());
     GetTaskAttemptCompletionEventsResponse taskAttemptCompletionEventsResponse = protocol
-            .getTaskAttemptCompletionEvents(taskAttemptRequest);
+        .getTaskAttemptCompletionEvents(taskAttemptRequest);
     assertEquals(0, taskAttemptCompletionEventsResponse.getCompletionEventCount());
     
     // test getDiagnostics
     GetDiagnosticsRequest diagnosticRequest = recordFactory
-            .newRecordInstance(GetDiagnosticsRequest.class);
+        .newRecordInstance(GetDiagnosticsRequest.class);
     diagnosticRequest.setTaskAttemptId(taId);
     GetDiagnosticsResponse diagnosticResponse = protocol
-            .getDiagnostics(diagnosticRequest);
+        .getDiagnostics(diagnosticRequest);
     // it is strange : why one empty string ?
     assertEquals(1, diagnosticResponse.getDiagnosticsCount());
     assertEquals("", diagnosticResponse.getDiagnostics(0));
@@ -198,20 +202,21 @@ public class TestJobHistoryServer {
   }
 
   // test launch method
-  @Test (timeout =60000)
+  @Test
+  @Timeout(value = 60)
   public void testLaunch() throws Exception {
 
     ExitUtil.disableSystemExit();
     try {
       historyServer = JobHistoryServer.launchJobHistoryServer(new String[0]);
     } catch (ExitUtil.ExitException e) {
-      assertEquals(0,e.status);
+      assertEquals(0, e.status);
       ExitUtil.resetFirstExitException();
       fail();
     }
   }
   
-  @After
+  @AfterEach
   public void stop(){
     if(historyServer != null) {
       historyServer.stop();

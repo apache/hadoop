@@ -27,7 +27,7 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_ID;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_LOG_TYPE;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.ENTITY_STRING;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NM_NODENAME;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
@@ -47,8 +47,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.View;
 import org.apache.hadoop.yarn.webapp.log.AggregatedLogsPage;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
@@ -91,7 +91,7 @@ public class TestHSWebApp {
     View viewInstance = testPage.getInstance(HsTasksPage.class);
     Map<String, String> moreParams = viewInstance.context().requestContext().moreParams();
     String appTableColumnsMeta = moreParams.get("ui.dataTables.selector.init");
-    Assert.assertTrue(appTableColumnsMeta.indexOf("natural") != -1);
+    Assertions.assertTrue(appTableColumnsMeta.indexOf("natural") != -1);
   }
 
   @Test
@@ -112,14 +112,14 @@ public class TestHSWebApp {
     View viewInstance = testPage.getInstance(HsTaskPage.class);
     Map<String, String> moreParams = viewInstance.context().requestContext().moreParams();
     String appTableColumnsMeta = moreParams.get("ui.dataTables.attempts.init");
-    Assert.assertTrue(appTableColumnsMeta.indexOf("natural") != -1);
+    Assertions.assertTrue(appTableColumnsMeta.indexOf("natural") != -1);
   }
 
   @Test public void testAttemptsWithJobView() {
     LOG.info("HsAttemptsPage with data");
     MockAppContext ctx = new MockAppContext(0, 1, 1, 1);
     JobId id = ctx.getAllJobs().keySet().iterator().next();
-    Map<String, String> params = new HashMap<String,String>();
+    Map<String, String> params = new HashMap<>();
     params.put(JOB_ID, id.toString());
     params.put(TASK_TYPE, "m");
     params.put(ATTEMPT_STATE, "SUCCESSFUL");
@@ -185,7 +185,7 @@ public class TestHSWebApp {
   public void testLogsView2() throws IOException {
     LOG.info("HsLogsPage with data");
     MockAppContext ctx = new MockAppContext(0, 1, 1, 1);
-    Map<String, String> params = new HashMap<String, String>();
+    Map<String, String> params = new HashMap<>();
 
     params.put(CONTAINER_ID, MRApp.newContainerId(1, 1, 333, 1)
         .toString());
@@ -207,7 +207,7 @@ public class TestHSWebApp {
   public void testLogsViewSingle() throws IOException {
     LOG.info("HsLogsPage with params for single log and data limits");
     MockAppContext ctx = new MockAppContext(0, 1, 1, 1);
-    Map<String, String> params = new HashMap<String, String>();
+    Map<String, String> params = new HashMap<>();
 
     final Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
@@ -242,7 +242,7 @@ public class TestHSWebApp {
   public void testLogsViewBadStartEnd() throws IOException {
     LOG.info("HsLogsPage with bad start/end params");
     MockAppContext ctx = new MockAppContext(0, 1, 1, 1);
-    Map<String, String> params = new HashMap<String, String>();
+    Map<String, String> params = new HashMap<>();
 
     params.put("start", "foo");
     params.put("end", "bar");

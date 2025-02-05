@@ -68,12 +68,14 @@ import org.apache.hadoop.yarn.webapp.log.AggregatedLogsPage;
 import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test some HtmlBlock classes
@@ -87,16 +89,15 @@ public class TestBlocks {
     Task task = getTask(0);
     String taskId = task.getID().toString();
 
-    Assert.assertEquals("pull links doesn't work correctly",
-        "Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
-        taskId + "</a>"
-        , HsJobBlock.addTaskLinks("Task failed " + taskId));
+    assertEquals("Task failed <a href=\"/jobhistory/task/" + taskId + "\">" + taskId + "</a>"
+        , HsJobBlock.addTaskLinks("Task failed " + taskId),
+        "pull links doesn't work correctly");
 
-    Assert.assertEquals("pull links doesn't work correctly",
-        "Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
+    assertEquals("Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
         taskId + "</a>\n Job failed as tasks failed. failedMaps:1 failedReduces:0"
         , HsJobBlock.addTaskLinks("Task failed " + taskId + "\n " +
-        "Job failed as tasks failed. failedMaps:1 failedReduces:0"));
+        "Job failed as tasks failed. failedMaps:1 failedReduces:0"),
+        "pull links doesn't work correctly");
   }
 
   /**
@@ -107,7 +108,7 @@ public class TestBlocks {
 
     Task task = getTask(0);
 
-    Map<TaskId, Task> tasks = new HashMap<TaskId, Task>();
+    Map<TaskId, Task> tasks = new HashMap<>();
     tasks.put(task.getID(), task);
 
     AppContext ctx = mock(AppContext.class);
@@ -143,7 +144,7 @@ public class TestBlocks {
     AppForTest app = new AppForTest(ctx);
 
     Task task = getTask(0);
-    Map<TaskAttemptId, TaskAttempt> attempts = new HashMap<TaskAttemptId, TaskAttempt>();
+    Map<TaskAttemptId, TaskAttempt> attempts = new HashMap<>();
     TaskAttempt attempt = mock(TaskAttempt.class);
     TaskAttemptId taId = new TaskAttemptIdPBImpl();
     taId.setId(0);
@@ -244,7 +245,7 @@ public class TestBlocks {
   @Test
   public void testHsJobsBlock() {
     AppContext ctx = mock(AppContext.class);
-    Map<JobId, Job> jobs = new HashMap<JobId, Job>();
+    Map<JobId, Job> jobs = new HashMap<>();
     Job job = getJob();
     jobs.put(job.getID(), job);
     when(ctx.getAllJobs()).thenReturn(jobs);
@@ -337,7 +338,7 @@ public class TestBlocks {
 
   private static class HsControllerForTest extends HsController {
 
-    static private Map<String, String> params = new HashMap<String, String>();
+    static private Map<String, String> params = new HashMap<>();
     private Class<?> clazz;
     ByteArrayOutputStream data = new ByteArrayOutputStream();
 
@@ -451,7 +452,7 @@ public class TestBlocks {
   }
 
   private class AttemptsBlockForTest extends AttemptsBlock {
-    private final Map<String, String> params = new HashMap<String, String>();
+    private final Map<String, String> params = new HashMap<>();
 
     public void addParameter(String name, String value) {
       params.put(name, value);
@@ -478,7 +479,7 @@ public class TestBlocks {
   }
 
   private class HsTasksBlockForTest extends HsTasksBlock {
-    private final Map<String, String> params = new HashMap<String, String>();
+    private final Map<String, String> params = new HashMap<>();
 
     public void addParameter(String name, String value) {
       params.put(name, value);

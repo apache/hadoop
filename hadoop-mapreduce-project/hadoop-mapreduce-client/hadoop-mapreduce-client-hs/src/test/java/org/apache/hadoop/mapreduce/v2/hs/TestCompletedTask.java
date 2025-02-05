@@ -30,31 +30,34 @@ import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
-import org.apache.hadoop.mapreduce.v2.hs.CompletedTask;
-import org.junit.Test;
-import static org.mockito.Mockito.*;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-public class TestCompletedTask{
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-  @Test (timeout=5000)
+public class TestCompletedTask {
+
+  @Test
+  @Timeout(value = 5)
   public void testTaskStartTimes() {
     
     TaskId taskId = mock(TaskId.class); 
     TaskInfo taskInfo = mock(TaskInfo.class);
-    Map<TaskAttemptID, TaskAttemptInfo> taskAttempts
-      = new TreeMap<TaskAttemptID, TaskAttemptInfo>();
+    Map<TaskAttemptID, TaskAttemptInfo> taskAttempts = new TreeMap<>();
     
     TaskAttemptID id = new TaskAttemptID("0", 0, TaskType.MAP, 0, 0);
     TaskAttemptInfo info = mock(TaskAttemptInfo.class);
     when(info.getAttemptId()).thenReturn(id);
-    when(info.getStartTime()).thenReturn(10l);
+    when(info.getStartTime()).thenReturn(10L);
     taskAttempts.put(id, info);
     
     id = new TaskAttemptID("1", 0, TaskType.MAP, 1, 1);
     info = mock(TaskAttemptInfo.class);
     when(info.getAttemptId()).thenReturn(id);
-    when(info.getStartTime()).thenReturn(20l);
+    when(info.getStartTime()).thenReturn(20L);
     taskAttempts.put(id, info);
     
     
@@ -63,13 +66,14 @@ public class TestCompletedTask{
     TaskReport report = task.getReport();
 
     // Make sure the startTime returned by report is the lesser of the 
-    // attempy launch times
-    assertTrue(report.getStartTime() == 10);
+    // attempt launch times
+    assertEquals(10, report.getStartTime());
   }
   /**
    * test some methods of CompletedTaskAttempt
    */
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testCompletedTaskAttempt(){
     
     TaskAttemptInfo attemptInfo= mock(TaskAttemptInfo.class);
@@ -82,14 +86,13 @@ public class TestCompletedTask{
     TaskID taskId =new TaskID(jobId,TaskType.REDUCE, 0);
     TaskAttemptID taskAttemptId= new TaskAttemptID(taskId, 0);
     when(attemptInfo.getAttemptId()).thenReturn(taskAttemptId);
-    
-    
-    CompletedTaskAttempt taskAttemt= new CompletedTaskAttempt(null,attemptInfo);
-    assertEquals( "Rackname",   taskAttemt.getNodeRackName());
-    assertEquals( Phase.CLEANUP,   taskAttemt.getPhase());
-    assertTrue(  taskAttemt.isFinished());
-    assertEquals( 11L,   taskAttemt.getShuffleFinishTime());
-    assertEquals( 12L,   taskAttemt.getSortFinishTime());
-    assertEquals( 10,   taskAttemt.getShufflePort());
+
+    CompletedTaskAttempt taskAttempt = new CompletedTaskAttempt(null, attemptInfo);
+    assertEquals("Rackname", taskAttempt.getNodeRackName());
+    assertEquals(Phase.CLEANUP, taskAttempt.getPhase());
+    assertTrue(taskAttempt.isFinished());
+    assertEquals(11L, taskAttempt.getShuffleFinishTime());
+    assertEquals(12L, taskAttempt.getSortFinishTime());
+    assertEquals(10, taskAttempt.getShufflePort());
   }
 }

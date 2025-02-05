@@ -43,19 +43,19 @@ import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
-@RunWith(value = Parameterized.class)
 public class TestJobHistoryEntities {
 
   private final String historyFileName =
@@ -78,11 +78,10 @@ public class TestJobHistoryEntities {
         .getFile());
   private CompletedJob completedJob;
 
-  public TestJobHistoryEntities(boolean loadTasks) throws Exception {
+  public void initTestJobHistoryEntities(boolean loadTasks) throws Exception {
     this.loadTasks = loadTasks;
   }
 
-  @Parameters
   public static Collection<Object[]> data() {
     List<Object[]> list = new ArrayList<Object[]>(2);
     list.add(new Object[] { true });
@@ -91,7 +90,9 @@ public class TestJobHistoryEntities {
   }
 
   /* Verify some expected values based on the history file */
-  @Test (timeout=100000)
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 100)
   public void testCompletedJob() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
@@ -117,8 +118,10 @@ public class TestJobHistoryEntities {
     assertEquals(JobState.SUCCEEDED, jobReport.getJobState());
     assertEquals(fullHistoryPath.toString(), jobReport.getHistoryFile());
   }
-  
-  @Test (timeout=100000)
+
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 100)
   public void testCopmletedJobReportWithZeroTasks() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
@@ -136,7 +139,9 @@ public class TestJobHistoryEntities {
         jobReport.getHistoryFile());
   }
 
-  @Test (timeout=10000)
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 10)
   public void testCompletedTask() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
@@ -165,7 +170,9 @@ public class TestJobHistoryEntities {
     assertEquals(rt1Id, rt1Report.getTaskId());
   }
 
-  @Test (timeout=10000)
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 10)
   public void testCompletedTaskAttempt() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
@@ -204,7 +211,9 @@ public class TestJobHistoryEntities {
    * Simple test of some methods of CompletedJob
    * @throws Exception
    */
-  @Test (timeout=30000)
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 30)
   public void testGetTaskAttemptCompletionEvent() throws Exception{
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
@@ -241,7 +250,9 @@ public class TestJobHistoryEntities {
 
   }
 
-  @Test (timeout=30000)
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 30)
   public void testCompletedJobWithDiagnostics() throws Exception {
     final String jobError = "Job Diagnostics";
     JobInfo jobInfo = spy(new JobInfo());
