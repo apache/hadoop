@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Comparator;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.util.Preconditions;
 import org.apache.commons.net.ftp.FTP;

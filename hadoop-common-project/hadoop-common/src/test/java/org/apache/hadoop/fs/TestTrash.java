@@ -78,7 +78,7 @@ public class TestTrash {
   protected static void checkTrash(FileSystem trashFs, Path trashRoot,
       Path path) throws IOException {
     Path p = Path.mergePaths(trashRoot, path);
-    assertTrue( trashFs.exists(p), "Could not find file in trash: "+ p);
+    assertTrue(trashFs.exists(p), "Could not find file in trash: " + p);
   }
   
   // counts how many instances of the file are in the Trash
@@ -311,7 +311,7 @@ public class TestTrash {
 
       val = shell.run(args);
 
-      assertFalse(trashRootFs.exists(trashRoot), "Expected TrashRoot (" + trashRoot + 
+      assertFalse(trashRootFs.exists(trashRoot), "Expected TrashRoot (" + trashRoot +
           ") to exist in file system:"
           + trashRootFs.getUri()); // No new Current should be created
       assertFalse(fs.exists(myFile));
@@ -395,7 +395,7 @@ public class TestTrash {
       System.setOut(stdout);
       System.setErr(stderr);
       assertTrue(output.indexOf("Consider using -skipTrash option") != -1 ||
-          output.indexOf("Failed to determine server " + "trash configuration") != -1, 
+          output.indexOf("Failed to determine server " + "trash configuration") != -1,
           "skipTrash wasn't suggested as remedy to failed rm command" +
           " or we deleted / even though we could not get server defaults");
     }
@@ -421,7 +421,7 @@ public class TestTrash {
 
       assertEquals(0, rc, "Expunge should return zero");
       assertFalse(trashRootFs.exists(dirToDelete), "old checkpoint format not recognized");
-      assertTrue(trashRootFs.exists(dirToKeep), 
+      assertTrue(trashRootFs.exists(dirToKeep),
           "old checkpoint format directory should not be removed");
     }
 
@@ -450,7 +450,7 @@ public class TestTrash {
       assertFalse(trashRootFs.exists(oldCheckpoint), "Old checkpoint should be removed");
       assertFalse(trashRootFs.exists(recentCheckpoint), "Recent checkpoint should be removed");
       assertFalse(trashRootFs.exists(currentFolder), "Current folder should be removed");
-      assertEquals(0, trashRootFs.listStatus(trashRoot.getParent()).length, 
+      assertEquals(0, trashRootFs.listStatus(trashRoot.getParent()).length,
           "Ensure trash folder is empty");
     }
   }
@@ -506,7 +506,7 @@ public class TestTrash {
       assertFalse(testlfs.exists(oldCheckpoint), "Old checkpoint should be removed");
       assertFalse(testlfs.exists(recentCheckpoint), "Recent checkpoint should be removed");
       assertFalse(testlfs.exists(currentFolder), "Current folder should be removed");
-      assertEquals(0, 
+      assertEquals(0,
           testlfs.listStatus(trashRoot.getParent()).length, "Ensure trash folder is empty");
 
       // Incorrect FileSystem scheme
@@ -1014,7 +1014,7 @@ public class TestTrash {
         assertTrue(wrapper.exists(fileInTrash), String.format("File %s is not moved to trash",
             fileInTrash.toString()));
         // Verify permission not change
-        assertTrue(fstat.getPermission().equals(fsPermission), 
+        assertTrue(fstat.getPermission().equals(fsPermission),
             String.format("Expected file: %s is %s, but actual is %s",
             fileInTrash.toString(),
             fsPermission.toString(),
@@ -1058,7 +1058,7 @@ public class TestTrash {
       emptierThread.join();
 
       AuditableTrashPolicy at = (AuditableTrashPolicy) trash.getTrashPolicy();
-      assertEquals(expectedNumOfCheckpoints, at.getNumberOfCheckpoints(), 
+      assertEquals(expectedNumOfCheckpoints, at.getNumberOfCheckpoints(),
           String.format("Expected num of checkpoints is %s, but actual is %s",
           expectedNumOfCheckpoints, at.getNumberOfCheckpoints()));
     } catch (InterruptedException  e) {

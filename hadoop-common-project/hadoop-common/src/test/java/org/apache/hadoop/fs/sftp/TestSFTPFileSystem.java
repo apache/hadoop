@@ -63,7 +63,7 @@ public class TestSFTPFileSystem {
   private static final String TEST_SFTP_DIR = "testsftp";
   private static final String TEST_ROOT_DIR =
       GenericTestUtils.getTestDir().getAbsolutePath();
-  
+
   private static final String connection = "sftp://user:password@localhost";
   private static Path localDir = null;
   private static FileSystem localFs = null;

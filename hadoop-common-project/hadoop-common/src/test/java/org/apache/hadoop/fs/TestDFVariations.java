@@ -162,9 +162,9 @@ public class TestDFVariations {
     String mountPath = df.getMount();
     File mountDir = new File(mountPath);
     assertTrue(mountDir.exists(), "Mount dir ["+mountDir.getAbsolutePath()+"] should exist.");
-    assertTrue(mountDir.isDirectory(), 
+    assertTrue(mountDir.isDirectory(),
         "Mount dir ["+mountDir.getAbsolutePath()+"] should be directory.");
-    assertTrue(workingDir.startsWith(mountPath), 
+    assertTrue(workingDir.startsWith(mountPath),
         "Working dir ["+workingDir+"] should start with ["+mountPath+"].");
   }
 }

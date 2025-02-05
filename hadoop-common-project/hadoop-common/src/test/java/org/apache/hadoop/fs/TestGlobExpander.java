@@ -55,10 +55,10 @@ public class TestGlobExpander {
   private void checkExpansion(String filePattern, String... expectedExpansions)
       throws IOException {
     List<String> actualExpansions = GlobExpander.expand(filePattern);
-    assertEquals(expectedExpansions.length, 
+    assertEquals(expectedExpansions.length,
         actualExpansions.size(), "Different number of expansions");
     for (int i = 0; i < expectedExpansions.length; i++) {
-      assertEquals(expectedExpansions[i], 
+      assertEquals(expectedExpansions[i],
           actualExpansions.get(i), "Expansion of " + filePattern);
     }
   }

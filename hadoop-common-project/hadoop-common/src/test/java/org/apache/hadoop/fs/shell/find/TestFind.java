@@ -59,7 +59,7 @@ import org.mockito.stubbing.Answer;
 
 @Timeout(10)
 public class TestFind {
-  
+
   private static FileSystem mockFs;
   private static Configuration conf;
 

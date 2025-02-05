@@ -121,22 +121,22 @@ public class TestChRootedFs {
     // Create file with recursive dir
     fileContextTestHelper.createFile(fc, "/newDir/foo");
     assertTrue(isFile(fc, new Path("/newDir/foo")));
-    assertTrue(isFile(fcTarget, new Path(chrootedTo,"newDir/foo")));
+    assertTrue(isFile(fcTarget, new Path(chrootedTo, "newDir/foo")));
     
     // Delete the created file
     assertTrue(fc.delete(new Path("/newDir/foo"), false));
     assertFalse(exists(fc, new Path("/newDir/foo")));
-    assertFalse(exists(fcTarget, new Path(chrootedTo,"newDir/foo")));
+    assertFalse(exists(fcTarget, new Path(chrootedTo, "newDir/foo")));
     
     // Create file with a 2 component dirs recursively
     fileContextTestHelper.createFile(fc, "/newDir/newDir2/foo");
     assertTrue(isFile(fc, new Path("/newDir/newDir2/foo")));
-    assertTrue(isFile(fcTarget, new Path(chrootedTo,"newDir/newDir2/foo")));
+    assertTrue(isFile(fcTarget, new Path(chrootedTo, "newDir/newDir2/foo")));
     
     // Delete the created file
     assertTrue(fc.delete(new Path("/newDir/newDir2/foo"), false));
     assertFalse(exists(fc, new Path("/newDir/newDir2/foo")));
-    assertFalse(exists(fcTarget, new Path(chrootedTo,"newDir/newDir2/foo")));
+    assertFalse(exists(fcTarget, new Path(chrootedTo, "newDir/newDir2/foo")));
   }
   
   
@@ -144,21 +144,21 @@ public class TestChRootedFs {
   public void testMkdirDelete() throws IOException {
     fc.mkdir(fileContextTestHelper.getTestRootPath(fc, "/dirX"), FileContext.DEFAULT_PERM, false);
     assertTrue(isDir(fc, new Path("/dirX")));
-    assertTrue(isDir(fcTarget, new Path(chrootedTo,"dirX")));
+    assertTrue(isDir(fcTarget, new Path(chrootedTo, "dirX")));
     
     fc.mkdir(fileContextTestHelper.getTestRootPath(fc, "/dirX/dirY"), FileContext.DEFAULT_PERM, false);
     assertTrue(isDir(fc, new Path("/dirX/dirY")));
-    assertTrue(isDir(fcTarget, new Path(chrootedTo,"dirX/dirY")));
+    assertTrue(isDir(fcTarget, new Path(chrootedTo, "dirX/dirY")));
     
 
     // Delete the created dir
     assertTrue(fc.delete(new Path("/dirX/dirY"), false));
     assertFalse(exists(fc, new Path("/dirX/dirY")));
-    assertFalse(exists(fcTarget, new Path(chrootedTo,"dirX/dirY")));
+    assertFalse(exists(fcTarget, new Path(chrootedTo, "dirX/dirY")));
     
     assertTrue(fc.delete(new Path("/dirX"), false));
     assertFalse(exists(fc, new Path("/dirX")));
-    assertFalse(exists(fcTarget, new Path(chrootedTo,"dirX")));
+    assertFalse(exists(fcTarget, new Path(chrootedTo, "dirX")));
     
   }
   @Test
@@ -167,22 +167,22 @@ public class TestChRootedFs {
     fileContextTestHelper.createFile(fc, "/newDir/foo");
     fc.rename(new Path("/newDir/foo"), new Path("/newDir/fooBar"));
     assertFalse(exists(fc, new Path("/newDir/foo")));
-    assertFalse(exists(fcTarget, new Path(chrootedTo,"newDir/foo")));
-    assertTrue(isFile(fc, fileContextTestHelper.getTestRootPath(fc,"/newDir/fooBar")));
-    assertTrue(isFile(fcTarget, new Path(chrootedTo,"newDir/fooBar")));
+    assertFalse(exists(fcTarget, new Path(chrootedTo, "newDir/foo")));
+    assertTrue(isFile(fc, fileContextTestHelper.getTestRootPath(fc, "/newDir/fooBar")));
+    assertTrue(isFile(fcTarget, new Path(chrootedTo, "newDir/fooBar")));
     
     
     // Rename a dir
     fc.mkdir(new Path("/newDir/dirFoo"), FileContext.DEFAULT_PERM, false);
     fc.rename(new Path("/newDir/dirFoo"), new Path("/newDir/dirFooBar"));
     assertFalse(exists(fc, new Path("/newDir/dirFoo")));
-    assertFalse(exists(fcTarget, new Path(chrootedTo,"newDir/dirFoo")));
-    assertTrue(isDir(fc, fileContextTestHelper.getTestRootPath(fc,"/newDir/dirFooBar")));
-    assertTrue(isDir(fcTarget, new Path(chrootedTo,"newDir/dirFooBar")));
+    assertFalse(exists(fcTarget, new Path(chrootedTo, "newDir/dirFoo")));
+    assertTrue(isDir(fc, fileContextTestHelper.getTestRootPath(fc, "/newDir/dirFooBar")));
+    assertTrue(isDir(fcTarget, new Path(chrootedTo, "newDir/dirFooBar")));
   }
   
   
-  /**
+  /*
    * We would have liked renames across file system to fail but 
    * Unfortunately there is not way to distinguish the two file systems 
    * @throws IOException
@@ -223,17 +223,17 @@ public class TestChRootedFs {
     
     // Note the the file status paths are the full paths on target
     fs = fileContextTestHelper.containsPath(fcTarget, "foo", dirPaths);
-      assertNotNull(fs);
-      assertTrue(fs.isFile());
+    assertNotNull(fs);
+    assertTrue(fs.isFile());
     fs = fileContextTestHelper.containsPath(fcTarget, "bar", dirPaths);
-      assertNotNull(fs);
-      assertTrue(fs.isFile());
+    assertNotNull(fs);
+    assertTrue(fs.isFile());
     fs = fileContextTestHelper.containsPath(fcTarget, "dirX", dirPaths);
-      assertNotNull(fs);
-      assertTrue(fs.isDirectory());
+    assertNotNull(fs);
+    assertTrue(fs.isDirectory());
     fs = fileContextTestHelper.containsPath(fcTarget, "dirY", dirPaths);
-      assertNotNull(fs);
-      assertTrue(fs.isDirectory());
+    assertNotNull(fs);
+    assertTrue(fs.isDirectory());
   }
   
   @Test
@@ -305,7 +305,7 @@ public class TestChRootedFs {
   
   @Test
   public void testResolvePath() throws IOException {
-    assertEquals(chrootedTo, fc.getDefaultFileSystem().resolvePath(new Path("/"))); 
+    assertEquals(chrootedTo, fc.getDefaultFileSystem().resolvePath(new Path("/")));
     fileContextTestHelper.createFile(fc, "/foo");
     assertEquals(new Path(chrootedTo, "foo"),
         fc.getDefaultFileSystem().resolvePath(new Path("/foo"))); 

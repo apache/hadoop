@@ -260,7 +260,7 @@ public class TestHarFileSystemBasics {
       assertTrue(expectedFileNames.contains(fileName), fileName + " not in expected files list");
       expectedFileNames.remove(fileName);
     }
-    assertEquals(0, expectedFileNames.size(), 
+    assertEquals(0, expectedFileNames.size(),
         "Didn't find all of the expected file names: " + expectedFileNames);
   }
 
@@ -274,7 +274,7 @@ public class TestHarFileSystemBasics {
         + harPath.toUri().getPath().toString();
     Path path = new Path(harPathWithUserinfo);
     Path qualifiedPath = path.getFileSystem(conf).makeQualified(path);
-    assertTrue(qualifiedPath.toString().equals(harPathWithUserinfo), 
+    assertTrue(qualifiedPath.toString().equals(harPathWithUserinfo),
         String.format("The qualified path (%s) did not match the expected path (%s).",
         qualifiedPath.toString(), harPathWithUserinfo));
   }

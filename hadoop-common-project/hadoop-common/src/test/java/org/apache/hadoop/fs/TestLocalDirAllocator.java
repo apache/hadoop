@@ -64,8 +64,8 @@ public class TestLocalDirAllocator {
   final static private String RELATIVE = "/RELATIVE";
   final static private String ABSOLUTE = "/ABSOLUTE";
   final static private String QUALIFIED = "/QUALIFIED";
-  private String ROOT;
-  private String PREFIX;
+  private String root;
+  private String prefix;
 
   static {
     try {
@@ -86,11 +86,11 @@ public class TestLocalDirAllocator {
         BUFFER_DIR_ROOT).toUri().toString();
   }
 
-  public void initTestLocalDirAllocator(String root, String prefix) {
-    ROOT = root;
-    PREFIX = prefix;
+  public void initTestLocalDirAllocator(String paramRoot, String paramPrefix) {
+    this.root = paramRoot;
+    this.prefix = paramPrefix;
   }
-  
+
   public static Collection<Object[]> params() {
     Object [][] data = new Object[][] {
       { BUFFER_DIR_ROOT, RELATIVE },
@@ -108,7 +108,7 @@ public class TestLocalDirAllocator {
 
   private static void validateTempDirCreation(String dir) throws IOException {
     File result = createTempFile(SMALL_FILE_SIZE);
-    assertTrue(result.getPath().startsWith(new Path(dir, FILENAME).toUri().getPath()), 
+    assertTrue(result.getPath().startsWith(new Path(dir, FILENAME).toUri().getPath()),
         "Checking for " + dir + " in " + result + " - FAILED!");
   }
 
@@ -123,17 +123,17 @@ public class TestLocalDirAllocator {
   }
 
   private String buildBufferDir(String dir, int i) {
-    return dir + PREFIX + i;
+    return dir + prefix + i;
   }
-  
+
   @Timeout(value = 30)
   @MethodSource("params")
   @ParameterizedTest
   public void test0(String root, String prefix) throws Exception {
     assumeNotWindows();
     initTestLocalDirAllocator(root, prefix);
-    String dir0 = buildBufferDir(ROOT, 0);
-    String dir1 = buildBufferDir(ROOT, 1);
+    String dir0 = buildBufferDir(root, 0);
+    String dir1 = buildBufferDir(root, 1);
     try {
       conf.set(CONTEXT, dir0 + "," + dir1);
       assertTrue(localFs.mkdirs(new Path(dir1)));
@@ -157,8 +157,8 @@ public class TestLocalDirAllocator {
   public void testROBufferDirAndRWBufferDir(String root, String prefix) throws Exception {
     assumeNotWindows();
     initTestLocalDirAllocator(root, prefix);
-    String dir1 = buildBufferDir(ROOT, 1);
-    String dir2 = buildBufferDir(ROOT, 2);
+    String dir1 = buildBufferDir(root, 1);
+    String dir2 = buildBufferDir(root, 2);
     try {
       conf.set(CONTEXT, dir1 + "," + dir2);
       assertTrue(localFs.mkdirs(new Path(dir2)));
@@ -171,7 +171,7 @@ public class TestLocalDirAllocator {
       rmBufferDirs();
     }
   }
-  
+
   /** Two buffer dirs. Both do not exist but on a RW disk.
    * Check if tmp dirs are allocated in a round-robin
    */
@@ -181,8 +181,8 @@ public class TestLocalDirAllocator {
   public void testDirsNotExist(String root, String prefix) throws Exception {
     assumeNotWindows();
     initTestLocalDirAllocator(root, prefix);
-    String dir2 = buildBufferDir(ROOT, 2);
-    String dir3 = buildBufferDir(ROOT, 3);
+    String dir2 = buildBufferDir(root, 2);
+    String dir3 = buildBufferDir(root, 3);
     try {
       conf.set(CONTEXT, dir2 + "," + dir3);
 
@@ -192,9 +192,9 @@ public class TestLocalDirAllocator {
       int secondDirIdx = (firstDirIdx == 2) ? 3 : 2;
 
       // check if tmp dirs are allocated in a round-robin manner
-      validateTempDirCreation(buildBufferDir(ROOT, firstDirIdx));
-      validateTempDirCreation(buildBufferDir(ROOT, secondDirIdx));
-      validateTempDirCreation(buildBufferDir(ROOT, firstDirIdx));
+      validateTempDirCreation(buildBufferDir(root, firstDirIdx));
+      validateTempDirCreation(buildBufferDir(root, secondDirIdx));
+      validateTempDirCreation(buildBufferDir(root, firstDirIdx));
     } finally {
       rmBufferDirs();
     }
@@ -210,8 +210,8 @@ public class TestLocalDirAllocator {
   public void testRWBufferDirBecomesRO(String root, String prefix) throws Exception {
     assumeNotWindows();
     initTestLocalDirAllocator(root, prefix);
-    String dir3 = buildBufferDir(ROOT, 3);
-    String dir4 = buildBufferDir(ROOT, 4);
+    String dir3 = buildBufferDir(root, 3);
+    String dir4 = buildBufferDir(root, 4);
     try {
       conf.set(CONTEXT, dir3 + "," + dir4);
       assertTrue(localFs.mkdirs(new Path(dir3)));
@@ -222,7 +222,7 @@ public class TestLocalDirAllocator {
 
       // Determine the round-robin sequence
       int nextDirIdx = (dirAllocator.getCurrentDirectoryIndex() == 0) ? 3 : 4;
-      validateTempDirCreation(buildBufferDir(ROOT, nextDirIdx));
+      validateTempDirCreation(buildBufferDir(root, nextDirIdx));
 
       // change buffer directory 2 to be read only
       new File(new Path(dir4).toUri().getPath()).setReadOnly();
@@ -252,8 +252,8 @@ public class TestLocalDirAllocator {
   public void testCreateManyFiles(String root, String prefix) throws Exception {
     assumeNotWindows();
     initTestLocalDirAllocator(root, prefix);
-    String dir5 = buildBufferDir(ROOT, 5);
-    String dir6 = buildBufferDir(ROOT, 6);
+    String dir5 = buildBufferDir(root, 5);
+    String dir6 = buildBufferDir(root, 6);
     try {
 
       conf.set(CONTEXT, dir5 + "," + dir6);
@@ -302,7 +302,7 @@ public class TestLocalDirAllocator {
     final int numTries = 100;
     String[] dirs = new String[numDirs];
     for (int d = 0; d < numDirs; ++d) {
-      dirs[d] = buildBufferDir(ROOT, d);
+      dirs[d] = buildBufferDir(root, d);
     }
     boolean next_dir_not_selected_at_least_once = false;
     try {
@@ -353,8 +353,8 @@ public class TestLocalDirAllocator {
   @ParameterizedTest
   public void testLocalPathForWriteDirCreation(String root, String prefix) throws IOException {
     initTestLocalDirAllocator(root, prefix);
-    String dir0 = buildBufferDir(ROOT, 0);
-    String dir1 = buildBufferDir(ROOT, 1);
+    String dir0 = buildBufferDir(root, 0);
+    String dir1 = buildBufferDir(root, 1);
     try {
       conf.set(CONTEXT, dir0 + "," + dir1);
       assertTrue(localFs.mkdirs(new Path(dir1)));
@@ -433,7 +433,7 @@ public class TestLocalDirAllocator {
   public void testNoSideEffects(String root, String prefix) throws IOException {
     assumeNotWindows();
     initTestLocalDirAllocator(root, prefix);
-    String dir = buildBufferDir(ROOT, 0);
+    String dir = buildBufferDir(root, 0);
     try {
       conf.set(CONTEXT, dir);
       File result = dirAllocator.createTmpFileForWrite(FILENAME, -1, conf);
@@ -458,7 +458,7 @@ public class TestLocalDirAllocator {
   public void testGetLocalPathToRead(String root, String prefix) throws IOException {
     assumeNotWindows();
     initTestLocalDirAllocator(root, prefix);
-    String dir = buildBufferDir(ROOT, 0);
+    String dir = buildBufferDir(root, 0);
     try {
       conf.set(CONTEXT, dir);
       assertTrue(localFs.mkdirs(new Path(dir)));
@@ -486,8 +486,8 @@ public class TestLocalDirAllocator {
   public void testGetAllLocalPathsToRead(String root, String prefix) throws IOException {
     assumeNotWindows();
     initTestLocalDirAllocator(root, prefix);
-    String dir0 = buildBufferDir(ROOT, 0);
-    String dir1 = buildBufferDir(ROOT, 1);
+    String dir0 = buildBufferDir(root, 0);
+    String dir1 = buildBufferDir(root, 1);
     try {
       conf.set(CONTEXT, dir0 + "," + dir1);
       assertTrue(localFs.mkdirs(new Path(dir0)));
@@ -535,7 +535,7 @@ public class TestLocalDirAllocator {
   @ParameterizedTest
   public void testRemoveContext(String root, String prefix) throws IOException {
     initTestLocalDirAllocator(root, prefix);
-    String dir = buildBufferDir(ROOT, 0);
+    String dir = buildBufferDir(root, 0);
     try {
       String contextCfgItemName = "application_1340842292563_0004.app.cache.dirs";
       conf.set(contextCfgItemName, dir);
@@ -558,7 +558,7 @@ public class TestLocalDirAllocator {
   @Timeout(value = 30)
   @MethodSource("params")
   @ParameterizedTest
-  public void testGetLocalPathForWriteForInvalidPaths(String root, String prefix) 
+  public void testGetLocalPathForWriteForInvalidPaths(String root, String prefix)
     throws Exception {
     initTestLocalDirAllocator(root, prefix);
     conf.set(CONTEXT, " ");
@@ -566,7 +566,7 @@ public class TestLocalDirAllocator {
       dirAllocator.getLocalPathForWrite("/test", conf);
       fail("not throwing the exception");
     } catch (IOException e) {
-      assertEquals("No space available in any of the local directories.", 
+      assertEquals("No space available in any of the local directories.",
           e.getMessage(), "Incorrect exception message");
     }
   }
@@ -581,8 +581,8 @@ public class TestLocalDirAllocator {
   @ParameterizedTest
   public void testGetLocalPathForWriteForLessSpace(String root, String prefix) throws Exception {
     initTestLocalDirAllocator(root, prefix);
-    String dir0 = buildBufferDir(ROOT, 0);
-    String dir1 = buildBufferDir(ROOT, 1);
+    String dir0 = buildBufferDir(root, 0);
+    String dir1 = buildBufferDir(root, 1);
     conf.set(CONTEXT, dir0 + "," + dir1);
     LambdaTestUtils.intercept(DiskErrorException.class,
         String.format("Could not find any valid local directory for %s with requested size %s",
@@ -598,7 +598,7 @@ public class TestLocalDirAllocator {
   @ParameterizedTest
   public void testDirectoryRecovery(String root, String prefix) throws Throwable {
     initTestLocalDirAllocator(root, prefix);
-    String dir0 = buildBufferDir(ROOT, 0);
+    String dir0 = buildBufferDir(root, 0);
     String subdir = dir0 + "/subdir1/subdir2";
 
     conf.set(CONTEXT, subdir);

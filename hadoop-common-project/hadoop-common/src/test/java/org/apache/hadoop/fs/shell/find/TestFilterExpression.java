@@ -40,7 +40,7 @@ import org.junit.jupiter.api.Timeout;
 public class TestFilterExpression {
   private Expression expr;
   private FilterExpression test;
-  
+
   @BeforeEach
   public void setup() {
     expr = mock(Expression.class);

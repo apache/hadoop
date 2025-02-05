@@ -60,7 +60,7 @@ public class TestFileSystemStorageStatistics {
       new FileSystem.Statistics("test-scheme");
   private FileSystemStorageStatistics storageStatistics =
       new FileSystemStorageStatistics(FS_STORAGE_STATISTICS_NAME, statistics);
-  
+
   @BeforeEach
   public void setup() {
     statistics.incrementBytesRead(RandomUtils.nextInt(0, 100));

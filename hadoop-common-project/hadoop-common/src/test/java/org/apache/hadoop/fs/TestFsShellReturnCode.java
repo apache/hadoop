@@ -109,7 +109,7 @@ public class TestFsShellReturnCode {
           assertEquals(((owner != null) ? "STUB-"+owner : oldStats[i][j].getOwner()),
               stats[j].getOwner(), "check owner of " + files[i]);
           assertEquals(((group != null) ? "STUB-"+group : oldStats[i][j].getGroup()),
-              stats[j].getGroup(), "check group of " + files[i]);        
+              stats[j].getGroup(), "check group of " + files[i]);
         }
       }
     }
@@ -310,7 +310,8 @@ public class TestFsShellReturnCode {
       results = bytes.toString();
       assertEquals(1, run, "Return code should be 1");
       assertTrue(!results.contains("get: null"), " Null is coming when source path is invalid. ");
-      assertTrue(results.contains("get: `"+args[1]+"': No such file or directory"), " Not displaying the intended message ");
+      assertTrue(results.contains("get: `" + args[1] + "': No such file or directory"), 
+          " Not displaying the intended message ");
     } finally {
       IOUtils.closeStream(out);
       System.setErr(oldErr);

@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Timeout;
 @Timeout(10)
 public class TestPrint {
   private FileSystem mockFs;
-  
+
   @BeforeEach
   public void resetMock() throws IOException {
     mockFs = MockFileSystem.setup();

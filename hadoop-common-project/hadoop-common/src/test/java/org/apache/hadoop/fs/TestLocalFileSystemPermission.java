@@ -236,7 +236,7 @@ public class TestLocalFileSystemPermission {
     try {
       assertTrue(localfs.mkdirs(dir));
       FsPermission initialPermission = getPermission(localfs, dir);
-      assertEquals(new FsPermission("755"), 
+      assertEquals(new FsPermission("755"),
           initialPermission, "With umask 022 permission should be 755 since the default " +
           "permission is 777");
 
@@ -249,7 +249,7 @@ public class TestLocalFileSystemPermission {
       assertThat(new FsPermission("755")).as(
           "With umask 062 permission should not be 755 since the " +
           "default permission is 777").isNotEqualTo(finalPermission);
-      assertEquals(new FsPermission("715"), finalPermission, 
+      assertEquals(new FsPermission("715"), finalPermission,
           "With umask 062 we expect 715 since the default permission is 777");
     } finally {
       conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "022");

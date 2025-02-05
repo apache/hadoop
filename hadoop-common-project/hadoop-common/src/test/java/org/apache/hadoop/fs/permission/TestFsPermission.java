@@ -254,7 +254,7 @@ public class TestFsPermission {
         FsPermission.getUMask(conf);
         fail("Shouldn't have been able to parse bad umask");
       } catch(IllegalArgumentException iae) {
-        assertTrue(isCorrectExceptionMessage(iae.getMessage(), b), 
+        assertTrue(isCorrectExceptionMessage(iae.getMessage(), b),
             "Exception should specify parsing error and invalid umask: " + iae.getMessage());
       }
     }

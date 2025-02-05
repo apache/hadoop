@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Timeout;
 
 @Timeout(10)
 public class TestAnd {
-  
+
   // test all expressions passing
   @Test
   public void testPass() throws IOException {

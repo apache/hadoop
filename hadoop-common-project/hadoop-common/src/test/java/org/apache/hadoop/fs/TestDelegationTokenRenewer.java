@@ -79,7 +79,7 @@ public class TestDelegationTokenRenewer {
 
     renewer.addRenewAction(fs);
     
-    assertEquals(1, renewer.getRenewQueueLength(), 
+    assertEquals(1, renewer.getRenewQueueLength(),
         "FileSystem not added to DelegationTokenRenewer");
     
     Thread.sleep(RENEW_CYCLE*2);
@@ -92,7 +92,7 @@ public class TestDelegationTokenRenewer {
     verify(fs, never()).getDelegationToken(null);
     verify(fs, never()).setDelegationToken(any());
     
-    assertEquals(0, renewer.getRenewQueueLength(), 
+    assertEquals(0, renewer.getRenewQueueLength(),
         "FileSystem not removed from DelegationTokenRenewer");
   }
 

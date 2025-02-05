@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Timeout;
 public class TestName {
   private FileSystem mockFs;
   private Name name;
-  
+
   @BeforeEach
   public void resetMock() throws IOException {
     mockFs = MockFileSystem.setup();

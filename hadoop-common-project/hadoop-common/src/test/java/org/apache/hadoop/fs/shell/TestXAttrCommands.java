@@ -54,22 +54,22 @@ public class TestXAttrCommands {
   @Test
   public void testGetfattrValidations() throws Exception {
     errContent.reset();
-    assertFalse(0 == runCommand(new String[] { "-getfattr", "-d"}), 
+    assertFalse(0 == runCommand(new String[]{"-getfattr", "-d"}),
         "getfattr should fail without path");
     assertTrue(errContent.toString().contains("<path> is missing"));
 
     errContent.reset();
-    assertFalse(0 == runCommand(new String[] { "-getfattr", "extra", "-d", "/test"}), 
+    assertFalse(0 == runCommand(new String[]{"-getfattr", "extra", "-d", "/test"}),
         "getfattr should fail with extra argument");
     assertTrue(errContent.toString().contains("Too many arguments"));
     
     errContent.reset();
-    assertFalse(0 == runCommand(new String[] { "-getfattr", "/test"}), 
+    assertFalse(0 == runCommand(new String[]{"-getfattr", "/test"}),
         "getfattr should fail without \"-n name\" or \"-d\"");
     assertTrue(errContent.toString().contains("Must specify '-n name' or '-d' option"));
     
     errContent.reset();
-    assertFalse(0 == runCommand(new String[] { "-getfattr", "-d", "-e", "aaa", "/test"}), 
+    assertFalse(0 == runCommand(new String[]{"-getfattr", "-d", "-e", "aaa", "/test"}),
         "getfattr should fail with invalid encoding");
     assertTrue(errContent.toString().contains("Invalid/unsupported encoding option specified: aaa"));
   }
@@ -77,17 +77,17 @@ public class TestXAttrCommands {
   @Test
   public void testSetfattrValidations() throws Exception {
     errContent.reset();
-    assertFalse(0 == runCommand(new String[] { "-setfattr", "-n", "user.a1" }), 
+    assertFalse(0 == runCommand(new String[]{"-setfattr", "-n", "user.a1"}),
         "setfattr should fail without path");
     assertTrue(errContent.toString().contains("<path> is missing"));
     
     errContent.reset();
-    assertFalse(0 == runCommand(new String[] { "-setfattr", "extra", "-n", "user.a1", "/test"}), 
+    assertFalse(0 == runCommand(new String[]{"-setfattr", "extra", "-n", "user.a1", "/test"}),
         "setfattr should fail with extra arguments");
     assertTrue(errContent.toString().contains("Too many arguments"));
     
     errContent.reset();
-    assertFalse(0 == runCommand(new String[] { "-setfattr", "/test"}), 
+    assertFalse(0 == runCommand(new String[]{"-setfattr", "/test"}),
         "setfattr should fail without \"-n name\" or \"-x name\"");
     assertTrue(errContent.toString().contains("Must specify '-n name' or '-x name' option"));
   }

@@ -75,7 +75,7 @@ public class TestLocalFileSystem {
   private final Path TEST_PATH = new Path(TEST_ROOT_DIR, "test-file");
   private Configuration conf;
   private LocalFileSystem fileSys;
-  
+
   private void cleanupFile(FileSystem fs, Path name) throws IOException {
     assertTrue(fs.exists(name));
     fs.delete(name, true);
@@ -423,7 +423,8 @@ public class TestLocalFileSystem {
     long newAccTime = 23456000;
 
     FileStatus status = fileSys.getFileStatus(path);
-    assertTrue(newModTime != status.getModificationTime(), "check we're actually changing something");
+    assertTrue(newModTime != status.getModificationTime(), 
+        "check we're actually changing something");
     assertTrue(newAccTime != status.getAccessTime(), "check we're actually changing something");
 
     fileSys.setTimes(path, newModTime, newAccTime);
@@ -600,7 +601,7 @@ public class TestLocalFileSystem {
     // Create test file with fragment
     FileSystemTestHelper.createFile(fs, pathWithFragment);
     Path resolved = fs.resolvePath(pathWithFragment);
-    assertEquals(pathQualified, 
+    assertEquals(pathQualified,
         resolved, "resolvePath did not strip fragment from Path");
   }
 
@@ -764,7 +765,7 @@ public class TestLocalFileSystem {
     builder.must("strM", "value");
     builder.must("unsupported", 12.34);
 
-    assertEquals("value", builder.getOptions().get("strM"), 
+    assertEquals("value", builder.getOptions().get("strM"),
         "Optional value should be overwrite by a mandatory value");
 
     Set<String> mandatoryKeys = builder.getMandatoryKeys();
@@ -793,7 +794,7 @@ public class TestLocalFileSystem {
         .stream()
         .filter(s -> s.getScheme().equals("file"))
         .collect(Collectors.toList());
-    assertEquals(1, fileStats.size(), 
+    assertEquals(1, fileStats.size(),
         "Number of statistics counters for file://");
     // this should be used for local and rawLocal, as they share the
     // same schema (although their class is different)
@@ -826,7 +827,7 @@ public class TestLocalFileSystem {
     final long bytesOut0 = stats.getBytesWritten();
     try {
       callable.call();
-      assertEquals(CRC_SIZE + DATA.length, stats.getBytesWritten() - bytesOut0, 
+      assertEquals(CRC_SIZE + DATA.length, stats.getBytesWritten() - bytesOut0,
           "Bytes written in " + operation + "; stats=" + stats);
     } finally {
       if (delete) {
@@ -856,7 +857,7 @@ public class TestLocalFileSystem {
     final long bytesRead0 = stats.getBytesRead();
     fileSys.open(file).close();
     final long bytesRead1 = stats.getBytesRead();
-    assertEquals(CRC_SIZE, bytesRead1 - bytesRead0, 
+    assertEquals(CRC_SIZE, bytesRead1 - bytesRead0,
         "Bytes read in open() call with stats " + stats);
   }
 
@@ -968,7 +969,7 @@ public class TestLocalFileSystem {
     // now read back the data, again with the builder API
     final long bytesRead0 = stats.getBytesRead();
     fileSys.openFile(file).build().get().close();
-    assertEquals(CRC_SIZE, stats.getBytesRead() - bytesRead0, 
+    assertEquals(CRC_SIZE, stats.getBytesRead() - bytesRead0,
         "Bytes read in openFile() call with stats " + stats);
     // now write with overwrite = true
     assertWritesCRC("createFileNonRecursive()",

@@ -162,17 +162,17 @@ public class TestListFiles {
     itor = fs.listFiles(TEST_DIR, true);
     stat = itor.next();
     assertTrue(stat.isFile());
-    assertTrue(filesToFind.remove(stat.getPath()), 
+    assertTrue(filesToFind.remove(stat.getPath()),
         "Path " + stat.getPath() + " unexpected");
 
     stat = itor.next();
     assertTrue(stat.isFile());
-    assertTrue(filesToFind.remove(stat.getPath()), 
+    assertTrue(filesToFind.remove(stat.getPath()),
         "Path " + stat.getPath() + " unexpected");
 
     stat = itor.next();
     assertTrue(stat.isFile());
-    assertTrue(filesToFind.remove(stat.getPath()), 
+    assertTrue(filesToFind.remove(stat.getPath()),
         "Path " + stat.getPath() + " unexpected");
     assertFalse(itor.hasNext());
     assertTrue(filesToFind.isEmpty());

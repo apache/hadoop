@@ -262,9 +262,7 @@ public class TestPathData {
   public void checkPathData(String dirString, PathData item) throws Exception {
     assertEquals(fs, item.fs, "checking fs");
     assertEquals(dirString, item.toString(), "checking string");
-    assertEquals(
-       fs.makeQualified(new Path(item.toString())), item.path, "checking path"
-    );
+    assertEquals(fs.makeQualified(new Path(item.toString())), item.path, "checking path");
     assertTrue(item.stat != null, "checking exist");
     assertTrue(item.stat.isDirectory(), "checking isDir");
   }
