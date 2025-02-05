@@ -18,11 +18,11 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.util.Shell;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,14 +37,14 @@ import org.apache.hadoop.test.GenericTestUtils;
 public class TestDU {
   final static private File DU_DIR = GenericTestUtils.getTestDir("dutmp");
 
-  @Before
+  @BeforeEach
   public void setUp() {
     assumeFalse(Shell.WINDOWS);
     FileUtil.fullyDelete(DU_DIR);
     assertTrue(DU_DIR.mkdirs());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
       FileUtil.fullyDelete(DU_DIR);
   }
@@ -91,9 +91,8 @@ public class TestDU {
     long duSize = du.getUsed();
     du.close();
 
-    assertTrue("Invalid on-disk size",
-        duSize >= writtenSize &&
-        writtenSize <= (duSize + slack));
+    assertTrue(duSize >= writtenSize && writtenSize <= (duSize + slack),
+        "Invalid on-disk size");
 
     //test with 0 interval, will not launch thread
     du = new DU(file, 0, 1, -1);
@@ -101,18 +100,16 @@ public class TestDU {
     duSize = du.getUsed();
     du.close();
 
-    assertTrue("Invalid on-disk size",
-        duSize >= writtenSize &&
-        writtenSize <= (duSize + slack));
+    assertTrue(duSize >= writtenSize && writtenSize <= (duSize + slack),
+        "Invalid on-disk size");
 
     //test without launching thread
     du = new DU(file, 10000, 0, -1);
     du.init();
     duSize = du.getUsed();
 
-    assertTrue("Invalid on-disk size",
-        duSize >= writtenSize &&
-        writtenSize <= (duSize + slack));
+    assertTrue(duSize >= writtenSize && writtenSize <= (duSize + slack),
+        "Invalid on-disk size");
   }
 
   @Test
@@ -124,7 +121,7 @@ public class TestDU {
     DU du = new DU(file, 10000L, 0, -1);
     du.incDfsUsed(-Long.MAX_VALUE);
     long duSize = du.getUsed();
-    assertTrue(String.valueOf(duSize), duSize >= 0L);
+    assertTrue(duSize >= 0L, String.valueOf(duSize));
   }
 
   @Test
@@ -133,14 +130,14 @@ public class TestDU {
     createFile(file, 8192);
     DU du = new DU(file, 3000, 0, 1024);
     du.init();
-    assertTrue("Initial usage setting not honored", du.getUsed() == 1024);
+    assertTrue(du.getUsed() == 1024, "Initial usage setting not honored");
 
     // wait until the first du runs.
     try {
       Thread.sleep(5000);
     } catch (InterruptedException ie) {}
 
-    assertTrue("Usage didn't get updated", du.getUsed() == 8192);
+    assertTrue(du.getUsed() == 8192, "Usage didn't get updated");
   }
 
 
