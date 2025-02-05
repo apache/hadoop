@@ -855,15 +855,22 @@ public class ITestAzureBlobFileSystemCreate extends
         .isTrue();
   }
 
+  /**
+   * Test the creation of a file without conditional overwrite.
+   * This test sets the configuration `fs.azure.enable.conditional.create.overwrite` to false,
+   * creates a directory, and then attempts to create a file at the same path with overwrite set to true.
+   * It expects an IOException to be thrown.
+   *
+   * @throws Exception if any exception occurs during the test execution
+   */
   @Test
   public void testCreationWithoutConditionalOverwrite()
-      throws Throwable {
+      throws Exception {
     final AzureBlobFileSystem currentFs = getFileSystem();
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set("fs.azure.enable.conditional.create.overwrite",
         String.valueOf(false));
     AzureBlobFileSystemStore store = currentFs.getAbfsStore();
-    AbfsClient client = store.getClientHandler().getIngressClient();
 
     final AzureBlobFileSystem fs =
         (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
@@ -872,15 +879,22 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(IOException.class, () -> fs.create(new Path("a/b/c"), true));
   }
 
+  /**
+   * Test the creation of a file with overwrite set to false without conditional overwrite.
+   * This test sets the configuration `fs.azure.enable.conditional.create.overwrite` to false,
+   * creates a directory, and then attempts to create a file at the same path with overwrite set to false.
+   * It expects an IOException to be thrown.
+   *
+   * @throws Exception if any exception occurs during the test execution
+   */
   @Test
   public void testCreationOverwriteFalseWithoutConditionalOverwrite()
-      throws Throwable {
+      throws Exception {
     final AzureBlobFileSystem currentFs = getFileSystem();
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set("fs.azure.enable.conditional.create.overwrite",
         String.valueOf(false));
     AzureBlobFileSystemStore store = currentFs.getAbfsStore();
-    AbfsClient client = store.getClientHandler().getIngressClient();
 
     final AzureBlobFileSystem fs =
         (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
