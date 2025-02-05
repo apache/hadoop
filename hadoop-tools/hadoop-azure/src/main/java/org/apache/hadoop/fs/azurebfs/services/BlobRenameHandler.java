@@ -129,7 +129,7 @@ public class BlobRenameHandler extends ListActionTaker {
           && pathInformation.getIsImplicit()) {
         AbfsRestOperation createMarkerOp = getAbfsClient().createPathRestOp(
             src.toUri().getPath(),
-            false, false, null,
+            false, false,
             false, null, null, tracingContext);
         pathInformation.setETag(extractEtagHeader(createMarkerOp.getResult()));
       }

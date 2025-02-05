@@ -154,7 +154,6 @@ public class BlobDeleteHandler extends ListActionTaker {
         getAbfsClient().createPathRestOp(path.getParent().toUri().getPath(),
             false,
             false,
-            null,
             false,
             null,
             null,

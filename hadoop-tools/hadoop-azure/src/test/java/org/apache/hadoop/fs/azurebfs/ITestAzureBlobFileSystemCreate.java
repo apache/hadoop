@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.FileNotFoundException;
 import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -83,6 +84,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -225,9 +227,9 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
     assumeBlobServiceType();
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
-    Mockito.doReturn(store).when(fs).getAbfsStore();
+    doReturn(store).when(fs).getAbfsStore();
     AbfsClient client = Mockito.spy(store.getClient());
-    Mockito.doReturn(client).when(store).getClient();
+    doReturn(client).when(store).getClient();
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     fs.mkdirs(new Path(path, "test3"));
     AzureBlobFileSystemStore.VersionedFileStatus fileStatus
@@ -585,8 +587,6 @@ public class ITestAzureBlobFileSystemCreate extends
 
     ReflectionUtils.setFinalField(AzureBlobFileSystemStore.class, abfsStore, "clientHandler", clientHandler);
     ReflectionUtils.setFinalField(AzureBlobFileSystemStore.class, abfsStore, "client", mockClient);
-    boolean isNamespaceEnabled = abfsStore
-        .getIsNamespaceEnabled(getTestTracingContext(fs, false));
 
     AbfsRestOperation successOp = mock(
         AbfsRestOperation.class);
@@ -660,7 +660,6 @@ public class ITestAzureBlobFileSystemCreate extends
               serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
           .when((AbfsBlobClient) mockClient)
           .createPathRestOp(any(String.class), eq(true), eq(true),
-              any(AzureBlobFileSystemStore.Permissions.class),
               any(boolean.class), eq(null), any(),
               any(TracingContext.class));
 
@@ -676,7 +675,6 @@ public class ITestAzureBlobFileSystemCreate extends
           // Scn5: create overwrite=false fails with Http500
           .when((AbfsBlobClient) mockClient)
           .createPathRestOp(any(String.class), eq(true), eq(false),
-              any(AzureBlobFileSystemStore.Permissions.class),
               any(boolean.class), eq(null), any(),
               any(TracingContext.class));
 
@@ -744,7 +742,6 @@ public class ITestAzureBlobFileSystemCreate extends
   private AbfsRestOperationException getMockAbfsRestOperationException(int status) {
     return new AbfsRestOperationException(status, "", "", new Exception());
   }
-
 
   /**
    * Attempts to test multiple flush calls.
@@ -951,6 +948,32 @@ public class ITestAzureBlobFileSystemCreate extends
         .isTrue();
   }
 
+  // Creation with append blob should succeed for blob endpoint
+  @Test
+  public void testCreateWithAppendBlobEnabled()
+      throws IOException, NoSuchFieldException, IllegalAccessException {
+    Configuration conf = getRawConfiguration();
+    try (AzureBlobFileSystem fs = Mockito.spy(
+        (AzureBlobFileSystem) FileSystem.newInstance(conf))) {
+      AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+      doReturn(true).when(store).isAppendBlobKey(anyString());
+
+      // Set abfsStore as our mocked value.
+      Field privateField = AzureBlobFileSystem.class.getDeclaredField(
+          "abfsStore");
+      privateField.setAccessible(true);
+      privateField.set(fs, store);
+      Path testPath = path("/testPath");
+      AzureBlobFileSystemStore.Permissions permissions
+          = new AzureBlobFileSystemStore.Permissions(false,
+          FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
+      fs.getAbfsStore().getClientHandler().getBlobClient().
+          createPath(makeQualified(testPath).toUri().getPath(), true, false,
+              permissions, true, null,
+              null, getTestTracingContext(fs, true));
+    }
+  }
+
   /**
    * Test create on implicit directory with explicit parent.
    * @throws Exception
@@ -1007,7 +1030,7 @@ public class ITestAzureBlobFileSystemCreate extends
   }
 
   /**
-   * Tests create file when file exists already
+   * Tests create file when file exists already and parent is implicit
    * Verifies using eTag for overwrite = true/false
    */
   @Test
@@ -1019,6 +1042,45 @@ public class ITestAzureBlobFileSystemCreate extends
     createAzCopyFolder(parentPath);
 
     String fileName = "/implicitParent/testFile";
+    Path filePath = new Path(fileName);
+    fs.create(filePath);
+    String eTag = extractFileEtag(fileName);
+
+    // testing createFile on already existing file path
+    fs.create(filePath, true);
+
+    String eTagAfterCreateOverwrite = extractFileEtag(fileName);
+
+    Assertions.assertThat(eTag.equals(eTagAfterCreateOverwrite))
+        .describedAs("New file eTag after create overwrite should be different from old")
+        .isFalse();
+
+    intercept(IOException.class, () ->
+        fs.create(filePath, false));
+
+    String eTagAfterCreate = extractFileEtag(fileName);
+
+    Assertions.assertThat(eTagAfterCreateOverwrite.equals(eTagAfterCreate))
+        .describedAs("File eTag should not change as creation fails")
+        .isTrue();
+
+    Assertions.assertThat(DirectoryStateHelper.isExplicitDirectory(parentPath, fs, getTestTracingContext(fs, true)))
+        .describedAs("Parent path should also change to explicit.")
+        .isTrue();
+  }
+
+  /**
+   * Tests create file when file exists already and parent is explicit
+   * Verifies using eTag for overwrite = true/false
+   */
+  @Test
+  public void testCreateFileExistsExplicitParent() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    String parentPathName = "/explicitParent";
+    Path parentPath = new Path(parentPathName);
+    fs.mkdirs(parentPath);
+
+    String fileName = "/explicitParent/testFile";
     Path filePath = new Path(fileName);
     fs.create(filePath);
     String eTag = extractFileEtag(fileName);
@@ -1308,6 +1370,20 @@ public class ITestAzureBlobFileSystemCreate extends
   }
 
   /**
+   * Creation of file on path with unicode chars
+   */
+  @Test
+  public void testCreateUnicode() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final Path path = new Path("/file\u0031");
+    fs.create(path);
+
+    Assertions.assertThat(fs.exists(path))
+        .describedAs("Path with unicode does not exist")
+        .isTrue();
+  }
+
+  /**
    * Creation of directory on path with unicode chars
    */
   @Test
@@ -1409,6 +1485,29 @@ public class ITestAzureBlobFileSystemCreate extends
         .build();
     Assertions.assertThat(fileSystem.exists(new Path("/hbase/dir/file")))
         .describedAs("File /hbase/dir/file does not exist")
+        .isTrue();
+  }
+
+  /**
+   * Test creating a file on a non-existing path with an implicit parent directory.
+   * This test creates an implicit directory, then creates a file
+   * inside this implicit directory and asserts that it gets created.
+   *
+   * @throws Exception if any exception occurs during the test execution
+   */
+  @Test
+  public void testCreateOnNonExistingPathWithImplicitParentDir() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final Path implicitPath = new Path("dir1");
+    final Path path = new Path("dir1/dir2");
+    createAzCopyFolder(implicitPath);
+
+    // Creating a directory on non-existing path inside an implicit directory
+    fs.create(path);
+
+    // Asserting that path created by azcopy becomes explicit.
+    Assertions.assertThat(fs.exists(path))
+        .describedAs("File dir1/dir2 does not exist")
         .isTrue();
   }
 
@@ -1577,7 +1676,7 @@ public class ITestAzureBlobFileSystemCreate extends
     Path path = makeQualified(new Path("a/b"));
     AbfsBlobClient blobClient = (AbfsBlobClient) fs.getAbfsStore().getClient(AbfsServiceType.BLOB);
     blobClient.createPathRestOp(path.toUri().getPath(), false, true,
-        null, false, null, null, getTestTracingContext(fs, true));
+        false, null, null, getTestTracingContext(fs, true));
 
     fs.mkdirs(new Path("a/b/c/d"));
 
@@ -1615,12 +1714,11 @@ public class ITestAzureBlobFileSystemCreate extends
 
     Path path = makeQualified(new Path("a"));
     AbfsBlobClient blobClient = (AbfsBlobClient) fs.getAbfsStore().getClient(AbfsServiceType.BLOB);
-    blobClient.createPathRestOp(path.toUri().getPath(), false, true,
-        null, false, null, null, getTestTracingContext(fs, true));
+    blobClient.createPathRestOp(path.toUri().getPath(), false, true, false, null, null, getTestTracingContext(fs, true));
 
     Path newPath = makeQualified(new Path("a/b/c"));
     blobClient.createPathRestOp(newPath.toUri().getPath(), false, true,
-        null, false, null, null, getTestTracingContext(fs, true));
+         false, null, null, getTestTracingContext(fs, true));
 
     fs.mkdirs(new Path("a/b/c/d"));
 
