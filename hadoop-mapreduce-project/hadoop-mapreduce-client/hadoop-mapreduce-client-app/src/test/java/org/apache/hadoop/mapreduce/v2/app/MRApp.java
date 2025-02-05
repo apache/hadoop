@@ -421,7 +421,7 @@ public class MRApp extends MRAppMaster {
       LOG.info("Job finish time :{}", jobReport.getFinishTime());
       assertTrue(jobReport.getStartTime() <= jobReport.getFinishTime(),
           "Job start time is not less than finish time");
-      assertTrue(jobReport.getFinishTime() <= System.currentTimeMillis(), 
+      assertTrue(jobReport.getFinishTime() <= System.currentTimeMillis(),
           "Job finish time is in future");
       for (Task task : job.getTasks().values()) {
         TaskReport taskReport = task.getReport();

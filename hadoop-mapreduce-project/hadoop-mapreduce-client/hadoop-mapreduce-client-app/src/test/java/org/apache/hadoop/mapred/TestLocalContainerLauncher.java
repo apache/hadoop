@@ -201,8 +201,8 @@ public class TestLocalContainerLauncher {
     final Path mapOut = mrOutputFiles.getOutputFileForWrite(1);
     conf.set(MRConfig.LOCAL_DIR, localDirs[1].toString());
     final Path mapOutIdx = mrOutputFiles.getOutputIndexFileForWrite(1);
-    assertNotEquals(
-       mapOut.getParent(), mapOutIdx.getParent(), "Paths must be different!");
+    assertNotEquals(mapOut.getParent(), mapOutIdx.getParent(),
+        "Paths must be different!");
 
     // make both dirs part of LOCAL_DIR
     conf.setStrings(MRConfig.LOCAL_DIR, localDirs);

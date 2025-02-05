@@ -369,9 +369,15 @@ public class WebApps {
 
         if (httpScheme.equals(WebAppUtils.HTTPS_PREFIX)) {
           String amKeystoreLoc = System.getenv("KEYSTORE_FILE_LOCATION");
+          if (StringUtils.isBlank(amKeystoreLoc)) {
+            amKeystoreLoc = System.getProperty("KEYSTORE_FILE_LOCATION");
+          }
           if (amKeystoreLoc != null) {
             LOG.info("Setting keystore location to " + amKeystoreLoc);
             String password = System.getenv("KEYSTORE_PASSWORD");
+            if (StringUtils.isBlank(password)) {
+              password = System.getProperty("KEYSTORE_PASSWORD");
+            }
             builder.keyStore(amKeystoreLoc, password, "jks");
           } else {
             LOG.info("Loading standard ssl config");
@@ -380,9 +386,15 @@ public class WebApps {
           builder.needsClientAuth(needsClientAuth);
           if (needsClientAuth) {
             String amTruststoreLoc = System.getenv("TRUSTSTORE_FILE_LOCATION");
+            if (StringUtils.isBlank(amTruststoreLoc)) {
+              amTruststoreLoc = System.getProperty("TRUSTSTORE_FILE_LOCATION");
+            }
             if (amTruststoreLoc != null) {
               LOG.info("Setting truststore location to " + amTruststoreLoc);
               String password = System.getenv("TRUSTSTORE_PASSWORD");
+              if (StringUtils.isBlank(password)) {
+                password = System.getProperty("TRUSTSTORE_PASSWORD");
+              }
               builder.trustStore(amTruststoreLoc, password, "jks");
             }
           }

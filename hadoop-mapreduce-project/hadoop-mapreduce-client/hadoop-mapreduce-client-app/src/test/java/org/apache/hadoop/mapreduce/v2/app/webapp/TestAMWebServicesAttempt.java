@@ -128,11 +128,6 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
     }
   }
 
-  @Override
-  public void setUp() throws Exception {
-    super.setUp();
-  }
-
   public TestAMWebServicesAttempt() {
   }
 

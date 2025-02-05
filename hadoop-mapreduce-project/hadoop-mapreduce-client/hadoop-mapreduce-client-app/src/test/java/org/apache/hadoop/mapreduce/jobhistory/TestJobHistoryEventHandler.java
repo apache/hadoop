@@ -427,16 +427,15 @@ public class TestJobHistoryEventHandler {
 
       // load the job_conf.xml in JHS directory and verify property redaction.
       Path jhsJobConfFile = getJobConfInIntermediateDoneDir(conf, params.jobId);
-      assertTrue(
-         FileContext.getFileContext(conf).util().exists(jhsJobConfFile), "The job_conf.xml file is not in the JHS directory");
+      assertTrue(FileContext.getFileContext(conf).util().exists(jhsJobConfFile),
+          "The job_conf.xml file is not in the JHS directory");
       Configuration jhsJobConf = new Configuration();
 
       try (InputStream input = FileSystem.get(conf).open(jhsJobConfFile)) {
         jhsJobConf.addResource(input);
-        assertEquals(
-        
-           MRJobConfUtil.REDACTION_REPLACEMENT_VAL
-,             jhsJobConf.get(sensitivePropertyName), sensitivePropertyName + " is not redacted in HDFS.");
+        assertEquals(MRJobConfUtil.REDACTION_REPLACEMENT_VAL,
+            jhsJobConf.get(sensitivePropertyName),
+            sensitivePropertyName + " is not redacted in HDFS.");
       }
     } finally {
       jheh.stop();
@@ -497,11 +496,11 @@ public class TestJobHistoryEventHandler {
       // If we got here then event handler worked but we don't know with which
       // file system. Now we check that history stuff was written to minicluster
       FileSystem dfsFileSystem = dfsCluster.getFileSystem();
-      assertTrue(
-         dfsFileSystem.globStatus(new Path(t.dfsWorkDir + "/*")).length != 0, "Minicluster contains some history files");
+      assertTrue(dfsFileSystem.globStatus(new Path(t.dfsWorkDir + "/*")).length != 0,
+          "Minicluster contains some history files");
       FileSystem localFileSystem = LocalFileSystem.get(conf);
-      assertFalse(
-         localFileSystem.exists(new Path(t.dfsWorkDir)), "No history directory on non-default file system");
+      assertFalse(localFileSystem.exists(new Path(t.dfsWorkDir)),
+          "No history directory on non-default file system");
     } finally {
       jheh.stop();
       purgeHdfsHistoryIntermediateDoneDirectory(conf);
@@ -947,9 +946,8 @@ public class TestJobHistoryEventHandler {
     //Make sure events were handled, 4 + 1 finish event
     assertTrue(jheh.eventsHandled == 5, "handleEvent should've been called only 5 times but was "
         + jheh.eventsHandled);
-    assertTrue(
-       jheh.lastEventHandled.getHistoryEvent()
-        instanceof JobUnsuccessfulCompletionEvent, "Last event handled wasn't JobUnsuccessfulCompletionEvent");
+    assertTrue(jheh.lastEventHandled.getHistoryEvent() instanceof JobUnsuccessfulCompletionEvent,
+        "Last event handled wasn't JobUnsuccessfulCompletionEvent");
   }
 
   @Test

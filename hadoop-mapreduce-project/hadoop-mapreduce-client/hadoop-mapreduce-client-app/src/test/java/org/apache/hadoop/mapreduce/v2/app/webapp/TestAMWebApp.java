@@ -72,7 +72,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import com.google.inject.Injector;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -84,9 +83,6 @@ public class TestAMWebApp {
       System.getProperty("test.build.data",
           System.getProperty("java.io.tmpdir")),
       TestAMWebApp.class.getName());
-
-  @RegisterExtension
-  public final EnvironmentVariablesExtension extension = new EnvironmentVariablesExtension();
 
   @AfterEach
   public void tearDown() {
@@ -130,7 +126,7 @@ public class TestAMWebApp {
 
   public static Map<String, String> getJobParams(AppContext appContext) {
     JobId jobId = appContext.getAllJobs().entrySet().iterator().next().getKey();
-    Map<String, String> params = new HashMap<>();
+    Map<String, String> params = new HashMap<String, String>();
     params.put(AMParams.JOB_ID, MRApps.toString(jobId));
     return params;
   }
@@ -139,7 +135,7 @@ public class TestAMWebApp {
     JobId jobId = appContext.getAllJobs().entrySet().iterator().next().getKey();
     Entry<TaskId, Task> e = appContext.getJob(jobId).getTasks().entrySet().iterator().next();
     e.getValue().getType();
-    Map<String, String> params = new HashMap<>();
+    Map<String, String> params = new HashMap<String, String>();
     params.put(AMParams.JOB_ID, MRApps.toString(jobId));
     params.put(AMParams.TASK_ID, MRApps.toString(e.getKey()));
     params.put(AMParams.TASK_TYPE, MRApps.taskSymbol(e.getValue().getType()));
@@ -256,9 +252,8 @@ public class TestAMWebApp {
     keystoreFile.getParentFile().mkdirs();
     KeyStoreTestUtil.createKeyStore(keystoreFile.getAbsolutePath(), "password",
         "server", keyPair.getPrivate(), cert);
-    extension.getEnvironmentVariables().set("KEYSTORE_FILE_LOCATION",
-        keystoreFile.getAbsolutePath());
-    extension.getEnvironmentVariables().set("KEYSTORE_PASSWORD", "password");
+    System.setProperty("KEYSTORE_FILE_LOCATION", keystoreFile.getAbsolutePath());
+    System.setProperty("KEYSTORE_PASSWORD", "password");
 
     Job job = app.submit(conf);
 
@@ -291,6 +286,8 @@ public class TestAMWebApp {
     app.verifyCompleted();
 
     keystoreFile.delete();
+    System.clearProperty("KEYSTORE_FILE_LOCATION");
+    System.clearProperty("KEYSTORE_PASSWORD");
   }
 
   @Test
@@ -312,9 +309,8 @@ public class TestAMWebApp {
     keystoreFile.getParentFile().mkdirs();
     KeyStoreTestUtil.createKeyStore(keystoreFile.getAbsolutePath(), "password",
         "server", keyPair.getPrivate(), cert);
-    extension.getEnvironmentVariables().set("KEYSTORE_FILE_LOCATION",
-        keystoreFile.getAbsolutePath());
-    extension.getEnvironmentVariables().set("KEYSTORE_PASSWORD", "password");
+    System.setProperty("KEYSTORE_FILE_LOCATION", keystoreFile.getAbsolutePath());
+    System.setProperty("KEYSTORE_PASSWORD", "password");
 
     KeyPair clientKeyPair = KeyStoreTestUtil.generateKeyPair("RSA");
     X509Certificate clientCert = KeyStoreTestUtil.generateCertificate(
@@ -323,9 +319,8 @@ public class TestAMWebApp {
     truststoreFile.getParentFile().mkdirs();
     KeyStoreTestUtil.createTrustStore(truststoreFile.getAbsolutePath(),
         "password", "client", clientCert);
-    extension.getEnvironmentVariables().set("TRUSTSTORE_FILE_LOCATION",
-        truststoreFile.getAbsolutePath());
-    extension.getEnvironmentVariables().set("TRUSTSTORE_PASSWORD", "password");
+    System.setProperty("TRUSTSTORE_FILE_LOCATION", truststoreFile.getAbsolutePath());
+    System.setProperty("TRUSTSTORE_PASSWORD", "password");
 
     Job job = app.submit(conf);
 
@@ -363,6 +358,11 @@ public class TestAMWebApp {
 
     keystoreFile.delete();
     truststoreFile.delete();
+
+    System.clearProperty("KEYSTORE_FILE_LOCATION");
+    System.clearProperty("KEYSTORE_PASSWORD");
+    System.clearProperty("TRUSTSTORE_FILE_LOCATION");
+    System.clearProperty("TRUSTSTORE_PASSWORD");
   }
 
   static String webProxyBase = null;
@@ -417,11 +417,11 @@ public class TestAMWebApp {
     }
   }
 
-  /*public static void main(String[] args) {
+  public static void main(String[] args) {
     AppContext context = new MockAppContext(0, 8, 88, 4);
     WebApps.$for("yarn", AppContext.class, context).withResourceConfig(configure(context)).
         at(58888).inDevMode().start(new AMWebApp(context)).joinThread();
-  }*/
+  }
 
   protected static ResourceConfig configure(AppContext context) {
     ResourceConfig config = new ResourceConfig();

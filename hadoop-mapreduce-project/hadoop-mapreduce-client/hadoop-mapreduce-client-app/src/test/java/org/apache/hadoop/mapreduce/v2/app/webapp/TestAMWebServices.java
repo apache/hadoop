@@ -337,8 +337,8 @@ public class TestAMWebServices extends JerseyTestBase {
     assertEquals(1, infonodes.getLength(), "incorrect number of elements");
     NodeList nodes = dom.getElementsByTagName("blacklistedNodes");
     Set<String> blacklistedNodes = ctx.getBlacklistedNodes();
-    assertEquals(blacklistedNodes.size()
-,         nodes.getLength(), "incorrect number of elements");
+    assertEquals(blacklistedNodes.size(),
+        nodes.getLength(), "incorrect number of elements");
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
       assertTrue(

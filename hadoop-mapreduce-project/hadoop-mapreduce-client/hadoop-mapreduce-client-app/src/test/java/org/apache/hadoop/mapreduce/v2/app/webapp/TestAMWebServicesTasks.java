@@ -738,8 +738,7 @@ public class TestAMWebServicesTasks extends JerseyTestBase {
       for (int j = 0; j < counters.length(); j++) {
         JSONObject counter = counters.getJSONObject(j);
         String counterName = counter.getString("name");
-        assertTrue(
-           (counterName != null && !counterName.isEmpty()), "name not set");
+        assertTrue((counterName != null && !counterName.isEmpty()), "name not set");
         long value = counter.getLong("value");
         assertTrue(value >= 0, "value  >= 0");
       }
@@ -769,8 +768,7 @@ public class TestAMWebServicesTasks extends JerseyTestBase {
           Element counter = (Element) counterArr.item(z);
           String counterName = WebServicesTestUtils.getXmlString(counter,
               "name");
-          assertTrue(
-             (counterName != null && !counterName.isEmpty()), "counter name not set");
+          assertTrue((counterName != null && !counterName.isEmpty()), "counter name not set");
 
           long value = WebServicesTestUtils.getXmlLong(counter, "value");
           assertTrue(value >= 0, "value not >= 0");

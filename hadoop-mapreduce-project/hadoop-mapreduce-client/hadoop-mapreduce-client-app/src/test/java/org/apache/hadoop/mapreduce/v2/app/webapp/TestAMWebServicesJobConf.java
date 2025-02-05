@@ -58,6 +58,7 @@ import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -69,7 +70,7 @@ import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 /**
  * Test the app master web service Rest API for getting the job conf. This
- * requires to be created a temporary configuration file.
+ * requires created a temporary configuration file.
  *
  *   /ws/v1/mapreduce/job/{jobid}/conf
  */
@@ -130,9 +131,9 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
     }
   }
 
-  @Override
-  public void setUp() throws Exception {
-    super.setUp();
+
+  @BeforeAll
+  public static void setTestConfDir() throws Exception {
     testConfDir.mkdir();
   }
 

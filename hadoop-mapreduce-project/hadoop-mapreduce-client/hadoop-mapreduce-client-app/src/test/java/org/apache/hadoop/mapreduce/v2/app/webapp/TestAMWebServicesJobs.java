@@ -470,8 +470,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
         } else {
           fail("should have acls in the web service info");
         }
-        assertTrue(
-           found, "acl: " + expectName + " not found in webservice output");
+        assertTrue(found, "acl: " + expectName + " not found in webservice output");
       }
     }
 
@@ -545,8 +544,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
           } else {
             fail("should have acls in the web service info");
           }
-          assertTrue(
-             found, "acl: " + expectName + " not found in webservice output");
+          assertTrue(found, "acl: " + expectName + " not found in webservice output");
         }
       }
     }
@@ -568,17 +566,15 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
     assertEquals(report.getStartTime(), startTime, "startTime incorrect");
     assertEquals(report.getFinishTime(), finishTime, "finishTime incorrect");
-    assertEquals(
-       Times.elapsed(report.getStartTime(), report.getFinishTime())
-,         elapsedTime, "elapsedTime incorrect");
+    assertEquals(Times.elapsed(report.getStartTime(), report.getFinishTime()),
+        elapsedTime, "elapsedTime incorrect");
     assertEquals(job.getTotalMaps(), mapsTotal, "mapsTotal incorrect");
-    assertEquals(job.getCompletedMaps()
-,         mapsCompleted, "mapsCompleted incorrect");
+    assertEquals(job.getCompletedMaps(),
+        mapsCompleted, "mapsCompleted incorrect");
     assertEquals(job.getTotalReduces(), reducesTotal, "reducesTotal incorrect");
-    assertEquals(job.getCompletedReduces()
-,         reducesCompleted, "reducesCompleted incorrect");
-    assertEquals(report.getMapProgress() * 100,
-        mapProgress, 0, "mapProgress incorrect");
+    assertEquals(job.getCompletedReduces(),
+        reducesCompleted, "reducesCompleted incorrect");
+    assertEquals(report.getMapProgress() * 100, mapProgress, 0, "mapProgress incorrect");
     assertEquals(report.getReduceProgress() * 100,
         reduceProgress, 0, "reduceProgress incorrect");
   }
@@ -617,8 +613,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
     assertTrue(runningReduceAttempts >= 0, "runningReduceAttempts not >= 0");
     assertTrue(failedReduceAttempts >= 0, "failedReduceAttempts not >= 0");
     assertTrue(killedReduceAttempts >= 0, "killedReduceAttempts not >= 0");
-    assertTrue(
-       successfulReduceAttempts >= 0, "successfulReduceAttempts not >= 0");
+    assertTrue(successfulReduceAttempts >= 0, "successfulReduceAttempts not >= 0");
 
     assertTrue(newMapAttempts >= 0, "newMapAttempts not >= 0");
     assertTrue(runningMapAttempts >= 0, "runningMapAttempts not >= 0");
@@ -724,8 +719,8 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       for (int j = 0; j < counters.length(); j++) {
         JSONObject counter = counters.getJSONObject(j);
         String counterName = counter.getString("name");
-        assertTrue(
-           (counterName != null && !counterName.isEmpty()), "counter name not set");
+        assertTrue((counterName != null && !counterName.isEmpty()),
+            "counter name not set");
 
         long mapValue = counter.getLong("mapCounterValue");
         assertTrue(mapValue >= 0, "mapCounterValue  >= 0");
@@ -764,8 +759,8 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
           Element counter = (Element) counterArr.item(z);
           String counterName = WebServicesTestUtils.getXmlString(counter,
               "name");
-          assertTrue(
-             (counterName != null && !counterName.isEmpty()), "counter name not set");
+          assertTrue((counterName != null && !counterName.isEmpty()),
+              "counter name not set");
 
           long mapValue = WebServicesTestUtils.getXmlLong(counter,
               "mapCounterValue");
