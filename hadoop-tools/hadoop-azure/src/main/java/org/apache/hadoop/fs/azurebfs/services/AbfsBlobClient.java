@@ -683,10 +683,17 @@ public class AbfsBlobClient extends AbfsClient {
    * @param tracingContext the tracing context.
    * @throws AzureBlobFileSystemException if the creation of markers fails.
    */
-  private void createParentMarkersIfNeeded(String path, boolean overwrite, AzureBlobFileSystemStore.Permissions permissions, boolean isAppendBlob, String eTag, ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext) throws AzureBlobFileSystemException {
+  private void createParentMarkersIfNeeded(String path,
+      boolean overwrite,
+      AzureBlobFileSystemStore.Permissions permissions,
+      boolean isAppendBlob,
+      String eTag,
+      ContextEncryptionAdapter contextEncryptionAdapter,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
     Path parentPath = new Path(path).getParent();
     if (parentPath != null && !parentPath.isRoot()) {
-      createMarkers(parentPath, overwrite, permissions, isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
+      createMarkers(parentPath, overwrite, permissions, isAppendBlob, eTag,
+          contextEncryptionAdapter, tracingContext);
     }
   }
 
