@@ -1876,7 +1876,8 @@ public class TestRecovery {
         "Expected Number of Task Attempts");
     for (TaskAttemptID taID : finalAttemptStates.keySet()) {
       assertEquals(finalAttemptStates.get(taID),
-          recoveredAttempts.get(TypeConverter.toYarn(taID)).getState(), "Expected Task Attempt State");
+          recoveredAttempts.get(TypeConverter.toYarn(taID)).getState(),
+          "Expected Task Attempt State");
     }
 
     Iterator<Event> ie = arg.getAllValues().iterator();
