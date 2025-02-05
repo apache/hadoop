@@ -19,6 +19,7 @@ package org.apache.hadoop.mapreduce.v2.app;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -40,7 +41,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.Assertions;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -467,38 +467,36 @@ public class TestMRAppMaster {
 
     // Now validate the task credentials
     Credentials appMasterCreds = appMaster.getCredentials();
-    Assertions.assertNotNull(appMasterCreds);
-    Assertions.assertEquals(1, appMasterCreds.numberOfSecretKeys());
-    Assertions.assertEquals(1, appMasterCreds.numberOfTokens());
+    assertNotNull(appMasterCreds);
+    assertEquals(1, appMasterCreds.numberOfSecretKeys());
+    assertEquals(1, appMasterCreds.numberOfTokens());
 
     // Validate the tokens - app token should not be present
     Token<? extends TokenIdentifier> usedToken =
         appMasterCreds.getToken(tokenAlias);
-    Assertions.assertNotNull(usedToken);
-    Assertions.assertEquals(storedToken, usedToken);
+    assertNotNull(usedToken);
+    assertEquals(storedToken, usedToken);
 
     // Validate the keys
     byte[] usedKey = appMasterCreds.getSecretKey(keyAlias);
-    Assertions.assertNotNull(usedKey);
-    Assertions.assertEquals("mySecretKey", new String(usedKey));
+    assertNotNull(usedKey);
+    assertEquals("mySecretKey", new String(usedKey));
 
     // The credentials should also be added to conf so that OuputCommitter can
     // access it - app token should not be present
     Credentials confCredentials = conf.getCredentials();
-    Assertions.assertEquals(1, confCredentials.numberOfSecretKeys());
-    Assertions.assertEquals(1, confCredentials.numberOfTokens());
-    Assertions.assertEquals(storedToken, confCredentials.getToken(tokenAlias));
-    Assertions.assertEquals("mySecretKey",
-      new String(confCredentials.getSecretKey(keyAlias)));
+    assertEquals(1, confCredentials.numberOfSecretKeys());
+    assertEquals(1, confCredentials.numberOfTokens());
+    assertEquals(storedToken, confCredentials.getToken(tokenAlias));
+    assertEquals("mySecretKey", new String(confCredentials.getSecretKey(keyAlias)));
 
     // Verify the AM's ugi - app token should be present
     Credentials ugiCredentials = appMaster.getUgi().getCredentials();
-    Assertions.assertEquals(1, ugiCredentials.numberOfSecretKeys());
-    Assertions.assertEquals(2, ugiCredentials.numberOfTokens());
-    Assertions.assertEquals(storedToken, ugiCredentials.getToken(tokenAlias));
-    Assertions.assertEquals(appToken, ugiCredentials.getToken(appTokenService));
-    Assertions.assertEquals("mySecretKey",
-      new String(ugiCredentials.getSecretKey(keyAlias)));
+    assertEquals(1, ugiCredentials.numberOfSecretKeys());
+    assertEquals(2, ugiCredentials.numberOfTokens());
+    assertEquals(storedToken, ugiCredentials.getToken(tokenAlias));
+    assertEquals(appToken, ugiCredentials.getToken(appTokenService));
+    assertEquals("mySecretKey", new String(ugiCredentials.getSecretKey(keyAlias)));
 
 
   }
@@ -527,9 +525,9 @@ public class TestMRAppMaster {
     doNothing().when(appMaster).serviceStop();
     // Test normal shutdown.
     appMaster.shutDownJob();
-    Assertions.assertTrue(
+    assertTrue(
                      ExitUtil.terminateCalled(), "Expected shutDownJob to terminate.");
-    Assertions.assertEquals(
+    assertEquals(
        0, ExitUtil.getFirstExitException().status, "Expected shutDownJob to exit with status code of 0.");
 
     // Test shutdown with exception.
@@ -540,7 +538,7 @@ public class TestMRAppMaster {
     appMaster.shutDownJob();
     assertTrue(
        ExitUtil.getFirstExitException().getMessage().contains(msg), "Expected message from ExitUtil.ExitException to be " + msg);
-    Assertions.assertEquals(
+    assertEquals(
        1, ExitUtil.getFirstExitException().status, "Expected shutDownJob to exit with status code of 1.");
   }
 

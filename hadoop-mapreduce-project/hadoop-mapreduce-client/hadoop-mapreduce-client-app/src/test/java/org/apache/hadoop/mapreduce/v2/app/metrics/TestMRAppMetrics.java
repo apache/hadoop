@@ -28,7 +28,8 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestMRAppMetrics {
 

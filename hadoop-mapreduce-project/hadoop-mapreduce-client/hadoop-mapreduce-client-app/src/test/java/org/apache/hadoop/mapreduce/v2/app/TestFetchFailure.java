@@ -19,14 +19,15 @@
 package org.apache.hadoop.mapreduce.v2.app;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicReference;
 
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
@@ -38,6 +39,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEventStatus;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
@@ -49,7 +51,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class TestFetchFailure {
@@ -64,8 +65,7 @@ public class TestFetchFailure {
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
     //all maps would be running
-    Assertions.assertEquals(
-      2, job.getTasks().size(), "Num tasks not correct");
+    assertEquals(2, job.getTasks().size(), "Num tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task mapTask = it.next();
     Task reduceTask = it.next();
@@ -85,18 +85,20 @@ public class TestFetchFailure {
 
     final int checkIntervalMillis = 10;
     final int waitForMillis = 800;
-    GenericTestUtils.waitFor(() -> {
-      TaskAttemptCompletionEvent[] events = job
-          .getTaskAttemptCompletionEvents(0, 100);
-      return events.length >= 1;
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        TaskAttemptCompletionEvent[] events = job
+            .getTaskAttemptCompletionEvents(0, 100);
+        return events.length >= 1;
+      }
     }, checkIntervalMillis, waitForMillis);
 
     TaskAttemptCompletionEvent[] events =
       job.getTaskAttemptCompletionEvents(0, 100);
-    Assertions.assertEquals(
-       1, events.length, "Num completion events not correct");
-    Assertions.assertEquals(
-       TaskAttemptCompletionEventStatus.SUCCEEDED, events[0].getStatus(), "Event status not correct");
+    assertEquals(1, events.length, "Num completion events not correct");
+    assertEquals(TaskAttemptCompletionEventStatus.SUCCEEDED, events[0].getStatus(),
+        "Event status not correct");
     
     // wait for reduce to start running
     app.waitForState(reduceTask, TaskState.RUNNING);
@@ -113,11 +115,11 @@ public class TestFetchFailure {
     app.waitForState(mapTask, TaskState.RUNNING);
     
     //map attempt must have become FAILED
-    Assertions.assertEquals(
-       TaskAttemptState.FAILED, mapAttempt1.getState(), "Map TaskAttempt state not correct");
+    assertEquals(TaskAttemptState.FAILED, mapAttempt1.getState(),
+        "Map TaskAttempt state not correct");
 
-    Assertions.assertEquals(
-       2, mapTask.getAttempts().size(), "Num attempts in Map Task not correct");
+    assertEquals(2, mapTask.getAttempts().size(),
+        "Num attempts in Map Task not correct");
     
     Iterator<TaskAttempt> atIt = mapTask.getAttempts().values().iterator();
     atIt.next();
@@ -140,46 +142,44 @@ public class TestFetchFailure {
     app.waitForState(job, JobState.SUCCEEDED);
     
     //previous completion event now becomes obsolete
-    Assertions.assertEquals(
+    assertEquals(
        TaskAttemptCompletionEventStatus.OBSOLETE, events[0].getStatus(), "Event status not correct");
     
     events = job.getTaskAttemptCompletionEvents(0, 100);
-    Assertions.assertEquals(
-       4, events.length, "Num completion events not correct");
-    Assertions.assertEquals(
-       mapAttempt1.getID(), events[0].getAttemptId(), "Event map attempt id not correct");
-    Assertions.assertEquals(
-       mapAttempt1.getID(), events[1].getAttemptId(), "Event map attempt id not correct");
-    Assertions.assertEquals(
-       mapAttempt2.getID(), events[2].getAttemptId(), "Event map attempt id not correct");
-    Assertions.assertEquals(
-       reduceAttempt.getID(), events[3].getAttemptId(), "Event reduce attempt id not correct");
-    Assertions.assertEquals(
-       TaskAttemptCompletionEventStatus.OBSOLETE, events[0].getStatus(), "Event status not correct for map attempt1");
-    Assertions.assertEquals(
-       TaskAttemptCompletionEventStatus.FAILED, events[1].getStatus(), "Event status not correct for map attempt1");
-    Assertions.assertEquals(
-       TaskAttemptCompletionEventStatus.SUCCEEDED, events[2].getStatus(), "Event status not correct for map attempt2");
-    Assertions.assertEquals(
-       TaskAttemptCompletionEventStatus.SUCCEEDED, events[3].getStatus(), "Event status not correct for reduce attempt1");
+    assertEquals(4, events.length, "Num completion events not correct");
+    assertEquals(mapAttempt1.getID(), events[0].getAttemptId(),
+        "Event map attempt id not correct");
+    assertEquals(mapAttempt1.getID(), events[1].getAttemptId(),
+        "Event map attempt id not correct");
+    assertEquals(mapAttempt2.getID(), events[2].getAttemptId(),
+        "Event map attempt id not correct");
+    assertEquals(reduceAttempt.getID(), events[3].getAttemptId(),
+        "Event reduce attempt id not correct");
+    assertEquals(TaskAttemptCompletionEventStatus.OBSOLETE, events[0].getStatus(),
+        "Event status not correct for map attempt1");
+    assertEquals(TaskAttemptCompletionEventStatus.FAILED, events[1].getStatus(),
+        "Event status not correct for map attempt1");
+    assertEquals(TaskAttemptCompletionEventStatus.SUCCEEDED, events[2].getStatus(),
+        "Event status not correct for map attempt2");
+    assertEquals(TaskAttemptCompletionEventStatus.SUCCEEDED, events[3].getStatus(),
+        "Event status not correct for reduce attempt1");
 
     TaskCompletionEvent mapEvents[] =
         job.getMapAttemptCompletionEvents(0, 2);
     TaskCompletionEvent convertedEvents[] = TypeConverter.fromYarn(events);
-    Assertions.assertEquals(2, mapEvents.length, "Incorrect number of map events");
-    Assertions.assertArrayEquals(
+    assertEquals(2, mapEvents.length, "Incorrect number of map events");
+    assertArrayEquals(
        Arrays.copyOfRange(convertedEvents, 0, 2), mapEvents, "Unexpected map events");
     mapEvents = job.getMapAttemptCompletionEvents(2, 200);
-    Assertions.assertEquals(1, mapEvents.length, "Incorrect number of map events");
-    Assertions.assertEquals(convertedEvents[2]
-,         mapEvents[0], "Unexpected map event");
+    assertEquals(1, mapEvents.length, "Incorrect number of map events");
+    assertEquals(convertedEvents[2], mapEvents[0], "Unexpected map event");
   }
   
   /**
    * This tests that if a map attempt was failed (say due to fetch failures),
    * then it gets re-run. When the next map attempt is running, if the AM dies,
    * then, on AM re-run, the AM does not incorrectly remember the first failed
-   * attempt. Currently, recovery does not recover running tasks. Effectively,
+   * attempt. Currently recovery does not recover running tasks. Effectively,
    * the AM re-runs the maps from scratch.
    */
   @Test
@@ -193,8 +193,7 @@ public class TestFetchFailure {
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
     //all maps would be running
-    Assertions.assertEquals(
-       2, job.getTasks().size(), "Num tasks not correct");
+    assertEquals(2, job.getTasks().size(), "Num tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task mapTask = it.next();
     Task reduceTask = it.next();
@@ -214,9 +213,8 @@ public class TestFetchFailure {
 
     TaskAttemptCompletionEvent[] events = 
       job.getTaskAttemptCompletionEvents(0, 100);
-    Assertions.assertEquals(
-       1, events.length, "Num completion events not correct");
-    Assertions.assertEquals(
+    assertEquals(1, events.length, "Num completion events not correct");
+    assertEquals(
        TaskAttemptCompletionEventStatus.SUCCEEDED, events[0].getStatus(), "Event status not correct");
 
     // wait for reduce to start running
@@ -246,8 +244,7 @@ public class TestFetchFailure {
     job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
     //all maps would be running
-    Assertions.assertEquals(
-       2, job.getTasks().size(), "Num tasks not correct");
+    assertEquals(2, job.getTasks().size(), "Num tasks not correct");
     it = job.getTasks().values().iterator();
     mapTask = it.next();
     reduceTask = it.next();
@@ -273,7 +270,7 @@ public class TestFetchFailure {
 
     app.waitForState(job, JobState.SUCCEEDED);
     events = job.getTaskAttemptCompletionEvents(0, 100);
-    Assertions.assertEquals(2, events.length, "Num completion events not correct");
+    assertEquals(2, events.length, "Num completion events not correct");
   }
   
   @Test
@@ -286,8 +283,7 @@ public class TestFetchFailure {
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
     //all maps would be running
-    Assertions.assertEquals(
-      4, job.getTasks().size(), "Num tasks not correct");
+    assertEquals(4, job.getTasks().size(), "Num tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task mapTask = it.next();
     Task reduceTask = it.next();
@@ -309,10 +305,10 @@ public class TestFetchFailure {
     
     TaskAttemptCompletionEvent[] events = 
       job.getTaskAttemptCompletionEvents(0, 100);
-    Assertions.assertEquals(
-       1, events.length, "Num completion events not correct");
-    Assertions.assertEquals(
-       TaskAttemptCompletionEventStatus.SUCCEEDED, events[0].getStatus(), "Event status not correct");
+    assertEquals(1, events.length,
+        "Num completion events not correct");
+    assertEquals(TaskAttemptCompletionEventStatus.SUCCEEDED, events[0].getStatus(),
+        "Event status not correct");
     
     // wait for reduce to start running
     app.waitForState(reduceTask, TaskState.RUNNING);
@@ -350,16 +346,16 @@ public class TestFetchFailure {
     app.waitForState(mapTask, TaskState.RUNNING);
     
     //map attempt must have become FAILED
-    Assertions.assertEquals(
-       TaskAttemptState.FAILED, mapAttempt1.getState(), "Map TaskAttempt state not correct");
+    assertEquals(TaskAttemptState.FAILED, mapAttempt1.getState(),
+        "Map TaskAttempt state not correct");
 
     assertThat(mapAttempt1.getDiagnostics().get(0))
         .isEqualTo("Too many fetch failures. Failing the attempt. "
             + "Last failure reported by "
             + reduceAttempt3.getID().toString() + " from host host3");
 
-    Assertions.assertEquals(
-       2, mapTask.getAttempts().size(), "Num attempts in Map Task not correct");
+    assertEquals(2, mapTask.getAttempts().size(),
+        "Num attempts in Map Task not correct");
     
     Iterator<TaskAttempt> atIt = mapTask.getAttempts().values().iterator();
     atIt.next();
@@ -392,45 +388,43 @@ public class TestFetchFailure {
     app.waitForState(job, JobState.SUCCEEDED);
     
     //previous completion event now becomes obsolete
-    Assertions.assertEquals(
-       TaskAttemptCompletionEventStatus.OBSOLETE, events[0].getStatus(), "Event status not correct");
+    assertEquals(
+        TaskAttemptCompletionEventStatus.OBSOLETE, events[0].getStatus(), "Event status not correct");
     
     events = job.getTaskAttemptCompletionEvents(0, 100);
-    Assertions.assertEquals(
-       6, events.length, "Num completion events not correct");
-    Assertions.assertEquals(
-       mapAttempt1.getID(), events[0].getAttemptId(), "Event map attempt id not correct");
-    Assertions.assertEquals(
-       mapAttempt1.getID(), events[1].getAttemptId(), "Event map attempt id not correct");
-    Assertions.assertEquals(
-       mapAttempt2.getID(), events[2].getAttemptId(), "Event map attempt id not correct");
-    Assertions.assertEquals(
-       reduceAttempt.getID(), events[3].getAttemptId(), "Event reduce attempt id not correct");
-    Assertions.assertEquals(
-       TaskAttemptCompletionEventStatus.OBSOLETE, events[0].getStatus(), "Event status not correct for map attempt1");
-    Assertions.assertEquals(
-       TaskAttemptCompletionEventStatus.FAILED, events[1].getStatus(), "Event status not correct for map attempt1");
-    Assertions.assertEquals(
-       TaskAttemptCompletionEventStatus.SUCCEEDED, events[2].getStatus(), "Event status not correct for map attempt2");
-    Assertions.assertEquals(
-       TaskAttemptCompletionEventStatus.SUCCEEDED, events[3].getStatus(), "Event status not correct for reduce attempt1");
+    assertEquals(6, events.length, "Num completion events not correct");
+    assertEquals(mapAttempt1.getID(), events[0].getAttemptId(),
+        "Event map attempt id not correct");
+    assertEquals(mapAttempt1.getID(), events[1].getAttemptId(),
+        "Event map attempt id not correct");
+    assertEquals(mapAttempt2.getID(), events[2].getAttemptId(),
+        "Event map attempt id not correct");
+    assertEquals(reduceAttempt.getID(), events[3].getAttemptId(),
+        "Event reduce attempt id not correct");
+    assertEquals(TaskAttemptCompletionEventStatus.OBSOLETE, events[0].getStatus(),
+        "Event status not correct for map attempt1");
+    assertEquals(TaskAttemptCompletionEventStatus.FAILED, events[1].getStatus(),
+        "Event status not correct for map attempt1");
+    assertEquals(TaskAttemptCompletionEventStatus.SUCCEEDED, events[2].getStatus(),
+        "Event status not correct for map attempt2");
+    assertEquals(TaskAttemptCompletionEventStatus.SUCCEEDED, events[3].getStatus(),
+        "Event status not correct for reduce attempt1");
 
     TaskCompletionEvent mapEvents[] =
         job.getMapAttemptCompletionEvents(0, 2);
     TaskCompletionEvent convertedEvents[] = TypeConverter.fromYarn(events);
-    Assertions.assertEquals(2, mapEvents.length, "Incorrect number of map events");
-    Assertions.assertArrayEquals(
+    assertEquals(2, mapEvents.length, "Incorrect number of map events");
+    assertArrayEquals(
        Arrays.copyOfRange(convertedEvents, 0, 2), mapEvents, "Unexpected map events");
     mapEvents = job.getMapAttemptCompletionEvents(2, 200);
-    Assertions.assertEquals(1, mapEvents.length, "Incorrect number of map events");
-    Assertions.assertEquals(convertedEvents[2]
-,         mapEvents[0], "Unexpected map event");
+    assertEquals(1, mapEvents.length, "Incorrect number of map events");
+    assertEquals(convertedEvents[2], mapEvents[0], "Unexpected map event");
   }
 
   private void updateStatus(MRApp app, TaskAttempt attempt, Phase phase) {
     TaskAttemptStatusUpdateEvent.TaskAttemptStatus status = new TaskAttemptStatusUpdateEvent.TaskAttemptStatus();
     status.counters = new Counters();
-    status.fetchFailedMaps = new ArrayList<>();
+    status.fetchFailedMaps = new ArrayList<TaskAttemptId>();
     status.id = attempt.getID();
     status.mapFinishTime = 0;
     status.phase = phase;
@@ -449,7 +443,8 @@ public class TestFetchFailure {
     app.getContext().getEventHandler().handle(
         new JobTaskAttemptFetchFailureEvent(
             reduceAttempt.getID(),
-            Collections.singletonList(mapAttempt.getID()), hostname));
+            Arrays.asList(new TaskAttemptId[] {mapAttempt.getID()}),
+                hostname));
   }
   
   static class MRAppWithHistory extends MRApp {

@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -28,7 +31,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileStatus;
@@ -113,7 +115,7 @@ public class TestTaskAttemptContainerRequest {
             mock(WrappedJvmID.class), taListener,
             credentials);
 
-    Assertions.assertEquals(acls, launchCtx.getApplicationACLs(), "ACLs mismatch");
+    assertEquals(acls, launchCtx.getApplicationACLs(), "ACLs mismatch");
     Credentials launchCredentials = new Credentials();
 
     DataInputByteBuffer dibb = new DataInputByteBuffer();
@@ -124,16 +126,13 @@ public class TestTaskAttemptContainerRequest {
     for (Token<? extends TokenIdentifier> token : credentials.getAllTokens()) {
       Token<? extends TokenIdentifier> launchToken =
           launchCredentials.getToken(token.getService());
-      Assertions.assertNotNull(
-         launchToken, "Token " + token.getService() + " is missing");
-      Assertions.assertEquals(
-         token, launchToken, "Token " + token.getService() + " mismatch");
+      assertNotNull(launchToken, "Token " + token.getService() + " is missing");
+      assertEquals(token, launchToken, "Token " + token.getService() + " mismatch");
     }
 
     // verify the secret key is in the launch context
-    Assertions.assertNotNull(
-       launchCredentials.getSecretKey(SECRET_KEY_ALIAS), "Secret key missing");
-    Assertions.assertTrue(Arrays.equals(SECRET_KEY,
+    assertNotNull(launchCredentials.getSecretKey(SECRET_KEY_ALIAS), "Secret key missing");
+    assertTrue(Arrays.equals(SECRET_KEY,
         launchCredentials.getSecretKey(SECRET_KEY_ALIAS)), "Secret key mismatch");
   }
 

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -54,7 +56,6 @@ import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Assertions;
 
 public class TestShuffleProvider {
 
@@ -91,7 +92,7 @@ public class TestShuffleProvider {
                      + "," + TestShuffleHandler2.MAPREDUCE_TEST_SHUFFLE_SERVICEID);
 
     Credentials credentials = new Credentials();
-    Token<JobTokenIdentifier> jobToken = new Token<>(
+    Token<JobTokenIdentifier> jobToken = new Token<JobTokenIdentifier>(
         ("tokenid").getBytes(), ("tokenpw").getBytes(),
         new Text("tokenkind"), new Text("tokenservice"));
     TaskAttemptImpl taImpl =
@@ -110,9 +111,12 @@ public class TestShuffleProvider {
             credentials);
 
     Map<String, ByteBuffer> serviceDataMap = launchCtx.getServiceData();
-    Assertions.assertNotNull(serviceDataMap.get(TestShuffleHandler1.MAPREDUCE_TEST_SHUFFLE_SERVICEID), "TestShuffleHandler1 is missing");
-    Assertions.assertNotNull(serviceDataMap.get(TestShuffleHandler2.MAPREDUCE_TEST_SHUFFLE_SERVICEID), "TestShuffleHandler2 is missing");
-    Assertions.assertEquals(3, serviceDataMap.size(), "mismatch number of services in map"); // 2 that we entered + 1 for the built-in shuffle-provider
+    assertNotNull(serviceDataMap.get(TestShuffleHandler1.MAPREDUCE_TEST_SHUFFLE_SERVICEID),
+        "TestShuffleHandler1 is missing");
+    assertNotNull(serviceDataMap.get(TestShuffleHandler2.MAPREDUCE_TEST_SHUFFLE_SERVICEID),
+        "TestShuffleHandler2 is missing");
+    // 2 that we entered + 1 for the built-in shuffle-provider
+    assertEquals(3, serviceDataMap.size(), "mismatch number of services in map");
   }
 
   static public class StubbedFS extends RawLocalFileSystem {

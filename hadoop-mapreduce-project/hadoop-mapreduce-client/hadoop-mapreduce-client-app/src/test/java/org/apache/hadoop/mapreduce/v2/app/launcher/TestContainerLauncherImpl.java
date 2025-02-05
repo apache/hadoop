@@ -92,7 +92,8 @@ public class TestContainerLauncherImpl {
   private static final RecordFactory recordFactory =
     RecordFactoryProvider.getRecordFactory(null);
 
-  private Map<String, ByteBuffer> serviceResponse = new HashMap<>();
+  private Map<String, ByteBuffer> serviceResponse =
+      new HashMap<String, ByteBuffer>();
 
   @BeforeEach
   public void setup() throws IOException {
@@ -135,14 +136,14 @@ public class TestContainerLauncherImpl {
       // That the other thread had time to insert the event into the queue and
       // start processing it.  For some reason we were getting interrupted
       // exceptions within eventQueue without this sleep.
-      Thread.sleep(100L);
+      Thread.sleep(100l);
       LOG.debug("POOL SIZE 1: "+this.eventQueue.size()+
           " POOL SIZE 2: "+this.launcherPool.getQueue().size()+
           " ACTIVE COUNT: "+ this.launcherPool.getActiveCount());
       while(!this.eventQueue.isEmpty() || 
           !this.launcherPool.getQueue().isEmpty() || 
           this.launcherPool.getActiveCount() > 0) {
-        Thread.sleep(100L);
+        Thread.sleep(100l);
         LOG.debug("POOL SIZE 1: "+this.eventQueue.size()+
             " POOL SIZE 2: "+this.launcherPool.getQueue().size()+
             " ACTIVE COUNT: "+ this.launcherPool.getActiveCount());
@@ -186,8 +187,8 @@ public class TestContainerLauncherImpl {
     ut.init(conf);
     ut.start();
     try {
-      ContainerId contId = makeContainerId(0L, 0, 0, 1);
-      TaskAttemptId taskAttemptId = makeTaskAttemptId(0L, 0, 0, TaskType.MAP, 0);
+      ContainerId contId = makeContainerId(0l, 0, 0, 1);
+      TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
       StartContainersResponse startResp =
         recordFactory.newRecordInstance(StartContainersResponse.class);
       startResp.setAllServicesMetaData(serviceResponse);
@@ -245,8 +246,8 @@ public class TestContainerLauncherImpl {
     ut.init(conf);
     ut.start();
     try {
-      ContainerId contId = makeContainerId(0L, 0, 0, 1);
-      TaskAttemptId taskAttemptId = makeTaskAttemptId(0L, 0, 0, TaskType.MAP, 0);
+      ContainerId contId = makeContainerId(0l, 0, 0, 1);
+      TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
       String cmAddress = "127.0.0.1:8000";
       StartContainersResponse startResp =
         recordFactory.newRecordInstance(StartContainersResponse.class);
@@ -321,8 +322,8 @@ public class TestContainerLauncherImpl {
     ut.init(conf);
     ut.start();
     try {
-      ContainerId contId = makeContainerId(0L, 0, 0, 1);
-      TaskAttemptId taskAttemptId = makeTaskAttemptId(0L, 0, 0, TaskType.MAP, 0);
+      ContainerId contId = makeContainerId(0l, 0, 0, 1);
+      TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
       String cmAddress = "127.0.0.1:8000";
       StartContainersResponse startResp =
         recordFactory.newRecordInstance(StartContainersResponse.class);
@@ -377,8 +378,8 @@ public class TestContainerLauncherImpl {
     ut.init(conf);
     ut.start();
     try {
-      ContainerId contId = makeContainerId(0L, 0, 0, 1);
-      TaskAttemptId taskAttemptId = makeTaskAttemptId(0L, 0, 0, TaskType.MAP, 0);
+      ContainerId contId = makeContainerId(0l, 0, 0, 1);
+      TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
       String cmAddress = "127.0.0.1:8000";
       StartContainersResponse startResp =
         recordFactory.newRecordInstance(StartContainersResponse.class);

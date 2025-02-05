@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
@@ -25,8 +29,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -82,7 +84,7 @@ public class TestMRClientService {
     Configuration conf = new Configuration();
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
-    Assertions.assertEquals(1, job.getTasks().size(), "Num tasks not correct");
+    assertEquals(1, job.getTasks().size(), "Num tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task task = it.next();
     app.waitForState(task, TaskState.RUNNING);
@@ -116,8 +118,7 @@ public class TestMRClientService {
     GetCountersRequest gcRequest =
         recordFactory.newRecordInstance(GetCountersRequest.class);    
     gcRequest.setJobId(job.getID());
-    Assertions.assertNotNull(
-       proxy.getCounters(gcRequest).getCounters(), "Counters is null");
+    assertNotNull(proxy.getCounters(gcRequest).getCounters(), "Counters is null");
 
     GetJobReportRequest gjrRequest =
         recordFactory.newRecordInstance(GetJobReportRequest.class);
@@ -131,14 +132,14 @@ public class TestMRClientService {
     gtaceRequest.setJobId(job.getID());
     gtaceRequest.setFromEventId(0);
     gtaceRequest.setMaxEvents(10);
-    Assertions.assertNotNull(
-        proxy.getTaskAttemptCompletionEvents(gtaceRequest).getCompletionEventList(), "TaskCompletionEvents is null");
+    assertNotNull(proxy.getTaskAttemptCompletionEvents(gtaceRequest).getCompletionEventList(),
+        "TaskCompletionEvents is null");
 
     GetDiagnosticsRequest gdRequest =
         recordFactory.newRecordInstance(GetDiagnosticsRequest.class);
     gdRequest.setTaskAttemptId(attempt.getID());
-    Assertions.assertNotNull(
-        proxy.getDiagnostics(gdRequest).getDiagnosticsList(), "Diagnostics is null");
+    assertNotNull(proxy.getDiagnostics(gdRequest).getDiagnosticsList(),
+        "Diagnostics is null");
 
     GetTaskAttemptReportRequest gtarRequest =
         recordFactory.newRecordInstance(GetTaskAttemptReportRequest.class);
@@ -151,31 +152,29 @@ public class TestMRClientService {
     GetTaskReportRequest gtrRequest =
         recordFactory.newRecordInstance(GetTaskReportRequest.class);
     gtrRequest.setTaskId(task.getID());
-    Assertions.assertNotNull(
-        proxy.getTaskReport(gtrRequest).getTaskReport(), "TaskReport is null");
+    assertNotNull(proxy.getTaskReport(gtrRequest).getTaskReport(),
+        "TaskReport is null");
 
     GetTaskReportsRequest gtreportsRequest =
         recordFactory.newRecordInstance(GetTaskReportsRequest.class);
     gtreportsRequest.setJobId(job.getID());
     gtreportsRequest.setTaskType(TaskType.MAP);
-    Assertions.assertNotNull(
-        proxy.getTaskReports(gtreportsRequest).getTaskReportList(), "TaskReports for map is null");
+    assertNotNull(proxy.getTaskReports(gtreportsRequest).getTaskReportList(),
+        "TaskReports for map is null");
 
     gtreportsRequest =
         recordFactory.newRecordInstance(GetTaskReportsRequest.class);
     gtreportsRequest.setJobId(job.getID());
     gtreportsRequest.setTaskType(TaskType.REDUCE);
-    Assertions.assertNotNull(
-        proxy.getTaskReports(gtreportsRequest).getTaskReportList(), "TaskReports for reduce is null");
+    assertNotNull(proxy.getTaskReports(gtreportsRequest).getTaskReportList(),
+        "TaskReports for reduce is null");
 
     List<String> diag = proxy.getDiagnostics(gdRequest).getDiagnosticsList();
-    Assertions.assertEquals(1 , diag.size(), "Num diagnostics not correct");
-    Assertions.assertEquals("Diag 1 not correct",
-        diagnostic1, diag.get(0));
+    assertEquals(1, diag.size(), "Num diagnostics not correct");
+    assertEquals(diagnostic1, diag.get(0), "Diag 1 not correct");
 
     TaskReport taskReport = proxy.getTaskReport(gtrRequest).getTaskReport();
-    Assertions.assertEquals(1
-,         taskReport.getDiagnosticsCount(), "Num diagnostics not correct");
+    assertEquals(1, taskReport.getDiagnosticsCount(), "Num diagnostics not correct");
 
     //send the done signal to the task
     app.getContext().getEventHandler().handle(
@@ -207,7 +206,7 @@ public class TestMRClientService {
     conf.set(MRJobConfig.JOB_ACL_VIEW_JOB, "viewonlyuser");
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
-    Assertions.assertEquals(1, job.getTasks().size(), "Num tasks not correct");
+    assertEquals(1, job.getTasks().size(), "Num tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task task = it.next();
     app.waitForState(task, TaskState.RUNNING);
@@ -217,10 +216,8 @@ public class TestMRClientService {
     UserGroupInformation viewOnlyUser =
         UserGroupInformation.createUserForTesting(
             "viewonlyuser", new String[] {});
-    Assertions.assertTrue(
-       job.checkAccess(viewOnlyUser, JobACL.VIEW_JOB), "viewonlyuser cannot view job");
-    Assertions.assertFalse(
-       job.checkAccess(viewOnlyUser, JobACL.MODIFY_JOB), "viewonlyuser can modify job");
+    assertTrue(job.checkAccess(viewOnlyUser, JobACL.VIEW_JOB), "viewonlyuser cannot view job");
+    assertFalse(job.checkAccess(viewOnlyUser, JobACL.MODIFY_JOB), "viewonlyuser can modify job");
     MRClientProtocol client = viewOnlyUser.doAs(
         (PrivilegedExceptionAction<MRClientProtocol>) () -> {
           YarnRPC rpc = YarnRPC.create(conf);
@@ -270,29 +267,27 @@ public class TestMRClientService {
   }
 
   private void verifyJobReport(JobReport jr) {
-    Assertions.assertNotNull(jr, "JobReport is null");
+    assertNotNull(jr, "JobReport is null");
     List<AMInfo> amInfos = jr.getAMInfos();
-    Assertions.assertEquals(1, amInfos.size());
-    Assertions.assertEquals(JobState.RUNNING, jr.getJobState());
+    assertEquals(1, amInfos.size());
+    assertEquals(JobState.RUNNING, jr.getJobState());
     AMInfo amInfo = amInfos.get(0);
-    Assertions.assertEquals(MRApp.NM_HOST, amInfo.getNodeManagerHost());
-    Assertions.assertEquals(MRApp.NM_PORT, amInfo.getNodeManagerPort());
-    Assertions.assertEquals(MRApp.NM_HTTP_PORT, amInfo.getNodeManagerHttpPort());
-    Assertions.assertEquals(1, amInfo.getAppAttemptId().getAttemptId());
-    Assertions.assertEquals(1, amInfo.getContainerId().getApplicationAttemptId()
-        .getAttemptId());
-    Assertions.assertTrue(amInfo.getStartTime() > 0);
-    Assertions.assertFalse(jr.isUber());
+    assertEquals(MRApp.NM_HOST, amInfo.getNodeManagerHost());
+    assertEquals(MRApp.NM_PORT, amInfo.getNodeManagerPort());
+    assertEquals(MRApp.NM_HTTP_PORT, amInfo.getNodeManagerHttpPort());
+    assertEquals(1, amInfo.getAppAttemptId().getAttemptId());
+    assertEquals(1, amInfo.getContainerId().getApplicationAttemptId().getAttemptId());
+    assertTrue(amInfo.getStartTime() > 0);
+    assertFalse(jr.isUber());
   }
   
   private void verifyTaskAttemptReport(TaskAttemptReport tar) {
-    Assertions.assertEquals(TaskAttemptState.RUNNING, tar.getTaskAttemptState());
-    Assertions.assertNotNull(tar, "TaskAttemptReport is null");
-    Assertions.assertEquals(MRApp.NM_HOST, tar.getNodeManagerHost());
-    Assertions.assertEquals(MRApp.NM_PORT, tar.getNodeManagerPort());
-    Assertions.assertEquals(MRApp.NM_HTTP_PORT, tar.getNodeManagerHttpPort());
-    Assertions.assertEquals(1, tar.getContainerId().getApplicationAttemptId()
-        .getAttemptId());
+    assertEquals(TaskAttemptState.RUNNING, tar.getTaskAttemptState());
+    assertNotNull(tar, "TaskAttemptReport is null");
+    assertEquals(MRApp.NM_HOST, tar.getNodeManagerHost());
+    assertEquals(MRApp.NM_PORT, tar.getNodeManagerPort());
+    assertEquals(MRApp.NM_HTTP_PORT, tar.getNodeManagerHttpPort());
+    assertEquals(1, tar.getContainerId().getApplicationAttemptId().getAttemptId());
   }
   
   class MRAppWithClientService extends MRApp {

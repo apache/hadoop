@@ -122,7 +122,8 @@ public class MRAppBenchmark {
         implements ContainerAllocator, RMHeartbeatHandler {
       private int containerCount;
       private Thread thread;
-      private BlockingQueue<ContainerAllocatorEvent> eventQueue = new LinkedBlockingQueue<>();
+      private BlockingQueue<ContainerAllocatorEvent> eventQueue =
+        new LinkedBlockingQueue<ContainerAllocatorEvent>();
       public ThrottledContainerAllocator() {
         super("ThrottledContainerAllocator");
       }
@@ -136,36 +137,40 @@ public class MRAppBenchmark {
       }
       @Override
       protected void serviceStart() throws Exception {
-        thread = new Thread(() -> {
-          ContainerAllocatorEvent event;
-          while (!Thread.currentThread().isInterrupted()) {
-            try {
-              if (concurrentRunningTasks < maxConcurrentRunningTasks) {
-                event = eventQueue.take();
-                ContainerId cId =
-                    ContainerId.newContainerId(getContext()
-                      .getApplicationAttemptId(), containerCount++);
+        thread = new Thread(new Runnable() {
+          @Override
+          @SuppressWarnings("unchecked")
+          public void run() {
+            ContainerAllocatorEvent event = null;
+            while (!Thread.currentThread().isInterrupted()) {
+              try {
+                if (concurrentRunningTasks < maxConcurrentRunningTasks) {
+                  event = eventQueue.take();
+                  ContainerId cId =
+                      ContainerId.newContainerId(getContext()
+                        .getApplicationAttemptId(), containerCount++);
 
-                //System.out.println("Allocating " + containerCount);
+                  //System.out.println("Allocating " + containerCount);
 
-                Container container =
-                    recordFactory.newRecordInstance(Container.class);
-                container.setId(cId);
-                NodeId nodeId = NodeId.newInstance("dummy", 1234);
-                container.setNodeId(nodeId);
-                container.setContainerToken(null);
-                container.setNodeHttpAddress("localhost:8042");
-                getContext().getEventHandler()
-                    .handle(
-                    new TaskAttemptContainerAssignedEvent(event
-                        .getAttemptID(), container, null));
-                concurrentRunningTasks++;
-              } else {
-                Thread.sleep(1000);
+                  Container container =
+                      recordFactory.newRecordInstance(Container.class);
+                  container.setId(cId);
+                  NodeId nodeId = NodeId.newInstance("dummy", 1234);
+                  container.setNodeId(nodeId);
+                  container.setContainerToken(null);
+                  container.setNodeHttpAddress("localhost:8042");
+                  getContext().getEventHandler()
+                      .handle(
+                      new TaskAttemptContainerAssignedEvent(event
+                          .getAttemptID(), container, null));
+                  concurrentRunningTasks++;
+                } else {
+                  Thread.sleep(1000);
+                }
+              } catch (InterruptedException e) {
+                System.out.println("Returning, interrupted");
+                return;
               }
-            } catch (InterruptedException e) {
-              System.out.println("Returning, interrupted");
-              return;
             }
           }
         });
@@ -240,7 +245,7 @@ public class MRAppBenchmark {
                 AllocateResponse response =
                     Records.newRecord(AllocateResponse.class);
                 List<ResourceRequest> askList = request.getAskList();
-                List<Container> containers = new ArrayList<>();
+                List<Container> containers = new ArrayList<Container>();
                 for (ResourceRequest req : askList) {
                   if (!ResourceRequest.isAnyLocation(req.getResourceName())) {
                     continue;

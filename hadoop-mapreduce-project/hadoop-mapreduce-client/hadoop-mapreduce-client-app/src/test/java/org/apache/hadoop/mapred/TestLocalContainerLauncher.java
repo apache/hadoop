@@ -54,13 +54,15 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class TestLocalContainerLauncher {
   private static final Logger LOG =
@@ -104,11 +106,15 @@ public class TestLocalContainerLauncher {
     AppContext context = mock(AppContext.class);
     // a simple event handler solely to detect the container cleaned event
     final CountDownLatch isDone = new CountDownLatch(1);
-    EventHandler<Event> handler = event -> {
-      LOG.info("handling event {} with type {}.", event.getClass(), event.getType());
-      if (event instanceof TaskAttemptEvent) {
-        if (event.getType() == TaskAttemptEventType.TA_CONTAINER_CLEANED) {
-          isDone.countDown();
+    EventHandler<Event> handler = new EventHandler<Event>() {
+      @Override
+      public void handle(Event event) {
+        LOG.info("handling event " + event.getClass() +
+            " with type " + event.getType());
+        if (event instanceof TaskAttemptEvent) {
+          if (event.getType() == TaskAttemptEventType.TA_CONTAINER_CLEANED) {
+            isDone.countDown();
+          }
         }
       }
     };
@@ -129,7 +135,7 @@ public class TestLocalContainerLauncher {
     Job job = mock(Job.class);
     when(job.getTotalMaps()).thenReturn(1);
     when(job.getTotalReduces()).thenReturn(0);
-    Map<JobId,Job> jobs = new HashMap<>();
+    Map<JobId,Job> jobs = new HashMap<JobId,Job>();
     jobs.put(jobId, job);
     // app context returns the one and only job
     when(context.getAllJobs()).thenReturn(jobs);
@@ -146,11 +152,14 @@ public class TestLocalContainerLauncher {
     TaskAttemptID taskID = TypeConverter.fromYarn(taId);
     when(mapTask.getTaskID()).thenReturn(taskID);
     when(mapTask.getJobID()).thenReturn(taskID.getJobID());
-    doAnswer((Answer<Void>) invocation -> {
-      // sleep for a long time
-      LOG.info("sleeping for 5 minutes...");
-      Thread.sleep(5 * 60 * 1000);
-      return null;
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        // sleep for a long time
+        LOG.info("sleeping for 5 minutes...");
+        Thread.sleep(5*60*1000);
+        return null;
+      }
     }).when(mapTask).run(isA(JobConf.class), isA(TaskUmbilicalProtocol.class));
 
     // pump in a task attempt launch event
@@ -162,7 +171,7 @@ public class TestLocalContainerLauncher {
     // now pump in a container clean-up event
     ContainerLauncherEvent cleanupEvent =
         new ContainerLauncherEvent(taId, null, null, null,
-        ContainerLauncher.EventType.CONTAINER_REMOTE_CLEANUP);
+            ContainerLauncher.EventType.CONTAINER_REMOTE_CLEANUP);
     launcher.handle(cleanupEvent);
 
     // wait for the event to fire: this should be received promptly
@@ -188,11 +197,11 @@ public class TestLocalContainerLauncher {
 
     // make sure both dirs are distinct
     //
-    conf.set(MRConfig.LOCAL_DIR, localDirs[0]);
+    conf.set(MRConfig.LOCAL_DIR, localDirs[0].toString());
     final Path mapOut = mrOutputFiles.getOutputFileForWrite(1);
-    conf.set(MRConfig.LOCAL_DIR, localDirs[1]);
+    conf.set(MRConfig.LOCAL_DIR, localDirs[1].toString());
     final Path mapOutIdx = mrOutputFiles.getOutputIndexFileForWrite(1);
-    Assertions.assertNotEquals(
+    assertNotEquals(
        mapOut.getParent(), mapOutIdx.getParent(), "Paths must be different!");
 
     // make both dirs part of LOCAL_DIR

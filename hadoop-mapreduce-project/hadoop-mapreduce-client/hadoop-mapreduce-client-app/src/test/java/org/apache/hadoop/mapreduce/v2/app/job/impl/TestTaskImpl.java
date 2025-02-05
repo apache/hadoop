@@ -372,7 +372,7 @@ public class TestTaskImpl {
   }
     
   /**
-   * {@link TaskStateInternal#KILL_WAIT}
+   * {@link TaskState#KILL_WAIT}
    */
   private void assertTaskKillWaitState() {
     assertEquals(TaskStateInternal.KILL_WAIT, mockTask.getInternalState());
@@ -407,7 +407,7 @@ public class TestTaskImpl {
   }
 
   @Test
-  /*
+  /**
    * {@link TaskState#NEW}->{@link TaskState#SCHEDULED}
    */
   public void testScheduleTask() {
@@ -418,7 +418,7 @@ public class TestTaskImpl {
   }
   
   @Test 
-  /*
+  /**
    * {@link TaskState#SCHEDULED}->{@link TaskState#KILL_WAIT}
    */
   public void testKillScheduledTask() {
@@ -430,7 +430,7 @@ public class TestTaskImpl {
   }
   
   @Test 
-  /*
+  /**
    * Kill attempt
    * {@link TaskState#SCHEDULED}->{@link TaskState#SCHEDULED}
    */
@@ -445,7 +445,7 @@ public class TestTaskImpl {
   }
   
   @Test 
-  /*
+  /**
    * Launch attempt
    * {@link TaskState#SCHEDULED}->{@link TaskState#RUNNING}
    */
@@ -458,7 +458,7 @@ public class TestTaskImpl {
   }
 
   @Test
-  /*
+  /**
    * Kill running attempt
    * {@link TaskState#RUNNING}->{@link TaskState#RUNNING} 
    */
@@ -475,7 +475,7 @@ public class TestTaskImpl {
 
   @Test
   public void testKillSuccessfulTask() {
-    LOG.info("--- START: testKillSuccessfulTask ---");
+    LOG.info("--- START: testKillSuccesfulTask ---");
     mockTask = createMockTask(TaskType.MAP);
     TaskId taskId = getNewTaskID();
     scheduleTaskAttempt(taskId);
@@ -489,7 +489,7 @@ public class TestTaskImpl {
   }
 
   @Test
-  /*
+  /**
    * Kill map attempt for succeeded map task
    * {@link TaskState#SUCCEEDED}->{@link TaskState#SCHEDULED}
    */
@@ -587,10 +587,10 @@ public class TestTaskImpl {
     mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(), 
         TaskEventType.T_ATTEMPT_SUCCEEDED));
     
-    assertFalse(
-       mockTask.canCommit(taskAttempts.get(0).getAttemptId()), "First attempt should not commit");
-    assertTrue(
-       mockTask.canCommit(getLastAttempt().getAttemptId()), "Second attempt should commit");
+    assertFalse(mockTask.canCommit(taskAttempts.get(0).getAttemptId()),
+        "First attempt should not commit");
+    assertTrue(mockTask.canCommit(getLastAttempt().getAttemptId()),
+        "Second attempt should commit");
 
     assertTaskSucceededState();
   }
@@ -820,16 +820,16 @@ public class TestTaskImpl {
     assertEquals(3, taskAttempts.size());
 
     // verify the speculative attempt(#2) is not a rescheduled attempt
-    assertFalse(taskAttempts.get(1).getRescheduled());
+    assertEquals(false, taskAttempts.get(1).getRescheduled());
 
     // verify the third attempt is a rescheduled attempt
-    assertTrue(taskAttempts.get(2).getRescheduled());
+    assertEquals(true, taskAttempts.get(2).getRescheduled());
 
     // now launch the latest attempt(#3) and set the internal state to running
     launchTaskAttempt(getLastAttempt().getAttemptId());
 
     // have the speculative attempt(#2) fail, verify task still since it
-    // hasn't reached the max attempts which is 4
+    // hasn't reach the max attempts which is 4
     MockTaskAttemptImpl taskAttempt1 = taskAttempts.get(1);
     taskAttempt1.setState(TaskAttemptState.FAILED);
     mockTask.handle(new TaskTAttemptFailedEvent(taskAttempt1.getAttemptId()));
@@ -890,5 +890,5 @@ public class TestTaskImpl {
         lastTaskAttemptEvent = (TaskAttemptEvent)event;
       }
     }
-  }
+  };
 }

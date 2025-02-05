@@ -45,7 +45,7 @@ import static org.mockito.Mockito.when;
 public class TestTaskAttemptFinishingMonitor {
 
   @Test
-  public void testFinishingAttemptTimeout()
+  public void testFinshingAttemptTimeout()
       throws IOException, InterruptedException {
     SystemClock clock = SystemClock.getInstance();
     Configuration conf = new Configuration();
@@ -103,6 +103,6 @@ public class TestTaskAttemptFinishingMonitor {
         }
       }
     }
-  }
+  };
 
 }

@@ -83,7 +83,6 @@ import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -242,12 +241,12 @@ public class TestJobHistoryEventHandler {
       }
 
       handleNextNEvents(jheh, 9);
-      Assertions.assertTrue(jheh.getFlushTimerStatus());
+      assertTrue(jheh.getFlushTimerStatus());
       verify(mockWriter, times(0)).flush();
 
       Thread.sleep(2 * 4 * 1000l); // 4 seconds should be enough. Just be safe.
       verify(mockWriter).flush();
-      Assertions.assertFalse(jheh.getFlushTimerStatus());
+      assertFalse(jheh.getFlushTimerStatus());
     } finally {
       jheh.stop();
       verify(mockWriter).close();
@@ -428,13 +427,13 @@ public class TestJobHistoryEventHandler {
 
       // load the job_conf.xml in JHS directory and verify property redaction.
       Path jhsJobConfFile = getJobConfInIntermediateDoneDir(conf, params.jobId);
-      Assertions.assertTrue(
+      assertTrue(
          FileContext.getFileContext(conf).util().exists(jhsJobConfFile), "The job_conf.xml file is not in the JHS directory");
       Configuration jhsJobConf = new Configuration();
 
       try (InputStream input = FileSystem.get(conf).open(jhsJobConfFile)) {
         jhsJobConf.addResource(input);
-        Assertions.assertEquals(
+        assertEquals(
         
            MRJobConfUtil.REDACTION_REPLACEMENT_VAL
 ,             jhsJobConf.get(sensitivePropertyName), sensitivePropertyName + " is not redacted in HDFS.");
@@ -517,7 +516,7 @@ public class TestJobHistoryEventHandler {
         "/mapred/history/done_intermediate");
     conf.set(MRJobConfig.USER_NAME, System.getProperty("user.name"));
     String pathStr = JobHistoryUtils.getHistoryIntermediateDoneDirForUser(conf);
-    Assertions.assertEquals("/mapred/history/done_intermediate/" +
+    assertEquals("/mapred/history/done_intermediate/" +
         System.getProperty("user.name"), pathStr);
 
     // Test fully qualified path
@@ -531,7 +530,7 @@ public class TestJobHistoryEventHandler {
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
             "file:///");
     pathStr = JobHistoryUtils.getHistoryIntermediateDoneDirForUser(conf);
-    Assertions.assertEquals(dfsCluster.getURI().toString() +
+    assertEquals(dfsCluster.getURI().toString() +
         "/mapred/history/done_intermediate/" + System.getProperty("user.name"),
         pathStr);
   }
@@ -608,13 +607,13 @@ public class TestJobHistoryEventHandler {
       jheh.getDispatcher().await();
       TimelineEntities entities = ts.getEntities("MAPREDUCE_JOB", null, null,
               null, null, null, null, null, null, null);
-      Assertions.assertEquals(1, entities.getEntities().size());
+      assertEquals(1, entities.getEntities().size());
       TimelineEntity tEntity = entities.getEntities().get(0);
-      Assertions.assertEquals(t.jobId.toString(), tEntity.getEntityId());
-      Assertions.assertEquals(1, tEntity.getEvents().size());
-      Assertions.assertEquals(EventType.AM_STARTED.toString(),
+      assertEquals(t.jobId.toString(), tEntity.getEntityId());
+      assertEquals(1, tEntity.getEvents().size());
+      assertEquals(EventType.AM_STARTED.toString(),
               tEntity.getEvents().get(0).getEventType());
-      Assertions.assertEquals(currentTime - 10,
+      assertEquals(currentTime - 10,
               tEntity.getEvents().get(0).getTimestamp());
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
@@ -625,17 +624,17 @@ public class TestJobHistoryEventHandler {
       jheh.getDispatcher().await();
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
               null, null, null, null, null, null);
-      Assertions.assertEquals(1, entities.getEntities().size());
+      assertEquals(1, entities.getEntities().size());
       tEntity = entities.getEntities().get(0);
-      Assertions.assertEquals(t.jobId.toString(), tEntity.getEntityId());
-      Assertions.assertEquals(2, tEntity.getEvents().size());
-      Assertions.assertEquals(EventType.JOB_SUBMITTED.toString(),
+      assertEquals(t.jobId.toString(), tEntity.getEntityId());
+      assertEquals(2, tEntity.getEvents().size());
+      assertEquals(EventType.JOB_SUBMITTED.toString(),
               tEntity.getEvents().get(0).getEventType());
-      Assertions.assertEquals(EventType.AM_STARTED.toString(),
+      assertEquals(EventType.AM_STARTED.toString(),
               tEntity.getEvents().get(1).getEventType());
-      Assertions.assertEquals(currentTime + 10,
+      assertEquals(currentTime + 10,
               tEntity.getEvents().get(0).getTimestamp());
-      Assertions.assertEquals(currentTime - 10,
+      assertEquals(currentTime - 10,
               tEntity.getEvents().get(1).getTimestamp());
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
@@ -644,21 +643,21 @@ public class TestJobHistoryEventHandler {
       jheh.getDispatcher().await();
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
               null, null, null, null, null, null);
-      Assertions.assertEquals(1, entities.getEntities().size());
+      assertEquals(1, entities.getEntities().size());
       tEntity = entities.getEntities().get(0);
-      Assertions.assertEquals(t.jobId.toString(), tEntity.getEntityId());
-      Assertions.assertEquals(3, tEntity.getEvents().size());
-      Assertions.assertEquals(EventType.JOB_SUBMITTED.toString(),
+      assertEquals(t.jobId.toString(), tEntity.getEntityId());
+      assertEquals(3, tEntity.getEvents().size());
+      assertEquals(EventType.JOB_SUBMITTED.toString(),
               tEntity.getEvents().get(0).getEventType());
-      Assertions.assertEquals(EventType.AM_STARTED.toString(),
+      assertEquals(EventType.AM_STARTED.toString(),
               tEntity.getEvents().get(1).getEventType());
-      Assertions.assertEquals(EventType.JOB_QUEUE_CHANGED.toString(),
+      assertEquals(EventType.JOB_QUEUE_CHANGED.toString(),
               tEntity.getEvents().get(2).getEventType());
-      Assertions.assertEquals(currentTime + 10,
+      assertEquals(currentTime + 10,
               tEntity.getEvents().get(0).getTimestamp());
-      Assertions.assertEquals(currentTime - 10,
+      assertEquals(currentTime - 10,
               tEntity.getEvents().get(1).getTimestamp());
-      Assertions.assertEquals(currentTime - 20,
+      assertEquals(currentTime - 20,
               tEntity.getEvents().get(2).getTimestamp());
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
@@ -667,25 +666,25 @@ public class TestJobHistoryEventHandler {
       jheh.getDispatcher().await();
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
               null, null, null, null, null, null);
-      Assertions.assertEquals(1, entities.getEntities().size());
+      assertEquals(1, entities.getEntities().size());
       tEntity = entities.getEntities().get(0);
-      Assertions.assertEquals(t.jobId.toString(), tEntity.getEntityId());
-      Assertions.assertEquals(4, tEntity.getEvents().size());
-      Assertions.assertEquals(EventType.JOB_SUBMITTED.toString(),
+      assertEquals(t.jobId.toString(), tEntity.getEntityId());
+      assertEquals(4, tEntity.getEvents().size());
+      assertEquals(EventType.JOB_SUBMITTED.toString(),
               tEntity.getEvents().get(0).getEventType());
-      Assertions.assertEquals(EventType.JOB_FINISHED.toString(),
+      assertEquals(EventType.JOB_FINISHED.toString(),
               tEntity.getEvents().get(1).getEventType());
-      Assertions.assertEquals(EventType.AM_STARTED.toString(),
+      assertEquals(EventType.AM_STARTED.toString(),
               tEntity.getEvents().get(2).getEventType());
-      Assertions.assertEquals(EventType.JOB_QUEUE_CHANGED.toString(),
+      assertEquals(EventType.JOB_QUEUE_CHANGED.toString(),
               tEntity.getEvents().get(3).getEventType());
-      Assertions.assertEquals(currentTime + 10,
+      assertEquals(currentTime + 10,
               tEntity.getEvents().get(0).getTimestamp());
-      Assertions.assertEquals(currentTime,
+      assertEquals(currentTime,
               tEntity.getEvents().get(1).getTimestamp());
-      Assertions.assertEquals(currentTime - 10,
+      assertEquals(currentTime - 10,
               tEntity.getEvents().get(2).getTimestamp());
-      Assertions.assertEquals(currentTime - 20,
+      assertEquals(currentTime - 20,
               tEntity.getEvents().get(3).getTimestamp());
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
@@ -695,29 +694,29 @@ public class TestJobHistoryEventHandler {
       jheh.getDispatcher().await();
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
               null, null, null, null, null, null);
-      Assertions.assertEquals(1, entities.getEntities().size());
+      assertEquals(1, entities.getEntities().size());
       tEntity = entities.getEntities().get(0);
-      Assertions.assertEquals(t.jobId.toString(), tEntity.getEntityId());
-      Assertions.assertEquals(5, tEntity.getEvents().size());
-      Assertions.assertEquals(EventType.JOB_KILLED.toString(),
+      assertEquals(t.jobId.toString(), tEntity.getEntityId());
+      assertEquals(5, tEntity.getEvents().size());
+      assertEquals(EventType.JOB_KILLED.toString(),
               tEntity.getEvents().get(0).getEventType());
-      Assertions.assertEquals(EventType.JOB_SUBMITTED.toString(),
+      assertEquals(EventType.JOB_SUBMITTED.toString(),
               tEntity.getEvents().get(1).getEventType());
-      Assertions.assertEquals(EventType.JOB_FINISHED.toString(),
+      assertEquals(EventType.JOB_FINISHED.toString(),
               tEntity.getEvents().get(2).getEventType());
-      Assertions.assertEquals(EventType.AM_STARTED.toString(),
+      assertEquals(EventType.AM_STARTED.toString(),
               tEntity.getEvents().get(3).getEventType());
-      Assertions.assertEquals(EventType.JOB_QUEUE_CHANGED.toString(),
+      assertEquals(EventType.JOB_QUEUE_CHANGED.toString(),
               tEntity.getEvents().get(4).getEventType());
-      Assertions.assertEquals(currentTime + 20,
+      assertEquals(currentTime + 20,
               tEntity.getEvents().get(0).getTimestamp());
-      Assertions.assertEquals(currentTime + 10,
+      assertEquals(currentTime + 10,
               tEntity.getEvents().get(1).getTimestamp());
-      Assertions.assertEquals(currentTime,
+      assertEquals(currentTime,
               tEntity.getEvents().get(2).getTimestamp());
-      Assertions.assertEquals(currentTime - 10,
+      assertEquals(currentTime - 10,
               tEntity.getEvents().get(3).getTimestamp());
-      Assertions.assertEquals(currentTime - 20,
+      assertEquals(currentTime - 20,
               tEntity.getEvents().get(4).getTimestamp());
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
@@ -725,13 +724,13 @@ public class TestJobHistoryEventHandler {
       jheh.getDispatcher().await();
       entities = ts.getEntities("MAPREDUCE_TASK", null, null, null,
               null, null, null, null, null, null);
-      Assertions.assertEquals(1, entities.getEntities().size());
+      assertEquals(1, entities.getEntities().size());
       tEntity = entities.getEntities().get(0);
-      Assertions.assertEquals(t.taskID.toString(), tEntity.getEntityId());
-      Assertions.assertEquals(1, tEntity.getEvents().size());
-      Assertions.assertEquals(EventType.TASK_STARTED.toString(),
+      assertEquals(t.taskID.toString(), tEntity.getEntityId());
+      assertEquals(1, tEntity.getEvents().size());
+      assertEquals(EventType.TASK_STARTED.toString(),
               tEntity.getEvents().get(0).getEventType());
-      Assertions.assertEquals(TaskType.MAP.toString(),
+      assertEquals(TaskType.MAP.toString(),
               tEntity.getEvents().get(0).getEventInfo().get("TASK_TYPE"));
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
@@ -739,15 +738,15 @@ public class TestJobHistoryEventHandler {
       jheh.getDispatcher().await();
       entities = ts.getEntities("MAPREDUCE_TASK", null, null, null,
               null, null, null, null, null, null);
-      Assertions.assertEquals(1, entities.getEntities().size());
+      assertEquals(1, entities.getEntities().size());
       tEntity = entities.getEntities().get(0);
-      Assertions.assertEquals(t.taskID.toString(), tEntity.getEntityId());
-      Assertions.assertEquals(2, tEntity.getEvents().size());
-      Assertions.assertEquals(EventType.TASK_STARTED.toString(),
+      assertEquals(t.taskID.toString(), tEntity.getEntityId());
+      assertEquals(2, tEntity.getEvents().size());
+      assertEquals(EventType.TASK_STARTED.toString(),
               tEntity.getEvents().get(1).getEventType());
-      Assertions.assertEquals(TaskType.REDUCE.toString(),
+      assertEquals(TaskType.REDUCE.toString(),
               tEntity.getEvents().get(0).getEventInfo().get("TASK_TYPE"));
-      Assertions.assertEquals(TaskType.MAP.toString(),
+      assertEquals(TaskType.MAP.toString(),
               tEntity.getEvents().get(1).getEventInfo().get("TASK_TYPE"));
     }
   }
@@ -786,7 +785,7 @@ public class TestJobHistoryEventHandler {
         + "{\"NAME\":\"MATT_SMITH\",\"DISPLAY_NAME\":\"Matt Smith\",\"VALUE\":"
         + "11},{\"NAME\":\"PETER_CAPALDI\",\"DISPLAY_NAME\":\"Peter Capaldi\","
         + "\"VALUE\":12}]}]";
-    Assertions.assertEquals(expected, jsonStr);
+    assertEquals(expected, jsonStr);
   }
 
   @Test
@@ -797,20 +796,20 @@ public class TestJobHistoryEventHandler {
     JsonNode jsonNode = JobHistoryEventUtils.countersToJSON(counters);
     String jsonStr = new ObjectMapper().writeValueAsString(jsonNode);
     String expected = "[]";
-    Assertions.assertEquals(expected, jsonStr);
+    assertEquals(expected, jsonStr);
 
     counters = new Counters();
     jsonNode = JobHistoryEventUtils.countersToJSON(counters);
     jsonStr = new ObjectMapper().writeValueAsString(jsonNode);
     expected = "[]";
-    Assertions.assertEquals(expected, jsonStr);
+    assertEquals(expected, jsonStr);
 
     counters.addGroup("DOCTORS", "Incarnations of the Doctor");
     jsonNode = JobHistoryEventUtils.countersToJSON(counters);
     jsonStr = new ObjectMapper().writeValueAsString(jsonNode);
     expected = "[{\"NAME\":\"DOCTORS\",\"DISPLAY_NAME\":\"Incarnations of the "
         + "Doctor\",\"COUNTERS\":[]}]";
-    Assertions.assertEquals(expected, jsonStr);
+    assertEquals(expected, jsonStr);
   }
 
   private void queueEvent(JHEvenHandlerForTest jheh, JobHistoryEvent event) {

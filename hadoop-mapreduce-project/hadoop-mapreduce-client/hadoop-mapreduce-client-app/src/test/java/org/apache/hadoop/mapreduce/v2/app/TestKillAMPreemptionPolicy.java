@@ -64,7 +64,7 @@ public class TestKillAMPreemptionPolicy {
     when(mPctxt.getTaskAttempt(any(ContainerId.class))).thenReturn(
         MRBuilderUtils.newTaskAttemptId(MRBuilderUtils.newTaskId(
             MRBuilderUtils.newJobId(appId, 1), 1, TaskType.MAP), 0));
-    List<Container> p = new ArrayList<>();
+    List<Container> p = new ArrayList<Container>();
     p.add(Container.newInstance(container, null, null, null, null, null));
     when(mPctxt.getContainers(any(TaskType.class))).thenReturn(p);
 
@@ -123,7 +123,7 @@ public class TestKillAMPreemptionPolicy {
       boolean contract, final ContainerId container) {
     PreemptionMessage preemptionMessage = recordFactory
         .newRecordInstance(PreemptionMessage.class);
-    Set<PreemptionContainer> cntrs = new HashSet<>();
+    Set<PreemptionContainer> cntrs = new HashSet<PreemptionContainer>();
     PreemptionContainer preemptContainer = recordFactory
         .newRecordInstance(PreemptionContainer.class);
     preemptContainer.setId(container);

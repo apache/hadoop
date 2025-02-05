@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -187,7 +188,7 @@ public class TestTaskAttemptListenerImpl {
     startListener(false);
 
     // Verify ask before registration.
-    //The JVM ID has not been registered yet, so we should kill it.
+    //The JVM ID has not been registered yet so we should kill it.
     JvmContext context = new JvmContext();
 
     context.jvmId = id; 
@@ -221,7 +222,7 @@ public class TestTaskAttemptListenerImpl {
 
     listener.unregister(attemptId, wid);
 
-    // Verify after un-registration.
+    // Verify after unregistration.
     result = listener.getTask(context);
     assertNotNull(result);
     assertTrue(result.shouldDie);
@@ -245,7 +246,7 @@ public class TestTaskAttemptListenerImpl {
 
     JVMId jvmid = new JVMId("test", 1, true, 2);
     JVMId jvmid1 = JVMId.forName("jvm_test_0001_m_000002");
-    // test compare method should be the same
+    // test compare methot should be the same
     assertEquals(0, jvmid.compareTo(jvmid1));
   }
 
@@ -377,7 +378,7 @@ public class TestTaskAttemptListenerImpl {
 
     TaskAttemptID tid = new TaskAttemptID("12345", 1, TaskType.REDUCE, 1, 0);
 
-    List<Path> partialOut = new ArrayList<>();
+    List<Path> partialOut = new ArrayList<Path>();
     partialOut.add(new Path("/prev1"));
     partialOut.add(new Path("/prev2"));
 
@@ -555,13 +556,16 @@ public class TestTaskAttemptListenerImpl {
     long unregisterTimeout = conf.getLong(MRJobConfig.TASK_EXIT_TIMEOUT,
         MRJobConfig.TASK_EXIT_TIMEOUT_DEFAULT);
     clock.setTime(unregisterTimeout + 1);
-    GenericTestUtils.waitFor(() -> {
-      try {
-        AMFeedback response =
-            tal.statusUpdate(attemptID, firstReduceStatus);
-        return !response.getTaskFound();
-      } catch (Exception e) {
-        throw new RuntimeException("status update failed", e);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          AMFeedback response =
+              tal.statusUpdate(attemptID, firstReduceStatus);
+          return !response.getTaskFound();
+        } catch (Exception e) {
+          throw new RuntimeException("status update failed", e);
+        }
       }
     }, 10, 10000);
   }
