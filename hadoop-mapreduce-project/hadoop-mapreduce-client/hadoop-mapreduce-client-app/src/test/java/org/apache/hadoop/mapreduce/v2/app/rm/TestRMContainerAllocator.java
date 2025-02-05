@@ -958,8 +958,8 @@ public class TestRMContainerAllocator {
 
     // validate that no container is assigned to h1 as it doesn't have 2048
     for (TaskAttemptContainerAssignedEvent assig : assigned) {
-       assertNotEquals("h1", assig.getContainer().getNodeId().getHost(),
-           "Assigned count not correct");
+      assertNotEquals("h1", assig.getContainer().getNodeId().getHost(),
+          "Assigned count not correct");
     }
   }
 
@@ -1452,12 +1452,12 @@ public class TestRMContainerAllocator {
     rm.drainEvents();
     assertBlacklistAdditionsAndRemovals(0, 0, rm);
 
-      assertEquals(3, assigned.size(), "No of assignments must be 3");
+    assertEquals(3, assigned.size(), "No of assignments must be 3");
 
     // validate that all containers are assigned to h3
     for (TaskAttemptContainerAssignedEvent assig : assigned) {
-       assertEquals("h3", assig.getContainer().getNodeId().getHost(),
-           "Assigned container host not correct");
+      assertEquals("h3", assig.getContainer().getNodeId().getHost(),
+          "Assigned container host not correct");
     }
   }
 
@@ -2731,8 +2731,7 @@ public class TestRMContainerAllocator {
         "Number of container should be 3");
 
     for (TaskAttemptContainerAssignedEvent assig : assignedContainers) {
-       assertEquals("h1", assig.getContainer().getNodeId().getHost(),
-       "Assigned count not correct");
+      assertEquals("h1", assig.getContainer().getNodeId().getHost(), "Assigned count not correct");
     }
 
     rm1.stop();

@@ -142,8 +142,8 @@ public class TestFetchFailure {
     app.waitForState(job, JobState.SUCCEEDED);
     
     //previous completion event now becomes obsolete
-    assertEquals(
-       TaskAttemptCompletionEventStatus.OBSOLETE, events[0].getStatus(), "Event status not correct");
+    assertEquals(TaskAttemptCompletionEventStatus.OBSOLETE, events[0].getStatus(),
+        "Event status not correct");
     
     events = job.getTaskAttemptCompletionEvents(0, 100);
     assertEquals(4, events.length, "Num completion events not correct");
@@ -168,8 +168,8 @@ public class TestFetchFailure {
         job.getMapAttemptCompletionEvents(0, 2);
     TaskCompletionEvent convertedEvents[] = TypeConverter.fromYarn(events);
     assertEquals(2, mapEvents.length, "Incorrect number of map events");
-    assertArrayEquals(
-       Arrays.copyOfRange(convertedEvents, 0, 2), mapEvents, "Unexpected map events");
+    assertArrayEquals(Arrays.copyOfRange(convertedEvents, 0, 2), mapEvents,
+        "Unexpected map events");
     mapEvents = job.getMapAttemptCompletionEvents(2, 200);
     assertEquals(1, mapEvents.length, "Incorrect number of map events");
     assertEquals(convertedEvents[2], mapEvents[0], "Unexpected map event");
@@ -214,8 +214,8 @@ public class TestFetchFailure {
     TaskAttemptCompletionEvent[] events = 
       job.getTaskAttemptCompletionEvents(0, 100);
     assertEquals(1, events.length, "Num completion events not correct");
-    assertEquals(
-       TaskAttemptCompletionEventStatus.SUCCEEDED, events[0].getStatus(), "Event status not correct");
+    assertEquals(TaskAttemptCompletionEventStatus.SUCCEEDED, events[0].getStatus(),
+        "Event status not correct");
 
     // wait for reduce to start running
     app.waitForState(reduceTask, TaskState.RUNNING);
@@ -388,8 +388,8 @@ public class TestFetchFailure {
     app.waitForState(job, JobState.SUCCEEDED);
     
     //previous completion event now becomes obsolete
-    assertEquals(
-        TaskAttemptCompletionEventStatus.OBSOLETE, events[0].getStatus(), "Event status not correct");
+    assertEquals(TaskAttemptCompletionEventStatus.OBSOLETE, events[0].getStatus(),
+        "Event status not correct");
     
     events = job.getTaskAttemptCompletionEvents(0, 100);
     assertEquals(6, events.length, "Num completion events not correct");
@@ -414,8 +414,8 @@ public class TestFetchFailure {
         job.getMapAttemptCompletionEvents(0, 2);
     TaskCompletionEvent convertedEvents[] = TypeConverter.fromYarn(events);
     assertEquals(2, mapEvents.length, "Incorrect number of map events");
-    assertArrayEquals(
-       Arrays.copyOfRange(convertedEvents, 0, 2), mapEvents, "Unexpected map events");
+    assertArrayEquals(Arrays.copyOfRange(convertedEvents, 0, 2), mapEvents,
+        "Unexpected map events");
     mapEvents = job.getMapAttemptCompletionEvents(2, 200);
     assertEquals(1, mapEvents.length, "Incorrect number of map events");
     assertEquals(convertedEvents[2], mapEvents[0], "Unexpected map event");

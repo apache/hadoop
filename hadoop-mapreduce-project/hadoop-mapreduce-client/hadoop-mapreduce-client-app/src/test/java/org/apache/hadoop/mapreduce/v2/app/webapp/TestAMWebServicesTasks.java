@@ -592,7 +592,7 @@ public class TestAMWebServicesTasks extends JerseyTestBase {
     assertEquals(report.getStartTime(), startTime, "startTime wrong");
     assertEquals(report.getFinishTime(), finishTime, "finishTime wrong");
     assertEquals(finishTime - startTime, elapsedTime, "elapsedTime wrong");
-    assertEquals( report.getProgress() * 100, progress, 1e-3f, "progress wrong");
+    assertEquals(report.getProgress() * 100, progress, 1e-3f, "progress wrong");
     assertEquals(report.getStatus(), status, "status wrong");
   }
 

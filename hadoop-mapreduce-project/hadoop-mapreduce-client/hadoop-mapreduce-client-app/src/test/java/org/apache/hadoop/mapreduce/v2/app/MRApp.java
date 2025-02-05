@@ -400,8 +400,8 @@ public class MRApp extends MRAppMaster {
 
   public void waitForState(Service.STATE finalState) throws Exception {
     if (finalState == Service.STATE.STOPPED) {
-       assertTrue(waitForServiceToStop(20 * 1000),
-           "Timeout while waiting for MRApp to stop");
+      assertTrue(waitForServiceToStop(20 * 1000),
+          "Timeout while waiting for MRApp to stop");
     } else {
       int timeoutSecs = 0;
       while (!finalState.equals(getServiceState())

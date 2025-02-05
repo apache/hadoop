@@ -19,7 +19,6 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -28,11 +27,11 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -88,7 +87,7 @@ import static org.mockito.Mockito.when;
 /**
  * Tests the behavior of TaskAttemptListenerImpl.
  */
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class TestTaskAttemptListenerImpl {
   private static final String ATTEMPT1_ID =
       "attempt_123456789012_0001_m_000001_0";
@@ -261,12 +260,6 @@ public class TestTaskAttemptListenerImpl {
         createTce(3, false, TaskAttemptCompletionEventStatus.FAILED) };
     TaskAttemptCompletionEvent[] mapEvents = { taskEvents[0], taskEvents[2] };
     Job mockJob = mock(Job.class);
-    when(mockJob.getTaskAttemptCompletionEvents(0, 100))
-      .thenReturn(taskEvents);
-    when(mockJob.getTaskAttemptCompletionEvents(0, 2))
-      .thenReturn(Arrays.copyOfRange(taskEvents, 0, 2));
-    when(mockJob.getTaskAttemptCompletionEvents(2, 100))
-      .thenReturn(Arrays.copyOfRange(taskEvents, 2, 4));
     when(mockJob.getMapAttemptCompletionEvents(0, 100)).thenReturn(
         TypeConverter.fromYarn(mapEvents));
     when(mockJob.getMapAttemptCompletionEvents(0, 2)).thenReturn(

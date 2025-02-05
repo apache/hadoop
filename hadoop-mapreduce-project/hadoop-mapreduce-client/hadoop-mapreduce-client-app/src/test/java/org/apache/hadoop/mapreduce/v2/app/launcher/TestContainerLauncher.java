@@ -295,7 +295,7 @@ public class TestContainerLauncher {
     app.waitForState(job, JobState.RUNNING);
 
     Map<TaskId, Task> tasks = job.getTasks();
-    assertEquals(1, tasks.size(), "Num tasks is not correct");
+      assertEquals(1, tasks.size(), "Num tasks is not correct");
 
     Task task = tasks.values().iterator().next();
     app.waitForState(task, TaskState.SCHEDULED);

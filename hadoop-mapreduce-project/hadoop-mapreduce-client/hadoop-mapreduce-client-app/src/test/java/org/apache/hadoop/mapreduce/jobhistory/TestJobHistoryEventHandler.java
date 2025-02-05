@@ -610,10 +610,8 @@ public class TestJobHistoryEventHandler {
       TimelineEntity tEntity = entities.getEntities().get(0);
       assertEquals(t.jobId.toString(), tEntity.getEntityId());
       assertEquals(1, tEntity.getEvents().size());
-      assertEquals(EventType.AM_STARTED.toString(),
-              tEntity.getEvents().get(0).getEventType());
-      assertEquals(currentTime - 10,
-              tEntity.getEvents().get(0).getTimestamp());
+      assertEquals(EventType.AM_STARTED.toString(), tEntity.getEvents().get(0).getEventType());
+      assertEquals(currentTime - 10, tEntity.getEvents().get(0).getTimestamp());
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
               new JobSubmittedEvent(TypeConverter.fromYarn(t.jobId), "name",
@@ -627,14 +625,10 @@ public class TestJobHistoryEventHandler {
       tEntity = entities.getEntities().get(0);
       assertEquals(t.jobId.toString(), tEntity.getEntityId());
       assertEquals(2, tEntity.getEvents().size());
-      assertEquals(EventType.JOB_SUBMITTED.toString(),
-              tEntity.getEvents().get(0).getEventType());
-      assertEquals(EventType.AM_STARTED.toString(),
-              tEntity.getEvents().get(1).getEventType());
-      assertEquals(currentTime + 10,
-              tEntity.getEvents().get(0).getTimestamp());
-      assertEquals(currentTime - 10,
-              tEntity.getEvents().get(1).getTimestamp());
+      assertEquals(EventType.JOB_SUBMITTED.toString(), tEntity.getEvents().get(0).getEventType());
+      assertEquals(EventType.AM_STARTED.toString(), tEntity.getEvents().get(1).getEventType());
+      assertEquals(currentTime + 10, tEntity.getEvents().get(0).getTimestamp());
+      assertEquals(currentTime - 10, tEntity.getEvents().get(1).getTimestamp());
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
               new JobQueueChangeEvent(TypeConverter.fromYarn(t.jobId), "q2"),
@@ -646,18 +640,13 @@ public class TestJobHistoryEventHandler {
       tEntity = entities.getEntities().get(0);
       assertEquals(t.jobId.toString(), tEntity.getEntityId());
       assertEquals(3, tEntity.getEvents().size());
-      assertEquals(EventType.JOB_SUBMITTED.toString(),
-              tEntity.getEvents().get(0).getEventType());
-      assertEquals(EventType.AM_STARTED.toString(),
-              tEntity.getEvents().get(1).getEventType());
+      assertEquals(EventType.JOB_SUBMITTED.toString(), tEntity.getEvents().get(0).getEventType());
+      assertEquals(EventType.AM_STARTED.toString(), tEntity.getEvents().get(1).getEventType());
       assertEquals(EventType.JOB_QUEUE_CHANGED.toString(),
-              tEntity.getEvents().get(2).getEventType());
-      assertEquals(currentTime + 10,
-              tEntity.getEvents().get(0).getTimestamp());
-      assertEquals(currentTime - 10,
-              tEntity.getEvents().get(1).getTimestamp());
-      assertEquals(currentTime - 20,
-              tEntity.getEvents().get(2).getTimestamp());
+          tEntity.getEvents().get(2).getEventType());
+      assertEquals(currentTime + 10, tEntity.getEvents().get(0).getTimestamp());
+      assertEquals(currentTime - 10, tEntity.getEvents().get(1).getTimestamp());
+      assertEquals(currentTime - 20, tEntity.getEvents().get(2).getTimestamp());
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
               new JobFinishedEvent(TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0,
@@ -669,22 +658,14 @@ public class TestJobHistoryEventHandler {
       tEntity = entities.getEntities().get(0);
       assertEquals(t.jobId.toString(), tEntity.getEntityId());
       assertEquals(4, tEntity.getEvents().size());
-      assertEquals(EventType.JOB_SUBMITTED.toString(),
-              tEntity.getEvents().get(0).getEventType());
-      assertEquals(EventType.JOB_FINISHED.toString(),
-              tEntity.getEvents().get(1).getEventType());
-      assertEquals(EventType.AM_STARTED.toString(),
-              tEntity.getEvents().get(2).getEventType());
-      assertEquals(EventType.JOB_QUEUE_CHANGED.toString(),
-              tEntity.getEvents().get(3).getEventType());
-      assertEquals(currentTime + 10,
-              tEntity.getEvents().get(0).getTimestamp());
-      assertEquals(currentTime,
-              tEntity.getEvents().get(1).getTimestamp());
-      assertEquals(currentTime - 10,
-              tEntity.getEvents().get(2).getTimestamp());
-      assertEquals(currentTime - 20,
-              tEntity.getEvents().get(3).getTimestamp());
+      assertEquals(EventType.JOB_SUBMITTED.toString(), tEntity.getEvents().get(0).getEventType());
+      assertEquals(EventType.JOB_FINISHED.toString(), tEntity.getEvents().get(1).getEventType());
+      assertEquals(EventType.AM_STARTED.toString(), tEntity.getEvents().get(2).getEventType());
+      assertEquals(EventType.JOB_QUEUE_CHANGED.toString(), tEntity.getEvents().get(3).getEventType());
+      assertEquals(currentTime + 10, tEntity.getEvents().get(0).getTimestamp());
+      assertEquals(currentTime, tEntity.getEvents().get(1).getTimestamp());
+      assertEquals(currentTime - 10, tEntity.getEvents().get(2).getTimestamp());
+      assertEquals(currentTime - 20, tEntity.getEvents().get(3).getTimestamp());
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
             new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId),
@@ -697,26 +678,17 @@ public class TestJobHistoryEventHandler {
       tEntity = entities.getEntities().get(0);
       assertEquals(t.jobId.toString(), tEntity.getEntityId());
       assertEquals(5, tEntity.getEvents().size());
-      assertEquals(EventType.JOB_KILLED.toString(),
-              tEntity.getEvents().get(0).getEventType());
-      assertEquals(EventType.JOB_SUBMITTED.toString(),
-              tEntity.getEvents().get(1).getEventType());
-      assertEquals(EventType.JOB_FINISHED.toString(),
-              tEntity.getEvents().get(2).getEventType());
-      assertEquals(EventType.AM_STARTED.toString(),
-              tEntity.getEvents().get(3).getEventType());
+      assertEquals(EventType.JOB_KILLED.toString(), tEntity.getEvents().get(0).getEventType());
+      assertEquals(EventType.JOB_SUBMITTED.toString(), tEntity.getEvents().get(1).getEventType());
+      assertEquals(EventType.JOB_FINISHED.toString(), tEntity.getEvents().get(2).getEventType());
+      assertEquals(EventType.AM_STARTED.toString(), tEntity.getEvents().get(3).getEventType());
       assertEquals(EventType.JOB_QUEUE_CHANGED.toString(),
-              tEntity.getEvents().get(4).getEventType());
-      assertEquals(currentTime + 20,
-              tEntity.getEvents().get(0).getTimestamp());
-      assertEquals(currentTime + 10,
-              tEntity.getEvents().get(1).getTimestamp());
-      assertEquals(currentTime,
-              tEntity.getEvents().get(2).getTimestamp());
-      assertEquals(currentTime - 10,
-              tEntity.getEvents().get(3).getTimestamp());
-      assertEquals(currentTime - 20,
-              tEntity.getEvents().get(4).getTimestamp());
+          tEntity.getEvents().get(4).getEventType());
+      assertEquals(currentTime + 20, tEntity.getEvents().get(0).getTimestamp());
+      assertEquals(currentTime + 10, tEntity.getEvents().get(1).getTimestamp());
+      assertEquals(currentTime, tEntity.getEvents().get(2).getTimestamp());
+      assertEquals(currentTime - 10, tEntity.getEvents().get(3).getTimestamp());
+      assertEquals(currentTime - 20, tEntity.getEvents().get(4).getTimestamp());
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
             new TaskStartedEvent(t.taskID, 0, TaskType.MAP, "")));
@@ -727,10 +699,9 @@ public class TestJobHistoryEventHandler {
       tEntity = entities.getEntities().get(0);
       assertEquals(t.taskID.toString(), tEntity.getEntityId());
       assertEquals(1, tEntity.getEvents().size());
-      assertEquals(EventType.TASK_STARTED.toString(),
-              tEntity.getEvents().get(0).getEventType());
+      assertEquals(EventType.TASK_STARTED.toString(), tEntity.getEvents().get(0).getEventType());
       assertEquals(TaskType.MAP.toString(),
-              tEntity.getEvents().get(0).getEventInfo().get("TASK_TYPE"));
+          tEntity.getEvents().get(0).getEventInfo().get("TASK_TYPE"));
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
             new TaskStartedEvent(t.taskID, 0, TaskType.REDUCE, "")));
@@ -741,12 +712,11 @@ public class TestJobHistoryEventHandler {
       tEntity = entities.getEntities().get(0);
       assertEquals(t.taskID.toString(), tEntity.getEntityId());
       assertEquals(2, tEntity.getEvents().size());
-      assertEquals(EventType.TASK_STARTED.toString(),
-              tEntity.getEvents().get(1).getEventType());
+      assertEquals(EventType.TASK_STARTED.toString(), tEntity.getEvents().get(1).getEventType());
       assertEquals(TaskType.REDUCE.toString(),
-              tEntity.getEvents().get(0).getEventInfo().get("TASK_TYPE"));
+          tEntity.getEvents().get(0).getEventInfo().get("TASK_TYPE"));
       assertEquals(TaskType.MAP.toString(),
-              tEntity.getEvents().get(1).getEventInfo().get("TASK_TYPE"));
+          tEntity.getEvents().get(1).getEventInfo().get("TASK_TYPE"));
     }
   }
 
@@ -923,7 +893,7 @@ public class TestJobHistoryEventHandler {
     jheh.stop();
     //Make sure events were handled
     assertTrue(jheh.eventsHandled == 4, "handleEvent should've been called only 4 times but was "
-      + jheh.eventsHandled);
+        + jheh.eventsHandled);
 
     //Create a new jheh because the last stop closed the eventWriter etc.
     jheh = new JHEventHandlerForSigtermTest(mockedContext, 0);

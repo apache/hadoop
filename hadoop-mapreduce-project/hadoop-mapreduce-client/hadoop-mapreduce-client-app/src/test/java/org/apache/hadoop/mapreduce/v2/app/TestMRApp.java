@@ -83,7 +83,7 @@ public class TestMRApp {
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.SUCCEEDED);
     app.verifyCompleted();
-    assertEquals(System.getProperty("user.name"),job.getUserName());
+    assertEquals(System.getProperty("user.name"), job.getUserName());
   }
 
   @Test
@@ -170,8 +170,8 @@ public class TestMRApp {
     app.waitForState(task2Attempt, TaskAttemptState.RUNNING);
     
     // reduces must be in NEW state
-    assertEquals(
-       TaskState.NEW, reduceTask.getReport().getTaskState(), "Reduce Task state not correct");
+    assertEquals(TaskState.NEW, reduceTask.getReport().getTaskState(),
+        "Reduce Task state not correct");
     
     //send the done signal to the 1st map task
     app.getContext().getEventHandler().handle(
@@ -268,8 +268,8 @@ public class TestMRApp {
 
     TaskAttemptCompletionEvent[] events = job1.getTaskAttemptCompletionEvents
         (0, 100);
-    assertEquals(2
-,         events.length, "Expecting 2 completion events for success");
+    assertEquals(2,
+        events.length, "Expecting 2 completion events for success");
 
     // send updated nodes info
     ArrayList<NodeReport> updatedNodes = new ArrayList<>();
@@ -291,8 +291,8 @@ public class TestMRApp {
     }, checkIntervalMillis, waitForMillis);
 
     events = job1.getTaskAttemptCompletionEvents(0, 100);
-    assertEquals(4
-,         events.length, "Expecting 2 more completion events for killed");
+    assertEquals(4,
+        events.length, "Expecting 2 more completion events for killed");
     // 2 map task attempts which were killed above should be requested from
     // container allocator with the previous map task marked as failed. If
     // this happens allocator will request the container for this mapper from
@@ -329,8 +329,8 @@ public class TestMRApp {
     }, checkIntervalMillis, waitForMillis);
 
     events = job1.getTaskAttemptCompletionEvents(0, 100);
-    assertEquals(5
-,         events.length, "Expecting 1 more completion events for success");
+    assertEquals(5,
+        events.length, "Expecting 1 more completion events for success");
 
     // Crash the app again.
     app.stop();
@@ -363,9 +363,8 @@ public class TestMRApp {
     }, checkIntervalMillis, waitForMillis);
 
     events = job2.getTaskAttemptCompletionEvents(0, 100);
-    assertEquals(
-    2
-,         events.length, "Expecting 2 completion events for killed & success of map1");
+    assertEquals(2, events.length,
+        "Expecting 2 completion events for killed & success of map1");
 
     task2Attempt = mapTask2.getAttempts().values().iterator().next();
     app.getContext()
@@ -382,8 +381,8 @@ public class TestMRApp {
     }, checkIntervalMillis, waitForMillis);
 
     events = job2.getTaskAttemptCompletionEvents(0, 100);
-    assertEquals(3
-,         events.length, "Expecting 1 more completion events for success");
+    assertEquals(3,
+        events.length, "Expecting 1 more completion events for success");
 
     app.waitForState(reduceTask1, TaskState.RUNNING);
     app.waitForState(reduceTask2, TaskState.RUNNING);
@@ -418,8 +417,8 @@ public class TestMRApp {
       return events14.length == 5;
     }, checkIntervalMillis, waitForMillis);
     events = job2.getTaskAttemptCompletionEvents(0, 100);
-    assertEquals(
-       5, events.length, "Expecting 2 more completion events for reduce success");
+    assertEquals(5, events.length,
+        "Expecting 2 more completion events for reduce success");
 
     // job succeeds
     app.waitForState(job2, JobState.SUCCEEDED);

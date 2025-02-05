@@ -1368,7 +1368,7 @@ public class TestTaskAttempt{
     taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
         TaskAttemptEventType.TA_KILL));
     assertEquals(TaskAttemptState.SUCCEEDED,
-       taImpl.getState(), "Task attempt is not in SUCCEEDED state");
+        taImpl.getState(), "Task attempt is not in SUCCEEDED state");
     assertEquals(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
         taImpl.getInternalState(), "Task attempt's internal state is not " +
         "SUCCESS_CONTAINER_CLEANUP");
@@ -1864,7 +1864,7 @@ public class TestTaskAttempt{
       Clock clock = SystemClock.getInstance();
       JobConf jobConf = new JobConf();
       jobConf.set(MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX
-         + CUSTOM_RESOURCE_NAME, "3z");
+          + CUSTOM_RESOURCE_NAME, "3z");
       createReduceTaskAttemptImplForTest(eventHandler, clock, jobConf);
     });
   }
@@ -1882,7 +1882,7 @@ public class TestTaskAttempt{
     taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
         TaskAttemptEventType.TA_DONE));
     assertEquals(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
-       taImpl.getInternalState(), "Task attempt's internal state is not " +
+        taImpl.getInternalState(), "Task attempt's internal state is not " +
         "SUCCESS_FINISHING_CONTAINER");
 
     taImpl.handle(new TaskAttemptEvent(taImpl.getID(),

@@ -339,7 +339,11 @@ public class TestRecovery {
    */
   public static void waitForContainerAssignment(final TaskAttempt task1Attempt2)
       throws TimeoutException, InterruptedException {
-    GenericTestUtils.waitFor(() -> task1Attempt2.getAssignedContainerID() != null, 10, 10000);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override public Boolean get() {
+        return task1Attempt2.getAssignedContainerID() != null;
+      }
+    }, 10, 10000);
   }
 
   /**
@@ -928,8 +932,7 @@ public class TestRecovery {
     conf.set(FileOutputFormat.OUTDIR, outputDir.toString());
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
-    assertEquals(
-      3, job.getTasks().size(), "No of tasks not correct");
+    assertEquals(3, job.getTasks().size(), "No of tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task mapTask1 = it.next();
     Task reduceTask1 = it.next();
@@ -1085,8 +1088,8 @@ public class TestRecovery {
     assertEquals(3, job.getTasks().size(), "No of tasks not correct");
     TestFileOutputCommitter committer = (
         TestFileOutputCommitter) app.getCommitter();
-    assertFalse(
-       committer.isAbortJobCalled(), "commiter.abortJob() has been called");
+    assertFalse(committer.isAbortJobCalled(),
+        "commiter.abortJob() has been called");
     app.close();
   }
 
@@ -1406,8 +1409,7 @@ public class TestRecovery {
     job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
     //all maps would be running
-    assertEquals(
-      3, job.getTasks().size(), "No of tasks not correct");
+    assertEquals(3, job.getTasks().size(), "No of tasks not correct");
     it = job.getTasks().values().iterator();
     mapTask1 = it.next();
     mapTask2 = it.next();
@@ -1527,8 +1529,7 @@ public class TestRecovery {
     job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
     //all maps would be running
-    assertEquals(
-      3, job.getTasks().size(), "No of tasks not correct");
+    assertEquals(3, job.getTasks().size(), "No of tasks not correct");
     it = job.getTasks().values().iterator();
     mapTask1 = it.next();
     mapTask2 = it.next();
@@ -1590,7 +1591,8 @@ public class TestRecovery {
         org.apache.hadoop.mapreduce.TaskType.MAP, taskId.getId());
 
     //Mock up the TaskAttempts
-    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts = new HashMap<>();
+    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts =
+        new HashMap<TaskAttemptID, TaskAttemptInfo>();
 
     TaskAttemptID taId1 = new TaskAttemptID(taskID, 2);
     TaskAttemptInfo mockTAinfo1 = getMockTaskAttemptInfo(taId1,
@@ -1615,11 +1617,12 @@ public class TestRecovery {
     verify(mockEventHandler,atLeast(1)).handle(
         (org.apache.hadoop.yarn.event.Event) arg.capture());
 
-    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates = new HashMap<>();
+    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates =
+        new HashMap<TaskAttemptID, TaskAttemptState>();
     finalAttemptStates.put(taId1, TaskAttemptState.SUCCEEDED);
     finalAttemptStates.put(taId2, TaskAttemptState.FAILED);
 
-    List<EventType> jobHistoryEvents = new ArrayList<>();
+    List<EventType> jobHistoryEvents = new ArrayList<EventType>();
     jobHistoryEvents.add(EventType.TASK_STARTED);
     jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
     jobHistoryEvents.add(EventType.MAP_ATTEMPT_FINISHED);
@@ -1645,7 +1648,8 @@ public class TestRecovery {
         org.apache.hadoop.mapreduce.TaskType.MAP, taskId.getId());
 
     //Mock up the TaskAttempts
-    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts = new HashMap<>();
+    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts =
+        new HashMap<TaskAttemptID, TaskAttemptInfo>();
 
     TaskAttemptID taId1 = new TaskAttemptID(taskID, 2);
     TaskAttemptInfo mockTAinfo1 = getMockTaskAttemptInfo(taId1,
@@ -1671,11 +1675,12 @@ public class TestRecovery {
     verify(mockEventHandler,atLeast(1)).handle(
         (org.apache.hadoop.yarn.event.Event) arg.capture());
 
-    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates = new HashMap<>();
+    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates =
+        new HashMap<TaskAttemptID, TaskAttemptState>();
     finalAttemptStates.put(taId1, TaskAttemptState.FAILED);
     finalAttemptStates.put(taId2, TaskAttemptState.FAILED);
 
-    List<EventType> jobHistoryEvents = new ArrayList<>();
+    List<EventType> jobHistoryEvents = new ArrayList<EventType>();
     jobHistoryEvents.add(EventType.TASK_STARTED);
     jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
     jobHistoryEvents.add(EventType.MAP_ATTEMPT_FAILED);
@@ -1701,7 +1706,8 @@ public class TestRecovery {
         org.apache.hadoop.mapreduce.TaskType.MAP, taskId.getId());
 
     //Mock up the TaskAttempts
-    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts = new HashMap<>();
+    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts =
+        new HashMap<TaskAttemptID, TaskAttemptInfo>();
 
     TaskAttemptID taId1 = new TaskAttemptID(taskID, 2);
     TaskAttemptInfo mockTAinfo1 = getMockTaskAttemptInfo(taId1,
@@ -1726,14 +1732,15 @@ public class TestRecovery {
     verify(mockEventHandler,atLeast(1)).handle(
         (org.apache.hadoop.yarn.event.Event) arg.capture());
 
-    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates = new HashMap<>();
+    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates =
+        new HashMap<TaskAttemptID, TaskAttemptState>();
     finalAttemptStates.put(taId1, TaskAttemptState.FAILED);
     finalAttemptStates.put(taId2, TaskAttemptState.FAILED);
     // check for one new attempt launched since successful attempt not found
     TaskAttemptID taId3 = new TaskAttemptID(taskID, 2000);
     finalAttemptStates.put(taId3, TaskAttemptState.NEW);
 
-    List<EventType> jobHistoryEvents = new ArrayList<>();
+    List<EventType> jobHistoryEvents = new ArrayList<EventType>();
     jobHistoryEvents.add(EventType.TASK_STARTED);
     jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
     jobHistoryEvents.add(EventType.MAP_ATTEMPT_FAILED);
@@ -1758,7 +1765,8 @@ public class TestRecovery {
         org.apache.hadoop.mapreduce.TaskType.MAP, taskId.getId());
 
     //Mock up the TaskAttempts
-    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts = new HashMap<>();
+    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts =
+        new HashMap<TaskAttemptID, TaskAttemptInfo>();
 
     TaskAttemptID taId1 = new TaskAttemptID(taskID, 2);
     TaskAttemptInfo mockTAinfo1 = getMockTaskAttemptInfo(taId1,
@@ -1783,11 +1791,12 @@ public class TestRecovery {
     verify(mockEventHandler,atLeast(1)).handle(
         (org.apache.hadoop.yarn.event.Event) arg.capture());
 
-    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates = new HashMap<>();
+    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates =
+        new HashMap<TaskAttemptID, TaskAttemptState>();
     finalAttemptStates.put(taId1, TaskAttemptState.SUCCEEDED);
     finalAttemptStates.put(taId2, TaskAttemptState.SUCCEEDED);
 
-    List<EventType> jobHistoryEvents = new ArrayList<>();
+    List<EventType> jobHistoryEvents = new ArrayList<EventType>();
     jobHistoryEvents.add(EventType.TASK_STARTED);
     jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
     jobHistoryEvents.add(EventType.MAP_ATTEMPT_FINISHED);
@@ -1813,7 +1822,8 @@ public class TestRecovery {
         org.apache.hadoop.mapreduce.TaskType.MAP, taskId.getId());
 
     //Mock up the TaskAttempts
-    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts = new HashMap<>();
+    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts =
+        new HashMap<TaskAttemptID, TaskAttemptInfo>();
     TaskAttemptID taId1 = new TaskAttemptID(taskID, 2);
     TaskAttemptInfo mockTAinfo1 = getMockTaskAttemptInfo(taId1,
         TaskAttemptState.KILLED);
@@ -1837,11 +1847,12 @@ public class TestRecovery {
     verify(mockEventHandler,atLeast(1)).handle(
         (org.apache.hadoop.yarn.event.Event) arg.capture());
 
-    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates = new HashMap<>();
+    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates =
+        new HashMap<TaskAttemptID, TaskAttemptState>();
     finalAttemptStates.put(taId1, TaskAttemptState.KILLED);
     finalAttemptStates.put(taId2, TaskAttemptState.KILLED);
 
-    List<EventType> jobHistoryEvents = new ArrayList<>();
+    List<EventType> jobHistoryEvents = new ArrayList<EventType>();
     jobHistoryEvents.add(EventType.TASK_STARTED);
     jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
     jobHistoryEvents.add(EventType.MAP_ATTEMPT_KILLED);

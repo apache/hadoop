@@ -370,8 +370,8 @@ public class TestMRAppMaster {
           new MRAppMasterTest(applicationAttemptId, containerId, "host", -1, -1,
               System.currentTimeMillis(), false, true);
       MRAppMaster.initAndStartAppMaster(appMaster, conf, userName);
-      assertEquals(expectedBools[i]
-,           appMaster.isLastAMRetry(), "isLastAMRetry is correctly computed.");
+      assertEquals(expectedBools[i],
+          appMaster.isLastAMRetry(), "isLastAMRetry is correctly computed.");
     }
   }
 
@@ -525,10 +525,10 @@ public class TestMRAppMaster {
     doNothing().when(appMaster).serviceStop();
     // Test normal shutdown.
     appMaster.shutDownJob();
-    assertTrue(
-                     ExitUtil.terminateCalled(), "Expected shutDownJob to terminate.");
-    assertEquals(
-       0, ExitUtil.getFirstExitException().status, "Expected shutDownJob to exit with status code of 0.");
+    assertTrue(ExitUtil.terminateCalled(),
+        "Expected shutDownJob to terminate.");
+    assertEquals(0, ExitUtil.getFirstExitException().status,
+        "Expected shutDownJob to exit with status code of 0.");
 
     // Test shutdown with exception.
     ExitUtil.resetFirstExitException();
@@ -536,10 +536,10 @@ public class TestMRAppMaster {
     doThrow(new RuntimeException(msg))
             .when(appMaster).notifyIsLastAMRetry(anyBoolean());
     appMaster.shutDownJob();
-    assertTrue(
-       ExitUtil.getFirstExitException().getMessage().contains(msg), "Expected message from ExitUtil.ExitException to be " + msg);
-    assertEquals(
-       1, ExitUtil.getFirstExitException().status, "Expected shutDownJob to exit with status code of 1.");
+    assertTrue(ExitUtil.getFirstExitException().getMessage().contains(msg),
+        "Expected message from ExitUtil.ExitException to be " + msg);
+    assertEquals(1, ExitUtil.getFirstExitException().status,
+        "Expected shutDownJob to exit with status code of 1.");
   }
 
   private void verifyFailedStatus(MRAppMasterTest appMaster,

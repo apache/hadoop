@@ -85,7 +85,8 @@ public class TestJobEndNotifier extends JobEndNotifier {
 
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS, "20");
     setConf(conf);
-    assertEquals(11, numTries, "Expected numTries to be 11, but was " + numTries); //11 because number of _retries_ is 10
+    assertEquals(11, numTries,
+        "Expected numTries to be 11, but was " + numTries); //11 because number of _retries_ is 10
   }
 
   //Test maximum retry interval is capped by
@@ -177,9 +178,9 @@ public class TestJobEndNotifier extends JobEndNotifier {
     this.notify(jobReport);
     long endTime = System.currentTimeMillis();
     assertEquals(1, this.notificationCount, "Only 1 try was expected but was : "
-      + this.notificationCount);
+        + this.notificationCount);
     assertTrue(endTime - startTime > 5000, "Should have taken more than 5 seconds it took "
-      + (endTime - startTime));
+        + (endTime - startTime));
 
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS, "3");
     conf.set(MRJobConfig.MR_JOB_END_RETRY_ATTEMPTS, "3");

@@ -426,12 +426,12 @@ public class TestJobImpl {
       TaskState.FAILED));
     //Verify abort job hasn't been called
     verify(committer, never())
-      .abortJob((JobContext) any(), (State) any());
+       .abortJob((JobContext) any(), (State) any());
     assertJobState(job, JobStateInternal.FAIL_WAIT);
 
     //Verify abortJob is called once and the job failed
     verify(committer, timeout(2000).times(1))
-      .abortJob((JobContext) any(), (State) any());
+        .abortJob((JobContext) any(), (State) any());
     assertJobState(job, JobStateInternal.FAILED);
 
     dispatcher.stop();
@@ -470,7 +470,7 @@ public class TestJobImpl {
     dispatcher.await();
     //Verify abortJob is called once and the job failed
     verify(committer, timeout(2000).times(1))
-      .abortJob((JobContext) any(), (State) any());
+        .abortJob((JobContext) any(), (State) any());
     assertJobState(job, JobStateInternal.FAILED);
 
     dispatcher.stop();
