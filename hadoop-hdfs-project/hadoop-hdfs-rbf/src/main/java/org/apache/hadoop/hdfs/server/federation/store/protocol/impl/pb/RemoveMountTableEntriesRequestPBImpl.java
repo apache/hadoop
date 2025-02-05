@@ -34,10 +34,11 @@ import org.apache.hadoop.hdfs.server.federation.store.records.impl.pb.PBRecord;
 public class RemoveMountTableEntriesRequestPBImpl extends RemoveMountTableEntriesRequest
     implements PBRecord {
 
-  private FederationProtocolPBTranslator<RemoveMountTableEntriesRequestProto, RemoveMountTableEntriesRequestProto.Builder, RemoveMountTableEntriesRequestProtoOrBuilder>
-      translator =
-      new FederationProtocolPBTranslator<RemoveMountTableEntriesRequestProto, RemoveMountTableEntriesRequestProto.Builder, RemoveMountTableEntriesRequestProtoOrBuilder>(
-          RemoveMountTableEntriesRequestProto.class);
+  private FederationProtocolPBTranslator<
+      RemoveMountTableEntriesRequestProto,
+      RemoveMountTableEntriesRequestProto.Builder,
+      RemoveMountTableEntriesRequestProtoOrBuilder>
+      translator = new FederationProtocolPBTranslator<>(RemoveMountTableEntriesRequestProto.class);
 
   public RemoveMountTableEntriesRequestPBImpl() {
   }
