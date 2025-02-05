@@ -25,8 +25,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 
 import java.io.IOException;
@@ -37,7 +37,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.IntStream;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Testing HttpFileSystem.
@@ -45,7 +45,7 @@ import static org.junit.Assert.assertEquals;
 public class TestHttpFileSystem {
   private final Configuration conf = new Configuration(false);
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf.set("fs.http.impl", HttpFileSystem.class.getCanonicalName());
   }
