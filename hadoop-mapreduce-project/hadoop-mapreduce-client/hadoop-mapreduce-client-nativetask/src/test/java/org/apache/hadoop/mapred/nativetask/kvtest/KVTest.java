@@ -97,9 +97,9 @@ public class KVTest {
   private Class<?> keyclass;
   private Class<?> valueclass;
 
-  public void initKVTest(Class<?> keyclass, Class<?> valueclass) {
-    this.keyclass = keyclass;
-    this.valueclass = valueclass;
+  public void initKVTest(Class<?> paramKeyclass, Class<?> paramValueclass) {
+    this.keyclass = paramKeyclass;
+    this.valueclass = paramValueclass;
   }
 
   @BeforeEach
@@ -110,8 +110,8 @@ public class KVTest {
 
   @MethodSource("data")
   @ParameterizedTest(name = "key:{0}\nvalue:{1}")
-  public void testKVCompatibility(Class<?> keyclass, Class<?> valueclass) throws Exception {
-    initKVTest(keyclass, valueclass);
+  public void testKVCompatibility(Class<?> pkeyclass, Class<?> pValueclass) throws Exception {
+    initKVTest(pkeyclass, pValueclass);
     final FileSystem fs = FileSystem.get(nativekvtestconf);
     final String jobName = "Test:" + keyclass.getSimpleName() + "--"
         + valueclass.getSimpleName();
