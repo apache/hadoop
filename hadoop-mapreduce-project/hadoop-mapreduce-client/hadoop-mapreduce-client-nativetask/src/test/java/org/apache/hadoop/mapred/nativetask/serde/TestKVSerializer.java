@@ -40,7 +40,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class TestKVSerializer {
 
-  int inputArraySize = 1000; // 1000 bytes Writable elements
+  private int inputArraySize = 1000; // 1000 bytes Writable elements
   int bufferSize = 100; // bytes
   private KV<BytesWritable, BytesWritable>[] inputArray;
 

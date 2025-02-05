@@ -143,16 +143,15 @@ public class ResultVerifier {
       throws IOException {
     Counters normalCounters = normalJob.getCounters();
     Counters nativeCounters = nativeJob.getCounters();
-    assertEquals(
-        normalCounters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue(),
-        nativeCounters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue(), 
+    assertEquals(normalCounters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue(),
+        nativeCounters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue(),
         "Counter MAP_OUTPUT_RECORDS should be equal");
     assertEquals(normalCounters.findCounter(TaskCounter.REDUCE_INPUT_GROUPS).getValue(),
-        nativeCounters.findCounter(TaskCounter.REDUCE_INPUT_GROUPS).getValue(), 
+        nativeCounters.findCounter(TaskCounter.REDUCE_INPUT_GROUPS).getValue(),
         "Counter REDUCE_INPUT_GROUPS should be equal");
     if (!hasCombiner) {
       assertEquals(normalCounters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).getValue(),
-          nativeCounters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).getValue(), 
+          nativeCounters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).getValue(),
           "Counter REDUCE_INPUT_RECORDS should be equal");
     }
   }
