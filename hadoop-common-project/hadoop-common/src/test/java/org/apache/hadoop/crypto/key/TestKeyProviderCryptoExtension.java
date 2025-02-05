@@ -33,19 +33,18 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
-import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 import static org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestKeyProviderCryptoExtension {
 
@@ -61,7 +60,7 @@ public class TestKeyProviderCryptoExtension {
   @Rule
   public Timeout testTimeout = new Timeout(180000, TimeUnit.MILLISECONDS);
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     conf = new Configuration();
     kp = new UserProvider.Factory().createProvider(new URI("user:///"), conf);
@@ -78,16 +77,14 @@ public class TestKeyProviderCryptoExtension {
     // Generate a new EEK and check it
     KeyProviderCryptoExtension.EncryptedKeyVersion ek1 = 
         kpExt.generateEncryptedKey(encryptionKey.getName());
-    assertEquals("Version name of EEK should be EEK",
-        KeyProviderCryptoExtension.EEK,
-        ek1.getEncryptedKeyVersion().getVersionName());
-    assertEquals("Name of EEK should be encryption key name",
-        ENCRYPTION_KEY_NAME, ek1.getEncryptionKeyName());
-    assertNotNull("Expected encrypted key material",
-        ek1.getEncryptedKeyVersion().getMaterial());
-    assertEquals("Length of encryption key material and EEK material should "
-            + "be the same", encryptionKey.getMaterial().length,
-        ek1.getEncryptedKeyVersion().getMaterial().length
+    assertEquals(KeyProviderCryptoExtension.EEK,
+        ek1.getEncryptedKeyVersion().getVersionName(), "Version name of EEK should be EEK");
+    assertEquals(ENCRYPTION_KEY_NAME, ek1.getEncryptionKeyName(),
+        "Name of EEK should be encryption key name");
+    assertNotNull(ek1.getEncryptedKeyVersion().getMaterial(), "Expected encrypted key material");
+    assertEquals(encryptionKey.getMaterial().length,
+        ek1.getEncryptedKeyVersion().getMaterial().length,
+        "Length of encryption key material and EEK material should be the same"
     );
 
     // Decrypt EEK into an EK and check it
@@ -137,8 +134,8 @@ public class TestKeyProviderCryptoExtension {
     KeyVersion decryptedKey = kpExt.decryptEncryptedKey(eek2);
     final byte[] apiMaterial = decryptedKey.getMaterial();
 
-    assertArrayEquals("Wrong key material from decryptEncryptedKey",
-        manualMaterial, apiMaterial);
+    assertArrayEquals(manualMaterial, apiMaterial,
+        "Wrong key material from decryptEncryptedKey");
   }
 
   @Test
@@ -158,16 +155,14 @@ public class TestKeyProviderCryptoExtension {
     // Reencrypt ek1
     final KeyProviderCryptoExtension.EncryptedKeyVersion ek2 =
         kpExt.reencryptEncryptedKey(ek1);
-    assertEquals("Version name of EEK should be EEK",
-        KeyProviderCryptoExtension.EEK,
-        ek2.getEncryptedKeyVersion().getVersionName());
-    assertEquals("Name of EEK should be encryption key name",
-        ENCRYPTION_KEY_NAME, ek2.getEncryptionKeyName());
-    assertNotNull("Expected encrypted key material",
-        ek2.getEncryptedKeyVersion().getMaterial());
-    assertEquals("Length of encryption key material and EEK material should "
-            + "be the same", encryptionKey.getMaterial().length,
-        ek2.getEncryptedKeyVersion().getMaterial().length);
+    assertEquals(KeyProviderCryptoExtension.EEK,
+        ek2.getEncryptedKeyVersion().getVersionName(), "Version name of EEK should be EEK");
+    assertEquals(ENCRYPTION_KEY_NAME, ek2.getEncryptionKeyName(),
+        "Name of EEK should be encryption key name");
+    assertNotNull(ek2.getEncryptedKeyVersion().getMaterial(), "Expected encrypted key material");
+    assertEquals(encryptionKey.getMaterial().length,
+        ek2.getEncryptedKeyVersion().getMaterial().length,
+        "Length of encryption key material and EEK material should be the same");
 
     if (Arrays.equals(ek2.getEncryptedKeyVersion().getMaterial(),
         ek1.getEncryptedKeyVersion().getMaterial())) {
@@ -182,16 +177,14 @@ public class TestKeyProviderCryptoExtension {
     // Re-encrypting the same EEK with the same EK should be deterministic
     final KeyProviderCryptoExtension.EncryptedKeyVersion ek2a =
         kpExt.reencryptEncryptedKey(ek1);
-    assertEquals("Version name of EEK should be EEK",
-        KeyProviderCryptoExtension.EEK,
-        ek2a.getEncryptedKeyVersion().getVersionName());
-    assertEquals("Name of EEK should be encryption key name",
-        ENCRYPTION_KEY_NAME, ek2a.getEncryptionKeyName());
-    assertNotNull("Expected encrypted key material",
-        ek2a.getEncryptedKeyVersion().getMaterial());
-    assertEquals("Length of encryption key material and EEK material should "
-            + "be the same", encryptionKey.getMaterial().length,
-        ek2a.getEncryptedKeyVersion().getMaterial().length);
+    assertEquals(KeyProviderCryptoExtension.EEK,
+        ek2a.getEncryptedKeyVersion().getVersionName(), "Version name of EEK should be EEK");
+    assertEquals(ENCRYPTION_KEY_NAME, ek2a.getEncryptionKeyName(),
+        "Name of EEK should be encryption key name");
+    assertNotNull(ek2a.getEncryptedKeyVersion().getMaterial(), "Expected encrypted key material");
+    assertEquals(encryptionKey.getMaterial().length,
+        ek2a.getEncryptedKeyVersion().getMaterial().length,
+        "Length of encryption key material and EEK material should be the same");
 
     if (Arrays.equals(ek2a.getEncryptedKeyVersion().getMaterial(),
         ek1.getEncryptedKeyVersion().getMaterial())) {
@@ -203,16 +196,14 @@ public class TestKeyProviderCryptoExtension {
     // Re-encrypting an EEK with the same version EK should be no-op
     final KeyProviderCryptoExtension.EncryptedKeyVersion ek3 =
         kpExt.reencryptEncryptedKey(ek2);
-    assertEquals("Version name of EEK should be EEK",
-        KeyProviderCryptoExtension.EEK,
-        ek3.getEncryptedKeyVersion().getVersionName());
-    assertEquals("Name of EEK should be encryption key name",
-        ENCRYPTION_KEY_NAME, ek3.getEncryptionKeyName());
-    assertNotNull("Expected encrypted key material",
-        ek3.getEncryptedKeyVersion().getMaterial());
-    assertEquals("Length of encryption key material and EEK material should "
-            + "be the same", encryptionKey.getMaterial().length,
-        ek3.getEncryptedKeyVersion().getMaterial().length);
+    assertEquals(KeyProviderCryptoExtension.EEK,
+        ek3.getEncryptedKeyVersion().getVersionName(), "Version name of EEK should be EEK");
+    assertEquals(ENCRYPTION_KEY_NAME, ek3.getEncryptionKeyName(),
+        "Name of EEK should be encryption key name");
+    assertNotNull(ek3.getEncryptedKeyVersion().getMaterial(), "Expected encrypted key material");
+    assertEquals(encryptionKey.getMaterial().length,
+        ek3.getEncryptedKeyVersion().getMaterial().length,
+        "Length of encryption key material and EEK material should be the same");
 
     if (Arrays.equals(ek3.getEncryptedKeyVersion().getMaterial(),
         ek1.getEncryptedKeyVersion().getMaterial())) {
@@ -254,29 +245,26 @@ public class TestKeyProviderCryptoExtension {
     for (int i = 0; i < ekvs.size(); ++i) {
       final EncryptedKeyVersion ekv = ekvs.get(i);
       final EncryptedKeyVersion orig = ekvsOrig.get(i);
-      assertEquals("Version name should be EEK",
-          KeyProviderCryptoExtension.EEK,
-          ekv.getEncryptedKeyVersion().getVersionName());
-      assertEquals("Encryption key name should be " + ENCRYPTION_KEY_NAME,
-          ENCRYPTION_KEY_NAME, ekv.getEncryptionKeyName());
-      assertNotNull("Expected encrypted key material",
-          ekv.getEncryptedKeyVersion().getMaterial());
-      assertEquals("Length of encryption key material and EEK material should "
-              + "be the same", encryptionKey.getMaterial().length,
-          ekv.getEncryptedKeyVersion().getMaterial().length);
-      assertFalse(
-          "Encrypted key material should not equal encryption key material",
-          Arrays.equals(ekv.getEncryptedKeyVersion().getMaterial(),
-              encryptionKey.getMaterial()));
+      assertEquals(KeyProviderCryptoExtension.EEK,
+          ekv.getEncryptedKeyVersion().getVersionName(), "Version name should be EEK");
+      assertEquals(ENCRYPTION_KEY_NAME, ekv.getEncryptionKeyName(),
+          "Encryption key name should be " + ENCRYPTION_KEY_NAME);
+      assertNotNull(ekv.getEncryptedKeyVersion().getMaterial(), "Expected encrypted key material");
+      assertEquals(encryptionKey.getMaterial().length,
+          ekv.getEncryptedKeyVersion().getMaterial().length,
+          "Length of encryption key material and EEK material should be the same");
+      assertFalse(Arrays.equals(ekv.getEncryptedKeyVersion().getMaterial(),
+          encryptionKey.getMaterial()),
+          "Encrypted key material should not equal encryption key material");
 
       if (i < 3) {
-        assertFalse("Re-encrypted EEK should have different material",
-            Arrays.equals(ekv.getEncryptedKeyVersion().getMaterial(),
-                orig.getEncryptedKeyVersion().getMaterial()));
+        assertFalse(Arrays.equals(ekv.getEncryptedKeyVersion().getMaterial(),
+            orig.getEncryptedKeyVersion().getMaterial()),
+            "Re-encrypted EEK should have different material");
       } else {
-        assertTrue("Re-encrypted EEK should have same material",
-            Arrays.equals(ekv.getEncryptedKeyVersion().getMaterial(),
-                orig.getEncryptedKeyVersion().getMaterial()));
+        assertTrue(Arrays.equals(ekv.getEncryptedKeyVersion().getMaterial(),
+            orig.getEncryptedKeyVersion().getMaterial()),
+            "Re-encrypted EEK should have same material");
       }
 
       // Decrypt the new EEK into an EK and check it
@@ -289,20 +277,19 @@ public class TestKeyProviderCryptoExtension {
 
       // Verify decrypting the new EEK and orig EEK gives the same material.
       final KeyVersion origKv = kpExt.decryptEncryptedKey(orig);
-      assertTrue("Returned EEK and original EEK should both decrypt to the "
-          + "same kv.", Arrays.equals(origKv.getMaterial(), kv.getMaterial()));
+      assertTrue(Arrays.equals(origKv.getMaterial(), kv.getMaterial()),
+          "Returned EEK and original EEK should both decrypt to the same kv.");
     }
   }
 
   @Test
   public void testNonDefaultCryptoExtensionSelectionWithCachingKeyProvider()
-          throws Exception {
+      throws Exception {
     Configuration config = new Configuration();
     KeyProvider localKp = new DummyCryptoExtensionKeyProvider(config);
     localKp = new CachingKeyProvider(localKp, 30000, 30000);
     EncryptedKeyVersion localEkv = getEncryptedKeyVersion(config, localKp);
-    Assert.assertEquals("dummyFakeKey@1",
-            localEkv.getEncryptionKeyVersionName());
+    assertEquals("dummyFakeKey@1", localEkv.getEncryptionKeyVersionName());
   }
 
   @Test
@@ -314,8 +301,8 @@ public class TestKeyProviderCryptoExtension {
                     createProvider(new URI("user:///"), config);
     localKp = new CachingKeyProvider(localKp, 30000, 30000);
     EncryptedKeyVersion localEkv = getEncryptedKeyVersion(config, localKp);
-    Assert.assertEquals(ENCRYPTION_KEY_NAME+"@0",
-            localEkv.getEncryptionKeyVersionName());
+    assertEquals(ENCRYPTION_KEY_NAME+"@0",
+        localEkv.getEncryptionKeyVersionName());
   }
 
   @Test
@@ -326,8 +313,8 @@ public class TestKeyProviderCryptoExtension {
             createProvider(new URI("user:///"), config);
     localKp = new DummyCachingCryptoExtensionKeyProvider(localKp, 30000, 30000);
     EncryptedKeyVersion localEkv = getEncryptedKeyVersion(config, localKp);
-    Assert.assertEquals("dummyCachingFakeKey@1",
-            localEkv.getEncryptionKeyVersionName());
+    assertEquals("dummyCachingFakeKey@1",
+        localEkv.getEncryptionKeyVersionName());
   }
 
   private EncryptedKeyVersion getEncryptedKeyVersion(Configuration config,

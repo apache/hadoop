@@ -34,22 +34,23 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestKeyProviderFactory {
 
   private FileSystemTestHelper fsHelper;
   private File testRootDir;
 
-  @Before
+  @BeforeEach
   public void setup() {
     fsHelper = new FileSystemTestHelper();
     String testRoot = fsHelper.getTestRootDir();
@@ -79,7 +80,7 @@ public class TestKeyProviderFactory {
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, "unknown:///");
     try {
       List<KeyProvider> providers = KeyProviderFactory.getProviders(conf);
-      assertTrue("should throw!", false);
+      assertTrue(false, "should throw!");
     } catch (IOException e) {
       assertEquals("No KeyProviderFactory for unknown:/// in " +
           KeyProviderFactory.KEY_PROVIDER_PATH,
@@ -93,7 +94,7 @@ public class TestKeyProviderFactory {
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, "unkn@own:/x/y");
     try {
       List<KeyProvider> providers = KeyProviderFactory.getProviders(conf);
-      assertTrue("should throw!", false);
+      assertTrue(false, "should throw!");
     } catch (IOException e) {
       assertEquals("Bad configuration of " +
           KeyProviderFactory.KEY_PROVIDER_PATH +
@@ -133,14 +134,14 @@ public class TestKeyProviderFactory {
     // try recreating key3
     try {
       provider.createKey("key3", key3, KeyProvider.options(conf));
-      assertTrue("should throw", false);
+      assertTrue(false, "should throw");
     } catch (IOException e) {
       assertEquals("Key key3 already exists in " + ourUrl, e.getMessage());
     }
     provider.deleteKey("key3");
     try {
       provider.deleteKey("key3");
-      assertTrue("should throw", false);
+      assertTrue(false, "should throw");
     } catch (IOException e) {
       assertEquals("Key key3 does not exist in " + ourUrl, e.getMessage());
     }
@@ -148,7 +149,7 @@ public class TestKeyProviderFactory {
     try {
       provider.createKey("key4", key3,
           KeyProvider.options(conf).setBitLength(8));
-      assertTrue("should throw", false);
+      assertTrue(false, "should throw");
     } catch (IOException e) {
       assertEquals("Wrong key length. Required 8, but got 128", e.getMessage());
     }
@@ -164,13 +165,13 @@ public class TestKeyProviderFactory {
     assertEquals("key4@1", provider.getCurrentKey("key4").getVersionName());
     try {
       provider.rollNewVersion("key4", key1);
-      assertTrue("should throw", false);
+      assertTrue(false, "should throw");
     } catch (IOException e) {
       assertEquals("Wrong key length. Required 8, but got 128", e.getMessage());
     }
     try {
       provider.rollNewVersion("no-such-key", key1);
-      assertTrue("should throw", false);
+      assertTrue(false, "should throw");
     } catch (IOException e) {
       assertEquals("Key no-such-key not found", e.getMessage());
     }
@@ -184,15 +185,14 @@ public class TestKeyProviderFactory {
     assertEquals("key3@0", provider.getCurrentKey("key3").getVersionName());
 
     List<String> keys = provider.getKeys();
-    assertTrue("Keys should have been returned.", keys.size() == 2);
-    assertTrue("Returned Keys should have included key3.", keys.contains("key3"));
-    assertTrue("Returned Keys should have included key4.", keys.contains("key4"));
+    assertTrue(keys.size() == 2, "Keys should have been returned.");
+    assertTrue(keys.contains("key3"), "Returned Keys should have included key3.");
+    assertTrue(keys.contains("key4"), "Returned Keys should have included key4.");
 
     List<KeyVersion> kvl = provider.getKeyVersions("key3");
-    assertEquals("KeyVersions should have been returned for key3.",
-        1, kvl.size());
-    assertEquals("KeyVersions should have included key3@0.",
-        "key3@0", kvl.get(0).getVersionName());
+    assertEquals(1, kvl.size(), "KeyVersions should have been returned for key3.");
+    assertEquals("key3@0", kvl.get(0).getVersionName(),
+        "KeyVersions should have included key3@0.");
     assertArrayEquals(key3, kvl.get(0).getMaterial());
   }
 
@@ -238,12 +238,12 @@ public class TestKeyProviderFactory {
     assertNotNull(provider.getCurrentKey("key5"));
     try {
       provider.flush();
-      Assert.fail("Should not succeed");
+      fail("Should not succeed");
     } catch (Exception e) {
       // Ignore
     }
-    // SHould be reset to pre-flush state
-    Assert.assertNull(provider.getCurrentKey("key5"));
+    // Should be reset to pre-flush state
+    assertNull(provider.getCurrentKey("key5"));
     
     // Un-inject last failure and
     // inject failure during keystore backup
@@ -254,12 +254,12 @@ public class TestKeyProviderFactory {
     assertNotNull(provider.getCurrentKey("key6"));
     try {
       provider.flush();
-      Assert.fail("Should not succeed");
+      fail("Should not succeed");
     } catch (Exception e) {
       // Ignore
     }
-    // SHould be reset to pre-flush state
-    Assert.assertNull(provider.getCurrentKey("key6"));
+    // Should be reset to pre-flush state
+    assertNull(provider.getCurrentKey("key6"));
     // END : Test flush error by failure injection
 
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, ourUrl.replace(
@@ -270,7 +270,7 @@ public class TestKeyProviderFactory {
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
     assertEquals("rw-------", s.getPermission().toString());
-    assertTrue(file + " should exist", file.isFile());
+    assertTrue(file.isFile(), file + " should exist");
 
     // Corrupt file and Check if JKS can reload from _OLD file
     File oldFile = new File(file.getPath() + "_OLD");
@@ -280,7 +280,7 @@ public class TestKeyProviderFactory {
     assertTrue(oldFile.exists());
     provider = KeyProviderFactory.getProviders(conf).get(0);
     assertTrue(file.exists());
-    assertTrue(oldFile + "should be deleted", !oldFile.exists());
+    assertTrue(!oldFile.exists(), oldFile + "should be deleted");
     verifyAfterReload(file, provider);
     assertTrue(!oldFile.exists());
 
@@ -289,7 +289,7 @@ public class TestKeyProviderFactory {
     newFile.createNewFile();
     try {
       provider = KeyProviderFactory.getProviders(conf).get(0);
-      Assert.fail("_NEW and current file should not exist together !!");
+      fail("_NEW and current file should not exist together !!");
     } catch (Exception e) {
       // Ignore
     } finally {
@@ -303,10 +303,10 @@ public class TestKeyProviderFactory {
     file.delete();
     try {
       provider = KeyProviderFactory.getProviders(conf).get(0);
-      Assert.assertFalse(newFile.exists());
-      Assert.assertFalse(oldFile.exists());
+      assertFalse(newFile.exists());
+      assertFalse(oldFile.exists());
     } catch (Exception e) {
-      Assert.fail("JKS should load from _NEW file !!");
+      fail("JKS should load from _NEW file !!");
       // Ignore
     }
     verifyAfterReload(file, provider);
@@ -317,10 +317,10 @@ public class TestKeyProviderFactory {
     file.delete();
     try {
       provider = KeyProviderFactory.getProviders(conf).get(0);
-      Assert.assertFalse(newFile.exists());
-      Assert.assertFalse(oldFile.exists());
+      assertFalse(newFile.exists());
+      assertFalse(oldFile.exists());
     } catch (Exception e) {
-      Assert.fail("JKS should load from _OLD file !!");
+      fail("JKS should load from _OLD file !!");
       // Ignore
     } finally {
       if (newFile.exists()) {
@@ -337,7 +337,7 @@ public class TestKeyProviderFactory {
     provider = KeyProviderFactory.getProviders(conf).get(0);
     try {
       provider.createKey("UPPERCASE", KeyProvider.options(conf));
-      Assert.fail("Expected failure on creating key name with uppercase " +
+      fail("Expected failure on creating key name with uppercase " +
           "characters");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains("Uppercase key names", e);
@@ -373,8 +373,8 @@ public class TestKeyProviderFactory {
 
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
-    assertEquals("Permissions should have been retained from the preexisting "
-        + "keystore.", "rwxrwxrwx", s.getPermission().toString());
+    assertEquals("rwxrwxrwx", s.getPermission().toString(),
+        "Permissions should have been retained from the preexisting keystore.");
   }
 
   @Test
@@ -393,29 +393,29 @@ public class TestKeyProviderFactory {
       provider.createKey("key3", new byte[16], KeyProvider.options(conf));
       provider.flush();
     } catch (Exception ex) {
-      Assert.fail("could not create keystore with password file");
+      fail("could not create keystore with password file");
     }
     KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
-    Assert.assertNotNull(provider.getCurrentKey("key3"));
+    assertNotNull(provider.getCurrentKey("key3"));
 
     try {
       conf.set(JavaKeyStoreProvider.KEYSTORE_PASSWORD_FILE_KEY, "bar");
       KeyProviderFactory.getProviders(conf).get(0);
-      Assert.fail("using non existing password file, it should fail");
+      fail("using non existing password file, it should fail");
     } catch (IOException ex) {
       //NOP
     }
     try {
       conf.set(JavaKeyStoreProvider.KEYSTORE_PASSWORD_FILE_KEY, "core-site.xml");
       KeyProviderFactory.getProviders(conf).get(0);
-      Assert.fail("using different password file, it should fail");
+      fail("using different password file, it should fail");
     } catch (IOException ex) {
       //NOP
     }
     try {
       conf.unset(JavaKeyStoreProvider.KEYSTORE_PASSWORD_FILE_KEY);
       KeyProviderFactory.getProviders(conf).get(0);
-      Assert.fail("No password file property, env not set, it should fail");
+      fail("No password file property, env not set, it should fail");
     } catch (IOException ex) {
       //NOP
     }
@@ -427,11 +427,11 @@ public class TestKeyProviderFactory {
     final Path jksPath = new Path(testRootDir.toString(), "test.jks");
     URI uri = new URI(JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri());
     KeyProvider kp = KeyProviderFactory.get(uri, conf);
-    Assert.assertNotNull(kp);
-    Assert.assertEquals(JavaKeyStoreProvider.class, kp.getClass());
+    assertNotNull(kp);
+    assertEquals(JavaKeyStoreProvider.class, kp.getClass());
     uri = new URI("foo://bar");
     kp = KeyProviderFactory.get(uri, conf);
-    Assert.assertNull(kp);
+    assertNull(kp);
 
   }
 

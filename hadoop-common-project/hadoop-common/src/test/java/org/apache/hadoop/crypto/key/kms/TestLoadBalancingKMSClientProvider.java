@@ -20,10 +20,10 @@ package org.apache.hadoop.crypto.key.kms;
 import static org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import static org.apache.hadoop.crypto.key.kms.KMSDelegationToken.TOKEN_KIND;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
@@ -42,7 +42,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
@@ -61,19 +60,15 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.Token;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
-
+@Timeout(30)
 public class TestLoadBalancingKMSClientProvider {
 
-  @Rule
-  public Timeout testTimeout = new Timeout(30, TimeUnit.SECONDS);
-
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     SecurityUtil.setTokenServiceUseIp(false);
   }
@@ -956,9 +951,9 @@ public class TestLoadBalancingKMSClientProvider {
           }
         });
     // make sure getActualUgi() returns the current user, not login user.
-    assertEquals(
+    assertEquals(ugi, actualUgi,
         "testTokenSelectionWithConf() should return the" +
-            " current user, not login user", ugi, actualUgi);
+        " current user, not login user");
   }
 
   @Test
