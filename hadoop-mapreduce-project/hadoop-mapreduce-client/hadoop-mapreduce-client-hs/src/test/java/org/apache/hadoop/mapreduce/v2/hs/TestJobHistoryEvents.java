@@ -61,7 +61,7 @@ public class TestJobHistoryEvents {
     app.submit(conf);
     Job job = app.getContext().getAllJobs().values().iterator().next();
     JobId jobId = job.getID();
-    LOG.info("JOBID is {}.", TypeConverter.fromYarn(jobId));
+    LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
     app.waitForState(job, JobState.SUCCEEDED);
     
     //make sure all events are flushed 
@@ -85,8 +85,8 @@ public class TestJobHistoryEvents {
     assertEquals(((JobHistory)context).getServiceState(),Service.STATE.STOPPED);
 
 
-    assertEquals(2
-,         parsedJob.getCompletedMaps(), "CompletedMaps not correct");
+    assertEquals(2, parsedJob.getCompletedMaps(),
+        "CompletedMaps not correct");
     assertEquals(System.getProperty("user.name"), parsedJob.getUserName());
     
     Map<TaskId, Task> tasks = parsedJob.getTasks();
@@ -109,7 +109,7 @@ public class TestJobHistoryEvents {
 
   /**
    * Verify that all the events are flushed on stopping the HistoryHandler
-   * @throws Exception Some common errors encountered in unit tests.
+   * @throws Exception
    */
   @Test
   public void testEventsFlushOnStop() throws Exception {
@@ -120,7 +120,7 @@ public class TestJobHistoryEvents {
     app.submit(conf);
     Job job = app.getContext().getAllJobs().values().iterator().next();
     JobId jobId = job.getID();
-    LOG.info("JOBID is {}.", TypeConverter.fromYarn(jobId));
+    LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
     app.waitForState(job, JobState.SUCCEEDED);
 
     // make sure all events are flushed
@@ -141,8 +141,8 @@ public class TestJobHistoryEvents {
     Map<TaskId, Task> maps = parsedJob.getTasks(TaskType.MAP);
     assertEquals(1, maps.size(), "No of maps not correct");
 
-   assertEquals(JobState.SUCCEEDED
-,      parsedJob.getState(), "Job state not correct");
+   assertEquals(JobState.SUCCEEDED, parsedJob.getState(),
+       "Job state not correct");
   }
 
   @Test
@@ -167,7 +167,7 @@ public class TestJobHistoryEvents {
     app.submit(conf);
     Job job = app.getContext().getAllJobs().values().iterator().next();
     JobId jobId = job.getID();
-    LOG.info("JOBID is {}.", TypeConverter.fromYarn(jobId));
+    LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
     app.waitForState(job, JobState.SUCCEEDED);
     
     //make sure all events are flushed 
@@ -192,7 +192,8 @@ public class TestJobHistoryEvents {
     assertThat(((JobHistory)context).getServiceState())
         .isEqualTo(Service.STATE.STOPPED);
 
-    assertEquals("assignedQueue", parsedJob.getQueueName(), "QueueName not correct");
+    assertEquals("assignedQueue", parsedJob.getQueueName(),
+        "QueueName not correct");
   }
 
   private void verifyTask(Task task) {

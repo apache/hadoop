@@ -40,7 +40,6 @@ import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlockForTest;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -133,8 +132,8 @@ public class TestHsJobBlock {
     block.getWriter().flush();
     String out = outputStream.toString();
 
-    Assertions.assertTrue(
-       out.contains("ApplicationMaster"), "Should display job overview for the job.");
+    assertTrue(out.contains("ApplicationMaster"),
+        "Should display job overview for the job.");
   }
 
   private static HtmlBlock.Block createBlockToCreateTo(

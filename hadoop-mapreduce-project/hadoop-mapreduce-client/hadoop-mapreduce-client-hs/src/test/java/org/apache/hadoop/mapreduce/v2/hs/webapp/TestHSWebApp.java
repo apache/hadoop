@@ -28,6 +28,7 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_LOG_TYPE;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.ENTITY_STRING;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NM_NODENAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
@@ -47,7 +48,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.View;
 import org.apache.hadoop.yarn.webapp.log.AggregatedLogsPage;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.google.inject.AbstractModule;
@@ -91,7 +91,7 @@ public class TestHSWebApp {
     View viewInstance = testPage.getInstance(HsTasksPage.class);
     Map<String, String> moreParams = viewInstance.context().requestContext().moreParams();
     String appTableColumnsMeta = moreParams.get("ui.dataTables.selector.init");
-    Assertions.assertTrue(appTableColumnsMeta.indexOf("natural") != -1);
+    assertTrue(appTableColumnsMeta.indexOf("natural") != -1);
   }
 
   @Test
@@ -112,7 +112,7 @@ public class TestHSWebApp {
     View viewInstance = testPage.getInstance(HsTaskPage.class);
     Map<String, String> moreParams = viewInstance.context().requestContext().moreParams();
     String appTableColumnsMeta = moreParams.get("ui.dataTables.attempts.init");
-    Assertions.assertTrue(appTableColumnsMeta.indexOf("natural") != -1);
+    assertTrue(appTableColumnsMeta.indexOf("natural") != -1);
   }
 
   @Test public void testAttemptsWithJobView() {

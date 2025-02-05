@@ -648,7 +648,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
-    assertEquals("jobs is not empty", "", json.get("jobs").toString());
+    assertEquals("", json.get("jobs").toString(), "jobs is not empty");
   }
 
   @Test

@@ -89,13 +89,13 @@ public class TestBlocks {
     Task task = getTask(0);
     String taskId = task.getID().toString();
 
-    assertEquals("Task failed <a href=\"/jobhistory/task/" + taskId + "\">" + taskId + "</a>"
-        , HsJobBlock.addTaskLinks("Task failed " + taskId),
+    assertEquals("Task failed <a href=\"/jobhistory/task/" + taskId + "\">" + taskId + "</a>",
+        HsJobBlock.addTaskLinks("Task failed " + taskId),
         "pull links doesn't work correctly");
 
     assertEquals("Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
-        taskId + "</a>\n Job failed as tasks failed. failedMaps:1 failedReduces:0"
-        , HsJobBlock.addTaskLinks("Task failed " + taskId + "\n " +
+        taskId + "</a>\n Job failed as tasks failed. failedMaps:1 failedReduces:0",
+        HsJobBlock.addTaskLinks("Task failed " + taskId + "\n " +
         "Job failed as tasks failed. failedMaps:1 failedReduces:0"),
         "pull links doesn't work correctly");
   }
@@ -108,7 +108,7 @@ public class TestBlocks {
 
     Task task = getTask(0);
 
-    Map<TaskId, Task> tasks = new HashMap<>();
+    Map<TaskId, Task> tasks = new HashMap<TaskId, Task>();
     tasks.put(task.getID(), task);
 
     AppContext ctx = mock(AppContext.class);
@@ -144,7 +144,7 @@ public class TestBlocks {
     AppForTest app = new AppForTest(ctx);
 
     Task task = getTask(0);
-    Map<TaskAttemptId, TaskAttempt> attempts = new HashMap<>();
+    Map<TaskAttemptId, TaskAttempt> attempts = new HashMap<TaskAttemptId, TaskAttempt>();
     TaskAttempt attempt = mock(TaskAttempt.class);
     TaskAttemptId taId = new TaskAttemptIdPBImpl();
     taId.setId(0);
@@ -245,7 +245,7 @@ public class TestBlocks {
   @Test
   public void testHsJobsBlock() {
     AppContext ctx = mock(AppContext.class);
-    Map<JobId, Job> jobs = new HashMap<>();
+    Map<JobId, Job> jobs = new HashMap<JobId, Job>();
     Job job = getJob();
     jobs.put(job.getID(), job);
     when(ctx.getAllJobs()).thenReturn(jobs);
@@ -338,7 +338,7 @@ public class TestBlocks {
 
   private static class HsControllerForTest extends HsController {
 
-    static private Map<String, String> params = new HashMap<>();
+    static private Map<String, String> params = new HashMap<String, String>();
     private Class<?> clazz;
     ByteArrayOutputStream data = new ByteArrayOutputStream();
 
@@ -452,7 +452,7 @@ public class TestBlocks {
   }
 
   private class AttemptsBlockForTest extends AttemptsBlock {
-    private final Map<String, String> params = new HashMap<>();
+    private final Map<String, String> params = new HashMap<String, String>();
 
     public void addParameter(String name, String value) {
       params.put(name, value);
@@ -479,7 +479,7 @@ public class TestBlocks {
   }
 
   private class HsTasksBlockForTest extends HsTasksBlock {
-    private final Map<String, String> params = new HashMap<>();
+    private final Map<String, String> params = new HashMap<String, String>();
 
     public void addParameter(String name, String value) {
       params.put(name, value);

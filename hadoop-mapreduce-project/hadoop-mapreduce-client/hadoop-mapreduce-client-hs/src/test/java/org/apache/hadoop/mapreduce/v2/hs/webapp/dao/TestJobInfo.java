@@ -53,7 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class TestJobInfo {
 
   @Test
-  @Timeout(value = 10000)
+  @Timeout(value = 10)
   public void testAverageMergeTime() throws IOException {
     String historyFileName =
         "job_1329348432655_0001-1329348443227-user-Sleep+job-1329348468601-10-1-SUCCEEDED-default.jhist";
@@ -97,9 +97,9 @@ public class TestJobInfo {
     final TaskId taskId2 = MRBuilderUtils.newTaskId(jobId, 2, TaskType.REDUCE);
   
     final TaskAttemptId taskAttemptId1  = MRBuilderUtils.
-    	newTaskAttemptId(taskId1, 1);
+    		newTaskAttemptId(taskId1, 1);
     final TaskAttemptId taskAttemptId2  = MRBuilderUtils.
-    	newTaskAttemptId(taskId2, 2);
+    		newTaskAttemptId(taskId2, 2);
   
     final TaskAttempt taskAttempt1 = mock(TaskAttempt.class);
     final TaskAttempt taskAttempt2 = mock(TaskAttempt.class);
@@ -181,13 +181,11 @@ public class TestJobInfo {
     DateFormat dateFormat = new SimpleDateFormat();
 
     JobInfo jobInfo = new JobInfo(job);
-    assertEquals(
-        JobInfo.NA, jobInfo.getFormattedStartTimeStr(dateFormat));
+    assertEquals(JobInfo.NA, jobInfo.getFormattedStartTimeStr(dateFormat));
 
     Date date = new Date();
     when(jobReport.getStartTime()).thenReturn(date.getTime());
     jobInfo = new JobInfo(job);
-    assertEquals(
-        dateFormat.format(date), jobInfo.getFormattedStartTimeStr(dateFormat));
+    assertEquals(dateFormat.format(date), jobInfo.getFormattedStartTimeStr(dateFormat));
   }
 }

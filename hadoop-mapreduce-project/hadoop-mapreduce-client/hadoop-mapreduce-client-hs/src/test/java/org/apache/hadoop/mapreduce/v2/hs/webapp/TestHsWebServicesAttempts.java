@@ -537,16 +537,15 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
       long shuffleFinishTime, long mergeFinishTime, long elapsedShuffleTime,
       long elapsedMergeTime, long elapsedReduceTime) {
 
-    assertEquals(ta.getShuffleFinishTime()
-,         shuffleFinishTime, "shuffleFinishTime wrong");
-    assertEquals(ta.getSortFinishTime()
-,         mergeFinishTime, "mergeFinishTime wrong");
-    assertEquals(
-       ta.getShuffleFinishTime() - ta.getLaunchTime(), elapsedShuffleTime, "elapsedShuffleTime wrong");
-    assertEquals(
-       ta.getSortFinishTime() - ta.getShuffleFinishTime(), elapsedMergeTime, "elapsedMergeTime wrong");
-    assertEquals(
-       ta.getFinishTime() - ta.getSortFinishTime(), elapsedReduceTime, "elapsedReduceTime wrong");
+    assertEquals(ta.getShuffleFinishTime(), shuffleFinishTime,
+        "shuffleFinishTime wrong");
+    assertEquals(ta.getSortFinishTime(), mergeFinishTime, "mergeFinishTime wrong");
+    assertEquals(ta.getShuffleFinishTime() - ta.getLaunchTime(), elapsedShuffleTime,
+        "elapsedShuffleTime wrong");
+    assertEquals(ta.getSortFinishTime() - ta.getShuffleFinishTime(), elapsedMergeTime,
+        "elapsedMergeTime wrong");
+    assertEquals(ta.getFinishTime() - ta.getSortFinishTime(), elapsedReduceTime,
+        "elapsedReduceTime wrong");
   }
 
   @Test
@@ -632,8 +631,8 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
       for (int j = 0; j < counters.length(); j++) {
         JSONObject counter = counters.getJSONObject(j);
         String counterName = counter.getString("name");
-        assertTrue(
-           (counterName != null && !counterName.isEmpty()), "name not set");
+        assertTrue((counterName != null && !counterName.isEmpty()),
+            "name not set");
         long value = counter.getLong("value");
         assertTrue(value >= 0, "value  >= 0");
       }
@@ -662,8 +661,8 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
           Element counter = (Element) counterArr.item(z);
           String counterName = WebServicesTestUtils.getXmlString(counter,
               "name");
-          assertTrue(
-             (counterName != null && !counterName.isEmpty()), "counter name not set");
+          assertTrue((counterName != null && !counterName.isEmpty()),
+              "counter name not set");
 
           long value = WebServicesTestUtils.getXmlLong(counter, "value");
           assertTrue(value >= 0, "value not >= 0");

@@ -76,8 +76,7 @@ public class TestJobListCache {
       if (values.size() > maxSize) {
         Thread.sleep(100);
       } else {
-        assertFalse(
-         values.contains(fileInfo1), "fileInfo1 should have been evicted");
+        assertFalse(values.contains(fileInfo1), "fileInfo1 should have been evicted");
         return;
       }
     }

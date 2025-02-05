@@ -253,8 +253,8 @@ public class TestHsWebServices extends JerseyTestBase {
         VersionInfo.getBuildVersion(), hadoopBuildVersion);
     WebServicesTestUtils.checkStringMatch("hadoopVersion",
         VersionInfo.getVersion(), hadoopVersion);
-    assertEquals(
-       JobHistoryServer.historyServerTimeStamp, startedOn, "startedOn doesn't match: ");
+    assertEquals(JobHistoryServer.historyServerTimeStamp, startedOn,
+        "startedOn doesn't match: ");
   }
 
   public void verifyHSInfo(JSONObject info)

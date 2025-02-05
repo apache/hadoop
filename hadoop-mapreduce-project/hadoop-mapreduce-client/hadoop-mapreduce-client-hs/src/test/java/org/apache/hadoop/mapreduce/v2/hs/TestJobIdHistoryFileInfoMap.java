@@ -58,10 +58,10 @@ public class TestJobIdHistoryFileInfoMap {
     Mockito.when(fileInfo1.getJobId()).thenReturn(jobId);
 
     // add it twice
-    assertEquals(
-       null, mapWithSize.putIfAbsent(jobId, fileInfo1), "Incorrect return on putIfAbsent()");
-    assertEquals(
-       fileInfo1, mapWithSize.putIfAbsent(jobId, fileInfo1), "Incorrect return on putIfAbsent()");
+    assertEquals(null, mapWithSize.putIfAbsent(jobId, fileInfo1),
+        "Incorrect return on putIfAbsent()");
+    assertEquals(fileInfo1, mapWithSize.putIfAbsent(jobId, fileInfo1),
+        "Incorrect return on putIfAbsent()");
 
     // check get()
     assertEquals(fileInfo1, mapWithSize.get(jobId), "Incorrect get()");

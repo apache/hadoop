@@ -46,7 +46,8 @@ public class TestCompletedTask {
     
     TaskId taskId = mock(TaskId.class); 
     TaskInfo taskInfo = mock(TaskInfo.class);
-    Map<TaskAttemptID, TaskAttemptInfo> taskAttempts = new TreeMap<>();
+    Map<TaskAttemptID, TaskAttemptInfo> taskAttempts
+      = new TreeMap<TaskAttemptID, TaskAttemptInfo>();
     
     TaskAttemptID id = new TaskAttemptID("0", 0, TaskType.MAP, 0, 0);
     TaskAttemptInfo info = mock(TaskAttemptInfo.class);
@@ -66,8 +67,8 @@ public class TestCompletedTask {
     TaskReport report = task.getReport();
 
     // Make sure the startTime returned by report is the lesser of the 
-    // attempt launch times
-    assertEquals(10, report.getStartTime());
+    // attempy launch times
+    assertTrue(report.getStartTime() == 10);
   }
   /**
    * test some methods of CompletedTaskAttempt
@@ -87,12 +88,13 @@ public class TestCompletedTask {
     TaskAttemptID taskAttemptId= new TaskAttemptID(taskId, 0);
     when(attemptInfo.getAttemptId()).thenReturn(taskAttemptId);
 
-    CompletedTaskAttempt taskAttempt = new CompletedTaskAttempt(null, attemptInfo);
-    assertEquals("Rackname", taskAttempt.getNodeRackName());
-    assertEquals(Phase.CLEANUP, taskAttempt.getPhase());
-    assertTrue(taskAttempt.isFinished());
-    assertEquals(11L, taskAttempt.getShuffleFinishTime());
-    assertEquals(12L, taskAttempt.getSortFinishTime());
-    assertEquals(10, taskAttempt.getShufflePort());
+
+    CompletedTaskAttempt taskAttemt= new CompletedTaskAttempt(null,attemptInfo);
+    assertEquals("Rackname", taskAttemt.getNodeRackName());
+    assertEquals(Phase.CLEANUP, taskAttemt.getPhase());
+    assertTrue(taskAttemt.isFinished());
+    assertEquals(11L, taskAttemt.getShuffleFinishTime());
+    assertEquals(12L, taskAttemt.getSortFinishTime());
+    assertEquals(10, taskAttemt.getShufflePort());
   }
 }

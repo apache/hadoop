@@ -70,9 +70,9 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 public class TestJobHistoryServer {
   private static RecordFactory recordFactory = RecordFactoryProvider
-      .getRecordFactory(null);
+          .getRecordFactory(null);
 
-  JobHistoryServer historyServer = null;
+  JobHistoryServer historyServer=null;
 
   // simple test init/start/stop   JobHistoryServer. Status should change.
   @Test
@@ -99,13 +99,14 @@ public class TestJobHistoryServer {
   @Timeout(value = 50)
   public void testReports() throws Exception {
     Configuration config = new Configuration();
-    config.setClass(
-        CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
-        MyResolver.class, DNSToSwitchMapping.class);
+    config
+            .setClass(
+                    CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+                    MyResolver.class, DNSToSwitchMapping.class);
 
     RackResolver.init(config);
     MRApp app = new MRAppWithHistory(1, 1, true, this.getClass().getName(),
-        true);
+            true);
     app.submit(config);
     Job job = app.getContext().getAllJobs().values().iterator().next();
     app.waitForState(job, JobState.SUCCEEDED);
@@ -121,12 +122,12 @@ public class TestJobHistoryServer {
       if (service instanceof JobHistory) {
         jobHistory = (JobHistory) service;
       }
-    }
+    };
 
     Map<JobId, Job> jobs= jobHistory.getAllJobs();
     
     assertEquals(1, jobs.size());
-    assertEquals("job_0_0000", jobs.keySet().iterator().next().toString());
+    assertEquals("job_0_0000",jobs.keySet().iterator().next().toString());
     
     Task task = job.getTasks().values().iterator().next();
     TaskAttempt attempt = task.getAttempts().values().iterator().next();
@@ -135,38 +136,39 @@ public class TestJobHistoryServer {
     MRClientProtocol protocol = historyService.getClientHandler();
 
     GetTaskAttemptReportRequest gtarRequest = recordFactory
-        .newRecordInstance(GetTaskAttemptReportRequest.class);
+            .newRecordInstance(GetTaskAttemptReportRequest.class);
     // test getTaskAttemptReport
     TaskAttemptId taId = attempt.getID();
     taId.setTaskId(task.getID());
     taId.getTaskId().setJobId(job.getID());
     gtarRequest.setTaskAttemptId(taId);
     GetTaskAttemptReportResponse response = protocol
-        .getTaskAttemptReport(gtarRequest);
+            .getTaskAttemptReport(gtarRequest);
     assertEquals("container_0_0000_01_000000", response.getTaskAttemptReport()
-        .getContainerId().toString());
+            .getContainerId().toString());
     assertTrue(response.getTaskAttemptReport().getDiagnosticInfo().isEmpty());
     // counters
     assertNotNull(response.getTaskAttemptReport().getCounters()
-        .getCounter(TaskCounter.PHYSICAL_MEMORY_BYTES));
+            .getCounter(TaskCounter.PHYSICAL_MEMORY_BYTES));
     assertEquals(taId.toString(), response.getTaskAttemptReport()
-        .getTaskAttemptId().toString());
+            .getTaskAttemptId().toString());
     // test getTaskReport
     GetTaskReportRequest request = recordFactory
-        .newRecordInstance(GetTaskReportRequest.class);
+            .newRecordInstance(GetTaskReportRequest.class);
     TaskId taskId = task.getID();
     taskId.setJobId(job.getID());
     request.setTaskId(taskId);
     GetTaskReportResponse reportResponse = protocol.getTaskReport(request);
     assertEquals("", reportResponse.getTaskReport().getDiagnosticsList()
-        .iterator().next());
+            .iterator().next());
     // progress
     assertEquals(1.0f, reportResponse.getTaskReport().getProgress(), 0.01);
     // report has corrected taskId
-    assertEquals(taskId.toString(), reportResponse.getTaskReport().getTaskId().toString());
+    assertEquals(taskId.toString(), reportResponse.getTaskReport().getTaskId()
+         .toString());
     // Task state should be SUCCEEDED
     assertEquals(TaskState.SUCCEEDED, reportResponse.getTaskReport()
-        .getTaskState());
+         .getTaskState());
 
     // For invalid jobid, throw IOException
     GetTaskReportsRequest gtreportsRequest =
@@ -183,18 +185,18 @@ public class TestJobHistoryServer {
 
     // test getTaskAttemptCompletionEvents
     GetTaskAttemptCompletionEventsRequest taskAttemptRequest = recordFactory
-        .newRecordInstance(GetTaskAttemptCompletionEventsRequest.class);
+            .newRecordInstance(GetTaskAttemptCompletionEventsRequest.class);
     taskAttemptRequest.setJobId(job.getID());
     GetTaskAttemptCompletionEventsResponse taskAttemptCompletionEventsResponse = protocol
-        .getTaskAttemptCompletionEvents(taskAttemptRequest);
+            .getTaskAttemptCompletionEvents(taskAttemptRequest);
     assertEquals(0, taskAttemptCompletionEventsResponse.getCompletionEventCount());
     
     // test getDiagnostics
     GetDiagnosticsRequest diagnosticRequest = recordFactory
-        .newRecordInstance(GetDiagnosticsRequest.class);
+            .newRecordInstance(GetDiagnosticsRequest.class);
     diagnosticRequest.setTaskAttemptId(taId);
     GetDiagnosticsResponse diagnosticResponse = protocol
-        .getDiagnostics(diagnosticRequest);
+            .getDiagnostics(diagnosticRequest);
     // it is strange : why one empty string ?
     assertEquals(1, diagnosticResponse.getDiagnosticsCount());
     assertEquals("", diagnosticResponse.getDiagnostics(0));

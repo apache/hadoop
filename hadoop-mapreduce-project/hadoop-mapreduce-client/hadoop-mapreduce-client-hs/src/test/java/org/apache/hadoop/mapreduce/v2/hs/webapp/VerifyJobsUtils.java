@@ -92,11 +92,11 @@ public class VerifyJobsUtils {
     assertEquals(report.getFinishTime(), finishTime, "finishTime incorrect");
 
     assertEquals(job.getTotalMaps(), mapsTotal, "mapsTotal incorrect");
-    assertEquals(job.getCompletedMaps()
-,         mapsCompleted, "mapsCompleted incorrect");
+    assertEquals(job.getCompletedMaps(),
+        mapsCompleted, "mapsCompleted incorrect");
     assertEquals(job.getTotalReduces(), reducesTotal, "reducesTotal incorrect");
-    assertEquals(job.getCompletedReduces()
-,         reducesCompleted, "reducesCompleted incorrect");
+    assertEquals(job.getCompletedReduces(),
+        reducesCompleted, "reducesCompleted incorrect");
   }
 
   public static void verifyHsJobGenericSecure(Job job, Boolean uberized,
@@ -125,8 +125,8 @@ public class VerifyJobsUtils {
 
     assertTrue(failedReduceAttempts >= 0, "failedReduceAttempts not >= 0");
     assertTrue(killedReduceAttempts >= 0, "killedReduceAttempts not >= 0");
-    assertTrue(
-       successfulReduceAttempts >= 0, "successfulReduceAttempts not >= 0");
+    assertTrue(successfulReduceAttempts >= 0,
+        "successfulReduceAttempts not >= 0");
 
     assertTrue(failedMapAttempts >= 0, "failedMapAttempts not >= 0");
     assertTrue(killedMapAttempts >= 0, "killedMapAttempts not >= 0");

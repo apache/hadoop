@@ -70,8 +70,8 @@ public class TestHistoryServerLeveldbStateStoreService {
       throws IOException {
     HistoryServerStateStoreService store =
         HistoryServerStateStoreServiceFactory.getStore(conf);
-    assertTrue(
-       store instanceof HistoryServerLeveldbStateStoreService, "Factory did not create a leveldb store");
+    assertTrue(store instanceof HistoryServerLeveldbStateStoreService,
+        "Factory did not create a leveldb store");
     store.init(conf);
     store.start();
     return store;
@@ -114,8 +114,8 @@ public class TestHistoryServerLeveldbStateStoreService {
       store.start();
       fail("Incompatible version, should have thrown before here.");
     } catch (ServiceStateException e) {
-      assertTrue(
-       e.getMessage().contains("Incompatible version for state:"), "Exception message mismatch");
+      assertTrue(e.getMessage().contains("Incompatible version for state:"),
+          "Exception message mismatch");
     }
     store.close();
   }
@@ -152,13 +152,13 @@ public class TestHistoryServerLeveldbStateStoreService {
     state = store.loadState();
     assertEquals(2, state.tokenState.size(), "incorrect loaded token count");
     assertTrue(state.tokenState.containsKey(token1), "missing token 1");
-    assertEquals(tokenDate1
-,         state.tokenState.get(token1), "incorrect token 1 date");
+    assertEquals(tokenDate1,
+        state.tokenState.get(token1), "incorrect token 1 date");
     assertTrue(state.tokenState.containsKey(token2), "missing token 2");
-    assertEquals(tokenDate2
-,         state.tokenState.get(token2), "incorrect token 2 date");
-    assertEquals(1
-,         state.tokenMasterKeyState.size(), "incorrect master key count");
+    assertEquals(tokenDate2,
+        state.tokenState.get(token2), "incorrect token 2 date");
+    assertEquals(1,
+        state.tokenMasterKeyState.size(), "incorrect master key count");
     assertTrue(
        state.tokenMasterKeyState.contains(key1), "missing master key 1");
 
@@ -189,13 +189,13 @@ public class TestHistoryServerLeveldbStateStoreService {
     assertEquals(2, state.tokenState.size(), "incorrect loaded token count");
     assertFalse(state.tokenState.containsKey(token1), "token 1 not removed");
     assertTrue(state.tokenState.containsKey(token2), "missing token 2");
-    assertEquals(newTokenDate2
-,         state.tokenState.get(token2), "incorrect token 2 date");
+    assertEquals(newTokenDate2,
+        state.tokenState.get(token2), "incorrect token 2 date");
     assertTrue(state.tokenState.containsKey(token3), "missing token 3");
-    assertEquals(tokenDate3
-,         state.tokenState.get(token3), "incorrect token 3 date");
-    assertEquals(2
-,         state.tokenMasterKeyState.size(), "incorrect master key count");
+    assertEquals(tokenDate3,
+        state.tokenState.get(token3), "incorrect token 3 date");
+    assertEquals(2,
+        state.tokenMasterKeyState.size(), "incorrect master key count");
     assertFalse(
        state.tokenMasterKeyState.contains(key1), "master key 1 not removed");
     assertTrue(

@@ -603,8 +603,8 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
       for (int j = 0; j < counters.length(); j++) {
         JSONObject counter = counters.getJSONObject(j);
         String counterName = counter.getString("name");
-        assertTrue(
-           (counterName != null && !counterName.isEmpty()), "counter name not set");
+        assertTrue((counterName != null && !counterName.isEmpty()),
+            "counter name not set");
 
         long mapValue = counter.getLong("mapCounterValue");
         assertTrue(mapValue >= 0, "mapCounterValue  >= 0");
@@ -643,8 +643,8 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
           Element counter = (Element) counterArr.item(z);
           String counterName = WebServicesTestUtils.getXmlString(counter,
               "name");
-          assertTrue(
-             (counterName != null && !counterName.isEmpty()), "counter name not set");
+          assertTrue((counterName != null && !counterName.isEmpty()),
+              "counter name not set");
 
           long mapValue = WebServicesTestUtils.getXmlLong(counter,
               "mapCounterValue");

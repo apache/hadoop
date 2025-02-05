@@ -56,7 +56,7 @@ public class TestUnnecessaryBlockingOnHistoryFileInfo {
    */
   private final static File INTERMEDIATE_DIR = new File("target",
       TestUnnecessaryBlockingOnHistoryFileInfo.class.getName() +
-      "/intermediate");
+          "/intermediate");
   /**
    * A test user directory under intermediate done directory.
    */
@@ -107,13 +107,16 @@ public class TestUnnecessaryBlockingOnHistoryFileInfo {
        */
       createJhistFile(job1);
       webRequest1 = new Thread(
-          () -> {
-            try {
-              HistoryFileManager.HistoryFileInfo historyFileInfo =
-                  historyFileManager.getFileInfo(job1);
-              historyFileInfo.loadJob();
-            } catch (IOException e) {
-              e.printStackTrace();
+          new Runnable() {
+            @Override
+            public void run() {
+              try {
+                HistoryFileManager.HistoryFileInfo historyFileInfo =
+                    historyFileManager.getFileInfo(job1);
+                historyFileInfo.loadJob();
+              } catch (IOException e) {
+                e.printStackTrace();
+              }
             }
           }
       );
@@ -134,13 +137,16 @@ public class TestUnnecessaryBlockingOnHistoryFileInfo {
        */
       createJhistFile(job2);
       webRequest2 = new Thread(
-          () -> {
-            try {
-              HistoryFileManager.HistoryFileInfo historyFileInfo =
-                  historyFileManager.getFileInfo(job2);
-              historyFileInfo.loadJob();
-            } catch (IOException e) {
-              e.printStackTrace();
+          new Runnable() {
+            @Override
+            public void run() {
+              try {
+                HistoryFileManager.HistoryFileInfo historyFileInfo =
+                    historyFileManager.getFileInfo(job2);
+                historyFileInfo.loadJob();
+              } catch (IOException e) {
+                e.printStackTrace();
+              }
             }
           }
       );
