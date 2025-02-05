@@ -221,7 +221,7 @@ public class TestHistoryFileManager {
       }
     }.start();
     assertThrows(YarnRuntimeException.class, () -> {
-        testCreateHistoryDirs(dfsCluster.getConfiguration(0), clock);
+      testCreateHistoryDirs(dfsCluster.getConfiguration(0), clock);
     });
   }
 

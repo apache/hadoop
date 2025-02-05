@@ -78,8 +78,8 @@ public class TestJobHistoryEntities {
         .getFile());
   private CompletedJob completedJob;
 
-  public void initTestJobHistoryEntities(boolean loadTasks) throws Exception {
-    this.loadTasks = loadTasks;
+  public void initTestJobHistoryEntities(boolean paramLoadTasks) throws Exception {
+    this.loadTasks = paramLoadTasks;
   }
 
   public static Collection<Object[]> data() {
@@ -93,7 +93,8 @@ public class TestJobHistoryEntities {
   @MethodSource("data")
   @ParameterizedTest
   @Timeout(value = 100)
-  public void testCompletedJob() throws Exception {
+  public void testCompletedJob(boolean paramLoadTasks) throws Exception {
+    initTestJobHistoryEntities(paramLoadTasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     when(info.getHistoryFile()).thenReturn(fullHistoryPath);
@@ -122,7 +123,8 @@ public class TestJobHistoryEntities {
   @MethodSource("data")
   @ParameterizedTest
   @Timeout(value = 100)
-  public void testCopmletedJobReportWithZeroTasks() throws Exception {
+  public void testCopmletedJobReportWithZeroTasks(boolean paramLoadTasks) throws Exception {
+    initTestJobHistoryEntities(paramLoadTasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     when(info.getHistoryFile()).thenReturn(fullHistoryPathZeroReduces);
@@ -142,7 +144,8 @@ public class TestJobHistoryEntities {
   @MethodSource("data")
   @ParameterizedTest
   @Timeout(value = 10)
-  public void testCompletedTask() throws Exception {
+  public void testCompletedTask(boolean paramLoadTasks) throws Exception {
+    initTestJobHistoryEntities(paramLoadTasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     completedJob =
@@ -173,7 +176,8 @@ public class TestJobHistoryEntities {
   @MethodSource("data")
   @ParameterizedTest
   @Timeout(value = 10)
-  public void testCompletedTaskAttempt() throws Exception {
+  public void testCompletedTaskAttempt(boolean paramLoadTasks) throws Exception {
+    initTestJobHistoryEntities(paramLoadTasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     completedJob =
@@ -214,7 +218,8 @@ public class TestJobHistoryEntities {
   @MethodSource("data")
   @ParameterizedTest
   @Timeout(value = 30)
-  public void testGetTaskAttemptCompletionEvent() throws Exception{
+  public void testGetTaskAttemptCompletionEvent(boolean paramLoadTasks) throws Exception {
+    initTestJobHistoryEntities(paramLoadTasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     completedJob =
@@ -253,7 +258,8 @@ public class TestJobHistoryEntities {
   @MethodSource("data")
   @ParameterizedTest
   @Timeout(value = 30)
-  public void testCompletedJobWithDiagnostics() throws Exception {
+  public void testCompletedJobWithDiagnostics(boolean paramLoadTasks) throws Exception {
+    initTestJobHistoryEntities(paramLoadTasks);
     final String jobError = "Job Diagnostics";
     JobInfo jobInfo = spy(new JobInfo());
     when(jobInfo.getErrorInfo()).thenReturn(jobError);

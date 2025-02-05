@@ -995,7 +995,7 @@ public class TestJobHistoryParsing {
       JobHistoryParser parser = new JobHistoryParser(fsdis);
       JobInfo info = parser.parse();
       assertEquals(info.getJobId(), JobID.forName("job_1393307629410_0001"),
-          "History parsed jobId incorrectly" );
+          "History parsed jobId incorrectly");
       assertEquals("", info.getErrorInfo(), "Default diagnostics incorrect");
     } finally {
       fsdis.close();

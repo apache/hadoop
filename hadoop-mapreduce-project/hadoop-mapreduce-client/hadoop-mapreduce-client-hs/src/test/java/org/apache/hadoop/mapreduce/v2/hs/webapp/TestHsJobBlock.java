@@ -89,7 +89,7 @@ public class TestHsJobBlock {
     block.getWriter().flush();
     String out = outputStream.toString();
     assertTrue(out.contains("Any job larger than " + maxAllowedTaskNum + " will not be loaded"),
-       "Should display warning message for jobs that have too many tasks");
+        "Should display warning message for jobs that have too many tasks");
   }
 
   @Test

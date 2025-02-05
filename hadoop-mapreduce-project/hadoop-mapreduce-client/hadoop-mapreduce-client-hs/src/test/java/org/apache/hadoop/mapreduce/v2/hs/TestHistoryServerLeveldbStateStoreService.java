@@ -159,8 +159,8 @@ public class TestHistoryServerLeveldbStateStoreService {
         state.tokenState.get(token2), "incorrect token 2 date");
     assertEquals(1,
         state.tokenMasterKeyState.size(), "incorrect master key count");
-    assertTrue(
-       state.tokenMasterKeyState.contains(key1), "missing master key 1");
+    assertTrue(state.tokenMasterKeyState.contains(key1),
+        "missing master key 1");
 
     // store some more keys and tokens, remove the previous key and one
     // of the tokens, and renew a previous token
@@ -196,12 +196,12 @@ public class TestHistoryServerLeveldbStateStoreService {
         state.tokenState.get(token3), "incorrect token 3 date");
     assertEquals(2,
         state.tokenMasterKeyState.size(), "incorrect master key count");
-    assertFalse(
-       state.tokenMasterKeyState.contains(key1), "master key 1 not removed");
-    assertTrue(
-       state.tokenMasterKeyState.contains(key2), "missing master key 2");
-    assertTrue(
-       state.tokenMasterKeyState.contains(key3), "missing master key 3");
+    assertFalse(state.tokenMasterKeyState.contains(key1),
+        "master key 1 not removed");
+    assertTrue(state.tokenMasterKeyState.contains(key2),
+        "missing master key 2");
+    assertTrue(state.tokenMasterKeyState.contains(key3),
+        "missing master key 3");
     store.close();
   }
 }
