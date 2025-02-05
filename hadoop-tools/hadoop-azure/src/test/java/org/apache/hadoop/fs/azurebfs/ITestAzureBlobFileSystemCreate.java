@@ -23,6 +23,7 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
@@ -37,6 +38,8 @@ import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -54,8 +57,10 @@ import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.RenameAtomicity;
 import org.apache.hadoop.fs.azurebfs.utils.DirectoryStateHelper;
@@ -85,6 +90,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -727,6 +733,127 @@ public class ITestAzureBlobFileSystemCreate extends
     // 1. create overwrite=false - fail with server error
     // Create will fail with 500
     validateCreateFileException(AbfsRestOperationException.class, abfsStore);
+  }
+
+  /**
+   * Tests that the exception thrown during the creation of a marker is swallowed.
+   * This test verifies that when an exception occurs during the creation of a marker,
+   * it does not propagate and is handled internally and file creation still succeeds.
+   *
+   * @throws Throwable if an error occurs during the test execution
+   */
+  @Test
+  public void testCreateMarkerFailExceptionIsSwallowed()
+      throws Throwable {
+
+    final AzureBlobFileSystem currentFs = getFileSystem();
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.set("fs.azure.enable.conditional.create.overwrite",
+        Boolean.toString(true));
+
+    final AzureBlobFileSystem fs =
+        (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
+            config);
+
+    // Get mock AbfsClient with current config
+    AbfsClient mockClient = Mockito.spy(fs.getAbfsClient());
+    AzureBlobFileSystemStore spiedStore = Mockito.spy(fs.getAbfsStore());
+    spiedStore.setClient(mockClient);
+
+    Assume.assumeTrue(mockClient instanceof AbfsBlobClient);
+    AbfsClientHandler clientHandler = Mockito.mock(AbfsClientHandler.class);
+    when(clientHandler.getIngressClient()).thenReturn(mockClient);
+    when(clientHandler.getClient(Mockito.any())).thenReturn(mockClient);
+    Path testFolder = new Path("/dir1");
+    createAzCopyFolder(testFolder);
+
+    AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
+
+    ReflectionUtils.setFinalField(AzureBlobFileSystemStore.class, abfsStore,
+        "clientHandler", clientHandler);
+    ReflectionUtils.setFinalField(AzureBlobFileSystemStore.class, abfsStore,
+        "client", mockClient);
+
+    AbfsRestOperation successOp = mock(
+        AbfsRestOperation.class);
+    AbfsHttpOperation http200Op = mock(
+        AbfsHttpOperation.class);
+    when(http200Op.getStatusCode()).thenReturn(HTTP_OK);
+    when(successOp.getResult()).thenReturn(http200Op);
+
+    AbfsRestOperationException preConditionResponseEx
+        = getMockAbfsRestOperationException(HTTP_PRECON_FAILED);
+
+    doCallRealMethod().when(mockClient)
+        .conditionalCreateOverwriteFile(anyString(),
+            Mockito.nullable(FileSystem.Statistics.class),
+            Mockito.nullable(AzureBlobFileSystemStore.Permissions.class),
+            anyBoolean(),
+            Mockito.nullable(ContextEncryptionAdapter.class),
+            Mockito.nullable(TracingContext.class));
+
+    doCallRealMethod().when((AbfsBlobClient) mockClient)
+        .checkDirectoryAndCreateMarkersIfNeeded(anyString(),
+            Mockito.nullable(AzureBlobFileSystemStore.Permissions.class),
+            anyBoolean(),
+            Mockito.nullable(String.class),
+            Mockito.nullable(ContextEncryptionAdapter.class),
+            Mockito.nullable(TracingContext.class));
+
+    doCallRealMethod().when((AbfsBlobClient) mockClient)
+        .createParentMarkersIfNeeded(anyString(),
+            Mockito.nullable(AzureBlobFileSystemStore.Permissions.class),
+            anyBoolean(),
+            Mockito.nullable(String.class),
+            Mockito.nullable(ContextEncryptionAdapter.class),
+            Mockito.nullable(TracingContext.class));
+
+    Mockito.doReturn(new ArrayList<>(Collections.singletonList(testFolder)))
+        .when((AbfsBlobClient) mockClient)
+        .getMarkerPathsTobeCreated(any(Path.class),
+            Mockito.nullable(TracingContext.class));
+
+    doReturn(false).when((AbfsBlobClient) mockClient)
+        .checkIsDirectoryPath(anyString(),
+            Mockito.nullable(TracingContext.class));
+
+    // throw exception for first call of marker creation and return true for file creation
+    doAnswer(new Answer<Void>() {
+      private boolean firstCall = true;
+
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        if (firstCall) {
+          firstCall = false;
+          throw preConditionResponseEx;
+        }
+        return null;
+      }
+    }).doCallRealMethod()
+        .when((AbfsBlobClient) mockClient)
+        .createPathRestOp(anyString(), anyBoolean(), anyBoolean(),
+            anyBoolean(), Mockito.nullable(String.class),
+            Mockito.nullable(ContextEncryptionAdapter.class),
+            Mockito.nullable(TracingContext.class));
+
+    AbfsClientTestUtil.hookOnRestOpsForTracingContextSingularity(mockClient);
+
+    doReturn(successOp) // Scn4: create overwrite=true fails with Http500
+        .when((AbfsBlobClient) mockClient)
+        .getPathStatus(any(String.class), any(TracingContext.class), nullable(
+            ContextEncryptionAdapter.class), eq(false));
+
+    FsPermission permission = new FsPermission(FsAction.ALL, FsAction.ALL,
+        FsAction.ALL);
+    FsPermission umask = new FsPermission(FsAction.NONE, FsAction.NONE,
+        FsAction.NONE);
+    Path testPath = new Path("/dir1/testFile");
+    abfsStore.createFile(testPath, null, true, permission, umask,
+        getTestTracingContext(getFileSystem(), true));
+    Assertions.assertThat(fs.exists(testPath))
+        .describedAs("File not created when marker creation failed.")
+        .isTrue();
+
   }
 
   private <E extends Throwable> void validateCreateFileException(final Class<E> exceptionClass, final AzureBlobFileSystemStore abfsStore)

@@ -1945,9 +1945,18 @@ public class AbfsBlobClient extends AbfsClient {
         : URLDecoder.decode(encoded, StandardCharsets.UTF_8.name());
   }
 
+  /**
+   * Checks if the listing of the specified path is non-empty.
+   *
+   * @param path The path to be listed.
+   * @param tracingContext The tracing context for tracking the operation.
+   * @return True if the listing is non-empty, False otherwise.
+   * @throws AzureBlobFileSystemException If an error occurs during the listing operation.
+   */
   private boolean isNonEmptyListing(String path,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
-    AbfsRestOperation listOp = listPath(path, false, 1, null, tracingContext, false);
+    AbfsRestOperation listOp = listPath(path, false, 1, null, tracingContext,
+        false);
     return !isEmptyListResults(listOp.getResult());
   }
 
@@ -1996,7 +2005,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @return true if the path is a directory and contains entries, false otherwise.
    * @throws AzureBlobFileSystemException if the rest operation fails.
    */
-  private boolean checkIsDirectoryPath(String path,
+  public boolean checkIsDirectoryPath(String path,
       TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     // If listing returns non-empty results, return true else false.
@@ -2114,7 +2123,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param tracingContext the tracing context.
    * @throws AzureBlobFileSystemException if the creation of markers fails.
    */
-  private void createParentMarkersIfNeeded(String path,
+  public void createParentMarkersIfNeeded(String path,
       AzureBlobFileSystemStore.Permissions permissions,
       boolean isAppendBlob,
       String eTag,
@@ -2198,6 +2207,21 @@ public class AbfsBlobClient extends AbfsClient {
   }
 
   /**
+   * Retrieves the list of marker paths to be created for the specified path.
+   *
+   * @param path The path for which marker paths need to be created.
+   * @param tracingContext The tracing context for the operation.
+   * @return A list of paths that need to be created as markers.
+   * @throws AzureBlobFileSystemException If an error occurs while finding parent paths for marker creation.
+   */
+  public List<Path> getMarkerPathsTobeCreated(final Path path,
+      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+    ArrayList<Path> keysToCreateAsFolder = new ArrayList<>();
+    findParentPathsForMarkerCreation(path, tracingContext, keysToCreateAsFolder);
+    return keysToCreateAsFolder;
+  }
+
+  /**
    * Creates marker blobs for the parent directories of the specified path.
    *
    * @param path The path for which parent directories need to be created.
@@ -2215,9 +2239,7 @@ public class AbfsBlobClient extends AbfsClient {
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
-    ArrayList<Path> keysToCreateAsFolder = new ArrayList<>();
-    findParentPathsForMarkerCreation(path, tracingContext,
-        keysToCreateAsFolder);
+    List<Path> keysToCreateAsFolder = getMarkerPathsTobeCreated(path, tracingContext);
     for (Path pathToCreate : keysToCreateAsFolder) {
       try {
         createPathRestOp(pathToCreate.toUri().getPath(), false, false,
