@@ -22,6 +22,22 @@ import org.mockito.invocation.InvocationOnMock;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 
+/**
+ * Interface used to intercept and customize the behavior of mocked
+ * `AbfsRestOperation` objects. The implementing class should define
+ * how to handle the mock operation when it is invoked.
+ *
+ * @param <T> the type of the mocked object, typically an `AbfsRestOperation`
+ */
 public interface MockIntercept<T> {
+
+  /**
+   * Defines custom behavior for handling the mocked object during its execution.
+   *
+   * @param mockedObj the mocked `AbfsRestOperation` object
+   * @param answer the invocation details for the mock method
+   * @throws AbfsRestOperationException if an error occurs during the
+   * mock operation handling
+   */
   void answer(T mockedObj, InvocationOnMock answer) throws AbfsRestOperationException;
 }

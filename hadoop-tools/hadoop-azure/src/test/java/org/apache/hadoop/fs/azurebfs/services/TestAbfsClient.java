@@ -141,6 +141,15 @@ public class TestAbfsClient {
         return false;
     }
 
+  /**
+   * Mocks the creation of an `AbfsRestOperation` for the given `AbfsClient` and intercepts its execution.
+   * This method sets up a mock behavior where the `AbfsRestOperation` will call the provided `MockIntercept`
+   * to handle custom logic during the operation execution.
+   *
+   * @param abfsClient the `AbfsClient` to mock the operation for
+   * @param mockIntercept the mock interceptor that defines custom behavior during the operation execution
+   * @throws Exception if an error occurs while mocking the operation creation
+   */
   public static void mockAbfsOperationCreation(final AbfsClient abfsClient,
       final MockIntercept mockIntercept) throws Exception {
     Mockito.doAnswer(answer -> {

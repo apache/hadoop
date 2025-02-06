@@ -1648,13 +1648,23 @@ public class ITestAzureBlobFileSystemRename extends
     fs.rename(new Path(dirPathStr), new Path("/dst/"));
   }
 
+  /**
+   * Test to verify the idempotency of the `rename` operation in Azure Blob File System when retrying
+   * after a failure. The test simulates a "path not found" error (HTTP 404) on the first attempt,
+   * checks that the operation correctly retries using the appropriate transaction ID,
+   * and ensures that the source file is renamed to the destination path once successful.
+   *
+   * @throws Exception if an error occurs during the file system operations or mocking
+   */
   @Test
   public void renamePathRetryIdempotency() throws Exception {
     final AzureBlobFileSystem currentFs = getFileSystem();
     Configuration config = new Configuration(this.getRawConfiguration());
+    config.set("fs.azure.enable.client.transaction.id", "true");
     final AzureBlobFileSystem fs =
         (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
             config);
+    assumeDfsServiceType();
     AbfsClient abfsClient = Mockito.spy(fs.getAbfsClient());
     fs.getAbfsStore().setClient(abfsClient);
     Path sourceDir = path("/testSrc");
@@ -1666,26 +1676,26 @@ public class ITestAzureBlobFileSystemRename extends
     final List<AbfsHttpHeader> headers = new ArrayList<>();
     TestAbfsClient.mockAbfsOperationCreation(abfsClient,
         new MockIntercept<AbfsRestOperation>() {
-          private int count = 0;
-          @Override
-          public void answer(final AbfsRestOperation mockedObj,
-              final InvocationOnMock answer) throws AbfsRestOperationException {
-            if (count == 0) {
-              count = 1;
-              AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
-              Mockito.doReturn("PUT").when(op).getMethod();
-              Mockito.doReturn("").when(op).getStorageErrorMessage();
-              Mockito.doReturn(SOURCE_PATH_NOT_FOUND.getErrorCode()).when(op)
-                  .getStorageErrorCode();
-              Mockito.doReturn(true).when(mockedObj).hasResult();
-              Mockito.doReturn(op).when(mockedObj).getResult();
-              Mockito.doReturn(HTTP_NOT_FOUND).when(op).getStatusCode();
-              headers.addAll(mockedObj.getRequestHeaders());
-              throw new AbfsRestOperationException(HTTP_NOT_FOUND, SOURCE_PATH_NOT_FOUND.getErrorCode(),
-                  "", null, op);
-            }
-          }
-        });
+      private int count = 0;
+      @Override
+      public void answer(final AbfsRestOperation mockedObj,
+          final InvocationOnMock answer) throws AbfsRestOperationException {
+        if (count == 0) {
+          count = 1;
+          AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
+          Mockito.doReturn("PUT").when(op).getMethod();
+          Mockito.doReturn("").when(op).getStorageErrorMessage();
+          Mockito.doReturn(SOURCE_PATH_NOT_FOUND.getErrorCode()).when(op)
+              .getStorageErrorCode();
+          Mockito.doReturn(true).when(mockedObj).hasResult();
+          Mockito.doReturn(op).when(mockedObj).getResult();
+          Mockito.doReturn(HTTP_NOT_FOUND).when(op).getStatusCode();
+          headers.addAll(mockedObj.getRequestHeaders());
+          throw new AbfsRestOperationException(HTTP_NOT_FOUND,
+              SOURCE_PATH_NOT_FOUND.getErrorCode(), "", null, op);
+        }
+      }
+    });
     AbfsRestOperation getPathRestOp = Mockito.mock(AbfsRestOperation.class);
     AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
     Mockito.doAnswer(answer -> {
@@ -1703,7 +1713,8 @@ public class ITestAzureBlobFileSystemRename extends
     Mockito.doReturn(DIRECTORY).when(op).getResponseHeader(X_MS_RESOURCE_TYPE);
     Mockito.doReturn(getPathRestOp).when(abfsClient).getPathStatus(
         Mockito.nullable(String.class), Mockito.nullable(Boolean.class),
-        Mockito.nullable(TracingContext.class), Mockito.nullable(ContextEncryptionAdapter.class));
+        Mockito.nullable(TracingContext.class),
+        Mockito.nullable(ContextEncryptionAdapter.class));
     fs.rename(sourceFilePath, destFilePath);
   }
 }

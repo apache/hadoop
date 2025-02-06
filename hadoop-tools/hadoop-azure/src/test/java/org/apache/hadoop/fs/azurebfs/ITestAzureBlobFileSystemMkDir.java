@@ -36,6 +36,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
+import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
@@ -49,7 +51,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.mockito.ArgumentMatchers.nullable;
 
 /**
  * Test mkdir operation.
@@ -182,16 +183,35 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     intercept(FileAlreadyExistsException.class, () -> fs.mkdirs(new Path("/testFilePath/newDir")));
   }
 
+  /**
+   * Tests the idempotency of creating a path with retries by simulating
+   * a conflict response (HTTP 409) from the Azure Blob File System client.
+   * The method ensures that the path creation operation retries correctly
+   * with the proper transaction ID headers, verifying idempotency during
+   * failure recovery.
+   *
+   * @throws Exception if any error occurs during the operation.
+   */
   @Test
   public void createPathRetryIdempotency() throws Exception {
     final AzureBlobFileSystem currentFs = getFileSystem();
     Configuration config = new Configuration(this.getRawConfiguration());
-    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(), config);
-    AbfsClient abfsClient = Mockito.spy(fs.getAbfsClient());
+    config.set("fs.azure.enable.client.transaction.id", "true");
+    final AzureBlobFileSystem fs =
+        (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
+            config);
+    assumeDfsServiceType();
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
+    AbfsDfsClient abfsClient = (AbfsDfsClient) Mockito.spy(clientHandler.getClient());
     fs.getAbfsStore().setClient(abfsClient);
-    final Path nonOverwriteFile = new Path("/NonOverwriteTest_FileName_" + UUID.randomUUID());
+    fs.getAbfsStore().setClientHandler(clientHandler);
+    Mockito.doReturn(abfsClient).when(clientHandler).getIngressClient();
+    final Path nonOverwriteFile = new Path(
+        "/NonOverwriteTest_FileName_" + UUID.randomUUID());
     final List<AbfsHttpHeader> headers = new ArrayList<>();
-    TestAbfsClient.mockAbfsOperationCreation(abfsClient, new MockIntercept<AbfsRestOperation>() {
+    TestAbfsClient.mockAbfsOperationCreation(abfsClient,
+        new MockIntercept<AbfsRestOperation>() {
       private int count = 0;
       @Override
       public void answer(final AbfsRestOperation mockedObj,
@@ -205,8 +225,8 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
           Mockito.doReturn(op).when(mockedObj).getResult();
           Mockito.doReturn(HTTP_CONFLICT).when(op).getStatusCode();
           headers.addAll(mockedObj.getRequestHeaders());
-          throw new AbfsRestOperationException(HTTP_CONFLICT, AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
-              "", null, op);
+          throw new AbfsRestOperationException(HTTP_CONFLICT,
+              AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(), "", null, op);
         }
       }
     });
@@ -225,9 +245,9 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     Mockito.doReturn(true).when(getPathRestOp).hasResult();
     Mockito.doReturn(op).when(getPathRestOp).getResult();
     Mockito.doReturn(getPathRestOp).when(abfsClient).getPathStatus(
-        nullable(String.class), nullable(Boolean.class),
-        nullable(TracingContext.class), nullable(ContextEncryptionAdapter.class));
-
+        Mockito.nullable(String.class), Mockito.nullable(Boolean.class),
+        Mockito.nullable(TracingContext.class),
+        Mockito.nullable(ContextEncryptionAdapter.class));
     fs.create(nonOverwriteFile, false);
   }
 }
