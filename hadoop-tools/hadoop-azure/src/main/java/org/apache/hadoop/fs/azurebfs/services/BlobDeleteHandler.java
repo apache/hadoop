@@ -158,9 +158,6 @@ public class BlobDeleteHandler extends ListActionTaker {
     if (!path.isRoot() && !path.getParent().isRoot()) {
       try {
         getAbfsClient().createMarkerAtPath(path.getParent().toUri().getPath(),
-            false,
-            false,
-            false,
             null,
             null,
             tracingContext);

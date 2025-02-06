@@ -498,23 +498,20 @@ public class AbfsBlobClient extends AbfsClient {
    * Creates a marker at the specified path.
    *
    * @param path the path where the marker is to be created.
-   * @param isFile whether the path is a file.
-   * @param overwrite whether to overwrite if the path already exists.
-   * @param isAppendBlob whether the path is an append blob.
    * @param eTag the eTag of the path.
    * @param contextEncryptionAdapter the context encryption adapter.
    * @param tracingContext the tracing context for the service call.
+   *
    * @return the created AbfsRestOperation.
+   *
    * @throws AzureBlobFileSystemException if an error occurs during the operation.
    */
   protected AbfsRestOperation createMarkerAtPath(final String path,
-      final boolean isFile,
-      final boolean overwrite,
-      final boolean isAppendBlob,
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
-    return createPathRestOp(path, isFile, overwrite, isAppendBlob, eTag, contextEncryptionAdapter, tracingContext);
+    return createPathRestOp(path, false, false, false, eTag,
+        contextEncryptionAdapter, tracingContext);
   }
 
   /**
