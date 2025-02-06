@@ -75,14 +75,14 @@ public class TestJobHistoryEvents {
     ((JobHistory)context).init(conf);
     ((JobHistory)context).start();
     assertTrue(context.getStartTime() > 0);
-    assertEquals(((JobHistory)context).getServiceState(),Service.STATE.STARTED);
+    assertEquals(((JobHistory) context).getServiceState(), Service.STATE.STARTED);
 
     // get job before stopping JobHistory
     Job parsedJob = context.getJob(jobId);
 
     // stop JobHistory
     ((JobHistory)context).stop();
-    assertEquals(((JobHistory)context).getServiceState(),Service.STATE.STOPPED);
+    assertEquals(((JobHistory) context).getServiceState(), Service.STATE.STOPPED);
 
 
     assertEquals(2, parsedJob.getCompletedMaps(),
@@ -141,8 +141,7 @@ public class TestJobHistoryEvents {
     Map<TaskId, Task> maps = parsedJob.getTasks(TaskType.MAP);
     assertEquals(1, maps.size(), "No of maps not correct");
 
-   assertEquals(JobState.SUCCEEDED, parsedJob.getState(),
-       "Job state not correct");
+    assertEquals(JobState.SUCCEEDED, parsedJob.getState(), "Job state not correct");
   }
 
   @Test
