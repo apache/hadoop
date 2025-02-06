@@ -27,16 +27,6 @@ import javax.annotation.Nullable;
 public final class PutObjectOptions {
 
   /**
-   * Can the PUT operation skip marker deletion?
-   */
-  private final boolean keepMarkers;
-
-  /**
-   * Is this a conditional PUT operation
-   */
-  private final boolean conditionalPutEnabled;
-
-  /**
    * Storage class, if not null.
    */
   private final String storageClass;
@@ -47,36 +37,46 @@ public final class PutObjectOptions {
   private final Map<String, String> headers;
 
   /**
+   * Prevent overwriting an existing object?
+   */
+  private final boolean noObjectOverwrite;
+
+  /**
+   * If set, allows overwriting an object only if the object's ETag matches this value.
+   */
+  private final String etagOverwrite;
+
+  /**
    * Constructor.
    * @param storageClass Storage class, if not null.
-   * @param conditionalPutEnabled Is this a conditional Put?
+   * @param noObjectOverwrite Prevent overwriting existing object?
    * @param headers Headers; may be null.
    */
   public PutObjectOptions(
-      final boolean keepMarkers,
-      final boolean conditionalPutEnabled,
       @Nullable final String storageClass,
-      @Nullable final Map<String, String> headers) {
-    this.keepMarkers = keepMarkers;
-    this.conditionalPutEnabled = conditionalPutEnabled;
+      @Nullable final Map<String, String> headers,
+      final boolean noObjectOverwrite,
+      final String etagOverwrite) {
+    this.noObjectOverwrite = noObjectOverwrite;
+    this.etagOverwrite = etagOverwrite;
     this.storageClass = storageClass;
     this.headers = headers;
   }
 
   /**
-   * Get the marker retention flag.
-   * @return true if markers are to be retained.
+   * Get the noObjectOverwrite flag.
+   * @return true if object override not allowed.
    */
-  public boolean isKeepMarkers() {
-    return keepMarkers;
+  public boolean isNoObjectOverwrite() {
+    return noObjectOverwrite;
   }
 
   /**
-   * Get the conditional put flag.
-   * @return true if it's a conditional put
+   * Get the ETag that must match for an overwrite operation to proceed.
+   * @return The ETag required for overwrite, or {@code null} if no ETag match is required.
    */
-  public boolean isconditionalPutEnabled() {
-    return conditionalPutEnabled;
+  public String getEtagOverwrite() {
+    return etagOverwrite;
   }
 
   /**
@@ -97,14 +97,9 @@ public final class PutObjectOptions {
   /**
    * Empty options.
    */
-  private static final PutObjectOptions EMPTY_OPTIONS = new PutObjectOptions(false, false,
-          null, null);
-  private static final PutObjectOptions KEEP_DIRS = new PutObjectOptions(true, false,
-      null, null);
-  private static final PutObjectOptions DELETE_DIRS = new PutObjectOptions(false, false,
-      null, null);
+  private static final PutObjectOptions EMPTY_OPTIONS = new PutObjectOptions(null, null, false, null);
 
-  /**
+    /**
    * Get the default options.
    * @return an instance with no storage class or headers.
    */

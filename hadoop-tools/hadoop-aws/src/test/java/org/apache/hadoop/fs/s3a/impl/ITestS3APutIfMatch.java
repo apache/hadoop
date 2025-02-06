@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.apache.hadoop.io.IOUtils;
 
 import org.junit.Test;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -43,14 +42,13 @@ import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_NONE_MATCH;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_412_PRECONDITION_FAILED;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.scale.S3AScaleTestBase._1MB;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 
 public class ITestS3APutIfMatch extends AbstractS3ACostTest {
-
-    private Configuration conf;
 
     @Override
     public Configuration createConfiguration() {
@@ -70,7 +68,7 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
     @Override
     public void setup() throws Exception {
         super.setup();
-        conf = createConfiguration();
+        Configuration conf = getConfiguration();
         skipIfNotEnabled(conf, FS_S3A_CONDITIONAL_FILE_CREATE,
                 "Skipping IfNoneMatch tests");
     }
@@ -102,12 +100,12 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
         FSDataOutputStreamBuilder builder = fs.createFile(path);
         builder.must(FS_S3A_CONDITIONAL_FILE_CREATE, "true");
         builder.opt(FS_S3A_CREATE_HEADER + "." + IF_NONE_MATCH, ifMatchTag);
-        FSDataOutputStream stream = builder.create().build();
-        if (data != null && data.length > 0) {
-            stream.write(data);
+
+        try (FSDataOutputStream stream = builder.create().build()) {
+            if (data != null && data.length > 0) {
+                stream.write(data);
+            }
         }
-        stream.close();
-        IOUtils.closeStream(stream);
     }
 
     @Test
@@ -121,13 +119,12 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
 
         RemoteFileChangedException firstException = intercept(RemoteFileChangedException.class,
                 () -> createFileWithIfNoneMatchFlag(fs, testFile, fileBytes, "*"));
-        assertS3ExceptionStatusCode(412, firstException);
+        assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, firstException);
 
         RemoteFileChangedException secondException = intercept(RemoteFileChangedException.class,
                 () -> createFileWithIfNoneMatchFlag(fs, testFile, fileBytes, "*"));
-        assertS3ExceptionStatusCode(412, secondException);
+        assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, secondException);
     }
-
 
     @Test
     public void testPutIfAbsentLargeFileConflict() throws Throwable {
@@ -141,10 +138,10 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
 
         RemoteFileChangedException firstException = intercept(RemoteFileChangedException.class,
                 () -> createFileWithIfNoneMatchFlag(fs, testFile, fileBytes, "*"));
-        assertS3ExceptionStatusCode(412, firstException);
+        assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, firstException);
 
         RemoteFileChangedException secondException = intercept(RemoteFileChangedException.class,
                 () -> createFileWithIfNoneMatchFlag(fs, testFile, fileBytes, "*"));
-        assertS3ExceptionStatusCode(412, secondException);
+        assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, secondException);
     }
 }

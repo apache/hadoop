@@ -2118,7 +2118,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // put options are derived from the option builder.
     boolean conditionalCreate = options.isConditionalCreate();
     final PutObjectOptions putOptions =
-        new PutObjectOptions(false, conditionalCreate, null, options.getHeaders());
+        new PutObjectOptions(null, options.getHeaders(), false, null);
+
 
     validateOutputStreamConfiguration(path, getConf());
 

@@ -1843,4 +1843,11 @@ public final class Constants {
   public static final String ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX =
           "fs.s3a.analytics.accelerator";
 
+  /**
+   * Value for the {@code If-None-Match} HTTP header in S3 requests.
+   * Value: {@value}.
+   * More information: <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html">
+   *      AWS S3 PutObject API Documentation</a>
+   */
+  public static final String IF_NONE_MATCH_STAR = "*";
 }
