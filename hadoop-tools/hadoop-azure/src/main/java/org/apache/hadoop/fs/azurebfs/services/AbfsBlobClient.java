@@ -587,16 +587,19 @@ public class AbfsBlobClient extends AbfsClient {
       boolean isAppendBlob,
       ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) throws IOException {
-    // Check for non-empty directory at the path. The only pending validation is the check for an explicitly empty directory,
-    // which is performed later to optimize TPS by delaying the lookup only if create with overwrite=false fails.
-    if (isNonEmptyDirectory(relativePath, tracingContext)) {
-      throw new AbfsRestOperationException(HTTP_CONFLICT,
-          AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
-          PATH_EXISTS,
-          null);
+    if (!getIsNamespaceEnabled()) {
+      // Check for non-empty directory at the path. The only pending validation is the check for an explicitly empty directory,
+      // which is performed later to optimize TPS by delaying the lookup only if create with overwrite=false fails.
+      if (isNonEmptyDirectory(relativePath, tracingContext)) {
+        throw new AbfsRestOperationException(HTTP_CONFLICT,
+            AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
+            PATH_EXISTS,
+            null);
+      }
+      // Create markers for the parent hierarchy.
+      tryMarkerCreation(relativePath, isAppendBlob, null,
+          contextEncryptionAdapter, tracingContext);
     }
-    // Create markers for the parent hierarchy.
-    tryMarkerCreation(relativePath, isAppendBlob, null, contextEncryptionAdapter, tracingContext);
     AbfsRestOperation op;
     try {
       // Trigger a creation with overwrite=false first so that eTag fetch can be

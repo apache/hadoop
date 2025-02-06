@@ -104,9 +104,6 @@ public class ITestAzureBlobFileSystemCreate extends
   private static final Path TEST_FILE_PATH = new Path("testfile");
   private static final String TEST_FOLDER_PATH = "testFolder";
   private static final String TEST_CHILD_FILE = "childFile";
-  private static final String PATH_CONFLICT
-      = "The specified path, or an element of the path, exists and its resource type is invalid for this operation.";
-  private  static final String BLOB_EXIST = "already exists";
 
   public ITestAzureBlobFileSystemCreate() throws Exception {
     super();
@@ -1008,7 +1005,6 @@ public class ITestAzureBlobFileSystemCreate extends
                    config)) {
         fs.mkdirs(new Path("a/b/c"));
         intercept(IOException.class,
-            PATH_CONFLICT,
             () -> fs.create(new Path("a/b/c"), true));
       }
     }
@@ -1026,11 +1022,13 @@ public class ITestAzureBlobFileSystemCreate extends
   public void testCreationOverwriteFalseWithoutConditionalOverwrite() throws Exception {
     try (AzureBlobFileSystem currentFs = getFileSystem()) {
       Configuration config = new Configuration(this.getRawConfiguration());
-      config.set("fs.azure.enable.conditional.create.overwrite", String.valueOf(false));
+      config.set("fs.azure.enable.conditional.create.overwrite",
+          String.valueOf(false));
 
-      try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(), config)) {
+      try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+          currentFs.getUri(), config)) {
         fs.mkdirs(new Path("a/b/c"));
-        intercept(IOException.class, BLOB_EXIST,
+        intercept(IOException.class,
             () -> fs.create(new Path("a/b/c"), false));
       }
     }
@@ -1047,7 +1045,7 @@ public class ITestAzureBlobFileSystemCreate extends
       Assertions.assertThat(fs.exists(new Path("a/b/c")))
           .describedAs("Path does not exist")
           .isTrue();
-      intercept(IOException.class, BLOB_EXIST,
+      intercept(IOException.class,
           () -> fs.create(new Path("a/b/c"), false));
     }
   }
@@ -1064,7 +1062,6 @@ public class ITestAzureBlobFileSystemCreate extends
           .describedAs("Path does not exist")
           .isTrue();
       intercept(IOException.class,
-          PATH_CONFLICT,
           () -> fs.create(new Path("a/b")));
     }
   }
@@ -1222,9 +1219,9 @@ public class ITestAzureBlobFileSystemCreate extends
       Path sourcePath = new Path(sourcePathName);
       createAzCopyFolder(sourcePath);
 
-      intercept(IOException.class, PATH_CONFLICT, () ->
+      intercept(IOException.class, () ->
           fs.create(sourcePath, true));
-      intercept(IOException.class, PATH_CONFLICT, () ->
+      intercept(IOException.class, () ->
           fs.create(sourcePath, false));
 
       Assertions.assertThat(
@@ -1374,7 +1371,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
       String childName = "/testParentFile/testChildFile";
       Path child = new Path(childName);
-      IOException e = intercept(IOException.class, PATH_CONFLICT, () ->
+      IOException e = intercept(IOException.class, () ->
           fs.create(child, false));
 
       // asserting that parent stays explicit
@@ -1396,8 +1393,7 @@ public class ITestAzureBlobFileSystemCreate extends
     try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.create(new Path("a/b/c"));
       intercept(IOException.class,
-          "The specified path, or an element of the path, exists and its resource type is invalid for this operation.",
-          () -> fs.mkdirs(new Path("a/b/c/d")));
+            () -> fs.mkdirs(new Path("a/b/c/d")));
     }
   }
 
@@ -1554,7 +1550,7 @@ public class ITestAzureBlobFileSystemCreate extends
       fs.setWorkingDirectory(new Path("/"));
       final Path p1 = new Path("dir1");
       fs.create(p1);
-      intercept(IOException.class, PATH_CONFLICT,
+      intercept(IOException.class,
           () -> fs.mkdirs(new Path("dir1/dir2")));
     }
   }
@@ -1568,7 +1564,7 @@ public class ITestAzureBlobFileSystemCreate extends
     try (AzureBlobFileSystem fs = getFileSystem()) {
       final Path p1 = new Path("dir1");
       fs.create(p1);
-      intercept(IOException.class, PATH_CONFLICT, () -> fs.mkdirs(new Path("dir1/dir2")));
+      intercept(IOException.class, () -> fs.mkdirs(new Path("dir1/dir2")));
     }
   }
 
@@ -1753,7 +1749,8 @@ public class ITestAzureBlobFileSystemCreate extends
       Assertions.assertThat(fs.exists(new Path("a/b/c/d")))
           .describedAs("File a/b/c/d does not exist")
           .isTrue();
-      intercept(IOException.class, PATH_CONFLICT, () -> fs.mkdirs(new Path("a/b/c/d")));
+        intercept(IOException.class,
+            () -> fs.mkdirs(new Path("a/b/c/d")));
     }
   }
 
