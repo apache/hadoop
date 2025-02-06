@@ -366,6 +366,11 @@ public final class Util {
 
   public static List<InetSocketAddress> getAddressesList(URI uri, Configuration conf)
       throws IOException{
+    return getAddressesList(uri, conf, false);
+  }
+
+  public static List<InetSocketAddress> getAddressesList(URI uri, Configuration conf,
+      boolean ignoreUnresolved) throws IOException{
     String authority = uri.getAuthority();
     Preconditions.checkArgument(authority != null && !authority.isEmpty(),
         "URI has no authority: " + uri);
@@ -383,6 +388,7 @@ public final class Util {
         DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_RESOLVER_IMPL);
 
     List<InetSocketAddress> addrs = Lists.newArrayList();
+    List<String> unresolvedHost = Lists.newArrayList();
     for (String addr : parts) {
       if (resolveNeeded) {
         LOG.info("Resolving journal address: " + addr);
@@ -395,7 +401,12 @@ public final class Util {
         String[] hostnames = dnr
             .getAllResolvedHostnameByDomainName(isa.getHostName(), true);
         if (hostnames.length == 0) {
-          throw new UnknownHostException(addr);
+          if (!ignoreUnresolved) {
+            throw new UnknownHostException(addr);
+          } else {
+            LOG.warn("journal address {} is unresolved", addr);
+            unresolvedHost.add(addr);
+          }
         }
         for (String h : hostnames) {
           addrs.add(NetUtils.createSocketAddr(
@@ -407,9 +418,22 @@ public final class Util {
         InetSocketAddress isa = NetUtils.createSocketAddr(
             addr, DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT);
         if (isa.isUnresolved()) {
-          throw new UnknownHostException(addr);
+          if (!ignoreUnresolved) {
+            throw new UnknownHostException(addr);
+          } else {
+            LOG.warn("journal address {} is unresolved", addr);
+            unresolvedHost.add(addr);
+          }
         }
         addrs.add(isa);
+      }
+    }
+    if (ignoreUnresolved) {
+      int minNumQuorum = parts.length - (parts.length / 2);
+      int reachableQuorum = addrs.size() - unresolvedHost.size();
+      if (reachableQuorum < minNumQuorum) {
+        LOG.error("Min quorum number {}, now is {}", minNumQuorum, reachableQuorum);
+        throw new UnknownHostException(unresolvedHost.toString());
       }
     }
     return addrs;
