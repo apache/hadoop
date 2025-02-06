@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.metrics2.util;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.management.MBeanServer;
@@ -25,6 +24,8 @@ import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test MXBean addition of key/value pairs to registered MBeans.
@@ -46,7 +47,7 @@ public class TestMBeans implements DummyMXBean {
 
       int jmxCounter = (int) platformMBeanServer
           .getAttribute(objectName, "Counter");
-      Assertions.assertEquals(counter, jmxCounter);
+      assertEquals(counter, jmxCounter);
     } finally {
       if (objectName != null) {
         MBeans.unregister(objectName);
@@ -70,7 +71,7 @@ public class TestMBeans implements DummyMXBean {
           ManagementFactory.getPlatformMBeanServer();
       int jmxCounter =
           (int) platformMBeanServer.getAttribute(objectName, "Counter");
-      Assertions.assertEquals(counter, jmxCounter);
+      assertEquals(counter, jmxCounter);
     } finally {
       if (objectName != null) {
         MBeans.unregister(objectName);
@@ -85,7 +86,7 @@ public class TestMBeans implements DummyMXBean {
     ObjectName mBeanName = MBeans.getMBeanName("Service",
         "Name", properties);
 
-    Assertions.assertEquals("Service",
+    assertEquals("Service",
         MBeans.getMbeanNameService(mBeanName));
 
     properties.put("key", "value");
@@ -94,7 +95,7 @@ public class TestMBeans implements DummyMXBean {
         "Name",
         properties);
 
-    Assertions.assertEquals("Service",
+    assertEquals("Service",
         MBeans.getMbeanNameService(mBeanName));
 
   }

@@ -51,18 +51,15 @@ public class TestRollingFileSystemSink {
 
     sink.init(conf);
 
-    assertEquals(
-       sink.rollIntervalMillis, 600000, "The roll interval was not set correctly");
-    assertEquals(
-       sink.rollOffsetIntervalMillis, 1, "The roll offset interval was not set correctly");
-    assertEquals(
-       sink.basePath, new Path("path"), "The base path was not set correctly");
-    assertEquals(
-       sink.ignoreError, true, "ignore-error was not set correctly");
-    assertEquals(
-       sink.allowAppend, true, "allow-append was not set correctly");
-    assertEquals("The source was not set correctly",
-        sink.source, "src");
+    assertEquals(sink.rollIntervalMillis, 600000,
+        "The roll interval was not set correctly");
+    assertEquals(sink.rollOffsetIntervalMillis, 1,
+        "The roll offset interval was not set correctly");
+    assertEquals(sink.basePath, new Path("path"),
+        "The base path was not set correctly");
+    assertEquals(sink.ignoreError, true, "ignore-error was not set correctly");
+    assertEquals(sink.allowAppend, true, "allow-append was not set correctly");
+    assertEquals(sink.source, "src", "The source was not set correctly");
   }
 
   /**

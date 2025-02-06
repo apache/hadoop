@@ -18,7 +18,6 @@
 package org.apache.hadoop.ipc;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -32,6 +31,8 @@ import java.nio.channels.ClosedByInterruptException;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * tests that the proxy can be interrupted
@@ -62,7 +63,7 @@ public class TestRPCWaitForProxy extends TestRpcBase {
     worker.join();
     Throwable caught = worker.getCaught();
     Throwable cause = caught.getCause();
-    Assertions.assertNotNull(cause, "No exception was raised");
+    assertNotNull(cause, "No exception was raised");
     if (!(cause instanceof ConnectException)) {
       throw caught;
     }
@@ -80,11 +81,11 @@ public class TestRPCWaitForProxy extends TestRpcBase {
     RpcThread worker = new RpcThread(100);
     worker.start();
     Thread.sleep(1000);
-    Assertions.assertTrue(worker.waitStarted, "worker hasn't started");
+    assertTrue(worker.waitStarted, "worker hasn't started");
     worker.interrupt();
     worker.join();
     Throwable caught = worker.getCaught();
-    Assertions.assertNotNull(caught, "No exception was raised");
+    assertNotNull(caught, "No exception was raised");
     // looking for the root cause here, which can be wrapped
     // as part of the NetUtils work. Having this test look
     // a the type of exception there would be brittle to improvements

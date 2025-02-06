@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.ipc;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.jupiter.api.Test;

@@ -54,12 +54,12 @@ import org.apache.hadoop.metrics2.impl.TestMetricsConfig;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.rules.TestName;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import static org.junit.Assert.assertTrue;
 
 /**
  * This class is a base class for testing the {@link RollingFileSystemSink}
@@ -119,7 +119,7 @@ public class RollingFileSystemSinkTestBase {
   /**
    * Set the date format's timezone to GMT.
    */
-  @BeforeAll
+  @BeforeClass
   public static void setup() {
     DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("GMT"));
     FileUtil.fullyDelete(ROOT_TEST_DIR);
@@ -129,7 +129,7 @@ public class RollingFileSystemSinkTestBase {
    * Delete the test directory for this test.
    * @throws IOException thrown if the delete fails
    */
-  @AfterAll
+  @AfterClass
   public static void deleteBaseDir() throws IOException {
     FileUtil.fullyDelete(ROOT_TEST_DIR);
   }
@@ -138,12 +138,12 @@ public class RollingFileSystemSinkTestBase {
    * Create the test directory for this test.
    * @throws IOException thrown if the create fails
    */
-  @BeforeEach
+  @Before
   public void createMethodDir() throws IOException {
     methodDir = new File(ROOT_TEST_DIR, methodName.getMethodName());
 
-    assertTrue(
-       methodDir.mkdirs(), "Test directory already exists: " + methodDir);
+    assertTrue("Test directory already exists: " + methodDir,
+        methodDir.mkdirs());
   }
 
   /**
@@ -265,7 +265,7 @@ public class RollingFileSystemSinkTestBase {
       }
     }
 
-    assertTrue(found, "No valid log directories found");
+    assertTrue("No valid log directories found", found);
 
     return metrics.toString();
   }
@@ -342,8 +342,8 @@ public class RollingFileSystemSinkTestBase {
         + "\\s+testTag22=testTagValue22,\\s+Hostname=.*$[\\n\\r]*",
          Pattern.MULTILINE);
 
-    assertTrue(expectedContentPattern.matcher(contents).matches(), "Sink did not produce the expected output. Actual output was: "
-        + contents);
+    assertTrue("Sink did not produce the expected output. Actual output was: "
+        + contents, expectedContentPattern.matcher(contents).matches());
   }
 
   /**
@@ -366,8 +366,8 @@ public class RollingFileSystemSinkTestBase {
         + "\\s+testTag22=testTagValue22,\\s+Hostname=.*$[\\n\\r]*",
          Pattern.MULTILINE);
 
-    assertTrue(expectedContentPattern.matcher(contents).matches(), "Sink did not produce the expected output. Actual output was: "
-        + contents);
+    assertTrue("Sink did not produce the expected output. Actual output was: "
+        + contents, expectedContentPattern.matcher(contents).matches());
   }
 
   /**
@@ -500,10 +500,10 @@ public class RollingFileSystemSinkTestBase {
       count++;
     }
 
-    assertTrue(expected >= count, "The sink created additional unexpected log files. " + count
-        + " files were created");
-    assertTrue(expected <= count, "The sink created too few log files. " + count + " files were "
-        + "created");
+    assertTrue("The sink created additional unexpected log files. " + count
+        + " files were created", expected >= count);
+    assertTrue("The sink created too few log files. " + count + " files were "
+        + "created", expected <= count);
   }
 
   /**

@@ -78,10 +78,9 @@ public class TestStatsDMetrics {
 
       String result =new String(p.getData(), 0, p.getLength(),
           StandardCharsets.UTF_8);
-      assertTrue(
-      
-         result.equals("host.process.jvm.Context.foo1:1.25|c") ||
-          result.equals("host.process.jvm.Context.foo2:2.25|g"), "Received data did not match data sent");
+      assertTrue(result.equals("host.process.jvm.Context.foo1:1.25|c") ||
+          result.equals("host.process.jvm.Context.foo2:2.25|g"),
+          "Received data did not match data sent");
 
     } finally {
       sink.close();
@@ -114,9 +113,9 @@ public class TestStatsDMetrics {
       String result =
           new String(p.getData(), 0, p.getLength(), StandardCharsets.UTF_8);
 
-      assertTrue(
-         result.equals("process.jvm.Context.foo1:1|c") ||
-          result.equals("process.jvm.Context.foo2:2|g"), "Received data did not match data sent");
+      assertTrue(result.equals("process.jvm.Context.foo1:1|c") ||
+          result.equals("process.jvm.Context.foo2:2|g"),
+          "Received data did not match data sent");
     } finally {
       sink.close();
     }

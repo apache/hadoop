@@ -29,9 +29,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.RetryCache.CacheEntryWithPayload;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests for {@link RetryCache}
@@ -177,7 +178,7 @@ public class TestRetryCache {
     for (int i = 0; i < numberOfThreads; i++) {
       Callable<Integer> worker = () -> {
         Server.getCurCall().set(call);
-        Assertions.assertEquals(Server.getCurCall().get(), call);
+        assertEquals(Server.getCurCall().get(), call);
         int randomPause = pause == 0 ? pause : r.nextInt(pause);
         return testServer.echo(input, failureOutput, randomPause, success);
       };
@@ -185,12 +186,12 @@ public class TestRetryCache {
       list.add(submit);
     }
 
-    Assertions.assertEquals(numberOfThreads, list.size());
+    assertEquals(numberOfThreads, list.size());
     for (Future<Integer> future : list) {
       if (success) {
-        Assertions.assertEquals(input, future.get().intValue());
+        assertEquals(input, future.get().intValue());
       } else {
-        Assertions.assertEquals(failureOutput, future.get().intValue());
+        assertEquals(failureOutput, future.get().intValue());
       }
     }
 
@@ -198,15 +199,15 @@ public class TestRetryCache {
       // If the operation was successful, all the subsequent operations
       // by other threads should be retries. Operation count should be 1.
       int retries = numberOfThreads + (attemptedBefore ? 0 : -1);
-      Assertions.assertEquals(1, testServer.operationCount.get());
-      Assertions.assertEquals(retries, testServer.retryCount.get());
+      assertEquals(1, testServer.operationCount.get());
+      assertEquals(retries, testServer.retryCount.get());
     } else {
       // If the operation failed, all the subsequent operations
       // should execute once more, hence the retry count should be 0 and
       // operation count should be the number of tries
       int opCount = numberOfThreads + (attemptedBefore ? 1 : 0);
-      Assertions.assertEquals(opCount, testServer.operationCount.get());
-      Assertions.assertEquals(0, testServer.retryCount.get());
+      assertEquals(opCount, testServer.operationCount.get());
+      assertEquals(0, testServer.retryCount.get());
     }
   }
 }

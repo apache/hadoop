@@ -172,8 +172,7 @@ public class TestGangliaMetrics {
       }
     }
 
-    assertEquals(
-       expectedCount, bytearrlist.size(), "Mismatch in record count: ");
+    assertEquals(expectedCount, bytearrlist.size(), "Mismatch in record count: ");
   }
 
   @SuppressWarnings("unused")

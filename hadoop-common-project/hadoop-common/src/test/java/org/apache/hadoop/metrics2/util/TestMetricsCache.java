@@ -22,8 +22,13 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
@@ -72,7 +77,7 @@ public class TestMetricsCache {
     // until now
     cr = cache.update(mr3, true);
     assertEquals(1, cr.tags().size(), "Got 1 tag");
-    assertEquals("Tag value", "tv3", cr.getTag("t"));
+    assertEquals("tv3", cr.getTag("t"), "Tag value");
     checkMetricValue("Metric value", cr, "m3", 3);
   }
 

@@ -53,11 +53,9 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.test.MockitoUtil;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -107,12 +105,19 @@ import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getDoubleGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /** Unit tests for RPC. */
 @SuppressWarnings("deprecation")
@@ -655,8 +660,8 @@ public class TestRPC extends TestRpcBase {
       if (expectFailure) {
         RemoteException re = (RemoteException) e.getCause();
         assertTrue(re.unwrapRemoteException() instanceof AuthorizationException);
-        assertEquals(
-           RpcErrorCodeProto.FATAL_UNAUTHORIZED, re.getErrorCode(), "RPC error code should be UNAUTHORIZED");
+        assertEquals(RpcErrorCodeProto.FATAL_UNAUTHORIZED, re.getErrorCode(),
+            "RPC error code should be UNAUTHORIZED");
       } else {
         throw e;
       }
@@ -798,8 +803,8 @@ public class TestRPC extends TestRpcBase {
       assertTrue(e.getCause() instanceof RemoteException);
       RemoteException re = (RemoteException) e.getCause();
       LOG.info("LOGGING MESSAGE: " + re.getLocalizedMessage());
-      assertEquals(
-         RpcErrorCodeProto.FATAL_UNAUTHORIZED, re.getErrorCode(), "RPC error code should be UNAUTHORIZED");
+      assertEquals(RpcErrorCodeProto.FATAL_UNAUTHORIZED, re.getErrorCode(),
+          "RPC error code should be UNAUTHORIZED");
       assertTrue(re.unwrapRemoteException() instanceof AccessControlException);
       succeeded = true;
     } finally {
@@ -820,8 +825,8 @@ public class TestRPC extends TestRpcBase {
     } catch (ServiceException e) {
       RemoteException re = (RemoteException) e.getCause();
       LOG.info("LOGGING MESSAGE: " + re.getLocalizedMessage());
-      assertEquals(
-         RpcErrorCodeProto.FATAL_UNAUTHORIZED, re.getErrorCode(), "RPC error code should be UNAUTHORIZED");
+      assertEquals(RpcErrorCodeProto.FATAL_UNAUTHORIZED, re.getErrorCode(),
+          "RPC error code should be UNAUTHORIZED");
       assertTrue(re.unwrapRemoteException() instanceof AccessControlException);
       succeeded = true;
     } finally {
@@ -838,8 +843,8 @@ public class TestRPC extends TestRpcBase {
     Server server;
 
     int threadsBefore = countThreads("Server$Listener$Reader");
-    assertEquals(
-       0, threadsBefore, "Expect no Reader threads running before test");
+    assertEquals(0, threadsBefore,
+        "Expect no Reader threads running before test");
 
     server = setupTestServer(conf, 5);
 
@@ -861,8 +866,8 @@ public class TestRPC extends TestRpcBase {
     }
 
     int threadsAfter = countThreads("Server$Listener$Reader");
-    assertEquals(
-       0, threadsAfter, "Expect no Reader threads left running after test");
+    assertEquals(0, threadsAfter,
+        "Expect no Reader threads left running after test");
   }
 
   @Test
@@ -1014,15 +1019,15 @@ public class TestRPC extends TestRpcBase {
   @Test
   @Timeout(value = 30)
   public void testSlowConnection() throws Exception {
-    SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
-    Socket mockSocket = Mockito.mock(Socket.class);
-    Mockito.when(mockFactory.createSocket()).thenReturn(mockSocket);
-    Mockito.when(mockSocket.getPort()).thenReturn(1234);
-    Mockito.when(mockSocket.getLocalPort()).thenReturn(2345);
+    SocketFactory mockFactory = mock(SocketFactory.class);
+    Socket mockSocket = mock(Socket.class);
+    when(mockFactory.createSocket()).thenReturn(mockSocket);
+    when(mockSocket.getPort()).thenReturn(1234);
+    when(mockSocket.getLocalPort()).thenReturn(2345);
     MockOutputStream mockOutputStream = new MockOutputStream();
-    Mockito.when(mockSocket.getOutputStream()).thenReturn(mockOutputStream);
+    when(mockSocket.getOutputStream()).thenReturn(mockOutputStream);
     // Use an input stream that always blocks
-    Mockito.when(mockSocket.getInputStream()).thenReturn(new InputStream() {
+    when(mockSocket.getInputStream()).thenReturn(new InputStream() {
       @Override
       public int read() throws IOException {
         // wait forever
@@ -1081,8 +1086,7 @@ public class TestRPC extends TestRpcBase {
       mockOutputStream.waitForWriters();
       // interrupt all the threads
       for(int thread=0; thread < numThreads; ++thread) {
-        assertTrue(
-           futures[thread].cancel(true), "cancel thread " + thread);
+        assertTrue(futures[thread].cancel(true), "cancel thread " + thread);
       }
       // wait until all the writers are cancelled
       pool.shutdown();
@@ -1160,8 +1164,8 @@ public class TestRPC extends TestRpcBase {
   @Test
   @Timeout(value = 30)
   public void testBadSetup() throws Exception {
-    SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
-    Mockito.when(mockFactory.createSocket())
+    SocketFactory mockFactory = mock(SocketFactory.class);
+    when(mockFactory.createSocket())
         .thenThrow(new IOException("can't connect"));
     Configuration clientConf = new Configuration();
     // Set an illegal value to cause an exception in the constructor
@@ -1338,16 +1342,16 @@ public class TestRPC extends TestRpcBase {
       }
       MetricsRecordBuilder rpcMetrics =
           getMetrics(server.getRpcMetrics().name());
-      assertEquals(
-         3000, getLongCounter("RpcEnQueueTimeNumOps", rpcMetrics), "Expected correct rpc en queue count");
-      assertEquals(
-         3000, getLongCounter("RpcQueueTimeNumOps", rpcMetrics), "Expected correct rpc queue count");
-      assertEquals(
-         3000, getLongCounter("RpcProcessingTimeNumOps", rpcMetrics), "Expected correct rpc processing count");
-      assertEquals(
-         3000, getLongCounter("RpcLockWaitTimeNumOps", rpcMetrics), "Expected correct rpc lock wait count");
-      assertEquals(
-         3000, getLongCounter("RpcResponseTimeNumOps", rpcMetrics), "Expected correct rpc response count");
+      assertEquals(3000, getLongCounter("RpcEnQueueTimeNumOps", rpcMetrics),
+          "Expected correct rpc en queue count");
+      assertEquals(3000, getLongCounter("RpcQueueTimeNumOps", rpcMetrics),
+          "Expected correct rpc queue count");
+      assertEquals(3000, getLongCounter("RpcProcessingTimeNumOps", rpcMetrics),
+          "Expected correct rpc processing count");
+      assertEquals(3000, getLongCounter("RpcLockWaitTimeNumOps", rpcMetrics),
+          "Expected correct rpc lock wait count");
+      assertEquals(3000, getLongCounter("RpcResponseTimeNumOps", rpcMetrics),
+          "Expected correct rpc response count");
       assertEquals(0, getDoubleGauge("RpcLockWaitTimeAvgTime", rpcMetrics), 0.001,
           "Expected zero rpc lock wait time");
       MetricsAsserts.assertQuantileGauges("RpcEnQueueTime" + interval + "s",
@@ -1682,15 +1686,15 @@ public class TestRPC extends TestRpcBase {
 
       UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user");
       // normal users start with priority 0.
-      Assertions.assertEquals(0, server.getPriorityLevel(ugi));
+      assertEquals(0, server.getPriorityLevel(ugi));
       // calls for a protocol defined client will have priority of 0.
-      Assertions.assertEquals(0, server.getPriorityLevel(newSchedulable(ugi)));
+      assertEquals(0, server.getPriorityLevel(newSchedulable(ugi)));
 
       // protocol defined client will have top priority of -1.
       ugi = UserGroupInformation.createRemoteUser("clientForProtocol");
-      Assertions.assertEquals(-1, server.getPriorityLevel(ugi));
+      assertEquals(-1, server.getPriorityLevel(ugi));
       // calls for a protocol defined client will have priority of 0.
-      Assertions.assertEquals(0, server.getPriorityLevel(newSchedulable(ugi)));
+      assertEquals(0, server.getPriorityLevel(newSchedulable(ugi)));
     } finally {
       stop(server, null);
     }
@@ -1818,21 +1822,21 @@ public class TestRPC extends TestRpcBase {
 
   @Test
   public void testServerNameFromClass() {
-    Assertions.assertEquals("TestRPC",
+    assertEquals("TestRPC",
         RPC.Server.serverNameFromClass(this.getClass()));
-    Assertions.assertEquals("TestClass",
+    assertEquals("TestClass",
         RPC.Server.serverNameFromClass(TestRPC.TestClass.class));
 
     Object testing = new TestClass().classFactory();
-    Assertions.assertEquals("Embedded",
+    assertEquals("Embedded",
         RPC.Server.serverNameFromClass(testing.getClass()));
 
     testing = new TestClass().classFactoryAbstract();
-    Assertions.assertEquals("TestClass",
+    assertEquals("TestClass",
         RPC.Server.serverNameFromClass(testing.getClass()));
 
     testing = new TestClass().classFactoryObject();
-    Assertions.assertEquals("TestClass",
+    assertEquals("TestClass",
         RPC.Server.serverNameFromClass(testing.getClass()));
 
   }
@@ -1950,9 +1954,9 @@ public class TestRPC extends TestRpcBase {
           assertEquals(1, conns.length, reqName);
           String connectionInfo = conns[0].toString();
           LOG.info("Connection is from: {}", connectionInfo);
-          assertEquals(
-          1, connectionInfo.split(" / ").length, "Connection string representation should include only IP address for healthy "
-                  + "connection");
+          assertEquals(1, connectionInfo.split(" / ").length,
+              "Connection string representation should include only IP address for healthy "
+              + "connection");
           // verify whether the connection should have been reused.
           if (isDisconnected) {
             assertNotSame(lastConn, conns[0], reqName);

@@ -19,7 +19,8 @@
 package org.apache.hadoop.metrics2.impl;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.apache.commons.configuration2.SubsetConfiguration;
 import static org.apache.hadoop.metrics2.filter.TestPatternFilter.*;
@@ -50,7 +51,7 @@ public class TestMetricsCollectorImpl {
       .addGauge(info("foo", ""), 1);
     assertEquals(1, rb.tags().size(), "1 tag");
     assertEquals(1, rb.metrics().size(), "1 metric");
-    assertEquals("expect foo tag", "foo", rb.tags().get(0).name());
-    assertEquals("expect c0", "c0", rb.metrics().get(0).name());
+    assertEquals("foo", rb.tags().get(0).name(), "expect foo tag");
+    assertEquals("c0", rb.metrics().get(0).name(), "expect c0");
   }
 }

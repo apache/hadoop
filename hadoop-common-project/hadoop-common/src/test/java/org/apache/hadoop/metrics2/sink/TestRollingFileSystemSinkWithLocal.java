@@ -21,9 +21,9 @@ package org.apache.hadoop.metrics2.sink;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.metrics2.MetricsSystem;
 
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.Test;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test the {@link RollingFileSystemSink} class in the context of the local file
@@ -114,9 +114,9 @@ public class TestRollingFileSystemSinkWithLocal
       // publish the metrics
       ms.publishMetricsNow();
 
-      assertTrue(
-         MockSink.errored, "No exception was generated while writing metrics "
-          + "even though the target directory was not writable");
+      assertTrue("No exception was generated while writing metrics "
+          + "even though the target directory was not writable",
+          MockSink.errored);
 
       ms.stop();
       ms.shutdown();
@@ -143,10 +143,10 @@ public class TestRollingFileSystemSinkWithLocal
       // publish the metrics
       ms.publishMetricsNow();
 
-      assertFalse(
-         MockSink.errored, "An exception was generated while writing metrics "
+      assertFalse("An exception was generated while writing metrics "
           + "when the target directory was not writable, even though the "
-          + "sink is set to ignore errors");
+          + "sink is set to ignore errors",
+          MockSink.errored);
 
       ms.stop();
       ms.shutdown();

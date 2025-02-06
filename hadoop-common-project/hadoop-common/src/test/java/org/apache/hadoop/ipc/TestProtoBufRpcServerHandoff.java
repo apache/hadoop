@@ -34,7 +34,6 @@ import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.protobuf.TestProtos;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcHandoffProto;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -44,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestProtoBufRpcServerHandoff {
 
@@ -104,8 +104,8 @@ public class TestProtoBufRpcServerHandoff {
 
     // Ensure the 5 second sleep responses are within a reasonable time of each
     // other.
-    Assertions.assertTrue(Math.abs(callable1.endTime - callable2.endTime) < 2000l);
-    Assertions.assertTrue(System.currentTimeMillis() - submitTime < 7000l);
+    assertTrue(Math.abs(callable1.endTime - callable2.endTime) < 2000l);
+    assertTrue(System.currentTimeMillis() - submitTime < 7000l);
 
   }
 
@@ -135,8 +135,8 @@ public class TestProtoBufRpcServerHandoff {
 
     // Ensure the 5 second sleep responses are within a reasonable time of each
     // other.
-    Assertions.assertTrue(Math.abs(callable1.endTime - callable2.endTime) < 2000L);
-    Assertions.assertTrue(System.currentTimeMillis() - submitTime < 7000L);
+    assertTrue(Math.abs(callable1.endTime - callable2.endTime) < 2000L);
+    assertTrue(System.currentTimeMillis() - submitTime < 7000L);
 
     // Check rpcMetrics
     MetricsRecordBuilder rb = getMetrics(server.rpcMetrics.name());

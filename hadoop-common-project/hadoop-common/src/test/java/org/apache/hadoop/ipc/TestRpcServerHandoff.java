@@ -34,11 +34,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.net.NetUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestRpcServerHandoff {
 
@@ -122,7 +125,7 @@ public class TestRpcServerHandoff {
       server.sendResponse();
       BytesWritable response = (BytesWritable) future.get();
 
-      Assertions.assertEquals(new BytesWritable(requestBytes), response);
+      assertEquals(new BytesWritable(requestBytes), response);
     } finally {
       if (server != null) {
         server.stop();
@@ -152,12 +155,12 @@ public class TestRpcServerHandoff {
       server.sendError();
       try {
         future.get();
-        Assertions.fail("Call succeeded. Was expecting an exception");
+        fail("Call succeeded. Was expecting an exception");
       } catch (ExecutionException e) {
         Throwable cause = e.getCause();
-        Assertions.assertTrue(cause instanceof RemoteException);
+        assertTrue(cause instanceof RemoteException);
         RemoteException re = (RemoteException) cause;
-        Assertions.assertTrue(re.toString().contains("DeferredError"));
+        assertTrue(re.toString().contains("DeferredError"));
       }
     } finally {
       if (server != null) {
@@ -173,7 +176,7 @@ public class TestRpcServerHandoff {
     while (sleepTime > 0) {
       try {
         future.get(200L, TimeUnit.MILLISECONDS);
-        Assertions.fail("Expected to timeout since" +
+        fail("Expected to timeout since" +
             " the deferred response hasn't been registered");
       } catch (TimeoutException e) {
         // Ignoring. Expected to time out.

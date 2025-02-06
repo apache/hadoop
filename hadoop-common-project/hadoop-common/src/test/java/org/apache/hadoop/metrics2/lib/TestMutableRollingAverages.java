@@ -23,7 +23,6 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.apache.hadoop.util.Time;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -32,9 +31,12 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 import static org.apache.hadoop.test.MetricsAsserts.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 /**
  * This class tests various cases of the algorithms implemented in
@@ -161,10 +163,8 @@ public class TestMutableRollingAverages {
 
     double metric1Avg = getDoubleGauge("[Metric1]RollingAvgTesting", rb);
     double metric2Avg = getDoubleGauge("[Metric2]RollingAvgTesting", rb);
-    Assertions.assertTrue(
-       metric1Avg == 500.0, "The rolling average of metric1 is not as expected");
-    Assertions.assertTrue(
-       metric2Avg == 1000.0, "The rolling average of metric2 is not as expected");
+    assertTrue(metric1Avg == 500.0, "The rolling average of metric1 is not as expected");
+    assertTrue(metric2Avg == 1000.0, "The rolling average of metric2 is not as expected");
 
   }
 

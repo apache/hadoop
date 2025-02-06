@@ -96,8 +96,8 @@ public class TestRPCServerShutdown extends TestRpcBase {
             fail("Future get should not return");
           } catch (ExecutionException e) {
             ServiceException se = (ServiceException) e.getCause();
-            assertTrue(
-               se.getCause() instanceof IOException, "Unexpected exception: " + se);
+            assertTrue(se.getCause() instanceof IOException,
+                "Unexpected exception: " + se);
             LOG.info("Expected exception", e.getCause());
           }
         }

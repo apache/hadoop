@@ -21,12 +21,15 @@ package org.apache.hadoop.metrics2.source;
 import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.util.GcTimeMonitor;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
 
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyFloat;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.verify;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 
 import org.apache.hadoop.conf.Configuration;
@@ -36,19 +39,18 @@ import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JvmPauseMonitor;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.metrics2.source.JvmMetricsInfo.*;
 import static org.apache.hadoop.metrics2.impl.MsInfo.*;
 
+@Timeout(30)
 public class TestJvmMetrics {
 
-  @Rule
-  public Timeout timeout = new Timeout(30000, TimeUnit.MILLISECONDS);
   private JvmPauseMonitor pauseMonitor;
   private GcTimeMonitor gcTimeMonitor;
 
@@ -129,7 +131,7 @@ public class TestJvmMetrics {
       pauseMonitor.init(new Configuration());
       pauseMonitor.stop();
       pauseMonitor.start();
-      Assertions.fail("Expected an exception, got " + pauseMonitor);
+      fail("Expected an exception, got " + pauseMonitor);
     } catch (ServiceStateException e) {
       GenericTestUtils.assertExceptionContains("cannot enter state", e);
     }
@@ -141,7 +143,7 @@ public class TestJvmMetrics {
     try {
       pauseMonitor.stop();
       pauseMonitor.init(new Configuration());
-      Assertions.fail("Expected an exception, got " + pauseMonitor);
+      fail("Expected an exception, got " + pauseMonitor);
     } catch (ServiceStateException e) {
       GenericTestUtils.assertExceptionContains("cannot enter state", e);
     }
@@ -193,10 +195,10 @@ public class TestJvmMetrics {
       gcCount = gcData.getAccumulatedGcCount();
     }
 
-    Assertions.assertTrue(maxGcTimePercentage > 0);
-    Assertions.assertTrue(gcCount > 0);
-    Assertions.assertTrue(alerter.numAlerts > 0);
-    Assertions.assertTrue(alerter.maxGcTimePercentage >= alertGcPerc);
+    assertTrue(maxGcTimePercentage > 0);
+    assertTrue(gcCount > 0);
+    assertTrue(alerter.numAlerts > 0);
+    assertTrue(alerter.maxGcTimePercentage >= alertGcPerc);
   }
 
   @Test
@@ -205,7 +207,7 @@ public class TestJvmMetrics {
         .initSingleton("test", null);
     JvmMetrics jvmMetrics2 = org.apache.hadoop.metrics2.source.JvmMetrics
         .initSingleton("test", null);
-    Assertions.assertEquals(
+    assertEquals(
        jvmMetrics1, jvmMetrics2, "initSingleton should return the singleton instance");
   }
 
@@ -217,11 +219,11 @@ public class TestJvmMetrics {
     final String process2Name = "process2";
     JvmMetrics jvmMetrics2 = org.apache.hadoop.metrics2.source.JvmMetrics
         .initSingleton(process2Name, null);
-    Assertions.assertEquals(
+    assertEquals(
        jvmMetrics1, jvmMetrics2, "initSingleton should return the singleton instance");
-    Assertions.assertEquals(
+    assertEquals(
        process1Name, jvmMetrics1.processName, "unexpected process name of the singleton instance");
-    Assertions.assertEquals(
+    assertEquals(
        process1Name, jvmMetrics2.processName, "unexpected process name of the singleton instance");
   }
 

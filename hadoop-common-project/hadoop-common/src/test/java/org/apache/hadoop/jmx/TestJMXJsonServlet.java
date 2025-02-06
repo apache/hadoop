@@ -97,8 +97,8 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod("TRACE");
 
-    assertEquals(
-       HttpServletResponse.SC_METHOD_NOT_ALLOWED, conn.getResponseCode(), "Unexpected response code");
+    assertEquals(HttpServletResponse.SC_METHOD_NOT_ALLOWED, conn.getResponseCode(),
+        "Unexpected response code");
   }
 
 }

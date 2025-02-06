@@ -40,11 +40,9 @@ import org.apache.hadoop.thirdparty.protobuf.RpcController;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -63,7 +61,6 @@ import static org.junit.Assume.assumeFalse;
  * This test depends on test.proto definition of types in src/test/proto
  * and protobuf service definition from src/test/test_rpc_service.proto
  */
-@RunWith(Parameterized.class)
 public class TestProtoBufRpc extends TestRpcBase {
   private static RPC.Server server;
   private final static int SLEEP_DURATION = 1000;
@@ -78,9 +75,9 @@ public class TestProtoBufRpc extends TestRpcBase {
    */
   private boolean testWithLegacyFirst;
 
-  public TestProtoBufRpc(Boolean testWithLegacy, Boolean testWithLegacyFirst) {
-    this.testWithLegacy = testWithLegacy;
-    this.testWithLegacyFirst = testWithLegacyFirst;
+  public void initTestProtoBufRpc(Boolean pTestWithLegacy, Boolean pTestWithLegacyFirst) {
+    this.testWithLegacy = pTestWithLegacy;
+    this.testWithLegacyFirst = pTestWithLegacyFirst;
   }
 
   @ProtocolInfo(protocolName = "testProto2", protocolVersion = 1)
@@ -152,7 +149,6 @@ public class TestProtoBufRpc extends TestRpcBase {
     }
   }
 
-  @Parameters
   public static Collection<Object[]> params() {
     Collection<Object[]> params = new ArrayList<Object[]>();
     params.add(new Object[] {Boolean.TRUE, Boolean.TRUE });
@@ -232,9 +228,12 @@ public class TestProtoBufRpc extends TestRpcBase {
     return RPC.getProxy(TestRpcService2Legacy.class, 0, addr, conf);
   }
 
-  @Test
+  @ParameterizedTest
   @Timeout(value = 5)
-  public void testProtoBufRpc() throws Exception {
+  @MethodSource("params")
+  public void testProtoBufRpc(boolean pTestWithLegacy,
+    boolean pTestWithLegacyFirst) throws Exception {
+    initTestProtoBufRpc(pTestWithLegacy, pTestWithLegacyFirst);
     TestRpcService client = getClient(addr, conf);
     testProtoBufRpc(client);
   }
@@ -263,10 +262,13 @@ public class TestProtoBufRpc extends TestRpcBase {
           .isEqualTo(RpcErrorCodeProto.ERROR_RPC_SERVER);
     }
   }
-  
-  @Test
+
+  @ParameterizedTest
   @Timeout(value = 5)
-  public void testProtoBufRpc2() throws Exception {
+  @MethodSource("params")
+  public void testProtoBufRpc2(boolean pTestWithLegacy,
+    boolean pTestWithLegacyFirst) throws Exception {
+    initTestProtoBufRpc(pTestWithLegacy, pTestWithLegacyFirst);
     TestRpcService2 client = getClient2();
     
     // Test ping method
@@ -314,9 +316,12 @@ public class TestProtoBufRpc extends TestRpcBase {
     assertCounterGt("Echo2NumOps", 0L, rpcDetailedMetrics);
   }
 
-  @Test
+  @ParameterizedTest
   @Timeout(value = 5)
-  public void testProtoBufRandomException() throws Exception {
+  @MethodSource("params")
+  public void testProtoBufRandomException(boolean pTestWithLegacy,
+      boolean pTestWithLegacyFirst) throws Exception {
+    initTestProtoBufRpc(pTestWithLegacy, pTestWithLegacyFirst);
     //No test with legacy
     assumeFalse(testWithLegacy);
     TestRpcService client = getClient(addr, conf);
@@ -333,10 +338,13 @@ public class TestProtoBufRpc extends TestRpcBase {
           .isEqualTo(RpcErrorCodeProto.ERROR_APPLICATION);
     }
   }
-  
-  @Test
+
+  @ParameterizedTest
   @Timeout(value = 6)
-  public void testExtraLongRpc() throws Exception {
+  @MethodSource("params")
+  public void testExtraLongRpc(boolean pTestWithLegacy,
+    boolean pTestWithLegacyFirst) throws Exception {
+    initTestProtoBufRpc(pTestWithLegacy, pTestWithLegacyFirst);
     //No test with legacy
     assumeFalse(testWithLegacy);
     TestRpcService2 client = getClient2();
@@ -355,10 +363,13 @@ public class TestProtoBufRpc extends TestRpcBase {
     }
   }
 
-  @Test
+  @ParameterizedTest
   @Timeout(value = 12)
-  public void testLogSlowRPC() throws IOException, ServiceException,
-      TimeoutException, InterruptedException {
+  @MethodSource("params")
+  public void testLogSlowRPC(boolean pTestWithLegacy,
+    boolean pTestWithLegacyFirst) throws IOException, ServiceException,
+    TimeoutException, InterruptedException {
+    initTestProtoBufRpc(pTestWithLegacy, pTestWithLegacyFirst);
     //No test with legacy
     assumeFalse(testWithLegacy);
     server.setLogSlowRPCThresholdTime(SLEEP_DURATION);
@@ -391,9 +402,12 @@ public class TestProtoBufRpc extends TestRpcBase {
         -> rpcMetrics.getRpcSlowCalls() == before + 1L, 10, 1000);
   }
 
-  @Test
+  @ParameterizedTest
   @Timeout(value = 12)
-  public void testEnsureNoLogIfDisabled() throws IOException, ServiceException {
+  @MethodSource("params")
+  public void testEnsureNoLogIfDisabled(boolean pTestWithLegacy,
+    boolean pTestWithLegacyFirst) throws IOException, ServiceException {
+    initTestProtoBufRpc(pTestWithLegacy, pTestWithLegacyFirst);
     //No test with legacy
     assumeFalse(testWithLegacy);
     // disable slow RPC  logging
