@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
 import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.APP_ID;
-import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -45,7 +44,6 @@ import org.apache.hadoop.yarn.webapp.WebApps;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig.Policy;
@@ -70,12 +68,14 @@ import org.apache.hadoop.yarn.server.webproxy.amfilter.AmFilterInitializer;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.http.HttpStatus;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import com.google.inject.Injector;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestAMWebApp {
 
@@ -84,7 +84,7 @@ public class TestAMWebApp {
           System.getProperty("java.io.tmpdir")),
       TestAMWebApp.class.getName());
 
-  @After
+  @AfterEach
   public void tearDown() {
     TEST_DIR.delete();
   }
@@ -217,7 +217,7 @@ public class TestAMWebApp {
     InputStream in = conn.getInputStream();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     IOUtils.copyBytes(in, out, 1024);
-    Assert.assertTrue(out.toString().contains("MapReduce Application"));
+    assertTrue(out.toString().contains("MapReduce Application"));
 
     // https:// is not accessible.
     URL httpsUrl = new URL("https://" + hostPort + "/mapreduce/");
@@ -225,7 +225,7 @@ public class TestAMWebApp {
       HttpURLConnection httpsConn =
           (HttpURLConnection) httpsUrl.openConnection();
       httpsConn.getInputStream();
-      Assert.fail("https:// is not accessible, expected to fail");
+      fail("https:// is not accessible, expected to fail");
     } catch (SSLException e) {
       // expected
     }
@@ -233,10 +233,6 @@ public class TestAMWebApp {
     app.waitForState(job, JobState.SUCCEEDED);
     app.verifyCompleted();
   }
-
-  @Rule
-  public final EnvironmentVariables environmentVariables
-      = new EnvironmentVariables();
 
   @Test
   public void testMRWebAppSSLEnabled() throws Exception {
@@ -256,9 +252,8 @@ public class TestAMWebApp {
     keystoreFile.getParentFile().mkdirs();
     KeyStoreTestUtil.createKeyStore(keystoreFile.getAbsolutePath(), "password",
         "server", keyPair.getPrivate(), cert);
-    environmentVariables.set("KEYSTORE_FILE_LOCATION",
-        keystoreFile.getAbsolutePath());
-    environmentVariables.set("KEYSTORE_PASSWORD", "password");
+    System.setProperty("KEYSTORE_FILE_LOCATION", keystoreFile.getAbsolutePath());
+    System.setProperty("KEYSTORE_PASSWORD", "password");
 
     Job job = app.submit(conf);
 
@@ -274,7 +269,7 @@ public class TestAMWebApp {
     InputStream in = httpsConn.getInputStream();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     IOUtils.copyBytes(in, out, 1024);
-    Assert.assertTrue(out.toString().contains("MapReduce Application"));
+    assertTrue(out.toString().contains("MapReduce Application"));
 
     // http:// is not accessible.
     URL httpUrl = new URL("http://" + hostPort + "/mapreduce/");
@@ -282,7 +277,7 @@ public class TestAMWebApp {
       HttpURLConnection httpConn =
           (HttpURLConnection) httpUrl.openConnection();
       httpConn.getResponseCode();
-      Assert.fail("http:// is not accessible, expected to fail");
+      fail("http:// is not accessible, expected to fail");
     } catch (SocketException e) {
       // expected
     }
@@ -291,6 +286,8 @@ public class TestAMWebApp {
     app.verifyCompleted();
 
     keystoreFile.delete();
+    System.clearProperty("KEYSTORE_FILE_LOCATION");
+    System.clearProperty("KEYSTORE_PASSWORD");
   }
 
   @Test
@@ -312,9 +309,8 @@ public class TestAMWebApp {
     keystoreFile.getParentFile().mkdirs();
     KeyStoreTestUtil.createKeyStore(keystoreFile.getAbsolutePath(), "password",
         "server", keyPair.getPrivate(), cert);
-    environmentVariables.set("KEYSTORE_FILE_LOCATION",
-        keystoreFile.getAbsolutePath());
-    environmentVariables.set("KEYSTORE_PASSWORD", "password");
+    System.setProperty("KEYSTORE_FILE_LOCATION", keystoreFile.getAbsolutePath());
+    System.setProperty("KEYSTORE_PASSWORD", "password");
 
     KeyPair clientKeyPair = KeyStoreTestUtil.generateKeyPair("RSA");
     X509Certificate clientCert = KeyStoreTestUtil.generateCertificate(
@@ -323,9 +319,8 @@ public class TestAMWebApp {
     truststoreFile.getParentFile().mkdirs();
     KeyStoreTestUtil.createTrustStore(truststoreFile.getAbsolutePath(),
         "password", "client", clientCert);
-    environmentVariables.set("TRUSTSTORE_FILE_LOCATION",
-        truststoreFile.getAbsolutePath());
-    environmentVariables.set("TRUSTSTORE_PASSWORD", "password");
+    System.setProperty("TRUSTSTORE_FILE_LOCATION", truststoreFile.getAbsolutePath());
+    System.setProperty("TRUSTSTORE_PASSWORD", "password");
 
     Job job = app.submit(conf);
 
@@ -341,7 +336,7 @@ public class TestAMWebApp {
     InputStream in = httpsConn.getInputStream();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     IOUtils.copyBytes(in, out, 1024);
-    Assert.assertTrue(out.toString().contains("MapReduce Application"));
+    assertTrue(out.toString().contains("MapReduce Application"));
 
     // Try with wrong client cert
     KeyPair otherClientKeyPair = KeyStoreTestUtil.generateKeyPair("RSA");
@@ -353,7 +348,7 @@ public class TestAMWebApp {
       HttpURLConnection httpConn =
           (HttpURLConnection) httpsUrl.openConnection();
       httpConn.getResponseCode();
-      Assert.fail("Wrong client certificate, expected to fail");
+      fail("Wrong client certificate, expected to fail");
     } catch (SSLException e) {
       // expected
     }
@@ -363,6 +358,11 @@ public class TestAMWebApp {
 
     keystoreFile.delete();
     truststoreFile.delete();
+
+    System.clearProperty("KEYSTORE_FILE_LOCATION");
+    System.clearProperty("KEYSTORE_PASSWORD");
+    System.clearProperty("TRUSTSTORE_FILE_LOCATION");
+    System.clearProperty("TRUSTSTORE_PASSWORD");
   }
 
   static String webProxyBase = null;
@@ -408,9 +408,9 @@ public class TestAMWebApp {
       String expectedURL = scheme + conf.get(YarnConfiguration.PROXY_ADDRESS)
           + ProxyUriUtils.getPath(app.getAppID(), "/mapreduce", true);
 
-      Assert.assertEquals(expectedURL,
+      assertEquals(expectedURL,
         conn.getHeaderField(HttpHeaders.LOCATION));
-      Assert.assertEquals(HttpStatus.SC_MOVED_TEMPORARILY,
+      assertEquals(HttpStatus.SC_MOVED_TEMPORARILY,
         conn.getResponseCode());
       app.waitForState(job, JobState.SUCCEEDED);
       app.verifyCompleted();
