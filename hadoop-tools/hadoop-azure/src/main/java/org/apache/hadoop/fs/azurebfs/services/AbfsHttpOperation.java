@@ -59,7 +59,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
   private static final int CLEAN_UP_BUFFER_SIZE = 64 * 1024;
 
-  private static final int ONE_THOUSAND = 1000;
+  public static final int ONE_THOUSAND = 1000;
 
   private static final int ONE_MILLION = ONE_THOUSAND * ONE_THOUSAND;
 
@@ -468,7 +468,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
       // Ignore errors that occur while attempting to parse the storage
       // error, since the response may have been handled by the HTTP driver
       // or for other reasons have an unexpected
-      log.debug("ExpectedError: ", ex);
+      log.debug("Error parsing storage error response", ex);
     }
   }
 

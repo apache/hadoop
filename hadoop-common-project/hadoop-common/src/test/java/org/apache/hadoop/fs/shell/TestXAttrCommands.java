@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.fs.shell;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -27,9 +27,9 @@ import java.io.PrintStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestXAttrCommands {
   private final ByteArrayOutputStream errContent = 
@@ -37,7 +37,7 @@ public class TestXAttrCommands {
   private Configuration conf = null;
   private PrintStream initialStdErr;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     errContent.reset();
     initialStdErr = System.err;
@@ -45,7 +45,7 @@ public class TestXAttrCommands {
     conf = new Configuration();
   }
   
-  @After
+  @AfterEach
   public void cleanUp() throws Exception {
     errContent.reset();
     System.setErr(initialStdErr);
@@ -54,41 +54,41 @@ public class TestXAttrCommands {
   @Test
   public void testGetfattrValidations() throws Exception {
     errContent.reset();
-    assertFalse("getfattr should fail without path",
-        0 == runCommand(new String[] { "-getfattr", "-d"}));
+    assertFalse(0 == runCommand(new String[]{"-getfattr", "-d"}),
+        "getfattr should fail without path");
     assertTrue(errContent.toString().contains("<path> is missing"));
 
     errContent.reset();
-    assertFalse("getfattr should fail with extra argument",
-        0 == runCommand(new String[] { "-getfattr", "extra", "-d", "/test"}));
+    assertFalse(0 == runCommand(new String[]{"-getfattr", "extra", "-d", "/test"}),
+        "getfattr should fail with extra argument");
     assertTrue(errContent.toString().contains("Too many arguments"));
     
     errContent.reset();
-    assertFalse("getfattr should fail without \"-n name\" or \"-d\"",
-        0 == runCommand(new String[] { "-getfattr", "/test"}));
+    assertFalse(0 == runCommand(new String[]{"-getfattr", "/test"}),
+        "getfattr should fail without \"-n name\" or \"-d\"");
     assertTrue(errContent.toString().contains("Must specify '-n name' or '-d' option"));
     
     errContent.reset();
-    assertFalse("getfattr should fail with invalid encoding",
-        0 == runCommand(new String[] { "-getfattr", "-d", "-e", "aaa", "/test"}));
+    assertFalse(0 == runCommand(new String[]{"-getfattr", "-d", "-e", "aaa", "/test"}),
+        "getfattr should fail with invalid encoding");
     assertTrue(errContent.toString().contains("Invalid/unsupported encoding option specified: aaa"));
   }
 
   @Test
   public void testSetfattrValidations() throws Exception {
     errContent.reset();
-    assertFalse("setfattr should fail without path",
-        0 == runCommand(new String[] { "-setfattr", "-n", "user.a1" }));
+    assertFalse(0 == runCommand(new String[]{"-setfattr", "-n", "user.a1"}),
+        "setfattr should fail without path");
     assertTrue(errContent.toString().contains("<path> is missing"));
     
     errContent.reset();
-    assertFalse("setfattr should fail with extra arguments",
-        0 == runCommand(new String[] { "-setfattr", "extra", "-n", "user.a1", "/test"}));
+    assertFalse(0 == runCommand(new String[]{"-setfattr", "extra", "-n", "user.a1", "/test"}),
+        "setfattr should fail with extra arguments");
     assertTrue(errContent.toString().contains("Too many arguments"));
     
     errContent.reset();
-    assertFalse("setfattr should fail without \"-n name\" or \"-x name\"",
-        0 == runCommand(new String[] { "-setfattr", "/test"}));
+    assertFalse(0 == runCommand(new String[]{"-setfattr", "/test"}),
+        "setfattr should fail without \"-n name\" or \"-x name\"");
     assertTrue(errContent.toString().contains("Must specify '-n name' or '-x name' option"));
   }
 

@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.server.namenode.visitor.NamespacePrintVisitor;
 import org.apache.hadoop.hdfs.util.Canceler;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -151,11 +152,11 @@ public class TestFSImageWithSnapshot {
         conf);
     FSImageCompression compression = FSImageCompression.createCompression(conf);
     File imageFile = getImageFile(testDir, txid);
-    fsn.readLock();
+    fsn.readLock(RwLockMode.GLOBAL);
     try {
       saver.save(imageFile, compression);
     } finally {
-      fsn.readUnlock();
+      fsn.readUnlock(RwLockMode.GLOBAL, "saveFSImage");
     }
     return imageFile;
   }
@@ -163,14 +164,14 @@ public class TestFSImageWithSnapshot {
   /** Load the fsimage from a temp file */
   private void loadFSImageFromTempFile(File imageFile) throws IOException {
     FSImageFormat.LoaderDelegator loader = FSImageFormat.newLoader(conf, fsn);
-    fsn.writeLock();
+    fsn.writeLock(RwLockMode.GLOBAL);
     fsn.getFSDirectory().writeLock();
     try {
       loader.load(imageFile, false);
       fsn.getFSDirectory().updateCountForQuota();
     } finally {
       fsn.getFSDirectory().writeUnlock();
-      fsn.writeUnlock();
+      fsn.writeUnlock(RwLockMode.GLOBAL, "loadFSImageFromTempFile");
     }
   }
   

@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.fs.shell;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.LinkedList;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class to verify Tail shell command.

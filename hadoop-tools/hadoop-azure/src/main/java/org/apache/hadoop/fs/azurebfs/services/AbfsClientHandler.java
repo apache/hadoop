@@ -41,6 +41,7 @@ public class AbfsClientHandler {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClientHandler.class);
 
   private AbfsServiceType defaultServiceType;
+  private AbfsServiceType ingressServiceType;
   private final AbfsDfsClient dfsAbfsClient;
   private final AbfsBlobClient blobAbfsClient;
 
@@ -80,6 +81,7 @@ public class AbfsClientHandler {
    */
   private void initServiceType(final AbfsConfiguration abfsConfiguration) {
     this.defaultServiceType = abfsConfiguration.getFsConfiguredServiceType();
+    this.ingressServiceType = abfsConfiguration.getIngressServiceType();
   }
 
   /**
@@ -91,12 +93,39 @@ public class AbfsClientHandler {
   }
 
   /**
+   * Get the AbfsClient based on the ingress service type.
+   *
+   * @return AbfsClient for the ingress service type.
+   */
+  public AbfsClient getIngressClient() {
+    return getClient(ingressServiceType);
+  }
+
+  /**
    * Get the AbfsClient based on the service type.
    * @param serviceType AbfsServiceType.
    * @return AbfsClient
    */
   public AbfsClient getClient(AbfsServiceType serviceType) {
     return serviceType == AbfsServiceType.DFS ? dfsAbfsClient : blobAbfsClient;
+  }
+
+  /**
+   * Gets the AbfsDfsClient instance.
+   *
+   * @return the AbfsDfsClient instance.
+   */
+  public AbfsDfsClient getDfsClient() {
+    return dfsAbfsClient;
+  }
+
+  /**
+   * Gets the AbfsBlobClient instance.
+   *
+   * @return the AbfsBlobClient instance.
+   */
+  public AbfsBlobClient getBlobClient() {
+    return blobAbfsClient;
   }
 
   /**

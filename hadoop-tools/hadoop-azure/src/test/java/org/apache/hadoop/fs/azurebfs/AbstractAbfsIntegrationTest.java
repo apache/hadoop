@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -36,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
@@ -50,6 +52,7 @@ import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.utils.AzcopyToolHelper;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
@@ -58,7 +61,12 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.FILE_SYSTEM_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -103,16 +111,16 @@ public abstract class AbstractAbfsIntegrationTest extends
     assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT_NAME,
             accountName != null && !accountName.isEmpty());
 
-    abfsConfig = new AbfsConfiguration(rawConfig, accountName);
+    final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
+    URI defaultUri = null;
+
+    abfsConfig = new AbfsConfiguration(rawConfig, accountName, identifyAbfsServiceTypeFromUrl(abfsUrl));
 
     authType = abfsConfig.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
     assumeValidAuthConfigsPresent();
 
     abfsScheme = authType == AuthType.SharedKey ? FileSystemUriSchemes.ABFS_SCHEME
             : FileSystemUriSchemes.ABFS_SECURE_SCHEME;
-
-    final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
-    URI defaultUri = null;
 
     try {
       defaultUri = new URI(abfsScheme, abfsUrl, null, null, null);
@@ -436,6 +444,13 @@ public abstract class AbstractAbfsIntegrationTest extends
         FileSystemUriSchemes.WASB_SCHEME, FileSystemUriSchemes.WASB_SECURE_SCHEME, FileSystemUriSchemes.WASB_DNS_PREFIX, isAlwaysHttpsUsed);
   }
 
+  private AbfsServiceType identifyAbfsServiceTypeFromUrl(String defaultUri) {
+    if (defaultUri.contains(ABFS_BLOB_DOMAIN_NAME)) {
+      return AbfsServiceType.BLOB;
+    }
+    return AbfsServiceType.DFS;
+  }
+
   private static String convertTestUrls(
       final String url,
       final String fromNonSecureScheme,
@@ -574,5 +589,115 @@ public abstract class AbstractAbfsIntegrationTest extends
 
   protected boolean isAppendBlobEnabled() {
     return getRawConfiguration().getBoolean(FS_AZURE_TEST_APPENDBLOB_ENABLED, false);
+  }
+
+  protected AbfsServiceType getAbfsServiceType() {
+    return abfsConfig.getFsConfiguredServiceType();
+  }
+
+  /**
+   * Returns the service type to be used for Ingress Operations irrespective of account type.
+   * Default value is the same as the service type configured for the file system.
+   * @return the service type.
+   */
+  public AbfsServiceType getIngressServiceType() {
+    return abfsConfig.getIngressServiceType();
+  }
+
+  /**
+   * Create directory with implicit parent directory.
+   * @param path path to create. Can be relative or absolute.
+   */
+  protected void createAzCopyFolder(Path path) throws Exception {
+    Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB);
+    assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_FIXED_SAS_TOKEN);
+    String sasToken = getRawConfiguration().get(FS_AZURE_TEST_FIXED_SAS_TOKEN);
+    AzcopyToolHelper azcopyHelper = AzcopyToolHelper.getInstance(sasToken);
+    azcopyHelper.createFolderUsingAzcopy(getAzcopyAbsolutePath(path));
+  }
+
+  /**
+   * Create file with implicit parent directory.
+   * @param path path to create. Can be relative or absolute.
+   */
+  protected void createAzCopyFile(Path path) throws Exception {
+    Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.BLOB);
+    assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_FIXED_SAS_TOKEN);
+    String sasToken = getRawConfiguration().get(FS_AZURE_TEST_FIXED_SAS_TOKEN);
+    AzcopyToolHelper azcopyHelper = AzcopyToolHelper.getInstance(sasToken);
+    azcopyHelper.createFileUsingAzcopy(getAzcopyAbsolutePath(path));
+  }
+
+  private String getAzcopyAbsolutePath(Path path) throws IOException {
+    String pathFromContainerRoot = getFileSystem().makeQualified(path).toUri().getPath();
+    return HTTPS_SCHEME + COLON + FORWARD_SLASH + FORWARD_SLASH
+        + accountName + FORWARD_SLASH + fileSystemName + pathFromContainerRoot;
+  }
+
+  /**
+   * Utility method to assume that the test is running against a Blob service.
+   * Otherwise, the test will be skipped.
+   */
+  protected void assumeBlobServiceType() {
+    Assume.assumeTrue("Blob service type is required for this test",
+        getAbfsServiceType() == AbfsServiceType.BLOB);
+  }
+
+  /**
+   * Utility method to assume that the test is running against a DFS service.
+   * Otherwise, the test will be skipped.
+   */
+  protected void assumeDfsServiceType() {
+    Assume.assumeTrue("DFS service type is required for this test",
+        getAbfsServiceType() == AbfsServiceType.DFS);
+  }
+
+  /**
+   * Utility method to assume that the test is running against a HNS Enabled account.
+   * Otherwise, the test will be skipped.
+   * @throws IOException if an error occurs while checking the account type.
+   */
+  protected void assumeHnsEnabled() throws IOException {
+    assumeHnsEnabled("HNS-Enabled account must be used for this test");
+  }
+
+  /**
+   * Utility method to assume that the test is running against a HNS Enabled account.
+   * @param errorMessage error message to be displayed if the test is skipped.
+   * @throws IOException if an error occurs while checking the account type.
+   */
+  protected void assumeHnsEnabled(String errorMessage) throws IOException {
+    Assume.assumeTrue(errorMessage, getIsNamespaceEnabled(getFileSystem()));
+  }
+
+  /**
+   * Utility method to assume that the test is running against a HNS Disabled account.
+   * Otherwise, the test will be skipped.
+   * @throws IOException if an error occurs while checking the account type.
+   */
+  protected void assumeHnsDisabled() throws IOException {
+    assumeHnsDisabled("HNS-Enabled account must not be used for this test");
+  }
+
+  /**
+   * Utility method to assume that the test is running against a HNS Disabled account.
+   * @param message error message to be displayed if the test is skipped.
+   * @throws IOException if an error occurs while checking the account type.
+   */
+  protected void assumeHnsDisabled(String message) throws IOException {
+    Assume.assumeFalse(message, getIsNamespaceEnabled(getFileSystem()));
+  }
+
+  /**
+   * Assert that the path contains the expected DNS suffix.
+   * If service type is blob, then path should have blob domain name.
+   * @param path to be asserted.
+   */
+  protected void assertPathDns(Path path) {
+    String expectedDns = getAbfsServiceType() == AbfsServiceType.BLOB
+        ? ABFS_BLOB_DOMAIN_NAME : ABFS_DFS_DOMAIN_NAME;
+    Assertions.assertThat(path.toString())
+        .describedAs("Path does not contain expected DNS")
+        .contains(expectedDns);
   }
 }

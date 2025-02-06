@@ -20,8 +20,8 @@ package org.apache.hadoop.mapred.nativetask.serde;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.nativetask.Constants;
@@ -30,16 +30,17 @@ import org.apache.hadoop.mapred.nativetask.buffer.DataOutputStream;
 import org.apache.hadoop.mapred.nativetask.testutil.TestInput;
 import org.apache.hadoop.mapred.nativetask.testutil.TestInput.KV;
 import org.apache.hadoop.mapred.nativetask.util.SizedWritable;
-import org.junit.Assert;
 import org.mockito.Mockito;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class TestKVSerializer {
 
-  int inputArraySize = 1000; // 1000 bytesWriable elements
+  private int inputArraySize = 1000; // 1000 bytes Writable elements
   int bufferSize = 100; // bytes
   private KV<BytesWritable, BytesWritable>[] inputArray;
 
@@ -48,7 +49,7 @@ public class TestKVSerializer {
   private SizedWritable value;
   private KVSerializer serializer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     this.inputArray = TestInput.getMapInputs(inputArraySize);
     this.key = new SizedWritable(BytesWritable.class);
@@ -72,7 +73,7 @@ public class TestKVSerializer {
       serializer.updateLength(key, value);
 
       // verify whether the size increase
-      Assert.assertTrue(key.length + value.length > kvLength);
+      assertTrue(key.length + value.length > kvLength);
       kvLength = key.length + value.length;
     }
   }
@@ -92,7 +93,7 @@ public class TestKVSerializer {
     Mockito.verify(dataOut, Mockito.times(2)).write(any(byte[].class),
         anyInt(), anyInt());
 
-    Assert.assertEquals(written, key.length + value.length + Constants.SIZEOF_KV_LENGTH);
+    assertEquals(written, key.length + value.length + Constants.SIZEOF_KV_LENGTH);
   }
 
   @Test
@@ -110,7 +111,7 @@ public class TestKVSerializer {
     Mockito.verify(dataOut, Mockito.times(2)).write(any(byte[].class),
         anyInt(), anyInt());
 
-    Assert.assertEquals(written, key.length + value.length + Constants.SIZEOF_KV_LENGTH);
+    assertEquals(written, key.length + value.length + Constants.SIZEOF_KV_LENGTH);
   }
 
   @Test
@@ -131,7 +132,7 @@ public class TestKVSerializer {
     Mockito.verify(dataOut, Mockito.times(2)).write(any(byte[].class),
         anyInt(), anyInt());
 
-    Assert.assertEquals(written, key.length + value.length + Constants.SIZEOF_KV_LENGTH
+    assertEquals(written, key.length + value.length + Constants.SIZEOF_KV_LENGTH
         + Constants.SIZEOF_PARTITION_LENGTH);
   }
 
@@ -139,14 +140,14 @@ public class TestKVSerializer {
   public void testDeserializerNoData() throws IOException {
     final DataInputStream in = Mockito.mock(DataInputStream.class);
     Mockito.when(in.hasUnReadData()).thenReturn(false);
-    Assert.assertEquals(0, serializer.deserializeKV(in, key, value));
+    assertEquals(0, serializer.deserializeKV(in, key, value));
   }
 
   @Test
   public void testDeserializer() throws IOException {
     final DataInputStream in = Mockito.mock(DataInputStream.class);
     Mockito.when(in.hasUnReadData()).thenReturn(true);
-    Assert.assertTrue(serializer.deserializeKV(in, key, value) > 0);
+    assertTrue(serializer.deserializeKV(in, key, value) > 0);
 
     Mockito.verify(in, Mockito.times(4)).readInt();
     Mockito.verify(in, Mockito.times(2)).readFully(any(byte[].class),

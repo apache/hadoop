@@ -127,6 +127,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocat
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
@@ -1698,10 +1699,10 @@ public class TestRouterRpc {
       // mark a replica as corrupt
       LocatedBlock block = NameNodeAdapter
           .getBlockLocations(nameNode, testFile, 0, 1024).get(0);
-      namesystem.writeLock();
+      namesystem.writeLock(RwLockMode.BM);
       bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
           "STORAGE_ID", "TEST");
-      namesystem.writeUnlock();
+      namesystem.writeUnlock(RwLockMode.BM, "findAndMarkBlockAsCorrupt");
       BlockManagerTestUtil.updateState(bm);
       DFSTestUtil.waitCorruptReplicas(fileSystem, namesystem,
           new Path(testFile), block.getBlock(), 1);

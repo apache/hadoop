@@ -188,7 +188,7 @@ public class TestDecommission extends AdminStatesBaseTest {
   /**
    * Tests decommission for non federated cluster
    */
-  @Test(timeout=360000)
+  @Test
   public void testDecommission() throws IOException {
     testDecommission(1, 6);
   }
@@ -198,7 +198,7 @@ public class TestDecommission extends AdminStatesBaseTest {
    * to other datanodes and satisfy the replication factor. Make sure the
    * datanode won't get stuck in decommissioning state.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testDecommission2() throws IOException {
     LOG.info("Starting test testDecommission");
     int numNamenodes = 1;
@@ -247,7 +247,7 @@ public class TestDecommission extends AdminStatesBaseTest {
   /**
    * Test decommission for federeated cluster
    */
-  @Test(timeout=360000)
+  @Test
   public void testDecommissionFederation() throws IOException {
     testDecommission(2, 2);
   }
@@ -262,7 +262,7 @@ public class TestDecommission extends AdminStatesBaseTest {
    * That creates inconsistent state and prevent SBN from finishing
    * decommission.
    */
-  @Test(timeout=360000)
+  @Test
   public void testDecommissionOnStandby() throws Exception {
     getConf().setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     getConf().setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
@@ -435,7 +435,7 @@ public class TestDecommission extends AdminStatesBaseTest {
   /**
    * Test that over-replicated blocks are deleted on recommission.
    */
-  @Test(timeout=120000)
+  @Test
   public void testRecommission() throws Exception {
     final int numDatanodes = 6;
     try {
@@ -516,7 +516,7 @@ public class TestDecommission extends AdminStatesBaseTest {
    * Tests cluster storage statistics during decommissioning for non
    * federated cluster
    */
-  @Test(timeout=360000)
+  @Test
   public void testClusterStats() throws Exception {
     testClusterStats(1);
   }
@@ -525,7 +525,7 @@ public class TestDecommission extends AdminStatesBaseTest {
    * Tests cluster storage statistics during decommissioning for
    * federated cluster
    */
-  @Test(timeout=360000)
+  @Test
   public void testClusterStatsFederation() throws Exception {
     testClusterStats(3);
   }
@@ -575,7 +575,7 @@ public class TestDecommission extends AdminStatesBaseTest {
    * in the include file are allowed to connect to the namenode in a non
    * federated cluster.
    */
-  @Test(timeout=360000)
+  @Test
   public void testHostsFile() throws IOException, InterruptedException {
     // Test for a single namenode cluster
     testHostsFile(1);
@@ -586,7 +586,7 @@ public class TestDecommission extends AdminStatesBaseTest {
    * in the include file are allowed to connect to the namenode in a 
    * federated cluster.
    */
-  @Test(timeout=360000)
+  @Test
   public void testHostsFileFederation()
       throws IOException, InterruptedException {
     // Test for 3 namenode federated cluster
@@ -624,7 +624,7 @@ public class TestDecommission extends AdminStatesBaseTest {
     }
   }
   
-  @Test(timeout=120000)
+  @Test
   public void testDecommissionWithOpenfile()
       throws IOException, InterruptedException {
     LOG.info("Starting test testDecommissionWithOpenfile");
@@ -676,7 +676,7 @@ public class TestDecommission extends AdminStatesBaseTest {
     fdos.close();
   }
 
-  @Test(timeout = 20000)
+  @Test
   public void testDecommissionWithUnknownBlock() throws IOException {
     startCluster(1, 3);
 
@@ -795,7 +795,7 @@ public class TestDecommission extends AdminStatesBaseTest {
     }
   }
 
-  @Test(timeout=180000)
+  @Test
   public void testDecommissionWithOpenfileReporting()
       throws Exception {
     LOG.info("Starting test testDecommissionWithOpenfileReporting");
@@ -901,7 +901,7 @@ public class TestDecommission extends AdminStatesBaseTest {
    * 2. close file with decommissioning
    * @throws Exception
    */
-  @Test(timeout=360000)
+  @Test
   public void testDecommissionWithCloseFileAndListOpenFiles()
       throws Exception {
     LOG.info("Starting test testDecommissionWithCloseFileAndListOpenFiles");
@@ -958,7 +958,7 @@ public class TestDecommission extends AdminStatesBaseTest {
     fileSys.delete(file, false);
   }
 
-  @Test(timeout = 360000)
+  @Test
   public void testDecommissionWithOpenFileAndBlockRecovery()
       throws IOException, InterruptedException {
     startCluster(1, 6);
@@ -1005,7 +1005,7 @@ public class TestDecommission extends AdminStatesBaseTest {
     assertEquals(dfs.getFileStatus(file).getLen(), writtenBytes);
   }
 
-  @Test(timeout=120000)
+  @Test
   public void testCloseWhileDecommission() throws IOException,
       ExecutionException, InterruptedException {
     LOG.info("Starting test testCloseWhileDecommission");
@@ -1064,7 +1064,7 @@ public class TestDecommission extends AdminStatesBaseTest {
    * to the IBR, all three nodes dn1/dn2/dn3 enter Decommissioning and then the
    * DN reports the IBR.
    */
-  @Test(timeout=120000)
+  @Test
   public void testAllocAndIBRWhileDecommission() throws IOException {
     LOG.info("Starting test testAllocAndIBRWhileDecommission");
     getConf().setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
@@ -1149,7 +1149,7 @@ public class TestDecommission extends AdminStatesBaseTest {
   /**
    * Tests restart of namenode while datanode hosts are added to exclude file
    **/
-  @Test(timeout=360000)
+  @Test
   public void testDecommissionWithNamenodeRestart()
       throws IOException, InterruptedException {
     LOG.info("Starting test testDecommissionWithNamenodeRestart");
@@ -1201,7 +1201,7 @@ public class TestDecommission extends AdminStatesBaseTest {
   /**
    * Tests dead node count after restart of namenode
    **/
-  @Test(timeout=360000)
+  @Test
   public void testDeadNodeCountAfterNamenodeRestart()throws Exception {
     LOG.info("Starting test testDeadNodeCountAfterNamenodeRestart");
     int numNamenodes = 1;
@@ -1248,7 +1248,7 @@ public class TestDecommission extends AdminStatesBaseTest {
    * valid DNS hostname for the DataNode.  See HDFS-5237 for background.
    */
   @Ignore
-  @Test(timeout=360000)
+  @Test
   public void testIncludeByRegistrationName() throws Exception {
     // Any IPv4 address starting with 127 functions as a "loopback" address
     // which is connected to the current host.  So by choosing 127.0.0.100
@@ -1314,7 +1314,7 @@ public class TestDecommission extends AdminStatesBaseTest {
     }, 500, 5000);
   }
   
-  @Test(timeout=120000)
+  @Test
   public void testBlocksPerInterval() throws Exception {
     GenericTestUtils.setLogLevel(
         LoggerFactory.getLogger(DatanodeAdminManager.class), Level.TRACE);
@@ -1369,7 +1369,7 @@ public class TestDecommission extends AdminStatesBaseTest {
   /**
    * Test DatanodeAdminManager#monitor can swallow any exceptions by default.
    */
-  @Test(timeout=120000)
+  @Test
   public void testPendingNodeButDecommissioned() throws Exception {
     // Only allow one node to be decom'd at a time
     getConf().setInt(
@@ -1416,7 +1416,7 @@ public class TestDecommission extends AdminStatesBaseTest {
     }
   }
 
-  @Test(timeout=120000)
+  @Test
   public void testPendingNodes() throws Exception {
     GenericTestUtils.setLogLevel(
         LoggerFactory.getLogger(DatanodeAdminManager.class), Level.TRACE);
@@ -1639,7 +1639,7 @@ public class TestDecommission extends AdminStatesBaseTest {
   /**
    * Verify if multiple DataNodes can be decommission at the same time.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testMultipleNodesDecommission() throws Exception {
     startCluster(1, 5);
     final Path file = new Path("/testMultipleNodesDecommission.dat");
@@ -1685,7 +1685,7 @@ public class TestDecommission extends AdminStatesBaseTest {
    * Force the tracked nodes set to be filled with nodes lost while decommissioning,
    * then decommission healthy nodes & validate they are decommissioned eventually.
    */
-  @Test(timeout = 120000)
+  @Test
   public void testRequeueUnhealthyDecommissioningNodes() throws Exception {
     // Create a MiniDFSCluster with 3 live datanode in AdminState=NORMAL and
     // 2 dead datanodes in AdminState=DECOMMISSION_INPROGRESS and a file
@@ -1911,7 +1911,8 @@ public class TestDecommission extends AdminStatesBaseTest {
   under-replicated block can be replicated to sufficient datanodes & the decommissioning
   node can be decommissioned.
    */
-  @Test(timeout = 60000)
+  @SuppressWarnings("checkstyle:methodlength")
+  @Test
   public void testDeleteCorruptReplicaForUnderReplicatedBlock() throws Exception {
     // Constants
     final Path file = new Path("/test-file");

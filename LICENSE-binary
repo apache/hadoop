@@ -341,20 +341,20 @@ org.apache.solr:solr-solrj:8.11.2
 org.apache.yetus:audience-annotations:0.5.0
 org.apache.zookeeper:zookeeper:3.8.4
 org.codehaus.jettison:jettison:1.5.4
-org.eclipse.jetty:jetty-annotations:9.4.53.v20231009
-org.eclipse.jetty:jetty-http:9.4.53.v20231009
-org.eclipse.jetty:jetty-io:9.4.53.v20231009
-org.eclipse.jetty:jetty-jndi:9.4.53.v20231009
-org.eclipse.jetty:jetty-plus:9.4.53.v20231009
-org.eclipse.jetty:jetty-security:9.4.53.v20231009
-org.eclipse.jetty:jetty-server:9.4.53.v20231009
-org.eclipse.jetty:jetty-servlet:9.4.53.v20231009
-org.eclipse.jetty:jetty-util:9.4.53.v20231009
-org.eclipse.jetty:jetty-util-ajax:9.4.53.v20231009
-org.eclipse.jetty:jetty-webapp:9.4.53.v20231009
-org.eclipse.jetty:jetty-xml:9.4.53.v20231009
-org.eclipse.jetty.websocket:javax-websocket-client-impl:9.4.53.v20231009
-org.eclipse.jetty.websocket:javax-websocket-server-impl:9.4.53.v20231009
+org.eclipse.jetty:jetty-annotations:9.4.57.v20241219
+org.eclipse.jetty:jetty-http:9.4.57.v20241219
+org.eclipse.jetty:jetty-io:9.4.57.v20241219
+org.eclipse.jetty:jetty-jndi:9.4.57.v20241219
+org.eclipse.jetty:jetty-plus:9.4.57.v20241219
+org.eclipse.jetty:jetty-security:9.4.57.v20241219
+org.eclipse.jetty:jetty-server:9.4.57.v20241219
+org.eclipse.jetty:jetty-servlet:9.4.57.v20241219
+org.eclipse.jetty:jetty-util:9.4.57.v20241219
+org.eclipse.jetty:jetty-util-ajax:9.4.57.v20241219
+org.eclipse.jetty:jetty-webapp:9.4.57.v20241219
+org.eclipse.jetty:jetty-xml:9.4.57.v20241219
+org.eclipse.jetty.websocket:javax-websocket-client-impl:9.4.57.v20241219
+org.eclipse.jetty.websocket:javax-websocket-server-impl:9.4.57.v20241219
 org.ehcache:ehcache:3.8.2
 org.ini4j:ini4j:0.5.4
 org.lz4:lz4-java:1.7.1
@@ -363,16 +363,6 @@ org.xerial.snappy:snappy-java:1.1.10.4
 org.yaml:snakeyaml:2.0
 org.wildfly.openssl:wildfly-openssl:2.1.4.Final
 software.amazon.awssdk:bundle:2.25.53
-org.glassfish.jersey.core:jersey-common:2.46
-org.glassfish.jersey.core:jersey-server:2.46
-org.glassfish.jersey.inject:jersey-hk2:2.46
-org.glassfish.jersey.core:jersey-client:2.46
-org.glassfish.jersey.test-framework:jersey-test-framework-core:2.46
-org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-grizzly2:2.46
-org.glassfish.jersey.containers:jersey-container-servlet:2.46
-org.glassfish.jersey.containers:jersey-container-servlet-core:2.46
-org.glassfish.jersey.media:jersey-media-json-jettison:2.46
-org.glassfish.jersey.media:jersey-media-jaxb:2.46
 net.jodah:failsafe:2.4.4
 
 --------------------------------------------------------------------------------
@@ -405,7 +395,7 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/d3-3.5.17.min.js
 leveldb v1.13
 
 com.google.protobuf:protobuf-java:2.5.0
-com.google.protobuf:protobuf-java:3.25.3
+com.google.protobuf:protobuf-java:3.25.5
 com.google.re2j:re2j:1.1
 com.jcraft:jsch:0.1.55
 com.thoughtworks.paranamer:paranamer:2.3
@@ -534,6 +524,24 @@ Eclipse Public License (EPL) 2.0
 jakarta.ws.rs-api:jakarta.ws.rs-api:2.1.6
 jakarta.servlet.jsp:jakarta.servlet.jsp-api:2.3.6
 jakarta.servlet:jakarta.servlet-api:4.0.4
+
+Eclipse Public License (EPL) 2.0 with some parts being
+GNU General Public License (GPL), Version 2, With Classpath Exception,
+Apache License, 2.0 or Public Domain
+--------------------------
+
+See also https://github.com/eclipse-ee4j/jersey/blob/master/NOTICE.md
+
+org.glassfish.jersey.core:jersey-common:2.46
+org.glassfish.jersey.core:jersey-server:2.46
+org.glassfish.jersey.inject:jersey-hk2:2.46
+org.glassfish.jersey.core:jersey-client:2.46
+org.glassfish.jersey.test-framework:jersey-test-framework-core:2.46
+org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-grizzly2:2.46
+org.glassfish.jersey.containers:jersey-container-servlet:2.46
+org.glassfish.jersey.containers:jersey-container-servlet-core:2.46
+org.glassfish.jersey.media:jersey-media-json-jettison:2.46
+org.glassfish.jersey.media:jersey-media-jaxb:2.46
 
 
 HSQL License

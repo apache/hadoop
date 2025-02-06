@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.After;
 import org.junit.Test;
@@ -194,12 +195,12 @@ public class TestFSNamesystem {
   }
 
   private void clearNamesystem(FSNamesystem fsn) {
-    fsn.writeLock();
+    fsn.writeLock(RwLockMode.GLOBAL);
     try {
       fsn.clear();
       assertFalse(fsn.isImageLoaded());
     } finally {
-      fsn.writeUnlock();
+      fsn.writeUnlock(RwLockMode.GLOBAL, "clearNamesystem");
     }
   }
 

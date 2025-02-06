@@ -25,7 +25,7 @@ import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Test the TestViewFSOverloadSchemeCentralMountTableConfig with mount-table
@@ -36,7 +36,7 @@ public class TestViewFSOverloadSchemeCentralMountTableConfig
   private Path oldMountTablePath;
   private Path latestMountTablepath;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     // Mount table name format: mount-table.<versionNumber>.xml

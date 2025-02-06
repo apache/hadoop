@@ -87,7 +87,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
   /**
    * Test valid value range for the config namenode.maintenance.replication.min.
    */
-  @Test (timeout = 60000)
+  @Test
   public void testMaintenanceMinReplConfigRange() {
     LOG.info("Setting testMaintenanceMinReplConfigRange");
 
@@ -120,7 +120,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    * Verify a node can transition from AdminStates.ENTERING_MAINTENANCE to
    * AdminStates.NORMAL.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testTakeNodeOutOfEnteringMaintenance() throws Exception {
     LOG.info("Starting testTakeNodeOutOfEnteringMaintenance");
     final int replicas = 1;
@@ -149,7 +149,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    * Verify a AdminStates.ENTERING_MAINTENANCE node can expire and transition
    * to AdminStates.NORMAL upon timeout.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testEnteringMaintenanceExpiration() throws Exception {
     LOG.info("Starting testEnteringMaintenanceExpiration");
     final int replicas = 1;
@@ -173,7 +173,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
   /**
    * Verify node stays in AdminStates.NORMAL with invalid expiration.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testInvalidExpiration() throws Exception {
     LOG.info("Starting testInvalidExpiration");
     final int replicas = 1;
@@ -195,7 +195,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    * When a dead node is put to maintenance, it transitions directly to
    * AdminStates.IN_MAINTENANCE.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testPutDeadNodeToMaintenance() throws Exception {
     LOG.info("Starting testPutDeadNodeToMaintenance");
     final int replicas = 1;
@@ -229,7 +229,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    * AdminStates.IN_MAINTENANCE. Then AdminStates.IN_MAINTENANCE expires and
    * transitions to AdminStates.NORMAL.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testPutDeadNodeToMaintenanceWithExpiration() throws Exception {
     LOG.info("Starting testPutDeadNodeToMaintenanceWithExpiration");
     final Path file =
@@ -266,7 +266,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
   /**
    * Transition from decommissioned state to maintenance state.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testTransitionFromDecommissioned() throws IOException {
     LOG.info("Starting testTransitionFromDecommissioned");
     final Path file = new Path("/testTransitionFromDecommissioned.dat");
@@ -289,7 +289,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    * Transition from decommissioned state to maintenance state.
    * After the maintenance state expires, it is transitioned to NORMAL.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testTransitionFromDecommissionedAndExpired() throws IOException {
     LOG.info("Starting testTransitionFromDecommissionedAndExpired");
     final Path file =
@@ -320,7 +320,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    * If node becomes dead when it is in AdminStates.ENTERING_MAINTENANCE, it
    * should stay in AdminStates.ENTERING_MAINTENANCE state.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testNodeDeadWhenInEnteringMaintenance() throws Exception {
     LOG.info("Starting testNodeDeadWhenInEnteringMaintenance");
     final int numNamenodes = 1;
@@ -366,7 +366,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    * DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY and
    * its file's replication factor into account.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testExpectedReplications() throws IOException {
     LOG.info("Starting testExpectedReplications");
     testExpectedReplication(1);
@@ -411,7 +411,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    * Verify a node can transition directly to AdminStates.IN_MAINTENANCE when
    * DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY is set to zero.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testZeroMinMaintenanceReplication() throws Exception {
     LOG.info("Starting testZeroMinMaintenanceReplication");
     setMinMaintenanceR(0);
@@ -434,7 +434,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    * DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY is set to zero. Then later
    * transition to NORMAL after maintenance expiration.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testZeroMinMaintenanceReplicationWithExpiration()
       throws Exception {
     LOG.info("Starting testZeroMinMaintenanceReplicationWithExpiration");
@@ -460,7 +460,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
   /**
    * Test file block replication lesser than maintenance minimum.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testFileBlockReplicationAffectingMaintenance()
       throws Exception {
     int defaultReplication = getConf().getInt(DFSConfigKeys
@@ -537,7 +537,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
   /**
    * Transition from IN_MAINTENANCE to DECOMMISSIONED.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testTransitionToDecommission() throws IOException {
     LOG.info("Starting testTransitionToDecommission");
     final int numNamenodes = 1;
@@ -581,7 +581,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
   /**
    * Transition from decommissioning state to maintenance state.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testTransitionFromDecommissioning() throws IOException {
     LOG.info("Starting testTransitionFromDecommissioning");
     startCluster(1, 3);
@@ -612,7 +612,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    * in decommission. Make sure decommission process take
    * maintenance replica into account.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testDecommissionDifferentNodeAfterMaintenances()
       throws Exception {
     testDecommissionDifferentNodeAfterMaintenance(2);
@@ -657,7 +657,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    * Verify if multiple DataNodes can transition to maintenance state
    * at the same time.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testMultipleNodesMaintenance() throws Exception {
     startCluster(1, 5);
     final Path file = new Path("/testMultipleNodesMaintenance.dat");
@@ -691,7 +691,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     cleanupFile(fileSys, file);
   }
 
-  @Test(timeout = 360000)
+  @Test
   public void testChangeReplicationFactors() throws IOException {
     // Prior to any change, there is 1 maintenance node and 2 live nodes.
 
@@ -762,7 +762,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    * c. Take the node out of maintenance => NN should schedule the replication
    *    and end up with 3 live.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testTakeDeadNodeOutOfMaintenance() throws Exception {
     LOG.info("Starting testTakeDeadNodeOutOfMaintenance");
     final int numNamenodes = 1;
@@ -818,7 +818,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    * d. Restart the maintenance dn => 1 maintenance, 3 live.
    * e. Take the node out of maintenance => over replication => 3 live.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testWithNNAndDNRestart() throws Exception {
     LOG.info("Starting testWithNNAndDNRestart");
     final int numNamenodes = 1;
@@ -876,7 +876,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
   /**
    * Machine under maintenance state won't be chosen for new block allocation.
    */
-  @Test(timeout = 3600000)
+  @Test
   public void testWriteAfterMaintenance() throws IOException {
     LOG.info("Starting testWriteAfterMaintenance");
     startCluster(1, 3);
@@ -908,7 +908,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
    * Given there are minReplication replicas somewhere else,
    * it can be transitioned to AdminStates.IN_MAINTENANCE.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testEnterMaintenanceWhenFileOpen() throws Exception {
     LOG.info("Starting testEnterMaintenanceWhenFileOpen");
     startCluster(1, 3);
@@ -927,7 +927,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
   /**
    * Machine under maintenance state won't be chosen for invalidation.
    */
-  @Test(timeout = 360000)
+  @Test
   public void testInvalidation() throws IOException {
     LOG.info("Starting testInvalidation");
     int numNamenodes = 1;
@@ -959,7 +959,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     cleanupFile(fileSys, file);
   }
 
-  @Test(timeout = 120000)
+  @Test
   public void testFileCloseAfterEnteringMaintenance() throws Exception {
     LOG.info("Starting testFileCloseAfterEnteringMaintenance");
     int expirationInMs = 30 * 1000;
@@ -1138,7 +1138,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     }
   }
 
-  @Test(timeout = 120000)
+  @Test
   public void testReportMaintenanceNodes() throws Exception {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     ByteArrayOutputStream err = new ByteArrayOutputStream();

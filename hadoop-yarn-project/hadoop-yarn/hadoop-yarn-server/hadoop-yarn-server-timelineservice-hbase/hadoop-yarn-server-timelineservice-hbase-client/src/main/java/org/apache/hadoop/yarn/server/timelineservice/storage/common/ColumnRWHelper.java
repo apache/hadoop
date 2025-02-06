@@ -330,7 +330,7 @@ public final class ColumnRWHelper {
               for (Map.Entry<Long, byte[]> cell : cells.entrySet()) {
                 V value =
                     (V) valueConverter.decodeValue(cell.getValue());
-                Long ts = supplementTs ? TimestampGenerator.
+                long ts = supplementTs ? TimestampGenerator.
                     getTruncatedTimestamp(cell.getKey()) : cell.getKey();
                 cellResults.put(ts, value);
               }

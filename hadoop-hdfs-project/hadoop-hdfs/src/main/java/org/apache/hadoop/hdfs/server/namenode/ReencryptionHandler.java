@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSTreeTraverser.TraverseInfo;
 import org.apache.hadoop.hdfs.server.namenode.ReencryptionUpdater.FileEdekInfo;
 import org.apache.hadoop.hdfs.server.namenode.ReencryptionUpdater.ReencryptionTask;
 import org.apache.hadoop.hdfs.server.namenode.ReencryptionUpdater.ZoneSubmissionTracker;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StopWatch;
@@ -338,7 +339,7 @@ public class ReencryptionHandler implements Runnable {
       }
 
       final Long zoneId;
-      dir.getFSNamesystem().readLock();
+      dir.getFSNamesystem().readLock(RwLockMode.FS);
       try {
         zoneId = getReencryptionStatus().getNextUnprocessedZone();
         if (zoneId == null) {
@@ -350,7 +351,7 @@ public class ReencryptionHandler implements Runnable {
         getReencryptionStatus().markZoneStarted(zoneId);
         resetSubmissionTracker(zoneId);
       } finally {
-        dir.getFSNamesystem().readUnlock("reEncryptThread");
+        dir.getFSNamesystem().readUnlock(RwLockMode.FS, "reEncryptThread");
       }
 
       try {
@@ -442,7 +443,7 @@ public class ReencryptionHandler implements Runnable {
 
   List<XAttr> completeReencryption(final INode zoneNode) throws IOException {
     assert dir.hasWriteLock();
-    assert dir.getFSNamesystem().hasWriteLock();
+    assert dir.getFSNamesystem().hasWriteLock(RwLockMode.FS);
     final Long zoneId = zoneNode.getId();
     ZoneReencryptionStatus zs = getReencryptionStatus().getZoneStatus(zoneId);
     assert zs != null;
@@ -613,7 +614,7 @@ public class ReencryptionHandler implements Runnable {
     protected void checkPauseForTesting()
         throws InterruptedException {
       assert !dir.hasReadLock();
-      assert !dir.getFSNamesystem().hasReadLock();
+      assert !dir.getFSNamesystem().hasReadLock(RwLockMode.FS);
       while (shouldPauseForTesting) {
         LOG.info("Sleeping in the re-encrypt handler for unit test.");
         synchronized (reencryptionHandler) {
@@ -747,7 +748,7 @@ public class ReencryptionHandler implements Runnable {
     @Override
     protected void throttle() throws InterruptedException {
       assert !dir.hasReadLock();
-      assert !dir.getFSNamesystem().hasReadLock();
+      assert !dir.getFSNamesystem().hasReadLock(RwLockMode.FS);
       final int numCores = Runtime.getRuntime().availableProcessors();
       if (taskQueue.size() >= numCores) {
         LOG.debug("Re-encryption handler throttling because queue size {} is"

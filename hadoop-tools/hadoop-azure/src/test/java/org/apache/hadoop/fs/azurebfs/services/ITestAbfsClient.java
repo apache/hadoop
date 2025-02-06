@@ -666,6 +666,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       // Give user error code 404 when processResponse is called.
       Mockito.doReturn(HTTP_METHOD_PUT).when(httpOperation).getMethod();
       Mockito.doReturn(HTTP_NOT_FOUND).when(httpOperation).getStatusCode();
+      Mockito.doReturn(HTTP_NOT_FOUND).when(httpOperation).getConnResponseCode();
       Mockito.doReturn("Resource Not Found")
           .when(httpOperation)
           .getConnResponseMessage();

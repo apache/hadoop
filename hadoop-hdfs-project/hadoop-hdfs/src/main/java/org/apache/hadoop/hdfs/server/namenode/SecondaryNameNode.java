@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.util.Canceler;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.io.MD5Hash;
@@ -1094,11 +1095,11 @@ public class SecondaryNameNode implements Runnable,
             sig.mostRecentCheckpointTxId + " even though it should have " +
             "just been downloaded");
       }
-      dstNamesystem.writeLock();
+      dstNamesystem.writeLock(RwLockMode.GLOBAL);
       try {
         dstImage.reloadFromImageFile(file, dstNamesystem);
       } finally {
-        dstNamesystem.writeUnlock("reloadFromImageFile");
+        dstNamesystem.writeUnlock(RwLockMode.GLOBAL, "reloadFromImageFile");
       }
       dstNamesystem.imageLoadComplete();
     }
