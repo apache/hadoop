@@ -31,13 +31,14 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.junit.After;
-import org.junit.Before;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestJobEndNotifier {
   HttpServer2 server;
@@ -49,9 +50,8 @@ public class TestJobEndNotifier {
     public static URI requestUri;
 
     @Override
-    public void doGet(HttpServletRequest request, 
-                      HttpServletResponse response
-                      ) throws ServletException, IOException {
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
       InputStreamReader in = new InputStreamReader(request.getInputStream());
       PrintStream out = new PrintStream(response.getOutputStream());
 
@@ -73,9 +73,8 @@ public class TestJobEndNotifier {
     public static volatile int calledTimes = 0;
 
     @Override
-    public void doGet(HttpServletRequest request, 
-                      HttpServletResponse response
-                      ) throws ServletException, IOException {
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
       boolean timedOut = false;
       calledTimes++;
       try {
@@ -84,7 +83,7 @@ public class TestJobEndNotifier {
       } catch (InterruptedException e) {
         timedOut = true;
       }
-      assertTrue("DelayServlet should be interrupted", timedOut);
+      assertTrue(timedOut, "DelayServlet should be interrupted");
     }
   }
 
@@ -94,15 +93,14 @@ public class TestJobEndNotifier {
     public static volatile int calledTimes = 0;
 
     @Override
-    public void doGet(HttpServletRequest request, 
-                      HttpServletResponse response
-                      ) throws ServletException, IOException {
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
       calledTimes++;
       throw new IOException("I am failing!");
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     new File(System.getProperty("build.webapps", "build/webapps") + "/test"
         ).mkdirs();
@@ -122,7 +120,7 @@ public class TestJobEndNotifier {
     FailServlet.calledTimes = 0;
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     server.stop();
   }

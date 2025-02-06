@@ -26,9 +26,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.slf4j.Logger;
@@ -73,7 +73,7 @@ public class TestEntryFileIO extends AbstractManifestCommitterTest {
   /**
    * Create an entry file during setup.
    */
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     entryFileIO = new EntryFileIO(new Configuration());
     createEntryFile();
@@ -83,7 +83,7 @@ public class TestEntryFileIO extends AbstractManifestCommitterTest {
    * Teardown deletes any entry file.
    * @throws Exception on any failure
    */
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     Thread.currentThread().setName("teardown");
     if (getEntryFile() != null) {
@@ -146,8 +146,8 @@ public class TestEntryFileIO extends AbstractManifestCommitterTest {
     final EntryFileIO.EntryIterator et = (EntryFileIO.EntryIterator) it;
     Assertions.assertThat(et)
         .describedAs("entry iterator %s", et)
-        .matches(p -> p.isClosed())
-        .extracting(p -> p.getCount())
+        .matches(EntryFileIO.EntryIterator::isClosed)
+        .extracting(EntryFileIO.EntryIterator::getCount)
         .isEqualTo(1);
   }
 
@@ -305,8 +305,7 @@ public class TestEntryFileIO extends AbstractManifestCommitterTest {
       out.close();
 
       // verify the exception is as expected
-      intercept(IOException.class, "mocked", () ->
-          out.maybeRaiseWriteException());
+      intercept(IOException.class, "mocked", out::maybeRaiseWriteException);
 
       // and verify the count of invocations.
       Assertions.assertThat(out.getCount())
@@ -362,9 +361,7 @@ public class TestEntryFileIO extends AbstractManifestCommitterTest {
       TaskPool.foreach(rangeExcludingIterator(0, attempts))
           .executeWith(getSubmitter())
           .stopOnFailure()
-          .run(l -> {
-            out.enqueue(list);
-          });
+          .run(l -> out.enqueue(list));
       out.close();
       out.maybeRaiseWriteException();
 
@@ -374,7 +371,7 @@ public class TestEntryFileIO extends AbstractManifestCommitterTest {
     }
 
     // now read it back
-    Assertions.assertThat(foreach(iterateOverEntryFile(), e -> { }))
+    org.assertj.core.api.Assertions.assertThat(foreach(iterateOverEntryFile(), e -> { }))
         .describedAs("total elements read")
         .isEqualTo(total);
   }

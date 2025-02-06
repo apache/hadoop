@@ -20,7 +20,8 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
@@ -63,12 +64,13 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
   private List<TaskManifest> manifests;
 
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     failures = new UnreliableManifestStoreOperations(
         createManifestStoreOperations());
     setStoreOperations(failures);
-    Path destDir = methodPath();
+    Path destDir = methodPath(TestCleanupStage.class.getName());
     StageConfig stageConfig = createStageConfigForJob(JOB1, destDir);
     setJobStageConfig(stageConfig);
     new SetupJobStage(stageConfig).apply(true);

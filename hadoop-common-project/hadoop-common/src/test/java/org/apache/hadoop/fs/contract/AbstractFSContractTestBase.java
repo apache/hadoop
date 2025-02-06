@@ -27,6 +27,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.AssumptionViolatedException;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
@@ -249,6 +250,11 @@ public abstract class AbstractFSContractTestBase extends Assert
   protected Path methodPath() throws IOException {
     return path(methodName.getMethodName());
   }
+
+  protected Path methodPath(String name) throws IOException {
+    return path(name);
+  }
+
 
   /**
    * Take a simple path like "/something" and turn it into

@@ -21,7 +21,8 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 import java.io.IOException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
@@ -51,13 +52,14 @@ public class TestTaskManifestFileIO extends AbstractManifestCommitterTest {
   private Path taPath;
 
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     taskIDs = new ManifestCommitterTestSupport.JobAndTaskIDsForTests(2, 2);
     source = new TaskManifest();
     taskAttempt00 = taskIDs.getTaskAttempt(0, 0);
     source.setTaskAttemptID(taskAttempt00);
-    testPath = methodPath();
+    testPath = methodPath(TestTaskManifestFileIO.class.getName());
     taPath = new Path(testPath, "  " + taskAttempt00);
     source.setTaskAttemptDir(marshallPath(taPath));
   }

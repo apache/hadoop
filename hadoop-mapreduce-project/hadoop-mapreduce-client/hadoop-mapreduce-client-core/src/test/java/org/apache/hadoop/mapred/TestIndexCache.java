@@ -32,16 +32,18 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestIndexCache {
   private JobConf conf;
   private FileSystem fs;
   private Path p;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = new JobConf();
     fs = FileSystem.getLocal(conf).getRaw();
@@ -174,8 +176,8 @@ public class TestIndexCache {
     try {
       // Number of reducers equal to partsPerMap
       cache.getIndexInformation("reduceEqualPartsPerMap", 
-               partsPerMap, // reduce number == partsPerMap
-               feq, UserGroupInformation.getCurrentUser().getShortUserName());
+          partsPerMap, // reduce number == partsPerMap
+          feq, UserGroupInformation.getCurrentUser().getShortUserName());
       fail("Number of reducers equal to partsPerMap did not fail");
     } catch (Exception e) {
       if (!(e instanceof IOException)) {
@@ -214,28 +216,20 @@ public class TestIndexCache {
 
     final Path big = new Path(p, "bigIndex");
     final String user = 
-      UserGroupInformation.getCurrentUser().getShortUserName();
+        UserGroupInformation.getCurrentUser().getShortUserName();
     writeFile(fs, big, bytesPerFile, partsPerMap);
     
     // run multiple times
     for (int i = 0; i < 20; ++i) {
-      Thread getInfoThread = new Thread() {
-        @Override
-        public void run() {
-          try {
-            cache.getIndexInformation("bigIndex", partsPerMap, big, user);
-          } catch (Exception e) {
-            // should not be here
-          }
+      Thread getInfoThread = new Thread(() -> {
+        try {
+          cache.getIndexInformation("bigIndex", partsPerMap, big, user);
+        } catch (Exception e) {
+          // should not be here
         }
-      };
-      Thread removeMapThread = new Thread() {
-        @Override
-        public void run() {
-          cache.removeMap("bigIndex");
-        }
-      };
-      if (i%2==0) {
+      });
+      Thread removeMapThread = new Thread(() -> cache.removeMap("bigIndex"));
+      if (i % 2 == 0) {
         getInfoThread.start();
         removeMapThread.start();        
       } else {
@@ -258,23 +252,20 @@ public class TestIndexCache {
     
     final Path racy = new Path(p, "racyIndex");
     final String user =  
-      UserGroupInformation.getCurrentUser().getShortUserName();
+        UserGroupInformation.getCurrentUser().getShortUserName();
     writeFile(fs, racy, bytesPerFile, partsPerMap);
 
     // run multiple instances
     Thread[] getInfoThreads = new Thread[50];
     for (int i = 0; i < 50; i++) {
-      getInfoThreads[i] = new Thread() {
-        @Override
-        public void run() {
-          try {
-            cache.getIndexInformation("racyIndex", partsPerMap, racy, user);
-            cache.removeMap("racyIndex");
-          } catch (Exception e) {
-            // should not be here
-          }
+      getInfoThreads[i] = new Thread(() -> {
+        try {
+          cache.getIndexInformation("racyIndex", partsPerMap, racy, user);
+          cache.removeMap("racyIndex");
+        } catch (Exception e) {
+          // should not be here
         }
-      };
+      });
     }
 
     for (int i = 0; i < 50; i++) {
@@ -283,17 +274,14 @@ public class TestIndexCache {
 
     final Thread mainTestThread = Thread.currentThread();
 
-    Thread timeoutThread = new Thread() {
-      @Override
-      public void run() {
-        try {
-          Thread.sleep(15000);
-          mainTestThread.interrupt();
-        } catch (InterruptedException ie) {
-          // we are done;
-        }
+    Thread timeoutThread = new Thread(() -> {
+      try {
+        Thread.sleep(15000);
+        mainTestThread.interrupt();
+      } catch (InterruptedException ie) {
+        // we are done;
       }
-    };
+    });
 
     for (int i = 0; i < 50; i++) {
       try {

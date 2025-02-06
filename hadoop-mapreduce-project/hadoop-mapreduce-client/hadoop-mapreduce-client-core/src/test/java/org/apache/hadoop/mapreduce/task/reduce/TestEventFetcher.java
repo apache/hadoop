@@ -17,16 +17,6 @@
  */
 package org.apache.hadoop.mapreduce.task.reduce;
 
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyInt;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -36,8 +26,18 @@ import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
+
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestEventFetcher {
 
@@ -68,8 +68,7 @@ public class TestEventFetcher {
     ExceptionReporter reporter = mock(ExceptionReporter.class);
 
     EventFetcherForTest<String,String> ef =
-        new EventFetcherForTest<String,String>(tid, umbilical, scheduler,
-            reporter, MAX_EVENTS_TO_FETCH);
+        new EventFetcherForTest<>(tid, umbilical, scheduler, reporter, MAX_EVENTS_TO_FETCH);
     ef.getMapCompletionEvents();
 
     verify(reporter, never()).reportException(any(Throwable.class));
@@ -86,8 +85,7 @@ public class TestEventFetcher {
 
   private MapTaskCompletionEventsUpdate getMockedCompletionEventsUpdate(
       int startIdx, int numEvents) {
-    ArrayList<TaskCompletionEvent> tceList =
-        new ArrayList<TaskCompletionEvent>(numEvents);
+    ArrayList<TaskCompletionEvent> tceList = new ArrayList<>(numEvents);
     for (int i = 0; i < numEvents; ++i) {
       int eventIdx = startIdx + i;
       TaskCompletionEvent tce = new TaskCompletionEvent(eventIdx,

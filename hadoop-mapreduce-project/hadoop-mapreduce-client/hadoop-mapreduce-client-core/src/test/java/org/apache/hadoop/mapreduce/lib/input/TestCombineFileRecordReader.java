@@ -22,7 +22,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.File;
 
-import org.junit.Assert;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -35,15 +34,16 @@ import org.apache.hadoop.mapred.Task.TaskReporter;
 
 import org.mockito.Mockito;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 public class TestCombineFileRecordReader {
 
   private static Path outDir = new Path(System.getProperty("test.build.data",
-            "/tmp"), TestCombineFileRecordReader.class.getName());
+      "/tmp"), TestCombineFileRecordReader.class.getName());
   private static class TextRecordReaderWrapper
     extends CombineFileRecordReaderWrapper<LongWritable,Text> {
     // this constructor signature is required by CombineFileRecordReader
@@ -63,7 +63,7 @@ public class TestCombineFileRecordReader {
     long[] fileLength = new long[3];
 
     try {
-      for(int i=0;i<3;i++){
+      for (int i = 0; i < 3; i++) {
         File dir = new File(outDir.toString());
         dir.mkdir();
         files[i] = new File(dir,"testfile"+i);
@@ -86,7 +86,7 @@ public class TestCombineFileRecordReader {
       cfrr.initialize(combineFileSplit,taskAttemptContext);
 
       verify(reporter).progress();
-      Assert.assertFalse(cfrr.nextKeyValue());
+      assertFalse(cfrr.nextKeyValue());
       verify(reporter, times(3)).progress();
     } finally {
       FileUtil.fullyDelete(new File(outDir.toString()));

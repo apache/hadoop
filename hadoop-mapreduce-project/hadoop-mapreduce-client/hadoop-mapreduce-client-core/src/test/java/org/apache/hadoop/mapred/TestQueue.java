@@ -31,13 +31,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * TestCounters checks the sanity and recoverability of Queue
@@ -46,12 +51,12 @@ public class TestQueue {
   private static File testDir = new File(System.getProperty("test.build.data",
       "/tmp"), TestJobConf.class.getSimpleName());
 
-  @Before
+  @BeforeEach
   public void setup() {
     testDir.mkdirs();
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     FileUtil.fullyDelete(testDir);
   }
@@ -60,9 +65,10 @@ public class TestQueue {
    * test QueueManager
    * configuration from file
    * 
-   * @throws IOException
+   * @throws IOException In the process of unit testing, an IO exception occurred.
    */
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testQueue() throws IOException {
     File f = null;
     try {
@@ -92,7 +98,7 @@ public class TestQueue {
       assertThat(secondSubQueue.getState().getStateName())
           .isEqualTo("stopped");
 
-      Set<String> template = new HashSet<String>();
+      Set<String> template = new HashSet<>();
       template.add("first");
       template.add("second");
       assertEquals(manager.getLeafQueueNames(), template);
@@ -117,7 +123,7 @@ public class TestQueue {
       iterator = root.getChildren().iterator();
       Queue firstSubQueue1 = iterator.next();
       Queue secondSubQueue1 = iterator.next();
-      // tets equal method
+      // tests equal method
       assertThat(firstSubQueue).isEqualTo(firstSubQueue1);
       assertThat(firstSubQueue1.getState().getStateName())
           .isEqualTo("running");
@@ -140,11 +146,11 @@ public class TestQueue {
           .isEqualTo(0);
       // test
       assertThat(manager.getSchedulerInfo("first")).isEqualTo("queueInfo");
-      Set<String> queueJobQueueInfos = new HashSet<String>();
+      Set<String> queueJobQueueInfos = new HashSet<>();
       for(JobQueueInfo jobInfo : manager.getJobQueueInfos()){
     	  queueJobQueueInfos.add(jobInfo.getQueueName());
       }
-      Set<String> rootJobQueueInfos = new HashSet<String>();
+      Set<String> rootJobQueueInfos = new HashSet<>();
       for(Queue queue : root.getChildren()){
     	  rootJobQueueInfos.add(queue.getJobQueueInfo().getQueueName());
       }
@@ -194,7 +200,8 @@ public class TestQueue {
     return conf;
   }
 
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testDefaultConfig() {
     QueueManager manager = new QueueManager(true);
     assertThat(manager.getRoot().getChildren().size()).isEqualTo(2);
@@ -203,10 +210,11 @@ public class TestQueue {
   /**
    * test for Qmanager with empty configuration
    * 
-   * @throws IOException
+   * @throws IOException In the process of unit testing, an IO exception occurred.
    */
 
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void test2Queue() throws IOException {
     Configuration conf = getConfiguration();
 
@@ -217,7 +225,7 @@ public class TestQueue {
     Queue root = manager.getRoot();
     
     // test children queues
-    assertTrue(root.getChildren().size() == 2);
+    assertEquals(2, root.getChildren().size());
     Iterator<Queue> iterator = root.getChildren().iterator();
     Queue firstSubQueue = iterator.next();
     assertEquals("first", firstSubQueue.getName());
@@ -238,15 +246,15 @@ public class TestQueue {
     assertThat(secondSubQueue.getSchedulingInfo())
         .isEqualTo("queueInfoqueueInfo");
     // test leaf queue
-    Set<String> template = new HashSet<String>();
+    Set<String> template = new HashSet<>();
     template.add("first");
     template.add("second");
     assertEquals(manager.getLeafQueueNames(), template);
   }
 /**
- * write cofiguration
- * @return
- * @throws IOException
+ * write configuration
+ * @return tst.xml
+ * @throws IOException In the process of unit testing, an IO exception occurred.
  */
   private File writeFile() throws IOException {
 

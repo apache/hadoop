@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -51,11 +51,10 @@ import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.client.api.SharedCacheClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,12 +74,12 @@ public class TestJobResourceUploaderWithSharedCache {
       new Path(MRJobConfig.DEFAULT_MR_AM_STAGING_DIR);
   private String input = "roses.are.red\nviolets.are.blue\nbunnies.are.pink\n";
 
-  @Before
+  @BeforeEach
   public void cleanup() throws Exception {
     remoteFs.delete(remoteStagingDir, true);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     // create configuration, dfs, file system
     localFs = FileSystem.getLocal(conf);
@@ -92,7 +91,7 @@ public class TestJobResourceUploaderWithSharedCache {
     remoteFs = dfs.getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     try {
       if (localFs != null) {
@@ -125,15 +124,12 @@ public class TestJobResourceUploaderWithSharedCache {
       // getFileChecksum method.
       scClient.init(conf);
       when(mockscClient.getFileChecksum(any(Path.class))).thenAnswer(
-          new Answer<String>() {
-            @Override
-            public String answer(InvocationOnMock invocation) throws Throwable {
-              Path file = (Path) invocation.getArguments()[0];
-              // Use the real scClient to generate the checksum. We use an
-              // answer/mock combination to avoid having to spy on a real
-              // SharedCacheClient object.
-              return scClient.getFileChecksum(file);
-            }
+          (Answer<String>) invocation -> {
+            Path file = (Path) invocation.getArguments()[0];
+            // Use the real scClient to generate the checksum. We use an
+            // answer/mock combination to avoid having to spy on a real
+            // SharedCacheClient object.
+            return scClient.getFileChecksum(file);
           });
     }
 
@@ -272,7 +268,7 @@ public class TestJobResourceUploaderWithSharedCache {
       job.addFileToClassPath(remoteJar);
     }
 
-    jobConf.set("tmpjars", secondJar.toString() + "," + thirdJar.toString());
+    jobConf.set("tmpjars", secondJar + "," + thirdJar);
 
     Path firstArchive = makeArchive("first-archive.zip", "first-file");
     Path secondArchive = makeArchive("second-archive.zip", "second-file");

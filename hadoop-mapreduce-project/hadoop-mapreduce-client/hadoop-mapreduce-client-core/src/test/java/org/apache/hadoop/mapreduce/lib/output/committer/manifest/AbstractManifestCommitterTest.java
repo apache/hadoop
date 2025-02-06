@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -327,7 +327,7 @@ public abstract class AbstractManifestCommitterTest
 
     // destination directory defaults to method path in
     // target FS
-    setDestDir(methodPath());
+    setDestDir(methodPath(AbstractManifestCommitterTest.class.getName()));
 
     // stage statistics
     setStageStatistics(createIOStatisticsStore().build());
@@ -444,7 +444,7 @@ public abstract class AbstractManifestCommitterTest
   /**
    * Make sure there's no thread leakage.
    */
-  @AfterClass
+  @AfterAll
   public static void threadLeakage() {
     THREAD_LEAK_TRACKER.assertNoThreadLeakage();
   }
@@ -452,7 +452,7 @@ public abstract class AbstractManifestCommitterTest
   /**
    * Dump the filesystem statistics after the class.
    */
-  @AfterClass
+  @AfterAll
   public static void dumpFileSystemIOStatistics() {
     LOG.info("Aggregate FileSystem Statistics {}",
         ioStatisticsToPrettyString(FILESYSTEM_IOSTATS));

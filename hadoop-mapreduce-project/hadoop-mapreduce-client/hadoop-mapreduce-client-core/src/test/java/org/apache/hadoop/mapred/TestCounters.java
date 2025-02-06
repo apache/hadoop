@@ -17,17 +17,11 @@
  */
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
-
-import org.junit.Assert;
 
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.CountersExceededException;
@@ -38,15 +32,22 @@ import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.counters.FrameworkCounterGroup;
 import org.apache.hadoop.mapreduce.counters.CounterGroupFactory.FrameworkGroupFactory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * TestCounters checks the sanity and recoverability of {@code Counters}
  */
 public class TestCounters {
-  enum myCounters {TEST1, TEST2};
+  enum myCounters {TEST1, TEST2}
   private static final long MAX_VALUE = 10;
   private static final Logger LOG = LoggerFactory.getLogger(TestCounters.class);
   
@@ -85,14 +86,14 @@ public class TestCounters {
    */
   private void testCounter(Counters counter) throws ParseException {
     String compactEscapedString = counter.makeEscapedCompactString();
-    assertFalse("compactEscapedString should not contain null",
-                compactEscapedString.contains("null"));
+    assertFalse(compactEscapedString.contains("null"),
+        "compactEscapedString should not contain null");
     
     Counters recoveredCounter = 
       Counters.fromEscapedCompactString(compactEscapedString);
     // Check for recovery from string
-    assertEquals("Recovered counter does not match on content", 
-                 counter, recoveredCounter);
+    assertEquals(counter, recoveredCounter,
+        "Recovered counter does not match on content");
   }
   
   @Test
@@ -109,7 +110,7 @@ public class TestCounters {
       // I. Check enum counters that have resource bundler
       testCounter(getEnumCounters(keysWithResource));
 
-      // II. Check enum counters that dont have resource bundler
+      // II. Check enum counters that don't have resource bundler
       testCounter(getEnumCounters(keysWithoutResource));
 
       // III. Check string counters
@@ -134,19 +135,19 @@ public class TestCounters {
       long expectedValue = initValue;
       Counter counter = counters.findCounter("foo", "bar");
       counter.setValue(initValue);
-      assertEquals("Counter value is not initialized correctly",
-                   expectedValue, counter.getValue());
+      assertEquals(expectedValue, counter.getValue(),
+          "Counter value is not initialized correctly");
       for (int j = 0; j < NUMBER_INC; j++) {
         int incValue = rand.nextInt();
         counter.increment(incValue);
         expectedValue += incValue;
-        assertEquals("Counter value is not incremented correctly",
-                     expectedValue, counter.getValue());
+        assertEquals(expectedValue, counter.getValue(),
+            "Counter value is not incremented correctly");
       }
       expectedValue = rand.nextInt();
       counter.setValue(expectedValue);
-      assertEquals("Counter value is not set correctly",
-                   expectedValue, counter.getValue());
+      assertEquals(expectedValue, counter.getValue(),
+          "Counter value is not set correctly");
     }
   }
   
@@ -174,29 +175,27 @@ public class TestCounters {
 
   @SuppressWarnings("deprecation")
   private void checkLegacyNames(Counters counters) {
-    assertEquals("New name", 1, counters.findCounter(
-        TaskCounter.class.getName(), "MAP_INPUT_RECORDS").getValue());
-    assertEquals("Legacy name", 1, counters.findCounter(
+    assertEquals(1, counters.findCounter(
+        TaskCounter.class.getName(), "MAP_INPUT_RECORDS").getValue(), "New name");
+    assertEquals(1, counters.findCounter(
         "org.apache.hadoop.mapred.Task$Counter",
-        "MAP_INPUT_RECORDS").getValue());
-    assertEquals("Legacy enum", 1,
-        counters.findCounter(Task.Counter.MAP_INPUT_RECORDS).getValue());
+        "MAP_INPUT_RECORDS").getValue(), "Legacy name");
+    assertEquals(1, counters.findCounter(Task.Counter.MAP_INPUT_RECORDS).getValue(), "Legacy enum");
 
-    assertEquals("New name", 1, counters.findCounter(
-        JobCounter.class.getName(), "DATA_LOCAL_MAPS").getValue());
-    assertEquals("Legacy name", 1, counters.findCounter(
+    assertEquals(1, counters.findCounter(
+        JobCounter.class.getName(), "DATA_LOCAL_MAPS").getValue(), "New name");
+    assertEquals(1, counters.findCounter(
         "org.apache.hadoop.mapred.JobInProgress$Counter",
-        "DATA_LOCAL_MAPS").getValue());
-    assertEquals("Legacy enum", 1,
-        counters.findCounter(JobInProgress.Counter.DATA_LOCAL_MAPS).getValue());
+        "DATA_LOCAL_MAPS").getValue(), "Legacy name");
+    assertEquals(1, counters.findCounter(JobInProgress.Counter.DATA_LOCAL_MAPS).getValue(), "Legacy enum");
 
-    assertEquals("New name", 1, counters.findCounter(
-        FileSystemCounter.class.getName(), "FILE_BYTES_READ").getValue());
-    assertEquals("New name and method", 1, counters.findCounter("file",
-        FileSystemCounter.BYTES_READ).getValue());
-    assertEquals("Legacy name", 1, counters.findCounter(
+    assertEquals(1, counters.findCounter(
+        FileSystemCounter.class.getName(), "FILE_BYTES_READ").getValue(), "New name");
+    assertEquals(1, counters.findCounter("file",
+        FileSystemCounter.BYTES_READ).getValue(), "New name and method");
+    assertEquals(1, counters.findCounter(
         "FileSystemCounters",
-        "FILE_BYTES_READ").getValue());
+        "FILE_BYTES_READ").getValue(), "Legacy name");
   }
   
   @SuppressWarnings("deprecation")
@@ -248,8 +247,8 @@ public class TestCounters {
     counters.findCounter("fs2", FileSystemCounter.BYTES_READ).increment(1);
     counters.incrCounter("group1", "counter1", 1);
     
-    HashSet<String> groups = new HashSet<String>(counters.getGroupNames());
-    HashSet<String> expectedGroups = new HashSet<String>();
+    HashSet<String> groups = new HashSet<>(counters.getGroupNames());
+    HashSet<String> expectedGroups = new HashSet<>();
     expectedGroups.add("group1");
     expectedGroups.add("FileSystemCounters"); //Legacy Name
     expectedGroups.add("org.apache.hadoop.mapreduce.FileSystemCounter");
@@ -266,8 +265,8 @@ public class TestCounters {
     assertEquals("group1.counter1:1", counters.makeCompactString());
     counters.incrCounter("group2", "counter2", 3);
     String cs = counters.makeCompactString();
-    assertTrue("Bad compact string",
-        cs.equals(GC1 + ',' + GC2) || cs.equals(GC2 + ',' + GC1));
+    assertTrue(
+       cs.equals(GC1 + ',' + GC2) || cs.equals(GC2 + ',' + GC1), "Bad compact string");
   }
   
   @Test
@@ -281,11 +280,7 @@ public class TestCounters {
       counters.findCounter("test", "test" + i);
     }
     setExpected(counters);
-    shouldThrow(CountersExceededException.class, new Runnable() {
-      public void run() {
-        counters.findCounter("test", "bad");
-      }
-    });
+    shouldThrow(CountersExceededException.class, () -> counters.findCounter("test", "bad"));
     checkExpected(counters);
   }
 
@@ -295,11 +290,7 @@ public class TestCounters {
       counters.findCounter("test" + i, "test");
     }
     setExpected(counters);
-    shouldThrow(CountersExceededException.class, new Runnable() {
-      public void run() {
-        counters.findCounter("bad", "test");
-      }
-    });
+    shouldThrow(CountersExceededException.class, () -> counters.findCounter("bad", "test"));
     checkExpected(counters);
   }
 
@@ -321,7 +312,7 @@ public class TestCounters {
     } catch (CountersExceededException e) {
       return;
     }
-    Assert.fail("Should've thrown " + ecls.getSimpleName());
+    fail("Should've thrown " + ecls.getSimpleName());
   }
 
   public static void main(String[] args) throws IOException {
@@ -341,12 +332,12 @@ public class TestCounters {
   
     org.apache.hadoop.mapreduce.Counter count1 = 
         counterGroup.findCounter(JobCounter.NUM_FAILED_MAPS.toString());
-    Assert.assertNotNull(count1);
+    assertNotNull(count1);
     
     // Verify no exception get thrown when finding an unknown counter
     org.apache.hadoop.mapreduce.Counter count2 = 
         counterGroup.findCounter("Unknown");
-    Assert.assertNull(count2);
+    assertNull(count2);
   }
 
   @SuppressWarnings("rawtypes")
@@ -363,19 +354,19 @@ public class TestCounters {
     org.apache.hadoop.mapreduce.Counter count1 =
         counterGroup.findCounter(
             TaskCounter.PHYSICAL_MEMORY_BYTES.toString());
-    Assert.assertNotNull(count1);
+    assertNotNull(count1);
     count1.increment(10);
     count1.increment(10);
-    Assert.assertEquals(20, count1.getValue());
+    assertEquals(20, count1.getValue());
 
     // Verify no exception get thrown when finding an unknown counter
     org.apache.hadoop.mapreduce.Counter count2 =
         counterGroup.findCounter(
             TaskCounter.MAP_PHYSICAL_MEMORY_BYTES_MAX.toString());
-    Assert.assertNotNull(count2);
+    assertNotNull(count2);
     count2.increment(5);
     count2.increment(10);
-    Assert.assertEquals(10, count2.getValue());
+    assertEquals(10, count2.getValue());
   }
 
   @Test
@@ -385,12 +376,12 @@ public class TestCounters {
   
     org.apache.hadoop.mapreduce.Counter count1 = 
         fsGroup.findCounter("ANY_BYTES_READ");
-    Assert.assertNotNull(count1);
+    assertNotNull(count1);
     
     // Verify no exception get thrown when finding an unknown counter
     org.apache.hadoop.mapreduce.Counter count2 = 
         fsGroup.findCounter("Unknown");
-    Assert.assertNull(count2);
+    assertNull(count2);
   }
   
 }

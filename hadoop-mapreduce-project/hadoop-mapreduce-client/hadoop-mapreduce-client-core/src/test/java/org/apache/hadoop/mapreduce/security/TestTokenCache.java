@@ -19,9 +19,16 @@
 package org.apache.hadoop.mapreduce.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URI;
@@ -36,10 +43,9 @@ import org.apache.hadoop.mapred.Master;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -47,7 +53,7 @@ public class TestTokenCache {
   private static Configuration conf;
   private static String renewer;
   
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     conf = new Configuration();
     conf.set(YarnConfiguration.RM_PRINCIPAL, "mapred/host@REALM");
@@ -144,7 +150,7 @@ public class TestTokenCache {
           int unique = 0;
           @Override
           public Token<?> answer(InvocationOnMock invocation) throws Throwable {
-            Token<?> token = new Token<TokenIdentifier>();
+            Token<?> token = new Token<>();
             token.setService(new Text(service));
             // use unique value so when we restore from token storage, we can
             // tell if it's really the same token
@@ -206,6 +212,6 @@ public class TestTokenCache {
     TokenCache.obtainTokensForNamenodesInternal(fs1, creds, conf, renewer);
     String fs_addr = fs1.getCanonicalServiceName();
     Token<?> nnt = TokenCache.getDelegationToken(creds, fs_addr);
-    assertNotNull("Token for nn is null", nnt);
+    assertNotNull(nnt, "Token for nn is null");
   }
 }

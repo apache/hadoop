@@ -19,8 +19,9 @@
 package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.IOException;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.fail;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,7 +41,7 @@ public class TestFileOutputFormat {
       fail("Should have thrown a RuntimeException with an IOException inside");
     }
     catch (RuntimeException re) {
-      assertTrue(re.getCause() instanceof IOException);
+       assertInstanceOf(IOException.class, re.getCause());
     }
   }
 

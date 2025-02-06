@@ -18,7 +18,7 @@
 package org.apache.hadoop.mapred;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -30,8 +30,9 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * TestCounters checks the sanity and recoverability of Queue
@@ -43,7 +44,7 @@ public class TestTaskLog {
       "target" + File.separatorChar + "test-dir")
       + File.separatorChar + testDirName;
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() {
     FileUtil.fullyDelete(new File(testDir));
   }
@@ -51,9 +52,10 @@ public class TestTaskLog {
   /**
    * test TaskAttemptID
    * 
-   * @throws IOException
+   * @throws IOException In the process of unit testing, an IO exception occurred.
    */
-  @Test (timeout=50000)
+  @Test
+  @Timeout(value = 50)
   public void testTaskLog() throws IOException {
     // test TaskLog
     System.setProperty(
@@ -128,9 +130,10 @@ public class TestTaskLog {
   /**
    * test without TASK_LOG_DIR
    * 
-   * @throws IOException
+   * @throws IOException In the process of unit testing, an IO exception occurred.
    */
-  @Test (timeout=50000)
+  @Test
+  @Timeout(value = 50)
   public void testTaskLogWithoutTaskLogDir() throws IOException {
     // TaskLog tasklog= new TaskLog();
     System.clearProperty(YarnConfiguration.YARN_APP_CONTAINER_LOG_DIR);

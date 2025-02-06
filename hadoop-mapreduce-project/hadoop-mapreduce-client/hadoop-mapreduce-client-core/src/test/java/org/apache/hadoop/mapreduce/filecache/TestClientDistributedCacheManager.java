@@ -35,13 +35,14 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,7 +70,7 @@ public class TestClientDistributedCacheManager {
   private Path secondCacheFile;
   private Configuration conf;
   
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf = new Configuration();
     fs = FileSystem.get(conf);
@@ -79,7 +80,7 @@ public class TestClientDistributedCacheManager {
     createTempFile(secondCacheFile, conf);
   }
   
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (fs.delete(TEST_ROOT_DIR, true)) {
       LOG.warn("Failed to delete test root dir and its content under "
@@ -100,12 +101,12 @@ public class TestClientDistributedCacheManager {
     FileStatus firstStatus = statCache.get(firstCacheFile.toUri());
     FileStatus secondStatus = statCache.get(secondCacheFile.toUri());
     
-    assertNotNull(firstCacheFile + " was not found in the stats cache",
-        firstStatus);
-    assertNotNull(secondCacheFile + " was not found in the stats cache",
-        secondStatus);
-    assertEquals("Missing/extra entries found in the stats cache",
-        2, statCache.size());
+    assertNotNull(
+       firstStatus, firstCacheFile + " was not found in the stats cache");
+    assertNotNull(
+       secondStatus, secondCacheFile + " was not found in the stats cache");
+    assertEquals(
+       2, statCache.size(), "Missing/extra entries found in the stats cache");
     String expected = firstStatus.getModificationTime() + ","
         + secondStatus.getModificationTime();
     assertEquals(expected, jobConf.get(MRJobConfig.CACHE_FILE_TIMESTAMPS));
@@ -118,13 +119,13 @@ public class TestClientDistributedCacheManager {
 
     FileStatus thirdStatus = statCache.get(TEST_VISIBILITY_CHILD_DIR.toUri());
 
-    assertEquals("Missing/extra entries found in the stats cache",
-        1, statCache.size());
-    assertNotNull(TEST_VISIBILITY_CHILD_DIR
-        + " was not found in the stats cache", thirdStatus);
+    assertEquals(
+       1, statCache.size(), "Missing/extra entries found in the stats cache");
+    assertNotNull(thirdStatus, TEST_VISIBILITY_CHILD_DIR
+        + " was not found in the stats cache");
     expected = Long.toString(thirdStatus.getModificationTime());
-    assertEquals("Incorrect timestamp for " + TEST_VISIBILITY_CHILD_DIR,
-        expected, jobConf.get(MRJobConfig.CACHE_FILE_TIMESTAMPS));
+    assertEquals(
+       expected, jobConf.get(MRJobConfig.CACHE_FILE_TIMESTAMPS), "Incorrect timestamp for " + TEST_VISIBILITY_CHILD_DIR);
   }
   
   @Test
@@ -145,9 +146,9 @@ public class TestClientDistributedCacheManager {
     jobConf = job.getConfiguration();
 
     // skip test if scratch dir is not PUBLIC
-    assumeTrue(TEST_VISIBILITY_PARENT_DIR + " is not public",
-        ClientDistributedCacheManager.isPublic(
-            jobConf, TEST_VISIBILITY_PARENT_DIR.toUri(), statCache));
+    assumeTrue(ClientDistributedCacheManager.isPublic(
+        jobConf, TEST_VISIBILITY_PARENT_DIR.toUri(), statCache),
+        TEST_VISIBILITY_PARENT_DIR + " is not public");
 
     ClientDistributedCacheManager.determineCacheVisibilities(jobConf,
         statCache);
@@ -236,10 +237,10 @@ public class TestClientDistributedCacheManager {
     missing.removeAll(expected);
     extra.removeAll(uris);
 
-    assertTrue("File status cache does not contain an entries for " + missing,
-        missing.isEmpty());
-    assertTrue("File status cache contains extra extries: " + extra,
-        extra.isEmpty());
+    assertTrue(
+       missing.isEmpty(), "File status cache does not contain an entries for " + missing);
+    assertTrue(
+       extra.isEmpty(), "File status cache contains extra entries: " + extra);
   }
 
   @SuppressWarnings("deprecation")

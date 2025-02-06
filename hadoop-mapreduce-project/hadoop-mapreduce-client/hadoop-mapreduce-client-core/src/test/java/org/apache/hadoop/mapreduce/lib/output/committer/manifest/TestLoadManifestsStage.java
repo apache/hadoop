@@ -23,7 +23,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -72,6 +73,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
   }
 
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     taskAttemptCount = numberOfTaskAttempts();

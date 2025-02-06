@@ -18,6 +18,10 @@
 package org.apache.hadoop.mapreduce.task.reduce;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -65,24 +69,20 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 public class TestMerger {
   private static File testRootDir;
-  @Rule
-  public TestName unitTestName = new TestName();
   private File unitTestDir;
   private JobConf jobConf;
   private FileSystem fs;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     // setup the test root directory
     testRootDir =
@@ -90,9 +90,9 @@ public class TestMerger {
             TestMerger.class);
   }
 
-  @Before
-  public void setup() throws IOException {
-    unitTestDir = new File(testRootDir, unitTestName.getMethodName());
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws IOException {
+    unitTestDir = new File(testRootDir, testInfo.getDisplayName());
     unitTestDir.mkdirs();
     jobConf = new JobConf();
     // Set the temp directories a subdir of the test directory.
@@ -123,21 +123,21 @@ public class TestMerger {
 
     LocalDirAllocator lda = new LocalDirAllocator(MRConfig.LOCAL_DIR);
 
-    MergeManagerImpl<Text, Text> mergeManager = new MergeManagerImpl<Text, Text>(
+    MergeManagerImpl<Text, Text> mergeManager = new MergeManagerImpl<>(
         reduceId1, jobConf, fs, lda, Reporter.NULL, null, null, null, null,
         null, null, null, new Progress(), new MROutputFiles());
 
     // write map outputs
-    Map<String, String> map1 = new TreeMap<String, String>();
+    Map<String, String> map1 = new TreeMap<>();
     map1.put("apple", "disgusting");
     map1.put("carrot", "delicious");
-    Map<String, String> map2 = new TreeMap<String, String>();
+    Map<String, String> map2 = new TreeMap<>();
     map1.put("banana", "pretty good");
     byte[] mapOutputBytes1 = writeMapOutput(jobConf, map1);
     byte[] mapOutputBytes2 = writeMapOutput(jobConf, map2);
-    InMemoryMapOutput<Text, Text> mapOutput1 = new InMemoryMapOutput<Text, Text>(
+    InMemoryMapOutput<Text, Text> mapOutput1 = new InMemoryMapOutput<>(
         jobConf, mapId1, mergeManager, mapOutputBytes1.length, null, true);
-    InMemoryMapOutput<Text, Text> mapOutput2 = new InMemoryMapOutput<Text, Text>(
+    InMemoryMapOutput<Text, Text> mapOutput2 = new InMemoryMapOutput<>(
         jobConf, mapId2, mergeManager, mapOutputBytes2.length, null, true);
     System.arraycopy(mapOutputBytes1, 0, mapOutput1.getMemory(), 0,
         mapOutputBytes1.length);
@@ -147,14 +147,13 @@ public class TestMerger {
     // create merger and run merge
     MergeThread<InMemoryMapOutput<Text, Text>, Text, Text> inMemoryMerger =
         mergeManager.createInMemoryMerger();
-    List<InMemoryMapOutput<Text, Text>> mapOutputs1 =
-        new ArrayList<InMemoryMapOutput<Text, Text>>();
+    List<InMemoryMapOutput<Text, Text>> mapOutputs1 = new ArrayList<>();
     mapOutputs1.add(mapOutput1);
     mapOutputs1.add(mapOutput2);
 
     inMemoryMerger.merge(mapOutputs1);
 
-    Assert.assertEquals(1, mergeManager.onDiskMapOutputs.size());
+    assertEquals(1, mergeManager.onDiskMapOutputs.size());
 
     TaskAttemptID reduceId2 = new TaskAttemptID(
         new TaskID(jobId, TaskType.REDUCE, 3), 0);
@@ -163,39 +162,38 @@ public class TestMerger {
     TaskAttemptID mapId4 = new TaskAttemptID(
         new TaskID(jobId, TaskType.MAP, 5), 0);
     // write map outputs
-    Map<String, String> map3 = new TreeMap<String, String>();
+    Map<String, String> map3 = new TreeMap<>();
     map3.put("apple", "awesome");
     map3.put("carrot", "amazing");
-    Map<String, String> map4 = new TreeMap<String, String>();
+    Map<String, String> map4 = new TreeMap<>();
     map4.put("banana", "bla");
     byte[] mapOutputBytes3 = writeMapOutput(jobConf, map3);
     byte[] mapOutputBytes4 = writeMapOutput(jobConf, map4);
-    InMemoryMapOutput<Text, Text> mapOutput3 = new InMemoryMapOutput<Text, Text>(
+    InMemoryMapOutput<Text, Text> mapOutput3 = new InMemoryMapOutput<>(
         jobConf, mapId3, mergeManager, mapOutputBytes3.length, null, true);
-    InMemoryMapOutput<Text, Text> mapOutput4 = new InMemoryMapOutput<Text, Text>(
+    InMemoryMapOutput<Text, Text> mapOutput4 = new InMemoryMapOutput<>(
         jobConf, mapId4, mergeManager, mapOutputBytes4.length, null, true);
     System.arraycopy(mapOutputBytes3, 0, mapOutput3.getMemory(), 0,
         mapOutputBytes3.length);
     System.arraycopy(mapOutputBytes4, 0, mapOutput4.getMemory(), 0,
         mapOutputBytes4.length);
 
-//    // create merger and run merge
+    // create merger and run merge
     MergeThread<InMemoryMapOutput<Text, Text>, Text, Text> inMemoryMerger2 =
         mergeManager.createInMemoryMerger();
-    List<InMemoryMapOutput<Text, Text>> mapOutputs2 =
-        new ArrayList<InMemoryMapOutput<Text, Text>>();
+    List<InMemoryMapOutput<Text, Text>> mapOutputs2 = new ArrayList<>();
     mapOutputs2.add(mapOutput3);
     mapOutputs2.add(mapOutput4);
 
     inMemoryMerger2.merge(mapOutputs2);
 
-    Assert.assertEquals(2, mergeManager.onDiskMapOutputs.size());
+    assertEquals(2, mergeManager.onDiskMapOutputs.size());
 
-    List<CompressAwarePath> paths = new ArrayList<CompressAwarePath>();
+    List<CompressAwarePath> paths = new ArrayList<>();
     Iterator<CompressAwarePath> iterator =
         mergeManager.onDiskMapOutputs.iterator();
-    List<String> keys = new ArrayList<String>();
-    List<String> values = new ArrayList<String>();
+    List<String> keys = new ArrayList<>();
+    List<String> values = new ArrayList<>();
     while (iterator.hasNext()) {
       CompressAwarePath next = iterator.next();
       readOnDiskMapOutput(jobConf, fs, next, keys, values);
@@ -207,35 +205,35 @@ public class TestMerger {
         "disgusting", "pretty good", "delicious"));
     mergeManager.close();
 
-    mergeManager = new MergeManagerImpl<Text, Text>(
+    mergeManager = new MergeManagerImpl<>(
         reduceId2, jobConf, fs, lda, Reporter.NULL, null, null, null, null,
         null, null, null, new Progress(), new MROutputFiles());
 
     MergeThread<CompressAwarePath,Text,Text> onDiskMerger = mergeManager.createOnDiskMerger();
     onDiskMerger.merge(paths);
 
-    Assert.assertEquals(1, mergeManager.onDiskMapOutputs.size());
+    assertEquals(1, mergeManager.onDiskMapOutputs.size());
 
-    keys = new ArrayList<String>();
-    values = new ArrayList<String>();
+    keys = new ArrayList<>();
+    values = new ArrayList<>();
     readOnDiskMapOutput(jobConf, fs,
         mergeManager.onDiskMapOutputs.iterator().next(), keys, values);
     assertThat(keys).isEqualTo(Arrays.asList("apple", "apple", "banana",
-            "banana", "carrot", "carrot"));
+        "banana", "carrot", "carrot"));
     assertThat(values).isEqualTo(Arrays.asList("awesome", "disgusting",
-            "pretty good", "bla", "amazing", "delicious"));
+        "pretty good", "bla", "amazing", "delicious"));
 
     mergeManager.close();
-    Assert.assertEquals(0, mergeManager.inMemoryMapOutputs.size());
-    Assert.assertEquals(0, mergeManager.inMemoryMergedMapOutputs.size());
-    Assert.assertEquals(0, mergeManager.onDiskMapOutputs.size());
+    assertEquals(0, mergeManager.inMemoryMapOutputs.size());
+    assertEquals(0, mergeManager.inMemoryMergedMapOutputs.size());
+    assertEquals(0, mergeManager.onDiskMapOutputs.size());
   }
 
   private byte[] writeMapOutput(Configuration conf, Map<String, String> keysToValues)
       throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     FSDataOutputStream fsdos = new FSDataOutputStream(baos, null);
-    IFile.Writer<Text, Text> writer = new IFile.Writer<Text, Text>(conf, fsdos,
+    IFile.Writer<Text, Text> writer = new IFile.Writer<>(conf, fsdos,
         Text.class, Text.class, null, null);
     for (String key : keysToValues.keySet()) {
       String value = keysToValues.get(key);
@@ -250,7 +248,7 @@ public class TestMerger {
     FSDataInputStream in =
         IntermediateEncryptedStream.wrapIfNecessary(conf, fs.open(path), path);
 
-    IFile.Reader<Text, Text> reader = new IFile.Reader<Text, Text>(conf, in,
+    IFile.Reader<Text, Text> reader = new IFile.Reader<>(conf, in,
         fs.getFileStatus(path).getLen(), null, null);
     DataInputBuffer keyBuff = new DataInputBuffer();
     DataInputBuffer valueBuff = new DataInputBuffer();
@@ -295,48 +293,45 @@ public class TestMerger {
     // Reading 6 keys total, 3 each in 2 segments, so each key read moves the
     // progress forward 1/6th of the way. Initially the first keys from each
     // segment have been read as part of the merge setup, so progress = 2/6.
-    Assert.assertEquals(2/6.0f, mergeQueue.getProgress().get(), epsilon);
+    assertEquals(2/6.0f, mergeQueue.getProgress().get(), epsilon);
 
     // The first next() returns one of the keys already read during merge setup
-    Assert.assertTrue(mergeQueue.next());
-    Assert.assertEquals(2/6.0f, mergeQueue.getProgress().get(), epsilon);
+    assertTrue(mergeQueue.next());
+    assertEquals(2/6.0f, mergeQueue.getProgress().get(), epsilon);
 
     // Subsequent next() calls should read one key and move progress
-    Assert.assertTrue(mergeQueue.next());
-    Assert.assertEquals(3/6.0f, mergeQueue.getProgress().get(), epsilon);
-    Assert.assertTrue(mergeQueue.next());
-    Assert.assertEquals(4/6.0f, mergeQueue.getProgress().get(), epsilon);
+    assertTrue(mergeQueue.next());
+    assertEquals(3/6.0f, mergeQueue.getProgress().get(), epsilon);
+    assertTrue(mergeQueue.next());
+    assertEquals(4/6.0f, mergeQueue.getProgress().get(), epsilon);
 
     // At this point we've exhausted all of the keys in one segment
     // so getting the next key will return the already cached key from the
     // other segment
-    Assert.assertTrue(mergeQueue.next());
-    Assert.assertEquals(4/6.0f, mergeQueue.getProgress().get(), epsilon);
+    assertTrue(mergeQueue.next());
+    assertEquals(4/6.0f, mergeQueue.getProgress().get(), epsilon);
 
     // Subsequent next() calls should read one key and move progress
-    Assert.assertTrue(mergeQueue.next());
-    Assert.assertEquals(5/6.0f, mergeQueue.getProgress().get(), epsilon);
-    Assert.assertTrue(mergeQueue.next());
-    Assert.assertEquals(1.0f, mergeQueue.getProgress().get(), epsilon);
+    assertTrue(mergeQueue.next());
+    assertEquals(5/6.0f, mergeQueue.getProgress().get(), epsilon);
+    assertTrue(mergeQueue.next());
+    assertEquals(1.0f, mergeQueue.getProgress().get(), epsilon);
 
     // Now there should be no more input
-    Assert.assertFalse(mergeQueue.next());
-    Assert.assertEquals(1.0f, mergeQueue.getProgress().get(), epsilon);
-    Assert.assertTrue(mergeQueue.getKey() == null);
-    Assert.assertEquals(0, mergeQueue.getValue().getData().length);
+    assertFalse(mergeQueue.next());
+    assertEquals(1.0f, mergeQueue.getProgress().get(), epsilon);
+    assertNull(mergeQueue.getKey());
+    assertEquals(0, mergeQueue.getValue().getData().length);
   }
 
   private Progressable getReporter() {
-    Progressable reporter = new Progressable() {
-      @Override
-      public void progress() {
-      }
+    Progressable reporter = () -> {
     };
     return reporter;
   }
 
   private List<Segment<Text, Text>> getUncompressedSegments() throws IOException {
-    List<Segment<Text, Text>> segments = new ArrayList<Segment<Text, Text>>();
+    List<Segment<Text, Text>> segments = new ArrayList<>();
     for (int i = 0; i < 2; i++) {
       segments.add(getUncompressedSegment(i));
     }
@@ -344,7 +339,7 @@ public class TestMerger {
   }
 
   private List<Segment<Text, Text>> getCompressedSegments() throws IOException {
-    List<Segment<Text, Text>> segments = new ArrayList<Segment<Text, Text>>();
+    List<Segment<Text, Text>> segments = new ArrayList<>();
     for (int i = 0; i < 2; i++) {
       segments.add(getCompressedSegment(i));
     }
@@ -352,20 +347,20 @@ public class TestMerger {
   }
 
   private Segment<Text, Text> getUncompressedSegment(int i) throws IOException {
-    return new Segment<Text, Text>(getReader(i, false), false);
+    return new Segment<>(getReader(i, false), false);
   }
 
   private Segment<Text, Text> getCompressedSegment(int i) throws IOException {
-    return new Segment<Text, Text>(getReader(i, true), false, 3000l);
+    return new Segment<>(getReader(i, true), false, 3000L);
   }
 
   @SuppressWarnings("unchecked")
   private Reader<Text, Text> getReader(int i, boolean isCompressedInput)
       throws IOException {
     Reader<Text, Text> readerMock = mock(Reader.class);
-    when(readerMock.getLength()).thenReturn(30l);
-    when(readerMock.getPosition()).thenReturn(0l).thenReturn(10l).thenReturn(
-        20l);
+    when(readerMock.getLength()).thenReturn(30L);
+    when(readerMock.getPosition()).thenReturn(0L).thenReturn(10L).thenReturn(
+        20L);
     when(
         readerMock.nextRawKey(any(DataInputBuffer.class)))
         .thenAnswer(getKeyAnswer("Segment" + i, isCompressedInput));

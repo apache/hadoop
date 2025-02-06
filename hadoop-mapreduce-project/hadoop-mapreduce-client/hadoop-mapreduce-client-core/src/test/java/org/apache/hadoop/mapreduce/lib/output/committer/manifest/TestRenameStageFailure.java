@@ -27,7 +27,8 @@ import java.util.List;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.fs.CommonPathCapabilities;
@@ -104,10 +105,11 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
   }
 
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     final FileSystem fs = getFileSystem();
-    final Path methodPath = methodPath();
+    final Path methodPath = methodPath(TestRenameStageFailure.class.getName());
     etagsSupported = fs.hasPathCapability(methodPath,
         CommonPathCapabilities.ETAGS_AVAILABLE);
     etagsPreserved = fs.hasPathCapability(methodPath,
@@ -142,7 +144,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
         " and exception message preserved");
 
     // destination directory.
-    Path destDir = methodPath();
+    Path destDir = methodPath("TestRenameStageFailure.testRenameSourceException");
     StageConfig stageConfig = createStageConfigForJob(JOB1, destDir);
     Path jobAttemptTaskSubDir = stageConfig.getJobAttemptTaskSubDir();
 
@@ -175,7 +177,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
   public void testCommitMissingFile() throws Throwable {
     describe("commit a file which doesn't exist. Expect FNFE always");
     // destination directory.
-    Path destDir = methodPath();
+    Path destDir = methodPath("TestRenameStageFailure.testCommitMissingFile");
     StageConfig stageConfig = createStageConfigForJob(JOB1, destDir);
     Path jobAttemptTaskSubDir = stageConfig.getJobAttemptTaskSubDir();
     TaskManifest manifest = new TaskManifest();
@@ -208,7 +210,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
   public void testDeleteTargetPaths() throws Throwable {
     describe("Verify that target path deletion works");
     // destination directory.
-    Path destDir = methodPath();
+    Path destDir = methodPath("TestRenameStageFailure.testDeleteTargetPaths");
     StageConfig stageConfig = createStageConfigForJob(JOB1, destDir)
         .withDeleteTargetPaths(true);
     Path jobAttemptTaskSubDir = stageConfig.getJobAttemptTaskSubDir();
@@ -255,7 +257,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     // and the new data made it over
     verifyFileContents(fs, dest, sourceData);
 
-    // lets check the etag too, for completeness
+    // let's check the etag too, for completeness
     if (isEtagsPreserved()) {
       Assertions.assertThat(getEtag(fs.getFileStatus(dest)))
           .describedAs("Etag of destination file %s", dest)
@@ -272,7 +274,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     Assume.assumeTrue("not used when resilient commits are available",
         !resilientCommit);
     // destination directory.
-    Path destDir = methodPath();
+    Path destDir = methodPath("TestRenameStageFailure.testRenameReturnsFalse");
     StageConfig stageConfig = createStageConfigForJob(JOB1, destDir);
     Path jobAttemptTaskSubDir = stageConfig.getJobAttemptTaskSubDir();
 

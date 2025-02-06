@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.mapreduce;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 
@@ -31,8 +32,8 @@ import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestJob {
   @Test
@@ -52,7 +53,7 @@ public class TestJob {
     when(client.getTaskCompletionEvents(jobid, 0, 10)).thenReturn(
         TaskCompletionEvent.EMPTY_ARRAY);
     Job job = Job.getInstance(cluster, status, new JobConf());
-    Assert.assertNotNull(job.toString());
+    Assertions.assertNotNull(job.toString());
   }
 
   @Test
@@ -68,8 +69,8 @@ public class TestJob {
     Job job = Job.getInstance(cluster, status, new JobConf());
 
     // ensurer job status is RUNNING
-    Assert.assertNotNull(job.getStatus());
-    Assert.assertTrue(job.getStatus().getState() == State.RUNNING);
+    Assertions.assertNotNull(job.getStatus());
+    Assertions.assertTrue(job.getStatus().getState() == State.RUNNING);
 
     // when updating job status, job client could not retrieve
     // job status, and status reset to null
@@ -78,15 +79,15 @@ public class TestJob {
     try {
       job.updateStatus();
     } catch (IOException e) {
-      Assert.assertTrue(e != null
+      Assertions.assertTrue(e != null
           && e.getMessage().contains("Job status not available"));
     }
 
     try {
       ControlledJob cj = new ControlledJob(job, null);
-      Assert.assertNotNull(cj.toString());
+      Assertions.assertNotNull(cj.toString());
     } catch (NullPointerException e) {
-      Assert.fail("job API fails with NPE");
+      Assertions.fail("job API fails with NPE");
     }
   }
 
