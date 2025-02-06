@@ -29,24 +29,18 @@ public class TestCpuTimeTracker {
         BigInteger.valueOf(100),
         System.currentTimeMillis());
     float val1 = tracker.getCpuTrackerUsagePercent();
-    assertTrue(
-    
-       val1 == -1.0, "Not invalid CPU usage");
+    assertTrue(val1 == -1.0, "Not invalid CPU usage");
     Thread.sleep(1000);
     tracker.updateElapsedJiffies(
         BigInteger.valueOf(200),
         System.currentTimeMillis());
     float val2 = tracker.getCpuTrackerUsagePercent();
-    assertTrue(
-    
-       val2 > 0, "Not positive CPU usage");
+    assertTrue(val2 > 0, "Not positive CPU usage");
     Thread.sleep(1000);
     tracker.updateElapsedJiffies(
         BigInteger.valueOf(0),
         System.currentTimeMillis());
     float val3 = tracker.getCpuTrackerUsagePercent();
-    assertTrue(
-    
-       val3 == 0.0, "Not positive CPU usage");
+    assertTrue(val3 == 0.0, "Not positive CPU usage");
   }
 }

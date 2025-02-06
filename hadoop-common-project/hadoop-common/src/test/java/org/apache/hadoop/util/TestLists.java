@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.util;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -27,6 +26,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Simple tests for utility class Lists.
@@ -37,27 +37,27 @@ public class TestLists {
   public void testAddToEmptyArrayList() {
     List<String> list = Lists.newArrayList();
     list.add("record1");
-    Assertions.assertEquals(1, list.size());
-    Assertions.assertEquals("record1", list.get(0));
+    assertEquals(1, list.size());
+    assertEquals("record1", list.get(0));
   }
 
   @Test
   public void testAddToEmptyLinkedList() {
     List<String> list = Lists.newLinkedList();
     list.add("record1");
-    Assertions.assertEquals(1, list.size());
-    Assertions.assertEquals("record1", list.get(0));
+    assertEquals(1, list.size());
+    assertEquals("record1", list.get(0));
   }
 
   @Test
   public void testVarArgArrayLists() {
     List<String> list = Lists.newArrayList("record1", "record2", "record3");
     list.add("record4");
-    Assertions.assertEquals(4, list.size());
-    Assertions.assertEquals("record1", list.get(0));
-    Assertions.assertEquals("record2", list.get(1));
-    Assertions.assertEquals("record3", list.get(2));
-    Assertions.assertEquals("record4", list.get(3));
+    assertEquals(4, list.size());
+    assertEquals("record1", list.get(0));
+    assertEquals("record2", list.get(1));
+    assertEquals("record3", list.get(2));
+    assertEquals("record4", list.get(3));
   }
 
   @Test
@@ -68,7 +68,7 @@ public class TestLists {
     set.add("record3");
     List<String> list = Lists.newArrayList(set);
     list.add("record4");
-    Assertions.assertEquals(4, list.size());
+    assertEquals(4, list.size());
   }
 
   @Test
@@ -79,7 +79,7 @@ public class TestLists {
     set.add("record3");
     List<String> list = Lists.newLinkedList(set);
     list.add("record4");
-    Assertions.assertEquals(4, list.size());
+    assertEquals(4, list.size());
   }
 
   @Test
@@ -130,18 +130,18 @@ public class TestLists {
     list.add("record1");
     list.add("record2");
     list.add("record3");
-    Assertions.assertEquals(3, list.size());
-    Assertions.assertEquals("record1", list.get(0));
-    Assertions.assertEquals("record2", list.get(1));
-    Assertions.assertEquals("record3", list.get(2));
+    assertEquals(3, list.size());
+    assertEquals("record1", list.get(0));
+    assertEquals("record2", list.get(1));
+    assertEquals("record3", list.get(2));
     list = Lists.newArrayListWithCapacity(3);
     list.add("record1");
     list.add("record2");
     list.add("record3");
-    Assertions.assertEquals(3, list.size());
-    Assertions.assertEquals("record1", list.get(0));
-    Assertions.assertEquals("record2", list.get(1));
-    Assertions.assertEquals("record3", list.get(2));
+    assertEquals(3, list.size());
+    assertEquals("record1", list.get(0));
+    assertEquals("record2", list.get(1));
+    assertEquals("record3", list.get(2));
   }
 
 }

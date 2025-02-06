@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collection;
@@ -25,8 +31,6 @@ import java.util.Map;
 
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class TestMachineList {
   private static String IP_LIST = "10.119.103.110,10.119.103.112,10.119.103.114";
@@ -185,7 +189,7 @@ public class TestMachineList {
 
   @Test
   public void testNullIpAddress() {
-    assertThrows(IllegalArgumentException.class, ()->{
+    assertThrows(IllegalArgumentException.class, () -> {
       //create MachineList with a list of ip ranges specified in CIDR format
       MachineList ml = new MachineList(CIDR_LIST, new TestAddressFactory());
 

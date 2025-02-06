@@ -70,8 +70,8 @@ public class TestGenericOptionsParser {
     new GenericOptionsParser(conf, args);
     String files = conf.get("tmpfiles");
     assertNotNull(files, "files is null");
-    assertEquals("files option does not match",
-      localFs.makeQualified(tmpPath).toString(), files);
+    assertEquals(localFs.makeQualified(tmpPath).toString(), files,
+        "files option does not match");
     
     // pass file as uri
     Configuration conf1 = new Configuration();
@@ -81,8 +81,8 @@ public class TestGenericOptionsParser {
     new GenericOptionsParser(conf1, args);
     files = conf1.get("tmpfiles");
     assertNotNull(files, "files is null");
-    assertEquals("files option does not match", 
-      localFs.makeQualified(new Path(tmpURI)).toString(), files);
+    assertEquals(localFs.makeQualified(new Path(tmpURI)).toString(), files,
+        "files option does not match");
    
     // pass a file that does not exist.
     // GenericOptionParser should throw exception
@@ -96,8 +96,8 @@ public class TestGenericOptionsParser {
       th = e;
     }
     assertNotNull(th, "throwable is null");
-    assertTrue(
-     th instanceof FileNotFoundException, "FileNotFoundException is not thrown");
+    assertTrue(th instanceof FileNotFoundException,
+        "FileNotFoundException is not thrown");
     files = conf2.get("tmpfiles");
     assertNull(files, "files is not null");
   }
@@ -117,16 +117,16 @@ public class TestGenericOptionsParser {
     new GenericOptionsParser(conf, args);
     String libjars = conf.get("tmpjars");
     assertNotNull(libjars, "libjars is null");
-    assertEquals("libjars does not match",
-        localFs.makeQualified(tmpJarPath).toString(), libjars);
+    assertEquals(localFs.makeQualified(tmpJarPath).toString(), libjars,
+        "libjars does not match");
 
     // now test the wildcard
     args[1] = testDir.toURI().toString() + "*";
     new GenericOptionsParser(conf, args);
     libjars = conf.get("tmpjars");
     assertNotNull(libjars, "libjars is null");
-    assertEquals("libjars does not match",
-        localFs.makeQualified(tmpJarPath).toString(), libjars);
+    assertEquals(localFs.makeQualified(tmpJarPath).toString(), libjars,
+        "libjars does not match");
   }
 
   /**
@@ -210,8 +210,8 @@ public class TestGenericOptionsParser {
     args[0] = "--newOpt";
     args[1] = "7";
     GenericOptionsParser g = new GenericOptionsParser(opts, args);
-    assertEquals("New option was ignored",
-      "7", g.getCommandLine().getOptionValues("newOpt")[0]);
+    assertEquals("7", g.getCommandLine().getOptionValues("newOpt")[0],
+        "New option was ignored");
   }
 
   /**
@@ -223,10 +223,10 @@ public class TestGenericOptionsParser {
     args[0] = "--conf=foo";
     args[1] = "--conf=bar";
     GenericOptionsParser g = new GenericOptionsParser(args);
-    assertEquals("1st conf param is incorrect",
-      "foo", g.getCommandLine().getOptionValues("conf")[0]);
-    assertEquals("2st conf param is incorrect",
-      "bar", g.getCommandLine().getOptionValues("conf")[1]);
+    assertEquals("foo", g.getCommandLine().getOptionValues("conf")[0],
+        "1st conf param is incorrect");
+    assertEquals("bar", g.getCommandLine().getOptionValues("conf")[1],
+        "2st conf param is incorrect");
   }
 
   @BeforeEach
@@ -270,8 +270,8 @@ public class TestGenericOptionsParser {
       th = e;
     }
     assertNotNull(th);
-    assertTrue(
-       th instanceof FileNotFoundException, "FileNotFoundException is not thrown");
+    assertTrue(th instanceof FileNotFoundException,
+        "FileNotFoundException is not thrown");
     
     // create file
     Path tmpPath = localFs.makeQualified(new Path(tmpFile.toString()));
@@ -285,7 +285,7 @@ public class TestGenericOptionsParser {
     new GenericOptionsParser(conf, args);
     String fileName = conf.get("mapreduce.job.credentials.binary");
     assertNotNull(fileName, "files is null");
-    assertEquals("files option does not match", tmpPath.toString(), fileName);
+    assertEquals(tmpPath.toString(), fileName, "files option does not match");
     
     Credentials ugiCreds =
         UserGroupInformation.getCurrentUser().getCredentials();
@@ -379,9 +379,8 @@ public class TestGenericOptionsParser {
       assertEquals(entry.getValue(), conf.get(entry.getKey()));
     }
 
-    assertArrayEquals(
-    
-     expectedRemainingArgs, remainingArgs, Arrays.toString(remainingArgs) + Arrays.toString(expectedRemainingArgs));
+    assertArrayEquals(expectedRemainingArgs, remainingArgs,
+        Arrays.toString(remainingArgs) + Arrays.toString(expectedRemainingArgs));
   }
 
   /** Test passing null as args. Some classes still call

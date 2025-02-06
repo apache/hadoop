@@ -22,11 +22,13 @@ import java.util.Iterator;
 import java.util.Random;
 
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Testing {@link LightWeightGSet} */
 public class TestLightWeightGSet {
@@ -80,7 +82,7 @@ public class TestLightWeightGSet {
       iter.next();
       iter.remove();
     }
-    Assertions.assertEquals(0, set.size());
+    assertEquals(0, set.size());
   }
 
   @Test
@@ -108,7 +110,7 @@ public class TestLightWeightGSet {
     }
     for (Iterator<TestElement> iter = set.iterator();
         iter.hasNext(); ) {
-      Assertions.assertTrue(iter.next().getVal() <= mode);
+      assertTrue(iter.next().getVal() <= mode);
     }
   }
 }

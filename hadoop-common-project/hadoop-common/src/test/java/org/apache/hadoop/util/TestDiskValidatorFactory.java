@@ -19,9 +19,11 @@ package org.apache.hadoop.util;
 
 import org.junit.jupiter.api.Test;
 
-import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 /**
  * The class to test DiskValidatorFactory.
@@ -39,8 +41,8 @@ public class TestDiskValidatorFactory {
     DiskValidator diskValidator = DiskValidatorFactory.getInstance("basic");
     assertNotNull(diskValidator, "Fail to get the instance.");
 
-    assertEquals(
-       diskValidator.getClass(), BasicDiskValidator.class, "Fail to create the correct instance.");
+    assertEquals(diskValidator.getClass(), BasicDiskValidator.class,
+        "Fail to create the correct instance.");
 
     assertNotNull(DiskValidatorFactory.INSTANCES.
         get(BasicDiskValidator.class), "Fail to cache the object");
@@ -53,7 +55,7 @@ public class TestDiskValidatorFactory {
    */
   @Test
   public void testGetInstanceOfNonExistClass() throws DiskErrorException {
-    assertThrows(DiskErrorException.class, ()->{
+    assertThrows(DiskErrorException.class, () -> {
       DiskValidatorFactory.getInstance("non-exist");
     });
   }

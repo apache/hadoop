@@ -18,7 +18,8 @@
 package org.apache.hadoop.util;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.crypto.OpensslCipher;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;

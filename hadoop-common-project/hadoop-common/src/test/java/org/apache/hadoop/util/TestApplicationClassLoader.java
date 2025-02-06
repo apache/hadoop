@@ -130,8 +130,8 @@ public class TestApplicationClassLoader {
     ClassLoader appClassloader = new ApplicationClassLoader(
         new URL[] { testJar }, currentClassLoader, null);
 
-    assertNull(
-       currentClassLoader.getResourceAsStream("resource.txt"), "Resource should be null for current classloader");
+    assertNull(currentClassLoader.getResourceAsStream("resource.txt"),
+        "Resource should be null for current classloader");
 
     InputStream in = appClassloader.getResourceAsStream("resource.txt");
     assertNotNull(in, "Resource should not be null for app classloader");

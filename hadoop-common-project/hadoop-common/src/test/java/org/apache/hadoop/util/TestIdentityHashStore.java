@@ -21,14 +21,17 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.junit.jupiter.api.Assertions;
-
 import org.apache.hadoop.util.IdentityHashStore;
 import org.apache.hadoop.util.IdentityHashStore.Visitor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestIdentityHashStore {
   private static final Logger LOG =
@@ -64,23 +67,23 @@ public class TestIdentityHashStore {
     store.visitAll(new Visitor<Key, Integer>() {
       @Override
       public void accept(Key k, Integer v) {
-        Assertions.fail("found key " + k + " in empty IdentityHashStore.");
+        fail("found key " + k + " in empty IdentityHashStore.");
       }
     });
-    Assertions.assertTrue(store.isEmpty());
+    assertTrue(store.isEmpty());
     final Key key1 = new Key("key1");
     Integer value1 = new Integer(100);
     store.put(key1, value1);
-    Assertions.assertTrue(!store.isEmpty());
-    Assertions.assertEquals(value1, store.get(key1));
+    assertTrue(!store.isEmpty());
+    assertEquals(value1, store.get(key1));
     store.visitAll(new Visitor<Key, Integer>() {
       @Override
       public void accept(Key k, Integer v) {
-        Assertions.assertEquals(key1, k);
+        assertEquals(key1, k);
       }
     });
-    Assertions.assertEquals(value1, store.remove(key1));
-    Assertions.assertTrue(store.isEmpty());
+    assertEquals(value1, store.remove(key1));
+    assertTrue(store.isEmpty());
   }
   
   @Test
@@ -91,10 +94,10 @@ public class TestIdentityHashStore {
     store.visitAll(new Visitor<Key, Integer>() {
       @Override
       public void accept(Key k, Integer v) {
-        Assertions.fail("found key " + k + " in empty IdentityHashStore.");
+        fail("found key " + k + " in empty IdentityHashStore.");
       }
     });
-    Assertions.assertTrue(store.isEmpty());
+    assertTrue(store.isEmpty());
     Key key1 = new Key("key1");
     Integer value1 = new Integer(100);
     Integer value2 = new Integer(200);
@@ -103,10 +106,10 @@ public class TestIdentityHashStore {
     Key equalToKey1 = new Key("key1");
 
     // IdentityHashStore compares by object equality, not equals()
-    Assertions.assertNull(store.get(equalToKey1)); 
+    assertNull(store.get(equalToKey1)); 
 
-    Assertions.assertTrue(!store.isEmpty());
-    Assertions.assertEquals(value1, store.get(key1));
+    assertTrue(!store.isEmpty());
+    assertEquals(value1, store.get(key1));
     store.put(key1, value2);
     store.put(key1, value3);
     final List<Integer> allValues = new LinkedList<Integer>();
@@ -116,13 +119,13 @@ public class TestIdentityHashStore {
         allValues.add(v);
       }
     });
-    Assertions.assertEquals(3, allValues.size());
+    assertEquals(3, allValues.size());
     for (int i = 0; i < 3; i++) {
       Integer value = store.remove(key1);
-      Assertions.assertTrue(allValues.remove(value));
+      assertTrue(allValues.remove(value));
     }
-    Assertions.assertNull(store.remove(key1));
-    Assertions.assertTrue(store.isEmpty());
+    assertNull(store.remove(key1));
+    assertTrue(store.isEmpty());
   }
   
   @Test
@@ -142,23 +145,22 @@ public class TestIdentityHashStore {
     store.visitAll(new Visitor<Key, Integer>() {
       @Override
       public void accept(Key k, Integer v) {
-        Assertions.assertTrue(keys.contains(k));
+        assertTrue(keys.contains(k));
       }
     });
     for (int i = 0; i < NUM_KEYS; i++) {
-      Assertions.assertEquals(Integer.valueOf(i),
+      assertEquals(Integer.valueOf(i),
           store.remove(keys.get(i)));
     }
     store.visitAll(new Visitor<Key, Integer>() {
       @Override
       public void accept(Key k, Integer v) {
-        Assertions.fail("expected all entries to be removed");
+        fail("expected all entries to be removed");
       }
     });
-    Assertions.assertTrue(
-       store.isEmpty(), "expected the store to be " +
+    assertTrue(store.isEmpty(), "expected the store to be " +
         "empty, but found " + store.numElements() + " elements.");
-    Assertions.assertEquals(1024, store.capacity());
+    assertEquals(1024, store.capacity());
   }
   
 }

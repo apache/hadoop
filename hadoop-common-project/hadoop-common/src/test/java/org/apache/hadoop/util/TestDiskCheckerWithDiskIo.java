@@ -20,9 +20,8 @@ package org.apache.hadoop.util;
 
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.FileIoProvider;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -41,9 +40,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verify {@link DiskChecker} validation routines that perform
  * Disk IO.
  */
+@Timeout(30)
 public final class TestDiskCheckerWithDiskIo {
-  @Rule
-  public Timeout testTimeout = new Timeout(30_000, TimeUnit.MILLISECONDS);
 
   /**
    * Verify DiskChecker ignores at least 2 transient file creation errors.
@@ -98,15 +96,13 @@ public final class TestDiskCheckerWithDiskIo {
     assertTrue(".001".matches("\\.00\\d$"));
     for (int i = 1; i < DiskChecker.DISK_IO_MAX_ITERATIONS; ++i) {
       final File file = DiskChecker.getFileNameForDiskIoCheck(rootDir, i);
-      assertTrue(
-      
-         file.toString().matches("^.*\\.[0-9]+$"), "File name does not match expected pattern: " + file);
+      assertTrue(file.toString().matches("^.*\\.[0-9]+$"),
+          "File name does not match expected pattern: " + file);
     }
     final File guidFile = DiskChecker.getFileNameForDiskIoCheck(
         rootDir, DiskChecker.DISK_IO_MAX_ITERATIONS);
-    assertTrue(
-    
-       guidFile.toString().matches("^.*\\.[A-Za-z0-9-]+$"), "File name does not match expected pattern: " + guidFile);
+    assertTrue(guidFile.toString().matches("^.*\\.[A-Za-z0-9-]+$"),
+        "File name does not match expected pattern: " + guidFile);
   }
 
   /**

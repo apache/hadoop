@@ -30,7 +30,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /*
  * Test for HostsFileReader.java
@@ -379,29 +384,28 @@ public class TestHostsFileReader {
     HostDetails details = hfp.getHostDetails();
     HostDetails lazyDetails = hfp.getLazyLoadedHostDetails();
 
-    assertEquals(2
-,         details.getExcludedHosts().size(), "Details: no. of excluded hosts");
-    assertEquals(2
-,         details.getIncludedHosts().size(), "Details: no. of included hosts");
-    assertEquals(4
-,         lazyDetails.getExcludedHosts().size(), "LazyDetails: no. of excluded hosts");
-    assertEquals(0
-,         lazyDetails.getIncludedHosts().size(), "LayDetails: no. of included hosts");
+    assertEquals(2, details.getExcludedHosts().size(),
+        "Details: no. of excluded hosts");
+    assertEquals(2, details.getIncludedHosts().size(),
+        "Details: no. of included hosts");
+    assertEquals(4, lazyDetails.getExcludedHosts().size(),
+        "LazyDetails: no. of excluded hosts");
+    assertEquals(0, lazyDetails.getIncludedHosts().size(),
+        "LayDetails: no. of included hosts");
 
     hfp.finishRefresh();
 
     details = hfp.getHostDetails();
-    assertEquals(4
-,         details.getExcludedHosts().size(), "Details: no. of excluded hosts");
-    assertEquals(0
-,         details.getIncludedHosts().size(), "Details: no. of included hosts");
-    assertNull(
-       hfp.getLazyLoadedHostDetails(), "Lazy host details should be null");
+    assertEquals(4, details.getExcludedHosts().size(),
+        "Details: no. of excluded hosts");
+    assertEquals(0, details.getIncludedHosts().size(),
+        "Details: no. of included hosts");
+    assertNull(hfp.getLazyLoadedHostDetails(), "Lazy host details should be null");
   }
 
   @Test
   public void testFinishRefreshWithoutLazyRefresh() throws IOException {
-    assertThrows(IllegalArgumentException.class, () -> {
+    assertThrows(IllegalStateException.class, () -> {
       FileWriter efw = new FileWriter(excludesFile);
       FileWriter ifw = new FileWriter(includesFile);
       efw.close();

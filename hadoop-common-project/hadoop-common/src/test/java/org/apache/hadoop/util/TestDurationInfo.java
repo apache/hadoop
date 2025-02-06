@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.util;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The class to test DurationInfo.
@@ -33,17 +34,17 @@ public class TestDurationInfo {
   @Test
   public void testDurationInfoCreation() throws Exception {
     DurationInfo info = new DurationInfo(log, "test");
-    Assertions.assertTrue(info.value() >= 0);
+    assertTrue(info.value() >= 0);
     Thread.sleep(1000);
     info.finished();
-    Assertions.assertTrue(info.value() > 0);
+    assertTrue(info.value() > 0);
 
     info = new DurationInfo(log, true, "test format %s", "value");
-    Assertions.assertEquals("test format value: duration 0:00.000s",
+    assertEquals("test format value: duration 0:00.000s",
         info.toString());
 
     info = new DurationInfo(log, false, "test format %s", "value");
-    Assertions.assertEquals("test format value: duration 0:00.000s",
+    assertEquals("test format value: duration 0:00.000s",
         info.toString());
   }
 
@@ -53,7 +54,7 @@ public class TestDurationInfo {
     Thread.sleep(1000);
     info.close();
     info.close();
-    Assertions.assertTrue(info.value() > 0);
+    assertTrue(info.value() > 0);
   }
 
   @Test

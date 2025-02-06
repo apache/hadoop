@@ -24,7 +24,10 @@ import java.util.Arrays;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestFileBasedIPList {
 
@@ -47,23 +50,15 @@ public class TestFileBasedIPList {
 
     IPList ipList = new FileBasedIPList("ips.txt");
 
-    assertTrue (
-       ipList.isIn("10.119.103.112"), "10.119.103.112 is not in the list");
-    assertFalse (
-       ipList.isIn("10.119.103.113"), "10.119.103.113 is in the list");
+    assertTrue(ipList.isIn("10.119.103.112"), "10.119.103.112 is not in the list");
+    assertFalse(ipList.isIn("10.119.103.113"), "10.119.103.113 is in the list");
 
-    assertTrue (
-       ipList.isIn("10.221.102.0"), "10.221.102.0 is not in the list");
-    assertTrue (
-       ipList.isIn("10.221.102.1"), "10.221.102.1 is not in the list");
-    assertTrue (
-       ipList.isIn("10.221.103.1"), "10.221.103.1 is not in the list");
-    assertTrue (
-       ipList.isIn("10.221.103.255"), "10.221.103.255 is not in the list");
-    assertFalse(
-       ipList.isIn("10.221.104.0"), "10.221.104.0 is in the list");
-    assertFalse(
-       ipList.isIn("10.221.104.1"), "10.221.104.1 is in the list");
+    assertTrue(ipList.isIn("10.221.102.0"), "10.221.102.0 is not in the list");
+    assertTrue(ipList.isIn("10.221.102.1"), "10.221.102.1 is not in the list");
+    assertTrue(ipList.isIn("10.221.103.1"), "10.221.103.1 is not in the list");
+    assertTrue(ipList.isIn("10.221.103.255"), "10.221.103.255 is not in the list");
+    assertFalse(ipList.isIn("10.221.104.0"), "10.221.104.0 is in the list");
+    assertFalse(ipList.isIn("10.221.104.1"), "10.221.104.1 is in the list");
   }
 
   /**
@@ -79,8 +74,7 @@ public class TestFileBasedIPList {
 
     IPList ipList = new FileBasedIPList("ips.txt");
 
-    assertFalse (
-       ipList.isIn(null), "Null Ip is in the list");
+    assertFalse(ipList.isIn(null), "Null Ip is in the list");
   }
 
   /**
@@ -98,25 +92,17 @@ public class TestFileBasedIPList {
 
     IPList ipList = new FileBasedIPList("ips.txt");
 
-    assertTrue (
-       ipList.isIn("10.119.103.112"), "10.119.103.112 is not in the list");
-    assertFalse (
-       ipList.isIn("10.119.103.113"), "10.119.103.113 is in the list");
+    assertTrue(ipList.isIn("10.119.103.112"), "10.119.103.112 is not in the list");
+    assertFalse(ipList.isIn("10.119.103.113"), "10.119.103.113 is in the list");
 
-    assertTrue (
-       ipList.isIn("10.221.103.121"), "10.221.103.121 is not in the list");
-    assertFalse(
-       ipList.isIn("10.221.104.0"), "10.221.104.0 is in the list");
+    assertTrue(ipList.isIn("10.221.103.121"), "10.221.103.121 is not in the list");
+    assertFalse(ipList.isIn("10.221.104.0"), "10.221.104.0 is in the list");
 
-    assertTrue (
-       ipList.isIn("10.222.103.121"), "10.222.103.121 is not in the list");
-    assertFalse(
-       ipList.isIn("10.223.104.0"), "10.223.104.0 is in the list");
+    assertTrue(ipList.isIn("10.222.103.121"), "10.222.103.121 is not in the list");
+    assertFalse(ipList.isIn("10.223.104.0"), "10.223.104.0 is in the list");
 
-    assertTrue (
-       ipList.isIn("10.113.221.221"), "10.113.221.221 is not in the list");
-    assertFalse(
-       ipList.isIn("10.113.221.222"), "10.113.221.222 is in the list");
+    assertTrue(ipList.isIn("10.113.221.221"), "10.113.221.221 is not in the list");
+    assertFalse(ipList.isIn("10.113.221.222"), "10.113.221.222 is in the list");
   }
 
   /**
@@ -129,8 +115,7 @@ public class TestFileBasedIPList {
 
     IPList ipl = new FileBasedIPList(null);
 
-    assertFalse(
-       ipl.isIn("110.113.221.222"), "110.113.221.222 is in the list");
+    assertFalse(ipl.isIn("110.113.221.222"), "110.113.221.222 is in the list");
   }
 
   /**
@@ -143,8 +128,7 @@ public class TestFileBasedIPList {
 
     IPList ipl = new FileBasedIPList("missingips.txt");
 
-    assertFalse(
-       ipl.isIn("110.113.221.222"), "110.113.221.222 is in the list");
+    assertFalse(ipl.isIn("110.113.221.222"), "110.113.221.222 is in the list");
   }
 
   /**
@@ -159,8 +143,7 @@ public class TestFileBasedIPList {
     createFileWithEntries ("ips.txt", ips);
     IPList ipl = new FileBasedIPList("ips.txt");
 
-    assertFalse(
-       ipl.isIn("110.113.221.222"), "110.113.221.222 is in the list");
+    assertFalse(ipl.isIn("110.113.221.222"), "110.113.221.222 is in the list");
   }
 
   /**
