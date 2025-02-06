@@ -37,7 +37,6 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Assertions;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -46,6 +45,8 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.Properties;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -153,7 +154,7 @@ public class TestHttpServerWithSpnego {
         HttpURLConnection conn = authUrl
             .openConnection(new URL(serverURL + servlet + "?doAs=userB"),
             token);
-        Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+        assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       }
 
       // userA cannot impersonate userC, it fails.
@@ -162,7 +163,7 @@ public class TestHttpServerWithSpnego {
         HttpURLConnection conn = authUrl
             .openConnection(new URL(serverURL + servlet + "?doAs=userC"),
             token);
-        Assertions.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+        assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
             conn.getResponseCode());
       }
 
@@ -173,7 +174,7 @@ public class TestHttpServerWithSpnego {
           new String[]{"logLevel", "logs"}) {
         HttpURLConnection conn = authUrl
             .openConnection(new URL(serverURL + servlet), token);
-        Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+        assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       }
 
       // Setup token for userB
@@ -184,7 +185,7 @@ public class TestHttpServerWithSpnego {
           new String[]{"logLevel", "logs"}) {
         HttpURLConnection conn = authUrl
             .openConnection(new URL(serverURL + servlet), token);
-        Assertions.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+        assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
             conn.getResponseCode());
       }
 
@@ -221,13 +222,13 @@ public class TestHttpServerWithSpnego {
       // endpoints in whitelist should not require Kerberos authentication
       for (String endpoint : allowList) {
         HttpURLConnection conn = (HttpURLConnection) new URL(serverURL + endpoint).openConnection();
-        Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+        assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       }
 
       // endpoints not in whitelist should require Kerberos authentication
       for (String endpoint : denyList) {
         HttpURLConnection conn = (HttpURLConnection) new URL(serverURL + endpoint).openConnection();
-        Assertions.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
+        assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
       }
 
     } finally {

@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.http;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 import org.eclipse.jetty.server.CustomRequestLog;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Slf4jRequestLogWriter;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TestHttpRequestLog {
 
@@ -32,9 +32,9 @@ public class TestHttpRequestLog {
   public void testAppenderDefined() {
     RequestLog requestLog = HttpRequestLog.getRequestLog("test");
     assertNotNull(requestLog, "RequestLog should not be null");
-    //assertThat(requestLog, instanceOf(CustomRequestLog.class));
+    assertInstanceOf(CustomRequestLog.class, requestLog);
     CustomRequestLog crl = (CustomRequestLog) requestLog;
-    //assertThat(crl.getWriter(), instanceOf(Slf4jRequestLogWriter.class));
+    assertInstanceOf(Slf4jRequestLogWriter.class, crl.getWriter());
     assertEquals(CustomRequestLog.EXTENDED_NCSA_FORMAT, crl.getFormatString());
   }
 }

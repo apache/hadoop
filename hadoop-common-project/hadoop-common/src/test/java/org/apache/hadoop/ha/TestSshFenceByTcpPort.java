@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.ha;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.net.InetSocketAddress;
 
@@ -25,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.SshFenceByTcpPort.Args;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assume;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.event.Level;
@@ -59,7 +62,7 @@ public class TestSshFenceByTcpPort {
   @Test
   @Timeout(value = 20)
   public void testFence() throws BadFencingConfigurationException {
-    Assume.assumeTrue(isConfigured());
+    assumeTrue(isConfigured());
     Configuration conf = new Configuration();
     conf.set(SshFenceByTcpPort.CONF_IDENTITIES_KEY, TEST_KEYFILE);
     SshFenceByTcpPort fence = new SshFenceByTcpPort();

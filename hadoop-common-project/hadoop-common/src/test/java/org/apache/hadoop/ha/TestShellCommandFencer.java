@@ -17,7 +17,15 @@
  */
 package org.apache.hadoop.ha;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.contains;
+import static org.mockito.Mockito.endsWith;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.reset;
 
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
@@ -33,7 +41,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -59,7 +66,7 @@ public class TestShellCommandFencer {
 
   @BeforeEach
   public void resetLogSpy() {
-    Mockito.reset(ShellCommandFencer.LOG);
+    reset(ShellCommandFencer.LOG);
   }
   
   private static ShellCommandFencer createFencer() {
@@ -89,9 +96,8 @@ public class TestShellCommandFencer {
       new NodeFencer(conf, "shell");
       fail("Didn't throw when passing no args to shell");
     } catch (BadFencingConfigurationException confe) {
-      assertTrue(
-      
-       confe.getMessage().contains("No argument passed"), "Unexpected exception:" + StringUtils.stringifyException(confe));    
+      assertTrue(confe.getMessage().contains("No argument passed"),
+          "Unexpected exception:" + StringUtils.stringifyException(confe));
     }
   }
 
@@ -102,9 +108,8 @@ public class TestShellCommandFencer {
       new NodeFencer(conf, "shell()");
       fail("Didn't throw when passing no args to shell");
     } catch (BadFencingConfigurationException confe) {
-      assertTrue(
-      
-       confe.getMessage().contains("Unable to parse line: 'shell()'"), "Unexpected exception:" + StringUtils.stringifyException(confe));
+      assertTrue(confe.getMessage().contains("Unable to parse line: 'shell()'"),
+          "Unexpected exception:" + StringUtils.stringifyException(confe));
     }
   }
 
@@ -115,8 +120,8 @@ public class TestShellCommandFencer {
   @Test
   public void testStdoutLogging() {
     assertTrue(fencer.tryFence(TEST_TARGET, "echo hello"));
-    Mockito.verify(ShellCommandFencer.LOG).info(
-        Mockito.endsWith("echo hello: hello"));
+    verify(ShellCommandFencer.LOG).info(
+        endsWith("echo hello: hello"));
   }
    
   /**
@@ -126,8 +131,8 @@ public class TestShellCommandFencer {
   @Test
   public void testStderrLogging() {
     assertTrue(fencer.tryFence(TEST_TARGET, "echo hello>&2"));
-    Mockito.verify(ShellCommandFencer.LOG).warn(
-        Mockito.endsWith("echo hello>&2: hello"));
+    verify(ShellCommandFencer.LOG).warn(
+        endsWith("echo hello>&2: hello"));
   }
 
   /**
@@ -138,12 +143,12 @@ public class TestShellCommandFencer {
   public void testConfAsEnvironment() {
     if (!Shell.WINDOWS) {
       fencer.tryFence(TEST_TARGET, "echo $in_fencing_tests");
-      Mockito.verify(ShellCommandFencer.LOG).info(
-          Mockito.endsWith("echo $in...ing_tests: yessir"));
+      verify(ShellCommandFencer.LOG).info(
+          endsWith("echo $in...ing_tests: yessir"));
     } else {
       fencer.tryFence(TEST_TARGET, "echo %in_fencing_tests%");
-      Mockito.verify(ShellCommandFencer.LOG).info(
-          Mockito.endsWith("echo %in...ng_tests%: yessir"));
+      verify(ShellCommandFencer.LOG).info(
+          endsWith("echo %in...ng_tests%: yessir"));
     }
   }
   
@@ -155,12 +160,12 @@ public class TestShellCommandFencer {
   public void testTargetAsEnvironment() {
     if (!Shell.WINDOWS) {
       fencer.tryFence(TEST_TARGET, "echo $target_host $target_port");
-      Mockito.verify(ShellCommandFencer.LOG).info(
-          Mockito.endsWith("echo $ta...rget_port: dummyhost 1234"));
+      verify(ShellCommandFencer.LOG).info(
+          endsWith("echo $ta...rget_port: dummyhost 1234"));
     } else {
       fencer.tryFence(TEST_TARGET, "echo %target_host% %target_port%");
-      Mockito.verify(ShellCommandFencer.LOG).info(
-          Mockito.endsWith("echo %ta...get_port%: dummyhost 1234"));
+      verify(ShellCommandFencer.LOG).info(
+          endsWith("echo %ta...get_port%: dummyhost 1234"));
     }
   }
 
@@ -180,18 +185,18 @@ public class TestShellCommandFencer {
         + "echo $source_host $source_port";
     if (!Shell.WINDOWS) {
       fencer.tryFence(target, cmd);
-      Mockito.verify(ShellCommandFencer.LOG).info(
-          Mockito.contains("echo $ta...rget_port: dummytarget 1111"));
+      verify(ShellCommandFencer.LOG).info(
+          contains("echo $ta...rget_port: dummytarget 1111"));
       fencer.tryFence(source, cmd);
-      Mockito.verify(ShellCommandFencer.LOG).info(
-          Mockito.contains("echo $so...urce_port: dummysource 2222"));
+      verify(ShellCommandFencer.LOG).info(
+          contains("echo $so...urce_port: dummysource 2222"));
     } else {
       fencer.tryFence(target, cmd);
-      Mockito.verify(ShellCommandFencer.LOG).info(
-          Mockito.contains("echo %ta...get_port%: dummytarget 1111"));
+      verify(ShellCommandFencer.LOG).info(
+          contains("echo %ta...get_port%: dummytarget 1111"));
       fencer.tryFence(source, cmd);
-      Mockito.verify(ShellCommandFencer.LOG).info(
-          Mockito.contains("echo %so...urce_port%: dummysource 2222"));
+      verify(ShellCommandFencer.LOG).info(
+          contains("echo %so...urce_port%: dummysource 2222"));
     }
   }
 

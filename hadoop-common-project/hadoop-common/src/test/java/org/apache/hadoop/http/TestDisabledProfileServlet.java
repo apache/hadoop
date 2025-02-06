@@ -68,20 +68,20 @@ public class TestDisabledProfileServlet extends HttpServerFunctionalTest {
   @Test
   public void testRequestMethods() throws IOException {
     HttpURLConnection connection = getConnection("PUT");
-    assertEquals(HttpServletResponse.SC_METHOD_NOT_ALLOWED
-,         connection.getResponseCode(), "Unexpected response code");
+    assertEquals(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
+        connection.getResponseCode(), "Unexpected response code");
     connection.disconnect();
     connection = getConnection("POST");
-    assertEquals(HttpServletResponse.SC_METHOD_NOT_ALLOWED
-,         connection.getResponseCode(), "Unexpected response code");
+    assertEquals(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
+        connection.getResponseCode(), "Unexpected response code");
     connection.disconnect();
     connection = getConnection("DELETE");
-    assertEquals(HttpServletResponse.SC_METHOD_NOT_ALLOWED
-,         connection.getResponseCode(), "Unexpected response code");
+    assertEquals(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
+        connection.getResponseCode(), "Unexpected response code");
     connection.disconnect();
     connection = getConnection("GET");
-    assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR
-,         connection.getResponseCode(), "Unexpected response code");
+    assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+        connection.getResponseCode(), "Unexpected response code");
     connection.disconnect();
   }
 

@@ -29,7 +29,6 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.AsyncGetFuture;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -103,10 +102,10 @@ public class TestAsyncIPC {
     void assertReturnValues() throws InterruptedException, ExecutionException {
       for (int i = 0; i < count; i++) {
         LongWritable value = returnFutures.get(i).get();
-        Assertions.assertEquals(
-           expectedValues.get(i).longValue(), value.get(), "call" + i + " failed.");
+        assertEquals(expectedValues.get(i).longValue(), value.get(),
+            "call" + i + " failed.");
       }
-      Assertions.assertFalse(failed);
+      assertFalse(failed);
     }
 
     void assertReturnValues(long timeout, TimeUnit unit)
@@ -129,12 +128,12 @@ public class TestAsyncIPC {
             continue;
           }
 
-          Assertions.assertEquals(
-             expectedValues.get(i).longValue(), value.get(), "call" + i + " failed.");
+          assertEquals(expectedValues.get(i).longValue(), value.get(),
+              "call" + i + " failed.");
           checked[i] = true;
         }
       }
-      Assertions.assertFalse(failed);
+      assertFalse(failed);
     }
   }
 
@@ -288,7 +287,7 @@ public class TestAsyncIPC {
       caller.assertReturnValues();
       caller.assertReturnValues();
       caller.assertReturnValues();
-      Assertions.assertEquals(asyncCallCount, client.getAsyncCallCount());
+      assertEquals(asyncCallCount, client.getAsyncCallCount());
     } finally {
       client.stop();
       server.stop();
@@ -388,7 +387,7 @@ public class TestAsyncIPC {
       @Override
       void checkResponse(RpcResponseHeaderProto header) throws IOException {
         super.checkResponse(header);
-        Assertions.assertEquals(infoMap.get(header.getCallId()).retry,
+        assertEquals(infoMap.get(header.getCallId()).retry,
             header.getRetryCount());
       }
     };
@@ -398,7 +397,7 @@ public class TestAsyncIPC {
     server.callListener = new Runnable() {
       @Override
       public void run() {
-        Assertions.assertEquals(infoMap.get(Server.getCallId()).retry,
+        assertEquals(infoMap.get(Server.getCallId()).retry,
             Server.getCallRetryCount());
       }
     };
@@ -437,7 +436,7 @@ public class TestAsyncIPC {
       public void run() {
         // we have not set the retry count for the client, thus on the server
         // side we should see retry count as 0
-        Assertions.assertEquals(retryCount, Server.getCallRetryCount());
+        assertEquals(retryCount, Server.getCallRetryCount());
       }
     };
 
@@ -473,7 +472,7 @@ public class TestAsyncIPC {
       public void run() {
         // we have not set the retry count for the client, thus on the server
         // side we should see retry count as 0
-        Assertions.assertEquals(0, Server.getCallRetryCount());
+        assertEquals(0, Server.getCallRetryCount());
       }
     };
 

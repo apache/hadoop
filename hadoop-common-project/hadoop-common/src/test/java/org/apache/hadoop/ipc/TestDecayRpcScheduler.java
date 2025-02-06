@@ -26,7 +26,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import static org.apache.hadoop.ipc.DecayRpcScheduler.IPC_DECAYSCHEDULER_THRESHOLDS_KEY;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -294,14 +298,14 @@ public class TestDecayRpcScheduler {
         "Hadoop:service="+ namespace + ",name=DecayRpcScheduler");
 
     String cvs1 = (String) mbs.getAttribute(mxbeanName, "CallVolumeSummary");
-    assertTrue(
-       cvs1.equals("{\"A\":6,\"B\":2,\"C\":2}"), "Get expected JMX of CallVolumeSummary before decay");
+    assertTrue(cvs1.equals("{\"A\":6,\"B\":2,\"C\":2}"),
+        "Get expected JMX of CallVolumeSummary before decay");
 
     scheduler.forceDecay();
 
     String cvs2 = (String) mbs.getAttribute(mxbeanName, "CallVolumeSummary");
-    assertTrue(
-       cvs2.equals("{\"A\":3,\"B\":1,\"C\":1}"), "Get expected JMX for CallVolumeSummary after decay");
+    assertTrue(cvs2.equals("{\"A\":3,\"B\":1,\"C\":1}"),
+        "Get expected JMX for CallVolumeSummary after decay");
   }
 
   @Test

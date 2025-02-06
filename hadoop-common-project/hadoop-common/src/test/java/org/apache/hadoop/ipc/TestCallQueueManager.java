@@ -25,9 +25,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.reset;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,7 +42,6 @@ import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mockito.Mockito;
 
 public class TestCallQueueManager {
   private CallQueueManager<FakeCall> manager;
@@ -440,12 +441,12 @@ public class TestCallQueueManager {
   @SuppressWarnings("unchecked")
   @Test
   public void testCallQueueOverflowExceptions() throws Exception {
-    RpcScheduler scheduler = Mockito.mock(RpcScheduler.class);
-    BlockingQueue<Schedulable> queue = Mockito.mock(BlockingQueue.class);
+    RpcScheduler scheduler = mock(RpcScheduler.class);
+    BlockingQueue<Schedulable> queue = mock(BlockingQueue.class);
     CallQueueManager<Schedulable> cqm =
-        Mockito.spy(new CallQueueManager<>(queue, scheduler, false, false));
+        spy(new CallQueueManager<>(queue, scheduler, false, false));
     CallQueueManager<Schedulable> cqmTriggerFailover =
-            Mockito.spy(new CallQueueManager<>(queue, scheduler, false, true));
+        spy(new CallQueueManager<>(queue, scheduler, false, true));
     Schedulable call = new FakeCall(0);
 
     // call queue exceptions that trigger failover

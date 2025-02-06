@@ -13,7 +13,6 @@
  */
 package org.apache.hadoop.http;
 
-import org.junit.jupiter.api.Assertions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.net.NetUtils;
@@ -36,6 +35,8 @@ import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.net.HttpCookie;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestHttpCookieFlag {
   private static final String BASEDIR =
@@ -120,9 +121,9 @@ public class TestHttpCookieFlag {
 
     String header = conn.getHeaderField("Set-Cookie");
     List<HttpCookie> cookies = HttpCookie.parse(header);
-    Assertions.assertTrue(!cookies.isEmpty());
-    Assertions.assertTrue(header.contains("; HttpOnly"));
-    Assertions.assertTrue("token".equals(cookies.get(0).getValue()));
+    assertTrue(!cookies.isEmpty());
+    assertTrue(header.contains("; HttpOnly"));
+    assertTrue("token".equals(cookies.get(0).getValue()));
   }
 
   @Test
@@ -135,10 +136,10 @@ public class TestHttpCookieFlag {
 
     String header = conn.getHeaderField("Set-Cookie");
     List<HttpCookie> cookies = HttpCookie.parse(header);
-    Assertions.assertTrue(!cookies.isEmpty());
-    Assertions.assertTrue(header.contains("; HttpOnly"));
-    Assertions.assertTrue(cookies.get(0).getSecure());
-    Assertions.assertTrue("token".equals(cookies.get(0).getValue()));
+    assertTrue(!cookies.isEmpty());
+    assertTrue(header.contains("; HttpOnly"));
+    assertTrue(cookies.get(0).getSecure());
+    assertTrue("token".equals(cookies.get(0).getValue()));
   }
 
   @AfterAll

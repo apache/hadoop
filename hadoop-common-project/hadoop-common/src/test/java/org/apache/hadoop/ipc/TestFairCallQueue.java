@@ -407,21 +407,21 @@ public class TestFairCallQueue {
   private void checkOverflowException(Exception ex, RpcStatusProto status,
       boolean failOverTriggered) {
     // should be an overflow exception
-    assertTrue(
-       ex instanceof CallQueueOverflowException, ex.getClass().getName() + " != CallQueueOverflowException");
+    assertTrue(ex instanceof CallQueueOverflowException,
+        ex.getClass().getName() + " != CallQueueOverflowException");
     IOException ioe = ((CallQueueOverflowException)ex).getCause();
     assertNotNull(ioe);
-    assertTrue(
-       ioe instanceof RpcServerException, ioe.getClass().getName() + " != RpcServerException");
+    assertTrue(ioe instanceof RpcServerException,
+        ioe.getClass().getName() + " != RpcServerException");
     RpcServerException rse = (RpcServerException)ioe;
     // check error/fatal status and if it embeds a retriable ex or standby ex.
     assertEquals(status, rse.getRpcStatusProto());
     if (failOverTriggered) {
-      assertTrue(
-         rse.getCause() instanceof StandbyException, rse.getClass().getName() + " != RetriableException");
+      assertTrue(rse.getCause() instanceof StandbyException,
+          rse.getClass().getName() + " != RetriableException");
     } else {
-      assertTrue(
-         rse.getCause() instanceof RetriableException, rse.getClass().getName() + " != RetriableException");
+      assertTrue(rse.getCause() instanceof RetriableException,
+          rse.getClass().getName() + " != RetriableException");
     }
   }
 

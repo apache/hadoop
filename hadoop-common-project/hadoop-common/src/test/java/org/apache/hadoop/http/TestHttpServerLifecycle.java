@@ -73,8 +73,8 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    */
   private void assertToStringContains(HttpServer2 server, String text) {
     String description = server.toString();
-    assertTrue(
-              description.contains(text), "Did not find \"" + text + "\" in \"" + description + "\"");
+    assertTrue(description.contains(text),
+        "Did not find \"" + text + "\" in \"" + description + "\"");
   }
 
   /**

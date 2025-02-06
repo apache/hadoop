@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.http;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -72,19 +75,18 @@ public class TestHtmlQuoting {
       new HttpServer2.QuotingInputFilter.RequestQuoter(mockReq);
     
     Mockito.doReturn("a<b").when(mockReq).getParameter("x");
-    assertEquals("Test simple param quoting",
-        "a&lt;b", quoter.getParameter("x"));
+    assertEquals("a&lt;b", quoter.getParameter("x"), "Test simple param quoting");
     
     Mockito.doReturn(null).when(mockReq).getParameter("x");
-    assertEquals(
-       null, quoter.getParameter("x"), "Test that missing parameters dont cause NPE");
+    assertEquals(null, quoter.getParameter("x"),
+        "Test that missing parameters dont cause NPE");
 
     Mockito.doReturn(new String[]{"a<b", "b"}).when(mockReq).getParameterValues("x");
-    assertArrayEquals(
-       new String[]{"a&lt;b", "b"}, quoter.getParameterValues("x"), "Test escaping of an array");
+    assertArrayEquals(new String[]{"a&lt;b", "b"}, quoter.getParameterValues("x"),
+        "Test escaping of an array");
 
     Mockito.doReturn(null).when(mockReq).getParameterValues("x");
-    assertArrayEquals(
-       null, quoter.getParameterValues("x"), "Test that missing parameters dont cause NPE for array");
+    assertArrayEquals(null, quoter.getParameterValues("x"),
+        "Test that missing parameters dont cause NPE for array");
   }
 }

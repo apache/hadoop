@@ -30,7 +30,6 @@ import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 
-import org.assertj.core.api.Assertions;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.ajax.JSON;
@@ -71,6 +70,8 @@ import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestHttpServer extends HttpServerFunctionalTest {
   static final Logger LOG = LoggerFactory.getLogger(TestHttpServer.class);
@@ -182,8 +183,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
             assertEquals("a:b\nc:d\n",
                          readOutput(new URL(baseUrl, "/echo?a=b&c=d")));
             int serverThreads = server.webServer.getThreadPool().getThreads();
-            assertTrue(serverThreads <= MAX_THREADS, "More threads are started than expected, Server Threads count: "
-                    + serverThreads);
+            assertTrue(serverThreads <= MAX_THREADS,
+                "More threads are started than expected, Server Threads count: " + serverThreads);
             System.out.println("Number of threads = " + serverThreads +
                 " which is less or equal than the max = " + MAX_THREADS);
           } catch (Exception e) {
@@ -281,9 +282,9 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     final HttpURLConnection conn =
         (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
-    Assertions.assertThat(conn.getResponseCode()).isEqualTo(200);
+    assertThat(conn.getResponseCode()).isEqualTo(200);
     final int after = metrics.responses2xx();
-    Assertions.assertThat(after).isGreaterThan(before);
+    assertThat(after).isGreaterThan(before);
   }
 
   /**
@@ -543,8 +544,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.doReturn(null).when(request).getParameterValues("dummy");
     RequestQuoter requestQuoter = new RequestQuoter(request);
     String[] parameterValues = requestQuoter.getParameterValues("dummy");
-    assertNull(
-        parameterValues, "It should return null " + "when there are no values for the parameter");
+    assertNull(parameterValues,
+        "It should return null when there are no values for the parameter");
   }
 
   @Test
@@ -554,8 +555,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.doReturn(values).when(request).getParameterValues("dummy");
     RequestQuoter requestQuoter = new RequestQuoter(request);
     String[] parameterValues = requestQuoter.getParameterValues("dummy");
-    assertTrue(Arrays.equals(
-        values, parameterValues), "It should return Parameter Values");
+    assertTrue(Arrays.equals(values, parameterValues),
+        "It should return Parameter Values");
   }
 
   @SuppressWarnings("unchecked")

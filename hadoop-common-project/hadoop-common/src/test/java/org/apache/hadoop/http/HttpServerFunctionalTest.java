@@ -49,7 +49,7 @@ public class HttpServerFunctionalTest extends Assertions {
     public void doGet(HttpServletRequest request,
                       HttpServletResponse response
     ) throws ServletException, IOException {
-      Assertions.assertEquals(63 * 1024, request.getHeader("longheader").length());
+      assertEquals(63 * 1024, request.getHeader("longheader").length());
       response.setStatus(HttpServletResponse.SC_OK);
     }
   }

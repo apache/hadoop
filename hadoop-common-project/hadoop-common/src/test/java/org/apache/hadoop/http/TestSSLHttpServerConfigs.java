@@ -28,7 +28,6 @@ import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -40,6 +39,7 @@ import static org.apache.hadoop.http.TestSSLHttpServer.SSL_SERVER_TRUSTSTORE_PRO
 import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.CLIENT_KEY_STORE_PASSWORD_DEFAULT;
 import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.SERVER_KEY_STORE_PASSWORD_DEFAULT;
 import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.TRUST_STORE_PASSWORD_DEFAULT;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test suit for testing KeyStore and TrustStore password settings.
@@ -173,7 +173,7 @@ public class TestSSLHttpServerConfigs {
     // .password should fail.
     try {
       testServerStart(null, null, null);
-      Assertions.fail("Server should have failed to start without any " +
+      fail("Server should have failed to start without any " +
           "KeyStore password.");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Problem starting http server",
@@ -189,7 +189,7 @@ public class TestSSLHttpServerConfigs {
     // Accessing KeyStore with wrong keyStore password/ keyPassword should fail.
     try {
       testServerStart(SERVER_PWD, "wrongPassword", null);
-      Assertions.fail("Server should have failed to start with wrong " +
+      fail("Server should have failed to start with wrong " +
           "KeyStore password.");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Keystore was tampered with, " +
@@ -198,7 +198,7 @@ public class TestSSLHttpServerConfigs {
 
     try {
       testServerStart("wrongPassword", SERVER_PWD, null);
-      Assertions.fail("Server should have failed to start with wrong " +
+      fail("Server should have failed to start with wrong " +
           "KeyStore password.");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Problem starting http server",
@@ -221,7 +221,7 @@ public class TestSSLHttpServerConfigs {
     // set) should fail.
     try {
       testServerStart(SERVER_PWD, SERVER_PWD, "wrongPassword");
-      Assertions.fail("Server should have failed to start with wrong " +
+      fail("Server should have failed to start with wrong " +
           "TrustStore password.");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Keystore was tampered with, " +
@@ -242,7 +242,7 @@ public class TestSSLHttpServerConfigs {
     // set) should fail.
     try {
       testServerStart(SERVER_PWD, "wrongPassword", TRUST_STORE_PWD);
-      Assertions.fail("Server should have failed to start with wrong " +
+      fail("Server should have failed to start with wrong " +
           "KeyStore password.");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Keystore was tampered with, " +
@@ -264,7 +264,7 @@ public class TestSSLHttpServerConfigs {
 
     try {
       testServerStart(null, null, null);
-      Assertions.fail("Server should have failed to start without " +
+      fail("Server should have failed to start without " +
           "KeyStore password.");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Problem starting http server",

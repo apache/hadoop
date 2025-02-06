@@ -18,10 +18,10 @@
 package org.apache.hadoop.ipc;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_KEY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestCallerContext {
@@ -32,14 +32,14 @@ public class TestCallerContext {
     CallerContext.Builder builder = new CallerContext.Builder(null, conf);
     CallerContext context = builder.append("context1")
         .append("context2").append("key3", "value3").build();
-    Assertions.assertEquals(true,
+    assertEquals(true,
         context.getContext().contains("$"));
     String[] items = context.getContext().split("\\$");
-    Assertions.assertEquals(3, items.length);
-    Assertions.assertEquals("key3:value3", items[2]);
+    assertEquals(3, items.length);
+    assertEquals("key3:value3", items[2]);
 
     builder.append("$$");
-    Assertions.assertEquals("context1$context2$key3:value3$$$",
+    assertEquals("context1$context2$key3:value3$$$",
         builder.build().getContext());
   }
 
@@ -49,28 +49,28 @@ public class TestCallerContext {
     conf.set(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY, "$");
     CallerContext.Builder builder = new CallerContext.Builder(null, conf);
     builder.append("key1", "value1");
-    Assertions.assertEquals("key1:value1",
+    assertEquals("key1:value1",
         builder.build().getContext());
 
     // Append an existed key with different value.
     builder.appendIfAbsent("key1", "value2");
     String[] items = builder.build().getContext().split("\\$");
-    Assertions.assertEquals(1, items.length);
-    Assertions.assertEquals("key1:value1",
+    assertEquals(1, items.length);
+    assertEquals("key1:value1",
         builder.build().getContext());
 
     // Append an absent key.
     builder.appendIfAbsent("key2", "value2");
     String[] items2 = builder.build().getContext().split("\\$");
-    Assertions.assertEquals(2, items2.length);
-    Assertions.assertEquals("key1:value1$key2:value2",
+    assertEquals(2, items2.length);
+    assertEquals("key1:value1$key2:value2",
         builder.build().getContext());
 
     // Append a key that is a substring of an existing key.
     builder.appendIfAbsent("key", "value");
     String[] items3 = builder.build().getContext().split("\\$");
-    Assertions.assertEquals(3, items3.length);
-    Assertions.assertEquals("key1:value1$key2:value2$key:value",
+    assertEquals(3, items3.length);
+    assertEquals("key1:value1$key2:value2$key:value",
         builder.build().getContext());
   }
 
