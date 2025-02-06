@@ -83,7 +83,7 @@ public class TestMetricsAnnotations {
   @Test
   public void testBadFields() {
     assertThrows(MetricsException.class, () ->
-       MetricsAnnotations.makeSource(new BadMetrics()));
+        MetricsAnnotations.makeSource(new BadMetrics()));
   }
 
   static class MyMetrics2 {

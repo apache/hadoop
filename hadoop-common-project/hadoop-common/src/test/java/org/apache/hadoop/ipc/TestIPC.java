@@ -1461,7 +1461,7 @@ public class TestIPC {
           new TestInvalidTokenHandler(client, server);
       DummyProtocol proxy = (DummyProtocol) Proxy.newProxyInstance(
           DummyProtocol.class.getClassLoader(),
-          new Class[] { DummyProtocol.class }, handler);
+          new Class[]{DummyProtocol.class}, handler);
       FailoverProxyProvider<DummyProtocol> provider =
            new DefaultFailoverProxyProvider<>(DummyProtocol.class, proxy);
       DummyProtocol retryProxy =

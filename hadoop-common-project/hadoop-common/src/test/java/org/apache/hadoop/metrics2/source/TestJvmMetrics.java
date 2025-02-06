@@ -207,8 +207,8 @@ public class TestJvmMetrics {
         .initSingleton("test", null);
     JvmMetrics jvmMetrics2 = org.apache.hadoop.metrics2.source.JvmMetrics
         .initSingleton("test", null);
-    assertEquals(
-       jvmMetrics1, jvmMetrics2, "initSingleton should return the singleton instance");
+    assertEquals(jvmMetrics1, jvmMetrics2,
+        "initSingleton should return the singleton instance");
   }
 
   @Test
@@ -219,12 +219,12 @@ public class TestJvmMetrics {
     final String process2Name = "process2";
     JvmMetrics jvmMetrics2 = org.apache.hadoop.metrics2.source.JvmMetrics
         .initSingleton(process2Name, null);
-    assertEquals(
-       jvmMetrics1, jvmMetrics2, "initSingleton should return the singleton instance");
-    assertEquals(
-       process1Name, jvmMetrics1.processName, "unexpected process name of the singleton instance");
-    assertEquals(
-       process1Name, jvmMetrics2.processName, "unexpected process name of the singleton instance");
+    assertEquals(jvmMetrics1, jvmMetrics2,
+        "initSingleton should return the singleton instance");
+    assertEquals(process1Name, jvmMetrics1.processName,
+        "unexpected process name of the singleton instance");
+    assertEquals(process1Name, jvmMetrics2.processName,
+        "unexpected process name of the singleton instance");
   }
 
   /**

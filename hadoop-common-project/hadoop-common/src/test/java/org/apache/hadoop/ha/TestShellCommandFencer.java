@@ -45,8 +45,6 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 
-import static org.mockito.Mockito.mock;
-
 public class TestShellCommandFencer {
   private ShellCommandFencer fencer = createFencer();
   private static final HAServiceTarget TEST_TARGET =

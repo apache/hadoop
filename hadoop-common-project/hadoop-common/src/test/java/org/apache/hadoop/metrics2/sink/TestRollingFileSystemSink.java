@@ -78,7 +78,7 @@ public class TestRollingFileSystemSink {
     calendar.set(Calendar.YEAR, 2016);
 
     assertNull(
-       rfsSink.nextFlush, "Last flush time should have been null prior to calling init()");
+        rfsSink.nextFlush, "Last flush time should have been null prior to calling init()");
 
     rfsSink.setInitialFlushTime(calendar.getTime());
 
@@ -92,7 +92,7 @@ public class TestRollingFileSystemSink {
     diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
 
     assertEquals(
-       -10L, diff, "The initial flush time was calculated incorrectly");
+        -10L, diff, "The initial flush time was calculated incorrectly");
 
     calendar.set(Calendar.SECOND, 1);
     calendar.set(Calendar.MILLISECOND, 10);
@@ -100,13 +100,13 @@ public class TestRollingFileSystemSink {
     diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
 
     assertEquals(
-       -10L, diff, "The initial flush time was calculated incorrectly");
+        -10L, diff, "The initial flush time was calculated incorrectly");
 
     // Try again with a random offset
     rfsSink = new RollingFileSystemSink(1000, 100);
 
     assertNull(
-       rfsSink.nextFlush, "Last flush time should have been null prior to calling init()");
+        rfsSink.nextFlush, "Last flush time should have been null prior to calling init()");
 
     calendar.set(Calendar.MILLISECOND, 0);
     calendar.set(Calendar.SECOND, 0);
@@ -114,29 +114,29 @@ public class TestRollingFileSystemSink {
 
     diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
 
-    assertTrue(
-       (diff == 0L) || ((diff > -1000L) && (diff < -900L)), "The initial flush time was calculated incorrectly: " + diff);
+    assertTrue((diff == 0L) || ((diff > -1000L) && (diff < -900L)),
+        "The initial flush time was calculated incorrectly: " + diff);
 
     calendar.set(Calendar.MILLISECOND, 10);
     rfsSink.setInitialFlushTime(calendar.getTime());
     diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
 
-    assertTrue(
-       (diff >= -10L) && (diff <= 0L) || ((diff > -1000L) && (diff < -910L)), "The initial flush time was calculated incorrectly: " + diff);
+    assertTrue((diff >= -10L) && (diff <= 0L) || ((diff > -1000L) && (diff < -910L)),
+       "The initial flush time was calculated incorrectly: " + diff);
 
     calendar.set(Calendar.SECOND, 1);
     calendar.set(Calendar.MILLISECOND, 10);
     rfsSink.setInitialFlushTime(calendar.getTime());
     diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
 
-    assertTrue(
-       (diff >= -10L) && (diff <= 0L) || ((diff > -1000L) && (diff < -910L)), "The initial flush time was calculated incorrectly: " + diff);
+    assertTrue((diff >= -10L) && (diff <= 0L) || ((diff > -1000L) && (diff < -910L)),
+        "The initial flush time was calculated incorrectly: " + diff);
 
     // Now try pathological settings
     rfsSink = new RollingFileSystemSink(1000, 1000000);
 
-    assertNull(
-       rfsSink.nextFlush, "Last flush time should have been null prior to calling init()");
+    assertNull(rfsSink.nextFlush,
+        "Last flush time should have been null prior to calling init()");
 
     calendar.set(Calendar.MILLISECOND, 1);
     calendar.set(Calendar.SECOND, 0);
@@ -144,8 +144,8 @@ public class TestRollingFileSystemSink {
 
     diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
 
-    assertTrue(
-       (diff > -1000L) && (diff <= 0L), "The initial flush time was calculated incorrectly: " + diff);
+    assertTrue((diff > -1000L) && (diff <= 0L),
+        "The initial flush time was calculated incorrectly: " + diff);
   }
 
   /**
@@ -167,26 +167,26 @@ public class TestRollingFileSystemSink {
     rfsSink.nextFlush.setTime(calendar.getTime());
     rfsSink.updateFlushTime(calendar.getTime());
 
-    assertEquals(
-       calendar.getTimeInMillis() + 1000
-,         rfsSink.nextFlush.getTimeInMillis(), "The next roll time should have been 1 second in the future");
+    assertEquals(calendar.getTimeInMillis() + 1000,
+        rfsSink.nextFlush.getTimeInMillis(),
+        "The next roll time should have been 1 second in the future");
 
     rfsSink.nextFlush.setTime(calendar.getTime());
     calendar.add(Calendar.MILLISECOND, 10);
     rfsSink.updateFlushTime(calendar.getTime());
 
-    assertEquals(
-       calendar.getTimeInMillis() + 990
-,         rfsSink.nextFlush.getTimeInMillis(), "The next roll time should have been 990 ms in the future");
+    assertEquals(calendar.getTimeInMillis() + 990,
+        rfsSink.nextFlush.getTimeInMillis(),
+        "The next roll time should have been 990 ms in the future");
 
     rfsSink.nextFlush.setTime(calendar.getTime());
     calendar.add(Calendar.SECOND, 2);
     calendar.add(Calendar.MILLISECOND, 10);
     rfsSink.updateFlushTime(calendar.getTime());
 
-    assertEquals(
-       calendar.getTimeInMillis() + 990
-,         rfsSink.nextFlush.getTimeInMillis(), "The next roll time should have been 990 ms in the future");
+    assertEquals(calendar.getTimeInMillis() + 990,
+        rfsSink.nextFlush.getTimeInMillis(),
+        "The next roll time should have been 990 ms in the future");
   }
 
   /**

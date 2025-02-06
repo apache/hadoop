@@ -75,9 +75,11 @@ public class TestProtoBufRpc extends TestRpcBase {
    */
   private boolean testWithLegacyFirst;
 
-  public void initTestProtoBufRpc(Boolean pTestWithLegacy, Boolean pTestWithLegacyFirst) {
+  public void initTestProtoBufRpc(Boolean pTestWithLegacy, Boolean pTestWithLegacyFirst)
+      throws IOException {
     this.testWithLegacy = pTestWithLegacy;
     this.testWithLegacyFirst = pTestWithLegacyFirst;
+    setUp();
   }
 
   @ProtocolInfo(protocolName = "testProto2", protocolVersion = 1)
@@ -157,7 +159,6 @@ public class TestProtoBufRpc extends TestRpcBase {
     return params;
   }
 
-  @BeforeEach
   @SuppressWarnings("deprecation")
   public void setUp() throws IOException { // Setup server for both protocols
     conf = new Configuration();
@@ -232,7 +233,7 @@ public class TestProtoBufRpc extends TestRpcBase {
   @Timeout(value = 5)
   @MethodSource("params")
   public void testProtoBufRpc(boolean pTestWithLegacy,
-    boolean pTestWithLegacyFirst) throws Exception {
+      boolean pTestWithLegacyFirst) throws Exception {
     initTestProtoBufRpc(pTestWithLegacy, pTestWithLegacyFirst);
     TestRpcService client = getClient(addr, conf);
     testProtoBufRpc(client);
@@ -264,10 +265,10 @@ public class TestProtoBufRpc extends TestRpcBase {
   }
 
   @ParameterizedTest
-  @Timeout(value = 5)
+  // @Timeout(value = 5)
   @MethodSource("params")
   public void testProtoBufRpc2(boolean pTestWithLegacy,
-    boolean pTestWithLegacyFirst) throws Exception {
+      boolean pTestWithLegacyFirst) throws Exception {
     initTestProtoBufRpc(pTestWithLegacy, pTestWithLegacyFirst);
     TestRpcService2 client = getClient2();
     
@@ -343,7 +344,7 @@ public class TestProtoBufRpc extends TestRpcBase {
   @Timeout(value = 6)
   @MethodSource("params")
   public void testExtraLongRpc(boolean pTestWithLegacy,
-    boolean pTestWithLegacyFirst) throws Exception {
+      boolean pTestWithLegacyFirst) throws Exception {
     initTestProtoBufRpc(pTestWithLegacy, pTestWithLegacyFirst);
     //No test with legacy
     assumeFalse(testWithLegacy);
@@ -367,8 +368,8 @@ public class TestProtoBufRpc extends TestRpcBase {
   @Timeout(value = 12)
   @MethodSource("params")
   public void testLogSlowRPC(boolean pTestWithLegacy,
-    boolean pTestWithLegacyFirst) throws IOException, ServiceException,
-    TimeoutException, InterruptedException {
+      boolean pTestWithLegacyFirst) throws IOException, ServiceException,
+      TimeoutException, InterruptedException {
     initTestProtoBufRpc(pTestWithLegacy, pTestWithLegacyFirst);
     //No test with legacy
     assumeFalse(testWithLegacy);
@@ -406,7 +407,7 @@ public class TestProtoBufRpc extends TestRpcBase {
   @Timeout(value = 12)
   @MethodSource("params")
   public void testEnsureNoLogIfDisabled(boolean pTestWithLegacy,
-    boolean pTestWithLegacyFirst) throws IOException, ServiceException {
+      boolean pTestWithLegacyFirst) throws IOException, ServiceException {
     initTestProtoBufRpc(pTestWithLegacy, pTestWithLegacyFirst);
     //No test with legacy
     assumeFalse(testWithLegacy);

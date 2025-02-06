@@ -104,8 +104,8 @@ public class TestProtoBufRpcServerHandoff {
 
     // Ensure the 5 second sleep responses are within a reasonable time of each
     // other.
-    assertTrue(Math.abs(callable1.endTime - callable2.endTime) < 2000l);
-    assertTrue(System.currentTimeMillis() - submitTime < 7000l);
+    assertTrue(Math.abs(callable1.endTime - callable2.endTime) < 2000L);
+    assertTrue(System.currentTimeMillis() - submitTime < 7000L);
 
   }
 

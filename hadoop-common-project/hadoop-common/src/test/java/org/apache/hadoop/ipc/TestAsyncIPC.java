@@ -464,6 +464,7 @@ public class TestAsyncIPC {
       InterruptedException, ExecutionException {
     // Override client to store the call id
     final Client client = new Client(LongWritable.class, conf);
+    Client.setCallIdAndRetryCount(Client.nextCallId(), 0, null);
 
     // Attach a listener that tracks every call ID received by the server.
     final TestServer server = new TestIPC.TestServer(1, false, conf);

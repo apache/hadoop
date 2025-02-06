@@ -53,8 +53,8 @@ public class TestMetricsCache {
     verify(mr).name();
     verify(mr).tags();
     verify(mr).metrics();
-    assertEquals(cr.metrics().size()
-,                  ((Collection<AbstractMetric>)mr.metrics()).size(), "same record size");
+    assertEquals(cr.metrics().size(), ((Collection<AbstractMetric>) mr.metrics()).size(),
+        "same record size");
     assertEquals(0, cr.getMetric("m"), "same metric value");
 
     MetricsRecord mr2 = makeRecord("r",
