@@ -157,7 +157,7 @@ public class BlobDeleteHandler extends ListActionTaker {
       throws AzureBlobFileSystemException {
     if (!path.isRoot() && !path.getParent().isRoot()) {
       try {
-        getAbfsClient().createPathRestOp(path.getParent().toUri().getPath(),
+        getAbfsClient().createMarkerAtPath(path.getParent().toUri().getPath(),
             false,
             false,
             false,
@@ -165,7 +165,7 @@ public class BlobDeleteHandler extends ListActionTaker {
             null,
             tracingContext);
       } catch (AbfsRestOperationException ex) {
-        LOG.debug("Marker creation failed for parent path {} ", path.getParent().toUri());
+        LOG.debug("Marker creation failed for parent path {} ", path.getParent().toUri().getPath());
       }
     }
   }
