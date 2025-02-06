@@ -18,24 +18,38 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.ArgumentMatchers.nullable;
 
 /**
  * Test mkdir operation.
@@ -166,5 +180,54 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     fs.create(new Path("/testFilePath"));
     intercept(FileAlreadyExistsException.class, () -> fs.mkdirs(new Path("/testFilePath")));
     intercept(FileAlreadyExistsException.class, () -> fs.mkdirs(new Path("/testFilePath/newDir")));
+  }
+
+  @Test
+  public void createPathRetryIdempotency() throws Exception {
+    final AzureBlobFileSystem currentFs = getFileSystem();
+    Configuration config = new Configuration(this.getRawConfiguration());
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(), config);
+    AbfsClient abfsClient = Mockito.spy(fs.getAbfsClient());
+    fs.getAbfsStore().setClient(abfsClient);
+    final Path nonOverwriteFile = new Path("/NonOverwriteTest_FileName_" + UUID.randomUUID());
+    final List<AbfsHttpHeader> headers = new ArrayList<>();
+    TestAbfsClient.mockAbfsOperationCreation(abfsClient, new MockIntercept<AbfsRestOperation>() {
+      private int count = 0;
+      @Override
+      public void answer(final AbfsRestOperation mockedObj,
+          final InvocationOnMock answer) throws AbfsRestOperationException {
+        if (count == 0) {
+          count = 1;
+          AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
+          Mockito.doReturn("PUT").when(op).getMethod();
+          Mockito.doReturn("").when(op).getStorageErrorMessage();
+          Mockito.doReturn(true).when(mockedObj).hasResult();
+          Mockito.doReturn(op).when(mockedObj).getResult();
+          Mockito.doReturn(HTTP_CONFLICT).when(op).getStatusCode();
+          headers.addAll(mockedObj.getRequestHeaders());
+          throw new AbfsRestOperationException(HTTP_CONFLICT, AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
+              "", null, op);
+        }
+      }
+    });
+    AbfsRestOperation getPathRestOp = Mockito.mock(AbfsRestOperation.class);
+    AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
+    Mockito.doAnswer(answer -> {
+      String requiredHeader = null;
+      for (AbfsHttpHeader httpHeader : headers) {
+        if (X_MS_CLIENT_TRANSACTION_ID.equalsIgnoreCase(httpHeader.getName())) {
+          requiredHeader = httpHeader.getValue();
+          break;
+        }
+      }
+      return requiredHeader;
+    }).when(op).getResponseHeader(X_MS_CLIENT_TRANSACTION_ID);
+    Mockito.doReturn(true).when(getPathRestOp).hasResult();
+    Mockito.doReturn(op).when(getPathRestOp).getResult();
+    Mockito.doReturn(getPathRestOp).when(abfsClient).getPathStatus(
+        nullable(String.class), nullable(Boolean.class),
+        nullable(TracingContext.class), nullable(ContextEncryptionAdapter.class));
+
+    fs.create(nonOverwriteFile, false);
   }
 }

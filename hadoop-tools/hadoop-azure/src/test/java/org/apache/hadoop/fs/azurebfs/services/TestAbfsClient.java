@@ -29,6 +29,7 @@ import org.mockito.Mockito;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
+import org.apache.hadoop.fs.azurebfs.MockIntercept;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
@@ -37,6 +38,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsClient.ABFS_CLIENT_TIMER_THREAD_NAME;
+import static org.mockito.ArgumentMatchers.any;
 
 /**
  * Unit test cases for the AbfsClient class.
@@ -138,4 +140,26 @@ public class TestAbfsClient {
         }
         return false;
     }
+
+  public static void mockAbfsOperationCreation(final AbfsClient abfsClient,
+      final MockIntercept mockIntercept) throws Exception {
+    Mockito.doAnswer(answer -> {
+          AbfsRestOperation op = Mockito.spy(
+              new AbfsRestOperation(
+                  answer.getArgument(0),
+                  abfsClient,
+                  answer.getArgument(1),
+                  answer.getArgument(2),
+                  answer.getArgument(3),
+                  abfsClient.getAbfsConfiguration()
+              ));
+          Mockito.doAnswer((answer1) -> {
+                mockIntercept.answer(op, answer1);
+                return null;
+              }).when(op)
+              .execute(any());
+          return op;
+        }).when(abfsClient)
+        .getAbfsRestOperation(any(), any(), any(), any());
+  }
 }

@@ -106,6 +106,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.I
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.RANGE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.USER_AGENT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_EXISTING_RESOURCE_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_LEASE_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_LEASE_BREAK_PERIOD;
@@ -378,6 +379,9 @@ public class AbfsDfsClient extends AbfsClient {
       requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
     }
 
+    // Add the client transaction ID to the request headers.
+    String clientTransactionId = addClientTransactionIdToHeader(requestHeaders);
+
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, isFile ? FILE : DIRECTORY);
     if (isAppendBlob) {
@@ -400,11 +404,27 @@ public class AbfsDfsClient extends AbfsClient {
       if (!op.hasResult()) {
         throw ex;
       }
-      if (!isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
-        String existingResource =
-            op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
-        if (existingResource != null && existingResource.equals(DIRECTORY)) {
-          return op; //don't throw ex on mkdirs for existing directory
+      if (op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+        if (!isFile) {
+          String existingResource =
+              op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
+          if (existingResource != null && existingResource.equals(DIRECTORY)) {
+            return op; //don't throw ex on mkdirs for existing directory
+          }
+        } else if (clientTransactionId != null) {
+          try {
+            final AbfsHttpOperation getPathStatusOp =
+                getPathStatus(path, false,
+                    tracingContext, null).getResult();
+            if (clientTransactionId.equals(
+                getPathStatusOp.getResponseHeader(
+                    X_MS_CLIENT_TRANSACTION_ID))) {
+              return op;
+            }
+          } catch (AzureBlobFileSystemException ignored) {
+            // In case of get path status failure,
+            // we will throw the original exception.
+          }
         }
       }
       throw ex;
@@ -611,6 +631,9 @@ public class AbfsDfsClient extends AbfsClient {
     requestHeaders.add(new AbfsHttpHeader(X_MS_RENAME_SOURCE, encodedRenameSource));
     requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, STAR));
 
+    // Add the client transaction ID to the request headers.
+    String clientTransactionId = addClientTransactionIdToHeader(requestHeaders);
+
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
     appendSASTokenToQuery(destination,
@@ -632,6 +655,25 @@ public class AbfsDfsClient extends AbfsClient {
     } catch (AzureBlobFileSystemException e) {
       // If we have no HTTP response, throw the original exception.
       if (!op.hasResult()) {
+        throw e;
+      }
+
+      if (clientTransactionId != null && SOURCE_PATH_NOT_FOUND.getErrorCode()
+          .equalsIgnoreCase(op.getResult().getStorageErrorCode())) {
+        try {
+          final AbfsHttpOperation abfsHttpOperation =
+              getPathStatus(destination, false,
+                  tracingContext, null).getResult();
+          if (clientTransactionId.equals(
+              abfsHttpOperation.getResponseHeader(
+                  X_MS_CLIENT_TRANSACTION_ID))) {
+            return new AbfsClientRenameResult(op, true,
+                isMetadataIncompleteState);
+          }
+        } catch (AbfsRestOperationException ignored) {
+          // In case of get path status failure,
+          // we will throw the original exception.
+        }
         throw e;
       }
 
@@ -1510,5 +1552,22 @@ public class AbfsDfsClient extends AbfsClient {
     }
 
     return properties;
+  }
+
+  /**
+   * Add the client transaction id to the request header
+   * if {@link AbfsConfiguration#getIsClientTransactionIdEnabled()} is enabled.
+   * @param requestHeaders list of headers to be sent with the request
+   *
+   * @return client transaction id
+   */
+  private String addClientTransactionIdToHeader(List<AbfsHttpHeader> requestHeaders) {
+    String clientTransactionId = null;
+    if (getAbfsConfiguration().getIsClientTransactionIdEnabled()) {
+      clientTransactionId = UUID.randomUUID().toString();
+      requestHeaders.add(
+          new AbfsHttpHeader(X_MS_CLIENT_TRANSACTION_ID, clientTransactionId));
+    }
+    return clientTransactionId;
   }
 }

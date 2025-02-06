@@ -1922,7 +1922,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     long contentLength;
     String contentLengthHeader = op.getResponseHeader(
         HttpHeaderConfigurations.CONTENT_LENGTH);
-    if (!contentLengthHeader.equals(EMPTY_STRING)) {
+    if (!Strings.isNullOrEmpty(contentLengthHeader)) {
       contentLength = Long.parseLong(contentLengthHeader);
     } else {
       contentLength = 0;

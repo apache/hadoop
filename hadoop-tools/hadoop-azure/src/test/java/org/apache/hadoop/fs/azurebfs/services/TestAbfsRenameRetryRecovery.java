@@ -272,12 +272,18 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     fs.rename(new Path(path1), new Path(path2));
 
     // validating stat counters after rename
-    // 4 calls should have happened in total for rename
+    // 5 calls should have happened in total for rename
     // 1 -> original rename rest call, 2 -> first retry,
     // +2 for getPathStatus calls
+    Long expectedConnectionsMade = 5 + connMadeBeforeRename;
+    if (fs.getAbfsStore().getAbfsConfiguration()
+        .getIsClientTransactionIdEnabled()) {
+      // 1 extra connection for the HEAD request to get the source path status
+      expectedConnectionsMade++;
+    }
     assertThatStatisticCounter(ioStats,
             CONNECTIONS_MADE.getStatName())
-            .isEqualTo(5 + connMadeBeforeRename);
+            .isEqualTo(expectedConnectionsMade);
     // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
     // retries happen internally within AbfsRestOperation execute()
     // the stat for RENAME_PATH_ATTEMPTS is updated only once before execute() is called
@@ -349,13 +355,21 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     assertEquals(false, renameResult);
 
     // validating stat counters after rename
-    // 3 calls should have happened in total for rename
+    // 4 calls should have happened in total for rename
     // 1 -> original rename rest call, 2 -> first retry,
     // +1 for getPathStatus calls
     // last getPathStatus call should be skipped
+    Long expectedConnectionsMade = 4 + connMadeBeforeRename;
+    if (fs.getAbfsStore().getAbfsConfiguration()
+        .getIsClientTransactionIdEnabled()) {
+      // 1 extra connection for the HEAD request to get the source path status
+      expectedConnectionsMade++;
+    }
     assertThatStatisticCounter(ioStats,
             CONNECTIONS_MADE.getStatName())
-            .isEqualTo(4 + connMadeBeforeRename);
+            .isEqualTo(expectedConnectionsMade);
+
+
 
     // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
     // retries happen internally within AbfsRestOperation execute()
