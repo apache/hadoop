@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.impl.WeakReferenceThreadMap;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
@@ -50,7 +50,7 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
    */
   private List<Integer> lostReferences;
 
-  @Before
+  @BeforeEach
   public void setup() {
     lostReferences = new ArrayList<>();
     referenceMap = new WeakReferenceMap<>(

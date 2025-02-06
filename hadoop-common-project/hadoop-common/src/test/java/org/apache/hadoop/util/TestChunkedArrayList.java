@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestChunkedArrayList {
 
@@ -103,41 +103,41 @@ public class TestChunkedArrayList {
     // Iterate through all list elements.
     Iterator<Integer> iter = list.iterator();
     for (int i = 0; i < NUM_ELEMS; i++) {
-      Assert.assertTrue(iter.hasNext());
+      Assertions.assertTrue(iter.hasNext());
       Integer val = iter.next();
-      Assert.assertEquals(Integer.valueOf(i), val);
+      Assertions.assertEquals(Integer.valueOf(i), val);
     }
-    Assert.assertFalse(iter.hasNext());
-    Assert.assertEquals(NUM_ELEMS, list.size());
+    Assertions.assertFalse(iter.hasNext());
+    Assertions.assertEquals(NUM_ELEMS, list.size());
 
     // Remove even elements.
     iter = list.iterator();
     for (int i = 0; i < NUM_ELEMS; i++) {
-      Assert.assertTrue(iter.hasNext());
+      Assertions.assertTrue(iter.hasNext());
       Integer val = iter.next();
-      Assert.assertEquals(Integer.valueOf(i), val);
+      Assertions.assertEquals(Integer.valueOf(i), val);
       if (i % 2 == 0) {
         iter.remove();
       }
     }
-    Assert.assertFalse(iter.hasNext());
-    Assert.assertEquals(NUM_ELEMS / 2, list.size());
+    Assertions.assertFalse(iter.hasNext());
+    Assertions.assertEquals(NUM_ELEMS / 2, list.size());
 
     // Iterate through all odd list elements.
     iter = list.iterator();
     for (int i = 0; i < NUM_ELEMS / 2; i++) {
-      Assert.assertTrue(iter.hasNext());
+      Assertions.assertTrue(iter.hasNext());
       Integer val = iter.next();
-      Assert.assertEquals(Integer.valueOf(1 + (2 * i)), val);
+      Assertions.assertEquals(Integer.valueOf(1 + (2 * i)), val);
       iter.remove();
     }
-    Assert.assertFalse(iter.hasNext());
+    Assertions.assertFalse(iter.hasNext());
 
     // Check that list is now empty.
-    Assert.assertEquals(0, list.size());
-    Assert.assertTrue(list.isEmpty());
+    Assertions.assertEquals(0, list.size());
+    Assertions.assertTrue(list.isEmpty());
     iter = list.iterator();
-    Assert.assertFalse(iter.hasNext());
+    Assertions.assertFalse(iter.hasNext());
   }
 
   @Test
@@ -148,15 +148,15 @@ public class TestChunkedArrayList {
       list.add(i);
     }
 
-    Assert.assertEquals(Integer.valueOf(100), list.get(100));
-    Assert.assertEquals(Integer.valueOf(1000), list.get(1000));
-    Assert.assertEquals(Integer.valueOf(10000), list.get(10000));
-    Assert.assertEquals(Integer.valueOf(100000), list.get(100000));
+    Assertions.assertEquals(Integer.valueOf(100), list.get(100));
+    Assertions.assertEquals(Integer.valueOf(1000), list.get(1000));
+    Assertions.assertEquals(Integer.valueOf(10000), list.get(10000));
+    Assertions.assertEquals(Integer.valueOf(100000), list.get(100000));
 
     Iterator<Integer> iter = list.iterator();
     iter.next();
     iter.remove();
-    Assert.assertEquals(Integer.valueOf(1), list.get(0));
+    Assertions.assertEquals(Integer.valueOf(1), list.get(0));
 
     iter = list.iterator();
     for (int i = 0; i < 500; i++) {
@@ -164,7 +164,7 @@ public class TestChunkedArrayList {
     }
     iter.remove();
 
-    Assert.assertEquals(Integer.valueOf(502), list.get(500));
-    Assert.assertEquals(Integer.valueOf(602), list.get(600));
+    Assertions.assertEquals(Integer.valueOf(502), list.get(500));
+    Assertions.assertEquals(Integer.valueOf(602), list.get(600));
   }
 }

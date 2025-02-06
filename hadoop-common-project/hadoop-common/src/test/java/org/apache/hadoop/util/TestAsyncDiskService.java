@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.util;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,8 +70,8 @@ public class TestAsyncDiskService {
     } catch (RuntimeException ex) {
       e = ex;
     }
-    assertNotNull("Executing a task on a non-existing volume should throw an "
-        + "Exception.", e);
+    assertNotNull(e, "Executing a task on a non-existing volume should throw an "
+        + "Exception.");
     
     service.shutdown();
     if (!service.awaitTermination(5000)) {

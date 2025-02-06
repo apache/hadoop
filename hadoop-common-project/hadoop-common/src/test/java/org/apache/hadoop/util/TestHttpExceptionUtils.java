@@ -19,8 +19,8 @@ package org.apache.hadoop.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import javax.servlet.http.HttpServletResponse;
@@ -53,11 +53,11 @@ public class TestHttpExceptionUtils {
     ObjectMapper mapper = new ObjectMapper();
     Map json = mapper.readValue(writer.toString(), Map.class);
     json = (Map) json.get(HttpExceptionUtils.ERROR_JSON);
-    Assert.assertEquals(IOException.class.getName(),
+    Assertions.assertEquals(IOException.class.getName(),
         json.get(HttpExceptionUtils.ERROR_CLASSNAME_JSON));
-    Assert.assertEquals(IOException.class.getSimpleName(),
+    Assertions.assertEquals(IOException.class.getSimpleName(),
         json.get(HttpExceptionUtils.ERROR_EXCEPTION_JSON));
-    Assert.assertEquals("Hello IOEX",
+    Assertions.assertEquals("Hello IOEX",
         json.get(HttpExceptionUtils.ERROR_MESSAGE_JSON));
   }
 
@@ -66,18 +66,18 @@ public class TestHttpExceptionUtils {
     Exception ex = new IOException("Hello IOEX");
     Response response = HttpExceptionUtils.createJerseyExceptionResponse(
         Response.Status.INTERNAL_SERVER_ERROR, ex);
-    Assert.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
+    Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
         response.getStatus());
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         Arrays.asList(MediaType.APPLICATION_JSON_TYPE).toArray(),
         response.getMetadata().get("Content-Type").toArray());
     Map entity = (Map) response.getEntity();
     entity = (Map) entity.get(HttpExceptionUtils.ERROR_JSON);
-    Assert.assertEquals(IOException.class.getName(),
+    Assertions.assertEquals(IOException.class.getName(),
         entity.get(HttpExceptionUtils.ERROR_CLASSNAME_JSON));
-    Assert.assertEquals(IOException.class.getSimpleName(),
+    Assertions.assertEquals(IOException.class.getSimpleName(),
         entity.get(HttpExceptionUtils.ERROR_EXCEPTION_JSON));
-    Assert.assertEquals("Hello IOEX",
+    Assertions.assertEquals("Hello IOEX",
         entity.get(HttpExceptionUtils.ERROR_MESSAGE_JSON));
   }
 

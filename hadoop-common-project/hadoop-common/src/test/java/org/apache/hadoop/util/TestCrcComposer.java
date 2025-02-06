@@ -25,12 +25,12 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unittests for CrcComposer.
@@ -55,7 +55,7 @@ public class TestCrcComposer {
   private byte[] crcBytesByChunk;
   private byte[] crcBytesByCell;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     rand.nextBytes(data);
     fullCrc = getRangeChecksum(data, 0, dataSize);

@@ -21,11 +21,12 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.util.IdentityHashStore;
 import org.apache.hadoop.util.IdentityHashStore.Visitor;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,43 +56,45 @@ public class TestIdentityHashStore {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testStartingWithZeroCapacity() {
     IdentityHashStore<Key, Integer> store = 
         new IdentityHashStore<Key, Integer>(0);
     store.visitAll(new Visitor<Key, Integer>() {
       @Override
       public void accept(Key k, Integer v) {
-        Assert.fail("found key " + k + " in empty IdentityHashStore.");
+        Assertions.fail("found key " + k + " in empty IdentityHashStore.");
       }
     });
-    Assert.assertTrue(store.isEmpty());
+    Assertions.assertTrue(store.isEmpty());
     final Key key1 = new Key("key1");
     Integer value1 = new Integer(100);
     store.put(key1, value1);
-    Assert.assertTrue(!store.isEmpty());
-    Assert.assertEquals(value1, store.get(key1));
+    Assertions.assertTrue(!store.isEmpty());
+    Assertions.assertEquals(value1, store.get(key1));
     store.visitAll(new Visitor<Key, Integer>() {
       @Override
       public void accept(Key k, Integer v) {
-        Assert.assertEquals(key1, k);
+        Assertions.assertEquals(key1, k);
       }
     });
-    Assert.assertEquals(value1, store.remove(key1));
-    Assert.assertTrue(store.isEmpty());
+    Assertions.assertEquals(value1, store.remove(key1));
+    Assertions.assertTrue(store.isEmpty());
   }
   
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testDuplicateInserts() {
     IdentityHashStore<Key, Integer> store = 
         new IdentityHashStore<Key, Integer>(4);
     store.visitAll(new Visitor<Key, Integer>() {
       @Override
       public void accept(Key k, Integer v) {
-        Assert.fail("found key " + k + " in empty IdentityHashStore.");
+        Assertions.fail("found key " + k + " in empty IdentityHashStore.");
       }
     });
-    Assert.assertTrue(store.isEmpty());
+    Assertions.assertTrue(store.isEmpty());
     Key key1 = new Key("key1");
     Integer value1 = new Integer(100);
     Integer value2 = new Integer(200);
@@ -100,10 +103,10 @@ public class TestIdentityHashStore {
     Key equalToKey1 = new Key("key1");
 
     // IdentityHashStore compares by object equality, not equals()
-    Assert.assertNull(store.get(equalToKey1)); 
+    Assertions.assertNull(store.get(equalToKey1)); 
 
-    Assert.assertTrue(!store.isEmpty());
-    Assert.assertEquals(value1, store.get(key1));
+    Assertions.assertTrue(!store.isEmpty());
+    Assertions.assertEquals(value1, store.get(key1));
     store.put(key1, value2);
     store.put(key1, value3);
     final List<Integer> allValues = new LinkedList<Integer>();
@@ -113,16 +116,17 @@ public class TestIdentityHashStore {
         allValues.add(v);
       }
     });
-    Assert.assertEquals(3, allValues.size());
+    Assertions.assertEquals(3, allValues.size());
     for (int i = 0; i < 3; i++) {
       Integer value = store.remove(key1);
-      Assert.assertTrue(allValues.remove(value));
+      Assertions.assertTrue(allValues.remove(value));
     }
-    Assert.assertNull(store.remove(key1));
-    Assert.assertTrue(store.isEmpty());
+    Assertions.assertNull(store.remove(key1));
+    Assertions.assertTrue(store.isEmpty());
   }
   
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testAdditionsAndRemovals() {
     IdentityHashStore<Key, Integer> store = 
         new IdentityHashStore<Key, Integer>(0);
@@ -138,23 +142,23 @@ public class TestIdentityHashStore {
     store.visitAll(new Visitor<Key, Integer>() {
       @Override
       public void accept(Key k, Integer v) {
-        Assert.assertTrue(keys.contains(k));
+        Assertions.assertTrue(keys.contains(k));
       }
     });
     for (int i = 0; i < NUM_KEYS; i++) {
-      Assert.assertEquals(Integer.valueOf(i),
+      Assertions.assertEquals(Integer.valueOf(i),
           store.remove(keys.get(i)));
     }
     store.visitAll(new Visitor<Key, Integer>() {
       @Override
       public void accept(Key k, Integer v) {
-        Assert.fail("expected all entries to be removed");
+        Assertions.fail("expected all entries to be removed");
       }
     });
-    Assert.assertTrue("expected the store to be " +
-        "empty, but found " + store.numElements() + " elements.",
-        store.isEmpty());
-    Assert.assertEquals(1024, store.capacity());
+    Assertions.assertTrue(
+       store.isEmpty(), "expected the store to be " +
+        "empty, but found " + store.numElements() + " elements.");
+    Assertions.assertEquals(1024, store.capacity());
   }
   
 }
