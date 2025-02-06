@@ -60,6 +60,7 @@ import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecretOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PART_UPLOAD_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.IF_NONE_MATCH_STAR;
@@ -333,13 +334,14 @@ public class RequestFactoryImpl implements RequestFactory {
    * @param options options for the request, including headers
    * @param length length of object to be uploaded
    * @param isDirectoryMarker true if object to be uploaded is a directory marker
+   * @param putOptions
    * @return the request builder
    */
   @Override
   public PutObjectRequest.Builder newPutObjectRequestBuilder(String key,
       final PutObjectOptions options,
       long length,
-      boolean isDirectoryMarker) {
+      boolean isDirectoryMarker, final PutObjectOptions putOptions) {
 
     Preconditions.checkArgument(isNotEmpty(key), "Null/empty key");
 
@@ -361,6 +363,17 @@ public class RequestFactoryImpl implements RequestFactory {
     if (!isDirectoryMarker) {
       setRequestTimeout(putObjectRequestBuilder, partUploadTimeout);
     }
+
+    if (putOptions.isNoObjectOverwrite()) {
+      LOG.debug("setting if none-match");
+      putObjectRequestBuilder.overrideConfiguration(
+              override -> override.putHeader(IF_NONE_MATCH, IF_NONE_MATCH_STAR));
+    }
+    if (!isEmpty(putOptions.getEtagOverwrite())) {
+      // TODO: add etag
+      LOG.warn("etag match not yet supported");
+    }
+
 
     return prepareRequest(putObjectRequestBuilder);
   }
@@ -544,9 +557,13 @@ public class RequestFactoryImpl implements RequestFactory {
     requestBuilder = CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
             .multipartUpload(CompletedMultipartUpload.builder().parts(partETags).build());
     if (putOptions.isNoObjectOverwrite()) {
+      LOG.debug("setting if none-match");
       requestBuilder.overrideConfiguration(
               override -> override.putHeader(IF_NONE_MATCH, IF_NONE_MATCH_STAR));
+    }
+    if (!isEmpty(putOptions.getEtagOverwrite())) {
       // TODO: add etag
+      LOG.warn("etag match not yet supported");
     }
 
     return prepareRequest(requestBuilder);

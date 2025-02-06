@@ -710,4 +710,55 @@ public final class Options {
     public static final String FS_OPTION_OPENFILE_EC_POLICY =
         FS_OPTION_OPENFILE + "ec.policy";
   }
+
+  /**
+   * The standard {@code createFile()} options.
+   * <p>
+   * If an option is not supported during file creation and it is considered
+   * part of a commit protocol, then, when supplied in a must() option,
+   * it MUST be rejected.
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public interface CreateFileOptionKeys {
+
+    /**
+     * {code createFile()} option to write a file iff there is nothing at the destination.
+     * This may happen during create() or in the close.
+     * <p>
+     * Explicitly set {@link #FS_OPTION_CREATE_IN_CLOSE} if you want to force the end of file
+     * creation.
+     *
+     * Value {@value}.
+     * <p>
+     * This can be set in the builder.
+     * <p>
+     * It should be exported as a path capability for all stores where
+     * the feature is available *and* enabled.
+     */
+    String FS_OPTION_CREATE_CONDITIONAL_OVERWRITE = "fs.option.create.conditional.overwrite";
+
+    /**
+     * Overwrite a file only if there is an Etag match. This option takes a string.
+     * Value {@value}.
+     */
+    String FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG =
+        "fs.option.create.conditional.overwrite.etag";
+
+    /**
+     * String to define the content filetype.
+     * Value {@value}.
+     */
+    String FS_OPTION_CREATE_CONTENT_TYPE = "fs.option.create.content.type";
+
+    /**
+     * A flag which requires the filesystem to create files/objects in close(),
+     * rather than create/createFile.
+     * <p>
+     * Object stores with this behavior should also export it as a path capability.
+     *
+     * Value {@value}.
+     */
+    String FS_OPTION_CREATE_IN_CLOSE = "fs.option.create.in.close";
+  }
 }

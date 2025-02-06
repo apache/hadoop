@@ -96,7 +96,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     String path2 = "path2";
     HeadObjectResponse md = HeadObjectResponse.builder().contentLength(128L).build();
 
-    Assertions.assertThat(factory.newPutObjectRequestBuilder(path, null, 128, false)
+    Assertions.assertThat(factory.newPutObjectRequestBuilder(path, null, 128, false, null)
             .build()
             .acl()
             .toString())
@@ -180,7 +180,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     a(factory.newListObjectsV2RequestBuilder(path, "/", 1));
     a(factory.newMultipartUploadRequestBuilder(path, null));
     a(factory.newPutObjectRequestBuilder(path,
-        PutObjectOptions.defaultOptions(), -1, true));
+        PutObjectOptions.defaultOptions(), -1, true, null));
   }
 
   /**
@@ -264,7 +264,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
 
     // A simple PUT
     final PutObjectRequest put = factory.newPutObjectRequestBuilder(path,
-        PutObjectOptions.defaultOptions(), 1024, false).build();
+        PutObjectOptions.defaultOptions(), 1024, false, null).build();
     assertApiTimeouts(partDuration, put);
 
     // multipart part

@@ -34,8 +34,9 @@ import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_ARRAY;
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CONDITIONAL_FILE_CREATE;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_OVERWRITE_SUPPORTED;
 import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
@@ -53,6 +54,7 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
     @Override
     public Configuration createConfiguration() {
         Configuration conf = super.createConfiguration();
+
         S3ATestUtils.disableFilesystemCaching(conf);
         removeBaseAndBucketOverrides(
                 conf,
@@ -69,8 +71,10 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
     public void setup() throws Exception {
         super.setup();
         Configuration conf = getConfiguration();
-        skipIfNotEnabled(conf, FS_S3A_CONDITIONAL_FILE_CREATE,
+        skipIfNotEnabled(conf, FS_S3A_CREATE_OVERWRITE_SUPPORTED,
                 "Skipping IfNoneMatch tests");
+
+        // for large files, skip if filesystem.hasPathCapability() does not support multipart
     }
 
     private static void assertS3ExceptionStatusCode(int code, Exception ex) {
@@ -98,7 +102,7 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
             byte[] data,
             String ifMatchTag) throws Exception {
         FSDataOutputStreamBuilder builder = fs.createFile(path);
-        builder.must(FS_S3A_CONDITIONAL_FILE_CREATE, "true");
+        builder.must(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE, "true");
         builder.opt(FS_S3A_CREATE_HEADER + "." + IF_NONE_MATCH, ifMatchTag);
 
         try (FSDataOutputStream stream = builder.create().build()) {
@@ -110,26 +114,33 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
 
     @Test
     public void testPutIfAbsentConflict() throws Throwable {
+      describe("generate conflict on overwrites");
         FileSystem fs = getFileSystem();
         Path testFile = methodPath();
         fs.mkdirs(testFile.getParent());
         byte[] fileBytes = dataset(TEST_FILE_LEN, 0, 255);
 
+        // create a file over an empty path: all good
         createFileWithIfNoneMatchFlag(fs, testFile, fileBytes, "*");
 
+        // attempted overwrite fails
         RemoteFileChangedException firstException = intercept(RemoteFileChangedException.class,
                 () -> createFileWithIfNoneMatchFlag(fs, testFile, fileBytes, "*"));
         assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, firstException);
 
+        // second attempt also fails
         RemoteFileChangedException secondException = intercept(RemoteFileChangedException.class,
                 () -> createFileWithIfNoneMatchFlag(fs, testFile, fileBytes, "*"));
         assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, secondException);
+
+        // TODO: delete file and verify an overwrite works again
     }
 
     @Test
     public void testPutIfAbsentLargeFileConflict() throws Throwable {
         FileSystem fs = getFileSystem();
         Path testFile = methodPath();
+
 
         // enough bytes for Multipart Upload
         byte[] fileBytes = dataset(6 * _1MB, 'a', 'z' - 'a');
@@ -143,5 +154,52 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
         RemoteFileChangedException secondException = intercept(RemoteFileChangedException.class,
                 () -> createFileWithIfNoneMatchFlag(fs, testFile, fileBytes, "*"));
         assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, secondException);
+
     }
+
+  @Test
+  public void testMultipartFileWithRaceCondition() throws Throwable {
+    /*
+      - f1 = createFile() no overwrite, but do not close it
+      - f2 = create small file, write. close file
+      - close (f1), expect different exception back. we will need to map this to RemoteFileChangedException
+     */
+  }
+
+  @Test
+  public void testTwoMultipartFileWithRaceCondition() throws Throwable {
+/*
+  - f1 = createFile() no overwrite, but do not close it
+  - f2 = create multipart file, write.
+  - close (f1), expect different exception back. we will need to map this to RemoteFileChangedException
+  - close (f2) expect a failure?
+ */
+  }
+
+  @Test
+  public void testOverwriteWithEmptyFile() throws Throwable {
+    /*
+    - create a non empty file
+    -overwrite with zero byte file: expect an error
+     */
+  }
+
+
+  @Test
+  public void testOverwriteEmptyFileWithFile() throws Throwable {
+    /*
+    - create an empty file
+    -overwrite: expect an error
+     */
+  }
+
+  @Test
+  public void testOverwriteEmptyWithEmptyFile() throws Throwable {
+    /*
+    - create an empty file
+    - overwrite with zero byte file: expect an error
+     */
+  }
+
+
 }

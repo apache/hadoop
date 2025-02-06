@@ -225,6 +225,10 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.fs.CommonPathCapabilities.DIRECTORY_LISTING_INCONSISTENT;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONTENT_TYPE;
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_IN_CLOSE;
 import static org.apache.hadoop.fs.impl.FlagSet.buildFlagSet;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -2116,9 +2120,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     String destKey = putTracker.getDestKey();
 
     // put options are derived from the option builder.
-    boolean conditionalCreate = options.isConditionalCreate();
+    boolean conditionalCreate = options.isConditionalOverwrite();
     final PutObjectOptions putOptions =
-        new PutObjectOptions(null, options.getHeaders(), false, null);
+        new PutObjectOptions(null, options.getHeaders(), conditionalCreate, null);
 
 
     validateOutputStreamConfiguration(path, getConf());
@@ -3193,7 +3197,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public PutObjectRequest.Builder newPutObjectRequestBuilder(String key,
       long length,
       boolean isDirectoryMarker) {
-    return requestFactory.newPutObjectRequestBuilder(key, null, length, isDirectoryMarker);
+    return requestFactory.newPutObjectRequestBuilder(key, null, length, isDirectoryMarker,
+        PutObjectOptions.defaultOptions());
   }
 
   /**
@@ -5363,9 +5368,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED:
       return isMultipartUploadEnabled();
 
-    // create file options
+    // create file options which are always true
+
+    case FS_OPTION_CREATE_IN_CLOSE:
+    case FS_OPTION_CREATE_CONTENT_TYPE:
     case FS_S3A_CREATE_PERFORMANCE:
     case FS_S3A_CREATE_HEADER:
+      return true;
+
+    case FS_OPTION_CREATE_CONDITIONAL_OVERWRITE:
+    case FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG:
+      // TODO HADOOP-19256. conditional on enablement
       return true;
 
     // is the FS configured for create file performance

@@ -1504,13 +1504,6 @@ public final class Constants {
   public static final String FS_S3A_CREATE_PERFORMANCE = "fs.s3a.create.performance";
 
   /**
-   * Flag for commit if none match.
-   * This can be set in the {code createFile()} builder.
-   * Value {@value}.
-   */
-  public static final String FS_S3A_CONDITIONAL_FILE_CREATE = "fs.s3a.conditional.file.create";
-
-  /**
    * Default value for create performance in an S3A FS.
    * Value {@value}.
    */
@@ -1529,6 +1522,23 @@ public final class Constants {
    */
   public static final String FS_S3A_PERFORMANCE_FLAGS =
       "fs.s3a.performance.flags";
+
+
+  /**
+   * Is the create overwrite feature enabled or not?
+   * A configuration option and a path status probe.
+   * Value {@value}.
+   */
+  public static final String FS_S3A_CREATE_OVERWRITE_SUPPORTED = "fs.s3a.create.overwrite.supported";
+
+  /**
+   * Create a multipart file, always: {@value}.
+   * <p>
+   * This is inefficient and will not work on a store which doesn't support that feature,
+   * so is primarily for testing.
+   */
+  public static final String FS_S3A_CREATE_MULTIPART = "fs.s3a.create.multipart";
+
   /**
    * Prefix for adding a header to the object when created.
    * The actual value must have a "." suffix and then the actual header.
