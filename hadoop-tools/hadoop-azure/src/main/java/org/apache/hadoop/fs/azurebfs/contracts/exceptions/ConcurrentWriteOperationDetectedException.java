@@ -39,7 +39,9 @@ public class ConcurrentWriteOperationDetectedException
   }
 
   /**
-   * Constructs a new ConcurrentWriteOperationDetectedException with an error message.
+   * Constructs a new ConcurrentWriteOperationDetectedException with the specified error message.
+   *
+   * @param message the detail message.
    */
   public ConcurrentWriteOperationDetectedException(String message) {
     super(message);

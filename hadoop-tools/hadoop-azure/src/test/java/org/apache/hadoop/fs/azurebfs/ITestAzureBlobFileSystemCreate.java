@@ -407,7 +407,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testFilterFSWriteAfterClose() throws Throwable {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       Path testPath = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
       FSDataOutputStream out = fs.create(testPath);
       intercept(IOException.class,
@@ -450,117 +450,118 @@ public class ITestAzureBlobFileSystemCreate extends
 
   public void testCreateFileOverwrite(boolean enableConditionalCreateOverwrite)
       throws Throwable {
-    try (final AzureBlobFileSystem currentFs = getFileSystem()) {
+    try (AzureBlobFileSystem currentFs = getFileSystem()) {
       Configuration config = new Configuration(this.getRawConfiguration());
       config.set("fs.azure.enable.conditional.create.overwrite",
           Boolean.toString(enableConditionalCreateOverwrite));
       AzureBlobFileSystemStore store = currentFs.getAbfsStore();
       AbfsClient client = store.getClientHandler().getIngressClient();
 
-      final AzureBlobFileSystem fs =
-          (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
-              config);
+      try (AzureBlobFileSystem fs =
+               (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
+                   config)) {
 
-      long totalConnectionMadeBeforeTest = fs.getInstrumentationMap()
-          .get(CONNECTIONS_MADE.getStatName());
+        long totalConnectionMadeBeforeTest = fs.getInstrumentationMap()
+            .get(CONNECTIONS_MADE.getStatName());
 
-      int createRequestCount = 0;
-      final Path nonOverwriteFile = new Path("/NonOverwriteTest_FileName_"
-          + UUID.randomUUID().toString());
+        int createRequestCount = 0;
+        final Path nonOverwriteFile = new Path("/NonOverwriteTest_FileName_"
+            + UUID.randomUUID().toString());
 
-      // Case 1: Not Overwrite - File does not pre-exist
-      // create should be successful
-      fs.create(nonOverwriteFile, false);
+        // Case 1: Not Overwrite - File does not pre-exist
+        // create should be successful
+        fs.create(nonOverwriteFile, false);
 
-      // One request to server to create path should be issued
-      // two calls added for -
-      // 1. getFileStatus on DFS endpoint : 1
-      //    getFileStatus on Blob endpoint: 1 ListBlobcall
-      // 2. actual create call: 1
-      createRequestCount += (
-          client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)
-              ? 2
-              : 1);
+        // One request to server to create path should be issued
+        // two calls added for -
+        // 1. getFileStatus on DFS endpoint : 1
+        //    getFileStatus on Blob endpoint: 1 ListBlobcall
+        // 2. actual create call: 1
+        createRequestCount += (
+            client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)
+                ? 2
+                : 1);
 
-      assertAbfsStatistics(
-          CONNECTIONS_MADE,
-          totalConnectionMadeBeforeTest + createRequestCount,
-          fs.getInstrumentationMap());
+        assertAbfsStatistics(
+            CONNECTIONS_MADE,
+            totalConnectionMadeBeforeTest + createRequestCount,
+            fs.getInstrumentationMap());
 
-      // Case 2: Not Overwrite - File pre-exists
-      fs.registerListener(new TracingHeaderValidator(
-          fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
-          fs.getFileSystemId(), FSOperationType.CREATE, false, 0));
-      intercept(FileAlreadyExistsException.class,
-          () -> fs.create(nonOverwriteFile, false));
-      fs.registerListener(null);
+        // Case 2: Not Overwrite - File pre-exists
+        fs.registerListener(new TracingHeaderValidator(
+            fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+            fs.getFileSystemId(), FSOperationType.CREATE, false, 0));
+        intercept(FileAlreadyExistsException.class,
+            () -> fs.create(nonOverwriteFile, false));
+        fs.registerListener(null);
 
-      // One request to server to create path should be issued
-      // Only single tryGetFileStatus should happen
-      // 1. getFileStatus on DFS endpoint : 1
-      //    getFileStatus on Blob endpoint: 1 (No Additional List blob call as file exists)
+        // One request to server to create path should be issued
+        // Only single tryGetFileStatus should happen
+        // 1. getFileStatus on DFS endpoint : 1
+        //    getFileStatus on Blob endpoint: 1 (No Additional List blob call as file exists)
 
-      createRequestCount += (
-          client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)
-              ? 2
-              : 1);
+        createRequestCount += (
+            client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)
+                ? 2
+                : 1);
 
-      assertAbfsStatistics(
-          CONNECTIONS_MADE,
-          totalConnectionMadeBeforeTest + createRequestCount,
-          fs.getInstrumentationMap());
+        assertAbfsStatistics(
+            CONNECTIONS_MADE,
+            totalConnectionMadeBeforeTest + createRequestCount,
+            fs.getInstrumentationMap());
 
-      final Path overwriteFilePath = new Path("/OverwriteTest_FileName_"
-          + UUID.randomUUID().toString());
+        final Path overwriteFilePath = new Path("/OverwriteTest_FileName_"
+            + UUID.randomUUID().toString());
 
-      // Case 3: Overwrite - File does not pre-exist
-      // create should be successful
-      fs.create(overwriteFilePath, true);
+        // Case 3: Overwrite - File does not pre-exist
+        // create should be successful
+        fs.create(overwriteFilePath, true);
 
-      /// One request to server to create path should be issued
-      // two calls added for -
-      // 1. getFileStatus on DFS endpoint : 1
-      //    getFileStatus on Blob endpoint: 1 ListBlobCall + 1 GPS
-      // 2. actual create call: 1
-      // 1 extra call when conditional overwrite is not enabled to check for empty directory
-      createRequestCount += (client instanceof AbfsBlobClient
-          && !getIsNamespaceEnabled(fs))
-          ? (enableConditionalCreateOverwrite ? 2 : 3)
-          : 1;
-
-      assertAbfsStatistics(
-          CONNECTIONS_MADE,
-          totalConnectionMadeBeforeTest + createRequestCount,
-          fs.getInstrumentationMap());
-
-      // Case 4: Overwrite - File pre-exists
-      fs.registerListener(new TracingHeaderValidator(
-          fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
-          fs.getFileSystemId(), FSOperationType.CREATE, true, 0));
-      fs.create(overwriteFilePath, true);
-      fs.registerListener(null);
-
-      createRequestCount += (
-          client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)
-              ? 1
-              : 0);
-
-      // Second actual create call will hap
-      if (enableConditionalCreateOverwrite) {
-        // Three requests will be sent to server to create path,
-        // 1. create without overwrite
-        // 2. GetFileStatus to get eTag
-        // 3. create with overwrite
-        createRequestCount += 3;
-      } else {
+        /// One request to server to create path should be issued
+        // two calls added for -
+        // 1. getFileStatus on DFS endpoint : 1
+        //    getFileStatus on Blob endpoint: 1 ListBlobCall + 1 GPS
+        // 2. actual create call: 1
+        // 1 extra call when conditional overwrite is not enabled to check for empty directory
         createRequestCount += (client instanceof AbfsBlobClient
-            && !getIsNamespaceEnabled(fs)) ? 2 : 1;
-      }
+            && !getIsNamespaceEnabled(fs))
+            ? (enableConditionalCreateOverwrite ? 2 : 3)
+            : 1;
 
-      assertAbfsStatistics(
-          CONNECTIONS_MADE,
-          totalConnectionMadeBeforeTest + createRequestCount,
-          fs.getInstrumentationMap());
+        assertAbfsStatistics(
+            CONNECTIONS_MADE,
+            totalConnectionMadeBeforeTest + createRequestCount,
+            fs.getInstrumentationMap());
+
+        // Case 4: Overwrite - File pre-exists
+        fs.registerListener(new TracingHeaderValidator(
+            fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+            fs.getFileSystemId(), FSOperationType.CREATE, true, 0));
+        fs.create(overwriteFilePath, true);
+        fs.registerListener(null);
+
+        createRequestCount += (
+            client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)
+                ? 1
+                : 0);
+
+        // Second actual create call will hap
+        if (enableConditionalCreateOverwrite) {
+          // Three requests will be sent to server to create path,
+          // 1. create without overwrite
+          // 2. GetFileStatus to get eTag
+          // 3. create with overwrite
+          createRequestCount += 3;
+        } else {
+          createRequestCount += (client instanceof AbfsBlobClient
+              && !getIsNamespaceEnabled(fs)) ? 2 : 1;
+        }
+
+        assertAbfsStatistics(
+            CONNECTIONS_MADE,
+            totalConnectionMadeBeforeTest + createRequestCount,
+            fs.getInstrumentationMap());
+      }
     }
   }
 
@@ -585,12 +586,12 @@ public class ITestAzureBlobFileSystemCreate extends
   public void testNegativeScenariosForCreateOverwriteDisabled()
       throws Throwable {
 
-    try (final AzureBlobFileSystem currentFs = getFileSystem()) {
+    try (AzureBlobFileSystem currentFs = getFileSystem()) {
       Configuration config = new Configuration(this.getRawConfiguration());
       config.set("fs.azure.enable.conditional.create.overwrite",
           Boolean.toString(true));
 
-      try (final AzureBlobFileSystem fs =
+      try (AzureBlobFileSystem fs =
                (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
                    config)) {
 
@@ -875,7 +876,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMultipleFlush() throws Throwable {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       Path testPath = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
       try (FSDataOutputStream out = fs.create(testPath)) {
         out.write('1');
@@ -891,7 +892,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testDeleteBeforeFlush() throws Throwable {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       Path testPath = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
       try (FSDataOutputStream out = fs.create(testPath)) {
         out.write('1');
@@ -924,7 +925,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirsFailsForSubdirectoryOfExistingFile() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.create(new Path("a/b/c"));
       fs.mkdirs(new Path("a/b/d"));
       intercept(IOException.class, () -> fs.mkdirs(new Path("a/b/c/d/e")));
@@ -946,7 +947,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirSameFolder() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       createAzCopyFolder(new Path("a/b/d"));
       fs.mkdirs(new Path("a/b/d"));
     }
@@ -958,7 +959,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCreateDirectoryAndFile() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.mkdirs(new Path("a/b/c"));
       Assertions.assertThat(fs.exists(new Path("a/b/c"))).isTrue();
       intercept(IOException.class, () -> fs.create(new Path("a/b/c")));
@@ -977,7 +978,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCreateSameFile() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.create(new Path("a/b/c"));
       fs.create(new Path("a/b/c"));
       Assertions.assertThat(fs.exists(new Path("a/b/c")))
@@ -997,12 +998,12 @@ public class ITestAzureBlobFileSystemCreate extends
   @Test
   public void testCreationWithoutConditionalOverwrite()
       throws Exception {
-    try (final AzureBlobFileSystem currentFs = getFileSystem()) {
+    try (AzureBlobFileSystem currentFs = getFileSystem()) {
       Configuration config = new Configuration(this.getRawConfiguration());
       config.set("fs.azure.enable.conditional.create.overwrite",
           String.valueOf(false));
 
-      try (final AzureBlobFileSystem fs =
+      try (AzureBlobFileSystem fs =
                (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
                    config)) {
         fs.mkdirs(new Path("a/b/c"));
@@ -1041,7 +1042,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCreateSameFileWithOverwriteFalse() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.create(new Path("a/b/c"));
       Assertions.assertThat(fs.exists(new Path("a/b/c")))
           .describedAs("Path does not exist")
@@ -1057,7 +1058,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCreateSubPath() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.create(new Path("a/b/c"));
       Assertions.assertThat(fs.exists(new Path("a/b/c")))
           .describedAs("Path does not exist")
@@ -1163,7 +1164,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCreatePathParentExplicit() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.mkdirs(new Path("a/b/c"));
       Assertions.assertThat(fs.exists(new Path("a/b/c")))
           .describedAs("Path does not exist")
@@ -1215,7 +1216,7 @@ public class ITestAzureBlobFileSystemCreate extends
   @Test
   public void testParentExplicitPathImplicit() throws Exception {
     assumeBlobServiceType();
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.mkdirs(new Path("/explicitParent"));
       String sourcePathName = "/explicitParent/implicitDir";
       Path sourcePath = new Path(sourcePathName);
@@ -1246,7 +1247,7 @@ public class ITestAzureBlobFileSystemCreate extends
   @Test
   public void testParentImplicitPathImplicit() throws Exception {
     assumeBlobServiceType();
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       String parentPathName = "/implicitParent";
       Path parentPath = new Path(parentPathName);
       String sourcePathName = "/implicitParent/implicitDir";
@@ -1279,7 +1280,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCreateFileExistsImplicitParent() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       String parentPathName = "/implicitParent";
       Path parentPath = new Path(parentPathName);
       createAzCopyFolder(parentPath);
@@ -1322,7 +1323,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCreateFileExistsExplicitParent() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       String parentPathName = "/explicitParent";
       Path parentPath = new Path(parentPathName);
       fs.mkdirs(parentPath);
@@ -1366,9 +1367,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCreateFileParentFile() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
-      final AzureBlobFileSystemStore store = fs.getAbfsStore();
-
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       String parentName = "/testParentFile";
       Path parent = new Path(parentName);
       fs.create(parent);
@@ -1394,7 +1393,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCreateMkdirs() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.create(new Path("a/b/c"));
       intercept(IOException.class,
           "The specified path, or an element of the path, exists and its resource type is invalid for this operation.",
@@ -1408,7 +1407,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirs() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.mkdirs(new Path("a/b"));
       fs.mkdirs(new Path("a/b/c/d"));
       fs.mkdirs(new Path("a/b/c/e"));
@@ -1451,7 +1450,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirsCreateSubPath() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.mkdirs(new Path("a/b/c"));
       Assertions.assertThat(fs.exists(new Path("a/b/c")))
           .describedAs("Path a/b/c does not exist")
@@ -1474,7 +1473,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirsByLevel() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.mkdirs(new Path("a"));
       fs.mkdirs(new Path("a/b/c"));
       fs.mkdirs(new Path("a/b/c/d/e"));
@@ -1516,7 +1515,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirsWithDelete() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.mkdirs(new Path("a/b"));
       fs.mkdirs(new Path("a/b/c/d"));
       fs.delete(new Path("a/b/c/d"));
@@ -1532,7 +1531,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirsWithRename() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.mkdirs(new Path("a/b/c/d"));
       fs.create(new Path("e/file"));
       fs.delete(new Path("a/b/c/d"));
@@ -1551,7 +1550,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testFileCreateMkdirsRoot() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.setWorkingDirectory(new Path("/"));
       final Path p1 = new Path("dir1");
       fs.create(p1);
@@ -1566,7 +1565,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testFileCreateMkdirsNonRoot() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       final Path p1 = new Path("dir1");
       fs.create(p1);
       intercept(IOException.class, PATH_CONFLICT, () -> fs.mkdirs(new Path("dir1/dir2")));
@@ -1579,7 +1578,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCreateSameDirectory() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.mkdirs(new Path("a/b/c"));
       fs.mkdirs(new Path("a/b/c"));
 
@@ -1602,7 +1601,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCreateSamePathDirectory() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.create(new Path("a"));
       intercept(IOException.class, () -> fs.mkdirs(new Path("a")));
     }
@@ -1613,7 +1612,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirOnRootAsParent() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       final Path path = new Path("a");
       fs.setWorkingDirectory(new Path("/"));
       fs.mkdirs(path);
@@ -1633,7 +1632,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirOnRoot() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       final Path path = new Path("/");
       fs.setWorkingDirectory(new Path("/"));
       fs.mkdirs(path);
@@ -1652,7 +1651,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCreateUnicode() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       final Path path = new Path("/file\u0031");
       fs.create(path);
 
@@ -1667,7 +1666,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirUnicode() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       final Path path = new Path("/dir\u0031");
       fs.mkdirs(path);
 
@@ -1686,7 +1685,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirParallelRequests() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       final Path path = new Path("/dir1");
 
       ExecutorService es = Executors.newFixedThreadPool(3);
@@ -1745,7 +1744,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCreateDirectoryAndFileRecreation() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       fs.mkdirs(new Path("a/b/c"));
       fs.create(new Path("a/b/c/d"));
       Assertions.assertThat(fs.exists(new Path("a/b/c")))
@@ -1784,7 +1783,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCreateOnNonExistingPathWithImplicitParentDir() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       final Path implicitPath = new Path("dir1");
       final Path path = new Path("dir1/dir2");
       createAzCopyFolder(implicitPath);
@@ -1801,7 +1800,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
   @Test
   public void testMkdirOnNonExistingPathWithImplicitParentDir() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       final Path implicitPath = new Path("dir1");
       final Path path = new Path("dir1/dir2");
       createAzCopyFolder(implicitPath);
@@ -1831,7 +1830,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirOnExistingExplicitDirWithImplicitParentDir() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       final Path implicitPath = new Path("dir1");
       final Path path = new Path("dir1/dir2");
 
@@ -1866,7 +1865,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirOnExistingImplicitDirWithExplicitParentDir() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       final Path explicitPath = new Path("dir1");
       final Path path = new Path("dir1/dir2");
 
@@ -1900,7 +1899,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirOnExistingImplicitDirWithImplicitParentDir() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       final Path implicitPath = new Path("dir3");
       final Path path = new Path("dir3/dir4");
 
@@ -1933,7 +1932,7 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testMkdirOnExistingFileWithImplicitParentDir() throws Exception {
-    try (final AzureBlobFileSystem fs = getFileSystem()) {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
       final Path implicitPath = new Path("dir1");
       final Path path = new Path("dir1/dir2");
 
@@ -1965,7 +1964,7 @@ public class ITestAzureBlobFileSystemCreate extends
   @Test
   public void testImplicitExplicitFolder() throws Exception {
     Configuration configuration = Mockito.spy(getRawConfiguration());
-    try (final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration)) {
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration)) {
       final Path implicitPath = new Path("a/b/c");
 
       createAzCopyFolder(implicitPath);
@@ -2010,7 +2009,7 @@ public class ITestAzureBlobFileSystemCreate extends
   @Test
   public void testImplicitExplicitFolder1() throws Exception {
     Configuration configuration = Mockito.spy(getRawConfiguration());
-    try (final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration)) {
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration)) {
       final Path implicitPath = new Path("a/b/c");
 
       createAzCopyFolder(implicitPath);
