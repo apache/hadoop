@@ -81,9 +81,8 @@ public class TestDNS {
     assertEquals(hostname3, hostname2);
     assertEquals(hostname2, hostname1);
     long interval = t2 - t1;
-    assertTrue(
-    
-       interval < 20000, "Took too long to determine local host - caching is not working");
+    assertTrue(interval < 20000,
+        "Took too long to determine local host - caching is not working");
   }
 
   /**

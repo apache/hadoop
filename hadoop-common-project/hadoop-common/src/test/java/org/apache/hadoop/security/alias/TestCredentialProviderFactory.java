@@ -34,9 +34,8 @@ import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,12 +48,9 @@ public class TestCredentialProviderFactory {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestCredentialProviderFactory.class);
 
-  @Rule
-  public final TestName test = new TestName();
-
   @BeforeEach
-  public void announce() {
-    LOG.info("Running test " + test.getMethodName());
+  public void announce(TestInfo testInfo) {
+    LOG.info("Running test " + testInfo.getDisplayName());
   }
 
   private static char[] chars = { 'a', 'b', 'c', 'd', 'e', 'f', 'g',
@@ -237,8 +233,8 @@ public class TestCredentialProviderFactory {
     Path path = ProviderUtils.unnestUri(new URI(ourUrl));
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
-    assertEquals("Unexpected permissions: " + s.getPermission().toString(),
-        "rw-------", s.getPermission().toString());
+    assertEquals("rw-------", s.getPermission().toString(),
+        "Unexpected permissions: " + s.getPermission().toString());
     assertTrue(file.isFile(), file + " should exist");
 
     // check permission retention after explicit change
@@ -280,7 +276,7 @@ public class TestCredentialProviderFactory {
 
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
-    assertEquals("Permissions should have been retained from the preexisting " +
-        "keystore.", "rwxrwxrwx", s.getPermission().toString());
+    assertEquals("rwxrwxrwx", s.getPermission().toString(),
+       "Permissions should have been retained from the preexisting keystore.");
   }
 }

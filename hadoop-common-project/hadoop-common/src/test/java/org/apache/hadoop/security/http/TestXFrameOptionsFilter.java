@@ -24,7 +24,6 @@ import javax.servlet.FilterConfig;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import org.mockito.Mockito;
@@ -32,7 +31,9 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
 
 /**
  * Test the default and customized behaviors of XFrameOptionsFilter.
@@ -57,10 +58,8 @@ public class TestXFrameOptionsFilter {
         @Override
         public Object answer(InvocationOnMock invocation) throws Throwable {
           Object[] args = invocation.getArguments();
-          Assertions.assertTrue(
-          
-             ((HttpServletResponse)args[1]).
-              containsHeader(X_FRAME_OPTIONS), "header should be visible inside chain and filters.");
+          assertTrue(((HttpServletResponse)args[1]).containsHeader(X_FRAME_OPTIONS),
+              "header should be visible inside chain and filters.");
             return null;
           }
         }
@@ -71,7 +70,7 @@ public class TestXFrameOptionsFilter {
         @Override
         public Object answer(InvocationOnMock invocation) throws Throwable {
             Object[] args = invocation.getArguments();
-            Assertions.assertTrue(
+            assertTrue(
             "DENY".equals(args[1]), "Options value incorrect should be DENY but is: "
                 + args[1]);
             headers.add((String)args[1]);
@@ -108,12 +107,11 @@ public class TestXFrameOptionsFilter {
         public Object answer(InvocationOnMock invocation) throws Throwable {
           Object[] args = invocation.getArguments();
           HttpServletResponse resp = (HttpServletResponse) args[1];
-          Assertions.assertTrue(
-          
-             resp.containsHeader(X_FRAME_OPTIONS), "Header should be visible inside chain and filters.");
+          assertTrue(resp.containsHeader(X_FRAME_OPTIONS),
+              "Header should be visible inside chain and filters.");
           // let's try and set another value for the header and make
           // sure that it doesn't overwrite the configured value
-          Assertions.assertTrue(resp instanceof
+          assertTrue(resp instanceof
               XFrameOptionsFilter.XFrameOptionsResponseWrapper);
           resp.setHeader(X_FRAME_OPTIONS, "LJM");
           return null;
@@ -126,7 +124,7 @@ public class TestXFrameOptionsFilter {
         @Override
         public Object answer(InvocationOnMock invocation) throws Throwable {
             Object[] args = invocation.getArguments();
-            Assertions.assertEquals("SAMEORIGIN", args[1],
+            assertEquals("SAMEORIGIN", args[1],
                 "Options value incorrect should be SAMEORIGIN but is: " + args[1]);
             headers.add((String)args[1]);
             return null;

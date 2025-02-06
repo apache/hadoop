@@ -24,7 +24,14 @@ import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.TRUST_STORE_PASSWO
 import static org.apache.hadoop.security.ssl.SSLFactory.Mode.CLIENT;
 import static org.apache.hadoop.security.ssl.SSLFactory.SSL_CLIENT_CONF_KEY;
 import static org.apache.hadoop.security.ssl.SSLFactory.SSL_REQUIRE_CLIENT_CERT_KEY;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -34,7 +41,6 @@ import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -151,13 +157,13 @@ public class TestSSLFactory {
 
   @Test
   public void clientMode() throws Exception {
-    assertThrows(IllegalArgumentException.class, ()->{
+    assertThrows(IllegalStateException.class, () -> {
       Configuration conf = createConfiguration(false, true);
       SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
       try {
         sslFactory.init();
-        Assertions.assertNotNull(sslFactory.createSSLSocketFactory());
-        Assertions.assertNotNull(sslFactory.getHostnameVerifier());
+        assertNotNull(sslFactory.createSSLSocketFactory());
+        assertNotNull(sslFactory.getHostnameVerifier());
         sslFactory.createSSLServerSocketFactory();
       } finally {
         sslFactory.destroy();
@@ -170,8 +176,8 @@ public class TestSSLFactory {
     SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, conf);
     try {
       sslFactory.init();
-      Assertions.assertNotNull(sslFactory.createSSLServerSocketFactory());
-      Assertions.assertEquals(clientCert, sslFactory.isClientCertRequired());
+      assertNotNull(sslFactory.createSSLServerSocketFactory());
+      assertEquals(clientCert, sslFactory.isClientCertRequired());
       if (socket) {
         sslFactory.createSSLSocketFactory();
       } else {
@@ -185,13 +191,13 @@ public class TestSSLFactory {
 
   @Test
   public void serverModeWithoutClientCertsSocket() throws Exception {
-    assertThrows(IllegalArgumentException.class,
+    assertThrows(IllegalStateException.class,
         () -> serverMode(false, true));
   }
 
   @Test
   public void serverModeWithClientCertsSocket() throws Exception {
-    assertThrows(IllegalArgumentException.class, () -> serverMode(true, true));
+    assertThrows(IllegalStateException.class, () -> serverMode(true, true));
   }
 
   @Test
@@ -201,7 +207,7 @@ public class TestSSLFactory {
 
   @Test
   public void serverModeWithClientCertsVerifier() throws Exception {
-    assertThrows(IllegalArgumentException.class, ()-> serverMode(true, false));
+    assertThrows(IllegalStateException.class, ()-> serverMode(true, false));
   }
 
   private void runDelegatedTasks(SSLEngineResult result, SSLEngine engine)
@@ -299,7 +305,7 @@ public class TestSSLFactory {
           dataDone = true;
         }
       }
-      Assertions.fail("The exception was not thrown");
+      fail("The exception was not thrown");
     } catch (SSLHandshakeException e) {
       GenericTestUtils.assertExceptionContains("no cipher suites in common", e);
     }
@@ -326,33 +332,33 @@ public class TestSSLFactory {
     SSLFactory sslFactory = new
       SSLFactory(SSLFactory.Mode.CLIENT, conf);
     sslFactory.init();
-    Assertions.assertEquals("DEFAULT", sslFactory.getHostnameVerifier().toString());
+    assertEquals("DEFAULT", sslFactory.getHostnameVerifier().toString());
     sslFactory.destroy();
 
     conf.set(SSLFactory.SSL_HOSTNAME_VERIFIER_KEY, "ALLOW_ALL");
     sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
     sslFactory.init();
-    Assertions.assertEquals("ALLOW_ALL",
+    assertEquals("ALLOW_ALL",
                         sslFactory.getHostnameVerifier().toString());
     sslFactory.destroy();
 
     conf.set(SSLFactory.SSL_HOSTNAME_VERIFIER_KEY, "DEFAULT_AND_LOCALHOST");
     sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
     sslFactory.init();
-    Assertions.assertEquals("DEFAULT_AND_LOCALHOST",
+    assertEquals("DEFAULT_AND_LOCALHOST",
                         sslFactory.getHostnameVerifier().toString());
     sslFactory.destroy();
 
     conf.set(SSLFactory.SSL_HOSTNAME_VERIFIER_KEY, "STRICT");
     sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
     sslFactory.init();
-    Assertions.assertEquals("STRICT", sslFactory.getHostnameVerifier().toString());
+    assertEquals("STRICT", sslFactory.getHostnameVerifier().toString());
     sslFactory.destroy();
 
     conf.set(SSLFactory.SSL_HOSTNAME_VERIFIER_KEY, "STRICT_IE6");
     sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
     sslFactory.init();
-    Assertions.assertEquals("STRICT_IE6",
+    assertEquals("STRICT_IE6",
                         sslFactory.getHostnameVerifier().toString());
     sslFactory.destroy();
   }
@@ -394,10 +400,10 @@ public class TestSSLFactory {
       sslFactory.init();
       HttpsURLConnection sslConn =
           (HttpsURLConnection) new URL("https://foo").openConnection();
-      Assertions.assertNotSame("STRICT_IE6",
+      assertNotSame("STRICT_IE6",
                            sslConn.getHostnameVerifier().toString());
       sslFactory.configure(sslConn);
-      Assertions.assertEquals("STRICT_IE6",
+      assertEquals("STRICT_IE6",
                           sslConn.getHostnameVerifier().toString());
     } finally {
       sslFactory.destroy();

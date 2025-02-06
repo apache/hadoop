@@ -30,7 +30,7 @@ public class TestXDR {
 
     XDR r = w.asReadOnlyWrap();
     for (int i = 0; i < times; ++i)
-      assertEquals(WRITE_VALUE,r.readInt());
+      assertEquals(WRITE_VALUE, r.readInt());
   }
 
   private void serializeLong(int times) {

@@ -106,13 +106,15 @@ public class TestClusterTopology extends Assertions {
     excludedNodes.add(node4);
     assertEquals(3, cluster.countNumOfAvailableNodes(NodeBase.ROOT, excludedNodes),
         "excluded nodes with ROOT scope should be considered");
-    assertEquals(2, cluster.countNumOfAvailableNodes("~" + deadNode.getNetworkLocation(), excludedNodes),
+    assertEquals(2,
+        cluster.countNumOfAvailableNodes("~" + deadNode.getNetworkLocation(), excludedNodes),
         "excluded nodes without ~ scope should be considered");
     assertEquals(1, cluster.countNumOfAvailableNodes(deadNode.getNetworkLocation(),
         excludedNodes), "excluded nodes with rack scope should be considered");
     // adding the node in excluded scope to excluded list
     excludedNodes.add(node2);
-    assertEquals(2, cluster.countNumOfAvailableNodes("~" + deadNode.getNetworkLocation(), excludedNodes),
+    assertEquals(2,
+        cluster.countNumOfAvailableNodes("~" + deadNode.getNetworkLocation(), excludedNodes),
         "excluded nodes with ~ scope should be considered");
     // getting count with non-exist scope.
     assertEquals(0, cluster.countNumOfAvailableNodes("/non-exist", excludedNodes),

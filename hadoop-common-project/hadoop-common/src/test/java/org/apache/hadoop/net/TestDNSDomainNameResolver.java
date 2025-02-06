@@ -35,7 +35,7 @@ public class TestDNSDomainNameResolver {
   public void testGetHostNameByIP() throws UnknownHostException {
     InetAddress localhost = InetAddress.getLocalHost();
     assumeFalse(Objects.equals(localhost.getCanonicalHostName(), localhost.getHostAddress()),
-       "IP lookup support required");
+        "IP lookup support required");
 
     // Precondition: host name and canonical host name for unresolved returns an IP address.
     InetAddress unresolved = InetAddress.getByAddress(localhost.getHostAddress(),

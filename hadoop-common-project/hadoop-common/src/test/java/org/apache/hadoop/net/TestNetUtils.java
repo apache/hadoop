@@ -745,17 +745,17 @@ public class TestNetUtils {
     String summary = "original [" + StringUtils.join(hosts, ", ") + "]"
         + " normalized [" + StringUtils.join(normalizedHosts, ", ") + "]";
     // when ipaddress is normalized, same address is expected in return
-    assertEquals(summary, hosts.get(0), normalizedHosts.get(0));
+    assertEquals(hosts.get(0), normalizedHosts.get(0), summary);
     // for normalizing a resolvable hostname, resolved ipaddress is expected in return
     assertFalse(normalizedHosts.get(1).equals(hosts.get(1)),
         "Element 1 equal "+ summary);
-    assertEquals(summary, hosts.get(0), normalizedHosts.get(1));
+    assertEquals(hosts.get(0), normalizedHosts.get(1), summary);
     // this address HADOOP-8372: when normalizing a valid resolvable hostname start with numeric, 
     // its ipaddress is expected to return
     assertFalse(normalizedHosts.get(2).equals(hosts.get(2)),
         "Element 2 equal " + summary);
     // return the same hostname after normalizing a irresolvable hostname.
-    assertEquals(summary, hosts.get(3), normalizedHosts.get(3));
+    assertEquals(hosts.get(3), normalizedHosts.get(3), summary);
   }
   
   @Test

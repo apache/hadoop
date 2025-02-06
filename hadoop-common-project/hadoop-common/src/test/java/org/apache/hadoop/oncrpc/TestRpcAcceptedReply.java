@@ -43,7 +43,7 @@ public class TestRpcAcceptedReply {
   @Test
   public void testAcceptStateFromInvalidValue() {
     assertThrows(IndexOutOfBoundsException.class, () ->
-       AcceptState.fromValue(6));
+        AcceptState.fromValue(6));
   }
 
   @Test

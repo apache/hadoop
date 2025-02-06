@@ -479,7 +479,7 @@ public class TestProxyUsers {
 
   @Test
   public void testProxyUsersWithEmptyPrefix() throws Exception {
-    assertThrows(IllegalArgumentException.class,() -> {
+    assertThrows(IllegalArgumentException.class, () -> {
       ProxyUsers.refreshSuperUserGroupsConfiguration(new Configuration(false), "");
     });
   }
