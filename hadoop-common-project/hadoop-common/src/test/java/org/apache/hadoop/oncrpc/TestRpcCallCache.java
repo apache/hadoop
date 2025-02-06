@@ -17,12 +17,6 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Iterator;
@@ -30,8 +24,9 @@ import java.util.Map.Entry;
 
 import org.apache.hadoop.oncrpc.RpcCallCache.CacheEntry;
 import org.apache.hadoop.oncrpc.RpcCallCache.ClientRequest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -39,14 +34,16 @@ import static org.mockito.Mockito.*;
  */
 public class TestRpcCallCache {
 
-  @Test(expected=IllegalArgumentException.class)
-  public void testRpcCallCacheConstructorIllegalArgument0(){
-    new RpcCallCache("test", 0);
+  @Test
+  public void testRpcCallCacheConstructorIllegalArgument0() {
+    assertThrows(IllegalArgumentException.class, () ->
+        new RpcCallCache("test", 0));
   }
 
-  @Test(expected=IllegalArgumentException.class)
-  public void testRpcCallCacheConstructorIllegalArgumentNegative(){
-    new RpcCallCache("test", -1);
+  @Test
+  public void testRpcCallCacheConstructorIllegalArgumentNegative() {
+    assertThrows(IllegalArgumentException.class, () ->
+        new RpcCallCache("test", -1));
   }
 
   @Test

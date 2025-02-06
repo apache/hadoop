@@ -18,15 +18,15 @@ package org.apache.hadoop.security;
 
 import java.io.IOException;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import static org.apache.hadoop.security.SecurityUtilTestHelper.isExternalKdcRunning;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests kerberos keytab login using a user-specified external KDC
@@ -39,7 +39,7 @@ import org.junit.Test;
  */
 public class TestUGIWithExternalKdc {
 
-  @Before
+  @BeforeEach
   public void testExternalKdcRunning() {
     Assume.assumeTrue(isExternalKdcRunning());
   }
@@ -48,8 +48,8 @@ public class TestUGIWithExternalKdc {
   public void testLogin() throws IOException {
     String userPrincipal = System.getProperty("user.principal");
     String userKeyTab = System.getProperty("user.keytab");
-    Assert.assertNotNull("User principal was not specified", userPrincipal);
-    Assert.assertNotNull("User keytab was not specified", userKeyTab);
+    Assertions.assertNotNull(userPrincipal, "User principal was not specified");
+    Assertions.assertNotNull(userKeyTab, "User keytab was not specified");
 
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
@@ -59,13 +59,13 @@ public class TestUGIWithExternalKdc {
     UserGroupInformation ugi = UserGroupInformation
         .loginUserFromKeytabAndReturnUGI(userPrincipal, userKeyTab);
 
-    Assert.assertEquals(AuthenticationMethod.KERBEROS,
+    Assertions.assertEquals(AuthenticationMethod.KERBEROS,
         ugi.getAuthenticationMethod());
     
     try {
       UserGroupInformation
       .loginUserFromKeytabAndReturnUGI("bogus@EXAMPLE.COM", userKeyTab);
-      Assert.fail("Login should have failed");
+      Assertions.fail("Login should have failed");
     } catch (Exception ex) {
       ex.printStackTrace();
     }

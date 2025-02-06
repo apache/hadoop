@@ -19,7 +19,7 @@
 package org.apache.hadoop.service;
 
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;

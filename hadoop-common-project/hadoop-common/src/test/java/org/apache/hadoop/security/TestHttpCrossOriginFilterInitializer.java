@@ -22,8 +22,8 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestHttpCrossOriginFilterInitializer {
 
@@ -48,11 +48,11 @@ public class TestHttpCrossOriginFilterInitializer {
     String outofscopeparam = filterParameters.get("outofscopeparam");
 
     // verify expected values are in place
-    Assert.assertEquals("Could not find filter parameter", "rootvalue",
+    Assertions.assertEquals("Could not find filter parameter", "rootvalue",
         rootvalue);
-    Assert.assertEquals("Could not find filter parameter", "nestedvalue",
+    Assertions.assertEquals("Could not find filter parameter", "nestedvalue",
         nestedvalue);
-    Assert.assertNull("Found unexpected value in filter parameters",
-        outofscopeparam);
+    Assertions.assertNull(
+       outofscopeparam, "Found unexpected value in filter parameters");
   }
 }

@@ -25,8 +25,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -61,17 +61,17 @@ public class TestDelegationTokenManager {
     Token<DelegationTokenIdentifier> token =
         (Token<DelegationTokenIdentifier>) tm.createToken(
             UserGroupInformation.getCurrentUser(), "foo");
-    Assert.assertNotNull(token);
+    Assertions.assertNotNull(token);
     tm.verifyToken(token);
-    Assert.assertTrue(tm.renewToken(token, "foo") > System.currentTimeMillis());
+    Assertions.assertTrue(tm.renewToken(token, "foo") > System.currentTimeMillis());
     tm.cancelToken(token, "foo");
     try {
       tm.verifyToken(token);
-      Assert.fail();
+      Assertions.fail();
     } catch (IOException ex) {
       //NOP
     } catch (Exception ex) {
-      Assert.fail();
+      Assertions.fail();
     }
     tm.destroy();
   }

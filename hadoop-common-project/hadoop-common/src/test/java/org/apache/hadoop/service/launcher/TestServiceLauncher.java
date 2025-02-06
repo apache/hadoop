@@ -32,7 +32,7 @@ import org.apache.hadoop.service.launcher.testservices.StringConstructorOnlyServ
 import static org.apache.hadoop.test.GenericTestUtils.*;
 import static org.apache.hadoop.service.launcher.testservices.ExceptionInExecuteLaunchableService.*;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestServiceLauncher extends AbstractServiceLauncherTestBase {
 

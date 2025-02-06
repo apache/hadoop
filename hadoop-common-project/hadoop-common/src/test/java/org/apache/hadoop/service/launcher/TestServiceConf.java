@@ -23,7 +23,7 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.launcher.testservices.LaunchableRunningService;
 import org.apache.hadoop.service.launcher.testservices.RunningService;
 import static org.apache.hadoop.service.launcher.LauncherArguments.*;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -97,8 +97,8 @@ public class TestServiceConf
     List<String> args = launcher.extractCommandOptions(extracted,
         argsList);
     if (!args.isEmpty()) {
-      assertEquals("args beginning with " + args.get(0),
-          0, args.size());
+      assertEquals(
+         0, args.size(), "args beginning with " + args.get(0));
     }
     assertEquals("true", extracted.get("propagated", "unset"));
   }
@@ -121,8 +121,8 @@ public class TestServiceConf
 
     List<String> args = launcher.extractCommandOptions(extracted, argsList);
     if (!args.isEmpty()) {
-      assertEquals("args beginning with " + args.get(0),
-          0, args.size());
+      assertEquals(
+         0, args.size(), "args beginning with " + args.get(0));
     }
     assertTrue(extracted.getBoolean(key1, false));
     assertEquals(7, extracted.getInt(key2, -1));
