@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -56,8 +58,7 @@ public class TestMultithreadedTestUtil {
     assertEquals(3, threadsRun.get());
     // Test shouldn't have waited the full 30 seconds, since
     // the threads exited faster than that.
-    assertTrue(
-       et - st < 5000, "Test took " + (et - st) + "ms");
+    assertTrue(et - st < 5000, "Test took " + (et - st) + "ms");
   }
 
   @Test
@@ -81,8 +82,7 @@ public class TestMultithreadedTestUtil {
     long et = Time.now();
     // Test shouldn't have waited the full 30 seconds, since
     // the thread throws faster than that
-    assertTrue(
-       et - st < 5000, "Test took " + (et - st) + "ms");
+    assertTrue(et - st < 5000, "Test took " + (et - st) + "ms");
   }
 
   @Test
@@ -106,8 +106,7 @@ public class TestMultithreadedTestUtil {
     long et = Time.now();
     // Test shouldn't have waited the full 30 seconds, since
     // the thread throws faster than that
-    assertTrue(
-       et - st < 5000, "Test took " + (et - st) + "ms");
+    assertTrue(et - st < 5000, "Test took " + (et - st) + "ms");
   }
 
   @Test
@@ -129,11 +128,11 @@ public class TestMultithreadedTestUtil {
     long elapsed = et - st;
 
     // Test should have waited just about 3 seconds
-    assertTrue(
-       Math.abs(elapsed - 3000) < 500, "Test took " + (et - st) + "ms");
+    assertTrue(Math.abs(elapsed - 3000) < 500,
+        "Test took " + (et - st) + "ms");
     // Counter should have been incremented lots of times in 3 full seconds
-    assertTrue(
-       counter.get() > 1000, "Counter value = " + counter.get());
+    assertTrue(counter.get() > 1000,
+        "Counter value = " + counter.get());
   }
 
 }

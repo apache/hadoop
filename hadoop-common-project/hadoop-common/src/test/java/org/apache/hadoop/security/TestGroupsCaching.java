@@ -272,8 +272,8 @@ public class TestGroupsCaching {
     Groups groups = new Groups(conf);
     List<String> userGroups = groups.getGroups("me");
     assertTrue(userGroups.isEmpty(), "non-empty groups for static user");
-    assertFalse(
-       FakeunPrivilegedGroupMapping.invoked, "group lookup done for static user");
+    assertFalse(FakeunPrivilegedGroupMapping.invoked,
+        "group lookup done for static user");
     
     List<String> expected = new ArrayList<String>();
     expected.add("group1");
@@ -281,15 +281,15 @@ public class TestGroupsCaching {
     FakeunPrivilegedGroupMapping.invoked = false;
     userGroups = groups.getGroups("user1");
     assertTrue(expected.equals(userGroups), "groups not correct");
-    assertFalse(
-       FakeunPrivilegedGroupMapping.invoked, "group lookup done for unprivileged user");
+    assertFalse(FakeunPrivilegedGroupMapping.invoked,
+        "group lookup done for unprivileged user");
 
     expected.add("group2");
     FakeunPrivilegedGroupMapping.invoked = false;
     userGroups = groups.getGroups("user2");
     assertTrue(expected.equals(userGroups), "groups not correct");
-    assertFalse(
-       FakeunPrivilegedGroupMapping.invoked, "group lookup done for unprivileged user");
+    assertFalse(FakeunPrivilegedGroupMapping.invoked,
+        "group lookup done for unprivileged user");
 
   }
 

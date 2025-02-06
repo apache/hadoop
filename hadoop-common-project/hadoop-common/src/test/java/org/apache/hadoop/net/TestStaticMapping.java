@@ -78,23 +78,18 @@ public class TestStaticMapping extends Assertions {
   }
 
   private void assertSingleSwitch(DNSToSwitchMapping mapping) {
-    assertEquals(
-                true
-,                  AbstractDNSToSwitchMapping.isMappingSingleSwitch(mapping), "Expected a single switch mapping "
-                     + mapping);
+    assertEquals(true, AbstractDNSToSwitchMapping.isMappingSingleSwitch(mapping),
+        "Expected a single switch mapping " + mapping);
   }
 
   private void assertMultiSwitch(DNSToSwitchMapping mapping) {
-    assertEquals(
-                false
-,                  AbstractDNSToSwitchMapping.isMappingSingleSwitch(mapping), "Expected a multi switch mapping "
-                     + mapping);
+    assertEquals(false, AbstractDNSToSwitchMapping.isMappingSingleSwitch(mapping),
+        "Expected a multi switch mapping " + mapping);
   }
 
   protected void assertMapSize(AbstractDNSToSwitchMapping switchMapping, int expectedSize) {
-    assertEquals(
-    
-       expectedSize, switchMapping.getSwitchMap().size(), "Expected two entries in the map " + switchMapping.dumpTopology());
+    assertEquals(expectedSize, switchMapping.getSwitchMap().size(),
+        "Expected two entries in the map " + switchMapping.dumpTopology());
   }
 
   private List<String> createQueryList() {
@@ -131,7 +126,7 @@ public class TestStaticMapping extends Assertions {
     String topology = mapping.dumpTopology();
     LOG.info(topology);
     assertEquals(1, switchMap.size(), topology);
-    assertEquals(topology, "/r1", switchMap.get("n1"));
+    assertEquals("/r1", switchMap.get("n1"), topology);
   }
 
   /**

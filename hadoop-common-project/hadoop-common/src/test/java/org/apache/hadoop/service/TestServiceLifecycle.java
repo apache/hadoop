@@ -25,7 +25,7 @@ import org.apache.hadoop.service.LoggingStateChangeListener;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.ServiceStateChangeListener;
 import org.apache.hadoop.service.ServiceStateException;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -204,10 +204,10 @@ public class TestServiceLifecycle extends ServiceAssert {
     assertEquals(Service.STATE.INITED, svc.getFailureState());
 
     Throwable failureCause = svc.getFailureCause();
-    assertNotNull(failureCause, "Null failure cause in " + svc);
+    assertNotNull("Null failure cause in " + svc, failureCause);
     BreakableService.BrokenLifecycleEvent cause =
       (BreakableService.BrokenLifecycleEvent) failureCause;
-    assertNotNull(cause.state, "null state in " + cause + " raised by " + svc);
+    assertNotNull("null state in " + cause + " raised by " + svc, cause.state);
     assertEquals(Service.STATE.INITED, cause.state);
   }
 
@@ -299,7 +299,7 @@ public class TestServiceLifecycle extends ServiceAssert {
 
   private void assertEventCount(BreakableStateChangeListener listener,
                                 int expected) {
-    assertEquals(expected, listener.getEventCount(), listener.toString());
+    assertEquals(listener.toString(), expected, listener.getEventCount());
   }
 
   @Test
@@ -343,7 +343,7 @@ public class TestServiceLifecycle extends ServiceAssert {
     long duration = System.currentTimeMillis() - start;
     assertEquals(Service.STATE.STOPPED, listener.notifyingState);
     assertServiceInState(service, Service.STATE.STOPPED);
-    assertTrue(duration < 10000, "Duration of " + duration + " too long");
+    assertTrue("Duration of " + duration + " too long", duration < 10000);
   }
 
   @Test

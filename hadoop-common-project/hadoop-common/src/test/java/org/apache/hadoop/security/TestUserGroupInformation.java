@@ -33,12 +33,11 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -82,16 +81,16 @@ import static org.apache.hadoop.test.MetricsAsserts.assertGaugeGt;
 import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.getDoubleGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -135,7 +134,7 @@ public class TestUserGroupInformation {
   }
 
   /** configure ugi */
-  @BeforeAll
+  @BeforeClass
   public static void setup() {
     javax.security.auth.login.Configuration.setConfiguration(
         new DummyLoginConfiguration());
@@ -146,32 +145,29 @@ public class TestUserGroupInformation {
     System.setProperty("hadoop.home.dir", (home != null ? home : "."));
   }
   
-  @BeforeEach
+  @Before
   public void setupUgi() {
     conf = new Configuration();
     UserGroupInformation.reset();
     UserGroupInformation.setConfiguration(conf);
   }
   
-  @AfterEach
+  @After
   public void resetUgi() {
     UserGroupInformation.setLoginUser(null);
   }
 
-  @Test
-  @Timeout(value = 30)
+  @Test(timeout = 30000)
   public void testSimpleLogin() throws IOException {
     tryLoginAuthenticationMethod(AuthenticationMethod.SIMPLE, true);
   }
 
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testTokenLogin() throws IOException {
     tryLoginAuthenticationMethod(AuthenticationMethod.TOKEN, false);
   }
   
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testProxyLogin() throws IOException {
     tryLoginAuthenticationMethod(AuthenticationMethod.PROXY, false);
   }
@@ -200,8 +196,7 @@ public class TestUserGroupInformation {
     }
   }
   
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testGetRealAuthenticationMethod() {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user1");
     ugi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
@@ -212,8 +207,7 @@ public class TestUserGroupInformation {
     assertEquals(AuthenticationMethod.SIMPLE, ugi.getRealAuthenticationMethod());
   }
   
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testCreateRemoteUser() {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user1");
     assertEquals(AuthenticationMethod.SIMPLE, ugi.getAuthenticationMethod());
@@ -225,8 +219,7 @@ public class TestUserGroupInformation {
   }
   
   /** Test login method */
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testLogin() throws Exception {
     conf.set(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS,
       String.valueOf(PERCENTILES_INTERVAL));
@@ -257,8 +250,7 @@ public class TestUserGroupInformation {
    * given user name - get all the groups.
    * Needs to happen before creating the test users
    */
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testGetServerSideGroups() throws IOException,
                                                InterruptedException {
     // get the user name
@@ -319,8 +311,7 @@ public class TestUserGroupInformation {
   }
 
   /** test constructor */
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testConstructor() throws Exception {
     // security off, so default should just return simple name
     testConstructorSuccess("user1", "user1");
@@ -334,8 +325,7 @@ public class TestUserGroupInformation {
   }
   
   /** test constructor */
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testConstructorWithRules() throws Exception {
     // security off, but use rules if explicitly set
     conf.set(HADOOP_SECURITY_AUTH_TO_LOCAL,
@@ -367,8 +357,7 @@ public class TestUserGroupInformation {
   }
   
   /** test constructor */
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testConstructorWithKerberos() throws Exception {
     // security on, default is remove default realm
     conf.set(HADOOP_SECURITY_AUTH_TO_LOCAL_MECHANISM, "hadoop");
@@ -398,8 +387,7 @@ public class TestUserGroupInformation {
   }
 
   /** test constructor */
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testConstructorWithKerberosRules() throws Exception {
     // security on, explicit rules
     SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
@@ -435,13 +423,12 @@ public class TestUserGroupInformation {
       String expect = (userName == null || userName.isEmpty())
           ? "Null user" : "Illegal principal name "+userName;
       String expect2 = "Malformed Kerberos name: "+userName;
-      assertTrue(
-         e.toString().contains(expect) || e.toString().contains(expect2), "Did not find "+ expect + " or " + expect2 + " in " + e);
+      assertTrue("Did not find "+ expect + " or " + expect2 + " in " + e,
+          e.toString().contains(expect) || e.toString().contains(expect2));
     }
   }
 
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testSetConfigWithRules() {
     String[] rules = { "RULE:[1:TEST1]", "RULE:[1:TEST2]", "RULE:[1:TEST3]" };
 
@@ -471,8 +458,7 @@ public class TestUserGroupInformation {
     assertEquals(rules[2], KerberosName.getRules());
   }
 
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testEnsureInitWithRules() throws IOException {
     String rules = "RULE:[1:RULE1]";
 
@@ -491,8 +477,7 @@ public class TestUserGroupInformation {
     assertEquals(rules, KerberosName.getRules());
   }
 
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testEquals() throws Exception {
     UserGroupInformation uugi = 
       UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
@@ -510,8 +495,7 @@ public class TestUserGroupInformation {
     assertEquals(uugi.hashCode(), ugi3.hashCode());
   }
   
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testEqualsWithRealUser() throws Exception {
     UserGroupInformation realUgi1 = UserGroupInformation.createUserForTesting(
         "RealUser", GROUP_NAMES);
@@ -524,8 +508,7 @@ public class TestUserGroupInformation {
     assertFalse(remoteUgi.equals(proxyUgi1));
   }
   
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testGettingGroups() throws Exception {
     UserGroupInformation uugi = 
       UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
@@ -536,8 +519,8 @@ public class TestUserGroupInformation {
     assertEquals(GROUP1_NAME, uugi.getPrimaryGroupName());
   }
 
-  @SuppressWarnings("unchecked")@Test
-  @Timeout(value = 30)
+  @SuppressWarnings("unchecked") // from Mockito mocks
+  @Test (timeout = 30000)
   public <T extends TokenIdentifier> void testAddToken() throws Exception {
     UserGroupInformation ugi = 
         UserGroupInformation.createRemoteUser("someone"); 
@@ -574,8 +557,8 @@ public class TestUserGroupInformation {
     checkTokens(ugi, t1, t2, t3);    
   }
 
-  @SuppressWarnings("unchecked")@Test
-  @Timeout(value = 30)
+  @SuppressWarnings("unchecked") // from Mockito mocks
+  @Test (timeout = 30000)
   public <T extends TokenIdentifier> void testGetCreds() throws Exception {
     UserGroupInformation ugi = 
         UserGroupInformation.createRemoteUser("someone"); 
@@ -600,8 +583,8 @@ public class TestUserGroupInformation {
     checkTokens(ugi, t1, t2);
   }
 
-  @SuppressWarnings("unchecked")@Test
-  @Timeout(value = 30)
+  @SuppressWarnings("unchecked") // from Mockito mocks
+  @Test (timeout = 30000)
   public <T extends TokenIdentifier> void testAddCreds() throws Exception {
     UserGroupInformation ugi = 
         UserGroupInformation.createRemoteUser("someone"); 
@@ -626,8 +609,7 @@ public class TestUserGroupInformation {
     assertSame(secret, ugi.getCredentials().getSecretKey(secretKey));
   }
 
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public <T extends TokenIdentifier> void testGetCredsNotSame()
       throws Exception {
     UserGroupInformation ugi = 
@@ -654,8 +636,8 @@ public class TestUserGroupInformation {
     assertEquals(tokens.length, ugiCreds.numberOfTokens());
   }
 
-  @SuppressWarnings("unchecked")@Test
-  @Timeout(value = 30)
+  @SuppressWarnings("unchecked") // from Mockito mocks
+  @Test (timeout = 30000)
   public <T extends TokenIdentifier> void testAddNamedToken() throws Exception {
     UserGroupInformation ugi = 
         UserGroupInformation.createRemoteUser("someone"); 
@@ -675,8 +657,8 @@ public class TestUserGroupInformation {
     assertSame(t1, ugi.getCredentials().getToken(service2));
   }
 
-  @SuppressWarnings("unchecked")@Test
-  @Timeout(value = 30)
+  @SuppressWarnings("unchecked") // from Mockito mocks
+  @Test (timeout = 30000)
   public <T extends TokenIdentifier> void testUGITokens() throws Exception {
     UserGroupInformation ugi = 
       UserGroupInformation.createUserForTesting("TheDoctor", 
@@ -722,8 +704,7 @@ public class TestUserGroupInformation {
     assertTrue(otherSet.contains(t2));
   }
   
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testTokenIdentifiers() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
         "TheDoctor", new String[] { "TheTARDIS" });
@@ -751,8 +732,7 @@ public class TestUserGroupInformation {
     assertEquals(2, otherSet.size());
   }
 
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testTestAuthMethod() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     // verify the reverse mappings works
@@ -764,42 +744,40 @@ public class TestUserGroupInformation {
     }
   }
   
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testUGIAuthMethod() throws Exception {
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     final AuthenticationMethod am = AuthenticationMethod.KERBEROS;
     ugi.setAuthenticationMethod(am);
-    Assertions.assertEquals(am, ugi.getAuthenticationMethod());
+    Assert.assertEquals(am, ugi.getAuthenticationMethod());
     ugi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException {
-        Assertions.assertEquals(am, UserGroupInformation.getCurrentUser()
+        Assert.assertEquals(am, UserGroupInformation.getCurrentUser()
             .getAuthenticationMethod());
         return null;
       }
     });
   }
   
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testUGIAuthMethodInRealUser() throws Exception {
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     UserGroupInformation proxyUgi = UserGroupInformation.createProxyUser(
         "proxy", ugi);
     final AuthenticationMethod am = AuthenticationMethod.KERBEROS;
     ugi.setAuthenticationMethod(am);
-    Assertions.assertEquals(am, ugi.getAuthenticationMethod());
-    Assertions.assertEquals(AuthenticationMethod.PROXY,
+    Assert.assertEquals(am, ugi.getAuthenticationMethod());
+    Assert.assertEquals(AuthenticationMethod.PROXY,
                         proxyUgi.getAuthenticationMethod());
-    Assertions.assertEquals(am, UserGroupInformation
+    Assert.assertEquals(am, UserGroupInformation
         .getRealAuthenticationMethod(proxyUgi));
     proxyUgi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException {
-        Assertions.assertEquals(AuthenticationMethod.PROXY, UserGroupInformation
+        Assert.assertEquals(AuthenticationMethod.PROXY, UserGroupInformation
             .getCurrentUser().getAuthenticationMethod());
-        Assertions.assertEquals(am, UserGroupInformation.getCurrentUser()
+        Assert.assertEquals(am, UserGroupInformation.getCurrentUser()
             .getRealUser().getAuthenticationMethod());
         return null;
       }
@@ -807,18 +785,17 @@ public class TestUserGroupInformation {
     UserGroupInformation proxyUgi2 = 
       new UserGroupInformation(proxyUgi.getSubject());
     proxyUgi2.setAuthenticationMethod(AuthenticationMethod.PROXY);
-    Assertions.assertEquals(proxyUgi, proxyUgi2);
+    Assert.assertEquals(proxyUgi, proxyUgi2);
     // Equality should work if authMethod is null
     UserGroupInformation realugi = UserGroupInformation.getCurrentUser();
     UserGroupInformation proxyUgi3 = UserGroupInformation.createProxyUser(
         "proxyAnother", realugi);
     UserGroupInformation proxyUgi4 = 
       new UserGroupInformation(proxyUgi3.getSubject());
-    Assertions.assertEquals(proxyUgi3, proxyUgi4);
+    Assert.assertEquals(proxyUgi3, proxyUgi4);
   }
   
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testLoginObjectInSubject() throws Exception {
     UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
     UserGroupInformation anotherUgi = new UserGroupInformation(loginUgi
@@ -828,11 +805,10 @@ public class TestUserGroupInformation {
     LoginContext login2 = anotherUgi.getSubject().getPrincipals(User.class)
     .iterator().next().getLogin();
     //login1 and login2 must be same instances
-    Assertions.assertTrue(login1 == login2);
+    Assert.assertTrue(login1 == login2);
   }
   
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testLoginModuleCommit() throws Exception {
     UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
     User user1 = loginUgi.getSubject().getPrincipals(User.class).iterator()
@@ -843,7 +819,7 @@ public class TestUserGroupInformation {
     User user2 = loginUgi.getSubject().getPrincipals(User.class).iterator()
         .next();
     // user1 and user2 must be same instances.
-    Assertions.assertTrue(user1 == user2);
+    Assert.assertTrue(user1 == user2);
   }
   
   public static void verifyLoginMetrics(long success, int failure)
@@ -881,8 +857,7 @@ public class TestUserGroupInformation {
    * with it, but that Subject was not created by Hadoop (ie it has no
    * associated User principal)
    */
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testUGIUnderNonHadoopContext() throws Exception {
     Subject nonHadoopSubject = new Subject();
     Subject.doAs(nonHadoopSubject, new PrivilegedExceptionAction<Void>() {
@@ -895,8 +870,7 @@ public class TestUserGroupInformation {
       });
   }
 
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testGetUGIFromSubject() throws Exception {
     KerberosPrincipal p = new KerberosPrincipal("guest");
     Subject subject = new Subject();
@@ -907,8 +881,7 @@ public class TestUserGroupInformation {
   }
 
   /** Test hasSufficientTimeElapsed method */
-  @Test
-  @Timeout(value = 30)
+  @Test (timeout = 30000)
   public void testHasSufficientTimeElapsed() throws Exception {
     // Make hasSufficientTimeElapsed public
     Method method = UserGroupInformation.class
@@ -942,8 +915,7 @@ public class TestUserGroupInformation {
     method.setAccessible(false);
   }
   
-  @Test
-  @Timeout(value = 10)
+  @Test(timeout=10000)
   public void testSetLoginUser() throws IOException {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test-user");
     UserGroupInformation.setLoginUser(ugi);
@@ -1010,8 +982,8 @@ public class TestUserGroupInformation {
             Token<? extends TokenIdentifier> t = mock(Token.class);
             when(t.getService()).thenReturn(new Text("t" + i));
             UserGroupInformation.getCurrentUser().addToken(t);
-            assertNull(
-               thread.cme, "ConcurrentModificationException encountered");
+            assertNull("ConcurrentModificationException encountered",
+                thread.cme);
           }
         } catch (ConcurrentModificationException cme) {
           cme.printStackTrace();
@@ -1167,7 +1139,7 @@ public class TestUserGroupInformation {
     String str =
         "5th retry, now:" + currentTime + ", retry:" + lastRetry;
     LOG.info(str);
-    assertEquals(endTime - reloginIntervalMs, lastRetry, str);
+    assertEquals(str, endTime - reloginIntervalMs, lastRetry);
 
     // make sure no more retries after (tgt endTime - login interval).
     UserGroupInformation.metrics.getRenewalFailures().incr();
@@ -1175,7 +1147,7 @@ public class TestUserGroupInformation {
         UserGroupInformation.getNextTgtRenewalTime(endTime, currentTime, rp);
     str = "overflow retry, now:" + currentTime + ", retry:" + lastRetry;
     LOG.info(str);
-    assertEquals(endTime - reloginIntervalMs, lastRetry, str);
+    assertEquals(str, endTime - reloginIntervalMs, lastRetry);
   }
 
   private void assertWithinBounds(final int numFailures, final long lastRetry,
@@ -1188,13 +1160,12 @@ public class TestUserGroupInformation {
         + ", lower bound:" + lower + ", upper bound:" + upper
         + ", retry:" + lastRetry);
     LOG.info(str);
-    assertTrue(lower <= lastRetry && lastRetry < upper, str);
+    assertTrue(str, lower <= lastRetry && lastRetry < upper);
   }
 
   // verify that getCurrentUser on the same and different subjects can be
   // concurrent.  Ie. no synchronization.
-  @Test
-  @Timeout(value = 8)
+  @Test(timeout=8000)
   public void testConcurrentGetCurrentUser() throws Exception {
     final CyclicBarrier barrier = new CyclicBarrier(2);
     final CountDownLatch latch = new CountDownLatch(1);
@@ -1335,8 +1306,8 @@ public class TestUserGroupInformation {
     // Check if the tokens were loaded
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
     Credentials outCred = ugi.getCredentials();
-    assertEquals(
-       2, outCred.getAllTokens().size(), "Tokens: " + outCred.getAllTokens());
+    assertEquals("Tokens: " + outCred.getAllTokens(),
+        2, outCred.getAllTokens().size());
     boolean found0 = false;
     boolean found1 = false;
     for (Token<? extends TokenIdentifier> token : outCred.getAllTokens()) {
@@ -1350,10 +1321,10 @@ public class TestUserGroupInformation {
         found1 = true;
       }
     }
-    assertTrue(
-       found0, "Expected token testTokenService0 not found: " + outCred);
-    assertTrue(
-       found1, "Expected token testTokenService1 not found: " + outCred);
+    assertTrue("Expected token testTokenService0 not found: " + outCred,
+        found0);
+    assertTrue("Expected token testTokenService1 not found: " + outCred,
+        found1);
 
     // Try to add the same token through configuration and file
     Credentials cred1 = new Credentials();
@@ -1365,8 +1336,8 @@ public class TestUserGroupInformation {
 
     UserGroupInformation ugi1 = UserGroupInformation.getLoginUser();
     Credentials outCred1 = ugi1.getCredentials();
-    assertEquals(
-       1, outCred1.getAllTokens().size(), "Tokens: " + outCred1.getAllTokens());
+    assertEquals("Tokens: " + outCred1.getAllTokens(),
+        1, outCred1.getAllTokens().size());
   }
 
   @Test
@@ -1385,8 +1356,8 @@ public class TestUserGroupInformation {
     UserGroupInformation.reset();
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
     Credentials creds = ugi.getCredentials();
-    assertEquals(
-       1, creds.getAllTokens().size(), "Tokens: " + creds.getAllTokens());
+    assertEquals("Tokens: " + creds.getAllTokens(),
+        1, creds.getAllTokens().size());
     assertArrayEquals(creds.getToken(service).getIdentifier(), identity);
 
     // Cleanup

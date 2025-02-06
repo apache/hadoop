@@ -182,13 +182,13 @@ public class TestNetworkTopologyWithNodeGroup {
   @Test
   public void testNodeGroup() throws Exception {
     String res = cluster.getNodeGroup("");
-    assertTrue(
-       res.equals(NodeBase.ROOT), "NodeGroup should be NodeBase.ROOT for empty location");
+    assertTrue(res.equals(NodeBase.ROOT),
+        "NodeGroup should be NodeBase.ROOT for empty location");
     try {
       cluster.getNodeGroup(null);
     } catch (IllegalArgumentException e) {
-      assertTrue(
-         e.getMessage().contains("Network Location is null"), "Null Network Location should throw exception!");
+      assertTrue(e.getMessage().contains("Network Location is null"),
+          "Null Network Location should throw exception!");
     }
   }
 

@@ -23,10 +23,11 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.runner.notification.Failure;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestTimedOutTestsListener {
 
@@ -156,16 +157,16 @@ public class TestTimedOutTestsListener {
       Thread.sleep(100);
     }
     
-    Assertions.assertEquals(3, countStringOccurrences(s, "BLOCKED"));
+    assertEquals(3, countStringOccurrences(s, "BLOCKED"));
     
-    Failure failure = new Failure(
-        null, new Exception(TimedOutTestsListener.TEST_TIMED_OUT_PREFIX));
+    RuntimeException failure =
+        new RuntimeException(TimedOutTestsListener.TEST_TIMED_OUT_PREFIX);
     StringWriter writer = new StringWriter();
     new TimedOutTestsListener(new PrintWriter(writer)).testFailure(failure);
     String out = writer.toString();
     
-    Assertions.assertTrue(out.contains("THREAD DUMP"));
-    Assertions.assertTrue(out.contains("DEADLOCKS DETECTED"));
+    assertTrue(out.contains("THREAD DUMP"));
+    assertTrue(out.contains("DEADLOCKS DETECTED"));
     
     System.out.println(out);
   }

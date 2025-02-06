@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -38,8 +38,8 @@ public class TestRpcMessage {
   @Test
   public void testRpcMessage() {
     RpcMessage msg = getRpcMessage(0, RpcMessage.Type.RPC_CALL);
-    Assertions.assertEquals(0, msg.getXid());
-    Assertions.assertEquals(RpcMessage.Type.RPC_CALL, msg.getMessageType());
+    assertEquals(0, msg.getXid());
+    assertEquals(RpcMessage.Type.RPC_CALL, msg.getMessageType());
   }
 
   @Test

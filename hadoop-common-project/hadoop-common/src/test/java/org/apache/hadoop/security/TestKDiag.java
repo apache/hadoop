@@ -23,13 +23,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.Rule;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,23 +36,17 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.security.KDiag.*;
 
+@Timeout(30)
 public class TestKDiag extends Assertions {
   private static final Logger LOG = LoggerFactory.getLogger(TestKDiag.class);
 
   public static final String KEYLEN = "128";
   public static final String HDFS_SITE_XML
       = "org/apache/hadoop/security/secure-hdfs-site.xml";
-
-  @Rule
-  public TestName methodName = new TestName();
-
-  @Rule
-  public Timeout testTimeout = new Timeout(30000, TimeUnit.MILLISECONDS);
 
   @BeforeAll
   public static void nameThread() {
@@ -155,7 +147,7 @@ public class TestKDiag extends Assertions {
 
   @Test
   public void testConfIsSecure() throws Throwable {
-    Assertions.assertFalse(SecurityUtil.getAuthenticationMethod(conf)
+    assertFalse(SecurityUtil.getAuthenticationMethod(conf)
         .equals(UserGroupInformation.AuthenticationMethod.SIMPLE));
   }
 

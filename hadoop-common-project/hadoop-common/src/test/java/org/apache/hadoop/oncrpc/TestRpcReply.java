@@ -20,9 +20,9 @@ package org.apache.hadoop.oncrpc;
 
 import org.apache.hadoop.oncrpc.RpcReply.ReplyState;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -31,8 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class TestRpcReply {
   @Test
   public void testReplyStateFromValue() {
-    Assertions.assertEquals(ReplyState.MSG_ACCEPTED, ReplyState.fromValue(0));
-    Assertions.assertEquals(ReplyState.MSG_DENIED, ReplyState.fromValue(1));
+    assertEquals(ReplyState.MSG_ACCEPTED, ReplyState.fromValue(0));
+    assertEquals(ReplyState.MSG_DENIED, ReplyState.fromValue(1));
   }
 
   @Test
@@ -49,8 +49,8 @@ public class TestRpcReply {
             return null;
           }
     };
-    Assertions.assertEquals(0, reply.getXid());
-    Assertions.assertEquals(RpcMessage.Type.RPC_REPLY, reply.getMessageType());
-    Assertions.assertEquals(ReplyState.MSG_ACCEPTED, reply.getState());
+    assertEquals(0, reply.getXid());
+    assertEquals(RpcMessage.Type.RPC_REPLY, reply.getMessageType());
+    assertEquals(ReplyState.MSG_ACCEPTED, reply.getState());
   }
 }

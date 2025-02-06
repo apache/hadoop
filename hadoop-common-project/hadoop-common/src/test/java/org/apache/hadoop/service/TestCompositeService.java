@@ -66,8 +66,8 @@ public class TestCompositeService {
     CompositeServiceImpl[] services = serviceManager.getServices().toArray(
         new CompositeServiceImpl[0]);
 
-    assertEquals(NUM_OF_SERVICES
-,         services.length, "Number of registered services ");
+    assertEquals(NUM_OF_SERVICES, services.length,
+        "Number of registered services ");
 
     Configuration conf = new Configuration();
     // Initialise the composite service
@@ -78,9 +78,9 @@ public class TestCompositeService {
 
     // Verify the init() call sequence numbers for every service
     for (int i = 0; i < NUM_OF_SERVICES; i++) {
-      assertEquals(i
-,           services[i].getCallSequenceNumber(), "For " + services[i]
-          + " service, init() call sequence number should have been ");
+      assertEquals(i, services[i].getCallSequenceNumber(),
+          "For " + services[i] +
+          " service, init() call sequence number should have been ");
     }
 
     // Reset the call sequence numbers
@@ -92,9 +92,9 @@ public class TestCompositeService {
 
     // Verify the start() call sequence numbers for every service
     for (int i = 0; i < NUM_OF_SERVICES; i++) {
-      assertEquals(i
-,           services[i].getCallSequenceNumber(), "For " + services[i]
-          + " service, start() call sequence number should have been ");
+      assertEquals(i,
+          services[i].getCallSequenceNumber(), "For " + services[i] +
+          " service, start() call sequence number should have been ");
     }
     resetServices(services);
 
@@ -105,18 +105,18 @@ public class TestCompositeService {
 
     // Verify the stop() call sequence numbers for every service
     for (int i = 0; i < NUM_OF_SERVICES; i++) {
-      assertEquals(
-         ((NUM_OF_SERVICES - 1) - i), services[i].getCallSequenceNumber(), "For " + services[i]
-          + " service, stop() call sequence number should have been ");
+      assertEquals(((NUM_OF_SERVICES - 1) - i), services[i].getCallSequenceNumber(),
+          "For " + services[i] +
+          " service, stop() call sequence number should have been ");
     }
 
     // Try to stop again. This should be a no-op.
     serviceManager.stop();
     // Verify that stop() call sequence numbers for every service don't change.
     for (int i = 0; i < NUM_OF_SERVICES; i++) {
-      assertEquals(
-         ((NUM_OF_SERVICES - 1) - i), services[i].getCallSequenceNumber(), "For " + services[i]
-          + " service, stop() call sequence number should have been ");
+      assertEquals(((NUM_OF_SERVICES - 1) - i), services[i].getCallSequenceNumber(),
+          "For " + services[i] +
+          " service, stop() call sequence number should have been ");
     }
   }
 
@@ -156,11 +156,11 @@ public class TestCompositeService {
       for (int i = 0; i < NUM_OF_SERVICES - 1; i++) {
         if (i >= FAILED_SERVICE_SEQ_NUMBER && STOP_ONLY_STARTED_SERVICES) {
           // Failed service state should be INITED
-          assertEquals(STATE.INITED
-,               services[NUM_OF_SERVICES - 1].getServiceState(), "Service state should have been ");
+          assertEquals(STATE.INITED, services[NUM_OF_SERVICES - 1].getServiceState(),
+              "Service state should have been ");
         } else {
-          assertEquals(STATE.STOPPED
-,               services[i].getServiceState(), "Service state should have been ");
+          assertEquals(STATE.STOPPED, services[i].getServiceState(),
+              "Service state should have been ");
         }
       }
 
@@ -224,10 +224,8 @@ public class TestCompositeService {
   }
 
   private void assertInState(STATE expected, Service service) {
-    assertEquals(
-                expected
-,                  service.getServiceState(), "Service state should have been " + expected + " in "
-                 + service);
+    assertEquals(expected,  service.getServiceState(),
+        "Service state should have been " + expected + " in " + service);
   }
 
   /**
@@ -322,8 +320,7 @@ public class TestCompositeService {
       @Override
       public void serviceInit(Configuration conf) {
         Integer notAService = new Integer(0);
-        assertFalse(
-           addIfService(notAService), "Added an integer as a service");
+        assertFalse(addIfService(notAService), "Added an integer as a service");
 
         service = new AbstractService("Service") {};
         assertTrue(addIfService(service), "Unable to add a service");
@@ -331,8 +328,8 @@ public class TestCompositeService {
     };
 
     testService.init(new Configuration());
-    assertEquals(
-                1, testService.getServices().size(), "Incorrect number of services");
+    assertEquals(1, testService.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -341,8 +338,7 @@ public class TestCompositeService {
       @Override
       public void serviceInit(Configuration conf) {
         Integer notAService = new Integer(0);
-        assertFalse(
-           addIfService(notAService), "Added an integer as a service");
+        assertFalse(addIfService(notAService), "Added an integer as a service");
 
         Service service1 = new AbstractService("Service1") {};
         addIfService(service1);
@@ -358,8 +354,8 @@ public class TestCompositeService {
     };
 
     testService.init(new Configuration());
-    assertEquals(
-       2, testService.getServices().size(), "Incorrect number of services");
+    assertEquals(2, testService.getServices().size(),
+        "Incorrect number of services");
   }
 
   //
@@ -397,8 +393,8 @@ public class TestCompositeService {
     assertInState(STATE.NOTINITED, child);
     parent.stop();
     assertInState(STATE.NOTINITED, child);
-    assertEquals(
-                1, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(1, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -497,8 +493,8 @@ public class TestCompositeService {
       //expected
     }
     parent.stop();
-    assertEquals(
-                1, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(1, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -561,8 +557,8 @@ public class TestCompositeService {
       //expected
     }
     parent.stop();
-    assertEquals(
-                1, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(1, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -583,8 +579,8 @@ public class TestCompositeService {
     }
     assertInState(STATE.STOPPED, child);
     parent.stop();
-    assertEquals(
-                1, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(1, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -633,8 +629,8 @@ public class TestCompositeService {
     assertInState(STATE.NOTINITED, sibling);
     parent.stop();
     assertInState(STATE.NOTINITED, sibling);
-    assertEquals(
-                1, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(1, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -653,8 +649,8 @@ public class TestCompositeService {
       //expected
     }
     parent.stop();
-    assertEquals(
-                2, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(2, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -671,8 +667,8 @@ public class TestCompositeService {
     assertInState(STATE.NOTINITED, sibling);
     parent.stop();
     assertInState(STATE.NOTINITED, sibling);
-    assertEquals(
-                2, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(2, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -689,8 +685,8 @@ public class TestCompositeService {
     assertInState(STATE.NOTINITED, sibling);
     parent.stop();
     assertInState(STATE.NOTINITED, sibling);
-    assertEquals(
-                2, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(2, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -708,8 +704,8 @@ public class TestCompositeService {
     assertInState(STATE.INITED, sibling);
     parent.stop();
     assertInState(STATE.INITED, sibling);
-    assertEquals(
-                1, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(1, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -727,8 +723,8 @@ public class TestCompositeService {
     assertInState(STATE.STARTED, sibling);
     parent.stop();
     assertInState(STATE.STOPPED, sibling);
-    assertEquals(
-                2, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(2, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -746,8 +742,8 @@ public class TestCompositeService {
     assertInState(STATE.INITED, sibling);
     parent.stop();
     assertInState(STATE.STOPPED, sibling);
-    assertEquals(
-                2, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(2, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -778,8 +774,8 @@ public class TestCompositeService {
     assertInState(STATE.STARTED, sibling);
     parent.stop();
     assertInState(STATE.STARTED, sibling);
-    assertEquals(
-                1, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(1, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -798,8 +794,8 @@ public class TestCompositeService {
     assertInState(STATE.STARTED, sibling);
     parent.stop();
     assertInState(STATE.STOPPED, sibling);
-    assertEquals(
-                2, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(2, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
 
@@ -819,8 +815,8 @@ public class TestCompositeService {
     assertInState(STATE.STARTED, sibling);
     parent.stop();
     assertInState(STATE.STOPPED, sibling);
-    assertEquals(
-                2, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(2, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -839,8 +835,8 @@ public class TestCompositeService {
     assertInState(STATE.STARTED, sibling);
     parent.stop();
     assertInState(STATE.STARTED, sibling);
-    assertEquals(
-                2, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(2, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -860,8 +856,8 @@ public class TestCompositeService {
     assertInState(STATE.STOPPED, sibling);
     parent.stop();
     assertInState(STATE.STOPPED, sibling);
-    assertEquals(
-                1, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(1, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -885,8 +881,8 @@ public class TestCompositeService {
     }
     parent.stop();
     assertInState(STATE.STOPPED, sibling);
-    assertEquals(
-                2, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(2, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -906,8 +902,8 @@ public class TestCompositeService {
     assertInState(STATE.STOPPED, sibling);
     parent.stop();
     assertInState(STATE.STOPPED, sibling);
-    assertEquals(
-                2, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(2, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   @Test
@@ -927,8 +923,8 @@ public class TestCompositeService {
     assertInState(STATE.STOPPED, sibling);
     parent.stop();
     assertInState(STATE.STOPPED, sibling);
-    assertEquals(
-                2, parent.getServices().size(), "Incorrect number of services");
+    assertEquals(2, parent.getServices().size(),
+        "Incorrect number of services");
   }
 
   public static class CompositeServiceAddingAChild extends CompositeService{

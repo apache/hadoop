@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.Map;
 
 import org.apache.hadoop.oncrpc.RpcReply;
-import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.XDR;
@@ -39,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestPortmap {
   private static Portmap pm = new Portmap();
@@ -70,11 +70,11 @@ public class TestPortmap {
         Thread.sleep(SHORT_TIMEOUT_MILLISECONDS);
       }
 
-      Assertions.assertTrue(s.isConnected()
-          && i < RETRY_TIMES, "Failed to connect to the server");
+      assertTrue(s.isConnected() && i < RETRY_TIMES,
+          "Failed to connect to the server");
 
       int b = s.getInputStream().read();
-      Assertions.assertTrue(b == -1, "The server failed to disconnect");
+      assertTrue(b == -1, "The server failed to disconnect");
     } finally {
       s.close();
     }
@@ -128,6 +128,6 @@ public class TestPortmap {
         break;
       }
     }
-    Assertions.assertTrue(found, "Registration failed");
+    assertTrue(found, "Registration failed");
   }
 }

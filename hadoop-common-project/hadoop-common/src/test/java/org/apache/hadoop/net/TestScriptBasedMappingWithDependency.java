@@ -20,7 +20,10 @@ package org.apache.hadoop.net;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -56,8 +59,8 @@ public class TestScriptBasedMappingWithDependency {
     Configuration conf = new Configuration();
     ScriptBasedMapping mapping = createMapping(conf);
     assertTrue(mapping.isSingleSwitch(), "Expected to be single switch");
-    assertTrue(
-              AbstractDNSToSwitchMapping.isMappingSingleSwitch(mapping), "Expected to be single switch");
+    assertTrue(AbstractDNSToSwitchMapping.isMappingSingleSwitch(mapping),
+        "Expected to be single switch");
   }
 
   @Test

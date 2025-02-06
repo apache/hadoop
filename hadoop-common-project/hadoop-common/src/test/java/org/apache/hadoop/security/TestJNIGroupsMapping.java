@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.security;
 import static org.junit.Assume.assumeTrue;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Arrays;
 import java.util.List;

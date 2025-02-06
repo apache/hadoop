@@ -20,7 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test that the {@link NullGroupsMapping} really does nothing.
@@ -42,19 +42,16 @@ public class TestNullGroupsMapping {
     List<String> expResult = Collections.emptyList();
     List<String> result = ngm.getGroups(user);
 
-    assertEquals(
-       expResult, result, "No groups should be returned");
+    assertEquals(expResult, result, "No groups should be returned");
 
     ngm.cacheGroupsAdd(Arrays.asList(new String[] {"group1", "group2"}));
     result = ngm.getGroups(user);
 
-    assertEquals(
-       expResult, result, "No groups should be returned");
+    assertEquals(expResult, result, "No groups should be returned");
 
     ngm.cacheGroupsRefresh();
     result = ngm.getGroups(user);
 
-    assertEquals(
-       expResult, result, "No groups should be returned");
+    assertEquals(expResult, result, "No groups should be returned");
   }
 }

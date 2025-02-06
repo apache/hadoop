@@ -29,7 +29,6 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -42,6 +41,9 @@ import java.net.NetworkInterface;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Enumeration;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test do as effective user.
@@ -121,7 +123,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
             return UserGroupInformation.getCurrentUser();
           }
         });
-    Assertions.assertEquals(
+    assertEquals(
         PROXY_USER_NAME + " (auth:PROXY) via " + REAL_USER_NAME + " (auth:SIMPLE)",
         curUGI.toString());
   }
@@ -137,8 +139,8 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
         String serverRemoteUser = client.getServerRemoteUser(null,
             newEmptyRequest()).getUser();
 
-        Assertions.assertEquals(ugi.toString(), currentUser);
-        Assertions.assertEquals(ugi.toString(), serverRemoteUser);
+        assertEquals(ugi.toString(), currentUser);
+        assertEquals(ugi.toString(), serverRemoteUser);
         return null;
       }
     });    
@@ -169,7 +171,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
       checkRemoteUgi(proxyUserUgi, conf);
     } catch (Exception e) {
       e.printStackTrace();
-      Assertions.fail();
+      fail();
     } finally {
       stop(server, client);
     }
@@ -199,7 +201,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
       checkRemoteUgi(proxyUserUgi, conf);
     } catch (Exception e) {
       e.printStackTrace();
-      Assertions.fail();
+      fail();
     } finally {
       stop(server, client);
     }
@@ -240,7 +242,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
             }
           });
 
-      Assertions.fail("The RPC must have failed " + retVal);
+      fail("The RPC must have failed " + retVal);
     } catch (Exception e) {
       e.printStackTrace();
     } finally {
@@ -276,7 +278,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
             }
           });
 
-      Assertions.fail("The RPC must have failed " + retVal);
+      fail("The RPC must have failed " + retVal);
     } catch (Exception e) {
       e.printStackTrace();
     } finally {
@@ -309,7 +311,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
             }
           });
 
-      Assertions.fail("The RPC must have failed " + retVal);
+      fail("The RPC must have failed " + retVal);
     } catch (Exception e) {
       e.printStackTrace();
     } finally {
@@ -347,7 +349,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
             }
           });
 
-      Assertions.fail("The RPC must have failed " + retVal);
+      fail("The RPC must have failed " + retVal);
     } catch (Exception e) {
       e.printStackTrace();
     } finally {
@@ -400,7 +402,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
       }
     });
     //The user returned by server must be the one in the token.
-    Assertions.assertEquals(REAL_USER_NAME + " (auth:TOKEN) via SomeSuperUser (auth:SIMPLE)", retVal);
+    assertEquals(REAL_USER_NAME + " (auth:TOKEN) via SomeSuperUser (auth:SIMPLE)", retVal);
   }
 
   /*
@@ -444,7 +446,7 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
       }
     });
     String expected = REAL_USER_NAME + " (auth:TOKEN) via SomeSuperUser (auth:SIMPLE)";
-    Assertions.assertEquals(expected, retVal, retVal + "!=" + expected);
+    assertEquals(expected, retVal, retVal + "!=" + expected);
   }
   
   //

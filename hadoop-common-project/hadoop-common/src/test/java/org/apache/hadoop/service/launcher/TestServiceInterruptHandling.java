@@ -68,10 +68,10 @@ public class TestServiceInterruptHandling
     }
     //the service is now stopped
     assertStopped(service);
-    assertTrue(
-       escalator.isSignalAlreadyReceived(), "isSignalAlreadyReceived() == false in " + escalator);
-    assertFalse(
-       escalator.isForcedShutdownTimedOut(), "isForcedShutdownTimedOut() == true in " + escalator);
+    assertTrue(escalator.isSignalAlreadyReceived(),
+        "isSignalAlreadyReceived() == false in " + escalator);
+    assertFalse(escalator.isForcedShutdownTimedOut(),
+        "isForcedShutdownTimedOut() == true in " + escalator);
 
     // now interrupt it a second time and expect it to escalate to a halt
     try {
@@ -99,8 +99,8 @@ public class TestServiceInterruptHandling
       assertExceptionDetails(EXIT_INTERRUPTED, "", e);
     }
 
-    assertTrue(
-       escalator.isForcedShutdownTimedOut(), "isForcedShutdownTimedOut() == false in " + escalator);
+    assertTrue(escalator.isForcedShutdownTimedOut(),
+        "isForcedShutdownTimedOut() == false in " + escalator);
   }
 
   private static class InterruptCatcher implements IrqHandler.Interrupted {

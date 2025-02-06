@@ -21,8 +21,7 @@ import javax.security.sasl.Sasl;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test class for IngressPortBasedResolver.

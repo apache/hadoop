@@ -25,13 +25,11 @@ import org.apache.hadoop.service.ServiceOperations;
 import static org.apache.hadoop.test.GenericTestUtils.*;
 import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.Rule;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,8 +39,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
+@Timeout(15)
 public class AbstractServiceLauncherTestBase extends Assertions implements
     LauncherExitCodes {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -53,18 +51,6 @@ public class AbstractServiceLauncherTestBase extends Assertions implements
    * A service which will be automatically stopped on teardown.
    */
   private Service serviceToTeardown;
-
-  /**
-   * All tests have a short life.
-   */
-  @Rule
-  public Timeout testTimeout = new Timeout(15000, TimeUnit.MILLISECONDS);
-
-  /**
-   * Rule to provide the method name.
-   */
-  @Rule
-  public TestName methodName = new TestName();
 
   /**
    * Turn off the exit util JVM exits, downgrading them to exception throws.

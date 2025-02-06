@@ -36,8 +36,9 @@ import org.apache.hadoop.oncrpc.security.CredentialsNone;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.slf4j.event.Level;
+
+import static org.mockito.Mockito.mock;
 
 public class TestFrameDecoder {
 
@@ -103,7 +104,7 @@ public class TestFrameDecoder {
     ByteBuf buf = Unpooled.directBuffer(1);
     List<Object> outputBufs = new ArrayList<>();
     decoder.decode(
-        Mockito.mock(ChannelHandlerContext.class), buf,
+        mock(ChannelHandlerContext.class), buf,
         outputBufs);
     assertTrue(outputBufs.isEmpty());
 
@@ -122,7 +123,7 @@ public class TestFrameDecoder {
     buf.writeBytes(fragment);
     outputBufs = new ArrayList<>();
     decoder.decode(
-        Mockito.mock(ChannelHandlerContext.class), buf,
+        mock(ChannelHandlerContext.class), buf,
         outputBufs);
     assertTrue(decoder.isLast());
     buf.release();
@@ -147,7 +148,7 @@ public class TestFrameDecoder {
     ByteBuf buf = Unpooled.directBuffer(4 + 10, 4 + 10);
     buf.writeBytes(fragment1);
     decoder.decode(
-        Mockito.mock(ChannelHandlerContext.class), buf,
+        mock(ChannelHandlerContext.class), buf,
         outputBufs);
 
     byte[] fragment2 = new byte[4 + 10];
@@ -162,7 +163,7 @@ public class TestFrameDecoder {
     buf = Unpooled.directBuffer(4 + 10, 4 + 10);
     buf.writeBytes(fragment2);
     decoder.decode(
-        Mockito.mock(ChannelHandlerContext.class), buf,
+        mock(ChannelHandlerContext.class), buf,
         outputBufs);
     // Expect two completed frames each 10 bytes
     decoder.isLast();

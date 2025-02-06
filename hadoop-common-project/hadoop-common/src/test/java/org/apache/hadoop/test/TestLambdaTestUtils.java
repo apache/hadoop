@@ -124,8 +124,8 @@ public class TestLambdaTestUtils extends Assertions {
    * @param minCount minimum value
    */
   protected void assertMinRetryCount(int minCount) {
-    assertTrue(
-       minCount <= retry.getInvocationCount(), "retry count of " + retry + " is not >= " + minCount);
+    assertTrue(minCount <= retry.getInvocationCount(),
+        "retry count of " + retry + " is not >= " + minCount);
   }
 
   /**
@@ -181,8 +181,8 @@ public class TestLambdaTestUtils extends Assertions {
           TIMEOUT_FAILURE_HANDLER);
       fail("should not have got here");
     } catch (TimeoutException e) {
-      assertEquals(
-         2, linearRetry.getInvocationCount(), linearRetry.toString());
+      assertEquals(2, linearRetry.getInvocationCount(),
+          linearRetry.toString());
     }
   }
 

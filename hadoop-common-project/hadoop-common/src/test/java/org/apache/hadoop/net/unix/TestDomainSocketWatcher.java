@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.Assume;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -35,6 +34,8 @@ import org.junit.jupiter.api.Timeout;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestDomainSocketWatcher {
   static final Logger LOG =
@@ -44,7 +45,7 @@ public class TestDomainSocketWatcher {
 
   @BeforeEach
   public void before() {
-    Assume.assumeTrue(DomainSocket.getLoadingFailureReason() == null);
+    assumeTrue(DomainSocket.getLoadingFailureReason() == null);
   }
 
   @AfterEach

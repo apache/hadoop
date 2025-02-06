@@ -62,7 +62,8 @@ public class TestRpcCall {
   @Test
   public void testInvalidRpcMessageType() {
     assertThrows(IllegalArgumentException.class, () -> {
-      RpcMessage.Type invalidMessageType = RpcMessage.Type.RPC_REPLY; // Message typ is not RpcMessage.RPC_CALL
+      // Message typ is not RpcMessage.RPC_CALL
+      RpcMessage.Type invalidMessageType = RpcMessage.Type.RPC_REPLY;
       new RpcCall(0, invalidMessageType, RpcCall.RPC_VERSION, 2, 3, 4, null, null);
     });
   }

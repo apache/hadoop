@@ -23,6 +23,7 @@ import static org.apache.hadoop.security.LdapGroupsMapping.LDAP_NUM_ATTEMPTS_KEY
 import static org.apache.hadoop.security.LdapGroupsMapping.READ_TIMEOUT;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -59,7 +60,6 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -166,7 +166,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
 
     // Check the group filter got resolved and get the desired values.
     List<String> groups = groupsMapping.getGroups(userName);
-    Assertions.assertEquals(Arrays.asList(getTestGroups()), groups);
+    assertEquals(Arrays.asList(getTestGroups()), groups);
   }
 
   /**
@@ -191,7 +191,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
         .thenReturn(getUserNames(), getGroupNames());
 
     List<String> groups = groupsMapping.getGroups(userName);
-    Assertions.assertEquals(Arrays.asList(getTestGroups()), groups);
+    assertEquals(Arrays.asList(getTestGroups()), groups);
 
     // We should have searched for the username and groups with default base dn
     verify(getContext(), times(1)).search(userBaseDN,
@@ -259,7 +259,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
     // regardless of input
     List<String> groups = groupsMapping.getGroups("some_user");
     
-    Assertions.assertEquals(expectedGroups, groups);
+    assertEquals(expectedGroups, groups);
     
     // We should have searched for a user, and then two groups
     verify(getContext(), times(searchTimes)).search(anyString(),
@@ -279,7 +279,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
     List<String> groups = groupsMapping.getGroups("some_user");
 
     // compare lists, ignoring the order
-    Assertions.assertEquals(new HashSet<>(expectedGroups), new HashSet<>(groups));
+    assertEquals(new HashSet<>(expectedGroups), new HashSet<>(groups));
 
     // We should have searched for a user, and group
     verify(getContext(), times(searchTimesGroup)).search(anyString(),
@@ -299,7 +299,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
     writer.close();
     
     LdapGroupsMapping mapping = new LdapGroupsMapping();
-    Assertions.assertEquals("hadoop",
+    assertEquals("hadoop",
         mapping.extractPassword(secretFile.getPath()));
   }
 
@@ -345,15 +345,15 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
         LdapGroupsMapping.LDAP_KEYSTORE_PASSWORD_KEY).getCredential());
 
     LdapGroupsMapping mapping = new LdapGroupsMapping();
-    Assertions.assertEquals("bindpass",
+    assertEquals("bindpass",
         mapping.getPassword(conf, LdapGroupsMapping.BIND_PASSWORD_KEY, ""));
-    Assertions.assertEquals("storepass",
+    assertEquals("storepass",
         mapping.getPassword(conf, LdapGroupsMapping.LDAP_KEYSTORE_PASSWORD_KEY,
             ""));
     // let's make sure that a password that doesn't exist returns an
     // empty string as currently expected and used to trigger a call to
     // extract password
-    Assertions.assertEquals("", mapping.getPassword(conf,"invalid-alias", ""));
+    assertEquals("", mapping.getPassword(conf,"invalid-alias", ""));
   }
 
   @Test
@@ -388,11 +388,11 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
         bindpassAlias).getCredential());
 
     LdapGroupsMapping mapping = new LdapGroupsMapping();
-    Assertions.assertEquals("bindpass",
+    assertEquals("bindpass",
         mapping.getPasswordFromCredentialProviders(conf, bindpassAlias, ""));
 
     // Empty for an invalid alias
-    Assertions.assertEquals("", mapping.getPasswordFromCredentialProviders(
+    assertEquals("", mapping.getPasswordFromCredentialProviders(
         conf, "invalid-alias", ""));
   }
 

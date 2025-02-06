@@ -17,7 +17,14 @@
  */
 package org.apache.hadoop.net;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -47,7 +54,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Shell;
 
-import org.junit.Assume;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -145,7 +151,7 @@ public class TestNetUtils {
     if (withChannel) {
       s = NetUtils.getDefaultSocketFactory(new Configuration())
           .createSocket();
-      Assume.assumeNotNull(s.getChannel());
+      assumeTrue(s.getChannel() != null);
     } else {
       s = new Socket();
       assertNull(s.getChannel());
@@ -193,8 +199,8 @@ public class TestNetUtils {
     long durationNano = System.nanoTime() - startNanos;
     long millis = TimeUnit.MILLISECONDS.convert(
         durationNano, TimeUnit.NANOSECONDS);
-    assertTrue(
-       Math.abs(millis - expectedMillis) < TIME_FUDGE_MILLIS, "Expected " + expectedMillis + "ms, but took " + millis);
+    assertTrue(Math.abs(millis - expectedMillis) < TIME_FUDGE_MILLIS,
+        "Expected " + expectedMillis + "ms, but took " + millis);
   }
   
   /**
@@ -731,7 +737,7 @@ public class TestNetUtils {
     try {
       InetAddress.getByName(oneHost);
     } catch (UnknownHostException e) {
-      Assume.assumeTrue("Network not resolving "+ oneHost, false);
+      assumeTrue(false, "Network not resolving " + oneHost);
     }
     List<String> hosts = Arrays.asList("127.0.0.1",
         "localhost", oneHost, "UnknownHost123");
@@ -741,13 +747,13 @@ public class TestNetUtils {
     // when ipaddress is normalized, same address is expected in return
     assertEquals(summary, hosts.get(0), normalizedHosts.get(0));
     // for normalizing a resolvable hostname, resolved ipaddress is expected in return
-    assertFalse(
-       normalizedHosts.get(1).equals(hosts.get(1)), "Element 1 equal "+ summary);
+    assertFalse(normalizedHosts.get(1).equals(hosts.get(1)),
+        "Element 1 equal "+ summary);
     assertEquals(summary, hosts.get(0), normalizedHosts.get(1));
     // this address HADOOP-8372: when normalizing a valid resolvable hostname start with numeric, 
     // its ipaddress is expected to return
-    assertFalse(
-       normalizedHosts.get(2).equals(hosts.get(2)), "Element 2 equal " + summary);
+    assertFalse(normalizedHosts.get(2).equals(hosts.get(2)),
+        "Element 2 equal " + summary);
     // return the same hostname after normalizing a irresolvable hostname.
     assertEquals(summary, hosts.get(3), normalizedHosts.get(3));
   }

@@ -18,8 +18,8 @@
 package org.apache.hadoop.security;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.security.PrivilegedExceptionAction;
@@ -37,8 +37,8 @@ import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Testcase for HADOOP-13433 that verifies the logic of fixKerberosTicketOrder.
@@ -63,7 +63,7 @@ public class TestFixKerberosTicketOrder extends KerberosSecurityTestcase {
 
   private Map<String, String> props;
 
-  @BeforeEach
+  @Before
   public void setUp() throws Exception {
     keytabFile = new File(getWorkDir(), "keytab");
     getKdc().createPrincipal(keytabFile, clientPrincipal, server1Principal,
@@ -106,13 +106,13 @@ public class TestFixKerberosTicketOrder extends KerberosSecurityTestcase {
     }
     // make sure the first ticket is not tgt
     assertFalse(
-    
-       subject.getPrivateCredentials().stream()
+        "The first ticket is still tgt, "
+            + "the implementation in jdk may have been changed, "
+            + "please reconsider the problem in HADOOP-13433",
+        subject.getPrivateCredentials().stream()
             .filter(c -> c instanceof KerberosTicket)
             .map(c -> ((KerberosTicket) c).getServer().getName()).findFirst()
-            .get().startsWith("krbtgt"), "The first ticket is still tgt, "
-            + "the implementation in jdk may have been changed, "
-            + "please reconsider the problem in HADOOP-13433");
+            .get().startsWith("krbtgt"));
     // should fail as we send a service ticket instead of tgt to KDC.
     intercept(SaslException.class,
         () -> ugi.doAs(new PrivilegedExceptionAction<Void>() {
@@ -131,11 +131,11 @@ public class TestFixKerberosTicketOrder extends KerberosSecurityTestcase {
     ugi.fixKerberosTicketOrder();
 
     // check if TGT is the first ticket after the fix.
-    assertTrue(
-       subject.getPrivateCredentials().stream()
+    assertTrue("The first ticket is not tgt",
+        subject.getPrivateCredentials().stream()
             .filter(c -> c instanceof KerberosTicket)
             .map(c -> ((KerberosTicket) c).getServer().getName()).findFirst()
-            .get().startsWith("krbtgt"), "The first ticket is not tgt");
+            .get().startsWith("krbtgt"));
 
     // make sure we can still get new service ticket after the fix.
     ugi.doAs(new PrivilegedExceptionAction<Void>() {
@@ -150,10 +150,10 @@ public class TestFixKerberosTicketOrder extends KerberosSecurityTestcase {
         return null;
       }
     });
-    assertTrue(
-       subject.getPrivateCredentials(KerberosTicket.class).stream()
+    assertTrue("No service ticket for " + server2Protocol + " found",
+        subject.getPrivateCredentials(KerberosTicket.class).stream()
             .filter(t -> t.getServer().getName().startsWith(server2Protocol))
-            .findAny().isPresent(), "No service ticket for " + server2Protocol + " found");
+            .findAny().isPresent());
   }
 
   @Test
@@ -188,11 +188,11 @@ public class TestFixKerberosTicketOrder extends KerberosSecurityTestcase {
     ugi.fixKerberosTicketOrder();
 
     // verify that after fixing, the tgt ticket should be removed
-    assertFalse(
-       subject.getPrivateCredentials().stream()
+    assertFalse("The first ticket is not tgt",
+        subject.getPrivateCredentials().stream()
             .filter(c -> c instanceof KerberosTicket)
             .map(c -> ((KerberosTicket) c).getServer().getName()).findFirst()
-            .isPresent(), "The first ticket is not tgt");
+            .isPresent());
 
 
     // should fail as we send a service ticket instead of tgt to KDC.
@@ -227,9 +227,9 @@ public class TestFixKerberosTicketOrder extends KerberosSecurityTestcase {
       }
     });
 
-    assertTrue(
-       subject.getPrivateCredentials(KerberosTicket.class).stream()
+    assertTrue("No service ticket for " + server2Protocol + " found",
+        subject.getPrivateCredentials(KerberosTicket.class).stream()
             .filter(t -> t.getServer().getName().startsWith(server2Protocol))
-            .findAny().isPresent(), "No service ticket for " + server2Protocol + " found");
+            .findAny().isPresent());
   }
 }

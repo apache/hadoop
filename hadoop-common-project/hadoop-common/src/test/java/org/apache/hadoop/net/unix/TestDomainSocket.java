@@ -38,8 +38,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.Assume;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -51,6 +49,13 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestDomainSocket {
   private static TemporarySocketDirectory sockDir;
@@ -68,7 +73,7 @@ public class TestDomainSocket {
   
   @BeforeEach
   public void before() {
-    Assume.assumeTrue(DomainSocket.getLoadingFailureReason() == null);
+    assumeTrue(DomainSocket.getLoadingFailureReason() == null);
   }
     
   /**
@@ -94,7 +99,7 @@ public class TestDomainSocket {
   @Test
   @Timeout(value = 180)
   public void testSocketPathSetGet() throws IOException {
-    Assertions.assertEquals("/var/run/hdfs/sock.100",
+    assertEquals("/var/run/hdfs/sock.100",
         DomainSocket.getEffectivePath("/var/run/hdfs/sock._PORT", 100));
   }
 
@@ -123,7 +128,7 @@ public class TestDomainSocket {
           buf[i] = 0;
         }
         try {
-          Assertions.assertEquals(-1, conn.getInputStream().read());
+          assertEquals(-1, conn.getInputStream().read());
         } catch (IOException e) {
           throw new RuntimeException("unexpected IOException", e);
         }
@@ -295,19 +300,19 @@ public class TestDomainSocket {
     int newBufSize = bufSize / 2;
     serv.setAttribute(DomainSocket.RECEIVE_BUFFER_SIZE, newBufSize);
     int nextBufSize = serv.getAttribute(DomainSocket.RECEIVE_BUFFER_SIZE);
-    Assertions.assertEquals(newBufSize, nextBufSize);
+    assertEquals(newBufSize, nextBufSize);
     // Let's set a server timeout
     int newTimeout = 1000;
     serv.setAttribute(DomainSocket.RECEIVE_TIMEOUT, newTimeout);
     int nextTimeout = serv.getAttribute(DomainSocket.RECEIVE_TIMEOUT);
-    Assertions.assertEquals(newTimeout, nextTimeout);
+    assertEquals(newTimeout, nextTimeout);
 
     ExecutorService exeServ = Executors.newSingleThreadExecutor();
     Callable<Void> callable = new Callable<Void>() {
       public Void call() {
         try {
           serv.accept();
-          Assertions.fail("expected the accept() to time out and fail");
+          fail("expected the accept() to time out and fail");
         } catch (SocketTimeoutException e) {
           GenericTestUtils.assertExceptionContains("accept(2) error: ", e);
         } catch (AsynchronousCloseException e) {
@@ -322,7 +327,7 @@ public class TestDomainSocket {
     Thread.sleep(500);
     serv.close(true);
     future.get();
-    Assertions.assertFalse(serv.isOpen());
+    assertFalse(serv.isOpen());
   }
   
   /**
@@ -463,17 +468,17 @@ public class TestDomainSocket {
           ReadStrategy reader = readStrategyClass.newInstance();
           reader.init(conn);
           reader.readFully(in1, 0, in1.length);
-          Assertions.assertTrue(Arrays.equals(clientMsg1, in1));
+          assertTrue(Arrays.equals(clientMsg1, in1));
           WriteStrategy writer = writeStrategyClass.newInstance();
           writer.init(conn);
           writer.write(serverMsg1);
           InputStream connInputStream = conn.getInputStream();
           int in2 = connInputStream.read();
-          Assertions.assertEquals((int)clientMsg2, in2);
+          assertEquals((int)clientMsg2, in2);
           conn.close();
         } catch (Throwable e) {
           threadResults.add(e);
-          Assertions.fail(e.getMessage());
+          fail(e.getMessage());
         }
         threadResults.add(new Success());
       }
@@ -492,7 +497,7 @@ public class TestDomainSocket {
           reader.init(client);
           byte in1[] = new byte[serverMsg1.length];
           reader.readFully(in1, 0, in1.length);
-          Assertions.assertTrue(Arrays.equals(serverMsg1, in1));
+          assertTrue(Arrays.equals(serverMsg1, in1));
           OutputStream clientOutputStream = client.getOutputStream();
           clientOutputStream.write(clientMsg2);
           client.close();
@@ -507,7 +512,7 @@ public class TestDomainSocket {
     for (int i = 0; i < 2; i++) {
       Throwable t = threadResults.take();
       if (!(t instanceof Success)) {
-        Assertions.fail(t.getMessage() + ExceptionUtils.getStackTrace(t));
+        fail(t.getMessage() + ExceptionUtils.getStackTrace(t));
       }
     }
     serverThread.join(120000);
@@ -630,14 +635,14 @@ public class TestDomainSocket {
           byte in1[] = new byte[clientMsg1.length];
           InputStream connInputStream = conn.getInputStream();
           IOUtils.readFully(connInputStream, in1, 0, in1.length);
-          Assertions.assertTrue(Arrays.equals(clientMsg1, in1));
+          assertTrue(Arrays.equals(clientMsg1, in1));
           DomainSocket domainConn = (DomainSocket)conn;
           domainConn.sendFileDescriptors(passedFds, serverMsg1, 0,
               serverMsg1.length);
           conn.close();
         } catch (Throwable e) {
           threadResults.add(e);
-          Assertions.fail(e.getMessage());
+          fail(e.getMessage());
         }
         threadResults.add(new Success());
       }
@@ -656,11 +661,11 @@ public class TestDomainSocket {
           FileInputStream recvFis[] = new FileInputStream[passedFds.length];
           int r = domainConn.
               recvFileInputStreams(recvFis, in1, 0, in1.length - 1);
-          Assertions.assertTrue(r > 0);
+          assertTrue(r > 0);
           IOUtils.readFully(clientInputStream, in1, r, in1.length - r);
-          Assertions.assertTrue(Arrays.equals(serverMsg1, in1));
+          assertTrue(Arrays.equals(serverMsg1, in1));
           for (int i = 0; i < passedFds.length; i++) {
-            Assertions.assertNotNull(recvFis[i]);
+            assertNotNull(recvFis[i]);
             passedFiles[i].checkInputStream(recvFis[i]);
           }
           for (FileInputStream fis : recvFis) {
@@ -678,7 +683,7 @@ public class TestDomainSocket {
     for (int i = 0; i < 2; i++) {
       Throwable t = threadResults.take();
       if (!(t instanceof Success)) {
-        Assertions.fail(t.getMessage() + ExceptionUtils.getStackTrace(t));
+        fail(t.getMessage() + ExceptionUtils.getStackTrace(t));
       }
     }
     serverThread.join(120000);
@@ -783,11 +788,11 @@ public class TestDomainSocket {
     socks[0].getOutputStream().write(1);
     socks[0].getOutputStream().write(2);
     socks[0].getOutputStream().write(3);
-    Assertions.assertTrue(readerThread.isAlive());
+    assertTrue(readerThread.isAlive());
     socks[0].shutdown();
     readerThread.join();
-    Assertions.assertFalse(failed.get());
-    Assertions.assertEquals(3, bytesRead.get());
+    assertFalse(failed.get());
+    assertEquals(3, bytesRead.get());
     IOUtils.cleanupWithLogger(null, socks);
   }
 }

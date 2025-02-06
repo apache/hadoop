@@ -18,13 +18,15 @@ package org.apache.hadoop.security;
 
 import java.io.IOException;
 
-import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import static org.apache.hadoop.security.SecurityUtilTestHelper.isExternalKdcRunning;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
-import org.junit.Assume;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -41,15 +43,15 @@ public class TestUGIWithExternalKdc {
 
   @BeforeEach
   public void testExternalKdcRunning() {
-    Assume.assumeTrue(isExternalKdcRunning());
+    assumeTrue(isExternalKdcRunning());
   }
 
   @Test
   public void testLogin() throws IOException {
     String userPrincipal = System.getProperty("user.principal");
     String userKeyTab = System.getProperty("user.keytab");
-    Assertions.assertNotNull(userPrincipal, "User principal was not specified");
-    Assertions.assertNotNull(userKeyTab, "User keytab was not specified");
+    assertNotNull(userPrincipal, "User principal was not specified");
+    assertNotNull(userKeyTab, "User keytab was not specified");
 
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
@@ -59,13 +61,13 @@ public class TestUGIWithExternalKdc {
     UserGroupInformation ugi = UserGroupInformation
         .loginUserFromKeytabAndReturnUGI(userPrincipal, userKeyTab);
 
-    Assertions.assertEquals(AuthenticationMethod.KERBEROS,
+    assertEquals(AuthenticationMethod.KERBEROS,
         ugi.getAuthenticationMethod());
     
     try {
       UserGroupInformation
       .loginUserFromKeytabAndReturnUGI("bogus@EXAMPLE.COM", userKeyTab);
-      Assertions.fail("Login should have failed");
+      fail("Login should have failed");
     } catch (Exception ex) {
       ex.printStackTrace();
     }
