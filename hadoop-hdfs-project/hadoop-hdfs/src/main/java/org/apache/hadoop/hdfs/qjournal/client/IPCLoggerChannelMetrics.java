@@ -77,6 +77,9 @@ class IPCLoggerChannelMetrics {
 
   private static String getName(IPCLoggerChannel ch) {
     InetSocketAddress addr = ch.getRemoteAddress();
+    if (addr.isUnresolved()) {
+      return "IPCLoggerChannel-" + addr.getHostName().replace(':', '.') + "-" + addr.getPort();
+    }
     String addrStr = addr.getAddress().getHostAddress();
     
     // IPv6 addresses have colons, which aren't allowed as part of
