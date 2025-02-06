@@ -15,7 +15,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-package org.apache.hadoop.util;
+package org.apache.hadoop.yarn.util;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
@@ -27,7 +27,11 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
  * NOTE: Do not use this to calculate a duration of expire or interval to sleep,
  * because it will be broken by settimeofday. Please use {@link MonotonicClock}
  * instead.
+ * @deprecated This class has been moved to {@link org.apache.hadoop.util.SystemClock}
+ * in hadoop-common-project and will be removed in Hadoop 4.0.0.
+ * Please use {@link org.apache.hadoop.util.SystemClock} instead.
  */
+@Deprecated
 @Public
 @Stable
 public final class SystemClock implements Clock {
