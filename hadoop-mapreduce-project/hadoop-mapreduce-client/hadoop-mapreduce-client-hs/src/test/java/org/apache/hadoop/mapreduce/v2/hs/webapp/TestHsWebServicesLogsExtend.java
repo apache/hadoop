@@ -52,9 +52,9 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -71,9 +71,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -241,7 +241,7 @@ public class TestHsWebServicesLogsExtend extends JerseyTestBase {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, REMOTE_LOG_ROOT_DIR);
@@ -282,7 +282,7 @@ public class TestHsWebServicesLogsExtend extends JerseyTestBase {
         "Hello-" + CONTAINER_2_2_3), NM_ID_2, FILE_NAME, USER, false);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws Exception {
     fs.delete(new Path(REMOTE_LOG_ROOT_DIR), true);
     fs.delete(new Path(LOCAL_ROOT_LOG_DIR), true);
