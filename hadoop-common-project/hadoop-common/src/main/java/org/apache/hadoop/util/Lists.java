@@ -247,12 +247,12 @@ public final class Lists {
    */
   private static <T> boolean addAll(Collection<T> addTo,
       Iterable<? extends T> elementsToAdd) {
+    if (addTo == null || elementsToAdd == null) {
+      throw new NullPointerException();
+    }
     if (elementsToAdd instanceof Collection) {
       Collection<? extends T> c = cast(elementsToAdd);
       return addTo.addAll(c);
-    }
-    if (elementsToAdd == null) {
-      throw new NullPointerException();
     }
     return addAll(addTo, elementsToAdd.iterator());
   }

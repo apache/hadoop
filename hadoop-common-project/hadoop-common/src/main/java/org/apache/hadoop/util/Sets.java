@@ -160,12 +160,12 @@ public final class Sets {
 
   private static <E extends Comparable> boolean addAll(TreeSet<E> addTo,
       Iterable<? extends E> elementsToAdd) {
+    if (addTo == null || elementsToAdd == null) {
+      throw new NullPointerException();
+    }
     if (elementsToAdd instanceof Collection) {
       Collection<? extends E> c = cast(elementsToAdd);
       return addTo.addAll(c);
-    }
-    if (elementsToAdd == null) {
-      throw new NullPointerException();
     }
     return addAll(addTo, elementsToAdd.iterator());
   }
