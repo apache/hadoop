@@ -22,8 +22,6 @@ import java.util.TimeZone;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.util.Clock;
-
 /**
  * Implementation of {@link Clock} that gives the current UTC time in
  * milliseconds.
