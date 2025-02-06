@@ -715,7 +715,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    *
    * @param futures The list of futures to check for exceptions.
    */
-  public void checkFuturesForExceptions(List<Future<?>> futures, int exceptionVal) {
+  protected void checkFuturesForExceptions(List<Future<?>> futures, int exceptionVal) {
     int exceptionCaught = 0;
     for (Future<?> future : futures) {
       try {

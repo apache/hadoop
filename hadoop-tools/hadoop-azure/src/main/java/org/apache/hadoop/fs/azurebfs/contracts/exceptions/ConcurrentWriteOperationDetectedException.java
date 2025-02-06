@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
 
 /**
  * Thrown when a concurrent write operation is detected.
- * This exception is used to indicate that a parallel access to the create path
+ * This exception is used to indicate that parallel access to the create path
  * has been detected, which violates the single writer semantics.
  */
 @org.apache.hadoop.classification.InterfaceAudience.Public
@@ -36,5 +36,12 @@ public class ConcurrentWriteOperationDetectedException
    */
   public ConcurrentWriteOperationDetectedException() {
     super(ERROR_MESSAGE);
+  }
+
+  /**
+   * Constructs a new ConcurrentWriteOperationDetectedException with an error message.
+   */
+  public ConcurrentWriteOperationDetectedException(String message) {
+    super(message);
   }
 }
