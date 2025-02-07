@@ -122,7 +122,7 @@ public class TestRollingFileSystemSink {
     diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
 
     assertTrue((diff >= -10L) && (diff <= 0L) || ((diff > -1000L) && (diff < -910L)),
-       "The initial flush time was calculated incorrectly: " + diff);
+        "The initial flush time was calculated incorrectly: " + diff);
 
     calendar.set(Calendar.SECOND, 1);
     calendar.set(Calendar.MILLISECOND, 10);
