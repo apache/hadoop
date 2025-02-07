@@ -29,7 +29,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -510,36 +509,6 @@ public class ITestAzureBlobFileSystemAppend extends
       fs1.mkdirs(filePath);
       outputStream.hsync();
     }
-  }
-
-  /**
-   * Checks a list of futures for exceptions.
-   *
-   * This method iterates over a list of futures, waits for each task to complete,
-   * and handles any exceptions thrown by the lambda expressions. If a
-   * RuntimeException is caught, it increments the exceptionCaught counter.
-   * If an unexpected exception is caught, it prints the exception to the standard error.
-   * Finally, it asserts that no RuntimeExceptions were caught.
-   *
-   * @param futures The list of futures to check for exceptions.
-   */
-  private void checkFuturesForExceptions(List<Future<?>> futures, int exceptionVal) {
-    int exceptionCaught = 0;
-    for (Future<?> future : futures) {
-      try {
-        future.get(); // wait for the task to complete and handle any exceptions thrown by the lambda expression
-      } catch (ExecutionException e) {
-        Throwable cause = e.getCause();
-        if (cause instanceof RuntimeException) {
-          exceptionCaught++;
-        } else {
-          System.err.println("Unexpected exception caught: " + cause);
-        }
-      } catch (InterruptedException e) {
-        // handle interruption
-      }
-    }
-    assertEquals(exceptionCaught, exceptionVal);
   }
 
   /**

@@ -145,7 +145,7 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
 
     // One request to server
     if (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)) {
-      // 1 GetBlobProperties + 1 PutBlob call.
+      // 1 ListBlobs + 1 GetBlobProperties
       mkdirRequestCount +=2;
     } else {
       mkdirRequestCount++;
