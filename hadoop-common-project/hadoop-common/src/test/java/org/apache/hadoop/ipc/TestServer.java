@@ -18,8 +18,14 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.net.BindException;
@@ -32,7 +38,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Server.Call;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 
 import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
@@ -120,7 +127,7 @@ public class TestServer {
       } finally {
         socket2.close();
       }
-      assertTrue("Failed to catch the expected bind exception",caught);
+      assertTrue(caught, "Failed to catch the expected bind exception");
     } finally {
       socket.close();
     }
@@ -135,7 +142,8 @@ public class TestServer {
   static class TestException3 extends Exception {
   }
 
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testLogExceptions() throws Exception {
     final Configuration conf = new Configuration();
     final Call dummyCall = new Call(0, 0, null, null);
@@ -189,7 +197,8 @@ public class TestServer {
     assertFalse(handler.isSuppressedLog(RpcClientException.class));
   }
 
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testPurgeIntervalNanosConf() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(CommonConfigurationKeysPublic.

@@ -21,9 +21,9 @@ import org.apache.http.HttpStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.NetUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +36,7 @@ public class TestHttpServerLogs extends HttpServerFunctionalTest {
   static final Logger LOG = LoggerFactory.getLogger(TestHttpServerLogs.class);
   private static HttpServer2 server;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
   }
 
@@ -47,7 +47,7 @@ public class TestHttpServerLogs extends HttpServerFunctionalTest {
     LOG.info("HTTP server started: "+ baseUrl);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws Exception {
     if (server != null && server.isAlive()) {
       server.stop();

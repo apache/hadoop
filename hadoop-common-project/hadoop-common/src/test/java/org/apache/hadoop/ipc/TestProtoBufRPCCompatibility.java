@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.ipc;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -34,8 +36,7 @@ import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.OldProtobufRpcProto;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.NewProtobufRpcProto;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.NewerProtobufRpcProto;
 import org.apache.hadoop.net.NetUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
@@ -71,8 +72,8 @@ public class TestProtoBufRPCCompatibility {
         EmptyRequestProto request) throws ServiceException {
       // Ensure clientId is received
       byte[] clientId = Server.getClientId();
-      Assert.assertNotNull(Server.getClientId());
-      Assert.assertEquals(16, clientId.length);
+      assertNotNull(Server.getClientId());
+      assertEquals(16, clientId.length);
       return EmptyResponseProto.newBuilder().build();
     }
 
@@ -81,8 +82,8 @@ public class TestProtoBufRPCCompatibility {
         EmptyRequestProto request) throws ServiceException {
       // Ensure clientId is received
       byte[] clientId = Server.getClientId();
-      Assert.assertNotNull(Server.getClientId());
-      Assert.assertEquals(16, clientId.length);
+      assertNotNull(Server.getClientId());
+      assertEquals(16, clientId.length);
       return EmptyResponseProto.newBuilder().build();
     }
   }
@@ -94,8 +95,8 @@ public class TestProtoBufRPCCompatibility {
         EmptyRequestProto request) throws ServiceException {
       // Ensure clientId is received
       byte[] clientId = Server.getClientId();
-      Assert.assertNotNull(Server.getClientId());
-      Assert.assertEquals(16, clientId.length);
+      assertNotNull(Server.getClientId());
+      assertEquals(16, clientId.length);
       return EmptyResponseProto.newBuilder().build();
     }
 
@@ -115,8 +116,8 @@ public class TestProtoBufRPCCompatibility {
         EmptyRequestProto request) throws ServiceException {
       // Ensure clientId is received
       byte[] clientId = Server.getClientId();
-      Assert.assertNotNull(Server.getClientId());
-      Assert.assertEquals(16, clientId.length);
+      assertNotNull(Server.getClientId());
+      assertEquals(16, clientId.length);
       return EmptyResponseProto.newBuilder().build();
     }
 
@@ -125,8 +126,8 @@ public class TestProtoBufRPCCompatibility {
         throws ServiceException {
       // Ensure clientId is received
       byte[] clientId = Server.getClientId();
-      Assert.assertNotNull(Server.getClientId());
-      Assert.assertEquals(16, clientId.length);
+      assertNotNull(Server.getClientId());
+      assertEquals(16, clientId.length);
       return EmptyResponseProto.newBuilder().build();
     }
   }

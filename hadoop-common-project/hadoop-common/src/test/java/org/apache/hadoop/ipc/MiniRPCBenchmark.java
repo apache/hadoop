@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.Enumeration;
 
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -43,6 +42,8 @@ import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDeleg
 import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenSecretManager;
 import org.apache.hadoop.util.Time;
 import org.slf4j.event.Level;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * MiniRPCBenchmark measures time to establish an RPC connection 
@@ -222,7 +223,7 @@ public class MiniRPCBenchmark {
           }
         });
       } catch (InterruptedException e) {
-        Assert.fail(Arrays.toString(e.getStackTrace()));
+        fail(Arrays.toString(e.getStackTrace()));
       }
     } finally {
       RPC.stopProxy(client);
