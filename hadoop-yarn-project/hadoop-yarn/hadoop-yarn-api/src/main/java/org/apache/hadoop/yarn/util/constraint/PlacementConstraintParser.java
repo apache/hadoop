@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -61,7 +62,9 @@ public final class PlacementConstraintParser {
   private static final String NOT_IN = "notin";
   private static final String AND = "and";
   private static final String OR = "or";
+  private static final String DELAYED_OR = "delayed_or";
   private static final String CARDINALITY = "cardinality";
+  private static final String TIMED = "timed";
   private static final String SCOPE_NODE = PlacementConstraints.NODE;
   private static final String SCOPE_RACK = PlacementConstraints.RACK;
 
@@ -195,7 +198,7 @@ public final class PlacementConstraintParser {
 
   /**
    * Tokenizer used to parse conjunction form of a constraint expression,
-   * [AND|OR](C1:C2:...:Cn). Each Cn is a constraint expression.
+   * [AND|OR|DELAYED_OR](C1:C2:...:Cn). Each Cn is a constraint expression.
    */
   public static final class ConjunctionTokenizer
       implements ConstraintTokenizer {
@@ -220,17 +223,20 @@ public final class PlacementConstraintParser {
       } else if(expression.startsWith(OR) ||
           expression.startsWith(OR.toUpperCase())) {
         op = OR;
+      } else if(expression.startsWith(DELAYED_OR) ||
+          expression.startsWith(DELAYED_OR.toUpperCase())) {
+        op = DELAYED_OR;
       } else {
         throw new PlacementConstraintParseException(
-            "Excepting starting with \"" + AND + "\" or \"" + OR + "\","
-                + " but met " + expression);
+            "Excepting starting with \"" + AND + "\" or \"" + OR + "\" or \""
+                + DELAYED_OR + "\"," + " but met " + expression);
       }
       parsedElements.add(op);
       Pattern p = Pattern.compile("\\((.*)\\)");
       Matcher m = p.matcher(expression);
       if (!m.find()) {
         throw new PlacementConstraintParseException("Unexpected format,"
-            + " expecting [AND|OR](A:B...) "
+            + " expecting [AND|OR|DELAYED_OR](A:B...) "
             + "but current expression is " + expression);
       }
       String childStrs = m.group(1);
@@ -568,6 +574,63 @@ public final class PlacementConstraintParser {
   }
 
   /**
+   * Timed Constraint parser used to parse a given timed constraint format:
+   *    "timed, [SCHEDULING_DELAY], [DELAY_UNIT: OPPORTUNITIES|MILLISECONDS],
+   *      [CONSTRAINT_EXPRESSION]", such as
+   *    "timed, 5, OPPORTUNITIES, NOTIN, NODE, foo, bar"
+   */
+  public static class TimedConstraintParser extends ConstraintParser {
+
+    public TimedConstraintParser(String expression) {
+      super(new BaseStringTokenizer(expression,
+          String.valueOf(EXPRESSION_VAL_DELIM)));
+    }
+
+    @Override
+    public AbstractConstraint parse()
+        throws PlacementConstraintParseException {
+      String op = nextToken();
+      if (!op.equalsIgnoreCase(TIMED)) {
+        throw new PlacementConstraintParseException("expecting " + TIMED
+            + " , but met " + op);
+      }
+
+      shouldHaveNext();
+      int schedulingDelay = toInt(nextToken());
+      shouldHaveNext();
+      String delayUnitStr = nextToken();
+      PlacementConstraint.TimedPlacementConstraint.DelayUnit delayUnit;
+      try {
+        delayUnit =
+            PlacementConstraint.TimedPlacementConstraint.DelayUnit.valueOf(
+                delayUnitStr.toUpperCase());
+      } catch (IllegalArgumentException e) {
+        throw new PlacementConstraintParseException(
+            "Invalid delay unit: " + delayUnitStr);
+      }
+      List<String> restElements = new ArrayList<>();
+      while(hasMoreTokens()) {
+        restElements.add(nextToken());
+      }
+      String constraintStr = String.join(",", restElements);
+      AbstractConstraint abstractConstraint = parseExpression(constraintStr);
+      switch (delayUnit) {
+      case OPPORTUNITIES:
+        return PlacementConstraints.delayedOr(
+            PlacementConstraints.timedOpportunitiesConstraint(
+                abstractConstraint, schedulingDelay));
+      case MILLISECONDS:
+        return PlacementConstraints.delayedOr(
+            PlacementConstraints.timedClockConstraint(abstractConstraint,
+                schedulingDelay, TimeUnit.MILLISECONDS));
+      default:
+        throw new PlacementConstraintParseException(
+            "Invalid delay unit: " + delayUnit);
+      }
+    }
+  }
+
+  /**
    * Parser used to parse conjunction form of constraints, such as
    * AND(A, ..., B), OR(A, ..., B).
    */
@@ -599,6 +662,20 @@ public final class PlacementConstraintParser {
         return PlacementConstraints.or(
             constraints.toArray(
                 new AbstractConstraint[constraints.size()]));
+      } else if (DELAYED_OR.equalsIgnoreCase(op)) {
+        List<PlacementConstraint.TimedPlacementConstraint> timedConstraints =
+            new ArrayList<>();
+        for (AbstractConstraint c : constraints) {
+          if (!(c instanceof PlacementConstraint.DelayedOr)) {
+            throw new PlacementConstraintParseException(
+                "Expecting delayed_or constraint, but met " + c);
+          }
+          timedConstraints.addAll(
+              ((PlacementConstraint.DelayedOr) c).getChildren());
+        }
+        return PlacementConstraints.delayedOr(timedConstraints.toArray(
+            new PlacementConstraint.TimedPlacementConstraint[
+                timedConstraints.size()]));
       } else {
         throw new PlacementConstraintParseException(
             "Unexpected conjunction operator : " + op
@@ -684,6 +761,11 @@ public final class PlacementConstraintParser {
         NodeConstraintParser np =
             new NodeConstraintParser(constraintStr);
         constraintOptional = Optional.ofNullable(np.tryParse());
+      }
+      if (!constraintOptional.isPresent()) {
+        TimedConstraintParser tcp =
+            new TimedConstraintParser(constraintStr);
+        constraintOptional = Optional.ofNullable(tcp.tryParse());
       }
       if (!constraintOptional.isPresent()) {
         throw new PlacementConstraintParseException(

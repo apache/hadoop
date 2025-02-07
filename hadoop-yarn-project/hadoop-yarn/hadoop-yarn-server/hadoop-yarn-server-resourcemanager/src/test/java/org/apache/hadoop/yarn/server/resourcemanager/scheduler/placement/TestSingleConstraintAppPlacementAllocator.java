@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.*;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTags;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResourceRequestException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -28,13 +29,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTags;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.InvalidAllocationTagsQueryException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.MemoryPlacementConstraintManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManager;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.Assert;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -515,5 +521,71 @@ public class TestSingleConstraintAppPlacementAllocator {
             attributes));
     assertFalse(result,
         "Allocation should fail as java=1.8 doesnt exist in node");
+  }
+
+  @Test
+  public void testDelayedOrOperator() {
+    LogManager.getRootLogger().setLevel(Level.DEBUG);
+    // placement constraints expression: partition=p1 and (java=1.9, delay=1 || java=1.8, delay=3)
+    PlacementConstraint.AbstractConstraint constraint = PlacementConstraints.and(
+            PlacementConstraints.targetIn(
+                    PlacementConstraints.NODE,
+                    PlacementConstraints.PlacementTargets.nodePartition("p1")),
+            PlacementConstraints.delayedOr(
+                    PlacementConstraints.timedOpportunitiesConstraint(
+                            PlacementConstraints.targetNodeAttribute(PlacementConstraints.NODE,
+                                    NodeAttributeOpCode.EQ,
+                                    PlacementConstraints.PlacementTargets.nodeAttribute("java", "1.9")),
+                            3),
+                    PlacementConstraints.timedOpportunitiesConstraint(
+                            PlacementConstraints.targetNodeAttribute(PlacementConstraints.NODE,
+                                    NodeAttributeOpCode.EQ,
+                                    PlacementConstraints.PlacementTargets.nodeAttribute("java", "1.8")),
+                            6)));
+    SchedulingRequest schedulingRequest1 =
+            SchedulingRequest.newBuilder().executionType(ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
+                    .allocationRequestId(10L).priority(Priority.newInstance(1))
+                    .placementConstraintExpression(constraint.build())
+                    .resourceSizing(ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
+                    .build();
+    allocator = new SingleConstraintAppPlacementAllocator();
+    allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
+    allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest1, false);
+    FiCaSchedulerNode testNode = TestUtils.getMockNode("host1", "/rack1", 123, 1024, 1);
+
+    // 1. test node: partition="p1", attributes={"java":"1.9"}
+    when(testNode.getPartition()).thenReturn("p1");
+    when(testNode.getNodeAttributes()).thenReturn(
+            Sets.newHashSet(NodeAttribute.newInstance("java", NodeAttributeType.STRING, "1.9")));
+    Assert.assertTrue("can allocate in node with required partition and attributes",
+            allocator.canAllocate(NodeType.NODE_LOCAL, testNode));
+
+    // 2. test node: partition="p1", attributes={"java":"1.8"}
+    when(testNode.getPartition()).thenReturn("p1");
+    when(testNode.getNodeAttributes()).thenReturn(
+            Sets.newHashSet(NodeAttribute.newInstance("java", NodeAttributeType.STRING, "1.8")));
+    for (int i = 0; i < 3; i++) {
+      Assert.assertFalse("can't allocate in node since delayed condition is not met",
+              allocator.canAllocate(NodeType.NODE_LOCAL, testNode));
+    }
+    Assert.assertTrue("can allocate in node when delayed condition is met",
+            allocator.canAllocate(NodeType.NODE_LOCAL, testNode));
+
+    // missed opportunities should be reset to 0 after satisfied
+    for (int i = 0; i < 3; i++) {
+      Assert.assertFalse("can't allocate in node since delayed condition is not met",
+              allocator.canAllocate(NodeType.NODE_LOCAL, testNode));
+    }
+    Assert.assertTrue("can allocate in node when delayed condition is met",
+            allocator.canAllocate(NodeType.NODE_LOCAL, testNode));
+
+    // 3. test node: partition="", attributes={"java":"1.9"}
+    when(testNode.getPartition()).thenReturn("");
+    when(testNode.getNodeAttributes()).thenReturn(
+            Sets.newHashSet(NodeAttribute.newInstance("java", NodeAttributeType.STRING, "1.9")));
+    for (int i = 0; i < 10; i++) {
+      Assert.assertFalse("can't allocate in node without required partition",
+              allocator.canAllocate(NodeType.NODE_LOCAL, testNode));
+    }
   }
 }

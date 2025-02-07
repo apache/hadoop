@@ -27,12 +27,16 @@ import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.Or;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint.DelayedOr;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.SingleConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TimedPlacementConstraint;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TimedPlacementConstraint.DelayUnit;
 import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParseException;
 import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParser;
 import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParser.SourceTags;
 import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParser.TargetConstraintParser;
+import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParser.TimedConstraintParser;
 import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParser.ConstraintParser;
 import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParser.CardinalityConstraintParser;
 import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParser.ConjunctionConstraintParser;
@@ -49,6 +53,7 @@ import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetNod
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetNotIn;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -197,6 +202,61 @@ class TestPlacementConstraintParser {
   }
 
   @Test
+  void testTimedConstraintParser() throws PlacementConstraintParseException {
+    String expressionExpr;
+    ConstraintParser parser;
+    AbstractConstraint constraint;
+    DelayedOr delayedOr;
+    TimedPlacementConstraint timedConstraint;
+
+    // timed,5,milliseconds,NODE,foo,0,1
+    expressionExpr = "timed,5,milliseconds,in,node,foo";
+    parser =
+        new PlacementConstraintParser.TimedConstraintParser(expressionExpr);
+    constraint = parser.parse();
+    assertInstanceOf(DelayedOr.class, constraint);
+    delayedOr = (DelayedOr) constraint;
+    assertEquals(1, delayedOr.getChildren().size());
+    timedConstraint = delayedOr.getChildren().get(0);
+    assertEquals(5, timedConstraint.getSchedulingDelay());
+    assertEquals(DelayUnit.MILLISECONDS, timedConstraint.getDelayUnit());
+    assertInstanceOf(SingleConstraint.class, timedConstraint.getConstraint());
+    SingleConstraint singleConstraint =
+        (SingleConstraint) timedConstraint.getConstraint();
+    assertEquals("node", singleConstraint.getScope());
+    assertEquals(1, singleConstraint.getMinCardinality());
+    assertEquals(Integer.MAX_VALUE, singleConstraint.getMaxCardinality());
+    assertEquals("in,node,foo", singleConstraint.toString());
+
+    // Invalid key word
+    try {
+      parser = new TimedConstraintParser("invalid,5,milliseconds,in,node");
+      parser.parse();
+      fail("Expecting a parsing failure!");
+    } catch (PlacementConstraintParseException e) {
+      assertTrue(e.getMessage().contains("expecting timed , but met invalid"));
+    }
+
+    // Invalid scheduling delay
+    try {
+      parser = new TimedConstraintParser("timed,a,milliseconds,in,node");
+      parser.parse();
+      fail("Expecting a parsing failure!");
+    } catch (PlacementConstraintParseException e) {
+      assertTrue(e.getMessage().contains("Expecting an Integer, but get a"));
+    }
+
+    // Invalid delay unit
+    try {
+      parser = new TimedConstraintParser("timed,5,invalid,in,node");
+      parser.parse();
+      fail("Expecting a parsing failure!");
+    } catch (PlacementConstraintParseException e) {
+      assertTrue(e.getMessage().contains("Invalid delay unit: invalid"));
+    }
+  }
+
+  @Test
   void testAndConstraintParser()
       throws PlacementConstraintParseException {
     String expressionExpr;
@@ -266,6 +326,41 @@ class TestPlacementConstraintParser {
     or = (Or) or.getChildren().get(1);
     assertEquals(2, or.getChildren().size());
     verifyConstraintToString(expressionExpr, constraint);
+  }
+
+  @Test
+  void testDelayedOrConstraintParser()
+      throws PlacementConstraintParseException {
+    String expressionExpr;
+    ConstraintParser parser;
+    AbstractConstraint constraint;
+    DelayedOr delayedOr;
+
+    expressionExpr = "DELAYED_OR(timed,5,OPPORTUNITIES,NOTIN,NODE,foo)";
+    parser = new ConjunctionConstraintParser(expressionExpr);
+    constraint = parser.parse();
+    assertInstanceOf(DelayedOr.class, constraint);
+    delayedOr = (DelayedOr) constraint;
+    assertEquals(1, delayedOr.getChildren().size());
+    TimedPlacementConstraint timedConstraint = delayedOr.getChildren().get(0);
+    assertEquals(5, timedConstraint.getSchedulingDelay());
+    assertEquals(DelayUnit.OPPORTUNITIES, timedConstraint.getDelayUnit());
+    assertEquals("notin,node,foo", timedConstraint.getConstraint().toString());
+
+    expressionExpr = "delayed_or(timed,5,opportunities,notin,node,foo:timed,60000,milliseconds,in,node,test)";
+    parser = new ConjunctionConstraintParser(expressionExpr);
+    constraint = parser.parse();
+    assertInstanceOf(DelayedOr.class, constraint);
+    delayedOr = (DelayedOr) constraint;
+    assertEquals(2, delayedOr.getChildren().size());
+    TimedPlacementConstraint firstConstraint = delayedOr.getChildren().get(0);
+    assertEquals(5, firstConstraint.getSchedulingDelay());
+    assertEquals(DelayUnit.OPPORTUNITIES, firstConstraint.getDelayUnit());
+    assertEquals("notin,node,foo", firstConstraint.getConstraint().toString());
+    TimedPlacementConstraint secondConstraint = delayedOr.getChildren().get(1);
+    assertEquals(60000, secondConstraint.getSchedulingDelay());
+    assertEquals(DelayUnit.MILLISECONDS, secondConstraint.getDelayUnit());
+    assertEquals("in,node,test", secondConstraint.getConstraint().toString());
   }
 
   @Test

@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.InvalidAllocationTagsQueryException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintsRuntimeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintsUtil;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
@@ -69,6 +70,7 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
   private String targetNodePartition;
   private AllocationTagsManager allocationTagsManager;
   private PlacementConstraintManager placementConstraintManager;
+  private PlacementConstraintsRuntimeInfo runtimeInfo;
 
   public SingleConstraintAppPlacementAllocator() {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -164,6 +166,7 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
       LOG.info(
           "Update numAllocation from old=" + existingNumAllocations + " to new="
               + newNumAllocations);
+      runtimeInfo.askUpdated();
 
       return updateResult;
     }
@@ -172,6 +175,9 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
     // This will update internal partitions, etc. after the SchedulingRequest is
     // valid.
     validateAndSetSchedulingRequest(newSchedulingRequest);
+
+    // update runtimeInfo
+    runtimeInfo.askUpdated();
 
     return new PendingAskUpdateResult(null,
         new PendingAsk(newSchedulingRequest.getResourceSizing()), null,
@@ -327,6 +333,9 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
       // Deduct sizing
       decreasePendingNumAllocation();
 
+      // Reset missed opportunities
+      runtimeInfo.resetMissedOpportunities();
+
       return new ContainerRequest(containerSchedulingRequest);
     } finally {
       writeLock.unlock();
@@ -334,29 +343,36 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
   }
 
   private boolean checkCardinalityAndPending(SchedulerNode node,
-      Optional<DiagnosticsCollector> dcOpt) {
+      Optional<DiagnosticsCollector> dcOpt, boolean isPreCheck) {
     // Do we still have pending resource?
     if (schedulingRequest.getResourceSizing().getNumAllocations() <= 0) {
       return false;
     }
 
     // node type will be ignored.
+    boolean satisfied;
     try {
-      return PlacementConstraintsUtil.canSatisfyConstraints(
+      satisfied = PlacementConstraintsUtil.canSatisfyConstraints(
           appSchedulingInfo.getApplicationId(), schedulingRequest, node,
-          placementConstraintManager, allocationTagsManager, dcOpt);
+          placementConstraintManager, allocationTagsManager, dcOpt,
+              Optional.of(runtimeInfo));
     } catch (InvalidAllocationTagsQueryException e) {
       LOG.warn("Failed to query node cardinality:", e);
       this.incrementPlacementAttempt();
-      return false;
+      satisfied = false;
     }
+    // add missed opportunities if not satisfied and in pre-check stage
+    if (isPreCheck && !satisfied) {
+      runtimeInfo.addMissedOpportunities();
+    }
+    return satisfied;
   }
 
   @Override
   public boolean canAllocate(NodeType type, SchedulerNode node) {
     readLock.lock();
     try {
-      return checkCardinalityAndPending(node, Optional.empty());
+      return checkCardinalityAndPending(node, Optional.empty(), false);
     } finally {
       readLock.unlock();
     }
@@ -397,7 +413,7 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
         }
         return rst;
       }
-      return checkCardinalityAndPending(schedulerNode, dcOpt);
+      return checkCardinalityAndPending(schedulerNode, dcOpt, true);
     } finally {
       readLock.unlock();
     }
@@ -442,5 +458,6 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
     super.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
     this.allocationTagsManager = rmContext.getAllocationTagsManager();
     this.placementConstraintManager = rmContext.getPlacementConstraintManager();
+    this.runtimeInfo = new PlacementConstraintsRuntimeInfo(System.currentTimeMillis(), 0);
   }
 }

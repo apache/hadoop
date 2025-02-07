@@ -20,7 +20,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.allocationTagWithNamespace;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.RACK;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.delayedOr;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetIn;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetNodeAttribute;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetNotIn;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.maxCardinality;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.and;
@@ -31,12 +33,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.timedClockConstraint;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.timedOpportunitiesConstraint;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.AbstractMap;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -46,11 +51,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 
+import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -244,7 +252,7 @@ public class TestPlacementConstraintsUtil {
         new GenericDiagnosticsCollector();
     assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode1, pcm, tm,
-        Optional.of(collector)));
+        Optional.of(collector), Optional.empty()));
     assertNotNull(collector.getDiagnostics());
     assertTrue(collector.getDiagnostics().contains("ALLOCATION_TAG"));
   }
@@ -1104,5 +1112,169 @@ public class TestPlacementConstraintsUtil {
       assertTrue(e.getMessage()
           .contains("Invalid namespace prefix: unknown_namespace"));
     }
+  }
+
+  @Test
+  public void testDelayOrConstraintAssignment()
+          throws InvalidAllocationTagsQueryException {
+    AllocationTagsManager tm = new AllocationTagsManager(rmContext);
+    PlacementConstraintManagerService pcm =
+            new MemoryPlacementConstraintManager();
+    DiagnosticsCollector dc = new GenericDiagnosticsCollector();
+    // Register App1 with delayedOr constraint: node partition p1 or p2
+    HashSet<String> delayedOrTag1 = new HashSet<>(Collections.singletonList("delayedOrTag1"));
+    HashSet<String> delayedOrTag2 = new HashSet<>(Collections.singletonList("delayedOrTag2"));
+    PlacementConstraint constraint1 = PlacementConstraints.build(delayedOr(
+            timedOpportunitiesConstraint(
+                    targetNodeAttribute(NODE, NodeAttributeOpCode.EQ,
+                            PlacementConstraints.PlacementTargets.nodePartition("p1")),
+                    3),
+            timedOpportunitiesConstraint(
+                    targetNodeAttribute(NODE, NodeAttributeOpCode.EQ,
+                            PlacementConstraints.PlacementTargets.nodePartition("p2")),
+                    6)));
+    PlacementConstraint constraint2 = PlacementConstraints.build(delayedOr(
+            timedClockConstraint(
+                    targetNodeAttribute(NODE, NodeAttributeOpCode.EQ,
+                            PlacementConstraints.PlacementTargets.nodePartition("p1")),
+                    1, TimeUnit.SECONDS)));
+    Map<Set<String>, PlacementConstraint> constraintMap = Stream
+            .of(new AbstractMap.SimpleEntry<>(delayedOrTag1, constraint1),
+                    new AbstractMap.SimpleEntry<>(delayedOrTag2, constraint2))
+            .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey,
+                    AbstractMap.SimpleEntry::getValue));
+    pcm.registerApplication(appId1, constraintMap);
+    RMNode n0r1 = rmNodes.get(0);
+    RMNode n1r1 = rmNodes.get(1);
+    RMNode n2r2 = rmNodes.get(2);
+
+    // init nodes: n0 (partition=p1), n1 (partition=p2), n2 (partition="")
+    SchedulerNode schedulerNode0 =newSchedulerNode(n0r1.getHostName(),
+            n0r1.getRackName(), n0r1.getNodeID());
+    SchedulerNode schedulerNode1 =newSchedulerNode(n1r1.getHostName(),
+            n1r1.getRackName(), n1r1.getNodeID());
+    SchedulerNode schedulerNode2 =newSchedulerNode(n2r2.getHostName(),
+            n2r2.getRackName(), n2r2.getNodeID());
+    when(schedulerNode0.getPartition()).thenReturn("p1");
+    when(schedulerNode1.getPartition()).thenReturn("p2");
+    when(schedulerNode2.getPartition()).thenReturn("");
+
+    BiFunction<DiagnosticsCollector, String, Boolean> checkParitionUnsatisfied =
+            (collector, partition) -> collector.getDiagnostics().startsWith(
+                    "unsatisfied PC expression=\"node,EQ,yarn_node_partition/=["+partition+"]\"");
+    BiFunction<DiagnosticsCollector, String, Boolean> checkDetails =
+            (collector, delayInfo) -> collector.getDetails().startsWith(
+                    "delayInfo: "+delayInfo);
+    SchedulingRequest requestWithTag1 = createSchedulingRequest(delayedOrTag1);
+    SchedulingRequest requestWithTag2 = createSchedulingRequest(delayedOrTag2);
+
+    /*
+     * test cases for delayUnit OPPORTUNITIES
+     */
+    /*
+     * n0 (partition=p1) should always be accepted
+     */
+    // satisfied even if no runtime info
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag1, schedulerNode0, pcm, tm, Optional.of(dc),
+            Optional.empty()));
+
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag1, schedulerNode0, pcm, tm, Optional.of(dc),
+            Optional.of(new PlacementConstraintsRuntimeInfo(System.currentTimeMillis(), 0))));
+
+    /*
+     * n1 should be accepted until reached the second delayOr condition
+     */
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag1, schedulerNode1, pcm, tm, Optional.of(dc),
+            Optional.empty()));
+    assertTrue(checkParitionUnsatisfied.apply(dc, "p1"));
+    assertTrue(checkDetails.apply(dc, "runtime info not found"));
+
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag1, schedulerNode1, pcm, tm, Optional.of(dc),
+            Optional.of(new PlacementConstraintsRuntimeInfo(System.currentTimeMillis(), 0))));
+    assertTrue(checkParitionUnsatisfied.apply(dc, "p1"));
+    assertTrue(checkDetails.apply(dc, "schedulingDelay=3, missedOpportunities=0"));
+
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag1, schedulerNode1, pcm, tm, Optional.of(dc),
+            Optional.of(new PlacementConstraintsRuntimeInfo(System.currentTimeMillis(), 2))));
+    assertTrue(checkParitionUnsatisfied.apply(dc, "p1"));
+    assertTrue(checkDetails.apply(dc, "schedulingDelay=3, missedOpportunities=2"));
+
+    // satisfied when placement attempt >= 3
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag1, schedulerNode1, pcm, tm, Optional.of(dc),
+            Optional.of(new PlacementConstraintsRuntimeInfo(System.currentTimeMillis(), 3))));
+
+    /*
+     * n2 should be accepted until reached all delay conditions
+     */
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag1, schedulerNode2, pcm, tm, Optional.of(dc),
+            Optional.empty()));
+    assertTrue(checkParitionUnsatisfied.apply(dc, "p1"));
+    assertTrue(checkDetails.apply(dc, "runtime info not found"));
+
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag1, schedulerNode2, pcm, tm, Optional.of(dc),
+            Optional.of(new PlacementConstraintsRuntimeInfo(System.currentTimeMillis(), 0))));
+    assertTrue(checkParitionUnsatisfied.apply(dc, "p1"));
+    assertTrue(checkDetails.apply(dc, "schedulingDelay=3, missedOpportunities=0"));
+
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag1, schedulerNode2, pcm, tm, Optional.of(dc),
+            Optional.of(new PlacementConstraintsRuntimeInfo(System.currentTimeMillis(), 2))));
+    assertTrue(checkParitionUnsatisfied.apply(dc, "p1"));
+    assertTrue(checkDetails.apply(dc, "schedulingDelay=3, missedOpportunities=2"));
+
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag1, schedulerNode2, pcm, tm, Optional.of(dc),
+            Optional.of(new PlacementConstraintsRuntimeInfo(System.currentTimeMillis(), 5))));
+    assertTrue(checkParitionUnsatisfied.apply(dc, "p2"));
+    assertTrue(checkDetails.apply(dc, "schedulingDelay=6, missedOpportunities=5"));
+
+    // satisfied when placement attempt >= 6
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag1, schedulerNode2, pcm, tm, Optional.of(dc),
+            Optional.of(new PlacementConstraintsRuntimeInfo(System.currentTimeMillis(), 6))));
+
+
+    /*
+     * test cases for delayUnit MILLISECONDS
+     */
+    /*
+     * n0 (partition=p1) should always be accepted
+     */
+    // satisfied even if no runtime info
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag2, schedulerNode0, pcm, tm, Optional.of(dc),
+            Optional.empty()));
+
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag2, schedulerNode0, pcm, tm, Optional.of(dc),
+            Optional.of(new PlacementConstraintsRuntimeInfo(System.currentTimeMillis(), 0))));
+
+    /*
+     * n1 should be accepted until reached the delayOr condition
+     */
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag2, schedulerNode1, pcm, tm, Optional.of(dc),
+            Optional.empty()));
+    assertTrue(checkParitionUnsatisfied.apply(dc, "p1"));
+    assertTrue(checkDetails.apply(dc, "runtime info not found"));
+
+    assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag2, schedulerNode1, pcm, tm, Optional.of(dc),
+            Optional.of(new PlacementConstraintsRuntimeInfo(System.currentTimeMillis(), 0))));
+    assertTrue(checkParitionUnsatisfied.apply(dc, "p1"));
+    assertTrue(checkDetails.apply(dc, "schedulingDelay=1000, elapsedMs="));
+
+    // satisfied when elapsedMs >= 1000
+    assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+            requestWithTag2, schedulerNode1, pcm, tm, Optional.of(dc),
+            Optional.of(new PlacementConstraintsRuntimeInfo(System.currentTimeMillis()-1000, 0))));
   }
 }

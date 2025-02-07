@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.Or;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint.DelayedOr;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TimedPlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.SingleConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression.TargetType;
@@ -261,12 +263,12 @@ public final class PlacementConstraintsUtil {
    */
   private static boolean canSatisfyAndConstraint(ApplicationId appId,
       And constraint, SchedulerNode node, AllocationTagsManager atm,
-      Optional<DiagnosticsCollector> dcOpt)
+      Optional<DiagnosticsCollector> dcOpt, Optional<PlacementConstraintsRuntimeInfo> riOpt)
       throws InvalidAllocationTagsQueryException {
     // Iterate over the constraints tree, if found any child constraint
     // isn't satisfied, return false.
     for (AbstractConstraint child : constraint.getChildren()) {
-      if(!canSatisfyConstraints(appId, child.build(), node, atm, dcOpt)) {
+      if(!canSatisfyConstraints(appId, child.build(), node, atm, dcOpt, riOpt)) {
         return false;
       }
     }
@@ -284,20 +286,86 @@ public final class PlacementConstraintsUtil {
    */
   private static boolean canSatisfyOrConstraint(ApplicationId appId,
       Or constraint, SchedulerNode node, AllocationTagsManager atm,
-      Optional<DiagnosticsCollector> dcOpt)
+      Optional<DiagnosticsCollector> dcOpt, Optional<PlacementConstraintsRuntimeInfo> riOpt)
       throws InvalidAllocationTagsQueryException {
     for (AbstractConstraint child : constraint.getChildren()) {
-      if (canSatisfyConstraints(appId, child.build(), node, atm, dcOpt)) {
+      if (canSatisfyConstraints(appId, child.build(), node, atm, dcOpt, riOpt)) {
         return true;
       }
     }
     return false;
   }
 
+  /**
+   * Returns true as long as any of child constraint is satisfied.
+   * @param appId application id
+   * @param constraint Or constraint
+   * @param node node
+   * @param atm allocation tags manager
+   * @return true if any child constraint is satisfied, false otherwise
+   * @throws InvalidAllocationTagsQueryException
+   */
+  private static boolean canSatisfyDelayedOrConstraint(
+          ApplicationId appId,
+          DelayedOr constraint, SchedulerNode node, AllocationTagsManager atm,
+          Optional<DiagnosticsCollector> dcOpt,
+          Optional<PlacementConstraintsRuntimeInfo> riOpt)
+          throws InvalidAllocationTagsQueryException {
+    for (TimedPlacementConstraint child: constraint.getChildren()) {
+      boolean satisfied = canSatisfyConstraints(appId, child.getConstraint().build(), node, atm, dcOpt, riOpt);
+      if (satisfied) {
+        return true;
+      }
+      // can't pass if not satisfied and not reached the delay condition
+      boolean canPass = true;
+      String delayedInfo = "";
+      if (riOpt.isPresent()) {
+        PlacementConstraintsRuntimeInfo ri = riOpt.get();
+        long schedulingDelay = child.getSchedulingDelay();
+        TimedPlacementConstraint.DelayUnit delayUnit = child.getDelayUnit();
+        if (delayUnit == TimedPlacementConstraint.DelayUnit.MILLISECONDS) {
+          long elapsedMs = System.currentTimeMillis() - ri.getLastAskUpdateTime();
+          if (elapsedMs < schedulingDelay) {
+            canPass = false;
+            delayedInfo = new StringBuilder("schedulingDelay=").append(schedulingDelay)
+                    .append(", elapsedMs=").append(elapsedMs).toString();
+          }
+        } else if (delayUnit == TimedPlacementConstraint.DelayUnit.OPPORTUNITIES &&
+                ri.getMissedOpportunities() < schedulingDelay) {
+          canPass = false;
+          delayedInfo = new StringBuilder("schedulingDelay=").append(schedulingDelay)
+                  .append(", missedOpportunities=").append(ri.getMissedOpportunities()).toString();
+        }
+      } else {
+        canPass = false;
+        delayedInfo = "runtime info not found";
+      }
+      if (!canPass) {
+        if (dcOpt.isPresent()) {
+          DiagnosticsCollector dc = dcOpt.get();
+          StringBuilder sb;
+          if (dc.getDetails() != null) {
+              sb = new StringBuilder(dc.getDetails()).append(", delayInfo: ");
+          } else {
+              sb = new StringBuilder("delayInfo: ");
+          }
+          String details = sb.append(delayedInfo).toString();
+          dc.collect(dc.getDiagnostics(), details);
+        } else if (LOG.isDebugEnabled()) {
+          LOG.debug("can't pass the delayed constraint: {}, delayedInfo: {}", constraint, delayedInfo);
+        }
+        return false;
+      }
+    }
+    // all passed
+    return true;
+  }
+
   private static boolean canSatisfyConstraints(ApplicationId appId,
       PlacementConstraint constraint, SchedulerNode node,
       AllocationTagsManager atm,
-      Optional<DiagnosticsCollector> dcOpt)
+      Optional<DiagnosticsCollector> dcOpt,
+      Optional<PlacementConstraintsRuntimeInfo> riOpt)
       throws InvalidAllocationTagsQueryException {
     if (constraint == null) {
       LOG.debug("Constraint is found empty during constraint validation for"
@@ -317,10 +385,13 @@ public final class PlacementConstraintsUtil {
       return canSatisfySingleConstraint(appId, single, node, atm, dcOpt);
     } else if (sConstraintExpr instanceof And) {
       And and = (And) sConstraintExpr;
-      return canSatisfyAndConstraint(appId, and, node, atm, dcOpt);
+      return canSatisfyAndConstraint(appId, and, node, atm, dcOpt, riOpt);
     } else if (sConstraintExpr instanceof Or) {
       Or or = (Or) sConstraintExpr;
-      return canSatisfyOrConstraint(appId, or, node, atm, dcOpt);
+      return canSatisfyOrConstraint(appId, or, node, atm, dcOpt, riOpt);
+    } else if (sConstraintExpr instanceof DelayedOr) {
+      DelayedOr delayedOr = (DelayedOr) sConstraintExpr;
+      return canSatisfyDelayedOrConstraint(appId, delayedOr, node, atm, dcOpt, riOpt);
     } else {
       throw new InvalidAllocationTagsQueryException(
           "Unsupported type of constraint: "
@@ -346,13 +417,15 @@ public final class PlacementConstraintsUtil {
    * @param pcm placement constraint manager
    * @param atm allocation tags manager
    * @param dcOpt optional diagnostics collector
+   * @param riOpt optional placement constraints runtime info
    * @return true if the given node satisfies the constraint of the request
    * @throws InvalidAllocationTagsQueryException if given string is not in valid format.
    */
   public static boolean canSatisfyConstraints(ApplicationId applicationId,
       SchedulingRequest request, SchedulerNode schedulerNode,
       PlacementConstraintManager pcm, AllocationTagsManager atm,
-      Optional<DiagnosticsCollector> dcOpt)
+      Optional<DiagnosticsCollector> dcOpt,
+      Optional<PlacementConstraintsRuntimeInfo> riOpt)
       throws InvalidAllocationTagsQueryException {
     Set<String> sourceTags = null;
     PlacementConstraint pc = null;
@@ -362,7 +435,7 @@ public final class PlacementConstraintsUtil {
     }
     return canSatisfyConstraints(applicationId,
         pcm.getMultilevelConstraint(applicationId, sourceTags, pc),
-        schedulerNode, atm, dcOpt);
+        schedulerNode, atm, dcOpt, riOpt);
   }
 
   public static boolean canSatisfyConstraints(ApplicationId applicationId,
@@ -370,7 +443,7 @@ public final class PlacementConstraintsUtil {
       PlacementConstraintManager pcm, AllocationTagsManager atm)
       throws InvalidAllocationTagsQueryException {
     return canSatisfyConstraints(applicationId, request, schedulerNode, pcm,
-        atm, Optional.empty());
+        atm, Optional.empty(), Optional.empty());
   }
 
   private static NodeAttribute getNodeConstraintFromRequest(String attrKey,
