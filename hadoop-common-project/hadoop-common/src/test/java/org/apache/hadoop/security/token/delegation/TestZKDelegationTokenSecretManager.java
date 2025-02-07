@@ -53,16 +53,16 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.fail;
 
 
 public class TestZKDelegationTokenSecretManager {
@@ -82,13 +82,13 @@ public class TestZKDelegationTokenSecretManager {
   @Rule
   public Timeout globalTimeout = new Timeout(300000, TimeUnit.MILLISECONDS);
 
-  @BeforeEach
+  @Before
   public void setup() throws Exception {
     zkServer = new TestingServer();
     zkServer.start();
   }
 
-  @AfterEach
+  @After
   public void tearDown() throws Exception {
     if (zkServer != null) {
       zkServer.close();
@@ -136,7 +136,7 @@ public class TestZKDelegationTokenSecretManager {
       Token<DelegationTokenIdentifier> token =
           (Token<DelegationTokenIdentifier>) tm1.createToken(
               UserGroupInformation.getCurrentUser(), "foo");
-      Assertions.assertNotNull(token);
+      Assert.assertNotNull(token);
       tm2.verifyToken(token);
       tm2.renewToken(token, "foo");
       tm1.verifyToken(token);
@@ -150,7 +150,7 @@ public class TestZKDelegationTokenSecretManager {
 
       token = (Token<DelegationTokenIdentifier>) tm2.createToken(
           UserGroupInformation.getCurrentUser(), "bar");
-      Assertions.assertNotNull(token);
+      Assert.assertNotNull(token);
       tm1.verifyToken(token);
       tm1.renewToken(token, "bar");
       tm2.verifyToken(token);
@@ -177,15 +177,15 @@ public class TestZKDelegationTokenSecretManager {
       Token<DelegationTokenIdentifier> token1 =
           (Token<DelegationTokenIdentifier>) tm1.createToken(
               UserGroupInformation.getCurrentUser(), "foo");
-      Assertions.assertNotNull(token1);
+      Assert.assertNotNull(token1);
       Token<DelegationTokenIdentifier> token2 =
           (Token<DelegationTokenIdentifier>) tm1.createToken(
               UserGroupInformation.getCurrentUser(), "bar");
-      Assertions.assertNotNull(token2);
+      Assert.assertNotNull(token2);
       Token<DelegationTokenIdentifier> token3 =
           (Token<DelegationTokenIdentifier>) tm1.createToken(
               UserGroupInformation.getCurrentUser(), "boo");
-      Assertions.assertNotNull(token3);
+      Assert.assertNotNull(token3);
 
       tm1.verifyToken(token1);
       tm1.verifyToken(token2);
@@ -212,7 +212,7 @@ public class TestZKDelegationTokenSecretManager {
       Token<DelegationTokenIdentifier> token4 =
           (Token<DelegationTokenIdentifier>) tm2.createToken(
               UserGroupInformation.getCurrentUser(), "xyz");
-      Assertions.assertNotNull(token4);
+      Assert.assertNotNull(token4);
       tm2.verifyToken(token4);
       tm1.verifyToken(token4);
 
@@ -253,19 +253,19 @@ public class TestZKDelegationTokenSecretManager {
     Token<DelegationTokenIdentifier> token1 =
         (Token<DelegationTokenIdentifier>) tm1.createToken(
             UserGroupInformation.getCurrentUser(), "foo");
-    Assertions.assertNotNull(token1);
+    Assert.assertNotNull(token1);
     AbstractDelegationTokenIdentifier id1 =
         tm1.getDelegationTokenSecretManager().decodeTokenIdentifier(token1);
-    Assertions.assertEquals(
-    1, id1.getSequenceNumber(), "Token seq should be the same");
+    Assert.assertEquals(
+        "Token seq should be the same", 1, id1.getSequenceNumber());
     Token<DelegationTokenIdentifier> token2 =
         (Token<DelegationTokenIdentifier>) tm1.createToken(
             UserGroupInformation.getCurrentUser(), "foo");
-    Assertions.assertNotNull(token2);
+    Assert.assertNotNull(token2);
     AbstractDelegationTokenIdentifier id2 =
         tm1.getDelegationTokenSecretManager().decodeTokenIdentifier(token2);
-    Assertions.assertEquals(
-    2, id2.getSequenceNumber(), "Token seq should be the same");
+    Assert.assertEquals(
+        "Token seq should be the same", 2, id2.getSequenceNumber());
 
     tm2 = new DelegationTokenManager(conf, new Text("bla"));
     tm2.init();
@@ -273,19 +273,19 @@ public class TestZKDelegationTokenSecretManager {
     Token<DelegationTokenIdentifier> token3 =
         (Token<DelegationTokenIdentifier>) tm2.createToken(
             UserGroupInformation.getCurrentUser(), "foo");
-    Assertions.assertNotNull(token3);
+    Assert.assertNotNull(token3);
     AbstractDelegationTokenIdentifier id3 =
         tm2.getDelegationTokenSecretManager().decodeTokenIdentifier(token3);
-    Assertions.assertEquals(
-    1001, id3.getSequenceNumber(), "Token seq should be the same");
+    Assert.assertEquals(
+        "Token seq should be the same", 1001, id3.getSequenceNumber());
     Token<DelegationTokenIdentifier> token4 =
         (Token<DelegationTokenIdentifier>) tm2.createToken(
             UserGroupInformation.getCurrentUser(), "foo");
-    Assertions.assertNotNull(token4);
+    Assert.assertNotNull(token4);
     AbstractDelegationTokenIdentifier id4 =
         tm2.getDelegationTokenSecretManager().decodeTokenIdentifier(token4);
-    Assertions.assertEquals(
-    1002, id4.getSequenceNumber(), "Token seq should be the same");
+    Assert.assertEquals(
+        "Token seq should be the same", 1002, id4.getSequenceNumber());
 
     verifyDestroy(tm1, conf);
     verifyDestroy(tm2, conf);
@@ -304,7 +304,7 @@ public class TestZKDelegationTokenSecretManager {
       Token<DelegationTokenIdentifier> token =
           (Token<DelegationTokenIdentifier>)
           tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
-      Assertions.assertNotNull(token);
+      Assert.assertNotNull(token);
       tm1.renewToken(token, "foo");
       tm1.verifyToken(token);
       verifyDestroy(tm1, conf);
@@ -324,7 +324,7 @@ public class TestZKDelegationTokenSecretManager {
       Token<DelegationTokenIdentifier> token =
           (Token<DelegationTokenIdentifier>)
           tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
-      Assertions.assertNotNull(token);
+      Assert.assertNotNull(token);
       tm1.cancelToken(token, "foo");
       try {
         verifyTokenFail(tm1, token);
@@ -371,7 +371,7 @@ public class TestZKDelegationTokenSecretManager {
     Token<DelegationTokenIdentifier> token =
       (Token<DelegationTokenIdentifier>)
     tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
-    Assertions.assertNotNull(token);
+    Assert.assertNotNull(token);
     tm1.destroy();
   }
 
@@ -420,8 +420,8 @@ public class TestZKDelegationTokenSecretManager {
   private void verifyACL(CuratorFramework curatorFramework,
       String path, ACL expectedACL) throws Exception {
     List<ACL> acls = curatorFramework.getACL().forPath(path);
-    Assertions.assertEquals(1, acls.size());
-    Assertions.assertEquals(expectedACL, acls.get(0));
+    Assert.assertEquals(1, acls.size());
+    Assert.assertEquals(expectedACL, acls.get(0));
   }
 
   // Since it is possible that there can be a delay for the cancel token message
@@ -470,11 +470,11 @@ public class TestZKDelegationTokenSecretManager {
     Token<DelegationTokenIdentifier> token =
         (Token<DelegationTokenIdentifier>) tm
             .createToken(UserGroupInformation.getCurrentUser(), "good");
-    Assertions.assertNotNull(token);
+    Assert.assertNotNull(token);
     Token<DelegationTokenIdentifier> cancelled =
         (Token<DelegationTokenIdentifier>) tm
             .createToken(UserGroupInformation.getCurrentUser(), "cancelled");
-    Assertions.assertNotNull(cancelled);
+    Assert.assertNotNull(cancelled);
     tm.verifyToken(token);
     tm.verifyToken(cancelled);
 
@@ -511,12 +511,12 @@ public class TestZKDelegationTokenSecretManager {
         smNew.decodeTokenIdentifier(cancelled);
     AbstractDelegationTokenSecretManager.DelegationTokenInformation dtinfo =
         zksmNew.getTokenInfo(id);
-    Assertions.assertNull(dtinfo, "canceled dt should be gone!");
+    Assert.assertNull("canceled dt should be gone!", dtinfo);
 
     // The good token should be loaded on startup, and removed after expiry.
     id = smNew.decodeTokenIdentifier(token);
     dtinfo = zksmNew.getTokenInfoFromMemory(id);
-    Assertions.assertNotNull(dtinfo, "good dt should be in memory!");
+    Assert.assertNotNull("good dt should be in memory!", dtinfo);
 
     // Wait for the good token to expire.
     Thread.sleep(5000);
@@ -556,7 +556,7 @@ public class TestZKDelegationTokenSecretManager {
 
     // Check if the created NameSpace exists.
     Stat stat = curatorFramework.checkExists().forPath(workingPath);
-    Assertions.assertNotNull(stat);
+    Assert.assertNotNull(stat);
 
     tm1.destroy();
     curatorFramework.close();
@@ -584,7 +584,7 @@ public class TestZKDelegationTokenSecretManager {
 
     // Check if the created NameSpace exists.
     Stat stat = curatorFramework.checkExists().forPath(workingPath);
-    Assertions.assertNotNull(stat);
+    Assert.assertNotNull(stat);
 
     // Repeated creation will throw NodeExists exception
     LambdaTestUtils.intercept(KeeperException.class,
@@ -624,10 +624,10 @@ public class TestZKDelegationTokenSecretManager {
     List<Future<Boolean>> futures = executorService.invokeAll(
         Arrays.asList(tm1Callable, tm2Callable));
     for(Future<Boolean> future : futures) {
-      Assertions.assertTrue(future.get());
+      Assert.assertTrue(future.get());
     }
     executorService.shutdownNow();
-    Assertions.assertTrue(executorService.awaitTermination(1, TimeUnit.SECONDS));
+    Assert.assertTrue(executorService.awaitTermination(1, TimeUnit.SECONDS));
     tm1.destroy();
     tm2.destroy();
 
@@ -636,7 +636,7 @@ public class TestZKDelegationTokenSecretManager {
 
     // Check if the created NameSpace exists.
     Stat stat = curatorFramework.checkExists().forPath(workingPath);
-    Assertions.assertNotNull(stat);
+    Assert.assertNotNull(stat);
 
     curatorFramework.close();
   }
