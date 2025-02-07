@@ -127,11 +127,14 @@ public class BlobRenameHandler extends ListActionTaker {
       RenameAtomicity renameAtomicity = null;
       if (pathInformation.getIsDirectory()
           && pathInformation.getIsImplicit()) {
-        AbfsRestOperation createMarkerOp = getAbfsClient().createPath(
-            src.toUri().getPath(),
-            false, false, null,
-            false, null, null, tracingContext);
-        pathInformation.setETag(extractEtagHeader(createMarkerOp.getResult()));
+        try {
+          AbfsRestOperation createMarkerOp = getAbfsClient().createMarkerAtPath(
+              src.toUri().getPath(), null, null, tracingContext);
+          pathInformation.setETag(
+              extractEtagHeader(createMarkerOp.getResult()));
+        } catch (AbfsRestOperationException ex) {
+          LOG.debug("Marker creation failed for src path {} ", src.toUri().getPath());
+        }
       }
       try {
         if (isAtomicRename) {

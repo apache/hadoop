@@ -20,6 +20,9 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -37,6 +40,9 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
  * deleting the blobs and creating the parent directory marker file if needed.
  */
 public class BlobDeleteHandler extends ListActionTaker {
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      BlobDeleteHandler.class);
 
   private final Path path;
 
@@ -151,18 +157,12 @@ public class BlobDeleteHandler extends ListActionTaker {
       throws AzureBlobFileSystemException {
     if (!path.isRoot() && !path.getParent().isRoot()) {
       try {
-        getAbfsClient().createPath(path.getParent().toUri().getPath(),
-            false,
-            false,
-            null,
-            false,
+        getAbfsClient().createMarkerAtPath(path.getParent().toUri().getPath(),
             null,
             null,
             tracingContext);
       } catch (AbfsRestOperationException ex) {
-        if (ex.getStatusCode() != HTTP_CONFLICT) {
-          throw ex;
-        }
+        LOG.debug("Marker creation failed for parent path {} ", path.getParent().toUri().getPath());
       }
     }
   }
