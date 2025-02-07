@@ -71,6 +71,8 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   private static final String TEST_FILE = "testfile";
   private final boolean isHNSEnabled;
   private static final int TEST_BYTES = 20;
+  private static final String PARALLEL_ACCESS = "Parallel access to the create path "
+      + "detected";
 
   public ITestAzureBlobFileSystemLease() throws Exception {
     super();
@@ -151,14 +153,15 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     fs.mkdirs(testFilePath.getParent());
 
     try (FSDataOutputStream out = fs.create(testFilePath)) {
-      LambdaTestUtils.intercept(IOException.class, isHNSEnabled ? ERR_PARALLEL_ACCESS_DETECTED
-          : client instanceof AbfsBlobClient
-              ? ERR_NO_LEASE_ID_SPECIFIED_BLOB
-              : ERR_NO_LEASE_ID_SPECIFIED, () -> {
-        try (FSDataOutputStream out2 = fs.create(testFilePath)) {
-        }
-        return "Expected second create on infinite lease dir to fail";
-      });
+      LambdaTestUtils.intercept(IOException.class,
+          isHNSEnabled ? PARALLEL_ACCESS
+              : client instanceof AbfsBlobClient
+                  ? ERR_NO_LEASE_ID_SPECIFIED_BLOB
+                  : ERR_NO_LEASE_ID_SPECIFIED, () -> {
+            try (FSDataOutputStream out2 = fs.create(testFilePath)) {
+            }
+            return "Expected second create on infinite lease dir to fail";
+          });
     }
     Assert.assertTrue("Store leases were not freed", fs.getAbfsStore().areLeasesFreed());
   }
