@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.util;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestProgress {
 
@@ -27,18 +28,18 @@ public class TestProgress {
   public void testSet(){
     Progress progress = new Progress();
     progress.set(Float.NaN);
-    Assertions.assertEquals(0, progress.getProgress(), 0.0);
+    assertEquals(0, progress.getProgress(), 0.0);
 
     progress.set(Float.NEGATIVE_INFINITY);
-    Assertions.assertEquals(0,progress.getProgress(),0.0);
+    assertEquals(0,progress.getProgress(),0.0);
 
     progress.set(-1);
-    Assertions.assertEquals(0,progress.getProgress(),0.0);
+    assertEquals(0,progress.getProgress(),0.0);
 
     progress.set((float) 1.1);
-    Assertions.assertEquals(1,progress.getProgress(),0.0);
+    assertEquals(1,progress.getProgress(),0.0);
 
     progress.set(Float.POSITIVE_INFINITY);
-    Assertions.assertEquals(1,progress.getProgress(),0.0);
+    assertEquals(1,progress.getProgress(),0.0);
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.util.bloom;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.AbstractCollection;
@@ -27,7 +28,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Random;
 
-import org.junit.jupiter.api.Assertions;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.util.hash.Hash;
@@ -83,7 +83,7 @@ public class BloomFilterCommonTester<T extends Filter> {
         }
         default: {
           // fail fast with unknown hash error !!!
-          Assertions.assertFalse(true, "unknown hash error");
+          assertFalse(true, "unknown hash error");
           return ImmutableSet.of();
         }
         }
@@ -229,7 +229,7 @@ public class BloomFilterCommonTester<T extends Filter> {
           assertTrue(restoredKey.equals(originKey), "checkOnReadWrite equals error");
           out.reset();
         } catch (Exception ioe) {
-          Assertions.fail("checkOnReadWrite ex error");
+          fail("checkOnReadWrite ex error");
         }
       }
 
@@ -240,7 +240,7 @@ public class BloomFilterCommonTester<T extends Filter> {
         } catch (IllegalArgumentException ex) {
           // expected
         } catch (Exception e) {
-          Assertions.fail("checkSetOnIAE ex error");
+          fail("checkSetOnIAE ex error");
         }
       }
 
@@ -272,7 +272,7 @@ public class BloomFilterCommonTester<T extends Filter> {
         } catch (IllegalArgumentException ex) {
           //
         } catch (Exception e) {
-          Assertions.fail("" + e);
+          fail("" + e);
         }
 
         try {
@@ -281,7 +281,7 @@ public class BloomFilterCommonTester<T extends Filter> {
         } catch (IllegalArgumentException ex) {
           //
         } catch (Exception e) {
-          Assertions.fail("" + e);
+          fail("" + e);
         }
 
         try {
@@ -290,7 +290,7 @@ public class BloomFilterCommonTester<T extends Filter> {
         } catch (IllegalArgumentException ex) {
           //
         } catch (Exception e) {
-          Assertions.fail("" + e);
+          fail("" + e);
         }
 
         try {
@@ -298,7 +298,7 @@ public class BloomFilterCommonTester<T extends Filter> {
         } catch (IllegalArgumentException ex) {
           // expected
         } catch (Exception e) {
-          Assertions.fail("" + e);
+          fail("" + e);
         }
 
         try {
@@ -306,7 +306,7 @@ public class BloomFilterCommonTester<T extends Filter> {
         } catch (IllegalArgumentException ex) {
           // expected
         } catch (Exception e) {
-          Assertions.fail("" + e);
+          fail("" + e);
         }
 
         try {
@@ -316,7 +316,7 @@ public class BloomFilterCommonTester<T extends Filter> {
         } catch (UnsupportedOperationException unex) {
           //
         } catch (Exception e) {
-          Assertions.fail("" + e);
+          fail("" + e);
         }
 
       }
@@ -328,7 +328,7 @@ public class BloomFilterCommonTester<T extends Filter> {
         } catch (NullPointerException ex) {
           // expected
         } catch (Exception e) {
-          Assertions.fail("" + e);
+          fail("" + e);
         }
       }
 
@@ -339,7 +339,7 @@ public class BloomFilterCommonTester<T extends Filter> {
         } catch (NullPointerException ex) {
           // expected
         } catch (Exception e) {
-          Assertions.fail("" + e);
+          fail("" + e);
         }
       }
     }),
@@ -357,7 +357,7 @@ public class BloomFilterCommonTester<T extends Filter> {
 
         // check on present even key
         for (int i = 0; i < numInsertions; i += 2) {
-          Assertions.assertTrue(
+          assertTrue(
              filter.membershipTest(new Key(Integer.toString(i).getBytes())), " filter might contains " + i);
         }
 
@@ -407,7 +407,7 @@ public class BloomFilterCommonTester<T extends Filter> {
           }
 
         } catch (IOException ex) {
-          Assertions.fail("error ex !!!" + ex);
+          fail("error ex !!!" + ex);
         }
       }
     }),
@@ -424,7 +424,7 @@ public class BloomFilterCommonTester<T extends Filter> {
           filter.xor(symmetricFilter);
           // check on present all key
           for (int i = 0; i < numInsertions; i++) {
-            Assertions.assertFalse(
+            assertFalse(
                filter.membershipTest(new Key(Integer.toString(i).getBytes())), " filter might contains " + i);
           }
 
@@ -442,7 +442,7 @@ public class BloomFilterCommonTester<T extends Filter> {
           // 1 xor 1 -> 0
           // check on absent all key
           for (int i = 0; i < numInsertions; i++) {
-            Assertions.assertFalse(
+            assertFalse(
                filter.membershipTest(new Key(Integer.toString(i).getBytes())), " filter might not contains " + i);
           }
 
@@ -478,7 +478,7 @@ public class BloomFilterCommonTester<T extends Filter> {
 
         for (int i = 0; i < numInsertions; i++) {
           if (i >= startIntersection && i <= endIntersection) {
-            Assertions.assertTrue(
+            assertTrue(
                filter.membershipTest(new Key(Integer.toString(i).getBytes())), " filter might contains " + i);
           }
         }        
@@ -508,7 +508,7 @@ public class BloomFilterCommonTester<T extends Filter> {
 
         // check on present all key
         for (int i = 0; i < numInsertions; i++) {
-          Assertions.assertTrue(
+          assertTrue(
              filter.membershipTest(new Key(Integer.toString(i).getBytes())), " filter might contains " + i);
         }        
       }

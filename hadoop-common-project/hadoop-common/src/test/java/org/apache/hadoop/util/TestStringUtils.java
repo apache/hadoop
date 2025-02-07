@@ -24,6 +24,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.StringUtils.STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG;
 import static org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.long2String;
 import static org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.string2long;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -48,7 +49,6 @@ import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.test.UnitTestcaseTimeLimit;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -382,15 +382,12 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
   @Test
   @Timeout(value = 30)
   public void testSimpleHostName() {
-    assertEquals("Should return hostname when FQDN is specified",
-            "hadoop01",
-            StringUtils.simpleHostname("hadoop01.domain.com"));
-    assertEquals("Should return hostname when only hostname is specified",
-            "hadoop01",
-            StringUtils.simpleHostname("hadoop01"));
-    assertEquals("Should not truncate when IP address is passed",
-            "10.10.5.68",
-            StringUtils.simpleHostname("10.10.5.68"));
+    assertEquals("hadoop01", StringUtils.simpleHostname("hadoop01.domain.com"),
+       "Should return hostname when FQDN is specified");
+    assertEquals("hadoop01", StringUtils.simpleHostname("hadoop01"),
+        "Should return hostname when only hostname is specified");
+    assertEquals("10.10.5.68", StringUtils.simpleHostname("10.10.5.68"),
+        "Should not truncate when IP address is passed");
   }
 
   @Test
@@ -534,21 +531,18 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
   public void testStringCollectionSplitByEqualsSuccess() {
     Map<String, String> splitMap =
         StringUtils.getTrimmedStringCollectionSplitByEquals("");
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(0);
 
     splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(null);
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(0);
 
     splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
         "element.first.key1 = element.first.val1");
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(1)
         .containsEntry("element.first.key1", "element.first.val1");
@@ -556,8 +550,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
         "element.xyz.key1 =element.abc.val1 , element.xyz.key2= element.abc.val2");
 
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(2)
         .containsEntry("element.xyz.key1", "element.abc.val1")
@@ -571,8 +564,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
             + " element.xyz.key6      =       element.abc.val6 \n , \n"
             + "element.xyz.key7=element.abc.val7,\n");
 
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(7)
         .containsEntry("element.xyz.key1", "element.abc.val1")
@@ -585,8 +577,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
 
     splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
         "element.first.key1 = element.first.val2 ,element.first.key1 =element.first.val1");
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(1)
         .containsEntry("element.first.key1", "element.first.val1");
@@ -594,16 +585,14 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
         ",,, , ,, ,element.first.key1 = element.first.val2 ,"
             + "element.first.key1 = element.first.val1 , ,,, ,");
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(1)
         .containsEntry("element.first.key1", "element.first.val1");
 
     splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
         ",, , ,      ,, ,");
-    Assertions
-        .assertThat(splitMap)
+    assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(0);
 
@@ -647,7 +636,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
   }
 
   // Benchmark for StringUtils split
-  public static void main(String []args) {
+  /*public static void main(String []args) {
     final String TO_SPLIT = "foo,bar,baz,blah,blah";
     for (boolean useOurs : new boolean[] { false, true }) {
       for (int outer=0; outer < 10; outer++) {
@@ -671,5 +660,5 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
         }
       }
     }
-  }
+  }*/
 }

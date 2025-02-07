@@ -19,12 +19,14 @@
 package org.apache.hadoop.util;
 
 import org.apache.commons.lang3.SystemUtils;
-import org.junit.jupiter.api.Assertions;
-import org.junit.Assume;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestSignalLogger {
   public static final Logger LOG =
@@ -33,11 +35,11 @@ public class TestSignalLogger {
   @Test
   @Timeout(value = 60)
   public void testInstall() throws Exception {
-    Assume.assumeTrue(SystemUtils.IS_OS_UNIX);
+    assumeTrue(SystemUtils.IS_OS_UNIX);
     SignalLogger.INSTANCE.register(LOG);
     try {
       SignalLogger.INSTANCE.register(LOG);
-      Assertions.fail("expected IllegalStateException from double registration");
+      fail("expected IllegalStateException from double registration");
     } catch (IllegalStateException e) {
       // fall through
     }

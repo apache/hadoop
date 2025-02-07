@@ -106,7 +106,7 @@ public class TestIdentityHashStore {
     Key equalToKey1 = new Key("key1");
 
     // IdentityHashStore compares by object equality, not equals()
-    assertNull(store.get(equalToKey1)); 
+    assertNull(store.get(equalToKey1));
 
     assertTrue(!store.isEmpty());
     assertEquals(value1, store.get(key1));

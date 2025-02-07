@@ -231,14 +231,15 @@ public class TestZKCuratorManager {
 
   private void validateJaasConfiguration(String clientConfig, String principal, String keytab,
       ZooKeeper zk) {
-    assertEquals(clientConfig
-,         zk.getClientConfig().getProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY), "Validate that expected clientConfig is set in ZK config");
+    assertEquals(clientConfig,
+        zk.getClientConfig().getProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY),
+        "Validate that expected clientConfig is set in ZK config");
 
     AppConfigurationEntry[] entries = javax.security.auth.login.Configuration.getConfiguration()
         .getAppConfigurationEntry(clientConfig);
-    assertEquals(principal
-,         entries[0].getOptions().get("principal"), "Validate that expected principal is set in Jaas config");
-    assertEquals(keytab
-,         entries[0].getOptions().get("keyTab"), "Validate that expected keytab is set in Jaas config");
+    assertEquals(principal, entries[0].getOptions().get("principal"),
+        "Validate that expected principal is set in Jaas config");
+    assertEquals(keytab, entries[0].getOptions().get("keyTab"),
+        "Validate that expected keytab is set in Jaas config");
   }
 }

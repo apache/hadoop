@@ -21,6 +21,7 @@ package org.apache.hadoop.util.bloom;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.AbstractCollection;
 import java.util.BitSet;
@@ -28,7 +29,6 @@ import java.util.Iterator;
 
 import org.apache.hadoop.util.bloom.BloomFilterCommonTester.BloomFilterTestStrategy;
 import org.apache.hadoop.util.hash.Hash;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
@@ -112,24 +112,18 @@ public class TestBloomFilters {
     Key key = new Key(new byte[] { 48, 48 });
 
     filter.add(key);
-    assertTrue(
-       filter.membershipTest(key), "CountingBloomFilter.membership error ");
-    assertTrue(
-       filter.approximateCount(key) == 1, "CountingBloomFilter.approximateCount error");
+    assertTrue(filter.membershipTest(key), "CountingBloomFilter.membership error ");
+    assertTrue(filter.approximateCount(key) == 1, "CountingBloomFilter.approximateCount error");
 
     filter.add(key);
-    assertTrue(
-       filter.approximateCount(key) == 2, "CountingBloomFilter.approximateCount error");
+    assertTrue(filter.approximateCount(key) == 2, "CountingBloomFilter.approximateCount error");
 
     filter.delete(key);
-    assertTrue(
-       filter.membershipTest(key), "CountingBloomFilter.membership error ");
+    assertTrue(filter.membershipTest(key), "CountingBloomFilter.membership error ");
 
     filter.delete(key);
-    assertFalse(
-       filter.membershipTest(key), "CountingBloomFilter.membership error ");
-    assertTrue(
-       filter.approximateCount(key) == 0, "CountingBloomFilter.approximateCount error");
+    assertFalse(filter.membershipTest(key), "CountingBloomFilter.membership error ");
+    assertTrue(filter.approximateCount(key) == 0, "CountingBloomFilter.approximateCount error");
 
     BloomFilterCommonTester.of(hashId, numInsertions)
         .withFilterInstance(filter)
@@ -186,8 +180,7 @@ public class TestBloomFilters {
         .get(hashId);
 
     if (falsePositives == null)
-      Assertions.fail(String.format("false positives for hash %d not founded",
-          hashId));
+      fail(String.format("false positives for hash %d not founded", hashId));
 
     filter.addFalsePositive(falsePositives);
 
@@ -200,8 +193,8 @@ public class TestBloomFilters {
     }
 
     for (int i = 1 - digits.getStart(); i < numInsertions; i += 2) {
-      assertFalse(
-         filter.membershipTest(new Key(Integer.toString(i).getBytes())), " testRetouchedBloomFilterAddFalsePositive error " + i);
+      assertFalse(filter.membershipTest(new Key(Integer.toString(i).getBytes())),
+          " testRetouchedBloomFilterAddFalsePositive error " + i);
     }
   }
 
@@ -257,7 +250,7 @@ public class TestBloomFilters {
     bf.bits = BitSet.valueOf(new byte[] { (byte) 0x95 });
     BitSet origBitSet = (BitSet) bf.bits.clone();
     bf.not();
-    assertFalse(
-               bf.bits.intersects(origBitSet), "BloomFilter#not should have inverted all bits");
+    assertFalse(bf.bits.intersects(origBitSet),
+        "BloomFilter#not should have inverted all bits");
   }
 }

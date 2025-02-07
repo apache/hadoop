@@ -19,20 +19,19 @@
 package org.apache.hadoop.util;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestOptions {
 
   @Test
   public void testAppend() throws Exception {
-    assertArrayEquals(
-                     new String[]{"Dr.", "Who", "hi", "there"}
-,                       Options.prependOptions(new String[]{"hi", "there"},
-                                             "Dr.", "Who"), "first append");
-    assertArrayEquals(
-                     new String[]{"aa","bb","cc","dd","ee","ff"}
-,                       Options.prependOptions(new String[]{"dd", "ee", "ff"},
-                                             "aa", "bb", "cc"), "second append");
+    assertArrayEquals(new String[]{"Dr.", "Who", "hi", "there"},
+        Options.prependOptions(new String[]{"hi", "there"},
+        "Dr.", "Who"), "first append");
+    assertArrayEquals(new String[]{"aa","bb","cc","dd","ee","ff"},
+        Options.prependOptions(new String[]{"dd", "ee", "ff"},
+        "aa", "bb", "cc"), "second append");
   }
 
   @Test

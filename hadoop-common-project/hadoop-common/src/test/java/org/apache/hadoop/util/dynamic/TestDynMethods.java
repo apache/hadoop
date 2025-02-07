@@ -21,12 +21,16 @@ package org.apache.hadoop.util.dynamic;
 
 import java.util.concurrent.Callable;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Copied from {@code org.apache.parquet.util} test suites.
@@ -78,10 +82,10 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         .impl(Concatenator.class, String.class, String.class, String.class)
         .buildChecked();
 
-    Assertions.assertEquals("a-b", cat2.invoke(obj, "a", "b"),
+    assertEquals("a-b", cat2.invoke(obj, "a", "b"),
         "Should call the 2-arg version successfully");
 
-    Assertions.assertEquals("a-b", cat2.invoke(obj, "a", "b", "c"),
+    assertEquals("a-b", cat2.invoke(obj, "a", "b", "c"),
         "Should ignore extra arguments");
 
     DynMethods.UnboundMethod cat3 = new DynMethods.Builder("concat")
@@ -90,10 +94,10 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         .impl(Concatenator.class, String.class, String.class)
         .build();
 
-    Assertions.assertEquals("a-b-c", cat3.invoke(obj, "a", "b", "c"),
+    assertEquals("a-b-c", cat3.invoke(obj, "a", "b", "c"),
         "Should call the 3-arg version successfully");
 
-    Assertions.assertEquals("a-b-null", cat3.invoke(obj, "a", "b"),
+    assertEquals("a-b-null", cat3.invoke(obj, "a", "b"),
         "Should call the 3-arg version null padding");
   }
 
@@ -103,11 +107,11 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         .impl(Concatenator.class, String[].class)
         .buildChecked();
 
-    Assertions.assertEquals("abcde",
+    assertEquals("abcde",
         cat.invokeChecked(new Concatenator(), (Object) new String[]{"a", "b", "c", "d", "e"}),
         "Should use the varargs version");
 
-    Assertions.assertEquals("abcde",
+    assertEquals("abcde",
         cat.bind(new Concatenator())
         .invokeChecked((Object) new String[]{"a", "b", "c", "d", "e"}), "Should use the varargs version");
   }
@@ -150,7 +154,7 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         .impl(Concatenator.class, "concat", String.class, String.class)
         .buildChecked();
 
-    Assertions.assertEquals("a-b", cat.invoke(obj, "a", "b"),
+    assertEquals("a-b", cat.invoke(obj, "a", "b"),
         "Should find 2-arg concat method");
   }
 
@@ -161,7 +165,7 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         .impl(Concatenator.class.getName(), String.class, String.class)
         .buildChecked();
 
-    Assertions.assertEquals("a-b", cat.invoke(obj, "a", "b"),
+    assertEquals("a-b", cat.invoke(obj, "a", "b"),
         "Should find 2-arg concat method");
   }
 
@@ -178,13 +182,12 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         .hiddenImpl(Concatenator.class, String.class)
         .buildChecked();
 
-    Assertions.assertNotNull(
-       changeSep, "Should find hidden method with hiddenImpl");
+    assertNotNull(changeSep, "Should find hidden method with hiddenImpl");
 
     changeSep.invokeChecked(obj, "/");
 
-    Assertions.assertEquals("Should use separator / instead of -",
-        "a/b", obj.concat("a", "b"));
+    assertEquals("a/b", obj.concat("a", "b"),
+        "Should use separator / instead of -");
   }
 
   @Test
@@ -197,16 +200,16 @@ public class TestDynMethods extends AbstractHadoopTestBase {
     DynMethods.BoundMethod dashCat = cat.bind(new Concatenator("-"));
     DynMethods.BoundMethod underCat = cat.bind(new Concatenator("_"));
 
-    Assertions.assertEquals("a-b", dashCat.invoke("a", "b"),
+    assertEquals("a-b", dashCat.invoke("a", "b"),
         "Should use '-' object without passing");
-    Assertions.assertEquals("a_b", underCat.invoke("a", "b"),
+    assertEquals("a_b", underCat.invoke("a", "b"),
         "Should use '_' object without passing");
 
     DynMethods.BoundMethod slashCat = new DynMethods.Builder("concat")
         .impl(Concatenator.class, String.class, String.class)
         .buildChecked(new Concatenator("/"));
 
-    Assertions.assertEquals("a/b", slashCat.invoke("a", "b"),
+    assertEquals("a/b", slashCat.invoke("a", "b"),
         "Should use bound object from builder without passing");
   }
 
@@ -222,7 +225,7 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         builder.build(new Concatenator()));
 
     final DynMethods.UnboundMethod staticCat = builder.buildChecked();
-    Assertions.assertTrue(staticCat.isStatic(), "Should be static");
+    assertTrue(staticCat.isStatic(), "Should be static");
 
     intercept(IllegalStateException.class, () ->
         staticCat.bind(new Concatenator()));
@@ -234,7 +237,7 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         .impl(Concatenator.class, String[].class)
         .buildStaticChecked();
 
-    Assertions.assertEquals("abcde", staticCat.invokeChecked(
+    assertEquals("abcde", staticCat.invokeChecked(
         (Object) new String[]{"a", "b", "c", "d", "e"}),
         "Should call varargs static method cat(String...)");
   }
@@ -249,7 +252,7 @@ public class TestDynMethods extends AbstractHadoopTestBase {
     intercept(IllegalStateException.class, builder::buildStaticChecked);
 
     final DynMethods.UnboundMethod cat2 = builder.buildChecked();
-    Assertions.assertFalse(
+    assertFalse(
        cat2.isStatic(), "concat(String,String) should not be static");
 
     intercept(IllegalStateException.class, cat2::asStatic);
@@ -262,11 +265,11 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         .impl(Concatenator.class, String.class);
 
     DynMethods.UnboundMethod newConcatenator = builder.buildChecked();
-    Assertions.assertTrue(
+    assertTrue(
        newConcatenator instanceof DynConstructors.Ctor, "Should find constructor implementation");
-    Assertions.assertTrue(
+    assertTrue(
        newConcatenator.isStatic(), "Constructor should be a static method");
-    Assertions.assertFalse(
+    assertFalse(
        newConcatenator.isNoop(), "Constructor should not be NOOP");
 
     // constructors cannot be bound
@@ -276,12 +279,12 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         builder.build(new Concatenator()));
 
     Concatenator concatenator = newConcatenator.asStatic().invoke("*");
-    Assertions.assertEquals("Should function as a concatenator",
-        "a*b", concatenator.concat("a", "b"));
+    assertEquals("a*b", concatenator.concat("a", "b"),
+        "Should function as a concatenator");
 
     concatenator = newConcatenator.asStatic().invokeChecked("@");
-    Assertions.assertEquals("Should function as a concatenator",
-        "a@b", concatenator.concat("a", "b"));
+    assertEquals("a@b", concatenator.concat("a", "b"),
+        "Should function as a concatenator");
   }
 
   @Test
@@ -291,7 +294,7 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         .ctorImpl(Concatenator.class, String.class)
         .buildChecked();
 
-    Assertions.assertFalse(
+    assertFalse(
        newConcatenator instanceof DynConstructors.Ctor, "Should find factory method before constructor method");
   }
 
@@ -303,17 +306,17 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         .orNoop()
         .buildChecked();
 
-    Assertions.assertTrue(
+    assertTrue(
        noop.isNoop(), "No implementation found, should return NOOP");
-    Assertions.assertNull(
+    assertNull(
        noop.invoke(new Concatenator(), "a"), "NOOP should always return null");
-    Assertions.assertNull(
+    assertNull(
        noop.invoke(null, "a"), "NOOP can be called with null");
-    Assertions.assertNull(
+    assertNull(
        noop.bind(new Concatenator()).invoke("a"), "NOOP can be bound");
-    Assertions.assertNull(
+    assertNull(
        noop.bind(null).invoke("a"), "NOOP can be bound to null");
-    Assertions.assertNull(
+    assertNull(
        noop.asStatic().invoke("a"), "NOOP can be static");
   }
 }

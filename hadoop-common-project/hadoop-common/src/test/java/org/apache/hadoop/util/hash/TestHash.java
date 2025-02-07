@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.util.hash;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.Test;
 
@@ -27,12 +28,11 @@ public class TestHash {
   @Test
   public void testHash() {
     int iterations = 30;
-    assertTrue(
-       Hash.JENKINS_HASH == Hash.parseHashType("jenkins"), "testHash jenkins error !!!");
-    assertTrue(
-       Hash.MURMUR_HASH == Hash.parseHashType("murmur"), "testHash murmur error !!!");
-    assertTrue(
-       Hash.INVALID_HASH == Hash.parseHashType("undefined"), "testHash undefined");
+    assertTrue(Hash.JENKINS_HASH == Hash.parseHashType("jenkins"),
+        "testHash jenkins error !!!");
+    assertTrue(Hash.MURMUR_HASH == Hash.parseHashType("murmur"),
+        "testHash murmur error !!!");
+    assertTrue(Hash.INVALID_HASH == Hash.parseHashType("undefined"), "testHash undefined");
 
     Configuration cfg = new Configuration();
     cfg.set("hadoop.util.hash.type", "murmur");
@@ -40,50 +40,43 @@ public class TestHash {
 
     cfg = new Configuration();
     cfg.set("hadoop.util.hash.type", "jenkins");
-    assertTrue(
-       JenkinsHash.getInstance() == Hash.getInstance(cfg), "testHash jenkins configuration error !!!");
+    assertTrue(JenkinsHash.getInstance() == Hash.getInstance(cfg),
+        "testHash jenkins configuration error !!!");
 
     cfg = new Configuration();
-    assertTrue(
-       MurmurHash.getInstance() == Hash.getInstance(cfg), "testHash undefine configuration error !!!");
+    assertTrue(MurmurHash.getInstance() == Hash.getInstance(cfg),
+        "testHash undefine configuration error !!!");
 
-    assertTrue(
-       JenkinsHash.getInstance() == Hash.getInstance(Hash.JENKINS_HASH), "testHash error jenkin getInstance !!!");
-    assertTrue(
-       MurmurHash.getInstance() == Hash.getInstance(Hash.MURMUR_HASH), "testHash error murmur getInstance !!!");
+    assertTrue(JenkinsHash.getInstance() == Hash.getInstance(Hash.JENKINS_HASH),
+        "testHash error jenkin getInstance !!!");
+    assertTrue(MurmurHash.getInstance() == Hash.getInstance(Hash.MURMUR_HASH),
+        "testHash error murmur getInstance !!!");
 
-    assertNull(
-       Hash.getInstance(Hash.INVALID_HASH), "testHash error invalid getInstance !!!");
+    assertNull(Hash.getInstance(Hash.INVALID_HASH),
+        "testHash error invalid getInstance !!!");
 
     int murmurHash = Hash.getInstance(Hash.MURMUR_HASH).hash(LINE.getBytes());
     for (int i = 0; i < iterations; i++) {
-      assertTrue(
-         murmurHash == Hash.getInstance(Hash.MURMUR_HASH)
-              .hash(LINE.getBytes()), "multiple evaluation murmur hash error !!!");
+      assertTrue(murmurHash == Hash.getInstance(Hash.MURMUR_HASH)
+          .hash(LINE.getBytes()), "multiple evaluation murmur hash error !!!");
     }
 
     murmurHash = Hash.getInstance(Hash.MURMUR_HASH).hash(LINE.getBytes(), 67);
     for (int i = 0; i < iterations; i++) {
-      assertTrue(
-      
-         murmurHash == Hash.getInstance(Hash.MURMUR_HASH).hash(
-              LINE.getBytes(), 67), "multiple evaluation murmur hash error !!!");
+      assertTrue( murmurHash == Hash.getInstance(Hash.MURMUR_HASH).hash(
+          LINE.getBytes(), 67), "multiple evaluation murmur hash error !!!");
     }
 
     int jenkinsHash = Hash.getInstance(Hash.JENKINS_HASH).hash(LINE.getBytes());
     for (int i = 0; i < iterations; i++) {
-      assertTrue(
-      
-         jenkinsHash == Hash.getInstance(Hash.JENKINS_HASH).hash(
-              LINE.getBytes()), "multiple evaluation jenkins hash error !!!");
+      assertTrue(jenkinsHash == Hash.getInstance(Hash.JENKINS_HASH).hash(
+          LINE.getBytes()), "multiple evaluation jenkins hash error !!!");
     }
 
     jenkinsHash = Hash.getInstance(Hash.JENKINS_HASH).hash(LINE.getBytes(), 67);
     for (int i = 0; i < iterations; i++) {
-      assertTrue(
-      
-         jenkinsHash == Hash.getInstance(Hash.JENKINS_HASH).hash(
-              LINE.getBytes(), 67), "multiple evaluation jenkins hash error !!!");
+      assertTrue(jenkinsHash == Hash.getInstance(Hash.JENKINS_HASH).hash(
+         LINE.getBytes(), 67), "multiple evaluation jenkins hash error !!!");
     }   
   } 
 }

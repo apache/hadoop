@@ -21,12 +21,14 @@ package org.apache.hadoop.util.dynamic;
 
 import java.util.concurrent.Callable;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Derived from {@code org.apache.parquet.util} test suites.
@@ -76,8 +78,8 @@ public class TestDynConstructors extends AbstractHadoopTestBase {
         .buildChecked();
 
     Concatenator dashCat = sepCtor.newInstanceChecked("-");
-    Assertions.assertEquals("Should construct with the 1-arg version",
-        "a-b", dashCat.concat("a", "b"));
+    assertEquals("a-b", dashCat.concat("a", "b"),
+        "Should construct with the 1-arg version");
 
     intercept(IllegalArgumentException.class, () ->
         sepCtor.newInstanceChecked("/", "-"));
@@ -92,8 +94,8 @@ public class TestDynConstructors extends AbstractHadoopTestBase {
         .buildChecked();
 
     Concatenator cat = defaultCtor.newInstanceChecked();
-    Assertions.assertEquals("Should construct with the no-arg version",
-        "ab", cat.concat("a", "b"));
+    assertEquals("ab", cat.concat("a", "b"),
+        "Should construct with the no-arg version");
   }
 
   @Test
@@ -116,7 +118,7 @@ public class TestDynConstructors extends AbstractHadoopTestBase {
         .impl(Concatenator.class.getName(), String.class)
         .buildChecked();
 
-    Assertions.assertNotNull(sepCtor.newInstance("-"), "Should find 1-arg constructor");
+    assertNotNull(sepCtor.newInstance("-"), "Should find 1-arg constructor");
   }
 
   @Test
@@ -130,12 +132,12 @@ public class TestDynConstructors extends AbstractHadoopTestBase {
         .hiddenImpl(Concatenator.class.getName(), char.class)
         .buildChecked();
 
-    Assertions.assertNotNull(sepCtor, "Should find hidden ctor with hiddenImpl");
+    assertNotNull(sepCtor, "Should find hidden ctor with hiddenImpl");
 
     Concatenator slashCat = sepCtor.newInstanceChecked('/');
 
-    Assertions.assertEquals("Should use separator /",
-        "a/b", slashCat.concat("a", "b"));
+    assertEquals("a/b", slashCat.concat("a", "b"),
+        "Should use separator /");
   }
 
   @Test
@@ -144,7 +146,7 @@ public class TestDynConstructors extends AbstractHadoopTestBase {
         .impl(Concatenator.class.getName())
         .buildChecked();
 
-    Assertions.assertTrue(ctor.isStatic(), "Should always be static");
+    assertTrue(ctor.isStatic(), "Should always be static");
 
     intercept(IllegalStateException.class, () ->
         ctor.bind(null));
@@ -162,9 +164,9 @@ public class TestDynConstructors extends AbstractHadoopTestBase {
     intercept(IllegalArgumentException.class, () ->
         ctor.invoke("a"));
 
-    Assertions.assertNotNull(
+    assertNotNull(
        ctor.invokeChecked(null), "Should allow invokeChecked(null, ...)");
-    Assertions.assertNotNull(
+    assertNotNull(
        ctor.invoke(null), "Should allow invoke(null, ...)");
   }
 }

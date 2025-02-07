@@ -159,21 +159,26 @@ public class TestSecureZKCuratorManager {
       String truststoreLocation, String truststorePassword, ZooKeeper zk) {
     try (ClientX509Util x509Util = new ClientX509Util()) {
       //testing if custom values are set properly
-      assertEquals(keystoreLocation
-,           zk.getClientConfig().getProperty(x509Util.getSslKeystoreLocationProperty()), "Validate that expected clientConfig is set in ZK config");
-      assertEquals(keystorePassword
-,           zk.getClientConfig().getProperty(x509Util.getSslKeystorePasswdProperty()), "Validate that expected clientConfig is set in ZK config");
-      assertEquals(truststoreLocation
-,           zk.getClientConfig().getProperty(x509Util.getSslTruststoreLocationProperty()), "Validate that expected clientConfig is set in ZK config");
-      assertEquals(truststorePassword
-,           zk.getClientConfig().getProperty(x509Util.getSslTruststorePasswdProperty()), "Validate that expected clientConfig is set in ZK config");
+      assertEquals(keystoreLocation,
+           zk.getClientConfig().getProperty(x509Util.getSslKeystoreLocationProperty()),
+          "Validate that expected clientConfig is set in ZK config");
+      assertEquals(keystorePassword,
+          zk.getClientConfig().getProperty(x509Util.getSslKeystorePasswdProperty()),
+          "Validate that expected clientConfig is set in ZK config");
+      assertEquals(truststoreLocation,
+          zk.getClientConfig().getProperty(x509Util.getSslTruststoreLocationProperty()),
+          "Validate that expected clientConfig is set in ZK config");
+      assertEquals(truststorePassword,
+          zk.getClientConfig().getProperty(x509Util.getSslTruststorePasswdProperty()),
+          "Validate that expected clientConfig is set in ZK config");
     }
     //testing if constant values hardcoded into the code are set properly
-    assertEquals("Validate that expected clientConfig is set in ZK config", Boolean.TRUE.toString(),
-        zk.getClientConfig().getProperty(ZKClientConfig.SECURE_CLIENT));
-    assertEquals(
-       ClientCnxnSocketNetty.class.getCanonicalName()
-,         zk.getClientConfig().getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET), "Validate that expected clientConfig is set in ZK config");
+    assertEquals(Boolean.TRUE.toString(),
+        zk.getClientConfig().getProperty(ZKClientConfig.SECURE_CLIENT),
+        "Validate that expected clientConfig is set in ZK config");
+    assertEquals(ClientCnxnSocketNetty.class.getCanonicalName(),
+        zk.getClientConfig().getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET),
+        "Validate that expected clientConfig is set in ZK config");
   }
 
   @Test
@@ -187,14 +192,14 @@ public class TestSecureZKCuratorManager {
     SecurityUtil.TruststoreKeystore truststoreKeystore =
         new SecurityUtil.TruststoreKeystore(conf);
 
-    assertEquals("Validate that null value is converted to empty string.", "",
-        truststoreKeystore.getKeystoreLocation());
-    assertEquals("Validate that null value is converted to empty string.", "",
-        truststoreKeystore.getKeystorePassword());
-    assertEquals("Validate that null value is converted to empty string.", "",
-        truststoreKeystore.getTruststoreLocation());
-    assertEquals("Validate that null value is converted to empty string.", "",
-        truststoreKeystore.getTruststorePassword());
+    assertEquals("", truststoreKeystore.getKeystoreLocation(),
+        "Validate that null value is converted to empty string.");
+    assertEquals("", truststoreKeystore.getKeystorePassword(),
+        "Validate that null value is converted to empty string.");
+    assertEquals("", truststoreKeystore.getTruststoreLocation(),
+        "Validate that null value is converted to empty string.");
+    assertEquals("", truststoreKeystore.getTruststorePassword(),
+        "Validate that null value is converted to empty string.");
 
     //Validate that non-null values will remain intact
     conf.set(CommonConfigurationKeys.ZK_SSL_KEYSTORE_LOCATION, "/keystore.jks");
@@ -203,13 +208,13 @@ public class TestSecureZKCuratorManager {
     conf.set(CommonConfigurationKeys.ZK_SSL_TRUSTSTORE_PASSWORD, "truststorePassword");
     SecurityUtil.TruststoreKeystore truststoreKeystore1 =
         new SecurityUtil.TruststoreKeystore(conf);
-    assertEquals("Validate that non-null value kept intact.", "/keystore.jks",
-        truststoreKeystore1.getKeystoreLocation());
-    assertEquals("Validate that null value is converted to empty string.", "keystorePassword",
-        truststoreKeystore1.getKeystorePassword());
-    assertEquals("Validate that null value is converted to empty string.", "/truststore.jks",
-        truststoreKeystore1.getTruststoreLocation());
-    assertEquals("Validate that null value is converted to empty string.", "truststorePassword",
-        truststoreKeystore1.getTruststorePassword());
+    assertEquals("/keystore.jks", truststoreKeystore1.getKeystoreLocation(),
+        "Validate that non-null value kept intact.");
+    assertEquals("keystorePassword", truststoreKeystore1.getKeystorePassword(),
+        "Validate that null value is converted to empty string.");
+    assertEquals("/truststore.jks", truststoreKeystore1.getTruststoreLocation(),
+        "Validate that null value is converted to empty string.");
+    assertEquals("truststorePassword", truststoreKeystore1.getTruststorePassword(),
+        "Validate that null value is converted to empty string.");
   }
 }

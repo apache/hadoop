@@ -17,19 +17,21 @@
  */
 package org.apache.hadoop.util;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestStopWatch {
 
   @Test
   public void testStartAndStop() throws Exception {
     try (StopWatch sw = new StopWatch()) {
-      Assertions.assertFalse(sw.isRunning());
+      assertFalse(sw.isRunning());
       sw.start();
-      Assertions.assertTrue(sw.isRunning());
+      assertTrue(sw.isRunning());
       sw.stop();
-      Assertions.assertFalse(sw.isRunning());
+      assertFalse(sw.isRunning());
     }
   }
 
@@ -46,16 +48,16 @@ public class TestStopWatch {
     try {
       sw.stop();
     } catch (Exception e) {
-      Assertions.assertTrue(
-         e instanceof IllegalStateException, "IllegalStateException is expected");
+      assertTrue(e instanceof IllegalStateException,
+          "IllegalStateException is expected");
     }
     sw.reset();
     sw.start();
     try {
       sw.start();
     } catch (Exception e) {
-      Assertions.assertTrue(
-         e instanceof IllegalStateException, "IllegalStateException is expected");
+      assertTrue(e instanceof IllegalStateException,
+          "IllegalStateException is expected");
     }
   }
 

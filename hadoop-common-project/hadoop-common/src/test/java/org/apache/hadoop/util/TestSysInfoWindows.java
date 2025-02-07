@@ -20,7 +20,7 @@ package org.apache.hadoop.util;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestSysInfoWindows {
 

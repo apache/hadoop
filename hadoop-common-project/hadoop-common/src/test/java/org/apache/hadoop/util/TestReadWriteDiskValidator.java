@@ -30,7 +30,6 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Assertions;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -64,13 +63,12 @@ public class TestReadWriteDiskValidator {
 
     ReadWriteDiskValidatorMetrics metric =
         ReadWriteDiskValidatorMetrics.getMetric(testDir.toString());
-    Assertions.assertEquals(
-       metric.getFileReadQuantiles()[0].getEstimator().getCount(), count, "The count number of estimator in MutableQuantiles"
+    assertEquals(metric.getFileReadQuantiles()[0].getEstimator().getCount(), count,
+        "The count number of estimator in MutableQuantiles"
         + "metrics of file read is not right");
 
-    Assertions.assertEquals(
-       metric.getFileWriteQuantiles()[0].getEstimator().getCount()
-,         count, "The count number of estimator in MutableQuantiles"
+    assertEquals(metric.getFileWriteQuantiles()[0].getEstimator().getCount(),
+        count, "The count number of estimator in MutableQuantiles"
         + "metrics of file write is not right");
 
     MetricsSource source = ms.getSource(
@@ -154,8 +152,8 @@ public class TestReadWriteDiskValidator {
         "FailureCount", 2);
     Long lastFailureTime2 = (Long) MetricsRecords.getMetricValueByName(
         collector.getRecords().get(1), "LastFailureTime");
-    assertTrue(
-       lastFailureTime1 < lastFailureTime2, "The first failure time should be less than the second one");
+    assertTrue(lastFailureTime1 < lastFailureTime2,
+        "The first failure time should be less than the second one");
 
     testDir.delete();
   }

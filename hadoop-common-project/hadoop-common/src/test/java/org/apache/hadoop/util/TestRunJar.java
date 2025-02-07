@@ -47,7 +47,6 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -106,10 +105,10 @@ public class TestRunJar {
     // Unjar everything
     RunJar.unJar(new File(TEST_ROOT_DIR, TEST_JAR_NAME),
                  unjarDir, MATCH_ANY);
-    assertTrue(
-              new File(unjarDir, TestRunJar.FOOBAR_TXT).exists(), "foobar unpacked");
-    assertTrue(
-              new File(unjarDir, FOOBAZ_TXT).exists(), "foobaz unpacked");
+    assertTrue(new File(unjarDir, TestRunJar.FOOBAR_TXT).exists(),
+        "foobar unpacked");
+    assertTrue(new File(unjarDir, FOOBAZ_TXT).exists(),
+        "foobaz unpacked");
   }
 
   /**
@@ -123,10 +122,9 @@ public class TestRunJar {
     RunJar.unJar(new File(TEST_ROOT_DIR, TEST_JAR_NAME),
                  unjarDir,
                  Pattern.compile(".*baz.*"));
-    assertFalse(
-               new File(unjarDir, TestRunJar.FOOBAR_TXT).exists(), "foobar not unpacked");
-    assertTrue(
-              new File(unjarDir, FOOBAZ_TXT).exists(), "foobaz unpacked");
+    assertFalse(new File(unjarDir, TestRunJar.FOOBAR_TXT).exists(),
+        "foobar not unpacked");
+    assertTrue(new File(unjarDir, FOOBAZ_TXT).exists(), "foobaz unpacked");
   }
 
   private File generateBigJar(File dir) throws Exception {
@@ -157,18 +155,18 @@ public class TestRunJar {
   public void testBigJar() throws Exception {
     Random r = new Random(System.currentTimeMillis());
     File dir = new File(TEST_ROOT_DIR, Long.toHexString(r.nextLong()));
-    Assertions.assertTrue(dir.mkdirs());
+    assertTrue(dir.mkdirs());
     File input = generateBigJar(dir);
     File output = new File(dir, "job2.jar");
     try {
       try (InputStream is = new FileInputStream(input)) {
         RunJar.unJarAndSave(is, dir, "job2.jar", Pattern.compile(".*"));
       }
-      Assertions.assertEquals(input.length(), output.length());
+      assertEquals(input.length(), output.length());
       for (int i = 0; i < 10; ++i) {
         File subdir = new File(dir, ((i % 2 == 0) ? "dir/" : ""));
         File f = new File(subdir, "f" + Integer.toString(i));
-        Assertions.assertEquals(756, f.length());
+        assertEquals(756, f.length());
       }
     } finally {
       // Clean up
@@ -192,8 +190,8 @@ public class TestRunJar {
 
   private File getUnjarDir(String dirName) {
     File unjarDir = new File(TEST_ROOT_DIR, dirName);
-    assertFalse(
-               new File(unjarDir, TestRunJar.FOOBAR_TXT).exists(), "unjar dir shouldn't exist at test start");
+    assertFalse(new File(unjarDir, TestRunJar.FOOBAR_TXT).exists(),
+        "unjar dir shouldn't exist at test start");
     return unjarDir;
   }
 

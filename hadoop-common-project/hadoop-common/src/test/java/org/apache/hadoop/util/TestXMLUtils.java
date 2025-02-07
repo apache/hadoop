@@ -33,7 +33,6 @@ import javax.xml.transform.stream.StreamSource;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
@@ -41,7 +40,9 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestXMLUtils extends AbstractHadoopTestBase {
 
@@ -151,14 +152,14 @@ public class TestXMLUtils extends AbstractHadoopTestBase {
     TransformerFactory factory = TransformerFactory.newInstance();
     AtomicBoolean flag1 = new AtomicBoolean(true);
     XMLUtils.bestEffortSetAttribute(factory, flag1, "unsupportedAttribute false", "abc");
-    Assertions.assertFalse(flag1.get(), "unexpected attribute results in return of false?");
+    assertFalse(flag1.get(), "unexpected attribute results in return of false?");
     AtomicBoolean flag2 = new AtomicBoolean(true);
     XMLUtils.bestEffortSetAttribute(factory, flag2, XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    Assertions.assertTrue(flag2.get(), "expected attribute results in return of true?");
+    assertTrue(flag2.get(), "expected attribute results in return of true?");
     AtomicBoolean flag3 = new AtomicBoolean(false);
     XMLUtils.bestEffortSetAttribute(factory, flag3, XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    Assertions.assertFalse(
-           flag3.get(), "expected attribute results in return of false if input flag is false?");
+    assertFalse(flag3.get(),
+        "expected attribute results in return of false if input flag is false?");
   }
 
   private static InputStream getResourceStream(final String filename) {

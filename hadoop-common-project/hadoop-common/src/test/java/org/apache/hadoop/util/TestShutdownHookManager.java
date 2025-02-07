@@ -102,13 +102,11 @@ public class TestShutdownHookManager {
     ShutdownHookManager.HookEntry hookEntry5 = mgr.getShutdownHooksInOrder()
         .get(0);
     assertEquals(hook5, hookEntry5.getHook());
-    assertEquals(
-       ShutdownHookManager.getShutdownTimeout(new Configuration())
-,         hookEntry5.getTimeout(), "default timeout not used");
+    assertEquals(ShutdownHookManager.getShutdownTimeout(new Configuration()),
+        hookEntry5.getTimeout(), "default timeout not used");
     assertEquals(5, hookEntry5.getPriority(), "hook priority");
     // remove this to avoid a longer sleep in the test run
-    assertTrue(
-       mgr.removeShutdownHook(hook5), "failed to remove " + hook5);
+    assertTrue(mgr.removeShutdownHook(hook5), "failed to remove " + hook5);
 
 
     // now execute the hook shutdown sequence
@@ -131,8 +129,7 @@ public class TestShutdownHookManager {
 
     // check the state of some of the invoked hooks
     // hook4 was invoked first, but it timed out.
-    assertEquals(
-       1, hook4.invokedOrder, "Expected to be invoked first " + hook4);
+    assertEquals(1, hook4.invokedOrder, "Expected to be invoked first " + hook4);
     assertFalse(hook4.completed, "Expected to time out " + hook4);
 
 
@@ -140,18 +137,17 @@ public class TestShutdownHookManager {
     // is the longest.
     assertTrue(hook1.completed, "Expected to complete " + hook1);
     long invocationInterval = hook1.startTime - hook4.startTime;
-    assertTrue(
-       invocationInterval >= hook4timeout * 1000, "invocation difference too short " + invocationInterval);
-    assertTrue(
-       invocationInterval < hook4.sleepTime, "sleeping hook4 blocked other threads for " + invocationInterval);
+    assertTrue(invocationInterval >= hook4timeout * 1000,
+        "invocation difference too short " + invocationInterval);
+    assertTrue(invocationInterval < hook4.sleepTime,
+        "sleeping hook4 blocked other threads for " + invocationInterval);
 
     // finally, clear the hooks
     mgr.clearShutdownHooks();
     // and verify that the hooks are empty
     assertFalse(mgr.hasShutdownHook(hook1));
-    assertEquals(
-       0
-,         mgr.getShutdownHooksInOrder().size(), "shutdown hook list is not empty");
+    assertEquals(0, mgr.getShutdownHooksInOrder().size(),
+        "shutdown hook list is not empty");
   }
 
   @Test
@@ -161,8 +157,8 @@ public class TestShutdownHookManager {
     long shutdownTimeout = 5;
     conf.setTimeDuration(SERVICE_SHUTDOWN_TIMEOUT,
         shutdownTimeout, TimeUnit.SECONDS);
-    assertEquals(shutdownTimeout,
-        ShutdownHookManager.getShutdownTimeout(conf), SERVICE_SHUTDOWN_TIMEOUT);
+    assertEquals(shutdownTimeout, ShutdownHookManager.getShutdownTimeout(conf),
+        SERVICE_SHUTDOWN_TIMEOUT);
   }
 
   /**
@@ -223,8 +219,8 @@ public class TestShutdownHookManager {
     mgr.addShutdownHook(hook1, 9); // create Hook1 with priority 9
     assertTrue(mgr.hasShutdownHook(hook1), "No hook1"); // hook1 lookup works
     assertEquals(1, mgr.getShutdownHooksInOrder().size()); // 1 hook
-    assertFalse(
-     mgr.removeShutdownHook(hook2), "Delete hook2 should not be allowed");
+    assertFalse(mgr.removeShutdownHook(hook2),
+        "Delete hook2 should not be allowed");
     assertTrue(mgr.removeShutdownHook(hook1), "Can't delete hook1");
     assertEquals(0, mgr.getShutdownHooksInOrder().size());
   }
