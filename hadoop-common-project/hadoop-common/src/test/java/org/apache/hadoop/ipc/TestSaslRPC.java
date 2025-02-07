@@ -266,7 +266,7 @@ public class TestSaslRPC extends TestRpcBase {
   @MethodSource("data")
   public void testErrorMessage(QualityOfProtection[] pQop,
       QualityOfProtection pExpectedQop, String pSaslPropertiesResolver) throws Exception {
-   initTestSaslRPC(pQop, pExpectedQop, pSaslPropertiesResolver);
+    initTestSaslRPC(pQop, pExpectedQop, pSaslPropertiesResolver);
     BadTokenSecretManager sm = new BadTokenSecretManager();
     final Server server = setupTestServer(conf, 5, sm);
 
