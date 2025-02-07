@@ -59,7 +59,7 @@ public class TestWinUtils {
     assumeWindows();
     TEST_DIR.mkdirs();
     assertTrue(TEST_DIR.isDirectory(),
-        "Failed to create Test directory " + TEST_DIR );
+        "Failed to create Test directory " + TEST_DIR);
     winutils = Shell.getWinUtilsPath();
   }
 
