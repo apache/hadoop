@@ -418,20 +418,20 @@ public class TestWebDelegationToken {
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       ugi.addToken(token.getDelegationToken());
       ugi.doAs(new PrivilegedExceptionAction<Void>() {
-                 @Override
-                 public Void run() throws Exception {
-                   HttpURLConnection conn = aUrl.openConnection(nonAuthURL, new DelegationTokenAuthenticatedURL.Token());
-                   assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
-                   if (useQS) {
-                     assertNull(conn.getHeaderField("UsingHeader"));
-                     assertNotNull(conn.getHeaderField("UsingQueryString"));
-                   } else {
-                     assertNotNull(conn.getHeaderField("UsingHeader"));
-                     assertNull(conn.getHeaderField("UsingQueryString"));
-                   }
-                   return null;
-                 }
-               });
+        @Override
+        public Void run() throws Exception {
+          HttpURLConnection conn = aUrl.openConnection(nonAuthURL, new DelegationTokenAuthenticatedURL.Token());
+          assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+          if (useQS) {
+            assertNull(conn.getHeaderField("UsingHeader"));
+            assertNotNull(conn.getHeaderField("UsingQueryString"));
+          } else {
+            assertNotNull(conn.getHeaderField("UsingHeader"));
+            assertNull(conn.getHeaderField("UsingQueryString"));
+          }
+          return null;
+        }
+      });
 
 
     } finally {
@@ -558,17 +558,17 @@ public class TestWebDelegationToken {
           DelegationTokenAuthenticatedURL aUrl =
               new DelegationTokenAuthenticatedURL();
           HttpURLConnection conn = aUrl.openConnection(url, token);
-         assertEquals(HttpURLConnection.HTTP_OK,
+          assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
           List<String> ret = IOUtils.readLines(conn.getInputStream(), StandardCharsets.UTF_8);
-         assertEquals(1, ret.size());
-         assertEquals(FOO_USER, ret.get(0));
+          assertEquals(1, ret.size());
+          assertEquals(FOO_USER, ret.get(0));
 
           try {
             aUrl.getDelegationToken(url, token, FOO_USER);
-           fail();
+            fail();
           } catch (AuthenticationException ex) {
-           assertTrue(ex.getMessage().contains(
+            assertTrue(ex.getMessage().contains(
                 "delegation token operation"));
           }
           return null;
@@ -779,7 +779,7 @@ public class TestWebDelegationToken {
 
       try {
         aUrl.getDelegationToken(url, token, FOO_USER, doAsUser);
-       fail();
+        fail();
       } catch (AuthenticationException ex) {
         assertTrue(ex.getCause().getMessage().contains("GSSException"));
       }

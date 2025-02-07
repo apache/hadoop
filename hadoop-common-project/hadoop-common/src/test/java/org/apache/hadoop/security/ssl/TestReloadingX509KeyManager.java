@@ -42,10 +42,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class TestReloadingX509KeyManager {
 
   private static final String BASEDIR = GenericTestUtils.getTempPath(
-    TestReloadingX509TrustManager.class.getSimpleName());
+      TestReloadingX509TrustManager.class.getSimpleName());
 
   private final GenericTestUtils.LogCapturer reloaderLog = GenericTestUtils.LogCapturer.captureLogs(
-    FileMonitoringTimerTask.LOG);
+      FileMonitoringTimerTask.LOG);
 
   @BeforeAll
   public static void setUp() throws Exception {
@@ -75,8 +75,8 @@ public class TestReloadingX509KeyManager {
       os.close();
 
       ReloadingX509KeystoreManager tm =
-         new ReloadingX509KeystoreManager("jks", keystoreLocation,
-         "password", "password");
+          new ReloadingX509KeystoreManager("jks", keystoreLocation,
+          "password", "password");
     });
   }
 
@@ -90,32 +90,33 @@ public class TestReloadingX509KeyManager {
     createKeyStore(keystoreLocation, "password", "cert1", kp.getPrivate(), sCert);
 
     long reloadInterval = 10;
-    Timer fileMonitoringTimer = new Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
+    Timer fileMonitoringTimer =
+        new Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
     ReloadingX509KeystoreManager tm =
         new ReloadingX509KeystoreManager("jks", keystoreLocation,
         "password", "password");
     try {
-        fileMonitoringTimer.schedule(new FileMonitoringTimerTask(
-            Paths.get(keystoreLocation), tm::loadFrom,null), reloadInterval, reloadInterval);
-        assertEquals(kp.getPrivate(), tm.getPrivateKey("cert1"));
+      fileMonitoringTimer.schedule(new FileMonitoringTimerTask(
+          Paths.get(keystoreLocation), tm::loadFrom,null), reloadInterval, reloadInterval);
+      assertEquals(kp.getPrivate(), tm.getPrivateKey("cert1"));
 
-        // Wait so that the file modification time is different
-        Thread.sleep((reloadInterval+ 1000));
+      // Wait so that the file modification time is different
+      Thread.sleep((reloadInterval+ 1000));
 
-        // Change the certificate with a new keypair
-        final KeyPair anotherKP = generateKeyPair("RSA");
-        sCert = KeyStoreTestUtil.generateCertificate("CN=localhost, O=server", anotherKP, 30,
-            "SHA1withRSA");
-        createKeyStore(keystoreLocation, "password", "cert1", anotherKP.getPrivate(), sCert);
+      // Change the certificate with a new keypair
+      final KeyPair anotherKP = generateKeyPair("RSA");
+      sCert = KeyStoreTestUtil.generateCertificate("CN=localhost, O=server", anotherKP, 30,
+          "SHA1withRSA");
+      createKeyStore(keystoreLocation, "password", "cert1", anotherKP.getPrivate(), sCert);
 
-        GenericTestUtils.waitFor(new Supplier<Boolean>() {
-            @Override
-            public Boolean get() {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+          @Override
+          public Boolean get() {
                 return tm.getPrivateKey("cert1").equals(kp.getPrivate());
             }
-        }, (int) reloadInterval, 100000);
+      }, (int) reloadInterval, 100000);
     } finally {
-        fileMonitoringTimer.cancel();
+      fileMonitoringTimer.cancel();
     }
   }
 
@@ -128,34 +129,35 @@ public class TestReloadingX509KeyManager {
     createKeyStore(keystoreLocation, "password", "cert1", kp.getPrivate(), cert1);
 
     long reloadInterval = 10;
-    Timer fileMonitoringTimer = new Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
+    Timer fileMonitoringTimer =
+        new Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
     ReloadingX509KeystoreManager tm =
         new ReloadingX509KeystoreManager("jks", keystoreLocation,
         "password",
         "password");
 
     try {
-        fileMonitoringTimer.schedule(new FileMonitoringTimerTask(
-            Paths.get(keystoreLocation), tm::loadFrom,null), reloadInterval, reloadInterval);
-        assertEquals(kp.getPrivate(), tm.getPrivateKey("cert1"));
+      fileMonitoringTimer.schedule(new FileMonitoringTimerTask(
+          Paths.get(keystoreLocation), tm::loadFrom,null), reloadInterval, reloadInterval);
+      assertEquals(kp.getPrivate(), tm.getPrivateKey("cert1"));
 
-        assertFalse(reloaderLog.getOutput().contains(
-            FileMonitoringTimerTask.PROCESS_ERROR_MESSAGE));
+      assertFalse(reloaderLog.getOutput().contains(
+          FileMonitoringTimerTask.PROCESS_ERROR_MESSAGE));
 
-        // Wait for the first reload to happen so we actually detect a change after the delete
-        Thread.sleep((reloadInterval+ 1000));
+      // Wait for the first reload to happen so we actually detect a change after the delete
+      Thread.sleep((reloadInterval+ 1000));
 
-        new File(keystoreLocation).delete();
+      new File(keystoreLocation).delete();
 
-        // Wait for the reload to happen and log to get written to
-        Thread.sleep((reloadInterval+ 1000));
+      // Wait for the reload to happen and log to get written to
+      Thread.sleep((reloadInterval+ 1000));
 
-        waitForFailedReloadAtLeastOnce((int) reloadInterval);
+      waitForFailedReloadAtLeastOnce((int) reloadInterval);
 
-        assertEquals(kp.getPrivate(), tm.getPrivateKey("cert1"));
+      assertEquals(kp.getPrivate(), tm.getPrivateKey("cert1"));
     } finally {
-        reloaderLog.stopCapturing();
-        fileMonitoringTimer.cancel();
+      reloaderLog.stopCapturing();
+      fileMonitoringTimer.cancel();
     }
   }
 

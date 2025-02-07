@@ -325,6 +325,6 @@ public class TestDtUtilShell {
     assertTrue(outContent.toString().contains(KIND_IMPORT.toString()),
         "test print after import output:\n" + outContent);
     assertTrue(outContent.toString().contains(alias),
-       "test print after import with alias output:\n" + outContent);
+        "test print after import with alias output:\n" + outContent);
   }
 }
