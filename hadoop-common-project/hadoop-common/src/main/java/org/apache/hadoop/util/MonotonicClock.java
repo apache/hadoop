@@ -19,8 +19,6 @@ package org.apache.hadoop.util;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.util.Clock;
-import org.apache.hadoop.util.Time;
 
 /**
  * A monotonic clock from some arbitrary time base in the past, counting in
