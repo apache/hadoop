@@ -115,8 +115,8 @@ public class TestXMLUtils extends AbstractHadoopTestBase {
     assertThrows(TransformerException.class, () -> {
       Transformer transformer = XMLUtils.newSecureTransformerFactory().newTransformer();
       try (
-         InputStream stream = getResourceStream("/xml/external-dtd.xml");
-         StringWriter stringWriter = new StringWriter()
+        InputStream stream = getResourceStream("/xml/external-dtd.xml");
+        StringWriter stringWriter = new StringWriter()
       ) {
         transformer.transform(new StreamSource(stream), new StreamResult(stringWriter));
       }
@@ -139,8 +139,8 @@ public class TestXMLUtils extends AbstractHadoopTestBase {
     assertThrows(TransformerException.class, () -> {
       Transformer transformer = XMLUtils.newSecureSAXTransformerFactory().newTransformer();
       try (
-         InputStream stream = getResourceStream("/xml/external-dtd.xml");
-         StringWriter stringWriter = new StringWriter()
+        InputStream stream = getResourceStream("/xml/external-dtd.xml");
+        StringWriter stringWriter = new StringWriter()
       ) {
         transformer.transform(new StreamSource(stream), new StreamResult(stringWriter));
       }

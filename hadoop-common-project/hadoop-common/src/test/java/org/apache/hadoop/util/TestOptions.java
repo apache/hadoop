@@ -29,7 +29,7 @@ public class TestOptions {
     assertArrayEquals(new String[]{"Dr.", "Who", "hi", "there"},
         Options.prependOptions(new String[]{"hi", "there"},
         "Dr.", "Who"), "first append");
-    assertArrayEquals(new String[]{"aa","bb","cc","dd","ee","ff"},
+    assertArrayEquals(new String[]{"aa", "bb", "cc", "dd", "ee", "ff"},
         Options.prependOptions(new String[]{"dd", "ee", "ff"},
         "aa", "bb", "cc"), "second append");
   }

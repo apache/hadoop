@@ -31,15 +31,15 @@ public class TestProgress {
     assertEquals(0, progress.getProgress(), 0.0);
 
     progress.set(Float.NEGATIVE_INFINITY);
-    assertEquals(0,progress.getProgress(),0.0);
+    assertEquals(0, progress.getProgress(), 0.0);
 
     progress.set(-1);
-    assertEquals(0,progress.getProgress(),0.0);
+    assertEquals(0, progress.getProgress(), 0.0);
 
     progress.set((float) 1.1);
-    assertEquals(1,progress.getProgress(),0.0);
+    assertEquals(1, progress.getProgress(), 0.0);
 
     progress.set(Float.POSITIVE_INFINITY);
-    assertEquals(1,progress.getProgress(),0.0);
+    assertEquals(1, progress.getProgress(), 0.0);
   }
 }

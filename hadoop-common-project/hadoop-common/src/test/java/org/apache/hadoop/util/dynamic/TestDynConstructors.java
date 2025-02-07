@@ -164,9 +164,8 @@ public class TestDynConstructors extends AbstractHadoopTestBase {
     intercept(IllegalArgumentException.class, () ->
         ctor.invoke("a"));
 
-    assertNotNull(
-       ctor.invokeChecked(null), "Should allow invokeChecked(null, ...)");
-    assertNotNull(
-       ctor.invoke(null), "Should allow invoke(null, ...)");
+    assertNotNull(ctor.invokeChecked(null),
+        "Should allow invokeChecked(null, ...)");
+    assertNotNull(ctor.invoke(null), "Should allow invoke(null, ...)");
   }
 }

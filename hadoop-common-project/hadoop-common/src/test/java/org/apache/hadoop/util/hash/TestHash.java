@@ -63,7 +63,7 @@ public class TestHash {
 
     murmurHash = Hash.getInstance(Hash.MURMUR_HASH).hash(LINE.getBytes(), 67);
     for (int i = 0; i < iterations; i++) {
-      assertTrue( murmurHash == Hash.getInstance(Hash.MURMUR_HASH).hash(
+      assertTrue(murmurHash == Hash.getInstance(Hash.MURMUR_HASH).hash(
           LINE.getBytes(), 67), "multiple evaluation murmur hash error !!!");
     }
 
@@ -76,7 +76,7 @@ public class TestHash {
     jenkinsHash = Hash.getInstance(Hash.JENKINS_HASH).hash(LINE.getBytes(), 67);
     for (int i = 0; i < iterations; i++) {
       assertTrue(jenkinsHash == Hash.getInstance(Hash.JENKINS_HASH).hash(
-         LINE.getBytes(), 67), "multiple evaluation jenkins hash error !!!");
+          LINE.getBytes(), 67), "multiple evaluation jenkins hash error !!!");
     }   
   } 
 }

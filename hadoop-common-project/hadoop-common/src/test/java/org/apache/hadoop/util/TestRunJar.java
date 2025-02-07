@@ -184,8 +184,10 @@ public class TestRunJar {
             unjarDir, MATCH_ANY);
 
     String failureMessage = "Last modify time was lost during unJar";
-    assertEquals(MOCKED_NOW, new File(unjarDir, TestRunJar.FOOBAR_TXT).lastModified(), failureMessage);
-    assertEquals(MOCKED_NOW_PLUS_TWO_SEC, new File(unjarDir, FOOBAZ_TXT).lastModified(), failureMessage);
+    assertEquals(MOCKED_NOW, new File(unjarDir, TestRunJar.FOOBAR_TXT).lastModified(),
+        failureMessage);
+    assertEquals(MOCKED_NOW_PLUS_TWO_SEC, new File(unjarDir, FOOBAZ_TXT).lastModified(),
+        failureMessage);
   }
 
   private File getUnjarDir(String dirName) {

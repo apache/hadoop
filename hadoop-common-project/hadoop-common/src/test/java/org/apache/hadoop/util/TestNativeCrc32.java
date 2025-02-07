@@ -94,7 +94,7 @@ public class TestNativeCrc32 {
   @ParameterizedTest
   @MethodSource("data")
   public void testVerifyChunkedSumsSuccessOddSize(DataChecksum.Type pChecksumType)
-    throws ChecksumException {
+      throws ChecksumException {
     initTestNativeCrc32(pChecksumType);
     // Test checksum with an odd number of bytes. This is a corner case that
     // is often broken in checksum calculation, because there is an loop which
@@ -113,7 +113,7 @@ public class TestNativeCrc32 {
   @ParameterizedTest
   @MethodSource("data")
   public void testVerifyChunkedSumsByteArraySuccess(DataChecksum.Type pChecksumType)
-    throws ChecksumException {
+      throws ChecksumException {
     initTestNativeCrc32(pChecksumType);
     allocateArrayByteBuffers();
     fillDataAndValidChecksums();
@@ -138,7 +138,7 @@ public class TestNativeCrc32 {
   @ParameterizedTest
   @MethodSource("data")
   public void testCalculateChunkedSumsSuccess(DataChecksum.Type pChecksumType)
-    throws ChecksumException {
+      throws ChecksumException {
     initTestNativeCrc32(pChecksumType);
     allocateDirectByteBuffers();
     fillDataAndValidChecksums();
@@ -149,7 +149,7 @@ public class TestNativeCrc32 {
   @ParameterizedTest
   @MethodSource("data")
   public void testCalculateChunkedSumsFail(DataChecksum.Type pChecksumType)
-    throws ChecksumException {
+      throws ChecksumException {
     initTestNativeCrc32(pChecksumType);
     allocateDirectByteBuffers();
     fillDataAndInvalidChecksums();
@@ -160,7 +160,7 @@ public class TestNativeCrc32 {
   @ParameterizedTest
   @MethodSource("data")
   public void testCalculateChunkedSumsByteArraySuccess(DataChecksum.Type pChecksumType)
-    throws ChecksumException {
+      throws ChecksumException {
     initTestNativeCrc32(pChecksumType);
     allocateArrayByteBuffers();
     fillDataAndValidChecksums();
@@ -172,7 +172,7 @@ public class TestNativeCrc32 {
   @ParameterizedTest
   @MethodSource("data")
   public void testCalculateChunkedSumsByteArrayFail(DataChecksum.Type pChecksumType)
-    throws ChecksumException {
+      throws ChecksumException {
     initTestNativeCrc32(pChecksumType);
     allocateArrayByteBuffers();
     fillDataAndInvalidChecksums();
@@ -185,7 +185,7 @@ public class TestNativeCrc32 {
   @MethodSource("data")
   @SuppressWarnings("deprecation")
   public void testNativeVerifyChunkedSumsSuccess(DataChecksum.Type pChecksumType)
-    throws ChecksumException {
+      throws ChecksumException {
     initTestNativeCrc32(pChecksumType);
     allocateDirectByteBuffers();
     fillDataAndValidChecksums();

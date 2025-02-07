@@ -113,7 +113,8 @@ public class TestDynMethods extends AbstractHadoopTestBase {
 
     assertEquals("abcde",
         cat.bind(new Concatenator())
-        .invokeChecked((Object) new String[]{"a", "b", "c", "d", "e"}), "Should use the varargs version");
+        .invokeChecked((Object) new String[]{"a", "b", "c", "d", "e"}),
+        "Should use the varargs version");
   }
 
   @Test
@@ -252,8 +253,8 @@ public class TestDynMethods extends AbstractHadoopTestBase {
     intercept(IllegalStateException.class, builder::buildStaticChecked);
 
     final DynMethods.UnboundMethod cat2 = builder.buildChecked();
-    assertFalse(
-       cat2.isStatic(), "concat(String,String) should not be static");
+    assertFalse(cat2.isStatic(),
+        "concat(String,String) should not be static");
 
     intercept(IllegalStateException.class, cat2::asStatic);
   }
@@ -265,12 +266,11 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         .impl(Concatenator.class, String.class);
 
     DynMethods.UnboundMethod newConcatenator = builder.buildChecked();
-    assertTrue(
-       newConcatenator instanceof DynConstructors.Ctor, "Should find constructor implementation");
-    assertTrue(
-       newConcatenator.isStatic(), "Constructor should be a static method");
-    assertFalse(
-       newConcatenator.isNoop(), "Constructor should not be NOOP");
+    assertTrue(newConcatenator instanceof DynConstructors.Ctor,
+        "Should find constructor implementation");
+    assertTrue(newConcatenator.isStatic(),
+        "Constructor should be a static method");
+    assertFalse(newConcatenator.isNoop(), "Constructor should not be NOOP");
 
     // constructors cannot be bound
     intercept(IllegalStateException.class, () ->
@@ -294,8 +294,8 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         .ctorImpl(Concatenator.class, String.class)
         .buildChecked();
 
-    assertFalse(
-       newConcatenator instanceof DynConstructors.Ctor, "Should find factory method before constructor method");
+    assertFalse(newConcatenator instanceof DynConstructors.Ctor,
+        "Should find factory method before constructor method");
   }
 
   @Test
@@ -306,17 +306,12 @@ public class TestDynMethods extends AbstractHadoopTestBase {
         .orNoop()
         .buildChecked();
 
-    assertTrue(
-       noop.isNoop(), "No implementation found, should return NOOP");
-    assertNull(
-       noop.invoke(new Concatenator(), "a"), "NOOP should always return null");
-    assertNull(
-       noop.invoke(null, "a"), "NOOP can be called with null");
-    assertNull(
-       noop.bind(new Concatenator()).invoke("a"), "NOOP can be bound");
-    assertNull(
-       noop.bind(null).invoke("a"), "NOOP can be bound to null");
-    assertNull(
-       noop.asStatic().invoke("a"), "NOOP can be static");
+    assertTrue(noop.isNoop(), "No implementation found, should return NOOP");
+    assertNull(noop.invoke(new Concatenator(), "a"),
+        "NOOP should always return null");
+    assertNull(noop.invoke(null, "a"), "NOOP can be called with null");
+    assertNull(noop.bind(new Concatenator()).invoke("a"), "NOOP can be bound");
+    assertNull(noop.bind(null).invoke("a"), "NOOP can be bound to null");
+    assertNull(noop.asStatic().invoke("a"), "NOOP can be static");
   }
 }

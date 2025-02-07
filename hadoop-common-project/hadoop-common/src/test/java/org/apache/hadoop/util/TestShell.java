@@ -141,7 +141,7 @@ public class TestShell extends Assertions {
       //When timing out exception is thrown.
     }
     shellFile.delete();
-    assertTrue( shexc.isTimedOut(), "Script did not timeout");
+    assertTrue(shexc.isTimedOut(), "Script did not timeout");
   }
 
   @Test

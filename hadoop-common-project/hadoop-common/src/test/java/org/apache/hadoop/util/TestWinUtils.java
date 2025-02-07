@@ -58,8 +58,8 @@ public class TestWinUtils {
     // Not supported on non-Windows platforms
     assumeWindows();
     TEST_DIR.mkdirs();
-    assertTrue(
-       TEST_DIR.isDirectory(), "Failed to create Test directory " + TEST_DIR );
+    assertTrue(TEST_DIR.isDirectory(),
+        "Failed to create Test directory " + TEST_DIR );
     winutils = Shell.getWinUtilsPath();
   }
 
@@ -342,11 +342,12 @@ public class TestWinUtils {
     // Deleting a file will succeed even if write permissions are not present
     // on the parent dir. Check the following link for additional details:
     // http://support.microsoft.com/kb/238018
-    assertTrue(
-       b.delete(), "Special behavior: deleting a file will succeed on Windows "
+    assertTrue(b.delete(),
+        "Special behavior: deleting a file will succeed on Windows "
         + "even if a user does not have write permissions on the parent dir");
 
-    assertFalse(b.renameTo(new File(a, "d")), "Renaming a file should fail on the dir where a user does "
+    assertFalse(b.renameTo(new File(a, "d")),
+        "Renaming a file should fail on the dir where a user does "
         + "not have write permissions");
 
     // restore permissions

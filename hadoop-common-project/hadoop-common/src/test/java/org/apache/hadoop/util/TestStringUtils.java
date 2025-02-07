@@ -124,9 +124,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
         "/",
         "////"};
     for (String testSubject : TO_TEST) {
-      assertArrayEquals(
-       testSubject.split("/")
-,         StringUtils.split(testSubject, '/'), "Testing '" + testSubject + "'");
+      assertArrayEquals(testSubject.split("/"),
+          StringUtils.split(testSubject, '/'), "Testing '" + testSubject + "'");
     }
   }
 
@@ -383,7 +382,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
   @Timeout(value = 30)
   public void testSimpleHostName() {
     assertEquals("hadoop01", StringUtils.simpleHostname("hadoop01.domain.com"),
-       "Should return hostname when FQDN is specified");
+        "Should return hostname when FQDN is specified");
     assertEquals("hadoop01", StringUtils.simpleHostname("hadoop01"),
         "Should return hostname when only hostname is specified");
     assertEquals("10.10.5.68", StringUtils.simpleHostname("10.10.5.68"),
@@ -481,8 +480,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
               FAST_DATE_FORMAT, start, end);
           String formattedTime2 = StringUtils.getFormattedTimeWithDiff(
               FAST_DATE_FORMAT, start, end);
-          assertTrue(formattedTime1.equals(formattedTime2), "Method returned inconsistent results indicative of"
-              + " a race condition");
+          assertTrue(formattedTime1.equals(formattedTime2),
+              "Method returned inconsistent results indicative of a race condition");
 
         }
       });
@@ -497,16 +496,14 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     long timeDiff = 523452311;
     String timeDiffStr = "99hrs, 59mins, 59sec";
 
-    assertEquals(timeDiffStr
-,         StringUtils.formatTimeSortable(timeDiff), "Incorrect time diff string returned");
+    assertEquals(timeDiffStr, StringUtils.formatTimeSortable(timeDiff),
+        "Incorrect time diff string returned");
   }
 
   @Test
   public void testIsAlpha() {
-    assertTrue(
-       StringUtils.isAlpha("hello"), "Reported hello as non-alpha string");
-    assertFalse(
-       StringUtils.isAlpha("hello1"), "Reported hello1 as alpha string");
+    assertTrue(StringUtils.isAlpha("hello"), "Reported hello as non-alpha string");
+    assertFalse(StringUtils.isAlpha("hello1"), "Reported hello1 as alpha string");
   }
 
   @Test
@@ -514,8 +511,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     String htmlStr = "<p>Hello. How are you?</p>";
     String escapedStr = "&lt;p&gt;Hello. How are you?&lt;/p&gt;";
 
-    assertEquals(
-       escapedStr, StringUtils.escapeHTML(htmlStr), "Incorrect escaped HTML string returned");
+    assertEquals(escapedStr, StringUtils.escapeHTML(htmlStr),
+        "Incorrect escaped HTML string returned");
   }
 
   @Test
