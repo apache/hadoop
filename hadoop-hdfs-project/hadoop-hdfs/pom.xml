@@ -549,7 +549,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       </build>
     </profile>
     <profile>
-      <id>jdk8</id>
+      <id>jdk1.8</id>
       <activation>
         <jdk>1.8</jdk>
       </activation>
