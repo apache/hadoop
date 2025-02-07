@@ -277,6 +277,6 @@ public class TestCredentialProviderFactory {
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
     assertEquals("rwxrwxrwx", s.getPermission().toString(),
-       "Permissions should have been retained from the preexisting keystore.");
+        "Permissions should have been retained from the preexisting keystore.");
   }
 }

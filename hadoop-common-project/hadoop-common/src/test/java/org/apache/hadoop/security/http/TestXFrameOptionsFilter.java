@@ -70,9 +70,8 @@ public class TestXFrameOptionsFilter {
         @Override
         public Object answer(InvocationOnMock invocation) throws Throwable {
             Object[] args = invocation.getArguments();
-            assertTrue(
-            "DENY".equals(args[1]), "Options value incorrect should be DENY but is: "
-                + args[1]);
+            assertTrue("DENY".equals(args[1]),
+                "Options value incorrect should be DENY but is: " + args[1]);
             headers.add((String)args[1]);
             return null;
           }

@@ -26,29 +26,28 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
 public class TestDelegationTokenManager {
 
   private static final long DAY_IN_SECS = 86400;
 
-  @Parameterized.Parameters
   public static Collection<Object[]> headers() {
-    return Arrays.asList(new Object[][] { { false }, { true } });
+    return Arrays.asList(new Object[][]{{false}, {true}});
   }
 
   private boolean enableZKKey;
 
-  public TestDelegationTokenManager(boolean enableZKKey) {
-    this.enableZKKey = enableZKKey;
+  public void initTestDelegationTokenManager(boolean pEnableZKKey) {
+    this.enableZKKey = pEnableZKKey;
   }
 
   @SuppressWarnings("unchecked")
-  @Test
-  public void testDTManager() throws Exception {
+  @ParameterizedTest
+  @MethodSource("headers")
+  public void testDTManager(boolean pEnableZKKey) throws Exception {
+    initTestDelegationTokenManager(pEnableZKKey);
     Configuration conf = new Configuration(false);
     conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, DAY_IN_SECS);
     conf.setLong(DelegationTokenManager.MAX_LIFETIME, DAY_IN_SECS);

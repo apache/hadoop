@@ -263,7 +263,7 @@ public class TestCredShell {
 
     for (String cmd : Arrays.asList("create", "delete")) {
       shell.setConf(new Configuration());
-      assertEquals(1, shell.init(new String[] { cmd }),
+      assertEquals(1, shell.init(new String[]{cmd}),
           "Expected empty argument on " + cmd + " to return 1");
     }
   }

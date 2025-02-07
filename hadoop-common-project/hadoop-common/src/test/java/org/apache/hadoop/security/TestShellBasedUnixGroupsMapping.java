@@ -337,12 +337,12 @@ public class TestShellBasedUnixGroupsMapping {
         ReflectionUtils.newInstance(TestDelayedGroupCommand.class, conf);
 
     executor = mapping.createGroupExecutor(userName);
-    assertEquals(defaultTimeout,
-        executor.getTimeoutInterval(), "Expected the group names executor to carry the default timeout");
+    assertEquals(defaultTimeout, executor.getTimeoutInterval(),
+        "Expected the group names executor to carry the default timeout");
 
     executor = mapping.createGroupIDExecutor(userName);
-    assertEquals(defaultTimeout,
-        executor.getTimeoutInterval(), "Expected the group ID executor to carry the default timeout");
+    assertEquals(defaultTimeout, executor.getTimeoutInterval(),
+        "Expected the group ID executor to carry the default timeout");
 
     mapping.getGroups(userName);
     assertFalse(shellMappingLog.getOutput().contains(commandTimeoutMessage),

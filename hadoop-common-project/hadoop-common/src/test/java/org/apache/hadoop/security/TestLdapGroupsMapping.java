@@ -353,7 +353,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
     // let's make sure that a password that doesn't exist returns an
     // empty string as currently expected and used to trigger a call to
     // extract password
-    assertEquals("", mapping.getPassword(conf,"invalid-alias", ""));
+    assertEquals("", mapping.getPassword(conf, "invalid-alias", ""));
   }
 
   @Test
