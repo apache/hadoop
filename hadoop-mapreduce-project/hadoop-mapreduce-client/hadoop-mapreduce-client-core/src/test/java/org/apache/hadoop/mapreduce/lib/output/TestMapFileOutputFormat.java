@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.output;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -39,7 +39,7 @@ public class TestMapFileOutputFormat {
     Reader reader = Mockito.mock(Reader.class);
     Reader[] readers = new Reader[]{reader};
     outputFormat.getEntry(readers, new MyPartitioner(), new Text(), new Text());
-    assertFalse(MyPartitioner.isGetPartitionCalled());
+    assertTrue(!MyPartitioner.isGetPartitionCalled());
   }
 
   @AfterEach

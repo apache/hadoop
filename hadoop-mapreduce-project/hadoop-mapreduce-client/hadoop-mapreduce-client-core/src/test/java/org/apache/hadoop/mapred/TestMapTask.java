@@ -50,7 +50,7 @@ import static org.mockito.Mockito.mock;
 public class TestMapTask {
   private static File testRootDir = new File(
       System.getProperty("test.build.data",
-      System.getProperty("java.io.tmpdir", "/tmp")),
+          System.getProperty("java.io.tmpdir", "/tmp")),
       TestMapTask.class.getName());
 
   @BeforeEach
@@ -91,12 +91,10 @@ public class TestMapTask {
     Path outputFile = mof.getOutputFile();
     FileSystem lfs = FileSystem.getLocal(conf);
     FsPermission perms = lfs.getFileStatus(outputFile).getPermission();
-    assertEquals(
-        (short) 0640, perms.toShort(), "Incorrect output file perms");
+    assertEquals((short) 0640, perms.toShort(), "Incorrect output file perms");
     Path indexFile = mof.getOutputIndexFile();
     perms = lfs.getFileStatus(indexFile).getPermission();
-    assertEquals(
-        (short) 0640, perms.toShort(), "Incorrect index file perms");
+    assertEquals((short) 0640, perms.toShort(), "Incorrect index file perms");
   }
 
   @Test

@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.IOException;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,22 +31,15 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
-import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.COMMITTER_FACTORY_CLASS;
-import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.COMMITTER_FACTORY_SCHEME_PATTERN;
-import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.FILE_COMMITTER_FACTORY;
-import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.NAMED_COMMITTER_CLASS;
-import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.NAMED_COMMITTER_FACTORY;
-import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.getCommitterFactory;
+import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Test the committer factory logic, looking at the override
  * and fallback behavior.
  */
 @SuppressWarnings("unchecked")
-public class TestPathOutputCommitterFactory {
+public class TestPathOutputCommitterFactory extends Assertions {
 
   private static final String HTTP_COMMITTER_FACTORY = String.format(
       COMMITTER_FACTORY_SCHEME_PATTERN, "http");

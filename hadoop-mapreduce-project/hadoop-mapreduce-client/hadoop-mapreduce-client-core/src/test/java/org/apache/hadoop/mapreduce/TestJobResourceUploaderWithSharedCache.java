@@ -55,6 +55,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,12 +125,15 @@ public class TestJobResourceUploaderWithSharedCache {
       // getFileChecksum method.
       scClient.init(conf);
       when(mockscClient.getFileChecksum(any(Path.class))).thenAnswer(
-          (Answer<String>) invocation -> {
-            Path file = (Path) invocation.getArguments()[0];
-            // Use the real scClient to generate the checksum. We use an
-            // answer/mock combination to avoid having to spy on a real
-            // SharedCacheClient object.
-            return scClient.getFileChecksum(file);
+          new Answer<String>() {
+            @Override
+            public String answer(InvocationOnMock invocation) throws Throwable {
+              Path file = (Path) invocation.getArguments()[0];
+              // Use the real scClient to generate the checksum. We use an
+              // answer/mock combination to avoid having to spy on a real
+              // SharedCacheClient object.
+              return scClient.getFileChecksum(file);
+            }
           });
     }
 
@@ -268,7 +272,7 @@ public class TestJobResourceUploaderWithSharedCache {
       job.addFileToClassPath(remoteJar);
     }
 
-    jobConf.set("tmpjars", secondJar + "," + thirdJar);
+    jobConf.set("tmpjars", secondJar.toString() + "," + thirdJar.toString());
 
     Path firstArchive = makeArchive("first-archive.zip", "first-file");
     Path secondArchive = makeArchive("second-archive.zip", "second-file");

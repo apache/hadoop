@@ -29,10 +29,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.AfterClass;
+import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -231,7 +229,6 @@ public class TestManifestCommitProtocol
   }
 
   @Override
-  @BeforeEach
   public void setup() throws Exception {
     super.setup();
 
@@ -240,7 +237,6 @@ public class TestManifestCommitProtocol
   }
 
   @Override
-  @AfterEach
   public void teardown() throws Exception {
     describe("teardown");
     Thread.currentThread().setName("teardown");
@@ -258,7 +254,7 @@ public class TestManifestCommitProtocol
     super.teardown();
   }
 
-  @AfterAll
+  @AfterClass
   public static void logAggregateIOStatistics() {
     LOG.info("Final IOStatistics {}",
         ioStatisticsToPrettyString(IOSTATISTICS));

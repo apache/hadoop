@@ -38,6 +38,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * test class JobInfo
+ *
+ *
  */
 public class TestJobInfo {
   @Test
@@ -69,8 +71,8 @@ public class TestJobInfo {
         org.apache.hadoop.mapred.TaskID.downgrade(tid);
     org.apache.hadoop.mapred.TaskReport treport =
         new org.apache.hadoop.mapred.TaskReport(tid1, 0.0f,
-        State.FAILED.toString(), null, TIPStatus.FAILED, 100, 100,
-        new org.apache.hadoop.mapred.Counters());
+          State.FAILED.toString(), null, TIPStatus.FAILED, 100, 100,
+          new org.apache.hadoop.mapred.Counters());
     assertThat(treport.getTaskId()).isEqualTo(
         "task_1014873536921_0006_m_000000");
     assertThat(treport.getTaskID().toString()).isEqualTo(

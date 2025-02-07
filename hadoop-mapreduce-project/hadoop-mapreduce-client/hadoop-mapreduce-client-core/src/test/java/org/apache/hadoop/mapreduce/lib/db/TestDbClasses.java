@@ -60,7 +60,7 @@ public class TestDbClasses {
     configuration.setInt(MRJobConfig.NUM_MAPS, 1);
 
     when(jobContext.getConfiguration()).thenReturn(configuration);
-    DataDrivenDBInputFormat<NullDBWritable> format = new DataDrivenDBInputFormat<>();
+    DataDrivenDBInputFormat<NullDBWritable> format = new DataDrivenDBInputFormat<NullDBWritable>();
     List<InputSplit> splits = format.getSplits(jobContext);
     assertEquals(1, splits.size());
     DataDrivenDBInputSplit split = (DataDrivenDBInputSplit) splits.get(0);
@@ -112,7 +112,7 @@ public class TestDbClasses {
     dbConfiguration.setInputOrderBy("Order");
     String[] fields = { "f1", "f2" };
 
-    OracleDBRecordReader<NullDBWritable> recorder = new OracleDBRecordReader<>(
+    OracleDBRecordReader<NullDBWritable> recorder = new OracleDBRecordReader<NullDBWritable>(
         splitter, NullDBWritable.class, configuration, connect,
         dbConfiguration, "condition", fields, "table");
     assertEquals(

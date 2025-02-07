@@ -52,7 +52,7 @@ public class TestTaskLog {
   /**
    * test TaskAttemptID
    * 
-   * @throws IOException In the process of unit testing, an IO exception occurred.
+   * @throws IOException
    */
   @Test
   @Timeout(value = 50)
@@ -130,7 +130,7 @@ public class TestTaskLog {
   /**
    * test without TASK_LOG_DIR
    * 
-   * @throws IOException In the process of unit testing, an IO exception occurred.
+   * @throws IOException
    */
   @Test
   @Timeout(value = 50)

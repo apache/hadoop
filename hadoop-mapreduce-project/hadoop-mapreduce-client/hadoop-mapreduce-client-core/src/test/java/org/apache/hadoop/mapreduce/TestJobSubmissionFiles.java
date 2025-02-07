@@ -37,7 +37,6 @@ import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-
 /**
  * Tests for JobSubmissionFiles Utility class.
  */

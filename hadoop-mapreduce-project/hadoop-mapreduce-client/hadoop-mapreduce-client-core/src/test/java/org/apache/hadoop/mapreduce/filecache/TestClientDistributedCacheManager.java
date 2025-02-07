@@ -101,12 +101,10 @@ public class TestClientDistributedCacheManager {
     FileStatus firstStatus = statCache.get(firstCacheFile.toUri());
     FileStatus secondStatus = statCache.get(secondCacheFile.toUri());
     
-    assertNotNull(
-       firstStatus, firstCacheFile + " was not found in the stats cache");
-    assertNotNull(
-       secondStatus, secondCacheFile + " was not found in the stats cache");
-    assertEquals(
-       2, statCache.size(), "Missing/extra entries found in the stats cache");
+    assertNotNull(firstStatus, firstCacheFile + " was not found in the stats cache");
+    assertNotNull(secondStatus, secondCacheFile + " was not found in the stats cache");
+    assertEquals(2, statCache.size(),
+        "Missing/extra entries found in the stats cache");
     String expected = firstStatus.getModificationTime() + ","
         + secondStatus.getModificationTime();
     assertEquals(expected, jobConf.get(MRJobConfig.CACHE_FILE_TIMESTAMPS));
@@ -119,13 +117,13 @@ public class TestClientDistributedCacheManager {
 
     FileStatus thirdStatus = statCache.get(TEST_VISIBILITY_CHILD_DIR.toUri());
 
-    assertEquals(
-       1, statCache.size(), "Missing/extra entries found in the stats cache");
+    assertEquals(1, statCache.size(),
+        "Missing/extra entries found in the stats cache");
     assertNotNull(thirdStatus, TEST_VISIBILITY_CHILD_DIR
         + " was not found in the stats cache");
     expected = Long.toString(thirdStatus.getModificationTime());
-    assertEquals(
-       expected, jobConf.get(MRJobConfig.CACHE_FILE_TIMESTAMPS), "Incorrect timestamp for " + TEST_VISIBILITY_CHILD_DIR);
+    assertEquals(expected, jobConf.get(MRJobConfig.CACHE_FILE_TIMESTAMPS),
+        "Incorrect timestamp for " + TEST_VISIBILITY_CHILD_DIR);
   }
   
   @Test
@@ -154,9 +152,9 @@ public class TestClientDistributedCacheManager {
         statCache);
     // We use get() instead of getBoolean() so we can tell the difference
     // between wrong and missing
-    assertEquals("The file paths were not found to be publicly visible "
-        + "even though the full path is publicly accessible",
-        "true,true", jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES));
+    assertEquals("true,true", jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES),
+       "The file paths were not found to be publicly visible " +
+       "even though the full path is publicly accessible");
     checkCacheEntries(statCache, null, firstCacheFile, relativePath);
 
     job = Job.getInstance(conf);
@@ -168,9 +166,9 @@ public class TestClientDistributedCacheManager {
         statCache);
     // We use get() instead of getBoolean() so we can tell the difference
     // between wrong and missing
-    assertEquals("The file path was not found to be publicly visible "
-        + "even though the full path is publicly accessible",
-        "true", jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES));
+    assertEquals("true", jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES),
+       "The file path was not found to be publicly visible " +
+       "even though the full path is publicly accessible");
     checkCacheEntries(statCache, null, wildcardPath.getParent());
 
     Path qualifiedParent = fs.makeQualified(TEST_VISIBILITY_PARENT_DIR);
@@ -186,9 +184,9 @@ public class TestClientDistributedCacheManager {
         statCache);
     // We use get() instead of getBoolean() so we can tell the difference
     // between wrong and missing
-    assertEquals("The file paths were found to be publicly visible "
-        + "even though the parent directory is not publicly accessible",
-        "false,false", jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES));
+    assertEquals("false,false", jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES),
+        "The file paths were found to be publicly visible " +
+        "even though the parent directory is not publicly accessible");
     checkCacheEntries(statCache, qualifiedParent,
         firstCacheFile, relativePath);
 
@@ -201,9 +199,9 @@ public class TestClientDistributedCacheManager {
         statCache);
     // We use get() instead of getBoolean() so we can tell the difference
     // between wrong and missing
-    assertEquals("The file path was found to be publicly visible "
-        + "even though the parent directory is not publicly accessible",
-        "false", jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES));
+    assertEquals("false", jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES),
+        "The file path was found to be publicly visible " +
+        "even though the parent directory is not publicly accessible");
     checkCacheEntries(statCache, qualifiedParent, wildcardPath.getParent());
   }
 
@@ -237,10 +235,10 @@ public class TestClientDistributedCacheManager {
     missing.removeAll(expected);
     extra.removeAll(uris);
 
-    assertTrue(
-       missing.isEmpty(), "File status cache does not contain an entries for " + missing);
-    assertTrue(
-       extra.isEmpty(), "File status cache contains extra entries: " + extra);
+    assertTrue(missing.isEmpty(),
+        "File status cache does not contain an entries for " + missing);
+    assertTrue(extra.isEmpty(),
+        "File status cache contains extra entries: " + extra);
   }
 
   @SuppressWarnings("deprecation")

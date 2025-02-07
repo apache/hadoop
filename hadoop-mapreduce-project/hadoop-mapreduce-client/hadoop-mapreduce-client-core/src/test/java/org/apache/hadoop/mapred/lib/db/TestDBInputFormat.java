@@ -29,6 +29,7 @@ import org.apache.hadoop.mapred.lib.db.DBInputFormat.DBRecordReader;
 import org.apache.hadoop.mapred.lib.db.DBInputFormat.NullDBWritable;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapred.lib.db.DBConfiguration;
 import org.apache.hadoop.mapreduce.lib.db.DriverForTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -50,7 +51,7 @@ public class TestDBInputFormat {
     JobConf configuration = new JobConf();
     setupDriver(configuration);
     
-    DBInputFormat<NullDBWritable> format = new DBInputFormat<>();
+    DBInputFormat<NullDBWritable> format = new DBInputFormat<NullDBWritable>();
     format.setConf(configuration);
     format.setConf(configuration);
     DBInputFormat.DBInputSplit splitter = new DBInputFormat.DBInputSplit(1, 10);
@@ -125,7 +126,8 @@ public class TestDBInputFormat {
   }
 
   /**
-   * test DBRecordReader. This reader should creates keys, values, know about position.
+   *
+   * test DBRecordReader. This reader should creates keys, values, know about position..
    */
   @SuppressWarnings("unchecked")
   @Test
@@ -147,6 +149,7 @@ public class TestDBInputFormat {
         .getClass().getName());
     assertEquals(0, reader.getPos());
     assertFalse(reader.next(key, value));
+
   }
 
   private void setupDriver(JobConf configuration) throws Exception {

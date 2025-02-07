@@ -68,8 +68,8 @@ public class TestLineRecordReader {
       throws IOException {
     conf.setInt(org.apache.hadoop.mapreduce.lib.input.
         LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
-    assertTrue(
-       testFileSize > firstSplitLength, "unexpected test data at " + testFilePath);
+    assertTrue(testFileSize > firstSplitLength,
+        "unexpected test data at " + testFilePath);
 
     String delimiter = conf.get("textinputformat.record.delimiter");
     byte[] recordDelimiterBytes = null;
@@ -108,8 +108,8 @@ public class TestLineRecordReader {
     }
     reader.close();
 
-    assertEquals(
-       numRecordsNoSplits, numRecordsFirstSplit + numRecordsRemainingSplits, "Unexpected number of records in split");
+    assertEquals(numRecordsNoSplits, numRecordsFirstSplit + numRecordsRemainingSplits,
+        "Unexpected number of records in split");
   }
 
   private void testLargeSplitRecordForFile(Configuration conf,
@@ -117,8 +117,8 @@ public class TestLineRecordReader {
       throws IOException {
     conf.setInt(org.apache.hadoop.mapreduce.lib.input.
         LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
-    assertTrue(
-       testFileSize < firstSplitLength, "unexpected firstSplitLength:" + firstSplitLength);
+    assertTrue(testFileSize < firstSplitLength, "unexpected firstSplitLength:" +
+        firstSplitLength);
     String delimiter = conf.get("textinputformat.record.delimiter");
     byte[] recordDelimiterBytes = null;
     if (null != delimiter) {
@@ -145,8 +145,8 @@ public class TestLineRecordReader {
       ++numRecordsFirstSplit;
     }
     reader.close();
-    assertEquals(
-       numRecordsNoSplits, numRecordsFirstSplit, "Unexpected number of records in split");
+    assertEquals(numRecordsNoSplits, numRecordsFirstSplit,
+        "Unexpected number of records in split");
   }
 
   @Test
@@ -262,7 +262,8 @@ public class TestLineRecordReader {
       }
     }
 
-    assertTrue(hasLargeRecord, "Invalid test data. Doesn't have a large enough record");
+    assertTrue(hasLargeRecord,
+        "Invalid test data. Doesn't have a large enough record");
   }
 
   @Test
@@ -323,8 +324,8 @@ public class TestLineRecordReader {
   public void testMultipleClose() throws IOException {
     URL testFileUrl = getClass().getClassLoader().
         getResource("recordSpanningMultipleSplits.txt.bz2");
-    assertNotNull(
-       testFileUrl, "Cannot find recordSpanningMultipleSplits.txt.bz2");
+    assertNotNull(testFileUrl,
+        "Cannot find recordSpanningMultipleSplits.txt.bz2");
     File testFile = new File(testFileUrl.getFile());
     Path testFilePath = new Path(testFile.getAbsolutePath());
     long testFileSize = testFile.length();
@@ -344,7 +345,7 @@ public class TestLineRecordReader {
 
     BZip2Codec codec = new BZip2Codec();
     codec.setConf(conf);
-    Set<Decompressor> decompressors = new HashSet<>();
+    Set<Decompressor> decompressors = new HashSet<Decompressor>();
     for (int i = 0; i < 10; ++i) {
       decompressors.add(CodecPool.getDecompressor(codec));
     }
@@ -572,16 +573,14 @@ public class TestLineRecordReader {
         assertEquals(9, value.getLength(), "Wrong position after record read");
         // Position should be 12 right after "|+|"
         int recordPos = 12;
-        assertEquals(recordPos
-,             reader.getPos(), "Wrong position after record read");
+        assertEquals(recordPos, reader.getPos(), "Wrong position after record read");
         // get the next record: "ij|kl" if the split/buffer allows it
         if (reader.next(key, value)) {
           // check the record info: "ij|kl"
           assertThat(value.toString()).isEqualTo("ij|kl");
           // Position should be 20 right after "|+|"
           recordPos = 20;
-          assertEquals(recordPos
-,               reader.getPos(), "Wrong position after record read");
+          assertEquals(recordPos, reader.getPos(), "Wrong position after record read");
         }
         // get the third record: "mno|pqr" if the split/buffer allows it
         if (reader.next(key, value)) {
@@ -589,13 +588,11 @@ public class TestLineRecordReader {
           assertThat(value.toString()).isEqualTo("mno|pqr");
           // Position should be 27 at the end of the string now
           recordPos = inputData.length();
-          assertEquals(recordPos
-,               reader.getPos(), "Wrong position after record read");
+          assertEquals(recordPos, reader.getPos(), "Wrong position after record read");
         }
         // no more records can be read we should still be at the last position
         assertFalse(reader.next(key, value), "Unexpected record returned");
-        assertEquals(recordPos
-,             reader.getPos(), "Wrong position after record read");
+        assertEquals(recordPos, reader.getPos(), "Wrong position after record read");
         reader.close();
       }
     }
@@ -672,9 +669,9 @@ public class TestLineRecordReader {
     File testFile = new File(testFileUrl.getFile());
     long testFileSize = testFile.length();
     Path testFilePath = new Path(testFile.getAbsolutePath());
-    assertTrue(
-       firstSplitLength > 9, "Split size is smaller than header length");
-    assertTrue(testFileSize > firstSplitLength, "Split size is larger than compressed file size " +
+    assertTrue(firstSplitLength > 9, "Split size is smaller than header length");
+    assertTrue(testFileSize > firstSplitLength,
+        "Split size is larger than compressed file size " +
         testFilePath);
 
     Configuration conf = new Configuration();

@@ -106,15 +106,14 @@ public class TestShuffleScheduler {
     MapOutput<K, V> output = mock(MapOutput.class);
 
     ShuffleConsumerPlugin.Context<K, V> context =
-        new ShuffleConsumerPlugin.Context<>(mockTaskAttemptID, job, mockFileSystem,
-        mockUmbilical, mockLocalDirAllocator,
-        mockReporter, mockCompressionCodec,
-        combinerClass, mockCombineOutputCollector,
-        mockCounter, mockCounter, mockCounter,
-        mockCounter, mockCounter, mockCounter,
-        mockTaskStatus, mockProgress, mockProgress,
-        mockTask, mockMapOutputFile, null);
-
+        new ShuffleConsumerPlugin.Context<K, V>(mockTaskAttemptID, job, mockFileSystem,
+                                                     mockUmbilical, mockLocalDirAllocator,
+                                                     mockReporter, mockCompressionCodec,
+                                                     combinerClass, mockCombineOutputCollector,
+                                                     mockCounter, mockCounter, mockCounter,
+                                                     mockCounter, mockCounter, mockCounter,
+                                                     mockTaskStatus, mockProgress, mockProgress,
+                                                     mockTask, mockMapOutputFile, null);
     TaskStatus status = new TaskStatus() {
       @Override
       public boolean getIsMap() {
@@ -125,7 +124,7 @@ public class TestShuffleScheduler {
       }
     };
     Progress progress = new Progress();
-    ShuffleSchedulerImpl<K, V> scheduler = new ShuffleSchedulerImpl<>(job, status, null,
+    ShuffleSchedulerImpl<K, V> scheduler = new ShuffleSchedulerImpl<K, V>(job, status, null,
         null, progress, context.getShuffledMapsCounter(),
         context.getReduceShuffleBytes(), context.getFailedShuffleCounter());
     TaskAttemptID attemptID0 = new TaskAttemptID(
@@ -242,15 +241,15 @@ public class TestShuffleScheduler {
     MapOutput<K, V> output = mock(MapOutput.class);
 
     ShuffleConsumerPlugin.Context<K, V> context =
-        new ShuffleConsumerPlugin.Context<>(
-        mockTaskAttemptID, job, mockFileSystem,
-        mockUmbilical, mockLocalDirAllocator,
-        mockReporter, mockCompressionCodec,
-        combinerClass, mockCombineOutputCollector,
-        mockCounter, mockCounter, mockCounter,
-        mockCounter, mockCounter, mockCounter,
-        mockTaskStatus, mockProgress, mockProgress,
-        mockTask, mockMapOutputFile, null);
+        new ShuffleConsumerPlugin.Context<K, V>(
+            mockTaskAttemptID, job, mockFileSystem,
+            mockUmbilical, mockLocalDirAllocator,
+            mockReporter, mockCompressionCodec,
+            combinerClass, mockCombineOutputCollector,
+            mockCounter, mockCounter, mockCounter,
+            mockCounter, mockCounter, mockCounter,
+            mockTaskStatus, mockProgress, mockProgress,
+            mockTask, mockMapOutputFile, null);
     TaskStatus status = new TaskStatus() {
       @Override
       public boolean getIsMap() {
@@ -261,7 +260,7 @@ public class TestShuffleScheduler {
       }
     };
     Progress progress = new Progress();
-    ShuffleSchedulerImpl<K, V> scheduler = new ShuffleSchedulerImpl<>(job,
+    ShuffleSchedulerImpl<K, V> scheduler = new ShuffleSchedulerImpl<K, V>(job,
         status, null, null, progress, context.getShuffledMapsCounter(),
         context.getReduceShuffleBytes(), context.getFailedShuffleCounter());
 
@@ -316,7 +315,7 @@ public class TestShuffleScheduler {
     MapOutput<K, V> output3 = mock(MapOutput.class);
 
     ShuffleConsumerPlugin.Context<K, V> context =
-        new ShuffleConsumerPlugin.Context<>(
+        new ShuffleConsumerPlugin.Context<K, V>(
             mockTaskAttemptID, job, mockFileSystem,
             mockUmbilical, mockLocalDirAllocator,
             mockReporter, mockCompressionCodec,
@@ -335,7 +334,7 @@ public class TestShuffleScheduler {
       }
     };
     Progress progress = new Progress();
-    ShuffleSchedulerImpl<K, V> scheduler = new ShuffleSchedulerImpl<>(job,
+    ShuffleSchedulerImpl<K, V> scheduler = new ShuffleSchedulerImpl<K, V>(job,
         status, null, null, progress, context.getShuffledMapsCounter(),
         context.getReduceShuffleBytes(), context.getFailedShuffleCounter());
 

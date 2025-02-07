@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -36,7 +37,7 @@ public class TestJobAclsManager {
 
   @Test
   public void testClusterAdmins() {
-    Map<JobACL, AccessControlList> tmpJobACLs;
+    Map<JobACL, AccessControlList> tmpJobACLs = new HashMap<JobACL, AccessControlList>();
     Configuration conf = new Configuration();
     String jobOwner = "testuser";
     conf.set(JobACL.VIEW_JOB.getAclName(), jobOwner);
@@ -63,7 +64,7 @@ public class TestJobAclsManager {
 
   @Test
   public void testClusterNoAdmins() {
-    Map<JobACL, AccessControlList> tmpJobACLs;
+    Map<JobACL, AccessControlList> tmpJobACLs = new HashMap<JobACL, AccessControlList>();
     Configuration conf = new Configuration();
     String jobOwner = "testuser";
     conf.set(JobACL.VIEW_JOB.getAclName(), "");
@@ -97,7 +98,7 @@ public class TestJobAclsManager {
 
   @Test
   public void testAclsOff() {
-    Map<JobACL, AccessControlList> tmpJobACLs;
+    Map<JobACL, AccessControlList> tmpJobACLs = new HashMap<JobACL, AccessControlList>();
     Configuration conf = new Configuration();
     String jobOwner = "testuser";
     conf.set(JobACL.VIEW_JOB.getAclName(), jobOwner);
@@ -118,7 +119,7 @@ public class TestJobAclsManager {
 
   @Test
   public void testGroups() {
-    Map<JobACL, AccessControlList> tmpJobACLs;
+    Map<JobACL, AccessControlList> tmpJobACLs = new HashMap<JobACL, AccessControlList>();
     Configuration conf = new Configuration();
     String jobOwner = "testuser";
     conf.set(JobACL.VIEW_JOB.getAclName(), jobOwner);

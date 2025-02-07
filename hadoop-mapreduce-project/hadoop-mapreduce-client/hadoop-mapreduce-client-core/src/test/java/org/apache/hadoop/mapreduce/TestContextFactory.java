@@ -48,7 +48,8 @@ public class TestContextFactory {
     TaskID taskId = new TaskID(jobId, TaskType.MAP, 0);
     TaskAttemptID taskAttemptid = new TaskAttemptID(taskId, 0);
     MapContext<IntWritable, IntWritable, IntWritable, IntWritable> mapContext =
-        new MapContextImpl<>(conf, taskAttemptid, null, null, null, null, null);
+    new MapContextImpl<IntWritable, IntWritable, IntWritable, IntWritable>(
+        conf, taskAttemptid, null, null, null, null, null);
     Mapper<IntWritable, IntWritable, IntWritable, IntWritable>.Context mapperContext = 
       new WrappedMapper<IntWritable, IntWritable, IntWritable, IntWritable>().getMapContext(
           mapContext);

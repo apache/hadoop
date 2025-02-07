@@ -43,7 +43,7 @@ import static org.mockito.Mockito.verify;
 public class TestCombineFileRecordReader {
 
   private static Path outDir = new Path(System.getProperty("test.build.data",
-      "/tmp"), TestCombineFileRecordReader.class.getName());
+            "/tmp"), TestCombineFileRecordReader.class.getName());
   private static class TextRecordReaderWrapper
     extends CombineFileRecordReaderWrapper<LongWritable,Text> {
     // this constructor signature is required by CombineFileRecordReader
@@ -63,7 +63,7 @@ public class TestCombineFileRecordReader {
     long[] fileLength = new long[3];
 
     try {
-      for (int i = 0; i < 3; i++) {
+      for(int i=0;i<3;i++){
         File dir = new File(outDir.toString());
         dir.mkdir();
         files[i] = new File(dir,"testfile"+i);

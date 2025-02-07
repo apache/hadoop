@@ -50,8 +50,9 @@ public class TestJobEndNotifier {
     public static URI requestUri;
 
     @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException {
+    public void doGet(HttpServletRequest request,
+                      HttpServletResponse response
+                      ) throws ServletException, IOException {
       InputStreamReader in = new InputStreamReader(request.getInputStream());
       PrintStream out = new PrintStream(response.getOutputStream());
 
@@ -73,8 +74,9 @@ public class TestJobEndNotifier {
     public static volatile int calledTimes = 0;
 
     @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException {
+    public void doGet(HttpServletRequest request,
+                      HttpServletResponse response
+                      ) throws ServletException, IOException {
       boolean timedOut = false;
       calledTimes++;
       try {
@@ -93,8 +95,9 @@ public class TestJobEndNotifier {
     public static volatile int calledTimes = 0;
 
     @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException {
+    public void doGet(HttpServletRequest request,
+                      HttpServletResponse response
+                      ) throws ServletException, IOException {
       calledTimes++;
       throw new IOException("I am failing!");
     }

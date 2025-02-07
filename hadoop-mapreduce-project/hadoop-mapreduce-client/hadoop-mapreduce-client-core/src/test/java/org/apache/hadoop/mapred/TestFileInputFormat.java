@@ -61,7 +61,7 @@ public class TestFileInputFormat {
 
   public void initTestFileInputFormat(int numThreads) {
     this.numThreads = numThreads;
-    LOG.info("Running with numThreads: {}.", numThreads);
+    LOG.info("Running with numThreads: " + numThreads);
   }
 
   public static Collection<Object[]> data() {
@@ -71,7 +71,7 @@ public class TestFileInputFormat {
   
   @BeforeEach
   public void setup() throws IOException {
-    LOG.info("Using Test Dir: {}.", TEST_ROOT_DIR);
+    LOG.info("Using Test Dir: " + TEST_ROOT_DIR);
     localFs = FileSystem.getLocal(new Configuration());
     localFs.delete(TEST_ROOT_DIR, true);
     localFs.mkdirs(TEST_ROOT_DIR);
@@ -93,15 +93,14 @@ public class TestFileInputFormat {
         "test:///a1/a2");
     MockFileSystem mockFs =
         (MockFileSystem) new Path("test:///").getFileSystem(conf);
-    assertEquals(
-       0, mockFs.numListLocatedStatusCalls, "listLocatedStatus already called");
+    assertEquals(0, mockFs.numListLocatedStatusCalls,
+        "listLocatedStatus already called");
     JobConf job = new JobConf(conf);
     TextInputFormat fileInputFormat = new TextInputFormat();
     fileInputFormat.configure(job);
     InputSplit[] splits = fileInputFormat.getSplits(job, 1);
     assertEquals(2, splits.length, "Input splits are not correct");
-    assertEquals(
-       1, mockFs.numListLocatedStatusCalls, "listLocatedStatus calls");
+    assertEquals(1, mockFs.numListLocatedStatusCalls, "listLocatedStatus calls");
     FileSystem.closeAll();
   }
 
@@ -250,9 +249,9 @@ public class TestFileInputFormat {
       } else if (f.toString().equals("test:/a1/a2")) {
         return new FileStatus[] {
             new FileStatus(10, false, 1, 150, 150,
-            new Path("test:/a1/a2/file2")),
+                new Path("test:/a1/a2/file2")),
             new FileStatus(10, false, 1, 151, 150,
-            new Path("test:/a1/a2/file3")) };
+                new Path("test:/a1/a2/file3")) };
       }
       return new FileStatus[0];
     }
@@ -275,8 +274,8 @@ public class TestFileInputFormat {
         throws IOException {
       return new BlockLocation[] {
           new BlockLocation(new String[] { "localhost:9866", "otherhost:9866" },
-          new String[] { "localhost", "otherhost" }, new String[] { "localhost" },
-          new String[0], 0, len, false) };
+              new String[] { "localhost", "otherhost" }, new String[] { "localhost" },
+              new String[0], 0, len, false) };
     }
 
     @Override

@@ -75,6 +75,7 @@ import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Time;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,7 +125,7 @@ public class TestFetcher {
     allErrs = mock(Counters.Counter.class);
     when(r.getCounter(anyString(), anyString())).thenReturn(allErrs);
 
-    ArrayList<TaskAttemptID> maps = new ArrayList<>(1);
+    ArrayList<TaskAttemptID> maps = new ArrayList<TaskAttemptID>(1);
     maps.add(map1ID);
     maps.add(map2ID);
     when(ss.getMapsForHost(host)).thenReturn(maps);
@@ -142,7 +143,7 @@ public class TestFetcher {
   public void testReduceOutOfDiskSpace() throws Throwable {
     LOG.info("testReduceOutOfDiskSpace");
     
-    Fetcher<Text,Text> underTest = new FakeFetcher<>(job, id, ss, mm,
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection);
 
     String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
@@ -174,7 +175,7 @@ public class TestFetcher {
     when(connection.getInputStream()).thenThrow(
         new SocketTimeoutException("This is a fake timeout :)"));
     
-    Fetcher<Text,Text> underTest = new FakeFetcher<>(job, id, ss, mm,
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection);
 
     underTest.copyFromHost(host);
@@ -213,7 +214,7 @@ public class TestFetcher {
   
   @Test
   public void testCopyFromHostBogusHeader() throws Exception {
-    Fetcher<Text,Text> underTest = new FakeFetcher<>(job, id, ss, mm,
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection);
 
     String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
@@ -257,7 +258,7 @@ public class TestFetcher {
     when(connection.getInputStream()).thenReturn(in);
 
     for (int i = 0; i < 3; ++i) {
-      Fetcher<Text,Text> underTest = new FakeFetcher<>(job, id, ss, mm,
+      Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
           r, metrics, except, key, connection);
       underTest.copyFromHost(host);
     }
@@ -289,7 +290,7 @@ public class TestFetcher {
     when(connection.getInputStream()).thenReturn(in);
 
     for (int i = 0; i < 3; ++i) {
-      Fetcher<Text,Text> underTest = new FakeFetcher<>(jobWithRetry,
+      Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(jobWithRetry,
           id, ss, mm, r, metrics, except, key, connection);
       underTest.copyFromHost(host);
     }
@@ -307,7 +308,7 @@ public class TestFetcher {
 
   @Test
   public void testCopyFromHostWait() throws Exception {
-    Fetcher<Text,Text> underTest = new FakeFetcher<>(job, id, ss, mm,
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection);
 
     String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
@@ -347,7 +348,7 @@ public class TestFetcher {
   public void testCopyFromHostCompressFailure() throws Exception {
     InMemoryMapOutput<Text, Text> immo = mock(InMemoryMapOutput.class);
 
-    Fetcher<Text,Text> underTest = new FakeFetcher<>(job, id, ss, mm,
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection);
 
     String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
@@ -385,7 +386,7 @@ public class TestFetcher {
   public void testCopyFromHostOnAnyException() throws Exception {
     InMemoryMapOutput<Text, Text> immo = mock(InMemoryMapOutput.class);
 
-    Fetcher<Text,Text> underTest = new FakeFetcher<>(job, id, ss, mm,
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection);
 
     String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
@@ -423,7 +424,7 @@ public class TestFetcher {
   public void testCopyFromHostWithRetry() throws Exception {
     InMemoryMapOutput<Text, Text> immo = mock(InMemoryMapOutput.class);
     ss = mock(ShuffleSchedulerImpl.class);
-    Fetcher<Text,Text> underTest = new FakeFetcher<>(jobWithRetry,
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(jobWithRetry,
         id, ss, mm, r, metrics, except, key, connection, true);
 
     String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
@@ -444,12 +445,14 @@ public class TestFetcher {
         .thenReturn(immo);
     
     final long retryTime = Time.monotonicNow();
-    doAnswer((Answer<Void>) ignore -> {
-      // Emulate host down for 3 seconds.
-      if ((Time.monotonicNow() - retryTime) <= 3000) {
-        throw new InternalError();
+    doAnswer(new Answer<Void>() {
+      public Void answer(InvocationOnMock ignore) throws IOException {
+        // Emulate host down for 3 seconds.
+        if ((Time.monotonicNow() - retryTime) <= 3000) {
+          throw new java.lang.InternalError();
+        }
+        return null;
       }
-      return null;
     }).when(immo).shuffle(any(MapHost.class), any(InputStream.class), anyLong(),
         anyLong(), any(ShuffleClientMetrics.class), any(Reporter.class));
 
@@ -463,7 +466,7 @@ public class TestFetcher {
   @Timeout(value = 10)
   public void testCopyFromHostWithRetryThenTimeout() throws Exception {
     InMemoryMapOutput<Text, Text> immo = mock(InMemoryMapOutput.class);
-    Fetcher<Text,Text> underTest = new FakeFetcher<>(jobWithRetry,
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(jobWithRetry,
         id, ss, mm, r, metrics, except, key, connection);
 
     String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
@@ -497,7 +500,7 @@ public class TestFetcher {
 
   @Test
   public void testCopyFromHostExtraBytes() throws Exception {
-    Fetcher<Text,Text> underTest = new FakeFetcher<>(job, id, ss, mm,
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection);
 
     String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
@@ -527,10 +530,10 @@ public class TestFetcher {
     ByteArrayInputStream in = new ByteArrayInputStream(bout.toByteArray());
     when(connection.getInputStream()).thenReturn(in);
     // 8 < 10 therefore there appear to be extra bytes in the IFileInputStream
-    IFileWrappedMapOutput<Text,Text> mapOut = new InMemoryMapOutput<>(
-        job, map1ID, mm, 8, null, true);
-    IFileWrappedMapOutput<Text,Text> mapOut2 = new InMemoryMapOutput<>(
-        job, map2ID, mm, 10, null, true);
+    IFileWrappedMapOutput<Text,Text> mapOut = new InMemoryMapOutput<Text, Text>(
+        job, map1ID, mm, 8, null, true );
+    IFileWrappedMapOutput<Text,Text> mapOut2 = new InMemoryMapOutput<Text, Text>(
+        job, map2ID, mm, 10, null, true );
 
     when(mm.reserve(eq(map1ID), anyLong(), anyInt())).thenReturn(mapOut);
     when(mm.reserve(eq(map2ID), anyLong(), anyInt())).thenReturn(mapOut2);
@@ -553,8 +556,8 @@ public class TestFetcher {
         OnDiskMapOutput.getTempPath(onDiskMapOutputPath, fetcher);
     fs = FileSystem.getLocal(job).getRaw();
     IFileWrappedMapOutput<Text,Text> odmo =
-        new OnDiskMapOutput<>(map1ID, mm, 100L, job, fetcher, true,
-        fs, onDiskMapOutputPath);
+        new OnDiskMapOutput<Text,Text>(map1ID, mm, 100L, job, fetcher, true,
+                                       fs, onDiskMapOutputPath);
 
     String mapData = "MAPDATA12345678901234567890";
 
@@ -613,8 +616,8 @@ public class TestFetcher {
   @Timeout(value = 10)
   public void testInterruptInMemory() throws Exception {
     final int FETCHER = 2;
-    IFileWrappedMapOutput<Text,Text> immo = spy(new InMemoryMapOutput<>(
-        job, id, mm, 100, null, true));
+    IFileWrappedMapOutput<Text,Text> immo = spy(new InMemoryMapOutput<Text,Text>(
+          job, id, mm, 100, null, true));
     when(mm.reserve(any(TaskAttemptID.class), anyLong(), anyInt()))
         .thenReturn(immo);
     doNothing().when(mm).waitForResource();
@@ -634,12 +637,14 @@ public class TestFetcher {
     final StuckInputStream in =
         new StuckInputStream(new ByteArrayInputStream(bout.toByteArray()));
     when(connection.getInputStream()).thenReturn(in);
-    doAnswer((Answer<Void>) ignore -> {
-      in.close();
-      return null;
+    doAnswer(new Answer<Void>() {
+      public Void answer(InvocationOnMock ignore) throws IOException {
+        in.close();
+        return null;
+      }
     }).when(connection).disconnect();
 
-    Fetcher<Text,Text> underTest = new FakeFetcher<>(job, id, ss, mm,
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection, FETCHER);
     underTest.start();
     // wait for read in inputstream
@@ -659,8 +664,8 @@ public class TestFetcher {
     Path pTmp = OnDiskMapOutput.getTempPath(p, FETCHER);
     FileSystem mFs = mock(FileSystem.class, RETURNS_DEEP_STUBS);
     IFileWrappedMapOutput<Text,Text> odmo =
-        spy(new OnDiskMapOutput<>(map1ID, mm, 100L, job,
-        FETCHER, true, mFs, p));
+        spy(new OnDiskMapOutput<Text,Text>(map1ID, mm, 100L, job,
+                                           FETCHER, true, mFs, p));
     when(mm.reserve(any(TaskAttemptID.class), anyLong(), anyInt()))
         .thenReturn(odmo);
     doNothing().when(mm).waitForResource();
@@ -680,12 +685,14 @@ public class TestFetcher {
         .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
     when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_VERSION))
         .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
-    doAnswer((Answer<Void>) ignore -> {
-      in.close();
-      return null;
+    doAnswer(new Answer<Void>() {
+      public Void answer(InvocationOnMock ignore) throws IOException {
+        in.close();
+        return null;
+      }
     }).when(connection).disconnect();
 
-    Fetcher<Text,Text> underTest = new FakeFetcher<>(job, id, ss, mm,
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(job, id, ss, mm,
         r, metrics, except, key, connection, FETCHER);
     underTest.start();
     // wait for read in inputstream
@@ -704,7 +711,7 @@ public class TestFetcher {
   @Timeout(value = 10)
   public void testCopyFromHostWithRetryUnreserve() throws Exception {
     InMemoryMapOutput<Text, Text> immo = mock(InMemoryMapOutput.class);
-    Fetcher<Text,Text> underTest = new FakeFetcher<>(jobWithRetry,
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(jobWithRetry,
         id, ss, mm, r, metrics, except, key, connection);
 
     String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
@@ -776,6 +783,7 @@ public class TestFetcher {
         super.openConnection(url);
       }
       // already 'opened' the mocked connection
+      return;
     }
   }
 

@@ -59,7 +59,6 @@ import org.slf4j.LoggerFactory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -696,7 +695,7 @@ public class TestFileOutputCommitter {
       th = ie;
     }
     assertNotNull(th);
-    assertInstanceOf(IOException.class, th);
+    assertTrue(th instanceof IOException);
     assertTrue(th.getMessage().contains("fake delete failed"));
     Path jtd = committer.getJobAttemptPath(jContext);
     File jobTmpDir = new File(jtd.toUri().getPath());
@@ -712,7 +711,7 @@ public class TestFileOutputCommitter {
       th = ie;
     }
     assertNotNull(th);
-    assertInstanceOf(IOException.class, th);
+    assertTrue(th instanceof IOException);
     assertTrue(th.getMessage().contains("fake delete failed"));
     assertTrue(jobTmpDir.exists(), "job temp dir does not exists");
     FileUtil.fullyDelete(new File(outDir.toString()));
@@ -729,7 +728,12 @@ public class TestFileOutputCommitter {
   }
 
   static class RLFS extends RawLocalFileSystem {
-    private final ThreadLocal<Boolean> needNull = ThreadLocal.withInitial(() -> true);
+    private final ThreadLocal<Boolean> needNull = new ThreadLocal<Boolean>() {
+      @Override
+      protected Boolean initialValue() {
+        return true;
+      }
+    };
 
     public RLFS() {
     }
@@ -787,15 +791,18 @@ public class TestFileOutputCommitter {
       try {
         for (int i = 0; i < taCtx.length; i++) {
           final int taskIdx = i;
-          executor.submit((Callable<Void>) () -> {
-            final OutputCommitter outputCommitter =
-                tof[taskIdx].getOutputCommitter(taCtx[taskIdx]);
-            outputCommitter.setupTask(taCtx[taskIdx]);
-            final RecordWriter rw =
-                tof[taskIdx].getRecordWriter(taCtx[taskIdx]);
-            writeOutput(rw, taCtx[taskIdx]);
-            outputCommitter.commitTask(taCtx[taskIdx]);
-            return null;
+          executor.submit(new Callable<Void>() {
+            @Override
+            public Void call() throws IOException, InterruptedException {
+              final OutputCommitter outputCommitter =
+                  tof[taskIdx].getOutputCommitter(taCtx[taskIdx]);
+              outputCommitter.setupTask(taCtx[taskIdx]);
+              final RecordWriter rw =
+                  tof[taskIdx].getRecordWriter(taCtx[taskIdx]);
+              writeOutput(rw, taCtx[taskIdx]);
+              outputCommitter.commitTask(taCtx[taskIdx]);
+              return null;
+            }
           });
         }
       } finally {
@@ -808,8 +815,8 @@ public class TestFileOutputCommitter {
       amCommitter.commitJob(jContext);
       final RawLocalFileSystem lfs = new RawLocalFileSystem();
       lfs.setConf(conf);
-      assertFalse(
-         lfs.exists(new Path(OUT_SUB_DIR, SUB_DIR)), "Must not end up with sub_dir/sub_dir");
+      assertFalse(lfs.exists(new Path(OUT_SUB_DIR, SUB_DIR)),
+          "Must not end up with sub_dir/sub_dir");
 
       // validate output
       validateContent(OUT_SUB_DIR);
@@ -835,7 +842,7 @@ public class TestFileOutputCommitter {
     int len = (int) f.length();
     byte[] buf = new byte[len];
     FileInputStream in = new FileInputStream(f);
-    String contents;
+    String contents = null;
     try {
       in.read(buf, 0, len);
       contents = new String(buf, StandardCharsets.UTF_8);
@@ -846,7 +853,7 @@ public class TestFileOutputCommitter {
   }
 
   /**
-   * The class provides a override implementation of commitJobInternal which
+   * The class provides a overrided implementation of commitJobInternal which
    * causes the commit failed for the first time then succeed.
    */
   public static class CommitterWithFailedThenSucceed extends

@@ -29,6 +29,8 @@ public abstract class BaseLineRecordReaderHelper {
   private final Path filePath;
   private final byte[] recordDelimiterBytes;
 
+
+
   public BaseLineRecordReaderHelper(Path filePath, Configuration conf) {
     this.conf = conf;
     this.filePath = filePath;

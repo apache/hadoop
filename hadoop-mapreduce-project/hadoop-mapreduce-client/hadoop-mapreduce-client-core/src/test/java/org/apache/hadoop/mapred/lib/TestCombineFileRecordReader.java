@@ -42,7 +42,7 @@ import static org.mockito.Mockito.verify;
 public class TestCombineFileRecordReader {
 
   private static Path outDir = new Path(System.getProperty("test.build.data",
-      "/tmp"), TestCombineFileRecordReader.class.getName());
+            "/tmp"), TestCombineFileRecordReader.class.getName());
 
   private static class TextRecordReaderWrapper
     extends org.apache.hadoop.mapred.lib.CombineFileRecordReaderWrapper<LongWritable,Text> {

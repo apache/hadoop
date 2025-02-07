@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.lib.jobcontrol;
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -49,7 +49,7 @@ public class TestJobControl {
     try {
       jobControl.run();
     } catch (Exception e) {
-      assertInstanceOf(IllegalArgumentException.class, e);
+      assertTrue(e instanceof IllegalArgumentException);
     }
 
   }

@@ -43,6 +43,7 @@ import org.apache.hadoop.mapred.Master;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -150,7 +151,7 @@ public class TestTokenCache {
           int unique = 0;
           @Override
           public Token<?> answer(InvocationOnMock invocation) throws Throwable {
-            Token<?> token = new Token<>();
+            Token<?> token = new Token<TokenIdentifier>();
             token.setService(new Text(service));
             // use unique value so when we restore from token storage, we can
             // tell if it's really the same token

@@ -54,6 +54,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
 
+
 /**
  * A class for unit testing JobResourceUploader.
  */
@@ -482,8 +483,8 @@ public class TestJobResourceUploader {
     validateResourcePathsSub(job.getCacheArchives(), expectedArchives);
     // We use a different job object here because the jobjar was set on a
     // different job object
-    assertEquals(
-       expectedJobJar, job.getJar(), "Job jar path is different than expected!");
+    assertEquals(expectedJobJar, job.getJar(),
+        "Job jar path is different than expected!");
   }
 
   private void validateResourcePathsSub(URI[] actualURIs,
@@ -504,7 +505,7 @@ public class TestJobResourceUploader {
   }
 
   private enum ResourceViolation {
-    NUMBER_OF_RESOURCES, TOTAL_RESOURCE_SIZE, SINGLE_RESOURCE_SIZE
+    NUMBER_OF_RESOURCES, TOTAL_RESOURCE_SIZE, SINGLE_RESOURCE_SIZE;
   }
 
   private void runLimitsTest(ResourceConf rlConf, boolean checkShouldSucceed,
@@ -521,15 +522,15 @@ public class TestJobResourceUploader {
     long configuredSizeOfResourceBytes = rlConf.sizeOfResource * 1024 * 1024;
     when(mockedStatus.getLen()).thenReturn(configuredSizeOfResourceBytes);
     when(mockedStatus.isDirectory()).thenReturn(false);
-    Map<URI, FileStatus> statCache = new HashMap<>();
+    Map<URI, FileStatus> statCache = new HashMap<URI, FileStatus>();
     try {
       uploader.checkLocalizationLimits(conf,
           conf.getStringCollection("tmpfiles"),
           conf.getStringCollection("tmpjars"),
           conf.getStringCollection("tmparchives"),
           conf.getJar(), statCache);
-      assertTrue(
-         checkShouldSucceed, "Limits check succeeded when it should have failed.");
+      assertTrue(checkShouldSucceed,
+          "Limits check succeeded when it should have failed.");
     } catch (IOException e) {
       if (checkShouldSucceed) {
         fail("Limits check failed when it should have succeeded: " + e);

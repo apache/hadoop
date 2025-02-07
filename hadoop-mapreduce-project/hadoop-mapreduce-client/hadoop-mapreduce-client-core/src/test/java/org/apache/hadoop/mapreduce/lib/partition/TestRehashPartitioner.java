@@ -49,7 +49,7 @@ public class TestRehashPartitioner {
   @Test
   public void testPatterns() {
     int results[] = new int[PARTITIONS];
-    RehashPartitioner <IntWritable, NullWritable> p = new RehashPartitioner<>();
+    RehashPartitioner <IntWritable, NullWritable> p = new RehashPartitioner < IntWritable, NullWritable> ();
     /* test sequence 4, 8, 12, ... 128 */
     for(int i = 0; i < END; i+= STEP) {
       results[p.getPartition(new IntWritable(i), null, PARTITIONS)]++;

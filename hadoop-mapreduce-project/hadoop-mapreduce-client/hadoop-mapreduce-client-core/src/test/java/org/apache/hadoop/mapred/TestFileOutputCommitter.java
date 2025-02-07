@@ -31,7 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -151,8 +150,8 @@ public class TestFileOutputCommitter {
     } else {
         assertFalse(jtd2.exists(), "Version 2 commits to output dir " + jtd2);
         if (commitVersion == 1) {
-          assertEquals(0, jtd1.list().length, "Version 2  recovery moves to output dir from "
-                    + jtd1);
+          assertEquals(0, jtd1.list().length,
+              "Version 2  recovery moves to output dir from " + jtd1);
         }
       }
 
@@ -543,7 +542,7 @@ public class TestFileOutputCommitter {
       th = ie;
     }
     assertNotNull(th);
-    assertInstanceOf(IOException.class, th);
+    assertTrue(th instanceof IOException);
     assertTrue(th.getMessage().contains("fake delete failed"));
     assertTrue(expectedFile.exists(), expectedFile + " does not exists");
 
@@ -554,7 +553,7 @@ public class TestFileOutputCommitter {
       th = ie;
     }
     assertNotNull(th);
-    assertInstanceOf(IOException.class, th);
+    assertTrue(th instanceof IOException);
     assertTrue(th.getMessage().contains("fake delete failed"));
     assertTrue(jobTmpDir.exists(), "job temp dir does not exists");
     FileUtil.fullyDelete(new File(outDir.toString()));
@@ -573,7 +572,7 @@ public class TestFileOutputCommitter {
     int len = (int) f.length();
     byte[] buf = new byte[len];
     FileInputStream in = new FileInputStream(f);
-    String contents;
+    String contents = null;
     try {
       in.read(buf, 0, len);
       contents = new String(buf, StandardCharsets.UTF_8);
@@ -584,7 +583,7 @@ public class TestFileOutputCommitter {
   }
 
   /**
-   * The class provides a override implementation of commitJobInternal which
+   * The class provides a overrided implementation of commitJobInternal which
    * causes the commit failed for the first time then succeed.
    */
   public static class CommitterWithFailedThenSucceed extends

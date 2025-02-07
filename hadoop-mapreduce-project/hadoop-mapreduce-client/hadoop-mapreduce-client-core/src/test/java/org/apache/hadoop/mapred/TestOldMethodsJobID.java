@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Test deprecated methods
+ *
  */
 public class TestOldMethodsJobID {
 
@@ -73,7 +74,7 @@ public class TestOldMethodsJobID {
   
   /**
    * test JobID
-   * @throws IOException In the process of unit testing, an IO exception occurred.
+   * @throws IOException
    */
   @SuppressWarnings("deprecation")
   @Test
@@ -113,8 +114,8 @@ public class TestOldMethodsJobID {
   }
 
   /**
-   * test deprecated methods of JobProfile
-   * @throws IOException In the process of unit testing, an IO exception occurred.
+   * test depricated methods of JobProfile
+   * @throws IOException
    */
   @SuppressWarnings("deprecation")
   @Test
@@ -155,7 +156,8 @@ public class TestOldMethodsJobID {
   }
   
   /**
-   * test Reporter. NULL
+   * test Reporter.NULL
+   *
    */
   
   @Test

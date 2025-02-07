@@ -17,6 +17,13 @@
  */
 package org.apache.hadoop.mapred;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.HashSet;
@@ -36,18 +43,11 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
 /**
  * TestCounters checks the sanity and recoverability of {@code Counters}
  */
 public class TestCounters {
-  enum myCounters {TEST1, TEST2}
+  enum myCounters {TEST1, TEST2};
   private static final long MAX_VALUE = 10;
   private static final Logger LOG = LoggerFactory.getLogger(TestCounters.class);
   
@@ -110,7 +110,7 @@ public class TestCounters {
       // I. Check enum counters that have resource bundler
       testCounter(getEnumCounters(keysWithResource));
 
-      // II. Check enum counters that don't have resource bundler
+      // II. Check enum counters that dont have resource bundler
       testCounter(getEnumCounters(keysWithoutResource));
 
       // III. Check string counters
@@ -247,8 +247,8 @@ public class TestCounters {
     counters.findCounter("fs2", FileSystemCounter.BYTES_READ).increment(1);
     counters.incrCounter("group1", "counter1", 1);
     
-    HashSet<String> groups = new HashSet<>(counters.getGroupNames());
-    HashSet<String> expectedGroups = new HashSet<>();
+    HashSet<String> groups = new HashSet<String>(counters.getGroupNames());
+    HashSet<String> expectedGroups = new HashSet<String>();
     expectedGroups.add("group1");
     expectedGroups.add("FileSystemCounters"); //Legacy Name
     expectedGroups.add("org.apache.hadoop.mapreduce.FileSystemCounter");
@@ -265,8 +265,8 @@ public class TestCounters {
     assertEquals("group1.counter1:1", counters.makeCompactString());
     counters.incrCounter("group2", "counter2", 3);
     String cs = counters.makeCompactString();
-    assertTrue(
-       cs.equals(GC1 + ',' + GC2) || cs.equals(GC2 + ',' + GC1), "Bad compact string");
+    assertTrue(cs.equals(GC1 + ',' + GC2) || cs.equals(GC2 + ',' + GC1),
+        "Bad compact string");
   }
   
   @Test
@@ -280,7 +280,11 @@ public class TestCounters {
       counters.findCounter("test", "test" + i);
     }
     setExpected(counters);
-    shouldThrow(CountersExceededException.class, () -> counters.findCounter("test", "bad"));
+    shouldThrow(CountersExceededException.class, new Runnable() {
+      public void run() {
+        counters.findCounter("test", "bad");
+      }
+    });
     checkExpected(counters);
   }
 
@@ -290,7 +294,11 @@ public class TestCounters {
       counters.findCounter("test" + i, "test");
     }
     setExpected(counters);
-    shouldThrow(CountersExceededException.class, () -> counters.findCounter("bad", "test"));
+    shouldThrow(CountersExceededException.class, new Runnable() {
+      public void run() {
+        counters.findCounter("bad", "test");
+      }
+    });
     checkExpected(counters);
   }
 

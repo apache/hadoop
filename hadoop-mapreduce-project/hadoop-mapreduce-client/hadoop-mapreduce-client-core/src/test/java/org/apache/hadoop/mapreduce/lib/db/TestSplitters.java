@@ -160,8 +160,8 @@ public class TestSplitters {
     for (int i = 0; i < expectedSplitRE.length; i++) {
       DataDrivenDBInputSplit split = (DataDrivenDBInputSplit) splits.get(i);
       String actualExpr = split.getLowerClause() + " " + split.getUpperClause();
-      assertTrue(
-         Pattern.matches(expectedSplitRE[i], actualExpr), "Split #" + (i+1) + " expression is wrong."
+      assertTrue(Pattern.matches(expectedSplitRE[i], actualExpr),
+          "Split #" + (i+1) + " expression is wrong."
           + " Expected " + expectedSplitRE[i]
           + " Actual " + actualExpr);
     }

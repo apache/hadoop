@@ -49,4 +49,5 @@ public class TestJobQueueClient {
     assertTrue(bbos.toString().contains("GrandChildQueue"),
         "printJobQueueInfo did not print grandchild's name");
   }
+
 }

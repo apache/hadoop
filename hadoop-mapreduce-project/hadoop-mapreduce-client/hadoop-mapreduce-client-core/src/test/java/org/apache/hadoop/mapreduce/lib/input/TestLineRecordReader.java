@@ -18,6 +18,13 @@
 
 package org.apache.hadoop.mapreduce.lib.input;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -43,13 +50,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 public class TestLineRecordReader {
   private static Path workDir = new Path(new Path(System.getProperty(
       "test.build.data", "target"), "data"), "TestTextInputFormat");
@@ -71,8 +71,8 @@ public class TestLineRecordReader {
       throws IOException {
     conf.setInt(org.apache.hadoop.mapreduce.lib.input.
         LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
-    assertTrue(
-       testFileSize > firstSplitLength, "unexpected test data at " + testFilePath);
+    assertTrue(testFileSize > firstSplitLength,
+        "unexpected test data at " + testFilePath);
 
     String delimiter = conf.get("textinputformat.record.delimiter");
     byte[] recordDelimiterBytes = null;
@@ -82,7 +82,8 @@ public class TestLineRecordReader {
     TaskAttemptContext context = new TaskAttemptContextImpl(conf, new TaskAttemptID());
 
     // read the data without splitting to count the records
-    FileSplit split = new FileSplit(testFilePath, 0, testFileSize, null);
+    FileSplit split = new FileSplit(testFilePath, 0, testFileSize,
+        (String[])null);
     LineRecordReader reader = new LineRecordReader(recordDelimiterBytes);
     reader.initialize(split, context);
     int numRecordsNoSplits = 0;
@@ -92,7 +93,7 @@ public class TestLineRecordReader {
     reader.close();
 
     // count the records in the first split
-    split = new FileSplit(testFilePath, 0, firstSplitLength, null);
+    split = new FileSplit(testFilePath, 0, firstSplitLength, (String[])null);
     reader = new LineRecordReader(recordDelimiterBytes);
     reader.initialize(split, context);
     int numRecordsFirstSplit = 0;
@@ -103,7 +104,7 @@ public class TestLineRecordReader {
 
     // count the records in the second split
     split = new FileSplit(testFilePath, firstSplitLength,
-        testFileSize - firstSplitLength, null);
+        testFileSize - firstSplitLength, (String[])null);
     reader = new LineRecordReader(recordDelimiterBytes);
     reader.initialize(split, context);
     int numRecordsRemainingSplits = 0;
@@ -111,8 +112,8 @@ public class TestLineRecordReader {
       ++numRecordsRemainingSplits;
     }
     reader.close();
-    assertEquals(numRecordsNoSplits
-,         numRecordsFirstSplit + numRecordsRemainingSplits, "Unexpected number of records in split ");
+    assertEquals(numRecordsNoSplits, numRecordsFirstSplit + numRecordsRemainingSplits,
+        "Unexpected number of records in split ");
   }
 
   @Test
@@ -152,7 +153,7 @@ public class TestLineRecordReader {
     TaskAttemptContext context = new TaskAttemptContextImpl(conf, new TaskAttemptID());
 
     // Gather the records returned by the record reader
-    ArrayList<String> records = new ArrayList<>();
+    ArrayList<String> records = new ArrayList<String>();
 
     long offset = 0;
     while (offset < testFileSize) {
@@ -205,8 +206,8 @@ public class TestLineRecordReader {
       }
     }
 
-    assertTrue(
-              hasLargeRecord, "Invalid test data. Doesn't have a large enough record");
+    assertTrue(hasLargeRecord,
+        "Invalid test data. Doesn't have a large enough record");
   }
 
   @Test
@@ -245,7 +246,8 @@ public class TestLineRecordReader {
     TaskAttemptContext context = new TaskAttemptContextImpl(conf, new TaskAttemptID());
 
     // read the data and check whether BOM is skipped
-    FileSplit split = new FileSplit(testFilePath, 0, testFileSize, null);
+    FileSplit split = new FileSplit(testFilePath, 0, testFileSize,
+        (String[])null);
     LineRecordReader reader = new LineRecordReader();
     reader.initialize(split, context);
     int numRecords = 0;
@@ -269,8 +271,7 @@ public class TestLineRecordReader {
   public void testMultipleClose() throws IOException {
     URL testFileUrl = getClass().getClassLoader().
         getResource("recordSpanningMultipleSplits.txt.bz2");
-    assertNotNull(
-       testFileUrl, "Cannot find recordSpanningMultipleSplits.txt.bz2");
+    assertNotNull(testFileUrl, "Cannot find recordSpanningMultipleSplits.txt.bz2");
     File testFile = new File(testFileUrl.getFile());
     Path testFilePath = new Path(testFile.getAbsolutePath());
     long testFileSize = testFile.length();
@@ -291,7 +292,7 @@ public class TestLineRecordReader {
 
     BZip2Codec codec = new BZip2Codec();
     codec.setConf(conf);
-    Set<Decompressor> decompressors = new HashSet<>();
+    Set<Decompressor> decompressors = new HashSet<Decompressor>();
     for (int i = 0; i < 10; ++i) {
       decompressors.add(CodecPool.getDecompressor(codec));
     }
@@ -418,7 +419,7 @@ public class TestLineRecordReader {
     String delimiter = "++";
     byte[] recordDelimiterBytes = delimiter.getBytes(StandardCharsets.UTF_8);
     int splitLength = 15;
-    FileSplit split = new FileSplit(inputFile, 0, splitLength, null);
+    FileSplit split = new FileSplit(inputFile, 0, splitLength, (String[])null);
     TaskAttemptContext context = new TaskAttemptContextImpl(conf,
         new TaskAttemptID());
     LineRecordReader reader = new LineRecordReader(recordDelimiterBytes);
@@ -447,7 +448,7 @@ public class TestLineRecordReader {
     assertNull(key, "Unexpected key returned");
     reader.close();
     split = new FileSplit(inputFile, splitLength,
-        inputData.length() - splitLength, null);
+        inputData.length() - splitLength, (String[])null);
     reader = new LineRecordReader(recordDelimiterBytes);
     reader.initialize(split, context);
     // No record is in the second split because the second split dropped
@@ -461,7 +462,7 @@ public class TestLineRecordReader {
     inputData = "abcd+efgh++ijk++mno";
     inputFile = createInputFile(conf, inputData);
     splitLength = 5;
-    split = new FileSplit(inputFile, 0, splitLength, null);
+    split = new FileSplit(inputFile, 0, splitLength, (String[])null);
     reader = new LineRecordReader(recordDelimiterBytes);
     reader.initialize(split, context);
     // Get first record: "abcd+efgh"
@@ -517,16 +518,15 @@ public class TestLineRecordReader {
         value = reader.getCurrentValue();
         assertEquals("abcd|efgh", value.toString());
         // Position should be 0 right at the start
-        assertEquals(keyPosition
-,             key.get(), "Wrong position after record read");
+        assertEquals(keyPosition, key.get(), "Wrong position after record read");
         // Position should be 12 right after the first "|+|"
         keyPosition = 12;
         // get the next record: "ij|kl" if the split/buffer allows it
         if (reader.nextKeyValue()) {
           // check the record info: "ij|kl"
           assertEquals("ij|kl", value.toString());
-          assertEquals(keyPosition
-,               key.get(), "Wrong position after record read");
+          assertEquals(keyPosition, key.get(),
+              "Wrong position after record read");
           // Position should be 20 after the second "|+|"
           keyPosition = 20;
         }
@@ -534,15 +534,13 @@ public class TestLineRecordReader {
         if (reader.nextKeyValue()) {
           // check the record info: "mno|pqr"
           assertEquals("mno|pqr", value.toString());
-          assertEquals(keyPosition
-,               key.get(), "Wrong position after record read");
+          assertEquals(keyPosition, key.get(), "Wrong position after record read");
           // Position should be the end of the input
           keyPosition = inputData.length();
         }
         assertFalse(reader.nextKeyValue(), "Unexpected record returned");
         // no more records can be read we should be at the last position
-        assertEquals(keyPosition
-,             key.get(), "Wrong position after record read");
+        assertEquals(keyPosition, key.get(), "Wrong position after record read");
         // after refresh should be empty
         key = reader.getCurrentKey();
         assertNull(key, "Unexpected key returned");
@@ -560,7 +558,7 @@ public class TestLineRecordReader {
     conf.setInt("io.file.buffer.size", 10);
     conf.setInt(org.apache.hadoop.mapreduce.lib.input.
         LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
-    FileSplit split = new FileSplit(inputFile, 0, 15, null);
+    FileSplit split = new FileSplit(inputFile, 0, 15, (String[])null);
     TaskAttemptContext context = new TaskAttemptContextImpl(conf,
         new TaskAttemptID());
     LineRecordReader reader = new LineRecordReader(null);
@@ -582,7 +580,7 @@ public class TestLineRecordReader {
     // Key should be 16 right after "1234567890\r\n12\r\n"
     assertEquals(16, key.get());
 
-    split = new FileSplit(inputFile, 15, 4, null);
+    split = new FileSplit(inputFile, 15, 4, (String[])null);
     reader = new LineRecordReader(null);
     reader.initialize(split, context);
     // The second split dropped the first record "\n"
@@ -599,7 +597,7 @@ public class TestLineRecordReader {
 
     inputData = "123456789\r\r\n";
     inputFile = createInputFile(conf, inputData);
-    split = new FileSplit(inputFile, 0, 12, null);
+    split = new FileSplit(inputFile, 0, 12, (String[])null);
     reader = new LineRecordReader(null);
     reader.initialize(split, context);
     reader.nextKeyValue();
@@ -632,9 +630,9 @@ public class TestLineRecordReader {
     File testFile = new File(testFileUrl.getFile());
     long testFileSize = testFile.length();
     Path testFilePath = new Path(testFile.getAbsolutePath());
-    assertTrue(
-       firstSplitLength > 9, "Split size is smaller than header length");
-    assertTrue(testFileSize > firstSplitLength, "Split size is larger than compressed file size " +
+    assertTrue(firstSplitLength > 9, "Split size is smaller than header length");
+    assertTrue(testFileSize > firstSplitLength,
+        "Split size is larger than compressed file size " +
         testFilePath);
 
     Configuration conf = new Configuration();

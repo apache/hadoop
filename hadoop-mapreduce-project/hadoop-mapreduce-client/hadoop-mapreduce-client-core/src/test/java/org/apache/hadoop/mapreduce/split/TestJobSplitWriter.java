@@ -53,8 +53,8 @@ public class TestJobSplitWriter {
           SplitMetaInfoReader.readSplitMetaInfo(new JobID(), fs, conf,
               submitDir);
       assertEquals(1, infos.length, "unexpected number of splits");
-      assertEquals(
-         4, infos[0].getLocations().length, "unexpected number of split locations");
+      assertEquals(4, infos[0].getLocations().length,
+          "unexpected number of split locations");
     } finally {
       FileUtil.fullyDelete(TEST_DIR);
     }
@@ -77,8 +77,8 @@ public class TestJobSplitWriter {
           SplitMetaInfoReader.readSplitMetaInfo(new JobID(), fs, conf,
               submitDir);
       assertEquals(1, infos.length, "unexpected number of splits");
-      assertEquals(
-         4, infos[0].getLocations().length, "unexpected number of split locations");
+      assertEquals(4, infos[0].getLocations().length,
+          "unexpected number of split locations");
     } finally {
       FileUtil.fullyDelete(TEST_DIR);
     }

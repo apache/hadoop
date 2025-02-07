@@ -26,8 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -77,10 +76,9 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
   private IOStatisticsStore iostats;
 
   @Override
-  @BeforeEach
   public void setup() throws Exception {
     super.setup();
-    destDir = methodPath(TestCreateOutputDirectoriesStage.class.getName());
+    destDir = methodPath();
     // clean up dest dir completely
     destDir.getFileSystem(getConfiguration()).delete(destDir, true);
     setStoreOperations(createManifestStoreOperations());

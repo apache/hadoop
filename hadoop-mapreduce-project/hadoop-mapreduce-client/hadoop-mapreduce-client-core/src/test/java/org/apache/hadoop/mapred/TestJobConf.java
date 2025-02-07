@@ -158,10 +158,10 @@ public class TestJobConf {
     
     // make sure mapreduce.map|reduce.java.opts are not set by default
     // so that they won't override mapred.child.java.opts
-    assertNull(
-       conf.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS), "mapreduce.map.java.opts should not be set by default");
-    assertNull(
-       conf.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS), "mapreduce.reduce.java.opts should not be set by default");
+    assertNull(conf.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS),
+        "mapreduce.map.java.opts should not be set by default");
+    assertNull(conf.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS),
+        "mapreduce.reduce.java.opts should not be set by default");
   }
 
   /**
@@ -363,11 +363,10 @@ public class TestJobConf {
   @Test
   public void testMaxTaskFailuresPerTracker() {
     JobConf jobConf = new JobConf(true);
-    assertTrue(
-      jobConf.getMaxTaskFailuresPerTracker() < jobConf.getMaxMapAttempts() &&
-      jobConf.getMaxTaskFailuresPerTracker() < jobConf.getMaxReduceAttempts(), "By default JobContext.MAX_TASK_FAILURES_PER_TRACKER was "
-      + "not less than JobContext.MAP_MAX_ATTEMPTS and REDUCE_MAX_ATTEMPTS"
-      );
+    assertTrue(jobConf.getMaxTaskFailuresPerTracker() < jobConf.getMaxMapAttempts() &&
+        jobConf.getMaxTaskFailuresPerTracker() < jobConf.getMaxReduceAttempts(),
+        "By default JobContext.MAX_TASK_FAILURES_PER_TRACKER was "
+        + "not less than JobContext.MAP_MAX_ATTEMPTS and REDUCE_MAX_ATTEMPTS");
   }
 
   /**

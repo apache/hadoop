@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -73,11 +73,9 @@ public class TestCLI {
 
     assertEquals(0, retCode_MAP, "MAP is a valid input,exit code should be 0");
     assertEquals(0, retCode_map, "map is a valid input,exit code should be 0");
-    assertEquals(0
-,         retCode_REDUCE, "REDUCE is a valid input,exit code should be 0");
-    assertEquals(
-    
-       0, retCode_completed, "REDUCE and completed are a valid inputs to -list-attempt-ids,exit code should be 0");
+    assertEquals(0, retCode_REDUCE, "REDUCE is a valid input,exit code should be 0");
+    assertEquals(0, retCode_completed,
+        "REDUCE and completed are a valid inputs to -list-attempt-ids,exit code should be 0");
 
     verify(job, times(2)).getTaskReports(TaskType.MAP);
     verify(job, times(2)).getTaskReports(TaskType.REDUCE);
@@ -106,14 +104,14 @@ public class TestCLI {
     int retCode_invalidJobId = cli.run(new String[] { "-list-attempt-ids",
         jobIdStr2, "MAP", "running" });
 
-    assertEquals(-1
-,         retCode_JOB_SETUP, "JOB_SETUP is an invalid input,exit code should be -1");
-    assertEquals(-1
-,         retCode_JOB_CLEANUP, "JOB_CLEANUP is an invalid input,exit code should be -1");
-    assertEquals(-1
-,         retCode_invalidTaskState, "complete is an invalid input,exit code should be -1");
-    assertEquals(-1
-,         retCode_invalidJobId, "Non existing job id should be skipped with -1");
+    assertEquals(-1, retCode_JOB_SETUP,
+        "JOB_SETUP is an invalid input,exit code should be -1");
+    assertEquals(-1, retCode_JOB_CLEANUP,
+        "JOB_CLEANUP is an invalid input,exit code should be -1");
+    assertEquals(-1, retCode_invalidTaskState,
+        "complete is an invalid input,exit code should be -1");
+    assertEquals(-1, retCode_invalidJobId,
+        "Non existing job id should be skipped with -1");
 
   }
 
@@ -173,7 +171,7 @@ public class TestCLI {
     cli.cluster = mockCluster;
 
     Job job = cli.getJob(JobID.forName("job_1234654654_001"));
-    assertNull(job, "job is not null");
+    assertTrue(job == null, "job is not null");
   }
 
   @Test

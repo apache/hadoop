@@ -77,7 +77,7 @@ public class TestFileInputFormat {
   
   public void initTestFileInputFormat(int numThreads) {
     this.numThreads = numThreads;
-    LOG.info("Running with numThreads: {}.", numThreads);
+    LOG.info("Running with numThreads: " + numThreads);
   }
   
   @Parameters
@@ -88,7 +88,7 @@ public class TestFileInputFormat {
   
   @BeforeEach
   public void setup() throws IOException {
-    LOG.info("Using Test Dir: {}.", TEST_ROOT_DIR);
+    LOG.info("Using Test Dir: " + TEST_ROOT_DIR);
     localFs = FileSystem.getLocal(new Configuration());
     localFs.delete(TEST_ROOT_DIR, true);
     localFs.mkdirs(TEST_ROOT_DIR);
@@ -159,8 +159,8 @@ public class TestFileInputFormat {
     conf.set(FileInputFormat.INPUT_DIR, "test:///a1/a2");
     MockFileSystem mockFs =
         (MockFileSystem) new Path("test:///").getFileSystem(conf);
-    assertEquals(
-       0, mockFs.numListLocatedStatusCalls, "listLocatedStatus already called");
+    assertEquals(0, mockFs.numListLocatedStatusCalls,
+        "listLocatedStatus already called");
     Job job = Job.getInstance(conf);
     FileInputFormat<?, ?> fileInputFormat = new TextInputFormat();
     List<InputSplit> splits = fileInputFormat.getSplits(job);
@@ -276,7 +276,7 @@ public class TestFileInputFormat {
       LocatedFileStatus orig = statuses.next();
       LocatedFileStatus shrink =
           (LocatedFileStatus)FileInputFormat.shrinkStatus(orig);
-      assertEquals(orig, shrink);
+      assertTrue(orig.equals(shrink));
       if (shrink.getBlockLocations() != null) {
         assertEquals(orig.getBlockLocations().length,
             shrink.getBlockLocations().length);
@@ -302,7 +302,7 @@ public class TestFileInputFormat {
           assertEquals(actual.isCorrupt(), location.isCorrupt());
         }
       } else {
-        assertNull(orig.getBlockLocations());
+        assertTrue(orig.getBlockLocations() == null);
       }
     }
     assertTrue(verified);
@@ -425,7 +425,7 @@ public class TestFileInputFormat {
 
     Iterable<Path> fqExpectedPaths =
         expectedPaths.stream().map(
-        localFs::makeQualified).collect(Collectors.toList());
+            input -> localFs.makeQualified(input)).collect(Collectors.toList());
 
 
     Set<Path> expectedPathSet = Sets.newHashSet(fqExpectedPaths);
@@ -434,9 +434,8 @@ public class TestFileInputFormat {
         fail("Found extra fetched status: " + fileStatus.getPath());
       }
     }
-    assertEquals(
-    0
-,         expectedPathSet.size(), "Not all expectedPaths matched: " + expectedPathSet);
+    assertEquals(0, expectedPathSet.size(),
+        "Not all expectedPaths matched: " + expectedPathSet);
   }
 
 
@@ -452,9 +451,8 @@ public class TestFileInputFormat {
         fail("Found extra split: " + splitPathString);
       }
     }
-    assertEquals(
-    0
-,         expectedSet.size(), "Not all expectedPaths matched: " + expectedSet);
+    assertEquals(0, expectedSet.size(),
+        "Not all expectedPaths matched: " + expectedSet);
   }
   
   private Configuration getConfiguration() {

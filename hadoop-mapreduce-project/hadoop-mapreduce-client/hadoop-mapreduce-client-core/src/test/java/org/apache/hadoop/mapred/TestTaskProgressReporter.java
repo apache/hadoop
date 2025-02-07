@@ -240,10 +240,12 @@ public class TestTaskProgressReporter {
           throws Exception {
     ExitUtil.disableSystemExit();
     threadExited = false;
-    Thread.UncaughtExceptionHandler h = (th, ex) -> {
-      if (ex instanceof ExitUtil.ExitException) {
-        threadExited = true;
-        th.interrupt();
+    Thread.UncaughtExceptionHandler h = new Thread.UncaughtExceptionHandler() {
+      public void uncaughtException(Thread th, Throwable ex) {
+        if (ex instanceof ExitUtil.ExitException) {
+          threadExited = true;
+          th.interrupt();
+        }
       }
     };
     Task task = new DummyTask();
@@ -298,16 +300,18 @@ public class TestTaskProgressReporter {
    * the check is done only once at the first loop of TaskReport#run.
    * @param limit the limit on BYTES_WRITTEN in local file system
    * @param failFast should the task fail fast with such limit?
-   * @throws Exception The exception thrown in the unit test.
+   * @throws Exception
    */
   public void testBytesWrittenLimit(long limit, boolean failFast)
           throws Exception {
     ExitUtil.disableSystemExit();
     threadExited = false;
-    Thread.UncaughtExceptionHandler h = (th, ex) -> {
-      System.out.println("Uncaught exception: " + ex);
-      if (ex instanceof ExitUtil.ExitException) {
-        threadExited = true;
+    Thread.UncaughtExceptionHandler h = new Thread.UncaughtExceptionHandler() {
+      public void uncaughtException(Thread th, Throwable ex) {
+        System.out.println("Uncaught exception: " + ex);
+        if (ex instanceof ExitUtil.ExitException) {
+          threadExited = true;
+        }
       }
     };
     JobConf conf = new JobConf();

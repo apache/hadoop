@@ -37,7 +37,6 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 /**
  *  Test that the executor service has been shut down
@@ -71,16 +70,24 @@ public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
     mkdirs = fileSys.mkdirs(scanPath);
     Path[] dirs = new Path[] {scanPath};
     final LocatedFileStatusFetcher fetcher = new LocatedFileStatusFetcher(conf,
-        dirs, true, path -> true, true);
+        dirs, true, new PathFilter() {
+          @Override
+          public boolean accept(Path path) {
+            return true;
+          }
+        }, true);
 
-    Thread t = new Thread(() -> {
-      try {
-        fetcher.getFileStatuses();
-      } catch (Exception e) {
-        // This should interrupt condition.await()
-        assertInstanceOf(InterruptedException.class, e);
+    Thread t = new Thread() {
+      @Override
+      public void run() {
+        try {
+          fetcher.getFileStatuses();
+        } catch (Exception e) {
+          // This should interrupt condition.await()
+          assertTrue(e instanceof InterruptedException);
+        }
       }
-    });
+    };
 
     t.start();
     LATCH.await();
@@ -88,8 +95,8 @@ public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
     t.interrupt();
     t.join();
     // Check the status for executor service
-    assertTrue(
-       fetcher.getListeningExecutorService().isShutdown(), "The executor service should have been shut down");
+    assertTrue(fetcher.getListeningExecutorService().isShutdown(),
+        "The executor service should have been shut down");
   }
 
   static class MockFileSystem extends LocalFileSystem {
