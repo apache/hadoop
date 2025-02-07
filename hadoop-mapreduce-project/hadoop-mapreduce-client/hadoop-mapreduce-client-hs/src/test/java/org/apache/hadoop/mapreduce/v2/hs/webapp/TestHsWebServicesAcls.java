@@ -29,8 +29,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response.Status;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -60,8 +60,8 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.server.webapp.LogServlet;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -82,7 +82,7 @@ public class TestHsWebServicesAcls {
   private String taskAttemptIdStr;
   private HsWebServices hsWebServices;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     this.conf = new JobConf();
     this.conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,

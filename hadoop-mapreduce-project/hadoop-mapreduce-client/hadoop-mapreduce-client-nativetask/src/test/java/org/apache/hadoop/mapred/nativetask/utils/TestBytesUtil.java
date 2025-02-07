@@ -20,10 +20,11 @@ package org.apache.hadoop.mapred.nativetask.utils;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Longs;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.mapred.nativetask.util.BytesUtil;
+
+import static org.junit.Assert.assertEquals;
 
 public class TestBytesUtil {
 
@@ -32,7 +33,7 @@ public class TestBytesUtil {
     final int a = 1000;
     final byte[] intBytes = Ints.toByteArray(a);
 
-    Assert.assertEquals(a, BytesUtil.toInt(intBytes, 0));
+    assertEquals(a, BytesUtil.toInt(intBytes, 0));
   }
 
   @Test
@@ -40,7 +41,7 @@ public class TestBytesUtil {
     final long l = 1000000L;
     final byte[] longBytes = Longs.toByteArray(l);
 
-    Assert.assertEquals(l, BytesUtil.toLong(longBytes, 0));
+    assertEquals(l, BytesUtil.toLong(longBytes, 0));
   }
 
   @Test
@@ -48,7 +49,7 @@ public class TestBytesUtil {
     final float f = 3.14f;
     final byte[] floatBytes = BytesUtil.toBytes(f);
 
-    Assert.assertEquals(f, BytesUtil.toFloat(floatBytes), 0.0f);
+    assertEquals(f, BytesUtil.toFloat(floatBytes), 0.0f);
   }
 
   @Test
@@ -56,14 +57,14 @@ public class TestBytesUtil {
     final double d = 3.14;
     final byte[] doubleBytes = BytesUtil.toBytes(d);
 
-    Assert.assertEquals(d, BytesUtil.toDouble(doubleBytes), 0.0);
+    assertEquals(d, BytesUtil.toDouble(doubleBytes), 0.0);
   }
 
   @Test
   public void testToStringBinary() {
-    Assert.assertEquals("\\x01\\x02ABC",
+    assertEquals("\\x01\\x02ABC",
         BytesUtil.toStringBinary(new byte[] { 1, 2, 65, 66, 67 }));
-    Assert.assertEquals("\\x10\\x11",
+    assertEquals("\\x10\\x11",
         BytesUtil.toStringBinary(new byte[] { 16, 17 }));
   }
 }

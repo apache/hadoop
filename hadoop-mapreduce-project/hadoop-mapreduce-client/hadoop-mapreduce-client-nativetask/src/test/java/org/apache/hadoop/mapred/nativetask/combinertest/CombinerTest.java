@@ -35,13 +35,15 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class CombinerTest {
   private FileSystem fs;
@@ -66,10 +68,10 @@ public class CombinerTest {
     ResultVerifier.verifyCounters(normaljob, nativejob, true);
   }
 
-  @Before
+  @BeforeEach
   public void startUp() throws Exception {
-    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
-    Assume.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
+    assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    assumeTrue(NativeRuntime.isNativeLibraryLoaded());
     final ScenarioConfiguration conf = new ScenarioConfiguration();
     conf.addcombinerConf();
 
@@ -90,7 +92,7 @@ public class CombinerTest {
       "/normalwordcount";
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanUp() throws IOException {
     final FileSystem fs = FileSystem.get(new ScenarioConfiguration());
     fs.delete(new Path(TestConstants.NATIVETASK_COMBINER_TEST_DIR), true);

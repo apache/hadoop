@@ -19,12 +19,13 @@
 package org.apache.hadoop.mapreduce.jobhistory;
 
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -34,7 +35,7 @@ public class TestJobSummary {
       LoggerFactory.getLogger(TestJobSummary.class);
   private JobSummary summary = new JobSummary();
 
-  @Before
+  @BeforeEach
   public void before() {
     JobId mockJobId = mock(JobId.class);
     when(mockJobId.toString()).thenReturn("testJobId");
@@ -64,8 +65,8 @@ public class TestJobSummary {
     summary.setJobName("aa\rbb\ncc\r\ndd");
     String out = summary.getJobSummaryString();
     LOG.info("summary: " + out);
-    Assert.assertFalse(out.contains("\r"));
-    Assert.assertFalse(out.contains("\n"));
-    Assert.assertTrue(out.contains("aa\\rbb\\ncc\\r\\ndd"));
+    assertFalse(out.contains("\r"));
+    assertFalse(out.contains("\n"));
+    assertTrue(out.contains("aa\\rbb\\ncc\\r\\ndd"));
   }
 }

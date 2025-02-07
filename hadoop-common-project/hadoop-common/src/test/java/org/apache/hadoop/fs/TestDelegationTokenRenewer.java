@@ -18,8 +18,17 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.atMost;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegationTokenRenewer.Renewable;
@@ -27,8 +36,9 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -42,7 +52,7 @@ public class TestDelegationTokenRenewer {
   Configuration conf;
   FileSystem fs;
   
-  @Before
+  @BeforeEach
   public void setup() {
     DelegationTokenRenewer.renewCycle = RENEW_CYCLE;
     DelegationTokenRenewer.reset();
@@ -69,8 +79,8 @@ public class TestDelegationTokenRenewer {
 
     renewer.addRenewAction(fs);
     
-    assertEquals("FileSystem not added to DelegationTokenRenewer", 1,
-        renewer.getRenewQueueLength());
+    assertEquals(1, renewer.getRenewQueueLength(),
+        "FileSystem not added to DelegationTokenRenewer");
     
     Thread.sleep(RENEW_CYCLE*2);
     verify(token, atLeast(2)).renew(eq(conf));
@@ -82,8 +92,8 @@ public class TestDelegationTokenRenewer {
     verify(fs, never()).getDelegationToken(null);
     verify(fs, never()).setDelegationToken(any());
     
-    assertEquals("FileSystem not removed from DelegationTokenRenewer", 0,
-        renewer.getRenewQueueLength());
+    assertEquals(0, renewer.getRenewQueueLength(),
+        "FileSystem not removed from DelegationTokenRenewer");
   }
 
   @Test
@@ -179,7 +189,8 @@ public class TestDelegationTokenRenewer {
     assertEquals(0, renewer.getRenewQueueLength());
   }
   
-  @Test(timeout=4000)
+  @Test
+  @Timeout(value = 4)
   public void testMultipleTokensDoNotDeadlock() throws IOException,
       InterruptedException {
     Configuration conf = mock(Configuration.class);

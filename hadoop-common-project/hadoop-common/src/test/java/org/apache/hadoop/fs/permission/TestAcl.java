@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.fs.permission;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests covering basic functionality of the ACL objects.
@@ -30,7 +32,7 @@ public class TestAcl {
     ENTRY7, ENTRY8, ENTRY9, ENTRY10, ENTRY11, ENTRY12, ENTRY13;
   private static AclStatus STATUS1, STATUS2, STATUS3, STATUS4;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() {
     // named user
     AclEntry.Builder aclEntryBuilder = new AclEntry.Builder()

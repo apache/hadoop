@@ -261,7 +261,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       // There maybe case that we read less than requested data.
       long filePosAtStartOfBuffer = fCursor - limit;
       if (abfsReadFooterMetrics != null) {
-        abfsReadFooterMetrics.checkMetricUpdate(filePathIdentifier, len, contentLength, nextReadPos);
+        abfsReadFooterMetrics.updateReadMetrics(filePathIdentifier, len, contentLength, nextReadPos);
       }
       if (nextReadPos >= filePosAtStartOfBuffer && nextReadPos <= fCursor) {
         // Determining position in buffer from where data is to be read.

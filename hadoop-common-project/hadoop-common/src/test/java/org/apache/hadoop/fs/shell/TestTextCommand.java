@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.shell;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -36,7 +37,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 /**
@@ -95,34 +96,40 @@ public class TestTextCommand {
     Assertions.assertThat(output).describedAs("output").isEmpty();
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testAvroFileInputStreamNullBuffer() throws Exception {
-    createFile(AVRO_FILENAME, generateWeatherAvroBinaryData());
-    URI uri = new URI(AVRO_FILENAME);
-    Configuration conf = new Configuration();
-    try (InputStream is = getInputStream(uri, conf)) {
-      is.read(null, 0, 10);
-    }
+    assertThrows(NullPointerException.class, () -> {
+      createFile(AVRO_FILENAME, generateWeatherAvroBinaryData());
+      URI uri = new URI(AVRO_FILENAME);
+      Configuration conf = new Configuration();
+      try (InputStream is = getInputStream(uri, conf)) {
+        is.read(null, 0, 10);
+      }
+    });
   }
 
-  @Test(expected = IndexOutOfBoundsException.class)
+  @Test
   public void testAvroFileInputStreamNegativePosition() throws Exception {
-    createFile(AVRO_FILENAME, generateWeatherAvroBinaryData());
-    URI uri = new URI(AVRO_FILENAME);
-    Configuration conf = new Configuration();
-    try (InputStream is = getInputStream(uri, conf)) {
-      is.read(new byte[10], -1, 10);
-    }
+    assertThrows(IndexOutOfBoundsException.class, () -> {
+      createFile(AVRO_FILENAME, generateWeatherAvroBinaryData());
+      URI uri = new URI(AVRO_FILENAME);
+      Configuration conf = new Configuration();
+      try (InputStream is = getInputStream(uri, conf)) {
+        is.read(new byte[10], -1, 10);
+      }
+    });
   }
 
-  @Test(expected = IndexOutOfBoundsException.class)
+  @Test
   public void testAvroFileInputStreamTooLong() throws Exception {
-    createFile(AVRO_FILENAME, generateWeatherAvroBinaryData());
-    URI uri = new URI(AVRO_FILENAME);
-    Configuration conf = new Configuration();
-    try (InputStream is = getInputStream(uri, conf)) {
-      is.read(new byte[10], 0, 11);
-    }
+    assertThrows(IndexOutOfBoundsException.class, () -> {
+      createFile(AVRO_FILENAME, generateWeatherAvroBinaryData());
+      URI uri = new URI(AVRO_FILENAME);
+      Configuration conf = new Configuration();
+      try (InputStream is = getInputStream(uri, conf)) {
+        is.read(new byte[10], 0, 11);
+      }
+    });
   }
 
   @Test
@@ -223,34 +230,40 @@ public class TestTextCommand {
     Assertions.assertThat(output).describedAs("output").isEmpty();
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testSequenceFileInputStreamNullBuffer() throws Exception {
-    Configuration conf = new Configuration();
-    createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
-    URI uri = new URI(SEQUENCE_FILENAME);
-    try (InputStream is = getInputStream(uri, conf)) {
-      is.read(null, 0, 10);
-    }
+    assertThrows(NullPointerException.class, () -> {
+      Configuration conf = new Configuration();
+      createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+      URI uri = new URI(SEQUENCE_FILENAME);
+      try (InputStream is = getInputStream(uri, conf)) {
+        is.read(null, 0, 10);
+      }
+    });
   }
 
-  @Test(expected = IndexOutOfBoundsException.class)
+  @Test
   public void testSequenceFileInputStreamNegativePosition() throws Exception {
-    Configuration conf = new Configuration();
-    createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
-    URI uri = new URI(SEQUENCE_FILENAME);
-    try (InputStream is = getInputStream(uri, conf)) {
-      is.read(new byte[10], -1, 10);
-    }
+    assertThrows(IndexOutOfBoundsException.class, () -> {
+      Configuration conf = new Configuration();
+      createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+      URI uri = new URI(SEQUENCE_FILENAME);
+      try (InputStream is = getInputStream(uri, conf)) {
+        is.read(new byte[10], -1, 10);
+      }
+    });
   }
 
-  @Test(expected = IndexOutOfBoundsException.class)
+  @Test
   public void testSequenceFileInputStreamTooLong() throws Exception {
-    Configuration conf = new Configuration();
-    createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
-    URI uri = new URI(SEQUENCE_FILENAME);
-    try (InputStream is = getInputStream(uri, conf)) {
-      is.read(new byte[10], 0, 11);
-    }
+    assertThrows(IndexOutOfBoundsException.class, () -> {
+      Configuration conf = new Configuration();
+      createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+      URI uri = new URI(SEQUENCE_FILENAME);
+      try (InputStream is = getInputStream(uri, conf)) {
+        is.read(new byte[10], 0, 11);
+      }
+    });
   }
 
   @Test

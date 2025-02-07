@@ -19,7 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
@@ -51,7 +51,7 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -107,7 +107,7 @@ public class TestHsWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyHSInfo(json.getJSONObject("historyInfo"));
   }
 
@@ -119,7 +119,7 @@ public class TestHsWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyHSInfo(json.getJSONObject("historyInfo"));
   }
 
@@ -131,7 +131,7 @@ public class TestHsWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyHSInfo(json.getJSONObject("historyInfo"));
   }
 
@@ -155,7 +155,7 @@ public class TestHsWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyHSInfo(json.getJSONObject("historyInfo"));
   }
 
@@ -168,7 +168,7 @@ public class TestHsWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyHSInfo(json.getJSONObject("historyInfo"));
   }
 
@@ -180,7 +180,7 @@ public class TestHsWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyHSInfo(json.getJSONObject("historyInfo"));
   }
 
@@ -253,13 +253,13 @@ public class TestHsWebServices extends JerseyTestBase {
         VersionInfo.getBuildVersion(), hadoopBuildVersion);
     WebServicesTestUtils.checkStringMatch("hadoopVersion",
         VersionInfo.getVersion(), hadoopVersion);
-    assertEquals("startedOn doesn't match: ",
-        JobHistoryServer.historyServerTimeStamp, startedOn);
+    assertEquals(JobHistoryServer.historyServerTimeStamp, startedOn,
+        "startedOn doesn't match: ");
   }
 
   public void verifyHSInfo(JSONObject info)
       throws JSONException {
-    assertEquals("incorrect number of elements", 4, info.length());
+    assertEquals(4, info.length(), "incorrect number of elements");
 
     verifyHsInfoGeneric(info.getString("hadoopVersionBuiltOn"),
         info.getString("hadoopBuildVersion"), info.getString("hadoopVersion"),
@@ -273,7 +273,7 @@ public class TestHsWebServices extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodes = dom.getElementsByTagName("historyInfo");
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
 
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);

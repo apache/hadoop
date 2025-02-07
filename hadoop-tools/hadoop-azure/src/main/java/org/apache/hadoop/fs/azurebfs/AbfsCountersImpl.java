@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.services.AbfsBackoffMetrics;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
@@ -69,6 +70,7 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SEND_REQUESTS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SERVER_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.WRITE_THROTTLES;
+import static org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum.TOTAL_NUMBER_OF_REQUESTS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import static org.apache.hadoop.util.Time.now;
 
@@ -324,18 +326,14 @@ public class AbfsCountersImpl implements AbfsCounters {
   public String toString() {
     String metric = "";
     if (abfsBackoffMetrics != null) {
-      long totalNoRequests = getAbfsBackoffMetrics().getTotalNumberOfRequests();
+      long totalNoRequests = getAbfsBackoffMetrics().getMetricValue(TOTAL_NUMBER_OF_REQUESTS);
       if (totalNoRequests > 0) {
         metric += "#BO:" + getAbfsBackoffMetrics().toString();
       }
     }
     if (abfsReadFooterMetrics != null) {
-      Map<String, AbfsReadFooterMetrics> metricsMap = getAbfsReadFooterMetrics().getMetricsMap();
-      if (metricsMap != null && !(metricsMap.isEmpty())) {
-        String readFooterMetric = getAbfsReadFooterMetrics().toString();
-        if (!readFooterMetric.equals("")) {
-          metric += "#FO:" + getAbfsReadFooterMetrics().toString();
-        }
+      if (getAbfsReadFooterMetrics().getTotalFiles() > 0) {
+        metric += "#FO:" + getAbfsReadFooterMetrics().toString();
       }
     }
     return metric;
