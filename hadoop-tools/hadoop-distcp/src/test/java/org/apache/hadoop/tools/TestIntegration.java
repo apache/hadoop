@@ -27,12 +27,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
-import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -69,7 +70,7 @@ public class TestIntegration {
     return conf;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() {
     try {
       fs = FileSystem.get(getConf());
@@ -85,7 +86,8 @@ public class TestIntegration {
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testSingleFileMissingTarget() {
     caseSingleFileMissingTarget(false);
     caseSingleFileMissingTarget(true);
@@ -102,13 +104,14 @@ public class TestIntegration {
       checkResult(target, 1);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testSingleFileTargetFile() {
     caseSingleFileTargetFile(false);
     caseSingleFileTargetFile(true);
@@ -125,13 +128,14 @@ public class TestIntegration {
       checkResult(target, 1);
     } catch (IOException e) {
       LOG.error("Exception encountered while testing distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testSingleFileTargetDir() {
     caseSingleFileTargetDir(false);
     caseSingleFileTargetDir(true);
@@ -149,13 +153,14 @@ public class TestIntegration {
       checkResult(target, 1, "file2");
     } catch (IOException e) {
       LOG.error("Exception encountered while testing distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testSingleDirTargetMissing() {
     caseSingleDirTargetMissing(false);
     caseSingleDirTargetMissing(true);
@@ -172,13 +177,14 @@ public class TestIntegration {
       checkResult(target, 1, "dir1");
     } catch (IOException e) {
       LOG.error("Exception encountered while testing distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testSingleDirTargetPresent() {
 
     try {
@@ -191,13 +197,14 @@ public class TestIntegration {
       checkResult(target, 1, "singledir/dir1");
     } catch (IOException e) {
       LOG.error("Exception encountered while testing distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testUpdateSingleDirTargetPresent() {
 
     try {
@@ -210,13 +217,14 @@ public class TestIntegration {
       checkResult(target, 1, "Udir1");
     } catch (IOException e) {
       LOG.error("Exception encountered while testing distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testMultiFileTargetPresent() {
     caseMultiFileTargetPresent(false);
     caseMultiFileTargetPresent(true);
@@ -234,13 +242,14 @@ public class TestIntegration {
       checkResult(target, 3, "file3", "file4", "file5");
     } catch (IOException e) {
       LOG.error("Exception encountered while testing distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testMultiFileTargetMissing() {
     caseMultiFileTargetMissing(false);
     caseMultiFileTargetMissing(true);
@@ -257,13 +266,14 @@ public class TestIntegration {
       checkResult(target, 3, "file3", "file4", "file5");
     } catch (IOException e) {
       LOG.error("Exception encountered while testing distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testMultiDirTargetPresent() {
 
     try {
@@ -276,13 +286,14 @@ public class TestIntegration {
       checkResult(target, 2, "multifile/file3", "multifile/file4", "multifile/file5", "singledir/dir1");
     } catch (IOException e) {
       LOG.error("Exception encountered while testing distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testUpdateMultiDirTargetPresent() {
 
     try {
@@ -295,13 +306,14 @@ public class TestIntegration {
       checkResult(target, 4, "Ufile3", "Ufile4", "Ufile5", "Udir1");
     } catch (IOException e) {
       LOG.error("Exception encountered while testing distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testMultiDirTargetMissing() {
 
     try {
@@ -315,13 +327,14 @@ public class TestIntegration {
           "multifile/file5", "singledir/dir1");
     } catch (IOException e) {
       LOG.error("Exception encountered while testing distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testUpdateMultiDirTargetMissing() {
 
     try {
@@ -334,13 +347,14 @@ public class TestIntegration {
       checkResult(target, 4, "file3", "file4", "file5", "dir1");
     } catch (IOException e) {
       LOG.error("Exception encountered while testing distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
     }
   }
   
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testDeleteMissingInDestination() {
     
     try {
@@ -353,18 +367,19 @@ public class TestIntegration {
       checkResult(target, 1, "file1");
     } catch (IOException e) {
       LOG.error("Exception encountered while running distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
       TestDistCpUtils.delete(fs, "target/tmp1");
     }
   }
   
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testOverwrite() {
     byte[] contents1 = "contents1".getBytes();
     byte[] contents2 = "contents2".getBytes();
-    Assert.assertEquals(contents1.length, contents2.length);
+    Assertions.assertEquals(contents1.length, contents2.length);
     
     try {
       addEntries(listFile, "srcdir");
@@ -382,17 +397,18 @@ public class TestIntegration {
       byte[] dstContents = new byte[contents1.length];
       is.readFully(dstContents);
       is.close();
-      Assert.assertArrayEquals(contents1, dstContents);
+      Assertions.assertArrayEquals(contents1, dstContents);
     } catch (IOException e) {
       LOG.error("Exception encountered while running distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
       TestDistCpUtils.delete(fs, "target/tmp1");
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testGlobTargetMissingSingleLevel() {
 
     try {
@@ -408,14 +424,15 @@ public class TestIntegration {
           "singledir/dir2/file6");
     } catch (IOException e) {
       LOG.error("Exception encountered while testing distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
       TestDistCpUtils.delete(fs, "target/tmp1");
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testUpdateGlobTargetMissingSingleLevel() {
 
     try {
@@ -430,14 +447,15 @@ public class TestIntegration {
       checkResult(target, 4, "file3", "file4", "file5", "dir2/file6");
     } catch (IOException e) {
       LOG.error("Exception encountered while running distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
       TestDistCpUtils.delete(fs, "target/tmp1");
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testGlobTargetMissingMultiLevel() {
 
     try {
@@ -454,14 +472,15 @@ public class TestIntegration {
           "dir3/file7", "dir3/file8", "dir3/file9");
     } catch (IOException e) {
       LOG.error("Exception encountered while running distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
       TestDistCpUtils.delete(fs, "target/tmp1");
     }
   }
 
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testUpdateGlobTargetMissingMultiLevel() {
 
     try {
@@ -478,14 +497,15 @@ public class TestIntegration {
           "file7", "file8", "file9");
     } catch (IOException e) {
       LOG.error("Exception encountered while running distcp", e);
-      Assert.fail("distcp failure");
+      Assertions.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
       TestDistCpUtils.delete(fs, "target/tmp1");
     }
   }
   
-  @Test(timeout=100000)
+  @Test
+  @Timeout(value = 100)
   public void testCleanup() {
     try {
       Path sourcePath = new Path("noscheme:///file");
@@ -503,12 +523,12 @@ public class TestIntegration {
       try {
         new DistCp(conf, options).execute();
       } catch (Throwable t) {
-        Assert.assertEquals(stagingDir.getFileSystem(conf).
+        Assertions.assertEquals(stagingDir.getFileSystem(conf).
             listStatus(stagingDir).length, 0);
       }
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
-      Assert.fail("testCleanup failed " + e.getMessage());
+      Assertions.fail("testCleanup failed " + e.getMessage());
     }
   }
   
@@ -576,13 +596,13 @@ public class TestIntegration {
   }
 
   private void checkResult(Path target, int count, String... relPaths) throws IOException {
-    Assert.assertEquals(count, fs.listStatus(target).length);
+    Assertions.assertEquals(count, fs.listStatus(target).length);
     if (relPaths == null || relPaths.length == 0) {
-      Assert.assertTrue(target.toString(), fs.exists(target));
+      Assertions.assertTrue(fs.exists(target), target.toString());
       return;
     }
     for (String relPath : relPaths) {
-      Assert.assertTrue(new Path(target, relPath).toString(), fs.exists(new Path(target, relPath)));
+      Assertions.assertTrue(fs.exists(new Path(target, relPath)), new Path(target, relPath).toString());
     }
   }
 

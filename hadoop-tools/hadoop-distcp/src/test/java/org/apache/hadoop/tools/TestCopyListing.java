@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.tools;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -36,10 +37,11 @@ import org.apache.hadoop.io.Text;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.junit.Test;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
@@ -61,13 +63,13 @@ public class TestCopyListing extends SimpleCopyListing {
   private static final Configuration config = new Configuration();
   private static MiniDFSCluster cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void create() throws IOException {
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).format(true)
                                                 .build();
   }
 
-  @AfterClass
+  @AfterAll
   public static void destroy() {
     if (cluster != null) {
       cluster.shutdown();
@@ -98,7 +100,8 @@ public class TestCopyListing extends SimpleCopyListing {
     return 0;
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testMultipleSrcToFile() {
     FileSystem fs = null;
     try {
@@ -119,7 +122,7 @@ public class TestCopyListing extends SimpleCopyListing {
       fs.create(target).close();
       try {
         validatePaths(new DistCpContext(options));
-        Assert.fail("Invalid inputs accepted");
+        Assertions.fail("Invalid inputs accepted");
       } catch (InvalidInputException ignore) { }
       TestDistCpUtils.delete(fs, "/tmp");
 
@@ -129,18 +132,19 @@ public class TestCopyListing extends SimpleCopyListing {
       fs.create(target).close();
       try {
         validatePaths(new DistCpContext(options));
-        Assert.fail("Invalid inputs accepted");
+        Assertions.fail("Invalid inputs accepted");
       } catch (InvalidInputException ignore) { }
       TestDistCpUtils.delete(fs, "/tmp");
     } catch (IOException e) {
       LOG.error("Exception encountered ", e);
-      Assert.fail("Test input validation failed");
+      Assertions.fail("Test input validation failed");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testDuplicates() {
     FileSystem fs = null;
     try {
@@ -158,36 +162,40 @@ public class TestCopyListing extends SimpleCopyListing {
           context);
       try {
         listing.buildListing(listingFile, context);
-        Assert.fail("Duplicates not detected");
+        Assertions.fail("Duplicates not detected");
       } catch (DuplicateFileException ignore) {
       }
     } catch (IOException e) {
       LOG.error("Exception encountered in test", e);
-      Assert.fail("Test failed " + e.getMessage());
+      Assertions.fail("Test failed " + e.getMessage());
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
   }
 
-  @Test(expected = DuplicateFileException.class, timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDiffBasedSimpleCopyListing() throws IOException {
-    FileSystem fs = null;
-    Configuration configuration = getConf();
-    DistCpSync distCpSync = Mockito.mock(DistCpSync.class);
-    Path listingFile = new Path("/tmp/list");
-    // Throws DuplicateFileException as it recursively traverses src3 directory
-    // and also adds 3.txt,4.txt twice
-    configuration.setBoolean(
-        DistCpConstants.CONF_LABEL_DIFF_COPY_LISTING_TRAVERSE_DIRECTORY, true);
-    try {
-      fs = FileSystem.get(getConf());
-      buildListingUsingSnapshotDiff(fs, configuration, distCpSync, listingFile);
-    } finally {
-      TestDistCpUtils.delete(fs, "/tmp");
-    }
+    assertThrows(DuplicateFileException.class, () -> {
+      FileSystem fs = null;
+      Configuration configuration = getConf();
+      DistCpSync distCpSync = Mockito.mock(DistCpSync.class);
+      Path listingFile = new Path("/tmp/list");
+      // Throws DuplicateFileException as it recursively traverses src3 directory
+      // and also adds 3.txt,4.txt twice
+      configuration.setBoolean(
+          DistCpConstants.CONF_LABEL_DIFF_COPY_LISTING_TRAVERSE_DIRECTORY, true);
+      try {
+        fs = FileSystem.get(getConf());
+        buildListingUsingSnapshotDiff(fs, configuration, distCpSync, listingFile);
+      } finally {
+        TestDistCpUtils.delete(fs, "/tmp");
+      }
+    });
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testDiffBasedSimpleCopyListingWithoutTraverseDirectory()
       throws IOException {
     FileSystem fs = null;
@@ -252,13 +260,14 @@ public class TestCopyListing extends SimpleCopyListing {
       CopyListing listing =
           CopyListing.getCopyListing(getConf(), CREDENTIALS, context);
       listing.buildListing(listingFile, context);
-      Assert.assertTrue(fs.exists(listingFile));
+      Assertions.assertTrue(fs.exists(listingFile));
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testBuildListing() {
     FileSystem fs = null;
     try {
@@ -294,7 +303,7 @@ public class TestCopyListing extends SimpleCopyListing {
       CopyListing listing = new SimpleCopyListing(getConf(), CREDENTIALS);
       try {
         listing.buildListing(listingFile, new DistCpContext(options));
-        Assert.fail("Duplicates not detected");
+        Assertions.fail("Duplicates not detected");
       } catch (DuplicateFileException ignore) {
       }
       assertThat(listing.getBytesToCopy()).isEqualTo(10);
@@ -303,19 +312,20 @@ public class TestCopyListing extends SimpleCopyListing {
 
       try {
         listing.buildListing(listingFile, new DistCpContext(options));
-        Assert.fail("Invalid input not detected");
+        Assertions.fail("Invalid input not detected");
       } catch (InvalidInputException ignore) {
       }
       TestDistCpUtils.delete(fs, "/tmp");
     } catch (IOException e) {
       LOG.error("Exception encountered ", e);
-      Assert.fail("Test build listing failed");
+      Assertions.fail("Test build listing failed");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testWithRandomFileListing() throws IOException {
     FileSystem fs = null;
     try {
@@ -346,7 +356,7 @@ public class TestCopyListing extends SimpleCopyListing {
       SimpleCopyListing listing = new SimpleCopyListing(getConf(), CREDENTIALS);
       listing.buildListing(listingFile, new DistCpContext(options));
 
-      Assert.assertEquals(listing.getNumberOfPaths(), pathCount);
+      Assertions.assertEquals(listing.getNumberOfPaths(), pathCount);
       validateFinalListing(listingFile, srcFiles);
       fs.delete(listingFile, true);
 
@@ -359,7 +369,7 @@ public class TestCopyListing extends SimpleCopyListing {
       long seed = System.nanoTime();
       listing.setSeedForRandomListing(seed);
       listing.buildListing(listingFile, new DistCpContext(options));
-      Assert.assertEquals(listing.getNumberOfPaths(), pathCount);
+      Assertions.assertEquals(listing.getNumberOfPaths(), pathCount);
 
       // validate randomness
       Collections.shuffle(srcFiles, new Random(seed));
@@ -381,9 +391,9 @@ public class TestCopyListing extends SimpleCopyListing {
       int idx = 0;
       while (reader.next(currentKey)) {
         reader.getCurrentValue(currentVal);
-        Assert.assertEquals("srcFiles.size=" + srcFiles.size()
-                + ", idx=" + idx, fs.makeQualified(srcFiles.get(idx)),
-            currentVal.getPath());
+        Assertions.assertEquals(fs.makeQualified(srcFiles.get(idx))
+,             currentVal.getPath(), "srcFiles.size=" + srcFiles.size()
+                + ", idx=" + idx);
         if (LOG.isDebugEnabled()) {
           LOG.debug("val=" + fs.makeQualified(srcFiles.get(idx)));
         }
@@ -393,7 +403,8 @@ public class TestCopyListing extends SimpleCopyListing {
   }
 
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testBuildListingForSingleFile() {
     FileSystem fs = null;
     String testRootString = "/singleFileListing";
@@ -426,11 +437,11 @@ public class TestCopyListing extends SimpleCopyListing {
 
       CopyListingFileStatus fileStatus = new CopyListingFileStatus();
       Text relativePath = new Text();
-      Assert.assertTrue(reader.next(relativePath, fileStatus));
-      Assert.assertTrue(relativePath.toString().equals(""));
+      Assertions.assertTrue(reader.next(relativePath, fileStatus));
+      Assertions.assertTrue(relativePath.toString().equals(""));
     }
     catch (Exception e) {
-      Assert.fail("Unexpected exception encountered.");
+      Assertions.fail("Unexpected exception encountered.");
       LOG.error("Unexpected exception: ", e);
     }
     finally {
@@ -461,7 +472,7 @@ public class TestCopyListing extends SimpleCopyListing {
     } catch (Exception e) {
       actualEx = e;
     }
-    Assert.assertNotNull("close writer didn't fail", actualEx);
-    Assert.assertEquals(expectedEx, actualEx);
+    Assertions.assertNotNull(actualEx, "close writer didn't fail");
+    Assertions.assertEquals(expectedEx, actualEx);
   }
 }

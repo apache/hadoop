@@ -28,10 +28,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -54,7 +54,7 @@ public class TestExternalCall {
     return conf;
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
 
     securityManager = System.getSecurityManager();
@@ -69,7 +69,7 @@ public class TestExternalCall {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     System.setSecurityManager(securityManager);
   }
@@ -92,7 +92,7 @@ public class TestExternalCall {
       String[] arg = { soure.toString(), target.toString() };
 
       distcp.run(arg);
-      Assert.assertTrue(fs.exists(target));
+      Assertions.assertTrue(fs.exists(target));
 
   
   }
@@ -127,12 +127,12 @@ public class TestExternalCall {
 
       String[] arg = {target.toString(),soure.toString()};
       DistCp.main(arg);
-      Assert.fail();
+      Assertions.fail();
 
     } catch (ExitException t) {
-      Assert.assertTrue(fs.exists(target));
-      Assert.assertEquals(t.status, 0);
-      Assert.assertEquals(
+      Assertions.assertTrue(fs.exists(target));
+      Assertions.assertEquals(t.status, 0);
+      Assertions.assertEquals(
           stagingDir.getFileSystem(conf).listStatus(stagingDir).length, 0);
     }
 

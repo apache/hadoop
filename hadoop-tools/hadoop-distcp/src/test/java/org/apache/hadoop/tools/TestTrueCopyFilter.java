@@ -19,18 +19,18 @@
 package org.apache.hadoop.tools;
 
 import org.apache.hadoop.fs.Path;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestTrueCopyFilter {
 
   @Test
   public void testShouldCopy() {
-    Assert.assertTrue(new TrueCopyFilter().shouldCopy(new Path("fake")));
+    Assertions.assertTrue(new TrueCopyFilter().shouldCopy(new Path("fake")));
   }
 
   @Test
   public void testShouldCopyWithNull() {
-    Assert.assertTrue(new TrueCopyFilter().shouldCopy(new Path("fake")));
+    Assertions.assertTrue(new TrueCopyFilter().shouldCopy(new Path("fake")));
   }
 }

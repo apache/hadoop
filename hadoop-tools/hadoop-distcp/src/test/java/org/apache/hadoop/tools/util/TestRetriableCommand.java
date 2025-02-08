@@ -20,8 +20,8 @@ package org.apache.hadoop.tools.util;
 
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicies;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 
@@ -54,28 +54,28 @@ public class TestRetriableCommand {
   public void testRetriableCommand() {
     try {
       new MyRetriableCommand(5).execute(0);
-      Assert.assertTrue(false);
+      Assertions.assertTrue(false);
     }
     catch (Exception e) {
-      Assert.assertTrue(true);
+      Assertions.assertTrue(true);
     }
 
 
     try {
       new MyRetriableCommand(3).execute(0);
-      Assert.assertTrue(true);
+      Assertions.assertTrue(true);
     }
     catch (Exception e) {
-      Assert.assertTrue(false);
+      Assertions.assertTrue(false);
     }
 
     try {
       new MyRetriableCommand(5, RetryPolicies.
           retryUpToMaximumCountWithFixedSleep(5, 0, TimeUnit.MILLISECONDS)).execute(0);
-      Assert.assertTrue(true);
+      Assertions.assertTrue(true);
     }
     catch (Exception e) {
-      Assert.assertTrue(false);
+      Assertions.assertTrue(false);
     }
   }
 }

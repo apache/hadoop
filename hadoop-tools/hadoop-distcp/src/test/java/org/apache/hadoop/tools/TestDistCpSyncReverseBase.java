@@ -33,10 +33,10 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.tools.mapred.CopyMapper;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -91,7 +91,7 @@ public abstract class TestDistCpSyncReverseBase {
     System.setErr(out);
     final String results;
     try {
-      Assert.assertEquals(0, shell.run(new String[] {"-lsr", dir }));
+      Assertions.assertEquals(0, shell.run(new String[] {"-lsr", dir }));
       results = bytes.toString();
     } finally {
       IOUtils.closeStream(out);
@@ -127,7 +127,7 @@ public abstract class TestDistCpSyncReverseBase {
     isSrcNotSameAsTgt = srcNotSameAsTgt;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     initSourcePath();
 
@@ -151,7 +151,7 @@ public abstract class TestDistCpSyncReverseBase {
     conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, target.toString());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     IOUtils.cleanupWithLogger(null, dfs);
     if (cluster != null) {
@@ -168,39 +168,39 @@ public abstract class TestDistCpSyncReverseBase {
   @Test
   public void testFallback() throws Exception {
     // the source/target dir are not snapshottable dir
-    Assert.assertFalse(sync());
+    Assertions.assertFalse(sync());
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
         HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s1");
-    Assert.assertEquals(spath, distCpContext.getSourcePaths().get(0));
+    Assertions.assertEquals(spath, distCpContext.getSourcePaths().get(0));
 
     // reset source path in options
     optionsBuilder.withSourcePaths(Arrays.asList(source));
     // the source/target does not have the given snapshots
     dfs.allowSnapshot(source);
     dfs.allowSnapshot(target);
-    Assert.assertFalse(sync());
-    Assert.assertEquals(spath, distCpContext.getSourcePaths().get(0));
+    Assertions.assertFalse(sync());
+    Assertions.assertEquals(spath, distCpContext.getSourcePaths().get(0));
 
     // reset source path in options
     optionsBuilder.withSourcePaths(Arrays.asList(source));
     this.enableAndCreateFirstSnapshot();
     dfs.createSnapshot(target, "s2");
-    Assert.assertTrue(sync());
+    Assertions.assertTrue(sync());
 
     // reset source paths in options
     optionsBuilder.withSourcePaths(Arrays.asList(source));
     // changes have been made in target
     final Path subTarget = new Path(target, "sub");
     dfs.mkdirs(subTarget);
-    Assert.assertFalse(sync());
+    Assertions.assertFalse(sync());
     // make sure the source path has been updated to the snapshot path
-    Assert.assertEquals(spath, distCpContext.getSourcePaths().get(0));
+    Assertions.assertEquals(spath, distCpContext.getSourcePaths().get(0));
 
     // reset source paths in options
     optionsBuilder.withSourcePaths(Arrays.asList(source));
     dfs.delete(subTarget, true);
-    Assert.assertTrue(sync());
+    Assertions.assertTrue(sync());
   }
 
   private void syncAndVerify() throws Exception {
@@ -209,7 +209,7 @@ public abstract class TestDistCpSyncReverseBase {
     lsrSource("Before sync source: ", shell, source);
     lsr("Before sync target: ", shell, target);
 
-    Assert.assertTrue(sync());
+    Assertions.assertTrue(sync());
 
     lsrSource("After sync source: ", shell, source);
     lsr("After sync target: ", shell, target);
@@ -337,14 +337,14 @@ public abstract class TestDistCpSyncReverseBase {
     lsr("Before sync target: ", shell, target);
 
     // do the sync
-    Assert.assertTrue(distCpSync.sync());
+    Assertions.assertTrue(distCpSync.sync());
 
     lsr("After sync target: ", shell, target);
 
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
         HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s1");
-    Assert.assertEquals(spath, distCpContext.getSourcePaths().get(0));
+    Assertions.assertEquals(spath, distCpContext.getSourcePaths().get(0));
 
     // build copy listing
     final Path listingPath = new Path("/tmp/META/fileList.seq");
@@ -370,10 +370,10 @@ public abstract class TestDistCpSyncReverseBase {
     lsr("After mapper target: ", shell, target);
 
     // verify that we only list modified and created files/directories
-    Assert.assertEquals(numDeletedModified, copyListing.size());
+    Assertions.assertEquals(numDeletedModified, copyListing.size());
 
     // verify that we only copied new appended data of f2 and the new file f1
-    Assert.assertEquals(blockSize * 3, stubContext.getReporter()
+    Assertions.assertEquals(blockSize * 3, stubContext.getReporter()
         .getCounter(CopyMapper.Counter.BYTESCOPIED).getValue());
 
     // verify the source and target now has the same structure
@@ -404,19 +404,19 @@ public abstract class TestDistCpSyncReverseBase {
 
   private void verifyCopy(FileStatus s, FileStatus t, boolean compareName)
       throws Exception {
-    Assert.assertEquals(s.isDirectory(), t.isDirectory());
+    Assertions.assertEquals(s.isDirectory(), t.isDirectory());
     if (compareName) {
-      Assert.assertEquals(s.getPath().getName(), t.getPath().getName());
+      Assertions.assertEquals(s.getPath().getName(), t.getPath().getName());
     }
     if (!s.isDirectory()) {
       // verify the file content is the same
       byte[] sbytes = DFSTestUtil.readFileBuffer(dfs, s.getPath());
       byte[] tbytes = DFSTestUtil.readFileBuffer(dfs, t.getPath());
-      Assert.assertArrayEquals(sbytes, tbytes);
+      Assertions.assertArrayEquals(sbytes, tbytes);
     } else {
       FileStatus[] slist = dfs.listStatus(s.getPath());
       FileStatus[] tlist = dfs.listStatus(t.getPath());
-      Assert.assertEquals(slist.length, tlist.length);
+      Assertions.assertEquals(slist.length, tlist.length);
       for (int i = 0; i < slist.length; i++) {
         verifyCopy(slist[i], tlist[i], true);
       }
@@ -440,11 +440,11 @@ public abstract class TestDistCpSyncReverseBase {
     changeData(target);
 
     // do the sync
-    Assert.assertTrue(sync());
+    Assertions.assertTrue(sync());
     final Path spath = new Path(source,
         HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s1");
     // make sure the source path is still unchanged
-    Assert.assertEquals(spath, distCpContext.getSourcePaths().get(0));
+    Assertions.assertEquals(spath, distCpContext.getSourcePaths().get(0));
   }
 
   private void initData2(Path dir) throws Exception {
@@ -662,7 +662,7 @@ public abstract class TestDistCpSyncReverseBase {
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
             HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s1");
-    Assert.assertEquals(spath, distCpContext.getSourcePaths().get(0));
+    Assertions.assertEquals(spath, distCpContext.getSourcePaths().get(0));
 
     // build copy listing
     final Path listingPath = new Path("/tmp/META/fileList.seq");
@@ -684,7 +684,7 @@ public abstract class TestDistCpSyncReverseBase {
     }
 
     // verify that we only list modified and created files/directories
-    Assert.assertEquals(numDeletedAndModified, copyListing.size());
+    Assertions.assertEquals(numDeletedAndModified, copyListing.size());
 
     lsr("After Copy target: ", shell, target);
 

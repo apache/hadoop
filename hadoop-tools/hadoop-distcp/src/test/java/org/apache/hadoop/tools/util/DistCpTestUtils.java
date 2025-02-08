@@ -32,9 +32,9 @@ import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Utility class for DistCpTests
@@ -54,7 +54,7 @@ public class DistCpTestUtils {
       Map<String, byte[]> expectedXAttrs)
       throws Exception {
     Map<String, byte[]> xAttrs = fs.getXAttrs(path);
-    assertEquals(path.toString(), expectedXAttrs.size(), xAttrs.size());
+    assertEquals(expectedXAttrs.size(), xAttrs.size(), path.toString());
     Iterator<Entry<String, byte[]>> i = expectedXAttrs.entrySet().iterator();
     while (i.hasNext()) {
       Entry<String, byte[]> e = i.next();
