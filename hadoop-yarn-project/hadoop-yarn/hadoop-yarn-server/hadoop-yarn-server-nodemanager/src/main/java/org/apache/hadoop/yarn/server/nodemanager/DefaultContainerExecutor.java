@@ -429,12 +429,14 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       command = concatStringCommands(numaCommands, command);
     }
 
-    LOG.info("launchContainer: {}", Arrays.toString(command));
+    long timeout = getConf().getLong(YarnConfiguration.NM_CONTAINER_LAUNCH_TIMEOUT_MS, 
+        YarnConfiguration.DEFAULT_NM_CONTAINER_LAUNCH_TIMEOUT_MS);
+    LOG.info("launchContainer: " + Arrays.toString(command) + ", timeout: " + timeout + " ms");
     return new ShellCommandExecutor(
         command,
         workDir,
         environment,
-        0L,
+        timeout,
         false);
   }
 

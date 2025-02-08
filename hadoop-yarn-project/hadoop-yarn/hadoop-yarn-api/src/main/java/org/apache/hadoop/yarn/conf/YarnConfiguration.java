@@ -1362,6 +1362,11 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CONTAINER_EXECUTOR =
     NM_PREFIX + "container-executor.class";
 
+  /** launch container shell exec time out period.*/
+  public static final String NM_CONTAINER_LAUNCH_TIMEOUT_MS =
+    NM_PREFIX + "container-launch.shell.timeout-ms";
+  public static final long DEFAULT_NM_CONTAINER_LAUNCH_TIMEOUT_MS = 2 * 60 * 1000;
+
   /** List of container state transition listeners.*/
   public static final String NM_CONTAINER_STATE_TRANSITION_LISTENERS =
       NM_PREFIX + "container-state-transition-listener.classes";
