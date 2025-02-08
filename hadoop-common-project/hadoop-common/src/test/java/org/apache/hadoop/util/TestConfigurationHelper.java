@@ -22,7 +22,7 @@ import java.util.Set;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.IterableAssert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.AbstractHadoopTestBase;

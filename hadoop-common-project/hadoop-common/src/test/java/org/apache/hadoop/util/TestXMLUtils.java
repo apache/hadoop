@@ -33,13 +33,16 @@ import javax.xml.transform.stream.StreamSource;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestXMLUtils extends AbstractHadoopTestBase {
 
@@ -47,23 +50,27 @@ public class TestXMLUtils extends AbstractHadoopTestBase {
   public void testSecureDocumentBuilderFactory() throws Exception {
     DocumentBuilder db = XMLUtils.newSecureDocumentBuilderFactory().newDocumentBuilder();
     Document doc = db.parse(new InputSource(new StringReader("<root/>")));
-    Assertions.assertThat(doc).describedAs("parsed document").isNotNull();
+    assertThat(doc).describedAs("parsed document").isNotNull();
   }
 
-  @Test(expected = SAXException.class)
+  @Test
   public void testExternalDtdWithSecureDocumentBuilderFactory() throws Exception {
-    DocumentBuilder db = XMLUtils.newSecureDocumentBuilderFactory().newDocumentBuilder();
-    try (InputStream stream = getResourceStream("/xml/external-dtd.xml")) {
-      Document doc = db.parse(stream);
-    }
+    assertThrows(SAXException.class, () -> {
+      DocumentBuilder db = XMLUtils.newSecureDocumentBuilderFactory().newDocumentBuilder();
+      try (InputStream stream = getResourceStream("/xml/external-dtd.xml")) {
+        Document doc = db.parse(stream);
+      }
+    });
   }
 
-  @Test(expected = SAXException.class)
+  @Test
   public void testEntityDtdWithSecureDocumentBuilderFactory() throws Exception {
-    DocumentBuilder db = XMLUtils.newSecureDocumentBuilderFactory().newDocumentBuilder();
-    try (InputStream stream = getResourceStream("/xml/entity-dtd.xml")) {
-      Document doc = db.parse(stream);
-    }
+    assertThrows(SAXException.class, () -> {
+      DocumentBuilder db = XMLUtils.newSecureDocumentBuilderFactory().newDocumentBuilder();
+      try (InputStream stream = getResourceStream("/xml/entity-dtd.xml")) {
+        Document doc = db.parse(stream);
+      }
+    });
   }
 
   @Test
@@ -72,20 +79,24 @@ public class TestXMLUtils extends AbstractHadoopTestBase {
     parser.parse(new InputSource(new StringReader("<root/>")), new DefaultHandler());
   }
 
-  @Test(expected = SAXException.class)
+  @Test
   public void testExternalDtdWithSecureSAXParserFactory() throws Exception {
-    SAXParser parser = XMLUtils.newSecureSAXParserFactory().newSAXParser();
-    try (InputStream stream = getResourceStream("/xml/external-dtd.xml")) {
-      parser.parse(stream, new DefaultHandler());
-    }
+    assertThrows(SAXException.class, () -> {
+      SAXParser parser = XMLUtils.newSecureSAXParserFactory().newSAXParser();
+      try (InputStream stream = getResourceStream("/xml/external-dtd.xml")) {
+        parser.parse(stream, new DefaultHandler());
+      }
+    });
   }
 
-  @Test(expected = SAXException.class)
+  @Test
   public void testEntityDtdWithSecureSAXParserFactory() throws Exception {
-    SAXParser parser = XMLUtils.newSecureSAXParserFactory().newSAXParser();
-    try (InputStream stream = getResourceStream("/xml/entity-dtd.xml")) {
-      parser.parse(stream, new DefaultHandler());
-    }
+    assertThrows(SAXException.class, () -> {
+      SAXParser parser = XMLUtils.newSecureSAXParserFactory().newSAXParser();
+      try (InputStream stream = getResourceStream("/xml/entity-dtd.xml")) {
+        parser.parse(stream, new DefaultHandler());
+      }
+    });
   }
 
   @Test
@@ -95,19 +106,21 @@ public class TestXMLUtils extends AbstractHadoopTestBase {
     Document doc = db.parse(new InputSource(new StringReader("<root/>")));
     try (StringWriter stringWriter = new StringWriter()) {
       transformer.transform(new DOMSource(doc), new StreamResult(stringWriter));
-      Assertions.assertThat(stringWriter.toString()).contains("<root");
+      assertThat(stringWriter.toString()).contains("<root");
     }
   }
 
-  @Test(expected = TransformerException.class)
+  @Test
   public void testExternalDtdWithSecureTransformerFactory() throws Exception {
-    Transformer transformer = XMLUtils.newSecureTransformerFactory().newTransformer();
-    try (
-        InputStream stream = getResourceStream("/xml/external-dtd.xml");
-        StringWriter stringWriter = new StringWriter()
-    ) {
-      transformer.transform(new StreamSource(stream), new StreamResult(stringWriter));
-    }
+    assertThrows(TransformerException.class, () -> {
+      Transformer transformer = XMLUtils.newSecureTransformerFactory().newTransformer();
+      try (
+          InputStream stream = getResourceStream("/xml/external-dtd.xml");
+          StringWriter stringWriter = new StringWriter()
+      ) {
+        transformer.transform(new StreamSource(stream), new StreamResult(stringWriter));
+      }
+    });
   }
 
   @Test
@@ -117,19 +130,21 @@ public class TestXMLUtils extends AbstractHadoopTestBase {
     Document doc = db.parse(new InputSource(new StringReader("<root/>")));
     try (StringWriter stringWriter = new StringWriter()) {
       transformer.transform(new DOMSource(doc), new StreamResult(stringWriter));
-      Assertions.assertThat(stringWriter.toString()).contains("<root");
+      assertThat(stringWriter.toString()).contains("<root");
     }
   }
 
-  @Test(expected = TransformerException.class)
+  @Test
   public void testExternalDtdWithSecureSAXTransformerFactory() throws Exception {
-    Transformer transformer = XMLUtils.newSecureSAXTransformerFactory().newTransformer();
-    try (
-        InputStream stream = getResourceStream("/xml/external-dtd.xml");
-        StringWriter stringWriter = new StringWriter()
-    ) {
-      transformer.transform(new StreamSource(stream), new StreamResult(stringWriter));
-    }
+    assertThrows(TransformerException.class, () -> {
+      Transformer transformer = XMLUtils.newSecureSAXTransformerFactory().newTransformer();
+      try (
+          InputStream stream = getResourceStream("/xml/external-dtd.xml");
+          StringWriter stringWriter = new StringWriter()
+      ) {
+        transformer.transform(new StreamSource(stream), new StreamResult(stringWriter));
+      }
+    });
   }
 
   @Test
@@ -137,14 +152,14 @@ public class TestXMLUtils extends AbstractHadoopTestBase {
     TransformerFactory factory = TransformerFactory.newInstance();
     AtomicBoolean flag1 = new AtomicBoolean(true);
     XMLUtils.bestEffortSetAttribute(factory, flag1, "unsupportedAttribute false", "abc");
-    Assert.assertFalse("unexpected attribute results in return of false?", flag1.get());
+    assertFalse(flag1.get(), "unexpected attribute results in return of false?");
     AtomicBoolean flag2 = new AtomicBoolean(true);
     XMLUtils.bestEffortSetAttribute(factory, flag2, XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    Assert.assertTrue("expected attribute results in return of true?", flag2.get());
+    assertTrue(flag2.get(), "expected attribute results in return of true?");
     AtomicBoolean flag3 = new AtomicBoolean(false);
     XMLUtils.bestEffortSetAttribute(factory, flag3, XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    Assert.assertFalse("expected attribute results in return of false if input flag is false?",
-            flag3.get());
+    assertFalse(flag3.get(),
+        "expected attribute results in return of false if input flag is false?");
   }
 
   private static InputStream getResourceStream(final String filename) {
