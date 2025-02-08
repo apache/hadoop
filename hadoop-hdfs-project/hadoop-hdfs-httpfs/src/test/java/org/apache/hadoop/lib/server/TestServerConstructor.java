@@ -23,9 +23,11 @@ import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.HTestCase;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @RunWith(value = Parameterized.class)
 public class TestServerConstructor extends HTestCase {
@@ -68,9 +70,11 @@ public class TestServerConstructor extends HTestCase {
   }
 
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void constructorFail() {
-    new Server(name, homeDir, configDir, logDir, tempDir, conf);
+    assertThrows(IllegalArgumentException.class, ()->{
+      new Server(name, homeDir, configDir, logDir, tempDir, conf);
+    });
   }
 
 }

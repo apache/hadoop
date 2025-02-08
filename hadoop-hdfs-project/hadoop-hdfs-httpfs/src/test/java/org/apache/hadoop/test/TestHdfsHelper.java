@@ -35,7 +35,7 @@ import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
 
