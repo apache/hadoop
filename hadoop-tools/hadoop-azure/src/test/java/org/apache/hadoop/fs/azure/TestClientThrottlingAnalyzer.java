@@ -44,8 +44,8 @@ public class TestClientThrottlingAnalyzer extends AbstractWasbTestWithTimeout {
     final double upperBound = expected + percentage / 100 * expected;
 
     assertTrue(actual >= lowerBound && actual <= upperBound, String.format(
-        "The actual value %1$d is not within the expected range: " +
-        "[%2$.2f, %3$.2f].",
+        "The actual value %1$d is not within the expected range: "
+        + "[%2$.2f, %3$.2f].",
         actual,
         lowerBound,
         upperBound));

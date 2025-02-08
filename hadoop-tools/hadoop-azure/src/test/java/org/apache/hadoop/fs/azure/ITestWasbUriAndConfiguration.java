@@ -49,7 +49,6 @@ import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.CreateOptions;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

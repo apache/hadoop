@@ -156,35 +156,35 @@ public class ITestAzureFileSystemInstrumentation extends AbstractWasbTestBase {
     getBandwidthGaugeUpdater().triggerUpdate(true);
     long bytesWritten = AzureMetricsTestUtil.getCurrentBytesWritten(getInstrumentation());
     assertTrue(bytesWritten > (FILE_SIZE / 2) && bytesWritten < (FILE_SIZE * 2),
-        "The bytes written in the last second " + bytesWritten +
-        " is pretty far from the expected range of around " + FILE_SIZE +
-        " bytes plus a little overhead.");
+        "The bytes written in the last second " + bytesWritten
+        + " is pretty far from the expected range of around " + FILE_SIZE
+        + " bytes plus a little overhead.");
     long totalBytesWritten = AzureMetricsTestUtil.getCurrentTotalBytesWritten(getInstrumentation());
     assertTrue(totalBytesWritten >= FILE_SIZE && totalBytesWritten < (FILE_SIZE * 2),
-        "The total bytes written  " + totalBytesWritten +
-        " is pretty far from the expected range of around " + FILE_SIZE +
-        " bytes plus a little overhead.");
+        "The total bytes written  " + totalBytesWritten
+         + " is pretty far from the expected range of around " + FILE_SIZE
+         + " bytes plus a little overhead.");
     long uploadRate = AzureMetricsTestUtil.getLongGaugeValue(getInstrumentation(), WASB_UPLOAD_RATE);
     LOG.info("Upload rate: " + uploadRate + " bytes/second.");
     long expectedRate = (FILE_SIZE * 1000L) / uploadDurationMs;
-    assertTrue(uploadRate >= expectedRate, "The upload rate " + uploadRate +
-        " is below the expected range of around " + expectedRate +
-        " bytes/second that the unit test observed. This should never be" +
-        " the case since the test underestimates the rate by looking at " +
-        " end-to-end time instead of just block upload time.");
+    assertTrue(uploadRate >= expectedRate, "The upload rate " + uploadRate
+        + " is below the expected range of around " + expectedRate
+        + " bytes/second that the unit test observed. This should never be"
+        + " the case since the test underestimates the rate by looking at "
+        + " end-to-end time instead of just block upload time.");
     long uploadLatency = AzureMetricsTestUtil.getLongGaugeValue(getInstrumentation(),
         WASB_UPLOAD_LATENCY);
     LOG.info("Upload latency: {}", uploadLatency);
     long expectedLatency = uploadDurationMs; // We're uploading less than a block.
     assertTrue(uploadLatency > 0,
-        "The upload latency " + uploadLatency +
-        " should be greater than zero now that I've just uploaded a file.");
+        "The upload latency " + uploadLatency
+        + " should be greater than zero now that I've just uploaded a file.");
     assertTrue(uploadLatency <= expectedLatency,
-        "The upload latency " + uploadLatency +
-        " is more than the expected range of around " + expectedLatency +
-        " milliseconds that the unit test observed. This should never be" +
-        " the case since the test overestimates the latency by looking at " +
-        " end-to-end time instead of just block upload time.");
+        "The upload latency " + uploadLatency
+        + " is more than the expected range of around " + expectedLatency
+        + " milliseconds that the unit test observed. This should never be"
+        + " the case since the test overestimates the latency by looking at "
+        + " end-to-end time instead of just block upload time.");
 
     // Read the file
     start = new Date();
@@ -207,31 +207,31 @@ public class ITestAzureFileSystemInstrumentation extends AbstractWasbTestBase {
     assertEquals(FILE_SIZE, totalBytesRead);
     long bytesRead = AzureMetricsTestUtil.getCurrentBytesRead(getInstrumentation());
     assertTrue(bytesRead > (FILE_SIZE / 2) && bytesRead < (FILE_SIZE * 2),
-        "The bytes read in the last second " + bytesRead +
-        " is pretty far from the expected range of around " + FILE_SIZE +
-        " bytes plus a little overhead.");
+        "The bytes read in the last second " + bytesRead
+        + " is pretty far from the expected range of around " + FILE_SIZE
+        + " bytes plus a little overhead.");
     long downloadRate = AzureMetricsTestUtil.getLongGaugeValue(getInstrumentation(), WASB_DOWNLOAD_RATE);
     LOG.info("Download rate: " + downloadRate + " bytes/second.");
     expectedRate = (FILE_SIZE * 1000L) / downloadDurationMs;
     assertTrue(downloadRate >= expectedRate,
-        "The download rate " + downloadRate +
-        " is below the expected range of around " + expectedRate +
-        " bytes/second that the unit test observed. This should never be" +
-        " the case since the test underestimates the rate by looking at " +
-        " end-to-end time instead of just block download time.");
+        "The download rate " + downloadRate
+        + " is below the expected range of around " + expectedRate
+        + " bytes/second that the unit test observed. This should never be"
+        + " the case since the test underestimates the rate by looking at "
+        + " end-to-end time instead of just block download time.");
     long downloadLatency = AzureMetricsTestUtil.getLongGaugeValue(getInstrumentation(),
         WASB_DOWNLOAD_LATENCY);
     LOG.info("Download latency: " + downloadLatency);
     expectedLatency = downloadDurationMs; // We're downloading less than a block.
     assertTrue(downloadLatency > 0,
-        "The download latency " + downloadLatency +
-        " should be greater than zero now that I've just downloaded a file.");
+        "The download latency " + downloadLatency
+         + " should be greater than zero now that I've just downloaded a file.");
     assertTrue(downloadLatency <= expectedLatency,
-        "The download latency " + downloadLatency +
-        " is more than the expected range of around " + expectedLatency +
-        " milliseconds that the unit test observed. This should never be" +
-        " the case since the test overestimates the latency by looking at " +
-        " end-to-end time instead of just block download time.");
+        "The download latency " + downloadLatency
+         + " is more than the expected range of around " + expectedLatency
+         + " milliseconds that the unit test observed. This should never be"
+         + " the case since the test overestimates the latency by looking at "
+         + " end-to-end time instead of just block download time.");
 
     assertNoErrors();
   }
@@ -265,17 +265,17 @@ public class ITestAzureFileSystemInstrumentation extends AbstractWasbTestBase {
     getBandwidthGaugeUpdater().triggerUpdate(true);
     long totalBytesWritten = AzureMetricsTestUtil.getCurrentTotalBytesWritten(getInstrumentation());
     assertTrue(totalBytesWritten >= FILE_SIZE && totalBytesWritten < (FILE_SIZE * 2),
-        "The total bytes written  " + totalBytesWritten +
-        " is pretty far from the expected range of around " + FILE_SIZE +
-        " bytes plus a little overhead.");
+        "The total bytes written  " + totalBytesWritten
+        + " is pretty far from the expected range of around " + FILE_SIZE
+        + " bytes plus a little overhead.");
     long uploadRate = AzureMetricsTestUtil.getLongGaugeValue(getInstrumentation(), WASB_UPLOAD_RATE);
     LOG.info("Upload rate: " + uploadRate + " bytes/second.");
     long uploadLatency = AzureMetricsTestUtil.getLongGaugeValue(getInstrumentation(),
         WASB_UPLOAD_LATENCY);
     LOG.info("Upload latency: " + uploadLatency);
     assertTrue(uploadLatency > 0,
-        "The upload latency " + uploadLatency +
-        " should be greater than zero now that I've just uploaded a file.");
+        "The upload latency " + uploadLatency
+         + " should be greater than zero now that I've just uploaded a file.");
 
     // Read the file
     InputStream inputStream = getFileSystem().open(filePath);
@@ -300,8 +300,8 @@ public class ITestAzureFileSystemInstrumentation extends AbstractWasbTestBase {
         WASB_DOWNLOAD_LATENCY);
     LOG.info("Download latency: " + downloadLatency);
     assertTrue(downloadLatency > 0,
-        "The download latency " + downloadLatency +
-        " should be greater than zero now that I've just downloaded a file.");
+        "The download latency " + downloadLatency
+        + " should be greater than zero now that I've just downloaded a file.");
   }
 
   @Test
@@ -481,9 +481,8 @@ public class ITestAzureFileSystemInstrumentation extends AbstractWasbTestBase {
       long inclusiveUpperLimit) {
     long currentResponses = getCurrentWebResponses();
     long justOperation = currentResponses - base;
-    assertTrue(justOperation >= inclusiveLowerLimit &&
-        justOperation <= inclusiveUpperLimit, String.format(
-        "Web responses expected in range [%d, %d], but was %d.",
+    assertTrue(justOperation >= inclusiveLowerLimit && justOperation <= inclusiveUpperLimit,
+        String.format("Web responses expected in range [%d, %d], but was %d.",
         inclusiveLowerLimit, inclusiveUpperLimit, justOperation));
     return currentResponses;
   }  

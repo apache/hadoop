@@ -1537,9 +1537,9 @@ public abstract class NativeAzureFileSystemBaseTest
     final long errorMargin = 60 * 1000; // Give it +/-60 seconds
     assertTrue(
         fileStatus.getModificationTime() > (currentUtcTime - errorMargin) &&
-        fileStatus.getModificationTime() < (currentUtcTime + errorMargin), "Modification time " +
-        new Date(fileStatus.getModificationTime()) + " is not close to now: " +
-        utc.getTime());
+        fileStatus.getModificationTime() < (currentUtcTime + errorMargin),
+        "Modification time " + new Date(fileStatus.getModificationTime())
+        + " is not close to now: " + utc.getTime());
   }
 
   private void createEmptyFile(Path testFile, FsPermission permission)

@@ -495,8 +495,7 @@ public final class AzureTestUtils extends Assertions {
     if (accountName == null) {
       accountName = conf.get(WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN);
     }
-    assumeTrue(accountName != null &&
-        !accountName.endsWith(WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX),
+    assumeTrue(accountName != null && !accountName.endsWith(WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX),
         "Account for WASB is missing or it is not in correct format");
     return accountName;
   }

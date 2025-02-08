@@ -122,7 +122,7 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
   }
 
   protected void deleteHugeFile(TestInfo info) throws IOException {
-    describe(info,"Deleting %s", hugefile);
+    describe(info, "Deleting %s", hugefile);
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     getFileSystem().delete(hugefile, false);
     timer.end("time to delete %s", hugefile);
