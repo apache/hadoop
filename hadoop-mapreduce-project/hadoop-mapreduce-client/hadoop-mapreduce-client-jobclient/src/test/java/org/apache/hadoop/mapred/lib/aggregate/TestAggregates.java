@@ -20,11 +20,14 @@ package org.apache.hadoop.mapred.lib.aggregate;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapred.lib.*;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.text.NumberFormat;
 
 public class TestAggregates {
@@ -78,7 +81,7 @@ public class TestAggregates {
     fileOut.close();
 
     System.out.println("inputData:");
-    System.out.println(inputData);
+    System.out.println(inputData.toString());
     JobConf job = new JobConf(conf, TestAggregates.class);
     FileInputFormat.setInputPaths(job, INPUT_DIR);
     job.setInputFormat(TextInputFormat.class);
@@ -111,7 +114,7 @@ public class TestAggregates {
     Path outPath = new Path(OUTPUT_DIR, "part-00000");
     String outdata = MapReduceTestUtil.readOutput(outPath,job);
     System.out.println("full out data:");
-    System.out.println(outdata);
+    System.out.println(outdata.toString());
     outdata = outdata.substring(0, expectedOutput.toString().length());
 
     assertEquals(expectedOutput.toString(),outdata);

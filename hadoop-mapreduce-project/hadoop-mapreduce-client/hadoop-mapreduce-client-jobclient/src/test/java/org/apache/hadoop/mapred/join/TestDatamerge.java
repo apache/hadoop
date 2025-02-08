@@ -53,7 +53,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDatamerge {
 
@@ -176,14 +178,14 @@ public class TestDatamerge {
       final String kvstr = "Unexpected tuple: " + stringify(key, val);
       if (0 == k % (srcs * srcs)) {
         for (int i = 0; i < val.size(); ++i) {
-          assertInstanceOf(IntWritable.class, val.get(i), kvstr);
+          assertTrue(val.get(i) instanceof IntWritable, kvstr);
           final int vali = ((IntWritable)val.get(i)).get();
           assertEquals((vali - i) * srcs, 10 * k, kvstr);
         }
       } else {
         for (int i = 0; i < val.size(); ++i) {
           if (i == k % srcs) {
-            assertInstanceOf(IntWritable.class, val.get(i), kvstr);
+            assertTrue(val.get(i) instanceof IntWritable, kvstr);
             final int vali = ((IntWritable)val.get(i)).get();
             assertEquals(srcs * (vali - i), 10 * (k - i), kvstr);
           } else {

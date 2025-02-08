@@ -32,7 +32,8 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDelegatingInputFormat {
   @Test
@@ -66,7 +67,7 @@ public class TestDelegatingInputFormat {
 
       int[] bins = new int[3];
       for (InputSplit split : splits) {
-       assertInstanceOf(TaggedInputSplit.class, split);
+       assertTrue(split instanceof TaggedInputSplit);
        final TaggedInputSplit tis = (TaggedInputSplit) split;
        int index = -1;
 

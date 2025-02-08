@@ -46,7 +46,9 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Disabled
 public class TestPipes {
@@ -67,7 +69,6 @@ public class TestPipes {
     fs.delete(p, true);
     assertFalse(fs.exists(p), "output not cleaned up");
   }
-
   @Test
   public void testPipes() throws IOException {
     if (System.getProperty("compile.c++") == null) {
@@ -83,16 +84,16 @@ public class TestPipes {
       Configuration conf = new Configuration();
       dfs = new MiniDFSCluster.Builder(conf).numDataNodes(numWorkers).build();
       mr = new MiniMRCluster(numWorkers,
-         dfs.getFileSystem().getUri().toString(), 1);
+                 dfs.getFileSystem().getUri().toString(), 1);
       writeInputFile(dfs.getFileSystem(), inputPath);
       runProgram(mr, dfs, wordCountSimple,
-          inputPath, outputPath, 3, 2, twoSplitOutput, null);
+                 inputPath, outputPath, 3, 2, twoSplitOutput, null);
       cleanup(dfs.getFileSystem(), outputPath);
       runProgram(mr, dfs, wordCountSimple,
-          inputPath, outputPath, 3, 0, noSortOutput, null);
+                 inputPath, outputPath, 3, 0, noSortOutput, null);
       cleanup(dfs.getFileSystem(), outputPath);
       runProgram(mr, dfs, wordCountPart,
-          inputPath, outputPath, 3, 2, fixedPartitionOutput, null);
+                 inputPath, outputPath, 3, 2, fixedPartitionOutput, null);
       runNonPipedProgram(mr, dfs, wordCountNoPipes, null);
       mr.waitUntilIdle();
     } finally {
@@ -151,14 +152,15 @@ public class TestPipes {
   }
 
   static void runProgram(MiniMRCluster mr, MiniDFSCluster dfs,
-      Path program, Path inputPath, Path outputPath,
-      int numMaps, int numReduces, String[] expectedResults,
-      JobConf conf) throws IOException {
+                          Path program, Path inputPath, Path outputPath,
+                          int numMaps, int numReduces, String[] expectedResults,
+                          JobConf conf
+                         ) throws IOException {
     Path wordExec = new Path("testing/bin/application");
-    JobConf job;
-    if (conf == null) {
+    JobConf job = null;
+    if(conf == null) {
       job = mr.createJobConf();
-    } else {
+    }else {
       job = new JobConf(conf);
     }
     job.setNumMapTasks(numMaps);
@@ -172,7 +174,7 @@ public class TestPipes {
       Submitter.setIsJavaRecordWriter(job, true);
       FileInputFormat.setInputPaths(job, inputPath);
       FileOutputFormat.setOutputPath(job, outputPath);
-      RunningJob rJob;
+      RunningJob rJob = null;
       if (numReduces == 0) {
         rJob = Submitter.jobSubmit(job);
 
@@ -198,9 +200,10 @@ public class TestPipes {
       assertTrue((numCounters > 0), "No counters found!");
     }
 
-    List<String> results = new ArrayList<>();
+    List<String> results = new ArrayList<String>();
     for (Path p:FileUtil.stat2Paths(dfs.getFileSystem().listStatus(outputPath,
-    	new Utils.OutputFileUtils.OutputFilesFilter()))) {
+    		                        new Utils.OutputFileUtils
+    		                                 .OutputFilesFilter()))) {
       results.add(MapReduceTestUtil.readOutput(p, job));
     }
     assertEquals(expectedResults.length, results.size(), "number of reduces is wrong");
@@ -216,10 +219,10 @@ public class TestPipes {
    * @param mr The mini mr cluster
    * @param dfs the dfs cluster
    * @param program the program to run
-   * @throws IOException The I/O exception thrown during unit testing.
+   * @throws IOException
    */
   static void runNonPipedProgram(MiniMRCluster mr, MiniDFSCluster dfs,
-      Path program, JobConf conf) throws IOException {
+                                  Path program, JobConf conf) throws IOException {
     JobConf job;
     if(conf == null) {
       job = mr.createJobConf();
@@ -229,7 +232,8 @@ public class TestPipes {
 
     job.setInputFormat(WordCountInputFormat.class);
     FileSystem local = FileSystem.getLocal(job);
-    Path testDir = new Path("file:" + System.getProperty("test.build.data"), "pipes");
+    Path testDir = new Path("file:" + System.getProperty("test.build.data"),
+                            "pipes");
     Path inDir = new Path(testDir, "input");
     nonPipedOutDir = new Path(testDir, "output");
     Path wordExec = new Path("testing/bin/application");
@@ -260,21 +264,20 @@ public class TestPipes {
     job.writeXml(out);
     out.close();
     System.err.println("About to run: Submitter -conf " + jobXml +
-        " -input " + inDir + " -output " + nonPipedOutDir +
-        " -program " +
-        dfs.getFileSystem().makeQualified(wordExec));
-
+                       " -input " + inDir + " -output " + nonPipedOutDir +
+                       " -program " +
+                       dfs.getFileSystem().makeQualified(wordExec));
     try {
       int ret = ToolRunner.run(new Submitter(),
-            new String[]{"-conf", jobXml.toString(),
-            "-input", inDir.toString(),
-            "-output", nonPipedOutDir.toString(),
-            "-program",
-            dfs.getFileSystem().makeQualified(wordExec).toString(),
-            "-reduces", "2"});
+                               new String[]{"-conf", jobXml.toString(),
+                                   "-input", inDir.toString(),
+                                   "-output", nonPipedOutDir.toString(),
+                                   "-program",
+                        dfs.getFileSystem().makeQualified(wordExec).toString(),
+                                   "-reduces", "2"});
       assertEquals(0, ret);
     } catch (Exception e) {
-      fail("got exception: " + StringUtils.stringifyException(e));
+      assertTrue(false, "got exception: " + StringUtils.stringifyException(e));
     }
   }
 }

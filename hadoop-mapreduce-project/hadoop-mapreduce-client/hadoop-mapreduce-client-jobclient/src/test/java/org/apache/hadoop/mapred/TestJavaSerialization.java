@@ -58,8 +58,8 @@ public class TestJavaSerialization {
       StringTokenizer st = new StringTokenizer(value.toString());
       while (st.hasMoreTokens()) {
         String token = st.nextToken();
-        assertTrue(
-         token.equals("a") || token.equals("b"), "Invalid token; expected 'a' or 'b', got " + token);
+        assertTrue(token.equals("a") || token.equals("b"),
+            "Invalid token; expected 'a' or 'b', got " + token);
         output.collect(token, 1L);
       }
     }
@@ -124,8 +124,8 @@ public class TestJavaSerialization {
 
     String inputFileContents =
         FileUtils.readFileToString(new File(INPUT_FILE.toUri().getPath()));
-    assertTrue(
-     inputFileContents.equals("b a\n"), "Input file contents not as expected; contents are '"
+    assertTrue(inputFileContents.equals("b a\n"),
+        "Input file contents not as expected; contents are '"
         + inputFileContents + "', expected \"b a\n\" ");
 
     JobClient.runJob(conf);
@@ -137,13 +137,12 @@ public class TestJavaSerialization {
     try (InputStream is = fs.open(outputFiles[0])) {
       String reduceOutput = org.apache.commons.io.IOUtils.toString(is, StandardCharsets.UTF_8);
       String[] lines = reduceOutput.split("\n");
-      assertEquals("Unexpected output; received output '" + reduceOutput + "'",
-          "a\t1", lines[0]);
-      assertEquals("Unexpected output; received output '" + reduceOutput + "'",
-          "b\t1", lines[1]);
-      assertEquals(
-      2
-,           lines.length, "Reduce output has extra lines; output is '" + reduceOutput + "'");
+      assertEquals("a\t1", lines[0],
+          "Unexpected output; received output '" + reduceOutput + "'");
+      assertEquals("b\t1", lines[1],
+          "Unexpected output; received output '" + reduceOutput + "'");
+      assertEquals(2, lines.length,
+          "Reduce output has extra lines; output is '" + reduceOutput + "'");
     }
   }
 

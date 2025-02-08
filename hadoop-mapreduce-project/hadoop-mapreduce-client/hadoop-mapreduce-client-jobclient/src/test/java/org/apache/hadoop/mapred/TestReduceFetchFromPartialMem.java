@@ -87,8 +87,9 @@ public class TestReduceFetchFromPartialMem {
     Counters c = runJob(job);
     final long out = c.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getCounter();
     final long spill = c.findCounter(TaskCounter.SPILLED_RECORDS).getCounter();
-    assertTrue(
-       spill < 2 * out, "Expected some records not spilled during reduce" + spill + ")"); // spilled map records, some records at the reduce
+    assertTrue(spill < 2 * out,
+        "Expected some records not spilled during reduce" + spill + ")");
+    // spilled map records, some records at the reduce
     long shuffleIoErrors =
         c.getGroup(SHUFFLE_ERR_GRP_NAME).getCounter(Fetcher.ShuffleErrors.IO_ERROR.toString());
     assertEquals(0, shuffleIoErrors);

@@ -58,35 +58,36 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for ClientServiceDelegate.java
  */
-
-@RunWith(value = Parameterized.class)
 public class TestClientServiceDelegate {
   private JobID oldJobId = JobID.forName("job_1315895242400_2");
   private org.apache.hadoop.mapreduce.v2.api.records.JobId jobId = TypeConverter
       .toYarn(oldJobId);
   private boolean isAMReachableFromClient;
 
-  public TestClientServiceDelegate(boolean isAMReachableFromClient) {
-    this.isAMReachableFromClient = isAMReachableFromClient;
+  public void initTestClientServiceDelegate(boolean pIsAMReachableFromClient) {
+    this.isAMReachableFromClient = pIsAMReachableFromClient;
   }
-
-  @Parameters
+  
   public static Collection<Object[]> data() {
     Object[][] data = new Object[][] { { true }, { false } };
     return Arrays.asList(data);
   }
 
-  @Test
-  public void testUnknownAppInRM() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testUnknownAppInRM(boolean pIsAMReachableFromClient) throws Exception {
+    initTestClientServiceDelegate(pIsAMReachableFromClient);
     MRClientProtocol historyServerProxy = mock(MRClientProtocol.class);
     when(historyServerProxy.getJobReport(getJobReportRequest())).thenReturn(
         getJobReportResponse());
@@ -94,12 +95,14 @@ public class TestClientServiceDelegate {
         historyServerProxy, getRMDelegate());
 
     JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
-    Assertions.assertNotNull(jobStatus);
+    assertNotNull(jobStatus);
   }
 
-  @Test
-  public void testRemoteExceptionFromHistoryServer() throws Exception {
-
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testRemoteExceptionFromHistoryServer(boolean pIsAMReachableFromClient)
+      throws Exception {
+    initTestClientServiceDelegate(pIsAMReachableFromClient);
     MRClientProtocol historyServerProxy = mock(MRClientProtocol.class);
     when(historyServerProxy.getJobReport(getJobReportRequest())).thenThrow(
         new IOException("Job ID doesnot Exist"));
@@ -113,16 +116,18 @@ public class TestClientServiceDelegate {
 
     try {
       clientServiceDelegate.getJobStatus(oldJobId);
-      Assertions.fail("Invoke should throw exception after retries.");
+      fail("Invoke should throw exception after retries.");
     } catch (IOException e) {
-      Assertions.assertTrue(e.getMessage().contains(
+      assertTrue(e.getMessage().contains(
           "Job ID doesnot Exist"));
     }
   }
 
-  @Test
-  public void testRetriesOnConnectionFailure() throws Exception {
-
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testRetriesOnConnectionFailure(boolean pIsAMReachableFromClient)
+      throws Exception {
+    initTestClientServiceDelegate(pIsAMReachableFromClient);
     MRClientProtocol historyServerProxy = mock(MRClientProtocol.class);
     when(historyServerProxy.getJobReport(getJobReportRequest())).thenThrow(
         new RuntimeException("1")).thenThrow(new RuntimeException("2"))       
@@ -136,13 +141,16 @@ public class TestClientServiceDelegate {
         historyServerProxy, rm);
 
     JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
-    Assertions.assertNotNull(jobStatus);
+    assertNotNull(jobStatus);
     verify(historyServerProxy, times(3)).getJobReport(
         any(GetJobReportRequest.class));
   }
 
-  @Test
-  public void testRetriesOnAMConnectionFailures() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testRetriesOnAMConnectionFailures(boolean pIsAMReachableFromClient)
+      throws Exception {
+    initTestClientServiceDelegate(pIsAMReachableFromClient);
     if (!isAMReachableFromClient) {
       return;
     }
@@ -175,16 +183,19 @@ public class TestClientServiceDelegate {
 
     JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
 
-    Assertions.assertNotNull(jobStatus);
+    assertNotNull(jobStatus);
     // assert maxClientRetry is not decremented.
-    Assertions.assertEquals(conf.getInt(MRJobConfig.MR_CLIENT_MAX_RETRIES,
+    assertEquals(conf.getInt(MRJobConfig.MR_CLIENT_MAX_RETRIES,
       MRJobConfig.DEFAULT_MR_CLIENT_MAX_RETRIES), clientServiceDelegate
       .getMaxClientRetry());
     verify(amProxy, times(5)).getJobReport(any(GetJobReportRequest.class));
   }
 
-  @Test
-  public void testNoRetryOnAMAuthorizationException() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testNoRetryOnAMAuthorizationException(boolean pIsAMReachableFromClient)
+      throws Exception {
+    initTestClientServiceDelegate(pIsAMReachableFromClient);
     if (!isAMReachableFromClient) {
       return;
     }
@@ -213,27 +224,30 @@ public class TestClientServiceDelegate {
 
     try {
       clientServiceDelegate.getJobStatus(oldJobId);
-      Assertions.fail("Exception should be thrown upon AuthorizationException");
+      fail("Exception should be thrown upon AuthorizationException");
     } catch (IOException e) {
-      Assertions.assertEquals(AuthorizationException.class.getName() + ": Denied",
+      assertEquals(AuthorizationException.class.getName() + ": Denied",
           e.getMessage());
     }
 
     // assert maxClientRetry is not decremented.
-    Assertions.assertEquals(conf.getInt(MRJobConfig.MR_CLIENT_MAX_RETRIES,
+    assertEquals(conf.getInt(MRJobConfig.MR_CLIENT_MAX_RETRIES,
       MRJobConfig.DEFAULT_MR_CLIENT_MAX_RETRIES), clientServiceDelegate
       .getMaxClientRetry());
     verify(amProxy, times(1)).getJobReport(any(GetJobReportRequest.class));
   }
 
-  @Test
-  public void testHistoryServerNotConfigured() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testHistoryServerNotConfigured(
+      boolean pIsAMReachableFromClient) throws Exception {
+    initTestClientServiceDelegate(pIsAMReachableFromClient);
     //RM doesn't have app report and job History Server is not configured
     ClientServiceDelegate clientServiceDelegate = getClientServiceDelegate(
         null, getRMDelegate());
     JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
-    Assertions.assertEquals("N/A", jobStatus.getUsername());
-    Assertions.assertEquals(JobStatus.State.PREP, jobStatus.getState());
+    assertEquals("N/A", jobStatus.getUsername());
+    assertEquals(JobStatus.State.PREP, jobStatus.getState());
 
     //RM has app report and job History Server is not configured
     ResourceMgrDelegate rm = mock(ResourceMgrDelegate.class);
@@ -243,12 +257,15 @@ public class TestClientServiceDelegate {
 
     clientServiceDelegate = getClientServiceDelegate(null, rm);
     jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
-    Assertions.assertEquals(applicationReport.getUser(), jobStatus.getUsername());
-    Assertions.assertEquals(JobStatus.State.SUCCEEDED, jobStatus.getState());
+    assertEquals(applicationReport.getUser(), jobStatus.getUsername());
+    assertEquals(JobStatus.State.SUCCEEDED, jobStatus.getState());
   }
-  
-  @Test
-  public void testJobReportFromHistoryServer() throws Exception {                                 
+
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testJobReportFromHistoryServer(
+      boolean pIsAMReachableFromClient) throws Exception {
+    initTestClientServiceDelegate(pIsAMReachableFromClient);
     MRClientProtocol historyServerProxy = mock(MRClientProtocol.class);                           
     when(historyServerProxy.getJobReport(getJobReportRequest())).thenReturn(                      
         getJobReportResponseFromHistoryServer());                                                 
@@ -259,15 +276,18 @@ public class TestClientServiceDelegate {
         historyServerProxy, rm);
 
     JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
-    Assertions.assertNotNull(jobStatus);
-    Assertions.assertEquals("TestJobFilePath", jobStatus.getJobFile());                               
-    Assertions.assertEquals("http://TestTrackingUrl", jobStatus.getTrackingUrl());                    
-    Assertions.assertEquals(1.0f, jobStatus.getMapProgress(), 0.0f);
-    Assertions.assertEquals(1.0f, jobStatus.getReduceProgress(), 0.0f);
+    assertNotNull(jobStatus);
+    assertEquals("TestJobFilePath", jobStatus.getJobFile());                               
+    assertEquals("http://TestTrackingUrl", jobStatus.getTrackingUrl());                    
+    assertEquals(1.0f, jobStatus.getMapProgress(), 0.0f);
+    assertEquals(1.0f, jobStatus.getReduceProgress(), 0.0f);
   }
-  
-  @Test
-  public void testCountersFromHistoryServer() throws Exception {                                 
+
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testCountersFromHistoryServer(
+      boolean pIsAMReachableFromClient) throws Exception {
+    initTestClientServiceDelegate(pIsAMReachableFromClient);
     MRClientProtocol historyServerProxy = mock(MRClientProtocol.class);                           
     when(historyServerProxy.getCounters(getCountersRequest())).thenReturn(                      
         getCountersResponseFromHistoryServer());
@@ -278,12 +298,15 @@ public class TestClientServiceDelegate {
         historyServerProxy, rm);
 
     Counters counters = TypeConverter.toYarn(clientServiceDelegate.getJobCounters(oldJobId));
-    Assertions.assertNotNull(counters);
-    Assertions.assertEquals(1001, counters.getCounterGroup("dummyCounters").getCounter("dummyCounter").getValue());                               
+    assertNotNull(counters);
+    assertEquals(1001, counters.getCounterGroup("dummyCounters").getCounter("dummyCounter").getValue());                               
   }
 
-  @Test
-  public void testReconnectOnAMRestart() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testReconnectOnAMRestart(
+      boolean pIsAMReachableFromClient) throws IOException {
+    initTestClientServiceDelegate(pIsAMReachableFromClient);
     //test not applicable when AM not reachable
     //as instantiateAMProxy is not called at all
     if(!isAMReachableFromClient) {
@@ -338,23 +361,26 @@ public class TestClientServiceDelegate {
         clientServiceDelegate).instantiateAMProxy(any(InetSocketAddress.class));
 
     JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
-    Assertions.assertNotNull(jobStatus);
-    Assertions.assertEquals("jobName-firstGen", jobStatus.getJobName());
+    assertNotNull(jobStatus);
+    assertEquals("jobName-firstGen", jobStatus.getJobName());
 
     jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
-    Assertions.assertNotNull(jobStatus);
-    Assertions.assertEquals("jobName-secondGen", jobStatus.getJobName());
+    assertNotNull(jobStatus);
+    assertEquals("jobName-secondGen", jobStatus.getJobName());
 
     jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
-    Assertions.assertNotNull(jobStatus);
-    Assertions.assertEquals("jobName-secondGen", jobStatus.getJobName());
+    assertNotNull(jobStatus);
+    assertEquals("jobName-secondGen", jobStatus.getJobName());
 
     verify(clientServiceDelegate, times(2)).instantiateAMProxy(
         any(InetSocketAddress.class));
   }
-  
-  @Test
-  public void testAMAccessDisabled() throws IOException {
+
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testAMAccessDisabled(
+      boolean pIsAMReachableFromClient) throws IOException {
+    initTestClientServiceDelegate(pIsAMReachableFromClient);
     //test only applicable when AM not reachable
     if(isAMReachableFromClient) {
       return;
@@ -379,56 +405,65 @@ public class TestClientServiceDelegate {
         historyServerProxy, rmDelegate));
 
     JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
-    Assertions.assertNotNull(jobStatus);
-    Assertions.assertEquals("N/A", jobStatus.getJobName());
+    assertNotNull(jobStatus);
+    assertEquals("N/A", jobStatus.getJobName());
     
     verify(clientServiceDelegate, times(0)).instantiateAMProxy(
         any(InetSocketAddress.class));
 
     // Should not reach AM even for second and third times too.
     jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
-    Assertions.assertNotNull(jobStatus);
-    Assertions.assertEquals("N/A", jobStatus.getJobName());    
+    assertNotNull(jobStatus);
+    assertEquals("N/A", jobStatus.getJobName());    
     verify(clientServiceDelegate, times(0)).instantiateAMProxy(
         any(InetSocketAddress.class));
     jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
-    Assertions.assertNotNull(jobStatus);
-    Assertions.assertEquals("N/A", jobStatus.getJobName());    
+    assertNotNull(jobStatus);
+    assertEquals("N/A", jobStatus.getJobName());    
     verify(clientServiceDelegate, times(0)).instantiateAMProxy(
         any(InetSocketAddress.class));
 
     // The third time around, app is completed, so should go to JHS
     JobStatus jobStatus1 = clientServiceDelegate.getJobStatus(oldJobId);
-    Assertions.assertNotNull(jobStatus1);
-    Assertions.assertEquals("TestJobFilePath", jobStatus1.getJobFile());                               
-    Assertions.assertEquals("http://TestTrackingUrl", jobStatus1.getTrackingUrl());                    
-    Assertions.assertEquals(1.0f, jobStatus1.getMapProgress(), 0.0f);
-    Assertions.assertEquals(1.0f, jobStatus1.getReduceProgress(), 0.0f);
+    assertNotNull(jobStatus1);
+    assertEquals("TestJobFilePath", jobStatus1.getJobFile());                               
+    assertEquals("http://TestTrackingUrl", jobStatus1.getTrackingUrl());                    
+    assertEquals(1.0f, jobStatus1.getMapProgress(), 0.0f);
+    assertEquals(1.0f, jobStatus1.getReduceProgress(), 0.0f);
     
     verify(clientServiceDelegate, times(0)).instantiateAMProxy(
         any(InetSocketAddress.class));
   }
-  
-  @Test
-  public void testRMDownForJobStatusBeforeGetAMReport() throws IOException {
+
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testRMDownForJobStatusBeforeGetAMReport(
+      boolean pIsAMReachableFromClient) throws IOException {
+    initTestClientServiceDelegate(pIsAMReachableFromClient);
     Configuration conf = new YarnConfiguration();
     testRMDownForJobStatusBeforeGetAMReport(conf,
         MRJobConfig.DEFAULT_MR_CLIENT_MAX_RETRIES);
   }
 
-  @Test
-  public void testRMDownForJobStatusBeforeGetAMReportWithRetryTimes()
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testRMDownForJobStatusBeforeGetAMReportWithRetryTimes(
+      boolean pIsAMReachableFromClient)
       throws IOException {
+    initTestClientServiceDelegate(pIsAMReachableFromClient);
     Configuration conf = new YarnConfiguration();
     conf.setInt(MRJobConfig.MR_CLIENT_MAX_RETRIES, 2);
     testRMDownForJobStatusBeforeGetAMReport(conf, conf.getInt(
         MRJobConfig.MR_CLIENT_MAX_RETRIES,
         MRJobConfig.DEFAULT_MR_CLIENT_MAX_RETRIES));
   }
-  
-  @Test
-  public void testRMDownRestoreForJobStatusBeforeGetAMReport()
+
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testRMDownRestoreForJobStatusBeforeGetAMReport(
+      boolean pIsAMReachableFromClient)
       throws IOException {
+    initTestClientServiceDelegate(pIsAMReachableFromClient);
     Configuration conf = new YarnConfiguration();
     conf.setInt(MRJobConfig.MR_CLIENT_MAX_RETRIES, 3);
 
@@ -451,7 +486,7 @@ public class TestClientServiceDelegate {
       JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
       verify(rmDelegate, times(3)).getApplicationReport(
           any(ApplicationId.class));
-      Assertions.assertNotNull(jobStatus);
+      assertNotNull(jobStatus);
     } catch (YarnException e) {
       throw new IOException(e);
     }
@@ -476,7 +511,7 @@ public class TestClientServiceDelegate {
           conf, rmDelegate, oldJobId, historyServerProxy);
       try {
         clientServiceDelegate.getJobStatus(oldJobId);
-        Assertions.fail("It should throw exception after retries");
+        fail("It should throw exception after retries");
       } catch (IOException e) {
         System.out.println("fail to get job status,and e=" + e.toString());
       }

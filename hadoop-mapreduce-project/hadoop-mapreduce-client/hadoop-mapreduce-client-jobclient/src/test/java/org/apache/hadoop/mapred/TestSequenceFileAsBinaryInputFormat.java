@@ -88,14 +88,10 @@ public class TestSequenceFileAsBinaryInputFormat {
           cmpkey.readFields(buf);
           buf.reset(bval.getBytes(), bval.getLength());
           cmpval.readFields(buf);
-          assertTrue(
-          
-             cmpkey.toString().equals(tkey.toString()), "Keys don't match: " + "*" + cmpkey.toString() + ":" +
-                                           tkey.toString() + "*");
-          assertTrue(
-          
-             cmpval.toString().equals(tval.toString()), "Vals don't match: " + "*" + cmpval.toString() + ":" +
-                                           tval.toString() + "*");
+          assertTrue(cmpkey.toString().equals(tkey.toString()),
+              "Keys don't match: " + "*" + cmpkey.toString() + ":" + tkey.toString() + "*");
+          assertTrue(cmpval.toString().equals(tval.toString()),
+              "Vals don't match: " + "*" + cmpval.toString() + ":" + tval.toString() + "*");
           ++count;
         }
       } finally {

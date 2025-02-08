@@ -31,8 +31,9 @@ import org.apache.hadoop.mapreduce.tools.CLI;
 import org.apache.hadoop.util.Tool;
 
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.Ignore;
-@Ignore
+import org.junit.jupiter.api.Disabled;
+
+@Disabled
 public class TestMRCJCJobClient extends TestMRJobClient {
 
   @BeforeAll

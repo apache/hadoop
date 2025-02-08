@@ -85,7 +85,8 @@ public class TestSpecialCharactersInOutputPath {
     try {
       assertTrue(runningJob.isComplete());
       assertTrue(runningJob.isSuccessful());
-      assertTrue(fs.exists(new Path("/testing/output/" + OUTPUT_FILENAME)), "Output folder not found!");
+      assertTrue(fs.exists(new Path("/testing/output/" + OUTPUT_FILENAME)),
+          "Output folder not found!");
     } catch (NullPointerException npe) {
       // This NPE should no more happens
       fail("A NPE should not have happened.");

@@ -269,24 +269,24 @@ public class TestTaskCommit extends HadoopTestCase {
   public void testCommitNotRequiredForJobSetup() throws Exception {
     Task testTask = createDummyTask(TaskType.MAP);
     testTask.setJobSetupTask();
-    assertFalse(
-        testTask.isCommitRequired(), "Job setup task should not need commit");
+    assertFalse(testTask.isCommitRequired(),
+        "Job setup task should not need commit");
   }
 
   @Test
   public void testCommitNotRequiredForJobCleanup() throws Exception {
     Task testTask = createDummyTask(TaskType.MAP);
     testTask.setJobCleanupTask();
-    assertFalse(
-        testTask.isCommitRequired(), "Job cleanup task should not need commit");
+    assertFalse(testTask.isCommitRequired(),
+        "Job cleanup task should not need commit");
   }
 
   @Test
   public void testCommitNotRequiredForTaskCleanup() throws Exception {
     Task testTask = createDummyTask(TaskType.REDUCE);
     testTask.setTaskCleanupTask();
-    assertFalse(
-        testTask.isCommitRequired(), "Task cleanup task should not need commit");
+    assertFalse(testTask.isCommitRequired(),
+        "Task cleanup task should not need commit");
   }
 
   private Task createDummyTask(TaskType type) throws IOException, ClassNotFoundException,

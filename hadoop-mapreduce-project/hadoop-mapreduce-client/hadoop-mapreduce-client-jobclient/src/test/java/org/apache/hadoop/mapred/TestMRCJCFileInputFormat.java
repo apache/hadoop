@@ -94,8 +94,8 @@ public class TestMRCJCFileInputFormat {
                   blockLocs[0].equals(splitLocs[1])));
     }
 
-    assertEquals(
-                1, job.getLong(FileInputFormat.NUM_INPUT_FILES, 0), "Expected value of " + FileInputFormat.NUM_INPUT_FILES);
+    assertEquals(1, job.getLong(FileInputFormat.NUM_INPUT_FILES, 0),
+        "Expected value of " + FileInputFormat.NUM_INPUT_FILES);
   }
 
   private void createInputs(FileSystem fs, Path inDir, String fileName)
@@ -135,8 +135,8 @@ public class TestMRCJCFileInputFormat {
     inFormat.configure(job);
     InputSplit[] splits = inFormat.getSplits(job, 1);
 
-    assertEquals(
-                numFiles, job.getLong(FileInputFormat.NUM_INPUT_FILES, 0), "Expected value of " + FileInputFormat.NUM_INPUT_FILES);
+    assertEquals(numFiles, job.getLong(FileInputFormat.NUM_INPUT_FILES, 0),
+        "Expected value of " + FileInputFormat.NUM_INPUT_FILES);
   }
   
   final Path root = new Path("/TestFileInputFormat");

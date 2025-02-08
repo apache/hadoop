@@ -96,8 +96,8 @@ public class TestCombineSequenceFileInputFormat {
       // the block size
       assertEquals(1, splits.length, "We got more than one splits!");
       InputSplit split = splits[0];
-      assertEquals(
-       CombineFileSplit.class, split.getClass(), "It should be CombineFileSplit");
+      assertEquals(CombineFileSplit.class, split.getClass(),
+          "It should be CombineFileSplit");
 
       // check each split
       BitSet bits = new BitSet(length);

@@ -31,7 +31,8 @@ public class TestConstructQuery {
   private String expected = "INSERT INTO hadoop_output (id,name,value) VALUES (?,?,?);";
   private String nullExpected = "INSERT INTO hadoop_output VALUES (?,?,?);"; 
   
-  private DBOutputFormat<DBWritable, NullWritable> format = new DBOutputFormat<>();
+  private DBOutputFormat<DBWritable, NullWritable> format
+    = new DBOutputFormat<DBWritable, NullWritable>();
   @Test
   public void testConstructQuery() {
     String actual = format.constructQuery("hadoop_output", fieldNames);

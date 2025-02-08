@@ -312,9 +312,8 @@ public class TestMapRed extends Configured implements Tool {
         assertTrue(fs.exists(input), "reduce input exists " + input);
         SequenceFile.Reader rdr = 
           new SequenceFile.Reader(fs, input, conf);
-        assertEquals(
-                     compressInput, 
-                     rdr.isCompressed(), "is reduce input compressed " + input);
+        assertEquals(compressInput, rdr.isCompressed(),
+            "is reduce input compressed " + input);
         rdr.close();          
       }
     }
@@ -422,9 +421,8 @@ public class TestMapRed extends Configured implements Tool {
       assertTrue(fs.exists(output), "reduce output exists " + output);
       SequenceFile.Reader rdr = 
         new SequenceFile.Reader(fs, output, conf);
-      assertEquals(
-                   redCompression != CompressionType.NONE, 
-                   rdr.isCompressed(), "is reduce output compressed " + output);
+      assertEquals(redCompression != CompressionType.NONE,
+          rdr.isCompressed(), "is reduce output compressed " + output);
       rdr.close();
     } finally {
       fs.delete(testdir, true);

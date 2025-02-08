@@ -83,7 +83,7 @@ public class TestMultithreadedMapRunner extends HadoopTestCase {
 
     fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
-      throw new IOException("Mkdirs failed to create " + inDir);
+      throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
     {
       DataOutputStream file = fs.create(new Path(inDir, "part-0"));

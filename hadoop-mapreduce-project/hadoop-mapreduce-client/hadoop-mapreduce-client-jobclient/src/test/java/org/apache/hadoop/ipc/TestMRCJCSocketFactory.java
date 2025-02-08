@@ -34,8 +34,10 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 import org.apache.hadoop.net.StandardSocketFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This class checks that RPCs can use specialized socket factories.
@@ -56,13 +58,13 @@ public class TestMRCJCSocketFactory {
 
     // Get a reference to its DFS directly
     FileSystem fs = cluster.getFileSystem();
-    Assertions.assertTrue(fs instanceof DistributedFileSystem);
+    assertTrue(fs instanceof DistributedFileSystem);
     DistributedFileSystem directDfs = (DistributedFileSystem) fs;
 
     Configuration cconf = getCustomSocketConfigs(nameNodePort);
 
     fs = FileSystem.get(cconf);
-    Assertions.assertTrue(fs instanceof DistributedFileSystem);
+    assertTrue(fs instanceof DistributedFileSystem);
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
 
     JobClient client = null;
@@ -72,12 +74,12 @@ public class TestMRCJCSocketFactory {
       // could we test Client-DataNode connections?
       Path filePath = new Path("/dir");
 
-      Assertions.assertFalse(directDfs.exists(filePath));
-      Assertions.assertFalse(dfs.exists(filePath));
+      assertFalse(directDfs.exists(filePath));
+      assertFalse(dfs.exists(filePath));
 
       directDfs.mkdirs(filePath);
-      Assertions.assertTrue(directDfs.exists(filePath));
-      Assertions.assertTrue(dfs.exists(filePath));
+      assertTrue(directDfs.exists(filePath));
+      assertTrue(dfs.exists(filePath));
 
       // This will test RPC to a Resource Manager
       fs = FileSystem.get(sconf);
@@ -95,7 +97,7 @@ public class TestMRCJCSocketFactory {
       client = new JobClient(jconf);
 
       JobStatus[] jobs = client.jobsToComplete();
-      Assertions.assertTrue(jobs.length == 0);
+      assertTrue(jobs.length == 0);
 
     } finally {
       closeClient(client);

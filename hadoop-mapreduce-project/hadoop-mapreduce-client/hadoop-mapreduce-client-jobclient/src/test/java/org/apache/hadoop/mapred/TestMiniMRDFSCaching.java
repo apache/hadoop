@@ -21,7 +21,7 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.MRCaching.TestResult;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -31,7 +31,7 @@ import java.io.IOException;
  * A JUnit test to test caching with DFS
  * 
  */
-@Ignore
+@Disabled
 public class TestMiniMRDFSCaching {
 
   @Test

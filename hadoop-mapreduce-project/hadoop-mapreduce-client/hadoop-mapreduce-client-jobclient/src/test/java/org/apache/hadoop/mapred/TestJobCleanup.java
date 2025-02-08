@@ -36,7 +36,9 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * A JUnit test to test Map-Reduce job cleanup.
@@ -169,13 +171,14 @@ public class TestJobCleanup {
 
     LOG.info("Job finished : " + job.isComplete());
     Path testFile = new Path(outDir, filename);
-    assertTrue(
-       fileSys.exists(testFile), "Done file \"" + testFile + "\" missing for job " + id);
+    assertTrue(fileSys.exists(testFile),
+        "Done file \"" + testFile + "\" missing for job " + id);
 
     // check if the files from the missing set exists
     for (String ex : exclude) {
       Path file = new Path(outDir, ex);
-      assertFalse(fileSys.exists(file), "File " + file + " should not be present for successful job "
+      assertFalse(fileSys.exists(file),
+          "File " + file + " should not be present for successful job "
           + id);
     }
   }
@@ -207,8 +210,8 @@ public class TestJobCleanup {
     // check if the files from the missing set exists
     for (String ex : exclude) {
       Path file = new Path(outDir, ex);
-      assertFalse(fileSys.exists(file), "File " + file + " should not be present for failed job "
-          + id);
+      assertFalse(fileSys.exists(file),
+          "File " + file + " should not be present for failed job " + id);
     }
   }
 
@@ -246,15 +249,15 @@ public class TestJobCleanup {
 
     if (fileName != null) {
       Path testFile = new Path(outDir, fileName);
-      assertTrue(
-         fileSys.exists(testFile), "File " + testFile + " missing for job " + id);
+      assertTrue(fileSys.exists(testFile),
+          "File " + testFile + " missing for job " + id);
     }
 
     // check if the files from the missing set exists
     for (String ex : exclude) {
       Path file = new Path(outDir, ex);
-      assertFalse(fileSys.exists(file), "File " + file + " should not be present for killed job "
-          + id);
+      assertFalse(fileSys.exists(file),
+          "File " + file + " should not be present for killed job " + id);
     }
   }
 

@@ -43,7 +43,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.Inflater;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test class for concatenated {@link CompressionInputStream}.
@@ -212,15 +214,12 @@ public class TestConcatenatedCompressedInput {
 
     List<Text> results = readSplit(format, splits[0], jobConf);
     assertEquals(6, results.size(), "splits[0] num lines");
-    assertEquals("splits[0][5]", "member #3",
-                 results.get(5).toString());
+    assertEquals("member #3", results.get(5).toString(), "splits[0][5]");
 
     results = readSplit(format, splits[1], jobConf);
     assertEquals(2, results.size(), "splits[1] num lines");
-    assertEquals("splits[1][0]", "this is a test",
-                 results.get(0).toString());
-    assertEquals("splits[1][1]", "of gzip",
-                 results.get(1).toString());
+    assertEquals("this is a test", results.get(0).toString(), "splits[1][0]");
+    assertEquals("of gzip", results.get(1).toString(), "splits[1][1]");
   }
 
   /**
@@ -264,14 +263,12 @@ public class TestConcatenatedCompressedInput {
     }
     if ((flags & 0x08) != 0) {   // FNAME
       while ((numBytesRead = in.read()) != 0) {
-        assertFalse(
-                   numBytesRead == -1, "unexpected end-of-file while reading filename");
+        assertFalse(numBytesRead == -1, "unexpected end-of-file while reading filename");
       }
     }
     if ((flags & 0x10) != 0) {   // FCOMMENT
       while ((numBytesRead = in.read()) != 0) {
-        assertFalse(
-                   numBytesRead == -1, "unexpected end-of-file while reading comment");
+        assertFalse(numBytesRead == -1, "unexpected end-of-file while reading comment");
       }
     }
     if ((flags & 0xe0) != 0) {   // reserved
@@ -320,9 +317,8 @@ public class TestConcatenatedCompressedInput {
     localFs.delete(workDir, true);
     // Don't use native libs for this test
     ZlibFactory.setNativeZlibLoaded(false);
-    assertEquals(
-     org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor.class
-,       gzip.getDecompressorType(), "[non-native (Java) codec]");
+    assertEquals(org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor.class,
+        gzip.getDecompressorType(), "[non-native (Java) codec]");
     System.out.println(COLOR_BR_YELLOW + "testBuiltInGzipDecompressor() using" +
       " non-native (Java Inflater) Decompressor (" + gzip.getDecompressorType()
       + ")" + COLOR_NORMAL);
@@ -360,10 +356,10 @@ public class TestConcatenatedCompressedInput {
       totalBytes += numBytes;
     }
     in.close();
-    assertEquals(
-                5346, totalBytes, "total uncompressed bytes in concatenated test file");
-    assertEquals(
-                84, lineNum, "total uncompressed lines in concatenated test file");
+    assertEquals(5346, totalBytes,
+        "total uncompressed bytes in concatenated test file");
+    assertEquals(84, lineNum,
+        "total uncompressed lines in concatenated test file");
 
     ZlibFactory.loadNativeZLib();
     // test GzipZlibDecompressor (native), just to be sure
@@ -453,21 +449,17 @@ public class TestConcatenatedCompressedInput {
 
     List<Text> results = readSplit(format, splits[0], jConf);
     assertEquals(84, results.size(), "splits[0] length (num lines)");
-    assertEquals("splits[0][0]",
-      "Call me Ishmael. Some years ago--never mind how long precisely--having",
-      results.get(0).toString());
-    assertEquals("splits[0][42]",
-      "Tell me, does the magnetic virtue of the needles of the compasses of",
-      results.get(42).toString());
+    assertEquals("Call me Ishmael. Some years ago--never mind how long precisely--having",
+        results.get(0).toString(), "splits[0][0]");
+    assertEquals("Tell me, does the magnetic virtue of the needles of the compasses of",
+        results.get(42).toString(), "splits[0][42]");
 
     results = readSplit(format, splits[1], jConf);
     assertEquals(84, results.size(), "splits[1] length (num lines)");
-    assertEquals("splits[1][0]",
-      "Call me Ishmael. Some years ago--never mind how long precisely--having",
-      results.get(0).toString());
-    assertEquals("splits[1][42]",
-      "Tell me, does the magnetic virtue of the needles of the compasses of",
-      results.get(42).toString());
+    assertEquals("Call me Ishmael. Some years ago--never mind how long precisely--having",
+        results.get(0).toString(), "splits[1][0]");
+    assertEquals("Tell me, does the magnetic virtue of the needles of the compasses of",
+        results.get(42).toString(), "splits[1][42]");
   }
 
   /**
@@ -510,15 +502,12 @@ public class TestConcatenatedCompressedInput {
 
     List<Text> results = readSplit(format, splits[0], jobConf);
     assertEquals(6, results.size(), "splits[0] num lines");
-    assertEquals("splits[0][5]", "member #3",
-                 results.get(5).toString());
+    assertEquals("member #3", results.get(5).toString(), "splits[0][5]");
 
     results = readSplit(format, splits[1], jobConf);
     assertEquals(2, results.size(), "splits[1] num lines");
-    assertEquals("splits[1][0]", "this is a test",
-                 results.get(0).toString());
-    assertEquals("splits[1][1]", "of bzip2",
-                 results.get(1).toString());
+    assertEquals("this is a test", results.get(0).toString(), "splits[1][0]");
+    assertEquals("of bzip2", results.get(1).toString(), "splits[1][1]");
   }
 
   /**
@@ -658,22 +647,18 @@ public class TestConcatenatedCompressedInput {
     // testConcatThenCompress (single)
     List<Text> results = readSplit(format, splits[0], jConf);
     assertEquals(84, results.size(), "splits[0] length (num lines)");
-    assertEquals("splits[0][0]",
-      "Call me Ishmael. Some years ago--never mind how long precisely--having",
-      results.get(0).toString());
-    assertEquals("splits[0][42]",
-      "Tell me, does the magnetic virtue of the needles of the compasses of",
-      results.get(42).toString());
+    assertEquals("Call me Ishmael. Some years ago--never mind how long precisely--having",
+        results.get(0).toString(), "splits[0][0]");
+    assertEquals("Tell me, does the magnetic virtue of the needles of the compasses of",
+        results.get(42).toString(), "splits[0][42]");
 
     // testCompressThenConcat (multi)
     results = readSplit(format, splits[1], jConf);
     assertEquals(84, results.size(), "splits[1] length (num lines)");
-    assertEquals("splits[1][0]",
-      "Call me Ishmael. Some years ago--never mind how long precisely--having",
-      results.get(0).toString());
-    assertEquals("splits[1][42]",
-      "Tell me, does the magnetic virtue of the needles of the compasses of",
-      results.get(42).toString());
+    assertEquals("Call me Ishmael. Some years ago--never mind how long precisely--having",
+        results.get(0).toString(), "splits[1][0]");
+    assertEquals("Tell me, does the magnetic virtue of the needles of the compasses of",
+        results.get(42).toString(), "splits[1][42]");
   }
 
   private static String unquote(String in) {
@@ -705,7 +690,7 @@ public class TestConcatenatedCompressedInput {
    * @param args
    * @throws Exception
    */
-  public static void main(String[] args) throws Exception {
+  /*public static void main(String[] args) throws Exception {
     for(String arg: args) {
       System.out.println("Working on " + arg);
       LineReader reader = makeStream(unquote(arg));
@@ -717,5 +702,5 @@ public class TestConcatenatedCompressedInput {
       }
       reader.close();
     }
-  }
+  }*/
 }

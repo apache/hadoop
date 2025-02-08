@@ -170,19 +170,18 @@ public class TestMiniMRChildTask {
       boolean oldConfigs = job.getBoolean(OLD_CONFIGS, false);
       if (oldConfigs) {
         String javaOpts = job.get(JobConf.MAPRED_TASK_JAVA_OPTS);
-        assertNotNull(
-                      javaOpts, JobConf.MAPRED_TASK_JAVA_OPTS + " is null!");
+        assertNotNull(javaOpts,
+            JobConf.MAPRED_TASK_JAVA_OPTS + " is null!");
         assertThat(javaOpts)
             .withFailMessage(JobConf.MAPRED_TASK_JAVA_OPTS + " has value of: "
                 + javaOpts)
             .isEqualTo(TASK_OPTS_VAL);
       } else {
         String mapJavaOpts = job.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS);
-        assertNotNull(
-                      mapJavaOpts, JobConf.MAPRED_MAP_TASK_JAVA_OPTS + " is null!");
-        assertEquals(
-                     mapJavaOpts, MAP_OPTS_VAL, JobConf.MAPRED_MAP_TASK_JAVA_OPTS + " has value of: " + 
-                     mapJavaOpts);
+        assertNotNull(mapJavaOpts,
+            JobConf.MAPRED_MAP_TASK_JAVA_OPTS + " is null!");
+        assertEquals(mapJavaOpts, MAP_OPTS_VAL,
+            JobConf.MAPRED_MAP_TASK_JAVA_OPTS + " has value of: " + mapJavaOpts);
       }
 
       // check if X=y works for an already existing parameter
@@ -193,8 +192,7 @@ public class TestMiniMRChildTask {
       checkEnv("NEW_PATH", File.pathSeparator + "/tmp", "noappend");
 
       String jobLocalDir = job.get(MRJobConfig.JOB_LOCAL_DIR);
-      assertNotNull(
-                   jobLocalDir, MRJobConfig.JOB_LOCAL_DIR + " is null");
+      assertNotNull(jobLocalDir, MRJobConfig.JOB_LOCAL_DIR + " is null");
     }
 
     public void map(WritableComparable key, Writable value,
@@ -214,16 +212,15 @@ public class TestMiniMRChildTask {
       boolean oldConfigs = job.getBoolean(OLD_CONFIGS, false);
       if (oldConfigs) {
         String javaOpts = job.get(JobConf.MAPRED_TASK_JAVA_OPTS);
-        assertNotNull(
-                      javaOpts, JobConf.MAPRED_TASK_JAVA_OPTS + " is null!");
+        assertNotNull(javaOpts, JobConf.MAPRED_TASK_JAVA_OPTS + " is null!");
         assertThat(javaOpts)
             .withFailMessage(JobConf.MAPRED_TASK_JAVA_OPTS + " has value of: "
                 + javaOpts)
             .isEqualTo(TASK_OPTS_VAL);
       } else {
         String reduceJavaOpts = job.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS);
-        assertNotNull(
-                      reduceJavaOpts, JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS + " is null!");
+        assertNotNull(reduceJavaOpts,
+            JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS + " is null!");
         assertThat(reduceJavaOpts)
             .withFailMessage(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS +
                 " has value of: " + reduceJavaOpts)

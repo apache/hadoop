@@ -118,7 +118,6 @@ import org.apache.log4j.SimpleLayout;
 import org.apache.log4j.WriterAppender;
 import org.apache.log4j.spi.LoggingEvent;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -280,7 +279,8 @@ public class TestYARNRunner {
     long startTimeMillis = System.currentTimeMillis();
     yarnRunner.killJob(jobId);
     assertTrue(System.currentTimeMillis() - startTimeMillis
-                  >= timeToWaitBeforeHardKill, "killJob should have waited at least " + timeToWaitBeforeHardKill
+        >= timeToWaitBeforeHardKill,
+        "killJob should have waited at least " + timeToWaitBeforeHardKill
         + " ms.");
   }
 
@@ -527,8 +527,8 @@ public class TestYARNRunner {
 
     for(String command : commands) {
       if(command != null) {
-        assertFalse(
-           command.contains(PROFILE_PARAMS), "Profiler should be disabled by default");
+        assertFalse(command.contains(PROFILE_PARAMS),
+            "Profiler should be disabled by default");
         adminPos = command.indexOf("-Djava.net.preferIPv4Stack=true");
         if(adminPos >= 0)
           adminIndex = index;
@@ -939,13 +939,13 @@ public class TestYARNRunner {
     Configuration confSent = BuilderUtils.parseTokensConf(submissionContext);
 
     // configs that match regex should be included
-    Assertions.assertEquals("123.0.0.1",
+    assertEquals("123.0.0.1",
         confSent.get("dfs.namenode.rpc-address.mycluster2.nn1"));
-    Assertions.assertEquals("123.0.0.2",
+    assertEquals("123.0.0.2",
         confSent.get("dfs.namenode.rpc-address.mycluster2.nn2"));
 
     // configs that aren't matching regex should not be included
-    Assertions.assertTrue(confSent.get("hadoop.tmp.dir") == null || !confSent
+    assertTrue(confSent.get("hadoop.tmp.dir") == null || !confSent
         .get("hadoop.tmp.dir").equals("testconfdir"));
     UserGroupInformation.reset();
   }
@@ -967,15 +967,15 @@ public class TestYARNRunner {
     List<ResourceRequest> resourceRequests =
         submissionContext.getAMContainerResourceRequests();
 
-    Assertions.assertEquals(1, resourceRequests.size());
+    assertEquals(1, resourceRequests.size());
     ResourceRequest resourceRequest = resourceRequests.get(0);
 
     ResourceInformation resourceInformation = resourceRequest.getCapability()
         .getResourceInformation(CUSTOM_RESOURCE_NAME);
-    Assertions.assertEquals("Expecting the default unit (G)",
-        "G", resourceInformation.getUnits());
-    Assertions.assertEquals(5L, resourceInformation.getValue());
-    Assertions.assertEquals(3, resourceRequest.getCapability().getVirtualCores());
+    assertEquals("G", resourceInformation.getUnits(),
+        "Expecting the default unit (G)");
+    assertEquals(5L, resourceInformation.getValue());
+    assertEquals(3, resourceRequest.getCapability().getVirtualCores());
   }
 
   @Test
@@ -993,11 +993,11 @@ public class TestYARNRunner {
       List<ResourceRequest> resourceRequests =
           submissionContext.getAMContainerResourceRequests();
 
-      Assertions.assertEquals(1, resourceRequests.size());
+      assertEquals(1, resourceRequests.size());
       ResourceRequest resourceRequest = resourceRequests.get(0);
 
       long memorySize = resourceRequest.getCapability().getMemorySize();
-      Assertions.assertEquals(3072, memorySize);
+      assertEquals(3072, memorySize);
     }
   }
 
@@ -1022,11 +1022,11 @@ public class TestYARNRunner {
         List<ResourceRequest> resourceRequests =
             submissionContext.getAMContainerResourceRequests();
 
-        Assertions.assertEquals(1, resourceRequests.size());
+        assertEquals(1, resourceRequests.size());
         ResourceRequest resourceRequest = resourceRequests.get(0);
 
         long memorySize = resourceRequest.getCapability().getMemorySize();
-        Assertions.assertEquals(3072, memorySize);
+        assertEquals(3072, memorySize);
         assertTrue(testAppender.getLogEvents().stream().anyMatch(
             e -> e.getLevel() == Level.WARN && ("Configuration " +
                 "yarn.app.mapreduce.am.resource." + memoryName + "=3Gi is " +

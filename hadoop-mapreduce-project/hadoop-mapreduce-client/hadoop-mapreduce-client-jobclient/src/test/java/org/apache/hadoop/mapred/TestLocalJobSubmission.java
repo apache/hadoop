@@ -37,16 +37,16 @@ import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * check for the job submission options of
@@ -58,8 +58,6 @@ public class TestLocalJobSubmission {
 
   private static File testRootDir;
 
-  @Rule
-  public TestName unitTestName = new TestName();
   private File unitTestDir;
   private Path jarPath;
   private Configuration config;
@@ -72,8 +70,8 @@ public class TestLocalJobSubmission {
   }
 
   @BeforeEach
-  public void setup() throws IOException {
-    unitTestDir = new File(testRootDir, unitTestName.getMethodName());
+  public void setup(TestInfo testInfo) throws IOException {
+    unitTestDir = new File(testRootDir, testInfo.getDisplayName());
     unitTestDir.mkdirs();
     config = createConfig();
     jarPath = makeJar(new Path(unitTestDir.getAbsolutePath(), "test.jar"));
@@ -140,8 +138,8 @@ public class TestLocalJobSubmission {
           (SpillCallBackPathsFinder) IntermediateEncryptedStream
               .setSpillCBInjector(new SpillCallBackPathsFinder());
       res = ToolRunner.run(config, new SleepJob(), args);
-      Assertions.assertTrue(
-         spillInjector.getEncryptedSpilledFiles().size() > 0, "No spill occurred");
+      assertTrue(spillInjector.getEncryptedSpilledFiles().size() > 0,
+          "No spill occurred");
     } catch (Exception e) {
       LOG.error("Job failed with {}", e.getLocalizedMessage(), e);
       fail("Job failed");

@@ -86,13 +86,13 @@ public class TestLineInputFormat {
     // check all splits except last one
     int count;
     for (int j = 0; j < splits.length -1; j++) {
-      assertEquals(0
-,         splits[j].getLocations().length, "There are no split locations");
+      assertEquals(0, splits[j].getLocations().length,
+          "There are no split locations");
       RecordReader<LongWritable, Text> reader =
         format.getRecordReader(splits[j], job, voidReporter);
       Class readerClass = reader.getClass();
-      assertEquals(
-          LineRecordReader.class, readerClass, "reader class is LineRecordReader.");
+      assertEquals(LineRecordReader.class, readerClass,
+          "reader class is LineRecordReader.");
       LongWritable key = reader.createKey();
       Class keyClass = key.getClass();
       assertEquals(LongWritable.class, keyClass, "Key class is LongWritable.");
@@ -108,8 +108,8 @@ public class TestLineInputFormat {
       } finally {
         reader.close();
       }
-      assertEquals( 
-                  expectedN, count, "number of lines in split is " + expectedN);
+      assertEquals(expectedN, count,
+          "number of lines in split is " + expectedN);
     }
   }
   

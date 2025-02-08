@@ -39,7 +39,10 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This testcase tests that a JobConf without default values submits jobs
@@ -95,8 +98,8 @@ public class TestNoDefaultsJobConf extends HadoopTestCase {
     JobClient.runJob(conf);
 
     Path[] outputFiles = FileUtil.stat2Paths(
-        getFileSystem().listStatus(outDir,
-        new Utils.OutputFileUtils.OutputFilesFilter()));
+                           getFileSystem().listStatus(outDir,
+                           new Utils.OutputFileUtils.OutputFilesFilter()));
     if (outputFiles.length > 0) {
       InputStream is = getFileSystem().open(outputFiles[0]);
       BufferedReader reader = new BufferedReader(new InputStreamReader(is));

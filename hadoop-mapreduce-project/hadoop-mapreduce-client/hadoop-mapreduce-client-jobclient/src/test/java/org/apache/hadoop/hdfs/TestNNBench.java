@@ -58,12 +58,11 @@ public class TestNNBench extends HadoopTestCase {
   public void testNNBenchCreateReadAndDelete() throws Exception {
     runNNBench(createJobConf(), "create_write");
     Path path = new Path(BASE_DIR + "/data/file_0_0");
-    assertTrue(
-       getFileSystem().exists(path), "create_write should create the file");
+    assertTrue(getFileSystem().exists(path), "create_write should create the file");
     runNNBench(createJobConf(), "open_read");
     runNNBench(createJobConf(), "delete");
-    assertFalse(
-       getFileSystem().exists(path), "Delete operation should delete the file");
+    assertFalse(getFileSystem().exists(path),
+        "Delete operation should delete the file");
   }
 
   @Test
@@ -71,13 +70,11 @@ public class TestNNBench extends HadoopTestCase {
   public void testNNBenchCreateAndRename() throws Exception {
     runNNBench(createJobConf(), "create_write");
     Path path = new Path(BASE_DIR + "/data/file_0_0");
-    assertTrue(
-       getFileSystem().exists(path), "create_write should create the file");
+    assertTrue(getFileSystem().exists(path), "create_write should create the file");
     runNNBench(createJobConf(), "rename");
     Path renamedPath = new Path(BASE_DIR + "/data/file_0_r_0");
     assertFalse(getFileSystem().exists(path), "Rename should rename the file");
-    assertTrue(
-       getFileSystem().exists(renamedPath), "Rename should rename the file");
+    assertTrue(getFileSystem().exists(renamedPath), "Rename should rename the file");
   }
 
   @Test
@@ -101,8 +98,8 @@ public class TestNNBench extends HadoopTestCase {
     runNNBench(createJobConf(), "create_write", baseDir);
 
     Path path = new Path(BASE_DIR + "/data/file_0_0");
-    assertTrue(
-           dfsCluster.getFileSystem().exists(path), "create_write should create the file");
+    assertTrue(dfsCluster.getFileSystem().exists(path),
+        "create_write should create the file");
     dfsCluster.shutdown();
   }
 

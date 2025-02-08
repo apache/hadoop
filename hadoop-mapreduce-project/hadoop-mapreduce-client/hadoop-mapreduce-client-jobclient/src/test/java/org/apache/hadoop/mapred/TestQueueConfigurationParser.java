@@ -32,10 +32,11 @@ import org.apache.hadoop.util.XMLUtils;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestQueueConfigurationParser {
 /**

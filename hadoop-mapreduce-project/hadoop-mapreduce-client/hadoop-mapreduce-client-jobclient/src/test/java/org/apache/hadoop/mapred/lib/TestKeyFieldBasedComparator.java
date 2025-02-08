@@ -89,10 +89,10 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
     conf.setMapperClass(InverseMapper.class);
     conf.setReducerClass(IdentityReducer.class);
     if (!fs.mkdirs(testdir)) {
-      throw new IOException("Mkdirs failed to create " + testdir);
+      throw new IOException("Mkdirs failed to create " + testdir.toString());
     }
     if (!fs.mkdirs(inDir)) {
-      throw new IOException("Mkdirs failed to create " + inDir);
+      throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
     // set up input data in 2 files 
     Path inFile = new Path(inDir, "part0");
@@ -161,7 +161,7 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
   byte[] line2_bytes = line2.getBytes();
 
   public void localTestWithoutMRJob(String keySpec, int expect) throws Exception {
-    KeyFieldBasedComparator<Void, Void> keyFieldCmp = new KeyFieldBasedComparator<>();
+    KeyFieldBasedComparator<Void, Void> keyFieldCmp = new KeyFieldBasedComparator<Void, Void>();
     localConf.setKeyFieldComparatorOptions(keySpec);
     keyFieldCmp.configure(localConf);
     int result = keyFieldCmp.compare(line1_bytes, 0, line1_bytes.length,

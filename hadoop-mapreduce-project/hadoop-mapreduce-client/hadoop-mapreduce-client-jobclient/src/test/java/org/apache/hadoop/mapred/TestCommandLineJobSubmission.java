@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * check for the job submission  options of 
  * -libjars -files -archives
  */
-@Ignore
+@Disabled
 public class TestCommandLineJobSubmission {
   // Input output paths for this..
   // these are all dummy and does not test

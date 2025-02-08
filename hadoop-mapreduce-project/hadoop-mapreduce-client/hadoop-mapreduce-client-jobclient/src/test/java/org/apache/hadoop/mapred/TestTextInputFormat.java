@@ -44,7 +44,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestTextInputFormat {
   private static final Logger LOG =
@@ -112,8 +114,8 @@ public class TestTextInputFormat {
         LOG.debug("splitting: got =        " + splits.length);
 
         if (length == 0) {
-           assertEquals(
-                        1, splits.length, "Files of length 0 are not returned from FileInputFormat.getSplits().");
+           assertEquals(1, splits.length,
+               "Files of length 0 are not returned from FileInputFormat.getSplits().");
            assertEquals(0, splits[0].getLength(), "Empty file length == 0");
         }
 
@@ -347,11 +349,11 @@ public class TestTextInputFormat {
     LineReader in = makeStream("abcd\u20acbdcd\u20ac");
     Text line = new Text();
     in.readLine(line);
-    assertEquals("readLine changed utf8 characters", 
-                 "abcd\u20acbdcd\u20ac", line.toString());
+    assertEquals("abcd\u20acbdcd\u20ac", line.toString(),
+        "readLine changed utf8 characters");
     in = makeStream("abc\u200axyz");
     in.readLine(line);
-    assertEquals("split on fake newline", "abc\u200axyz", line.toString());
+    assertEquals("abc\u200axyz", line.toString(), "split on fake newline");
   }
 
   /**
@@ -527,13 +529,12 @@ public class TestTextInputFormat {
     }
     List<Text> results = readSplit(format, splits[0], job);
     assertEquals(6, results.size(), "splits[0] length");
-    assertEquals("splits[0][5]", " dog", results.get(5).toString());
+    assertEquals(" dog", results.get(5).toString(), "splits[0][5]");
     results = readSplit(format, splits[1], job);
     assertEquals(2, results.size(), "splits[1] length");
-    assertEquals("splits[1][0]", "this is a test", 
-                 results.get(0).toString());    
-    assertEquals("splits[1][1]", "of gzip", 
-                 results.get(1).toString());    
+    assertEquals("this is a test", results.get(0).toString(), "splits[1][0]");
+    assertEquals("of gzip",
+        results.get(1).toString(), "splits[1][1]");
   }
 
   /**
@@ -551,8 +552,8 @@ public class TestTextInputFormat {
     TextInputFormat format = new TextInputFormat();
     format.configure(job);
     InputSplit[] splits = format.getSplits(job, 100);
-    assertEquals(
-                1, splits.length, "Compressed files of length 0 are not returned from FileInputFormat.getSplits().");
+    assertEquals(1, splits.length,
+        "Compressed files of length 0 are not returned from FileInputFormat.getSplits().");
     List<Text> results = readSplit(format, splits[0], job);
     assertEquals(0, results.size(), "Compressed empty file length == 0");
   }
@@ -586,7 +587,7 @@ public class TestTextInputFormat {
    * @param args
    * @throws Exception
    */
-  public static void main(String[] args) throws Exception {
+  /*public static void main(String[] args) throws Exception {
     for(String arg: args) {
       System.out.println("Working on " + arg);
       LineReader reader = makeStream(unquote(arg));
@@ -598,5 +599,5 @@ public class TestTextInputFormat {
       }
       reader.close();
     }
-  }
+  }*/
 }

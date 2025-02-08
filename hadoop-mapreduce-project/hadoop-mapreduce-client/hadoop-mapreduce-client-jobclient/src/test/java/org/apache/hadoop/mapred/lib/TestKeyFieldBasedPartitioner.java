@@ -31,16 +31,18 @@ public class TestKeyFieldBasedPartitioner {
   @Test
   public void testEmptyKey() throws Exception {
     KeyFieldBasedPartitioner<Text, Text> kfbp = 
-      new KeyFieldBasedPartitioner<>();
+      new KeyFieldBasedPartitioner<Text, Text>();
     JobConf conf = new JobConf();
     conf.setInt("num.key.fields.for.partition", 10);
     kfbp.configure(conf);
-    assertEquals(0, kfbp.getPartition(new Text(), new Text(), 10), "Empty key should map to 0th partition");
+    assertEquals(0, kfbp.getPartition(new Text(), new Text(), 10),
+        "Empty key should map to 0th partition");
   }
 
   @Test
   public void testMultiConfigure() {
-    KeyFieldBasedPartitioner<Text, Text> kfbp = new KeyFieldBasedPartitioner<>();
+    KeyFieldBasedPartitioner<Text, Text> kfbp =
+      new KeyFieldBasedPartitioner<Text, Text>();
     JobConf conf = new JobConf();
     conf.set(KeyFieldBasedPartitioner.PARTITIONER_OPTIONS, "-k1,1");
     kfbp.setConf(conf);

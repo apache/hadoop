@@ -94,7 +94,8 @@ public class TestSequenceFileAsTextInputFormat {
           RecordReader<Text, Text> reader =
             format.getRecordReader(splits[j], job, reporter);
           Class readerClass = reader.getClass();
-          assertEquals(SequenceFileAsTextRecordReader.class, readerClass, "reader class is SequenceFileAsTextRecordReader.");        
+          assertEquals(SequenceFileAsTextRecordReader.class, readerClass,
+              "reader class is SequenceFileAsTextRecordReader.");
           Text value = reader.createValue();
           Text key = reader.createKey();
           try {

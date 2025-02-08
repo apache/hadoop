@@ -581,9 +581,9 @@ public class TestJobCounters {
     } else if (TaskType.REDUCE.equals(type)) {
       reports = client.getReduceTaskReports(id);
     }
-    
-    assertNotNull(reports, "No reports found for task type '" + type.name() 
-                  + "' in job " + id);
+
+    assertNotNull(reports, "No reports found for task type '" + type.name()
+         + "' in job " + id);
     // make sure that the total number of reports match the expected
     assertEquals(numReports, reports.length, "Mismatch in task id");
     
@@ -708,11 +708,11 @@ public class TestJobCounters {
       System.out.println("Job2 (high memory job) reduce task heap usage: " 
                          + highMemJobReduceHeapUsage);
 
-      assertTrue(
-                 lowMemJobMapHeapUsage < highMemJobMapHeapUsage, "Incorrect map heap usage reported by the map task");
+      assertTrue(lowMemJobMapHeapUsage < highMemJobMapHeapUsage,
+          "Incorrect map heap usage reported by the map task");
 
-      assertTrue(
-                 lowMemJobReduceHeapUsage < highMemJobReduceHeapUsage, "Incorrect reduce heap usage reported by the reduce task");
+      assertTrue(lowMemJobReduceHeapUsage < highMemJobReduceHeapUsage,
+          "Incorrect reduce heap usage reported by the reduce task");
     } finally {
       // shutdown the mr cluster
       mrCluster.shutdown();

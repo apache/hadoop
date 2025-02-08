@@ -311,8 +311,10 @@ public class TestTupleWritable {
     ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
     TupleWritable dTuple = new TupleWritable();
     dTuple.readFields(new DataInputStream(in));
-    assertTrue(oldTuple.isCompatible(dTuple), "Tuple writable is unable to read pre-0.21 versions of TupleWritable");
-    assertEquals(-1, in.read(), "All tuple data has not been read from the stream");
+    assertTrue(oldTuple.isCompatible(dTuple),
+        "Tuple writable is unable to read pre-0.21 versions of TupleWritable");
+    assertEquals(-1, in.read(),
+        "All tuple data has not been read from the stream");
   }
   @Test
   public void testPreVersion21CompatibilityEmptyTuple() throws Exception {
@@ -324,8 +326,10 @@ public class TestTupleWritable {
     ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
     TupleWritable dTuple = new TupleWritable();
     dTuple.readFields(new DataInputStream(in));
-    assertTrue(oldTuple.isCompatible(dTuple), "Tuple writable is unable to read pre-0.21 versions of TupleWritable");
-    assertEquals(-1, in.read(), "All tuple data has not been read from the stream");
+    assertTrue(oldTuple.isCompatible(dTuple),
+        "Tuple writable is unable to read pre-0.21 versions of TupleWritable");
+    assertEquals(-1, in.read(),
+        "All tuple data has not been read from the stream");
   }
   
   /**

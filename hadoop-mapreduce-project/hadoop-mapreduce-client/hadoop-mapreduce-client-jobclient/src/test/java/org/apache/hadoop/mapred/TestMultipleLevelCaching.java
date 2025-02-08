@@ -27,7 +27,7 @@ import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * This test checks whether the task caches are created and used properly.
  */
-@Ignore
+@Disabled
 public class TestMultipleLevelCaching {
   private static final int MAX_LEVEL = 5;
   final Path inDir = new Path("/cachetesting");
@@ -158,14 +158,12 @@ public class TestMultipleLevelCaching {
     }
     RunningJob job = launchJob(jobConf, in, out, numMaps, jobName);
     Counters counters = job.getCounters();
-    assertEquals(
-           counters.getCounter(JobCounter.OTHER_LOCAL_MAPS), otherLocalMaps, "Number of local maps");
-    assertEquals(
-           counters.getCounter(JobCounter.DATA_LOCAL_MAPS)
-,                                 dataLocalMaps, "Number of Data-local maps");
-    assertEquals(
-           counters.getCounter(JobCounter.RACK_LOCAL_MAPS)
-,                                 rackLocalMaps, "Number of Rack-local maps");
+    assertEquals(counters.getCounter(JobCounter.OTHER_LOCAL_MAPS),
+        otherLocalMaps, "Number of local maps");
+    assertEquals(counters.getCounter(JobCounter.DATA_LOCAL_MAPS),
+        dataLocalMaps, "Number of Data-local maps");
+    assertEquals(counters.getCounter(JobCounter.RACK_LOCAL_MAPS),
+        rackLocalMaps, "Number of Rack-local maps");
     mr.waitUntilIdle();
     mr.shutdown();
   }

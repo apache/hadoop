@@ -193,8 +193,8 @@ public class TestMapProgress {
         return;
       }
       // validate map task progress when the map task is in map phase
-      assertTrue(
-                Math.abs(mapTaskProgress - ((float)recordNum/3)) < 0.001, "Map progress is not the expected value.");
+      assertTrue(Math.abs(mapTaskProgress - ((float)recordNum/3)) < 0.001,
+          "Map progress is not the expected value.");
     }
   }
 
