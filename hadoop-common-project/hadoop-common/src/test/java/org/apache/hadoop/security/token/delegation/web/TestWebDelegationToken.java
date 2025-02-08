@@ -36,10 +36,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.slf4j.event.Level;
@@ -77,6 +76,12 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestWebDelegationToken {
   private static final String OK_USER = "ok-user";
@@ -193,7 +198,7 @@ public class TestWebDelegationToken {
     return "http://" + c.getHost() + ":" + c.getLocalPort();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // resetting hadoop security to simple
     org.apache.hadoop.conf.Configuration conf =
@@ -205,7 +210,7 @@ public class TestWebDelegationToken {
         Level.TRACE);
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws Exception {
     jetty.stop();
 
@@ -235,45 +240,45 @@ public class TestWebDelegationToken {
 
       // unauthenticated access to URL
       HttpURLConnection conn = (HttpURLConnection) nonAuthURL.openConnection();
-      Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
           conn.getResponseCode());
 
       // authenticated access to URL
       conn = (HttpURLConnection) authURL.openConnection();
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
 
       // unauthenticated access to get delegation token
       URL url = new URL(nonAuthURL.toExternalForm() + "?op=GETDELEGATIONTOKEN");
       conn = (HttpURLConnection) url.openConnection();
-      Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
           conn.getResponseCode());
 
       // authenticated access to get delegation token
       url = new URL(authURL.toExternalForm() +
           "&op=GETDELEGATIONTOKEN&renewer=foo");
       conn = (HttpURLConnection) url.openConnection();
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       ObjectMapper mapper = new ObjectMapper();
       Map map = mapper.readValue(conn.getInputStream(), Map.class);
       String dt = (String) ((Map) map.get("Token")).get("urlString");
-      Assert.assertNotNull(dt);
+      assertNotNull(dt);
 
       // delegation token access to URL
       url = new URL(nonAuthURL.toExternalForm() + "?delegation=" + dt);
       conn = (HttpURLConnection) url.openConnection();
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
 
       // delegation token and authenticated access to URL
       url = new URL(authURL.toExternalForm() + "&delegation=" + dt);
       conn = (HttpURLConnection) url.openConnection();
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
 
       // renewew delegation token, unauthenticated access to URL
       url = new URL(nonAuthURL.toExternalForm() +
           "?op=RENEWDELEGATIONTOKEN&token=" + dt);
       conn = (HttpURLConnection) url.openConnection();
       conn.setRequestMethod("PUT");
-      Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
           conn.getResponseCode());
 
       // renewew delegation token, authenticated access to URL
@@ -281,14 +286,14 @@ public class TestWebDelegationToken {
           "&op=RENEWDELEGATIONTOKEN&token=" + dt);
       conn = (HttpURLConnection) url.openConnection();
       conn.setRequestMethod("PUT");
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
 
       // renewew delegation token, authenticated access to URL, not renewer
       url = new URL(getJettyURL() +
           "/foo/bar?authenticated=bar&op=RENEWDELEGATIONTOKEN&token=" + dt);
       conn = (HttpURLConnection) url.openConnection();
       conn.setRequestMethod("PUT");
-      Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+      assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
           conn.getResponseCode());
 
       // cancel delegation token, nonauthenticated access to URL
@@ -296,32 +301,32 @@ public class TestWebDelegationToken {
           "?op=CANCELDELEGATIONTOKEN&token=" + dt);
       conn = (HttpURLConnection) url.openConnection();
       conn.setRequestMethod("PUT");
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
 
       // cancel canceled delegation token, nonauthenticated access to URL
       url = new URL(nonAuthURL.toExternalForm() +
           "?op=CANCELDELEGATIONTOKEN&token=" + dt);
       conn = (HttpURLConnection) url.openConnection();
       conn.setRequestMethod("PUT");
-      Assert.assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
+      assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
           conn.getResponseCode());
 
       // get new delegation token
       url = new URL(authURL.toExternalForm() +
           "&op=GETDELEGATIONTOKEN&renewer=foo");
       conn = (HttpURLConnection) url.openConnection();
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       mapper = new ObjectMapper();
       map = mapper.readValue(conn.getInputStream(), Map.class);
       dt = (String) ((Map) map.get("Token")).get("urlString");
-      Assert.assertNotNull(dt);
+      assertNotNull(dt);
 
       // cancel delegation token, authenticated access to URL
       url = new URL(authURL.toExternalForm() +
           "&op=CANCELDELEGATIONTOKEN&token=" + dt);
       conn = (HttpURLConnection) url.openConnection();
       conn.setRequestMethod("PUT");
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     } finally {
       jetty.stop();
     }
@@ -364,32 +369,32 @@ public class TestWebDelegationToken {
 
       try {
         aUrl.getDelegationToken(nonAuthURL, token, FOO_USER);
-        Assert.fail();
+        fail();
       } catch (Exception ex) {
-        Assert.assertTrue(ex.getCause().getMessage().contains("401"));
+        assertTrue(ex.getCause().getMessage().contains("401"));
       }
 
       aUrl.getDelegationToken(authURL, token, FOO_USER);
-      Assert.assertNotNull(token.getDelegationToken());
-      Assert.assertEquals(new Text("token-kind"),
+      assertNotNull(token.getDelegationToken());
+      assertEquals(new Text("token-kind"),
           token.getDelegationToken().getKind());
 
       aUrl.renewDelegationToken(authURL, token);
 
       try {
         aUrl.renewDelegationToken(nonAuthURL, token);
-        Assert.fail();
+        fail();
       } catch (Exception ex) {
-        Assert.assertTrue(ex.getMessage().contains("401"));
+        assertTrue(ex.getMessage().contains("401"));
       }
 
       aUrl.getDelegationToken(authURL, token, FOO_USER);
 
       try {
         aUrl.renewDelegationToken(authURL2, token);
-        Assert.fail();
+        fail();
       } catch (Exception ex) {
-        Assert.assertTrue(ex.getMessage().contains("403"));
+        assertTrue(ex.getMessage().contains("403"));
       }
 
       aUrl.getDelegationToken(authURL, token, FOO_USER);
@@ -405,7 +410,7 @@ public class TestWebDelegationToken {
       try {
         aUrl.renewDelegationToken(nonAuthURL, token);
       } catch (Exception ex) {
-        Assert.assertTrue(ex.getMessage().contains("401"));
+        assertTrue(ex.getMessage().contains("401"));
       }
 
       aUrl.getDelegationToken(authURL, token, "foo");
@@ -413,20 +418,21 @@ public class TestWebDelegationToken {
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       ugi.addToken(token.getDelegationToken());
       ugi.doAs(new PrivilegedExceptionAction<Void>() {
-                 @Override
-                 public Void run() throws Exception {
-                   HttpURLConnection conn = aUrl.openConnection(nonAuthURL, new DelegationTokenAuthenticatedURL.Token());
-                   Assert.assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
-                   if (useQS) {
-                     Assert.assertNull(conn.getHeaderField("UsingHeader"));
-                     Assert.assertNotNull(conn.getHeaderField("UsingQueryString"));
-                   } else {
-                     Assert.assertNotNull(conn.getHeaderField("UsingHeader"));
-                     Assert.assertNull(conn.getHeaderField("UsingQueryString"));
-                   }
-                   return null;
-                 }
-               });
+        @Override
+        public Void run() throws Exception {
+          HttpURLConnection conn =
+              aUrl.openConnection(nonAuthURL, new DelegationTokenAuthenticatedURL.Token());
+          assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+          if (useQS) {
+            assertNull(conn.getHeaderField("UsingHeader"));
+            assertNotNull(conn.getHeaderField("UsingQueryString"));
+          } else {
+            assertNotNull(conn.getHeaderField("UsingHeader"));
+            assertNull(conn.getHeaderField("UsingQueryString"));
+          }
+          return null;
+        }
+      });
 
 
     } finally {
@@ -472,8 +478,8 @@ public class TestWebDelegationToken {
           new DelegationTokenAuthenticatedURL();
 
       aUrl.getDelegationToken(authURL, token, FOO_USER);
-      Assert.assertNotNull(token.getDelegationToken());
-      Assert.assertEquals(new Text("fooKind"),
+      assertNotNull(token.getDelegationToken());
+      assertEquals(new Text("fooKind"),
           token.getDelegationToken().getKind());
 
     } finally {
@@ -553,17 +559,17 @@ public class TestWebDelegationToken {
           DelegationTokenAuthenticatedURL aUrl =
               new DelegationTokenAuthenticatedURL();
           HttpURLConnection conn = aUrl.openConnection(url, token);
-          Assert.assertEquals(HttpURLConnection.HTTP_OK,
+          assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
           List<String> ret = IOUtils.readLines(conn.getInputStream(), StandardCharsets.UTF_8);
-          Assert.assertEquals(1, ret.size());
-          Assert.assertEquals(FOO_USER, ret.get(0));
+          assertEquals(1, ret.size());
+          assertEquals(FOO_USER, ret.get(0));
 
           try {
             aUrl.getDelegationToken(url, token, FOO_USER);
-            Assert.fail();
+            fail();
           } catch (AuthenticationException ex) {
-            Assert.assertTrue(ex.getMessage().contains(
+            assertTrue(ex.getMessage().contains(
                 "delegation token operation"));
           }
           return null;
@@ -623,15 +629,15 @@ public class TestWebDelegationToken {
           DelegationTokenAuthenticatedURL aUrl =
               new DelegationTokenAuthenticatedURL();
           HttpURLConnection conn = aUrl.openConnection(url, token);
-          Assert.assertEquals(HttpURLConnection.HTTP_OK,
+          assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
           List<String> ret = IOUtils.readLines(conn.getInputStream(), StandardCharsets.UTF_8);
-          Assert.assertEquals(1, ret.size());
-          Assert.assertEquals(FOO_USER, ret.get(0));
+          assertEquals(1, ret.size());
+          assertEquals(FOO_USER, ret.get(0));
 
           aUrl.getDelegationToken(url, token, FOO_USER);
-          Assert.assertNotNull(token.getDelegationToken());
-          Assert.assertEquals(new Text("token-kind"),
+          assertNotNull(token.getDelegationToken());
+          assertEquals(new Text("token-kind"),
               token.getDelegationToken().getKind());
           return null;
         }
@@ -746,7 +752,7 @@ public class TestWebDelegationToken {
     final String doAsUser = doAs ? OK_USER : null;
 
     File testDir = new File("target/" + UUID.randomUUID().toString());
-    Assert.assertTrue(testDir.mkdirs());
+    assertTrue(testDir.mkdirs());
     MiniKdc kdc = new MiniKdc(MiniKdc.createConf(), testDir);
     final Server jetty = createJettyServer();
     ServletContextHandler context = new ServletContextHandler();
@@ -774,9 +780,9 @@ public class TestWebDelegationToken {
 
       try {
         aUrl.getDelegationToken(url, token, FOO_USER, doAsUser);
-        Assert.fail();
+        fail();
       } catch (AuthenticationException ex) {
-        Assert.assertTrue(ex.getCause().getMessage().contains("GSSException"));
+        assertTrue(ex.getCause().getMessage().contains("GSSException"));
       }
 
       doAsKerberosUser("client", keytabFile.getAbsolutePath(),
@@ -785,8 +791,8 @@ public class TestWebDelegationToken {
             public Void call() throws Exception {
               aUrl.getDelegationToken(
                   url, token, doAs ? doAsUser : "client", doAsUser);
-              Assert.assertNotNull(token.getDelegationToken());
-              Assert.assertEquals(new Text("token-kind"),
+              assertNotNull(token.getDelegationToken());
+              assertEquals(new Text("token-kind"),
                   token.getDelegationToken().getKind());
               // Make sure the token belongs to the right owner
               ByteArrayInputStream buf = new ByteArrayInputStream(
@@ -796,29 +802,28 @@ public class TestWebDelegationToken {
                   new DelegationTokenIdentifier(new Text("token-kind"));
               id.readFields(dis);
               dis.close();
-              Assert.assertEquals(
-                  doAs ? new Text(OK_USER) : new Text("client"), id.getOwner());
+              assertEquals(doAs ? new Text(OK_USER) : new Text("client"), id.getOwner());
               if (doAs) {
-                Assert.assertEquals(new Text("client"), id.getRealUser());
+                assertEquals(new Text("client"), id.getRealUser());
               }
 
               aUrl.renewDelegationToken(url, token, doAsUser);
-              Assert.assertNotNull(token.getDelegationToken());
+              assertNotNull(token.getDelegationToken());
 
               aUrl.getDelegationToken(url, token, FOO_USER, doAsUser);
-              Assert.assertNotNull(token.getDelegationToken());
+              assertNotNull(token.getDelegationToken());
 
               try {
                 aUrl.renewDelegationToken(url, token, doAsUser);
-                Assert.fail();
+                fail();
               } catch (Exception ex) {
-                Assert.assertTrue(ex.getMessage().contains("403"));
+                assertTrue(ex.getMessage().contains("403"));
               }
 
               aUrl.getDelegationToken(url, token, FOO_USER, doAsUser);
 
               aUrl.cancelDelegationToken(url, token, doAsUser);
-              Assert.assertNull(token.getDelegationToken());
+              assertNull(token.getDelegationToken());
 
               return null;
             }
@@ -848,17 +853,17 @@ public class TestWebDelegationToken {
           url.toExternalForm(), FOO_USER, OK_USER);
       HttpURLConnection conn = 
           (HttpURLConnection) new URL(strUrl).openConnection();
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       List<String> ret = IOUtils.readLines(conn.getInputStream(), StandardCharsets.UTF_8);
-      Assert.assertEquals(1, ret.size());
-      Assert.assertEquals(OK_USER, ret.get(0));
+      assertEquals(1, ret.size());
+      assertEquals(OK_USER, ret.get(0));
       strUrl = String.format("%s?user.name=%s&DOAS=%s", url.toExternalForm(), 
           FOO_USER, OK_USER);
       conn = (HttpURLConnection) new URL(strUrl).openConnection();
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       ret = IOUtils.readLines(conn.getInputStream(), StandardCharsets.UTF_8);
-      Assert.assertEquals(1, ret.size());
-      Assert.assertEquals(OK_USER, ret.get(0));
+      assertEquals(1, ret.size());
+      assertEquals(OK_USER, ret.get(0));
 
       UserGroupInformation ugi = UserGroupInformation.createRemoteUser(FOO_USER);
       ugi.doAs(new PrivilegedExceptionAction<Void>() {
@@ -871,16 +876,16 @@ public class TestWebDelegationToken {
 
           // proxyuser using authentication handler authentication
           HttpURLConnection conn = aUrl.openConnection(url, token, OK_USER);
-          Assert.assertEquals(HttpURLConnection.HTTP_OK,
+          assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
           List<String> ret = IOUtils
               .readLines(conn.getInputStream(), StandardCharsets.UTF_8);
-          Assert.assertEquals(1, ret.size());
-          Assert.assertEquals(OK_USER, ret.get(0));
+          assertEquals(1, ret.size());
+          assertEquals(OK_USER, ret.get(0));
 
           // unauthorized proxy user using authentication handler authentication
           conn = aUrl.openConnection(url, token, FAIL_USER);
-          Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+          assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
               conn.getResponseCode());
 
           // proxy using delegation token authentication
@@ -892,12 +897,12 @@ public class TestWebDelegationToken {
 
           // requests using delegation token as auth do not honor doAs
           conn = aUrl.openConnection(url, token, OK_USER);
-          Assert.assertEquals(HttpURLConnection.HTTP_OK,
+          assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
           ret = IOUtils
               .readLines(conn.getInputStream(), StandardCharsets.UTF_8);
-          Assert.assertEquals(1, ret.size());
-          Assert.assertEquals(FOO_USER, ret.get(0));
+          assertEquals(1, ret.size());
+          assertEquals(FOO_USER, ret.get(0));
 
           return null;
         }
@@ -954,22 +959,22 @@ public class TestWebDelegationToken {
 
           // user foo
           HttpURLConnection conn = aUrl.openConnection(url, token);
-          Assert.assertEquals(HttpURLConnection.HTTP_OK,
+          assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
           List<String> ret = IOUtils
               .readLines(conn.getInputStream(), StandardCharsets.UTF_8);
-          Assert.assertEquals(1, ret.size());
-          Assert.assertEquals("remoteuser=" + FOO_USER+ ":ugi=" + FOO_USER, 
+          assertEquals(1, ret.size());
+          assertEquals("remoteuser=" + FOO_USER+ ":ugi=" + FOO_USER,
               ret.get(0));
 
           // user ok-user via proxyuser foo
           conn = aUrl.openConnection(url, token, OK_USER);
-          Assert.assertEquals(HttpURLConnection.HTTP_OK,
+          assertEquals(HttpURLConnection.HTTP_OK,
               conn.getResponseCode());
           ret = IOUtils.readLines(conn.getInputStream(), StandardCharsets.UTF_8);
-          Assert.assertEquals(1, ret.size());
-          Assert.assertEquals("realugi=" + FOO_USER +":remoteuser=" + OK_USER + 
-                  ":ugi=" + OK_USER, ret.get(0));
+          assertEquals(1, ret.size());
+          assertEquals("realugi=" + FOO_USER + ":remoteuser=" + OK_USER +
+              ":ugi=" + OK_USER, ret.get(0));
 
           return null;
         }
@@ -1016,11 +1021,11 @@ public class TestWebDelegationToken {
 
           // user ok-user via proxyuser foo
           HttpURLConnection conn = aUrl.openConnection(url, token, OK_USER);
-          Assert.assertEquals(HttpURLConnection.HTTP_OK,
+          assertEquals(HttpURLConnection.HTTP_OK,
                   conn.getResponseCode());
           List<String> ret = IOUtils.readLines(conn.getInputStream(), StandardCharsets.UTF_8);
-          Assert.assertEquals(1, ret.size());
-          Assert.assertEquals("realugi=" + FOO_USER +":remoteuser=" + OK_USER +
+          assertEquals(1, ret.size());
+          assertEquals("realugi=" + FOO_USER +":remoteuser=" + OK_USER +
                   ":ugi=" + OK_USER, ret.get(0));
 
           return null;

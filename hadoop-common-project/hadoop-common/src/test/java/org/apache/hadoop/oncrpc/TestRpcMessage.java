@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Test for {@link RpcMessage}
@@ -36,8 +38,8 @@ public class TestRpcMessage {
   @Test
   public void testRpcMessage() {
     RpcMessage msg = getRpcMessage(0, RpcMessage.Type.RPC_CALL);
-    Assert.assertEquals(0, msg.getXid());
-    Assert.assertEquals(RpcMessage.Type.RPC_CALL, msg.getMessageType());
+    assertEquals(0, msg.getXid());
+    assertEquals(RpcMessage.Type.RPC_CALL, msg.getMessageType());
   }
 
   @Test
@@ -46,9 +48,11 @@ public class TestRpcMessage {
     msg.validateMessageType(RpcMessage.Type.RPC_CALL);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testValidateMessageException() {
-    RpcMessage msg = getRpcMessage(0, RpcMessage.Type.RPC_CALL);
-    msg.validateMessageType(RpcMessage.Type.RPC_REPLY);
+    assertThrows(IllegalArgumentException.class, () -> {
+      RpcMessage msg = getRpcMessage(0, RpcMessage.Type.RPC_CALL);
+      msg.validateMessageType(RpcMessage.Type.RPC_REPLY);
+    });
   }
 }

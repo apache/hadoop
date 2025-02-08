@@ -20,8 +20,10 @@ package org.apache.hadoop.oncrpc;
 import org.apache.hadoop.oncrpc.RpcDeniedReply.RejectState;
 import org.apache.hadoop.oncrpc.RpcReply.ReplyState;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Test for {@link RpcDeniedReply}
@@ -29,22 +31,23 @@ import org.junit.Test;
 public class TestRpcDeniedReply {
   @Test
   public void testRejectStateFromValue() {
-    Assert.assertEquals(RejectState.RPC_MISMATCH, RejectState.fromValue(0));
-    Assert.assertEquals(RejectState.AUTH_ERROR, RejectState.fromValue(1));
+    assertEquals(RejectState.RPC_MISMATCH, RejectState.fromValue(0));
+    assertEquals(RejectState.AUTH_ERROR, RejectState.fromValue(1));
   }
 
-  @Test(expected=IndexOutOfBoundsException.class)
+  @Test
   public void testRejectStateFromInvalidValue1() {
-    RejectState.fromValue(2);
+    assertThrows(IndexOutOfBoundsException.class, () ->
+        RejectState.fromValue(2));
   }
 
   @Test
   public void testConstructor() {
     RpcDeniedReply reply = new RpcDeniedReply(0, ReplyState.MSG_ACCEPTED,
         RejectState.AUTH_ERROR, new VerifierNone());
-    Assert.assertEquals(0, reply.getXid());
-    Assert.assertEquals(RpcMessage.Type.RPC_REPLY, reply.getMessageType());
-    Assert.assertEquals(ReplyState.MSG_ACCEPTED, reply.getState());
-    Assert.assertEquals(RejectState.AUTH_ERROR, reply.getRejectState());
+    assertEquals(0, reply.getXid());
+    assertEquals(RpcMessage.Type.RPC_REPLY, reply.getMessageType());
+    assertEquals(ReplyState.MSG_ACCEPTED, reply.getState());
+    assertEquals(RejectState.AUTH_ERROR, reply.getRejectState());
   }
 }
