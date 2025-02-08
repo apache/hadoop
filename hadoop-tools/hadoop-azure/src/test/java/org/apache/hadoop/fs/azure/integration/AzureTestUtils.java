@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX;
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN;
@@ -495,8 +495,9 @@ public final class AzureTestUtils extends Assertions {
     if (accountName == null) {
       accountName = conf.get(WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN);
     }
-    assumeTrue("Account for WASB is missing or it is not in correct format",
-            accountName != null && !accountName.endsWith(WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX));
+    assumeTrue(accountName != null &&
+        !accountName.endsWith(WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX),
+        "Account for WASB is missing or it is not in correct format");
     return accountName;
   }
 

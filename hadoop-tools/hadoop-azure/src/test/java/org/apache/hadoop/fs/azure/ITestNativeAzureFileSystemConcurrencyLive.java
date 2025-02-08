@@ -23,8 +23,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
@@ -56,8 +56,8 @@ public class ITestNativeAzureFileSystemConcurrencyLive
    */
   @Test
   @Timeout(TEST_EXECUTION_TIMEOUT)
-  public void testConcurrentCreateDeleteFile() throws Exception {
-    Path testFile = methodPath();
+  public void testConcurrentCreateDeleteFile(TestInfo testInfo) throws Exception {
+    Path testFile = methodPath(testInfo);
 
     List<CreateFileTask> tasks = new ArrayList<>(THREAD_COUNT);
 
@@ -73,12 +73,12 @@ public class ITestNativeAzureFileSystemConcurrencyLive
       List<Future<Void>> futures = es.invokeAll(tasks);
 
       for (Future<Void> future : futures) {
-        Assertions.assertTrue(future.isDone());
+        assertTrue(future.isDone());
 
         // we are using Callable<V>, so if an exception
         // occurred during the operation, it will be thrown
         // when we call get
-        Assertions.assertEquals(null, future.get());
+        assertEquals(null, future.get());
       }
     } finally {
       if (es != null) {
@@ -112,7 +112,7 @@ public class ITestNativeAzureFileSystemConcurrencyLive
 
       int successCount = 0;
       for (Future<Boolean> future : futures) {
-        Assertions.assertTrue(future.isDone());
+        assertTrue(future.isDone());
 
         // we are using Callable<V>, so if an exception
         // occurred during the operation, it will be thrown
@@ -123,7 +123,7 @@ public class ITestNativeAzureFileSystemConcurrencyLive
         }
       }
 
-      Assertions.assertEquals(
+      assertEquals(
       
          1
 ,           successCount, "Exactly one delete operation should return true.");
@@ -161,7 +161,7 @@ public class ITestNativeAzureFileSystemConcurrencyLive
       List<Future<Integer>> futures = es.invokeAll(tasks);
 
       for (Future<Integer> future : futures) {
-        Assertions.assertTrue(future.isDone());
+        assertTrue(future.isDone());
 
         // we are using Callable<V>, so if an exception
         // occurred during the operation, it will be thrown

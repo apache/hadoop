@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.RejectedExecutionException;
@@ -34,9 +30,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem.FolderRenamePending;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -53,12 +48,9 @@ public class ITestFileSystemOperationsWithThreads extends AbstractWasbTestBase {
   private int iterations = 1;
   private LogCapturer logs = null;
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
   @BeforeEach
-  public void setUp() throws Exception {
-    super.setUp();
+  public void setUp(TestInfo testInfo) throws Exception {
+    super.setUp(testInfo);
     Configuration conf = fs.getConf();
 
     // By default enable parallel threads for rename and delete operations.

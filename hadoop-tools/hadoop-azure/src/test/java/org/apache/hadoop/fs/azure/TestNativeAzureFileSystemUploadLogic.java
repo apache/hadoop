@@ -24,8 +24,9 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Tests for the upload, buffering and flush logic in WASB.
@@ -65,9 +66,10 @@ public class TestNativeAzureFileSystemUploadLogic extends AbstractWasbTestBase {
    * bit of data.
    */
   @Test
-  @Ignore /* flush() no longer does anything. @@TODO: implement a force-flush and reinstate this test */
-  public void testConsistencyAfterSmallFlushes() throws Exception {
-    testConsistencyAfterManyFlushes(FlushFrequencyVariation.BeforeSingleBufferFull);
+  @Disabled
+  /* flush() no longer does anything. @@TODO: implement a force-flush and reinstate this test */
+  public void testConsistencyAfterSmallFlushes(TestInfo testInfo) throws Exception {
+    testConsistencyAfterManyFlushes(FlushFrequencyVariation.BeforeSingleBufferFull, testInfo);
   }
 
   /**
@@ -75,9 +77,10 @@ public class TestNativeAzureFileSystemUploadLogic extends AbstractWasbTestBase {
    * bit of data.
    */
   @Test
-  @Ignore /* flush() no longer does anything. @@TODO: implement a force-flush and reinstate this test */
-  public void testConsistencyAfterMediumFlushes() throws Exception {
-    testConsistencyAfterManyFlushes(FlushFrequencyVariation.AfterSingleBufferFull);
+  @Disabled
+  /* flush() no longer does anything. @@TODO: implement a force-flush and reinstate this test */
+  public void testConsistencyAfterMediumFlushes(TestInfo testInfo) throws Exception {
+    testConsistencyAfterManyFlushes(FlushFrequencyVariation.AfterSingleBufferFull, testInfo);
   }
 
   /**
@@ -85,9 +88,10 @@ public class TestNativeAzureFileSystemUploadLogic extends AbstractWasbTestBase {
    * of data.
    */
   @Test
-  @Ignore /* flush() no longer does anything. @@TODO: implement a force-flush and reinstate this test */
-  public void testConsistencyAfterLargeFlushes() throws Exception {
-    testConsistencyAfterManyFlushes(FlushFrequencyVariation.AfterAllRingBufferFull);
+  @Disabled
+  /* flush() no longer does anything. @@TODO: implement a force-flush and reinstate this test */
+  public void testConsistencyAfterLargeFlushes(TestInfo testInfo) throws Exception {
+    testConsistencyAfterManyFlushes(FlushFrequencyVariation.AfterAllRingBufferFull, testInfo);
   }
 
   /**
@@ -147,9 +151,9 @@ public class TestNativeAzureFileSystemUploadLogic extends AbstractWasbTestBase {
    * with what I'd expect.
    * @param variation The variation/scenario to test.
    */
-  private void testConsistencyAfterManyFlushes(FlushFrequencyVariation variation)
-      throws Exception {
-    Path uploadedFile = methodPath();
+  private void testConsistencyAfterManyFlushes(FlushFrequencyVariation variation,
+      TestInfo testInfo) throws Exception {
+    Path uploadedFile = methodPath(testInfo);
     try {
       OutputStream outStream = getFileSystem().create(uploadedFile);
       final int totalSize = 9123;

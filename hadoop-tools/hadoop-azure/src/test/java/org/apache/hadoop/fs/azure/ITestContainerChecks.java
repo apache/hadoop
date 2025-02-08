@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.FileNotFoundException;
 import java.util.EnumSet;
@@ -32,7 +33,6 @@ import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.Assume;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -61,7 +61,7 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
   @Test
   public void testContainerExistAfterDoesNotExist() throws Exception {
     testAccount = blobStorageTestAccount();
-    assumeNotNull(testAccount);
+    assumeTrue(testAccount != null);
     CloudBlobContainer container = testAccount.getRealContainer();
     FileSystem fs = testAccount.getFileSystem();
 
@@ -101,7 +101,7 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
   @Test
   public void testContainerCreateAfterDoesNotExist() throws Exception {
     testAccount = blobStorageTestAccount();
-    assumeNotNull(testAccount);
+    assumeTrue(testAccount != null);
     CloudBlobContainer container = testAccount.getRealContainer();
     FileSystem fs = testAccount.getFileSystem();
 
@@ -127,7 +127,7 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
   @Test
   public void testContainerCreateOnWrite() throws Exception {
     testAccount = blobStorageTestAccount();
-    assumeNotNull(testAccount);
+    assumeTrue(testAccount != null);
     CloudBlobContainer container = testAccount.getRealContainer();
     FileSystem fs = testAccount.getFileSystem();
 
@@ -170,10 +170,10 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
   @Test
   public void testContainerChecksWithSas() throws Exception {
 
-    Assume.assumeFalse(runningInSASMode);
+    assumeFalse(runningInSASMode);
     testAccount = AzureBlobStorageTestAccount.create("",
         EnumSet.of(CreateOptions.UseSas));
-    assumeNotNull(testAccount);
+    assumeTrue(testAccount != null);
     CloudBlobContainer container = testAccount.getRealContainer();
     FileSystem fs = testAccount.getFileSystem();
 

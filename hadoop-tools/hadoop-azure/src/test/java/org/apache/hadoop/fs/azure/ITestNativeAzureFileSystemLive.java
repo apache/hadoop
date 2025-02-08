@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import com.microsoft.azure.storage.StorageException;
 
@@ -141,11 +142,11 @@ public class ITestNativeAzureFileSystemLive extends
    * held lease on the blob when doing some DDL operation
    */
   @Test
-  public void testDeleteThrowsExceptionWithLeaseExistsErrorMessage()
+  public void testDeleteThrowsExceptionWithLeaseExistsErrorMessage(TestInfo testInfo)
       throws Exception {
     LOG.info("Starting test");
     // Create the file
-    Path path = methodPath();
+    Path path = methodPath(testInfo);
     fs.create(path);
     assertPathExists("test file", path);
     NativeAzureFileSystem nfs = fs;
@@ -289,10 +290,10 @@ public class ITestNativeAzureFileSystemLive extends
    * under the same path.
    */
   @Test
-  public void testMkdirOnExistingFolderWithLease() throws Exception {
+  public void testMkdirOnExistingFolderWithLease(TestInfo testInfo) throws Exception {
     SelfRenewingLease lease;
     // Create the folder
-    Path path = methodPath();
+    Path path = methodPath(testInfo);
     fs.mkdirs(path);
     NativeAzureFileSystem nfs = fs;
     String fullKey = nfs.pathToKey(nfs.makeAbsolute(path));

@@ -30,7 +30,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.integration.AbstractAzureScaleTest;
 import org.apache.hadoop.util.Time;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,9 +65,10 @@ public class ITestReadAndSeekPageBlobAfterWrite extends AbstractAzureScaleTest {
   // path of page blob file to read and write
   private Path blobPath;
 
+  @BeforeEach
   @Override
-  public void setUp() throws Exception {
-    super.setUp();
+  public void setUp(TestInfo testInfo) throws Exception {
+    super.setUp(testInfo);
     fs = getTestAccount().getFileSystem();
     // Make sure we are using an integral number of pages.
     assertEquals(0, MAX_BYTES % PAGE_SIZE);
@@ -78,9 +81,9 @@ public class ITestReadAndSeekPageBlobAfterWrite extends AbstractAzureScaleTest {
   }
 
   @Override
-  public void tearDown() throws Exception {
+  public void tearDown(TestInfo testInfo) throws Exception {
     deleteQuietly(fs, blobPath, true);
-    super.tearDown();
+    super.tearDown(testInfo);
   }
 
   /**

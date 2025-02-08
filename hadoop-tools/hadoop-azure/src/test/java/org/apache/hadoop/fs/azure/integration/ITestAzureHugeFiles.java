@@ -23,11 +23,10 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Iterator;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.Assume;
-import org.junit.FixMethodOrder;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +42,7 @@ import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 
 /**
@@ -60,7 +60,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
  * ordering.</b>
  */
 
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -81,8 +81,8 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
   private Path testPath;
 
   @Override
-  public void setUp() throws Exception {
-    super.setUp();
+  public void setUp(TestInfo testInfo) throws Exception {
+    super.setUp(testInfo);
     testPath = path("ITestAzureHugeFiles");
     scaleTestDir = new Path(testPath, "scale");
     hugefile = new Path(scaleTestDir, "hugefile");
@@ -95,9 +95,9 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
    * @throws Exception
    */
   @Override
-  public void tearDown() throws Exception {
+  public void tearDown(TestInfo testInfo) throws Exception {
     testAccount = null;
-    super.tearDown();
+    super.tearDown(testInfo);
     if (testAccountForCleanup != null) {
       cleanupTestAccount(testAccount);
     }
@@ -121,8 +121,8 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
     // the last test in the suite does the teardown
   }
 
-  protected void deleteHugeFile() throws IOException {
-    describe("Deleting %s", hugefile);
+  protected void deleteHugeFile(TestInfo info) throws IOException {
+    describe(info,"Deleting %s", hugefile);
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     getFileSystem().delete(hugefile, false);
     timer.end("time to delete %s", hugefile);
@@ -151,8 +151,8 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
     assertPathExists(getFileSystem(), "huge file not created", hugefile);
     try {
       FileStatus status = getFileSystem().getFileStatus(hugefile);
-      Assume.assumeTrue("Not a file: " + status, status.isFile());
-      Assume.assumeTrue("File " + hugefile + " is empty", status.getLen() > 0);
+      assumeTrue(status.isFile(), "Not a file: " + status);
+      assumeTrue(status.getLen() > 0, "File " + hugefile + " is empty");
       return status;
     } catch (FileNotFoundException e) {
       skip("huge file not created: " + hugefile);
@@ -175,16 +175,16 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
   }
 
   @Test
-  public void test_010_CreateHugeFile() throws IOException {
+  public void test_010_CreateHugeFile(TestInfo testInfo) throws IOException {
     long filesize = getTestPropertyBytes(getConfiguration(),
         KEY_HUGE_FILESIZE,
         DEFAULT_HUGE_FILESIZE);
     long filesizeMB = filesize / S_1M;
 
     // clean up from any previous attempts
-    deleteHugeFile();
+    deleteHugeFile(testInfo);
 
-    describe("Creating file %s of size %d MB", hugefile, filesizeMB);
+    describe(testInfo,"Creating file %s of size %d MB", hugefile, filesizeMB);
 
     // now do a check of available upload time, with a pessimistic bandwidth
     // (that of remote upload tests). If the test times out then not only is
@@ -258,9 +258,9 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
   }
 
   @Test
-  public void test_040_PositionedReadHugeFile() throws Throwable {
+  public void test_040_PositionedReadHugeFile(TestInfo testInfo) throws Throwable {
     assumeHugeFileExists();
-    describe("Positioned reads of file %s", hugefile);
+    describe(testInfo, "Positioned reads of file %s", hugefile);
     NativeAzureFileSystem fs = getFileSystem();
     FileStatus status = fs.getFileStatus(hugefile);
     long filesize = status.getLen();
@@ -316,9 +316,9 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
   }
 
   @Test
-  public void test_050_readHugeFile() throws Throwable {
+  public void test_050_readHugeFile(TestInfo testInfo) throws Throwable {
     assumeHugeFileExists();
-    describe("Reading %s", hugefile);
+    describe(testInfo, "Reading %s", hugefile);
     NativeAzureFileSystem fs = getFileSystem();
     FileStatus status = fs.getFileStatus(hugefile);
     long filesize = status.getLen();
@@ -342,11 +342,10 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
   }
 
   @Test
-  public void test_060_openAndReadWholeFileBlocks() throws Throwable {
+  public void test_060_openAndReadWholeFileBlocks(TestInfo testInfo) throws Throwable {
     FileStatus status = assumeHugeFileExists();
     int blockSize = S_1M;
-    describe("Open the test file and read it in blocks of size %d",
-        blockSize);
+    describe(testInfo, "Open the test file and read it in blocks of size %d", blockSize);
     long len =  status.getLen();
     FSDataInputStream in = openDataFile();
     NanoTimer timer2 = null;
@@ -398,7 +397,7 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
         if (bandwidthInBytes(blockTimer, blockSize) < minimumBandwidth) {
           LOG.warn("Bandwidth {} too low on block {}: resetting connection",
               bw, blockId);
-          Assertions.assertTrue(resetCount <= maxResetCount, "Bandwidth of " + bw + " too low after "
+          assertTrue(resetCount <= maxResetCount, "Bandwidth of " + bw + " too low after "
               + resetCount + " attempts");
           resetCount++;
           // reset the connection
@@ -413,9 +412,9 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
   }
 
   @Test
-  public void test_100_renameHugeFile() throws Throwable {
+  public void test_100_renameHugeFile(TestInfo testInfo) throws Throwable {
     assumeHugeFileExists();
-    describe("renaming %s to %s", hugefile, hugefileRenamed);
+    describe(testInfo, "renaming %s to %s", hugefile, hugefileRenamed);
     NativeAzureFileSystem fs = getFileSystem();
     FileStatus status = fs.getFileStatus(hugefile);
     long filesize = status.getLen();
@@ -441,10 +440,10 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
   }
 
   @Test
-  public void test_999_deleteHugeFiles() throws IOException {
+  public void test_999_deleteHugeFiles(TestInfo testInfo) throws IOException {
     // mark the test account for cleanup after this test
     testAccountForCleanup = testAccount;
-    deleteHugeFile();
+    deleteHugeFile(testInfo);
     ContractTestUtils.NanoTimer timer2 = new ContractTestUtils.NanoTimer();
     NativeAzureFileSystem fs = getFileSystem();
     fs.delete(hugefileRenamed, false);

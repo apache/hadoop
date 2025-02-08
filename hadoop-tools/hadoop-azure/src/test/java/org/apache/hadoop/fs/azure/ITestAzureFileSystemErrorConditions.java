@@ -41,7 +41,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.NO_ACCESS_TO_CONTAINER_MSG;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Error handling.
@@ -157,7 +157,7 @@ public class ITestAzureFileSystemErrorConditions extends
     // Need to do this test against a live storage account
     AzureBlobStorageTestAccount testAccount =
         AzureBlobStorageTestAccount.create();
-    assumeNotNull(testAccount);
+    assumeTrue(testAccount != null);
     try {
       NativeAzureFileSystem fs = testAccount.getFileSystem();
       injectTransientError(fs, new ConnectionRecognizer() {
@@ -200,7 +200,7 @@ public class ITestAzureFileSystemErrorConditions extends
     // Need to do this test against a live storage account
     AzureBlobStorageTestAccount testAccount =
         AzureBlobStorageTestAccount.create();
-    assumeNotNull(testAccount);
+    assumeTrue(testAccount != null);
     try {
       NativeAzureFileSystem fs = testAccount.getFileSystem();
       injectTransientError(fs, new ConnectionRecognizer() {
@@ -224,7 +224,7 @@ public class ITestAzureFileSystemErrorConditions extends
     // Need to do this test against a live storage account
     AzureBlobStorageTestAccount testAccount =
         AzureBlobStorageTestAccount.create();
-    assumeNotNull(testAccount);
+    assumeTrue(testAccount != null);
     try {
       NativeAzureFileSystem fs = testAccount.getFileSystem();
       Path testFile = new Path("/a/b");

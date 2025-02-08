@@ -50,11 +50,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.Assume;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
@@ -70,8 +68,6 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   protected String accountKey;
   protected static Configuration conf = null;
   private boolean runningInSASMode = false;
-  @Rule
-  public final TemporaryFolder tempDir = new TemporaryFolder();
 
   private AzureBlobStorageTestAccount testAccount;
 
@@ -138,7 +134,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   @Test
   public void testConnectUsingSAS() throws Exception {
 
-    Assume.assumeFalse(runningInSASMode);
+    assumeFalse(runningInSASMode);
     // Create the test account with SAS credentials.
     testAccount = AzureBlobStorageTestAccount.create("",
         EnumSet.of(CreateOptions.UseSas, CreateOptions.CreateContainer));
@@ -154,7 +150,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   @Test
   public void testConnectUsingSASReadonly() throws Exception {
 
-    Assume.assumeFalse(runningInSASMode);
+    assumeFalse(runningInSASMode);
     // Create the test account with SAS credentials.
     testAccount = AzureBlobStorageTestAccount.create("", EnumSet.of(
         CreateOptions.UseSas, CreateOptions.CreateContainer,
@@ -381,14 +377,15 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   }
 
   @Test
-  public void testCredsFromCredentialProvider() throws Exception {
+  public void testCredsFromCredentialProvider(@TempDir java.nio.file.Path tempDir)
+      throws Exception {
 
     assumeFalse(runningInSASMode);
     String account = "testacct";
     String key = "testkey";
     // set up conf to have a cred provider
     final Configuration conf = new Configuration();
-    final File file = tempDir.newFile("test.jks");
+    final File file = new File(tempDir.toFile(), "myfile.txt");
     final URI jks = ProviderUtils.nestURIForLocalJavaKeyStoreProvider(
         file.toURI());
     conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,

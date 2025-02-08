@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.fs.azure;
 
-import org.junit.FixMethodOrder;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -31,7 +31,7 @@ import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.cleanupTestA
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.readStringFromFile;
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.writeStringToFile;
 
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 /**
  * Because FileSystem.Statistics is per FileSystem, so statistics can not be ran in
  * parallel, hence in this test file, force them to run in sequential.

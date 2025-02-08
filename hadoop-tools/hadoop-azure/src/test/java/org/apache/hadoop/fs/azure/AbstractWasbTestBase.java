@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,15 +51,15 @@ public abstract class AbstractWasbTestBase extends AbstractWasbTestWithTimeout
   protected AzureBlobStorageTestAccount testAccount;
 
   @BeforeEach
-  public void setUp() throws Exception {
+  public void setUp(TestInfo testInfo) throws Exception {
     AzureBlobStorageTestAccount account = createTestAccount();
     assumeNotNull("test account", account);
     bindToTestAccount(account);
   }
 
   @AfterEach
-  public void tearDown() throws Exception {
-    describe("closing test account and filesystem");
+  public void tearDown(TestInfo info) throws Exception {
+    describe(info,"closing test account and filesystem");
     testAccount = cleanupTestAccount(testAccount);
     IOUtils.closeStream(fs);
     fs = null;
@@ -146,31 +147,37 @@ public abstract class AbstractWasbTestBase extends AbstractWasbTestWithTimeout
   /**
    * Return a path bonded to this method name, unique to this fork during
    * parallel execution.
+   * @param testInfo Provides information about the currently executing test method.
+   * This can include details such as the name of the test method, display name.
    * @return a method name unique to (fork, method).
    * @throws IOException IO problems
    */
-  protected Path methodPath() throws IOException {
-    return path(methodName.getMethodName());
+  protected Path methodPath(TestInfo testInfo) throws IOException {
+    return path(testInfo.getDisplayName());
   }
 
   /**
    * Return a blob path bonded to this method name, unique to this fork during
    * parallel execution.
+   * @param testInfo Provides information about the currently executing test method.
+   * This can include details such as the name of the test method, display name.
    * @return a method name unique to (fork, method).
    * @throws IOException IO problems
    */
-  protected Path methodBlobPath() throws IOException {
-    return blobPath(methodName.getMethodName());
+  protected Path methodBlobPath(TestInfo testInfo) throws IOException {
+    return blobPath(testInfo.getDisplayName());
   }
 
   /**
    * Describe a test in the logs.
+   * @param testInfo Provides information about the currently executing test method.
+   * This can include details such as the name of the test method, display name.
    * @param text text to print
    * @param args arguments to format in the printing
    */
-  protected void describe(String text, Object... args) {
+  protected void describe(TestInfo testInfo, String text, Object... args) {
     LOG.info("\n\n{}: {}\n",
-        methodName.getMethodName(),
+        testInfo.getDisplayName(),
         String.format(text, args));
   }
 }

@@ -29,7 +29,9 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import static org.apache.hadoop.fs.FSExceptionMessages.STREAM_IS_CLOSED;
 import static org.apache.hadoop.fs.azure.ExceptionHandlingTestHelper.*;
@@ -46,9 +48,10 @@ public class ITestFileSystemOperationExceptionHandling
   private Path testPath;
   private Path testFolderPath;
 
+  @BeforeEach
   @Override
-  public void setUp() throws Exception {
-    super.setUp();
+  public void setUp(TestInfo testInfo) throws Exception {
+    super.setUp(testInfo);
     testPath = path("testfile.dat");
     testFolderPath = path("testfolder");
   }
@@ -57,13 +60,13 @@ public class ITestFileSystemOperationExceptionHandling
    * Helper method that creates a InputStream to validate exceptions
    * for various scenarios.
    */
-  private void setupInputStreamToTest(AzureBlobStorageTestAccount testAccount)
+  private void setupInputStreamToTest(AzureBlobStorageTestAccount testAccount, TestInfo testInfo)
       throws Exception {
 
     FileSystem fs = testAccount.getFileSystem();
 
     // Step 1: Create a file and write dummy data.
-    Path base = methodPath();
+    Path base = methodPath(testInfo);
     Path testFilePath1 = new Path(base, "test1.dat");
     Path testFilePath2 = new Path(base, "test2.dat");
     FSDataOutputStream outputStream = fs.create(testFilePath1);
@@ -82,10 +85,10 @@ public class ITestFileSystemOperationExceptionHandling
    * Tests a basic single threaded read scenario for Page blobs.
    */
   @Test
-  public void testSingleThreadedPageBlobReadScenario() throws Throwable {
+  public void testSingleThreadedPageBlobReadScenario(TestInfo testInfo) throws Throwable {
     assertThrows(FileNotFoundException.class, () -> {
       AzureBlobStorageTestAccount testAccount = getPageBlobTestStorageAccount();
-      setupInputStreamToTest(testAccount);
+      setupInputStreamToTest(testAccount, testInfo);
       byte[] readBuffer = new byte[512];
       inputStream.read(readBuffer);
     });
@@ -95,10 +98,10 @@ public class ITestFileSystemOperationExceptionHandling
    * Tests a basic single threaded seek scenario for Page blobs.
    */
   @Test
-  public void testSingleThreadedPageBlobSeekScenario() throws Throwable {
+  public void testSingleThreadedPageBlobSeekScenario(TestInfo testInfo) throws Throwable {
     assertThrows(FileNotFoundException.class, () -> {
       AzureBlobStorageTestAccount testAccount = getPageBlobTestStorageAccount();
-      setupInputStreamToTest(testAccount);
+      setupInputStreamToTest(testAccount, testInfo);
       inputStream.seek(5);
     });
   }
@@ -107,10 +110,10 @@ public class ITestFileSystemOperationExceptionHandling
    * Test a basic single thread seek scenario for Block blobs.
    */
   @Test
-  public void testSingleThreadBlockBlobSeekScenario() throws Throwable {
-    assertThrows(FileNotFoundException.class, ()->{
+  public void testSingleThreadBlockBlobSeekScenario(TestInfo testInfo) throws Throwable {
+    assertThrows(FileNotFoundException.class, () -> {
       AzureBlobStorageTestAccount testAccount = createTestAccount();
-      setupInputStreamToTest(testAccount);
+      setupInputStreamToTest(testAccount, testInfo);
       inputStream.seek(5);
       inputStream.read();
     });
@@ -120,10 +123,10 @@ public class ITestFileSystemOperationExceptionHandling
    * Tests a basic single threaded read scenario for Block blobs.
    */
   @Test
-  public void testSingledThreadBlockBlobReadScenario() throws Throwable {
-    assertThrows(FileNotFoundException.class, ()->{
+  public void testSingledThreadBlockBlobReadScenario(TestInfo testInfo) throws Throwable {
+    assertThrows(FileNotFoundException.class, () -> {
       AzureBlobStorageTestAccount testAccount = createTestAccount();
-      setupInputStreamToTest(testAccount);
+      setupInputStreamToTest(testAccount, testInfo);
       byte[] readBuffer = new byte[512];
       inputStream.read(readBuffer);
     });
@@ -300,13 +303,13 @@ public class ITestFileSystemOperationExceptionHandling
   }
 
   @AfterEach
-  public void tearDown() throws Exception {
+  public void tearDown(TestInfo testInfo) throws Exception {
     if (inputStream != null) {
       inputStream.close();
     }
 
     ContractTestUtils.rm(fs, testPath, true, true);
-    super.tearDown();
+    super.tearDown(testInfo);
   }
 
   @Override

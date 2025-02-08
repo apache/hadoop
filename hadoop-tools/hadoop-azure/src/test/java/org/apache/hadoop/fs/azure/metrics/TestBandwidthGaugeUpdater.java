@@ -42,9 +42,8 @@ public class TestBandwidthGaugeUpdater {
         new Date(), 200);
     updater.triggerUpdate(true);
     long currentBytes = AzureMetricsTestUtil.getCurrentBytesWritten(instrumentation);
-    assertTrue(
-    
-       currentBytes > 18 && currentBytes < 22, "We expect around (200/10 = 20) bytes written as the gauge value." +
+    assertTrue(currentBytes > 18 && currentBytes < 22,
+        "We expect around (200/10 = 20) bytes written as the gauge value." +
         "Got " + currentBytes);
     updater.close();
   }

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.azure;
 
+import org.junit.jupiter.api.Disabled;
 import java.io.IOException;
-import org.junit.Ignore;
 
 /**
  * Run {@link NativeAzureFileSystemBaseTest} tests against a mocked store,
@@ -36,32 +36,32 @@ public class TestNativeAzureFileSystemMocked extends
   // Ignore the following tests because taking a lease requires a real
   // (not mock) file system store. These tests don't work on the mock.
   @Override
-  @Ignore
+  @Disabled
   public void testLeaseAsDistributedLock() {
   }
 
   @Override
-  @Ignore
+  @Disabled
   public void testSelfRenewingLease() {
   }
 
   @Override
-  @Ignore
+  @Disabled
   public void testRedoFolderRenameAll() {
   }
 
   @Override
-  @Ignore
+  @Disabled
   public void testCreateNonRecursive() {
   }
 
   @Override
-  @Ignore
+  @Disabled
   public void testSelfRenewingLeaseFileDelete() {
   }
 
   @Override
-  @Ignore
+  @Disabled
   public void testRenameRedoFolderAlreadyDone() throws IOException{
   }
 }

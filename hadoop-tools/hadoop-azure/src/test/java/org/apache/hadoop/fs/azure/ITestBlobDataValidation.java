@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azure;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_CHECK_BLOCK_MD5;
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_STORE_BLOB_MD5;
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import com.microsoft.azure.storage.Constants;
 import com.microsoft.azure.storage.OperationContext;
@@ -65,9 +66,9 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
    * Test that by default we don't store the blob-level MD5.
    */
   @Test
-  public void testBlobMd5StoreOffByDefault() throws Exception {
+  public void testBlobMd5StoreOffByDefault(TestInfo testInfo) throws Exception {
     testAccount = AzureBlobStorageTestAccount.create();
-    testStoreBlobMd5(false);
+    testStoreBlobMd5(false, testInfo);
   }
 
   /**
@@ -75,11 +76,11 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
    * in the configuration.
    */
   @Test
-  public void testStoreBlobMd5() throws Exception {
+  public void testStoreBlobMd5(TestInfo testInfo) throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(KEY_STORE_BLOB_MD5, true);
     testAccount = AzureBlobStorageTestAccount.create(conf);
-    testStoreBlobMd5(true);
+    testStoreBlobMd5(true, testInfo);
   }
 
   /**
@@ -91,12 +92,12 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
         toTrim);
   }
 
-  private void testStoreBlobMd5(boolean expectMd5Stored) throws Exception {
-    assumeNotNull(testAccount);
+  private void testStoreBlobMd5(boolean expectMd5Stored, TestInfo testInfo) throws Exception {
+    assumeTrue(testAccount != null);
     // Write a test file.
     NativeAzureFileSystem fs = testAccount.getFileSystem();
     Path testFilePath = AzureTestUtils.pathForTests(fs,
-        methodName.getMethodName());
+        testInfo.getDisplayName());
     String testFileKey = trim(testFilePath.toUri().getPath(), "/");
     OutputStream outStream = fs.create(testFilePath);
     outStream.write(new byte[] { 5, 15 });
@@ -211,7 +212,7 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
 
   private void testCheckBlockMd5(final boolean expectMd5Checked)
       throws Exception {
-    assumeNotNull(testAccount);
+    assumeTrue(testAccount != null);
     Path testFilePath = new Path("/testFile");
 
     // Add a hook to check that for GET/PUT requests we set/don't set

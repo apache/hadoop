@@ -29,7 +29,9 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test append operations.
@@ -46,10 +48,11 @@ public class ITestNativeAzureFileSystemAppend extends AbstractWasbTestBase {
     return conf;
   }
 
+  @BeforeEach
   @Override
-  public void setUp() throws Exception {
-    super.setUp();
-    testPath = methodPath();
+  public void setUp(TestInfo testInfo) throws Exception {
+    super.setUp(testInfo);
+    testPath = methodPath(testInfo);
   }
 
 

@@ -30,20 +30,23 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 public class TestNativeAzureFileSystemConcurrency extends AbstractWasbTestBase {
   private InMemoryBlockBlobStore backingStore;
 
   @Override
-  public void setUp() throws Exception {
-    super.setUp();
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    super.setUp(testInfo);
     backingStore = getTestAccount().getMockStorage().getBackingStore();
   }
 
   @Override
-  public void tearDown() throws Exception {
-    super.tearDown();
+  public void tearDown(TestInfo testInfo) throws Exception {
+    super.tearDown(testInfo);
     backingStore = null;
   }
 
@@ -140,7 +143,7 @@ public class TestNativeAzureFileSystemConcurrency extends AbstractWasbTestBase {
    * operations against the same FS.
    */
   @Test
-  public void testMultiThreadedOperation() throws Exception {
+  public void testMultiThreadedOperation(TestInfo info) throws Exception {
     for (int iter = 0; iter < 10; iter++) {
       final int numThreads = 20;
       Thread[] threads = new Thread[numThreads];
@@ -169,12 +172,10 @@ public class TestNativeAzureFileSystemConcurrency extends AbstractWasbTestBase {
       for (Thread t : threads) {
         t.join();
       }
-      assertTrue(
-      
-         exceptionsEncountered.isEmpty(), "Encountered exceptions: "
-              + StringUtils.join("\r\n", selectToString(exceptionsEncountered)));
-      tearDown();
-      setUp();
+      assertTrue(exceptionsEncountered.isEmpty(), "Encountered exceptions: "
+          + StringUtils.join("\r\n", selectToString(exceptionsEncountered)));
+      tearDown(info);
+      setUp(info);
     }
   }
 }

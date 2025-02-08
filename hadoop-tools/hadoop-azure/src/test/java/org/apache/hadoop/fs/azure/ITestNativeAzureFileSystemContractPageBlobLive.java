@@ -25,10 +25,10 @@ import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 
 import static org.junit.Assume.assumeNotNull;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.junit.rules.TestName;
 
 /**
@@ -59,7 +59,7 @@ public class ITestNativeAzureFileSystemContractPageBlobLive extends
     return AzureBlobStorageTestAccount.create(conf);
   }
 
-  @BeforeEach
+  @Before
   public void setUp() throws Exception {
     testAccount = createTestAccount();
     assumeNotNull(testAccount);

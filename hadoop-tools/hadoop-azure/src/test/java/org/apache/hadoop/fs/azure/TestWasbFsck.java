@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -67,7 +67,8 @@ public class TestWasbFsck extends AbstractWasbTestWithTimeout {
    * Tests that we recover files properly
    */
   @Test
-  @Ignore  /* flush() no longer does anything  @@TODO: reinstate an appropriate test of fsck recovery*/
+  @Disabled
+  /* flush() no longer does anything  @@TODO: reinstate an appropriate test of fsck recovery*/
   public void testRecover() throws Exception {
     Path danglingFile = new Path("/crashedInTheMiddle");
 

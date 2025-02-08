@@ -36,9 +36,8 @@ public class TestKeyPageBlobDirectories extends AbstractWasbTestBase{
   }
 
   public void expectPageBlobKey(boolean expectedOutcome, AzureNativeFileSystemStore store, String path) {
-    assertEquals(
-           expectedOutcome, store.isPageBlobKey(path), "Unexpected result for isPageBlobKey(" + path + ")");
-
+    assertEquals(expectedOutcome, store.isPageBlobKey(path),
+        "Unexpected result for isPageBlobKey(" + path + ")");
   }
 
   @Test

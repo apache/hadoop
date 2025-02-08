@@ -25,9 +25,7 @@ import java.util.EnumSet;
 import java.util.Random;
 import java.util.concurrent.Callable;
 
-import org.junit.FixMethodOrder;
-import org.junit.jupiter.api.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +51,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
  * (KEY_INPUT_STREAM_VERSION=1) and the new
  * <code>BlockBlobInputStream</code> (KEY_INPUT_STREAM_VERSION=2).
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 
 public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -73,9 +71,10 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
   private FileStatus testFileStatus;
   private Path hugefile;
 
+  @BeforeEach
   @Override
-  public void setUp() throws Exception {
-    super.setUp();
+  public void setUp(TestInfo testInfo) throws Exception {
+    super.setUp(testInfo);
     Configuration conf = new Configuration();
     conf.setInt(AzureNativeFileSystemStore.KEY_INPUT_STREAM_VERSION, 1);
 

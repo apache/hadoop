@@ -41,12 +41,14 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem.FolderRenamePending;
 
 import com.microsoft.azure.storage.AccessCondition;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,9 +78,10 @@ public abstract class NativeAzureFileSystemBaseTest
   public static final Logger LOG = LoggerFactory.getLogger(NativeAzureFileSystemBaseTest.class);
   protected NativeAzureFileSystem fs;
 
+  @BeforeEach
   @Override
-  public void setUp() throws Exception {
-    super.setUp();
+  public void setUp(TestInfo testInfo) throws Exception {
+    super.setUp(testInfo);
     fs = getFileSystem();
   }
 
@@ -112,8 +115,8 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testStoreRetrieveFile() throws Exception {
-    Path testFile = methodPath();
+  public void testStoreRetrieveFile(TestInfo testInfo) throws Exception {
+    Path testFile = methodPath(testInfo);
     writeString(testFile, "Testing");
     assertTrue(fs.exists(testFile));
     FileStatus status = fs.getFileStatus(testFile);
@@ -126,12 +129,12 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testSetGetXAttr() throws Exception {
+  public void testSetGetXAttr(TestInfo testInfo) throws Exception {
     byte[] attributeValue1 = "hi".getBytes(StandardCharsets.UTF_8);
     byte[] attributeValue2 = "你好".getBytes(StandardCharsets.UTF_8);
     String attributeName1 = "user.asciiAttribute";
     String attributeName2 = "user.unicodeAttribute";
-    Path testFile = methodPath();
+    Path testFile = methodPath(testInfo);
 
     // after creating a file, the xAttr should not be present
     createEmptyFile(testFile, FsPermission.createImmutable(READ_WRITE_PERMISSIONS));
@@ -148,10 +151,10 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testSetGetXAttrCreateReplace() throws Exception {
+  public void testSetGetXAttrCreateReplace(TestInfo testInfo) throws Exception {
     byte[] attributeValue = "one".getBytes(StandardCharsets.UTF_8);
     String attributeName = "user.someAttribute";
-    Path testFile = methodPath();
+    Path testFile = methodPath(testInfo);
 
     // after creating a file, it must be possible to create a new xAttr
     createEmptyFile(testFile, FsPermission.createImmutable(READ_WRITE_PERMISSIONS));
@@ -163,11 +166,11 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testSetGetXAttrReplace() throws Exception {
+  public void testSetGetXAttrReplace(TestInfo testInfo) throws Exception {
     byte[] attributeValue1 = "one".getBytes(StandardCharsets.UTF_8);
     byte[] attributeValue2 = "two".getBytes(StandardCharsets.UTF_8);
     String attributeName = "user.someAttribute";
-    Path testFile = methodPath();
+    Path testFile = methodPath(testInfo);
 
     // after creating a file, it must not be possible to replace an xAttr
     createEmptyFile(testFile, FsPermission.createImmutable(READ_WRITE_PERMISSIONS));
@@ -180,8 +183,8 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testStoreDeleteFolder() throws Exception {
-    Path testFolder = methodPath();
+  public void testStoreDeleteFolder(TestInfo testInfo) throws Exception {
+    Path testFolder = methodPath(testInfo);
     assertFalse(fs.exists(testFolder));
     assertTrue(fs.mkdirs(testFolder));
     assertTrue(fs.exists(testFolder));
@@ -200,15 +203,15 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testFileOwnership() throws Exception {
-    Path testFile = methodPath();
+  public void testFileOwnership(TestInfo testInfo) throws Exception {
+    Path testFile = methodPath(testInfo);
     writeString(testFile, "Testing");
     testOwnership(testFile);
   }
 
   @Test
-  public void testFolderOwnership() throws Exception {
-    Path testFolder = methodPath();
+  public void testFolderOwnership(TestInfo testInfo) throws Exception {
+    Path testFolder = methodPath(testInfo);
     fs.mkdirs(testFolder);
     testOwnership(testFolder);
   }
@@ -234,8 +237,8 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testFilePermissions() throws Exception {
-    Path testFile = methodPath();
+  public void testFilePermissions(TestInfo testInfo) throws Exception {
+    Path testFile = methodPath(testInfo);
     FsPermission permission = FsPermission.createImmutable((short) 644);
     createEmptyFile(testFile, permission);
     FileStatus ret = fs.getFileStatus(testFile);
@@ -244,8 +247,8 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testFolderPermissions() throws Exception {
-    Path testFolder = methodPath();
+  public void testFolderPermissions(TestInfo testInfo) throws Exception {
+    Path testFolder = methodPath(testInfo);
     FsPermission permission = FsPermission.createImmutable((short) 644);
     fs.mkdirs(testFolder, permission);
     FileStatus ret = fs.getFileStatus(testFolder);
@@ -384,14 +387,14 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testCopyFromLocalFileSystem() throws Exception {
+  public void testCopyFromLocalFileSystem(TestInfo testInfo) throws Exception {
     Path localFilePath = new Path(System.getProperty("test.build.data",
         "azure_test"));
     FileSystem localFs = FileSystem.get(new Configuration());
     localFs.delete(localFilePath, true);
     try {
       writeStringToFile(localFs, localFilePath, "Testing");
-      Path dstPath = methodPath();
+      Path dstPath = methodPath(testInfo);
       assertTrue(FileUtil.copy(localFs, localFilePath, fs, dstPath, false,
           fs.getConf()));
       assertPathExists("coied from local", dstPath);
@@ -490,8 +493,8 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testReadingDirectoryAsFile() throws Exception {
-    Path dir = methodPath();
+  public void testReadingDirectoryAsFile(TestInfo testInfo) throws Exception {
+    Path dir = methodPath(testInfo);
     assertTrue(fs.mkdirs(dir));
     try {
       fs.open(dir).close();
@@ -502,8 +505,8 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testCreatingFileOverDirectory() throws Exception {
-    Path dir = methodPath();
+  public void testCreatingFileOverDirectory(TestInfo testInfo) throws Exception {
+    Path dir = methodPath(testInfo);
     assertTrue(fs.mkdirs(dir));
     try {
       fs.create(dir).close();
@@ -515,8 +518,8 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testInputStreamReadWithZeroSizeBuffer() throws Exception {
-    Path newFile = methodPath();
+  public void testInputStreamReadWithZeroSizeBuffer(TestInfo testInfo) throws Exception {
+    Path newFile = methodPath(testInfo);
     OutputStream output = fs.create(newFile);
     output.write(10);
     output.close();
@@ -527,8 +530,9 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testInputStreamReadWithBufferReturnsMinusOneOnEof() throws Exception {
-    Path newFile = methodPath();
+  public void testInputStreamReadWithBufferReturnsMinusOneOnEof(TestInfo testInfo)
+      throws Exception {
+    Path newFile = methodPath(testInfo);
     OutputStream output = fs.create(newFile);
     output.write(10);
     output.close();
@@ -549,8 +553,9 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testInputStreamReadWithBufferReturnsMinusOneOnEofForLargeBuffer() throws Exception {
-    Path newFile = methodPath();
+  public void testInputStreamReadWithBufferReturnsMinusOneOnEofForLargeBuffer(TestInfo testInfo)
+      throws Exception {
+    Path newFile = methodPath(testInfo);
     OutputStream output = fs.create(newFile);
     byte[] outputBuff = new byte[97331];
     for(int i = 0; i < outputBuff.length; ++i) {
@@ -575,8 +580,8 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testInputStreamReadIntReturnsMinusOneOnEof() throws Exception {
-    Path newFile = methodPath();
+  public void testInputStreamReadIntReturnsMinusOneOnEof(TestInfo testInfo) throws Exception {
+    Path newFile = methodPath(testInfo);
     OutputStream output = fs.create(newFile);
     output.write(10);
     output.close();
@@ -592,8 +597,8 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testSetPermissionOnFile() throws Exception {
-    Path newFile = methodPath();
+  public void testSetPermissionOnFile(TestInfo testInfo) throws Exception {
+    Path newFile = methodPath(testInfo);
     OutputStream output = fs.create(newFile);
     output.write(13);
     output.close();
@@ -614,8 +619,8 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testSetPermissionOnFolder() throws Exception {
-    Path newFolder = methodPath();
+  public void testSetPermissionOnFolder(TestInfo testInfo) throws Exception {
+    Path newFolder = methodPath(testInfo);
     assertTrue(fs.mkdirs(newFolder));
     FsPermission newPermission = new FsPermission((short) 0600);
     fs.setPermission(newFolder, newPermission);
@@ -626,8 +631,8 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testSetOwnerOnFile() throws Exception {
-    Path newFile = methodPath();
+  public void testSetOwnerOnFile(TestInfo testInfo) throws Exception {
+    Path newFile = methodPath(testInfo);
     OutputStream output = fs.create(newFile);
     output.write(13);
     output.close();
@@ -650,8 +655,8 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testSetOwnerOnFolder() throws Exception {
-    Path newFolder = methodPath();
+  public void testSetOwnerOnFolder(TestInfo testInfo) throws Exception {
+    Path newFolder = methodPath(testInfo);
     assertTrue(fs.mkdirs(newFolder));
     fs.setOwner(newFolder, "newUser", null);
     FileStatus newStatus = fs.getFileStatus(newFolder);
@@ -661,22 +666,22 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testModifiedTimeForFile() throws Exception {
-    Path testFile = methodPath();
+  public void testModifiedTimeForFile(TestInfo testInfo) throws Exception {
+    Path testFile = methodPath(testInfo);
     fs.create(testFile).close();
     testModifiedTime(testFile);
   }
 
   @Test
-  public void testModifiedTimeForFolder() throws Exception {
-    Path testFolder = methodPath();
+  public void testModifiedTimeForFolder(TestInfo testInfo) throws Exception {
+    Path testFolder = methodPath(testInfo);
     assertTrue(fs.mkdirs(testFolder));
     testModifiedTime(testFolder);
   }
 
   @Test
-  public void testFolderLastModifiedTime() throws Exception {
-    Path parentFolder = methodPath();
+  public void testFolderLastModifiedTime(TestInfo testInfo) throws Exception {
+    Path parentFolder = methodPath(testInfo);
     Path innerFile = new Path(parentFolder, "innerfile");
     assertTrue(fs.mkdirs(parentFolder));
 

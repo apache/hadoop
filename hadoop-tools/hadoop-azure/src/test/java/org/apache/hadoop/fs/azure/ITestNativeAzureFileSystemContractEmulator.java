@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
@@ -43,7 +43,7 @@ public class ITestNativeAzureFileSystemContractEmulator extends
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
   }
 
-  @BeforeEach
+  @Before
   public void setUp() throws Exception {
     nameThread();
     testAccount = AzureBlobStorageTestAccount.createForEmulator();

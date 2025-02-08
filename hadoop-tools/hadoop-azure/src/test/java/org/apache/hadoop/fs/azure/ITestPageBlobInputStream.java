@@ -24,11 +24,12 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.concurrent.Callable;
 
-import org.junit.FixMethodOrder;
-import org.junit.Rule;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,8 +46,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Test semantics of the page blob input stream
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
+@Timeout(600)
 public class ITestPageBlobInputStream extends AbstractWasbTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestPageBlobInputStream.class);
@@ -58,17 +59,13 @@ public class ITestPageBlobInputStream extends AbstractWasbTestBase {
 
   private long testFileLength;
 
-  /**
-   * Long test timeout.
-   */
-  @Rule
-  public Timeout testTimeout = new Timeout(10 * 60 * 1000);
   private FileStatus testFileStatus;
   private Path hugefile;
 
+  @BeforeEach
   @Override
-  public void setUp() throws Exception {
-    super.setUp();
+  public void setUp(TestInfo testInfo) throws Exception {
+    super.setUp(testInfo);
     createTestAccount();
 
     hugefile = fs.makeQualified(TEST_FILE_PATH);

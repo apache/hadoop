@@ -32,10 +32,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
-import org.junit.Assume;
-import org.junit.FixMethodOrder;
-import org.junit.jupiter.api.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,11 +45,12 @@ import org.apache.hadoop.fs.azure.integration.AbstractAzureScaleTest;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+
 /**
  * Test list performance.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 public class ITestListPerformance extends AbstractAzureScaleTest {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestListPerformance.class);
@@ -69,9 +67,10 @@ public class ITestListPerformance extends AbstractAzureScaleTest {
 
   private int expectedFileCount;
 
+  @BeforeEach
   @Override
-  public void setUp() throws Exception {
-    super.setUp();
+  public void setUp(TestInfo testInfo) throws Exception {
+    super.setUp(testInfo);
     Configuration conf = getConfiguration();
     // fail fast
     threads = AzureTestUtils.getTestPropertyInt(conf,
@@ -97,7 +96,7 @@ public class ITestListPerformance extends AbstractAzureScaleTest {
 
   @Test
   public void test_0101_CreateDirectoryWithFiles() throws Exception {
-    Assume.assumeFalse("Test path exists; skipping", fs.exists(TEST_DIR_PATH));
+    assumeFalse(fs.exists(TEST_DIR_PATH), "Test path exists; skipping");
 
     ExecutorService executorService = Executors.newFixedThreadPool(threads);
     CloudBlobContainer container = testAccount.getRealContainer();
