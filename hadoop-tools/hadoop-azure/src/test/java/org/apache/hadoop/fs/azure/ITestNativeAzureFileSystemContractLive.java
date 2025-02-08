@@ -25,11 +25,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Ignore;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TestName;
 
 /**
@@ -47,7 +47,7 @@ public class ITestNativeAzureFileSystemContractLive extends
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     nameThread();
     testAccount = AzureBlobStorageTestAccount.create();

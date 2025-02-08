@@ -23,10 +23,10 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests which look at fsck recovery.
@@ -36,14 +36,14 @@ public class TestWasbFsck extends AbstractWasbTestWithTimeout {
   private FileSystem fs;
   private InMemoryBlockBlobStore backingStore;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     testAccount = AzureBlobStorageTestAccount.createMock();
     fs = testAccount.getFileSystem();
     backingStore = testAccount.getMockStorage().getBackingStore();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     testAccount.cleanup();
     fs = null;

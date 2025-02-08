@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test append operations.
@@ -323,28 +323,30 @@ public class ITestNativeAzureFileSystemAppend extends AbstractWasbTestBase {
     }
   }
 
-  @Test(expected=UnsupportedOperationException.class)
+  @Test
   /*
    * Test to verify the behavior when Append Support configuration flag is set to false
    */
   public void testFalseConfigurationFlagBehavior() throws Throwable {
+    assertThrows(UnsupportedOperationException.class, ()->{
+      fs = testAccount.getFileSystem();
+      Configuration conf = fs.getConf();
+      conf.setBoolean(NativeAzureFileSystem.APPEND_SUPPORT_ENABLE_PROPERTY_NAME, false);
+      URI uri = fs.getUri();
+      fs.initialize(uri, conf);
 
-    fs = testAccount.getFileSystem();
-    Configuration conf = fs.getConf();
-    conf.setBoolean(NativeAzureFileSystem.APPEND_SUPPORT_ENABLE_PROPERTY_NAME, false);
-    URI uri = fs.getUri();
-    fs.initialize(uri, conf);
+      FSDataOutputStream appendStream = null;
 
-    FSDataOutputStream appendStream = null;
-
-    try {
-      createBaseFileWithData(0, testPath);
-      appendStream = fs.append(testPath, 10);
-    } finally {
-      if (appendStream != null) {
-        appendStream.close();
+      try {
+        createBaseFileWithData(0, testPath);
+        appendStream = fs.append(testPath, 10);
+      } finally {
+        if (appendStream != null) {
+          appendStream.close();
+        }
       }
-    }
+
+    });
   }
 
 }

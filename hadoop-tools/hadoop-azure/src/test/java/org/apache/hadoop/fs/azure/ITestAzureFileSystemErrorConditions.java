@@ -30,7 +30,7 @@ import java.util.concurrent.Callable;
 import com.microsoft.azure.storage.OperationContext;
 import com.microsoft.azure.storage.SendingRequestEvent;
 import com.microsoft.azure.storage.StorageEvent;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -76,7 +76,7 @@ public class ITestAzureFileSystemErrorConditions extends
     try {
       FileSystem.get(noAccessPath.toUri(), new Configuration())
         .open(noAccessPath);
-      assertTrue("Should've thrown.", false);
+      assertTrue(false, "Should've thrown.");
     } catch (AzureException ex) {
       GenericTestUtils.assertExceptionContains(
           String.format(NO_ACCESS_TO_CONTAINER_MSG, account, container), ex);

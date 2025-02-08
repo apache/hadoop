@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azure.metrics;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
@@ -73,8 +73,8 @@ public class TestNativeAzureFileSystemMetricsSystem {
    */
   private void assertFilesCreated(AzureBlobStorageTestAccount account,
       String name, int expected) {
-    assertEquals("Files created in account " + name,
-        expected, getFilesCreated(account));
+    assertEquals(
+       expected, getFilesCreated(account), "Files created in account " + name);
   }
 
   @Test

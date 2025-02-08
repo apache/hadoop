@@ -25,7 +25,7 @@ import java.io.OutputStream;
 import org.apache.hadoop.fs.Path;
 
 import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the upload, buffering and flush logic in WASB.

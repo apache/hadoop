@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.azure;
 
 import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runners.MethodSorters;
 
 import org.apache.hadoop.conf.Configuration;

@@ -35,8 +35,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.TestHookOperationContext;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import com.microsoft.azure.storage.Constants;
 import com.microsoft.azure.storage.OperationContext;
@@ -56,7 +56,7 @@ import com.microsoft.azure.storage.core.Base64;
 public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
   private AzureBlobStorageTestAccount testAccount;
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     testAccount = AzureTestUtils.cleanupTestAccount(testAccount);
   }
@@ -109,7 +109,7 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
     if (expectMd5Stored) {
       assertNotNull(obtainedMd5);
     } else {
-      assertNull("Expected no MD5, found: " + obtainedMd5, obtainedMd5);
+      assertNull(obtainedMd5, "Expected no MD5, found: " + obtainedMd5);
     }
 
     // Mess with the content so it doesn't match the MD5.
@@ -137,8 +137,8 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
       }
       StorageException cause = (StorageException)ex.getCause();
       assertNotNull(cause);
-      assertEquals("Unexpected cause: " + cause,
-          StorageErrorCodeStrings.INVALID_MD5, cause.getErrorCode());
+      assertEquals(
+         StorageErrorCodeStrings.INVALID_MD5, cause.getErrorCode(), "Unexpected cause: " + cause);
     }
   }
 
@@ -192,7 +192,7 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
       if (expectMd5) {
         assertNotNull(obtainedMd5);
       } else {
-        assertNull("Expected no MD5, found: " + obtainedMd5, obtainedMd5);
+        assertNull(obtainedMd5, "Expected no MD5, found: " + obtainedMd5);
       }
     }
 

@@ -23,10 +23,10 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Iterator;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
 import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -201,9 +201,9 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
         timeout, uploadTime, KEY_TEST_TIMEOUT, uploadTime * 2),
         uploadTime < timeout);
 */
-    assertEquals("File size set in " + KEY_HUGE_FILESIZE + " = " + filesize
-            + " is not a multiple of " + UPLOAD_BLOCKSIZE,
-        0, filesize % UPLOAD_BLOCKSIZE);
+    assertEquals(
+       0, filesize % UPLOAD_BLOCKSIZE, "File size set in " + KEY_HUGE_FILESIZE + " = " + filesize
+            + " is not a multiple of " + UPLOAD_BLOCKSIZE);
 
     byte[] data = SOURCE_DATA;
 
@@ -254,7 +254,7 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
     ContractTestUtils.assertPathExists(fs, "Huge file", hugefile);
     FileStatus status = fs.getFileStatus(hugefile);
     ContractTestUtils.assertIsFile(hugefile, status);
-    assertEquals("File size in " + status, filesize, status.getLen());
+    assertEquals(filesize, status.getLen(), "File size in " + status);
   }
 
   @Test
@@ -398,8 +398,8 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
         if (bandwidthInBytes(blockTimer, blockSize) < minimumBandwidth) {
           LOG.warn("Bandwidth {} too low on block {}: resetting connection",
               bw, blockId);
-          Assert.assertTrue("Bandwidth of " + bw + " too low after "
-              + resetCount + " attempts", resetCount <= maxResetCount);
+          Assertions.assertTrue(resetCount <= maxResetCount, "Bandwidth of " + bw + " too low after "
+              + resetCount + " attempts");
           resetCount++;
           // reset the connection
         }

@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azure;
 import com.microsoft.azure.storage.*;
 import com.microsoft.azure.storage.blob.*;
 import com.microsoft.azure.storage.core.Base64;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -212,9 +212,9 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
    * @return
    */
   private boolean wasGeneratedByMe(MetricsRecord currentRecord) {
-    Assert.assertNotNull("null filesystem", fs);
-    Assert.assertNotNull("null filesystemn instance ID",
-        fs.getInstrumentation().getFileSystemInstanceId());
+    Assertions.assertNotNull(fs, "null filesystem");
+    Assertions.assertNotNull(
+       fs.getInstrumentation().getFileSystemInstanceId(), "null filesystemn instance ID");
     String myFsId = fs.getInstrumentation().getFileSystemInstanceId().toString();
     for (MetricsTag currentTag : currentRecord.tags()) {
       if (currentTag.name().equalsIgnoreCase("wasbFileSystemId")) {

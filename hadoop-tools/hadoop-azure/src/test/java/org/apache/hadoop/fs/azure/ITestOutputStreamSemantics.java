@@ -33,12 +33,11 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.fs.StreamCapabilities;
-import org.hamcrest.core.IsEqual;
-import org.hamcrest.core.IsNot;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasStreamCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksStreamCapabilities;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test semantics of functions flush, hflush, hsync, and close for block blobs,
@@ -72,16 +71,13 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
 
       if (isEqual) {
         assertArrayEquals(
-            String.format("Bytes read do not match bytes written to %1$s",
-                blobPath),
-            writeBuffer,
-            readBuffer);
+        
+           writeBuffer
+,             readBuffer, String.format("Bytes read do not match bytes written to %1$s",
+                blobPath));
       } else {
-        assertThat(
-            String.format("Bytes read unexpectedly match bytes written to %1$s",
-                blobPath),
-            readBuffer,
-            IsNot.not(IsEqual.equalTo(writeBuffer)));
+        assertThat(readBuffer).isNotEqualTo(writeBuffer).as(
+            String.format("Bytes read unexpectedly match bytes written to %1$s", blobPath));
       }
     }
   }
