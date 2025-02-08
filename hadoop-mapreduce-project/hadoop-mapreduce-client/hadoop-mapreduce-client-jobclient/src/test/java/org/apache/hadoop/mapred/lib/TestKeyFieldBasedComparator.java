@@ -34,10 +34,10 @@ import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.Utils;
-import org.junit.After;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -89,10 +89,10 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
     conf.setMapperClass(InverseMapper.class);
     conf.setReducerClass(IdentityReducer.class);
     if (!fs.mkdirs(testdir)) {
-      throw new IOException("Mkdirs failed to create " + testdir.toString());
+      throw new IOException("Mkdirs failed to create " + testdir);
     }
     if (!fs.mkdirs(inDir)) {
-      throw new IOException("Mkdirs failed to create " + inDir.toString());
+      throw new IOException("Mkdirs failed to create " + inDir);
     }
     // set up input data in 2 files 
     Path inFile = new Path(inDir, "part0");
@@ -133,7 +133,7 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
     }
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     FileUtil.fullyDelete(TEST_DIR);
   }
@@ -161,7 +161,7 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
   byte[] line2_bytes = line2.getBytes();
 
   public void localTestWithoutMRJob(String keySpec, int expect) throws Exception {
-    KeyFieldBasedComparator<Void, Void> keyFieldCmp = new KeyFieldBasedComparator<Void, Void>();
+    KeyFieldBasedComparator<Void, Void> keyFieldCmp = new KeyFieldBasedComparator<>();
     localConf.setKeyFieldComparatorOptions(keySpec);
     keyFieldCmp.configure(localConf);
     int result = keyFieldCmp.compare(line1_bytes, 0, line1_bytes.length,

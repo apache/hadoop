@@ -28,10 +28,10 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * A JUnit test to test Mini Map-Reduce Cluster with Mini-DFS.
@@ -70,10 +70,10 @@ public class TestMiniMRWithDFSWithDistinctUsers {
       });
 
     rj.waitForCompletion();
-    Assert.assertEquals("SUCCEEDED", JobStatus.getJobRunState(rj.getJobState()));
+    Assertions.assertEquals("SUCCEEDED", JobStatus.getJobRunState(rj.getJobState()));
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     dfs = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
 
@@ -98,7 +98,7 @@ public class TestMiniMRWithDFSWithDistinctUsers {
                            1, null, null, MR_UGI, mrConf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (mr != null) { mr.shutdown();}
     if (dfs != null) { dfs.shutdown(); }

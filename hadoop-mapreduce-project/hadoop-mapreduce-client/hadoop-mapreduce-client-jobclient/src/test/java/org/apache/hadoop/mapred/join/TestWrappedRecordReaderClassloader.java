@@ -33,8 +33,10 @@ import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestWrappedRecordReaderClassloader {
   /**
@@ -47,7 +49,7 @@ public class TestWrappedRecordReaderClassloader {
     JobConf job = new JobConf();
     Fake_ClassLoader classLoader = new Fake_ClassLoader();
     job.setClassLoader(classLoader);
-    assertTrue(job.getClassLoader() instanceof Fake_ClassLoader);
+    assertInstanceOf(Fake_ClassLoader.class, job.getClassLoader());
 
     FileSystem fs = FileSystem.get(job);
     Path testdir = fs.makeQualified(new Path(
@@ -58,7 +60,7 @@ public class TestWrappedRecordReaderClassloader {
     job.set("mapreduce.join.expr", CompositeInputFormat.compose("outer",
         IF_ClassLoaderChecker.class, src));
 
-    CompositeInputFormat<NullWritable> inputFormat = new CompositeInputFormat<NullWritable>();
+    CompositeInputFormat<NullWritable> inputFormat = new CompositeInputFormat<>();
     inputFormat.getRecordReader(inputFormat.getSplits(job, 1)[0], job,
         Reporter.NULL);
   }
@@ -113,7 +115,7 @@ public class TestWrappedRecordReaderClassloader {
 
     public RecordReader<K, V> getRecordReader(InputSplit ignored, JobConf job,
         Reporter reporter) {
-      return new RR_ClassLoaderChecker<K, V>(job);
+      return new RR_ClassLoaderChecker<>(job);
     }
   }
 
@@ -123,9 +125,9 @@ public class TestWrappedRecordReaderClassloader {
 
     @SuppressWarnings("unchecked")
     public RR_ClassLoaderChecker(JobConf job) {
-      assertTrue("The class loader has not been inherited from "
-          + CompositeRecordReader.class.getSimpleName(),
-          job.getClassLoader() instanceof Fake_ClassLoader);
+      assertInstanceOf(Fake_ClassLoader.class, job.getClassLoader(),
+         "The class loader has not been inherited from " +
+          CompositeRecordReader.class.getSimpleName());
 
       keyclass = (Class<? extends K>) job.getClass("test.fakeif.keyclass",
           NullWritable.class, WritableComparable.class);

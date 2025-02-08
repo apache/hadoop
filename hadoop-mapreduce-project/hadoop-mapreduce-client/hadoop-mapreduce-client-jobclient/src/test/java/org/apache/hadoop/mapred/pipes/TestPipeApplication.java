@@ -68,10 +68,10 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestPipeApplication {
   private static File workSpace = new File("target",
@@ -82,7 +82,7 @@ public class TestPipeApplication {
   /**
    * test PipesMapRunner    test the transfer data from reader
    *
-   * @throws Exception
+   * @throws Exception The exception thrown during unit testing.
    */
   @Test
   public void testRunner() throws Exception {
@@ -97,26 +97,25 @@ public class TestPipeApplication {
 
       conf.set(MRJobConfig.TASK_ATTEMPT_ID, taskName);
 
-      CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
-              new Counters.Counter(), new Progress());
+      CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<>(
+          new Counters.Counter(), new Progress());
       FileSystem fs = new RawLocalFileSystem();
       fs.initialize(FsConstants.LOCAL_FS_URI, conf);
-      Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs.create(
-              new Path(workSpace + File.separator + "outfile")), IntWritable.class,
-              Text.class, null, null, true);
+      Writer<IntWritable, Text> wr = new Writer<>(conf, fs.create(
+          new Path(workSpace + File.separator + "outfile")), IntWritable.class,
+          Text.class, null, null, true);
       output.setWriter(wr);
       // stub for client
       File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicationRunnableStub");
 
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
       // token for authorization
-      Token<AMRMTokenIdentifier> token = new Token<AMRMTokenIdentifier>(
-              "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
-              "service"));
+      Token<AMRMTokenIdentifier> token = new Token<>(
+          "user".getBytes(), "password".getBytes(), new Text("kind"), new Text("service"));
       TokenCache.setJobToken(token,  conf.getCredentials());
       conf.setBoolean(MRJobConfig.SKIP_RECORDS, true);
       TestTaskReporter reporter = new TestTaskReporter();
-      PipesMapRunner<FloatWritable, NullWritable, IntWritable, Text> runner = new PipesMapRunner<FloatWritable, NullWritable, IntWritable, Text>();
+      PipesMapRunner<FloatWritable, NullWritable, IntWritable, Text> runner = new PipesMapRunner<>();
 
       initStdOut(conf);
 
@@ -153,7 +152,7 @@ public class TestPipeApplication {
    * test org.apache.hadoop.mapred.pipes.Application
    * test a internal functions: MessageType.REGISTER_COUNTER,  INCREMENT_COUNTER, STATUS, PROGRESS...
    *
-   * @throws Throwable
+   * @throws Throwable The exception thrown during unit testing.
    */
 
   @Test
@@ -174,16 +173,15 @@ public class TestPipeApplication {
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
 
       // token for authorization
-      Token<AMRMTokenIdentifier> token = new Token<AMRMTokenIdentifier>(
-              "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
-              "service"));
+      Token<AMRMTokenIdentifier> token = new Token<>(
+          "user".getBytes(), "password".getBytes(), new Text("kind"), new Text("service"));
 
       TokenCache.setJobToken(token, conf.getCredentials());
       FakeCollector output = new FakeCollector(new Counters.Counter(),
               new Progress());
       FileSystem fs = new RawLocalFileSystem();
       fs.initialize(FsConstants.LOCAL_FS_URI, conf);
-      Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs.create(
+      Writer<IntWritable, Text> wr = new Writer<>(conf, fs.create(
               new Path(workSpace.getAbsolutePath() + File.separator + "outfile")),
               IntWritable.class, Text.class, null, null, true);
       output.setWriter(wr);
@@ -191,8 +189,8 @@ public class TestPipeApplication {
 
       initStdOut(conf);
 
-      Application<WritableComparable<IntWritable>, Writable, IntWritable, Text> application = new Application<WritableComparable<IntWritable>, Writable, IntWritable, Text>(
-              conf, rReader, output, reporter, IntWritable.class, Text.class);
+      Application<WritableComparable<IntWritable>, Writable, IntWritable, Text> application = new Application<>(
+          conf, rReader, output, reporter, IntWritable.class, Text.class);
       application.getDownlink().flush();
 
       application.getDownlink().mapItem(new IntWritable(3), new Text("txt"));
@@ -245,7 +243,7 @@ public class TestPipeApplication {
   /**
    * test org.apache.hadoop.mapred.pipes.Submitter
    *
-   * @throws Exception
+   * @throws Exception The exception thrown during unit testing.
    */
   @Test
   public void testSubmitter() throws Exception {
@@ -264,7 +262,7 @@ public class TestPipeApplication {
     Submitter.setKeepCommandFile(conf, false);
     Submitter.setIsJavaRecordReader(conf, false);
     Submitter.setIsJavaRecordWriter(conf, false);
-    PipesPartitioner<IntWritable, Text> partitioner = new PipesPartitioner<IntWritable, Text>();
+    PipesPartitioner<IntWritable, Text> partitioner = new PipesPartitioner<>();
     partitioner.configure(conf);
 
     Submitter.setJavaPartitioner(conf, partitioner.getClass());
@@ -284,7 +282,7 @@ public class TestPipeApplication {
     } catch (ExitUtil.ExitException e) {
       // System.exit prohibited! output message test
       assertTrue(out.toString().contains(""));
-      assertTrue(out.toString(), out.toString().contains("pipes"));
+      assertTrue(out.toString().contains("pipes"), out.toString());
       assertTrue(out.toString().contains("[-input <path>] // Input directory"));
       assertTrue(out.toString()
               .contains("[-output <path>] // Output directory"));
@@ -343,7 +341,7 @@ public class TestPipeApplication {
       String[] args = new String[22];
       File input = new File(workSpace + File.separator + "input");
       if (!input.exists()) {
-        Assert.assertTrue(input.createNewFile());
+        Assertions.assertTrue(input.createNewFile());
       }
       File outPut = new File(workSpace + File.separator + "output");
       FileUtil.fullyDelete(outPut);
@@ -388,7 +386,7 @@ public class TestPipeApplication {
    * test org.apache.hadoop.mapred.pipes.PipesReducer
    * test the transfer of data: key and value
    *
-   * @throws Exception
+   * @throws Exception The exception thrown during unit testing.
    */
   @Test
   public void testPipesReduser() throws Exception {
@@ -396,25 +394,24 @@ public class TestPipeApplication {
     File[] psw = cleanTokenPasswordFile();
     JobConf conf = new JobConf();
     try {
-      Token<AMRMTokenIdentifier> token = new Token<AMRMTokenIdentifier>(
-              "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
-              "service"));
+      Token<AMRMTokenIdentifier> token = new Token<>(
+          "user".getBytes(), "password".getBytes(), new Text("kind"), new Text("service"));
       TokenCache.setJobToken(token, conf.getCredentials());
 
       File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeReducerStub");
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
 
-      PipesReducer<BooleanWritable, Text, IntWritable, Text> reducer = new PipesReducer<BooleanWritable, Text, IntWritable, Text>();
+      PipesReducer<BooleanWritable, Text, IntWritable, Text> reducer = new PipesReducer<>();
       reducer.configure(conf);
       BooleanWritable bw = new BooleanWritable(true);
 
       conf.set(MRJobConfig.TASK_ATTEMPT_ID, taskName);
       initStdOut(conf);
       conf.setBoolean(MRJobConfig.SKIP_RECORDS, true);
-      CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
-              new Counters.Counter(), new Progress());
+      CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<>(
+          new Counters.Counter(), new Progress());
       Reporter reporter = new TestTaskReporter();
-      List<Text> texts = new ArrayList<Text>();
+      List<Text> texts = new ArrayList<>();
       texts.add(new Text("first"));
       texts.add(new Text("second"));
       texts.add(new Text("third"));
@@ -447,7 +444,7 @@ public class TestPipeApplication {
   @Test
   public void testPipesPartitioner() {
 
-    PipesPartitioner<IntWritable, Text> partitioner = new PipesPartitioner<IntWritable, Text>();
+    PipesPartitioner<IntWritable, Text> partitioner = new PipesPartitioner<>();
     JobConf configuration = new JobConf();
     Submitter.getJavaPartitioner(configuration);
     partitioner.configure(new JobConf());
@@ -569,7 +566,7 @@ public class TestPipeApplication {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     InputStream is = new FileInputStream(file);
     byte[] buffer = new byte[1024];
-    int counter = 0;
+    int counter;
     while ((counter = is.read(buffer)) >= 0) {
       out.write(buffer, 0, counter);
     }
@@ -813,7 +810,7 @@ public class TestPipeApplication {
   private class FakeCollector extends
           CombineOutputCollector<IntWritable, Text> {
 
-    final private Map<IntWritable, Text> collect = new HashMap<IntWritable, Text>();
+    final private Map<IntWritable, Text> collect = new HashMap<>();
 
     public FakeCollector(Counter outCounter, Progressable progressable) {
       super(outCounter, progressable);

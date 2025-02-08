@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.JobStatus.State;
@@ -41,7 +41,7 @@ import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -69,7 +69,7 @@ public class TestResourceMgrDelegate {
       new YarnConfiguration()) {
       @Override
       protected void serviceStart() throws Exception {
-        Assert.assertTrue(this.client instanceof YarnClientImpl);
+        Assertions.assertTrue(this.client instanceof YarnClientImpl);
         ((YarnClientImpl) this.client).setRMClient(applicationsManager);
       }
     };
@@ -84,10 +84,10 @@ public class TestResourceMgrDelegate {
       throw new IOException(e);
     }
 
-    Assert.assertTrue("Children of root queue not requested",
-      argument.getValue().getIncludeChildQueues());
-    Assert.assertTrue("Request wasn't to recurse through children",
-      argument.getValue().getRecursive());
+    Assertions.assertTrue(
+     argument.getValue().getIncludeChildQueues(), "Children of root queue not requested");
+    Assertions.assertTrue(
+     argument.getValue().getRecursive(), "Request wasn't to recurse through children");
   }
 
   @Test
@@ -113,16 +113,16 @@ public class TestResourceMgrDelegate {
       new YarnConfiguration()) {
       @Override
       protected void serviceStart() throws Exception {
-        Assert.assertTrue(this.client instanceof YarnClientImpl);
+        Assertions.assertTrue(this.client instanceof YarnClientImpl);
         ((YarnClientImpl) this.client).setRMClient(applicationsManager);
       }
     };
     JobStatus[] allJobs = resourceMgrDelegate.getAllJobs();
 
-    Assert.assertEquals(State.FAILED, allJobs[0].getState());
-    Assert.assertEquals(State.SUCCEEDED, allJobs[1].getState());
-    Assert.assertEquals(State.KILLED, allJobs[2].getState());
-    Assert.assertEquals(State.FAILED, allJobs[3].getState());
+    Assertions.assertEquals(State.FAILED, allJobs[0].getState());
+    Assertions.assertEquals(State.SUCCEEDED, allJobs[1].getState());
+    Assertions.assertEquals(State.KILLED, allJobs[2].getState());
+    Assertions.assertEquals(State.FAILED, allJobs[3].getState());
   }
 
   private ApplicationReport getApplicationReport(

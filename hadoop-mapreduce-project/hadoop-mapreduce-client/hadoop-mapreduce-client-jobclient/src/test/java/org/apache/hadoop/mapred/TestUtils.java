@@ -20,8 +20,8 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestUtils {
   private static final Path[] LOG_PATHS = new Path[] {

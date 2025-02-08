@@ -26,13 +26,13 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.compress.*;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class TestKeyValueTextInputFormat {
   private static final Logger LOG =
@@ -102,14 +102,14 @@ public class TestKeyValueTextInputFormat {
           RecordReader<Text, Text> reader =
             format.getRecordReader(splits[j], job, reporter);
           Class readerClass = reader.getClass();
-          assertEquals("reader class is KeyValueLineRecordReader.", KeyValueLineRecordReader.class, readerClass);        
+          assertEquals(KeyValueLineRecordReader.class, readerClass, "reader class is KeyValueLineRecordReader.");        
 
           Text key = reader.createKey();
           Class keyClass = key.getClass();
           Text value = reader.createValue();
           Class valueClass = value.getClass();
-          assertEquals("Key class is Text.", Text.class, keyClass);
-          assertEquals("Value class is Text.", Text.class, valueClass);
+          assertEquals(Text.class, keyClass, "Key class is Text.");
+          assertEquals(Text.class, valueClass, "Value class is Text.");
           try {
             int count = 0;
             while (reader.next(key, value)) {
@@ -120,7 +120,7 @@ public class TestKeyValueTextInputFormat {
                          " in split " + j +
                          " at position "+reader.getPos());
               }
-              assertFalse("Key in multiple partitions.", bits.get(v));
+              assertFalse(bits.get(v), "Key in multiple partitions.");
               bits.set(v);
               count++;
             }
@@ -129,7 +129,7 @@ public class TestKeyValueTextInputFormat {
             reader.close();
           }
         }
-        assertEquals("Some keys in no partition.", length, bits.cardinality());
+        assertEquals(length, bits.cardinality(), "Some keys in no partition.");
       }
 
     }
@@ -163,18 +163,18 @@ public class TestKeyValueTextInputFormat {
       in = makeStream("a\nbb\n\nccc\rdddd\r\neeeee");
       Text out = new Text();
       in.readLine(out);
-      assertEquals("line1 length", 1, out.getLength());
+      assertEquals(1, out.getLength(), "line1 length");
       in.readLine(out);
-      assertEquals("line2 length", 2, out.getLength());
+      assertEquals(2, out.getLength(), "line2 length");
       in.readLine(out);
-      assertEquals("line3 length", 0, out.getLength());
+      assertEquals(0, out.getLength(), "line3 length");
       in.readLine(out);
-      assertEquals("line4 length", 3, out.getLength());
+      assertEquals(3, out.getLength(), "line4 length");
       in.readLine(out);
-      assertEquals("line5 length", 4, out.getLength());
+      assertEquals(4, out.getLength(), "line5 length");
       in.readLine(out);
-      assertEquals("line5 length", 5, out.getLength());
-      assertEquals("end of file", 0, in.readLine(out));
+      assertEquals(5, out.getLength(), "line5 length");
+      assertEquals(0, in.readLine(out), "end of file");
     } finally {
       if (in != null) {
         in.close();
@@ -236,17 +236,17 @@ public class TestKeyValueTextInputFormat {
     KeyValueTextInputFormat format = new KeyValueTextInputFormat();
     format.configure(job);
     InputSplit[] splits = format.getSplits(job, 100);
-    assertEquals("compressed splits == 2", 2, splits.length);
+    assertEquals(2, splits.length, "compressed splits == 2");
     FileSplit tmp = (FileSplit) splits[0];
     if (tmp.getPath().getName().equals("part2.txt.gz")) {
       splits[0] = splits[1];
       splits[1] = tmp;
     }
     List<Text> results = readSplit(format, splits[0], job);
-    assertEquals("splits[0] length", 6, results.size());
+    assertEquals(6, results.size(), "splits[0] length");
     assertEquals("splits[0][5]", " dog", results.get(5).toString());
     results = readSplit(format, splits[1], job);
-    assertEquals("splits[1] length", 2, results.size());
+    assertEquals(2, results.size(), "splits[1] length");
     assertEquals("splits[1][0]", "this is a test", 
                  results.get(0).toString());    
     assertEquals("splits[1][1]", "of gzip", 

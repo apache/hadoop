@@ -29,8 +29,8 @@ import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +43,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.Inflater;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test class for concatenated {@link CompressionInputStream}.
@@ -80,7 +80,7 @@ public class TestConcatenatedCompressedInput {
     }
   }
 
-  @After
+  @AfterEach
   public void after() {
     ZlibFactory.loadNativeZLib();
   }
@@ -203,7 +203,7 @@ public class TestConcatenatedCompressedInput {
     format.configure(jobConf);
 
     InputSplit[] splits = format.getSplits(jobConf, 100);
-    assertEquals("compressed splits == 2", 2, splits.length);
+    assertEquals(2, splits.length, "compressed splits == 2");
     FileSplit tmp = (FileSplit) splits[0];
     if (tmp.getPath().getName().equals("part2.txt.gz")) {
       splits[0] = splits[1];
@@ -211,12 +211,12 @@ public class TestConcatenatedCompressedInput {
     }
 
     List<Text> results = readSplit(format, splits[0], jobConf);
-    assertEquals("splits[0] num lines", 6, results.size());
+    assertEquals(6, results.size(), "splits[0] num lines");
     assertEquals("splits[0][5]", "member #3",
                  results.get(5).toString());
 
     results = readSplit(format, splits[1], jobConf);
-    assertEquals("splits[1] num lines", 2, results.size());
+    assertEquals(2, results.size(), "splits[1] num lines");
     assertEquals("splits[1][0]", "this is a test",
                  results.get(0).toString());
     assertEquals("splits[1][1]", "of gzip",
@@ -243,43 +243,43 @@ public class TestConcatenatedCompressedInput {
     localFs.copyFromLocalFile(fnLocal, fnHDFS);
 
     final FileInputStream in = new FileInputStream(fnLocal.toString());
-    assertEquals("concat bytes available", 148, in.available());
+    assertEquals(148, in.available(), "concat bytes available");
 
     // should wrap all of this header-reading stuff in a running-CRC wrapper
     // (did so in BuiltInGzipDecompressor; see below)
 
     byte[] compressedBuf = new byte[256];
     int numBytesRead = in.read(compressedBuf, 0, 10);
-    assertEquals("header bytes read", 10, numBytesRead);
-    assertEquals("1st byte", 0x1f, compressedBuf[0] & 0xff);
-    assertEquals("2nd byte", 0x8b, compressedBuf[1] & 0xff);
-    assertEquals("3rd byte (compression method)", 8, compressedBuf[2] & 0xff);
+    assertEquals(10, numBytesRead, "header bytes read");
+    assertEquals(0x1f, compressedBuf[0] & 0xff, "1st byte");
+    assertEquals(0x8b, compressedBuf[1] & 0xff, "2nd byte");
+    assertEquals(8, compressedBuf[2] & 0xff, "3rd byte (compression method)");
 
     byte flags = (byte)(compressedBuf[3] & 0xff);
     if ((flags & 0x04) != 0) {   // FEXTRA
       numBytesRead = in.read(compressedBuf, 0, 2);
-      assertEquals("XLEN bytes read", 2, numBytesRead);
+      assertEquals(2, numBytesRead, "XLEN bytes read");
       int xlen = ((compressedBuf[1] << 8) | compressedBuf[0]) & 0xffff;
       in.skip(xlen);
     }
     if ((flags & 0x08) != 0) {   // FNAME
       while ((numBytesRead = in.read()) != 0) {
-        assertFalse("unexpected end-of-file while reading filename",
-                    numBytesRead == -1);
+        assertFalse(
+                   numBytesRead == -1, "unexpected end-of-file while reading filename");
       }
     }
     if ((flags & 0x10) != 0) {   // FCOMMENT
       while ((numBytesRead = in.read()) != 0) {
-        assertFalse("unexpected end-of-file while reading comment",
-                    numBytesRead == -1);
+        assertFalse(
+                   numBytesRead == -1, "unexpected end-of-file while reading comment");
       }
     }
     if ((flags & 0xe0) != 0) {   // reserved
-      assertTrue("reserved bits are set??", (flags & 0xe0) == 0);
+      assertTrue((flags & 0xe0) == 0, "reserved bits are set??");
     }
     if ((flags & 0x02) != 0) {   // FHCRC
       numBytesRead = in.read(compressedBuf, 0, 2);
-      assertEquals("CRC16 bytes read", 2, numBytesRead);
+      assertEquals(2, numBytesRead, "CRC16 bytes read");
       int crc16 = ((compressedBuf[1] << 8) | compressedBuf[0]) & 0xffff;
     }
 
@@ -320,9 +320,9 @@ public class TestConcatenatedCompressedInput {
     localFs.delete(workDir, true);
     // Don't use native libs for this test
     ZlibFactory.setNativeZlibLoaded(false);
-    assertEquals("[non-native (Java) codec]",
-      org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor.class,
-      gzip.getDecompressorType());
+    assertEquals(
+     org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor.class
+,       gzip.getDecompressorType(), "[non-native (Java) codec]");
     System.out.println(COLOR_BR_YELLOW + "testBuiltInGzipDecompressor() using" +
       " non-native (Java Inflater) Decompressor (" + gzip.getDecompressorType()
       + ")" + COLOR_NORMAL);
@@ -347,8 +347,8 @@ public class TestConcatenatedCompressedInput {
     // here's first pair of DecompressorStreams:
     final FileInputStream in1 = new FileInputStream(fnLocal1.toString());
     final FileInputStream in2 = new FileInputStream(fnLocal2.toString());
-    assertEquals("concat bytes available", 2734, in1.available());
-    assertEquals("concat bytes available", 3413, in2.available()); // w/hdr CRC
+    assertEquals(2734, in1.available(), "concat bytes available");
+    assertEquals(3413, in2.available(), "concat bytes available"); // w/hdr CRC
 
     CompressionInputStream cin2 = gzip.createInputStream(in2);
     LineReader in = new LineReader(cin2);
@@ -360,10 +360,10 @@ public class TestConcatenatedCompressedInput {
       totalBytes += numBytes;
     }
     in.close();
-    assertEquals("total uncompressed bytes in concatenated test file",
-                 5346, totalBytes);
-    assertEquals("total uncompressed lines in concatenated test file",
-                 84, lineNum);
+    assertEquals(
+                5346, totalBytes, "total uncompressed bytes in concatenated test file");
+    assertEquals(
+                84, lineNum, "total uncompressed lines in concatenated test file");
 
     ZlibFactory.loadNativeZLib();
     // test GzipZlibDecompressor (native), just to be sure
@@ -442,7 +442,7 @@ public class TestConcatenatedCompressedInput {
 
     // here's Nth pair of DecompressorStreams:
     InputSplit[] splits = format.getSplits(jConf, 100);
-    assertEquals("compressed splits == 2", 2, splits.length);
+    assertEquals(2, splits.length, "compressed splits == 2");
     FileSplit tmp = (FileSplit) splits[0];
     if (tmp.getPath()
             .getName().equals("testdata/testCompressThenConcat.txt.gz")) {
@@ -452,7 +452,7 @@ public class TestConcatenatedCompressedInput {
     }
 
     List<Text> results = readSplit(format, splits[0], jConf);
-    assertEquals("splits[0] length (num lines)", 84, results.size());
+    assertEquals(84, results.size(), "splits[0] length (num lines)");
     assertEquals("splits[0][0]",
       "Call me Ishmael. Some years ago--never mind how long precisely--having",
       results.get(0).toString());
@@ -461,7 +461,7 @@ public class TestConcatenatedCompressedInput {
       results.get(42).toString());
 
     results = readSplit(format, splits[1], jConf);
-    assertEquals("splits[1] length (num lines)", 84, results.size());
+    assertEquals(84, results.size(), "splits[1] length (num lines)");
     assertEquals("splits[1][0]",
       "Call me Ishmael. Some years ago--never mind how long precisely--having",
       results.get(0).toString());
@@ -501,7 +501,7 @@ public class TestConcatenatedCompressedInput {
     // [135 splits for a 208-byte file and a 62-byte file(!)]
 
     InputSplit[] splits = format.getSplits(jobConf, 100);
-    assertEquals("compressed splits == 2", 2, splits.length);
+    assertEquals(2, splits.length, "compressed splits == 2");
     FileSplit tmp = (FileSplit) splits[0];
     if (tmp.getPath().getName().equals("part2.txt.bz2")) {
       splits[0] = splits[1];
@@ -509,12 +509,12 @@ public class TestConcatenatedCompressedInput {
     }
 
     List<Text> results = readSplit(format, splits[0], jobConf);
-    assertEquals("splits[0] num lines", 6, results.size());
+    assertEquals(6, results.size(), "splits[0] num lines");
     assertEquals("splits[0][5]", "member #3",
                  results.get(5).toString());
 
     results = readSplit(format, splits[1], jobConf);
-    assertEquals("splits[1] num lines", 2, results.size());
+    assertEquals(2, results.size(), "splits[1] num lines");
     assertEquals("splits[1][0]", "this is a test",
                  results.get(0).toString());
     assertEquals("splits[1][1]", "of bzip2",
@@ -555,8 +555,8 @@ public class TestConcatenatedCompressedInput {
     // here's first pair of BlockDecompressorStreams:
     final FileInputStream in1 = new FileInputStream(fnLocal1.toString());
     final FileInputStream in2 = new FileInputStream(fnLocal2.toString());
-    assertEquals("concat bytes available", 2567, in1.available());
-    assertEquals("concat bytes available", 3056, in2.available());
+    assertEquals(2567, in1.available(), "concat bytes available");
+    assertEquals(3056, in2.available(), "concat bytes available");
 
     CompressionInputStream cin2 = bzip2.createInputStream(in2);
     LineReader in = new LineReader(cin2);
@@ -568,10 +568,10 @@ public class TestConcatenatedCompressedInput {
       totalBytes += numBytes;
     }
     in.close();
-    assertEquals("total uncompressed bytes in concatenated test file",
-                 5346, totalBytes);
-    assertEquals("total uncompressed lines in concatenated test file",
-                 84, lineNum);
+    assertEquals(
+                5346, totalBytes, "total uncompressed bytes in concatenated test file");
+    assertEquals(
+                84, lineNum, "total uncompressed lines in concatenated test file");
 
     // test CBZip2InputStream with lots of different input-buffer sizes
     doMultipleBzip2BufferSizes(jobConf);
@@ -646,7 +646,7 @@ public class TestConcatenatedCompressedInput {
 
     // here's Nth pair of DecompressorStreams:
     InputSplit[] splits = format.getSplits(jConf, 100);
-    assertEquals("compressed splits == 2", 2, splits.length);
+    assertEquals(2, splits.length, "compressed splits == 2");
     FileSplit tmp = (FileSplit) splits[0];
     if (tmp.getPath()
             .getName().equals("testdata/testCompressThenConcat.txt.gz")) {
@@ -657,7 +657,7 @@ public class TestConcatenatedCompressedInput {
 
     // testConcatThenCompress (single)
     List<Text> results = readSplit(format, splits[0], jConf);
-    assertEquals("splits[0] length (num lines)", 84, results.size());
+    assertEquals(84, results.size(), "splits[0] length (num lines)");
     assertEquals("splits[0][0]",
       "Call me Ishmael. Some years ago--never mind how long precisely--having",
       results.get(0).toString());
@@ -667,7 +667,7 @@ public class TestConcatenatedCompressedInput {
 
     // testCompressThenConcat (multi)
     results = readSplit(format, splits[1], jConf);
-    assertEquals("splits[1] length (num lines)", 84, results.size());
+    assertEquals(84, results.size(), "splits[1] length (num lines)");
     assertEquals("splits[1][0]",
       "Call me Ishmael. Some years ago--never mind how long precisely--having",
       results.get(0).toString());

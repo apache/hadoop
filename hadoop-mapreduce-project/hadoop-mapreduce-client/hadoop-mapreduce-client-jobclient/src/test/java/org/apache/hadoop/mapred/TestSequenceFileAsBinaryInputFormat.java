@@ -25,13 +25,13 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSequenceFileAsBinaryInputFormat {
   private static final Logger LOG = FileInputFormat.LOG;
@@ -89,20 +89,20 @@ public class TestSequenceFileAsBinaryInputFormat {
           buf.reset(bval.getBytes(), bval.getLength());
           cmpval.readFields(buf);
           assertTrue(
-              "Keys don't match: " + "*" + cmpkey.toString() + ":" +
-                                           tkey.toString() + "*",
-              cmpkey.toString().equals(tkey.toString()));
+          
+             cmpkey.toString().equals(tkey.toString()), "Keys don't match: " + "*" + cmpkey.toString() + ":" +
+                                           tkey.toString() + "*");
           assertTrue(
-              "Vals don't match: " + "*" + cmpval.toString() + ":" +
-                                           tval.toString() + "*",
-              cmpval.toString().equals(tval.toString()));
+          
+             cmpval.toString().equals(tval.toString()), "Vals don't match: " + "*" + cmpval.toString() + ":" +
+                                           tval.toString() + "*");
           ++count;
         }
       } finally {
         reader.close();
       }
     }
-    assertEquals("Some records not found", RECORDS, count);
+    assertEquals(RECORDS, count, "Some records not found");
   }
 
 }

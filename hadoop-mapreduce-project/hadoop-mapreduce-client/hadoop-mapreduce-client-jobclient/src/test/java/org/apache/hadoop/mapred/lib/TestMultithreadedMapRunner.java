@@ -35,14 +35,14 @@ import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.map.MultithreadedMapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestMultithreadedMapRunner extends HadoopTestCase {
 
@@ -83,7 +83,7 @@ public class TestMultithreadedMapRunner extends HadoopTestCase {
 
     fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
-      throw new IOException("Mkdirs failed to create " + inDir.toString());
+      throw new IOException("Mkdirs failed to create " + inDir);
     }
     {
       DataOutputStream file = fs.create(new Path(inDir, "part-0"));

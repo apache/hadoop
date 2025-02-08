@@ -21,9 +21,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapred.JobConf;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestConstructQuery {
   private String[] fieldNames = new String[] { "id", "name", "value" };
@@ -31,8 +31,7 @@ public class TestConstructQuery {
   private String expected = "INSERT INTO hadoop_output (id,name,value) VALUES (?,?,?);";
   private String nullExpected = "INSERT INTO hadoop_output VALUES (?,?,?);"; 
   
-  private DBOutputFormat<DBWritable, NullWritable> format 
-    = new DBOutputFormat<DBWritable, NullWritable>();
+  private DBOutputFormat<DBWritable, NullWritable> format = new DBOutputFormat<>();
   @Test
   public void testConstructQuery() {
     String actual = format.constructQuery("hadoop_output", fieldNames);

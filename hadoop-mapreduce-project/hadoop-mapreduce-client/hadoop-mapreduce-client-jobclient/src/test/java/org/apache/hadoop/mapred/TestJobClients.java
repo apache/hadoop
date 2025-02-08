@@ -19,9 +19,9 @@
 package org.apache.hadoop.mapred;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -40,8 +40,8 @@ import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskReport;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("deprecation")
 public class TestJobClients {
@@ -189,7 +189,7 @@ public class TestJobClients {
     client.displayJobList(new JobStatus[] {mockJobStatus}, new PrintWriter(out));
     String commandLineOutput = out.toString();
     System.out.println(commandLineOutput);
-    Assert.assertTrue(commandLineOutput.contains("Total jobs:1"));
+    Assertions.assertTrue(commandLineOutput.contains("Total jobs:1"));
 
     verify(mockJobStatus, atLeastOnce()).getJobID();
     verify(mockJobStatus).getState();

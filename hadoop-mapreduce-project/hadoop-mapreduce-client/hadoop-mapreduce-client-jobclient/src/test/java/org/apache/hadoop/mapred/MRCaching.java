@@ -32,7 +32,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 
 import java.net.URI;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 public class MRCaching {
   static String testStr = "This is a test file " + "used for testing caching "
@@ -299,13 +299,13 @@ public class MRCaching {
     String configValues = job.get(configKey, "");
     System.out.println(configKey + " -> " + configValues);
     String[] realSizes = StringUtils.getStrings(configValues);
-    Assert.assertEquals("Number of files for "+ configKey,
-                        expectedSizes.length, realSizes.length);
+    Assertions.assertEquals(
+                       expectedSizes.length, realSizes.length, "Number of files for "+ configKey);
 
     for (int i=0; i < expectedSizes.length; ++i) {
       long actual = Long.valueOf(realSizes[i]);
       long expected = expectedSizes[i];
-      Assert.assertEquals("File "+ i +" for "+ configKey, expected, actual);
+      Assertions.assertEquals(expected, actual, "File "+ i +" for "+ configKey);
     }
   }
 }

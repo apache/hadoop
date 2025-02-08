@@ -38,15 +38,15 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 @Ignore
 public class TestBadRecords extends ClusterMapReduceTestCase {
   
@@ -61,7 +61,7 @@ public class TestBadRecords extends ClusterMapReduceTestCase {
   
   private List<String> input;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     setupClassBase(TestBadRecords.class);
   }
