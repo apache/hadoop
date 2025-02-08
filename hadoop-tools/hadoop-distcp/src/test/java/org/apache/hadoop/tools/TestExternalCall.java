@@ -97,7 +97,7 @@ public class TestExternalCall {
     Path target = createFile("target.txt");
 
     DistCp distcp = new DistCp(conf, null);
-    String[] arg = { soure.toString(), target.toString() };
+    String[] arg = {soure.toString(), target.toString()};
 
     distcp.run(arg);
     assertTrue(fs.exists(target));
