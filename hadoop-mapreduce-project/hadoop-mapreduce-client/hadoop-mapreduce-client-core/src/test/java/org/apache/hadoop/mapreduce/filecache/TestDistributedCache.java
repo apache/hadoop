@@ -94,7 +94,7 @@ public class TestDistributedCache {
     DistributedCache.addFileToClassPath(new Path("file:///a"), conf, fs, true);
     assertEquals("file:/a", conf.get(MRJobConfig.CLASSPATH_FILES),
         "The mapreduce.job.classpath.files property was not set correctly");
-    assertEquals( "file:///a", conf.get(MRJobConfig.CACHE_FILES),
+    assertEquals("file:///a", conf.get(MRJobConfig.CACHE_FILES),
         "The mapreduce.job.cache.files property was not set correctly");
 
     DistributedCache.addFileToClassPath(new Path("file:///b"), conf, fs, true);

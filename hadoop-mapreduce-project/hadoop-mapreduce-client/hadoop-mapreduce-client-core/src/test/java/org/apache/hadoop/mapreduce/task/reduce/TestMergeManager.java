@@ -219,7 +219,8 @@ public class TestMergeManager {
 
     MapOutputFile mapOutputFile = new MROutputFiles();
     FileSystem fs = FileSystem.getLocal(jobConf);
-    MergeManagerImpl<IntWritable, IntWritable> manager = new MergeManagerImpl<>(null, jobConf, fs, null,
+    MergeManagerImpl<IntWritable, IntWritable> manager = new MergeManagerImpl<>(
+        null, jobConf, fs, null,
         null, null, null, null, null, null, null, null, null, mapOutputFile);
 
     MergeThread onDiskMerger = manager.getOnDiskMerger();
