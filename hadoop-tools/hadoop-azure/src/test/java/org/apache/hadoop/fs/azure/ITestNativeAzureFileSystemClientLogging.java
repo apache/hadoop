@@ -104,8 +104,8 @@ public class ITestNativeAzureFileSystemClientLogging
     performWASBOperations();
 
     String output = getLogOutput(logs);
-    assertTrue(
-       verifyStorageClientLogs(output, TEMP_DIR), "Log entry " + TEMP_DIR + " not found  in " + output);
+    assertTrue(verifyStorageClientLogs(output, TEMP_DIR),
+        "Log entry " + TEMP_DIR + " not found  in " + output);
   }
 
   protected String getLogOutput(LogCapturer logs) {
@@ -125,8 +125,8 @@ public class ITestNativeAzureFileSystemClientLogging
     performWASBOperations();
     String output = getLogOutput(logs);
 
-    assertFalse(
-       verifyStorageClientLogs(output, TEMP_DIR), "Log entry " + TEMP_DIR + " found  in " + output);
+    assertFalse(verifyStorageClientLogs(output, TEMP_DIR),
+        "Log entry " + TEMP_DIR + " found  in " + output);
   }
 
   @Override

@@ -25,7 +25,11 @@ import java.util.EnumSet;
 import java.util.Random;
 import java.util.concurrent.Callable;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -354,8 +358,8 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
 
     int numBytesReadV2NoBuffer = inputStreamV2NoBuffer.read(pos,
         bufferV2NoBuffer, 0, size);
-    assertEquals(size
-,         numBytesReadV2NoBuffer, "Bytes read from V2 stream (buffered pread disabled)");
+    assertEquals(size, numBytesReadV2NoBuffer,
+        "Bytes read from V2 stream (buffered pread disabled)");
 
     assertArrayEquals(bufferV1, bufferV2, "Mismatch in read data");
     assertArrayEquals(bufferV2, bufferV2NoBuffer, "Mismatch in read data");
@@ -509,11 +513,9 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
           }
       );
       long elapsedTimeMs = timer.elapsedTimeMs();
-      assertTrue(
-      
-         elapsedTimeMs < 20, String.format(
-              "There should not be any network I/O (elapsedTimeMs=%1$d).",
-              elapsedTimeMs));
+      assertTrue(elapsedTimeMs < 20, String.format(
+          "There should not be any network I/O (elapsedTimeMs=%1$d).",
+          elapsedTimeMs));
     }
   }
 
@@ -575,10 +577,9 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
 
       long elapsedTimeMs = timer.elapsedTimeMs();
       assertTrue(
-      
-         elapsedTimeMs < 20, String.format(
-              "There should not be any network I/O (elapsedTimeMs=%1$d).",
-              elapsedTimeMs));
+          elapsedTimeMs < 20, String.format(
+          "There should not be any network I/O (elapsedTimeMs=%1$d).",
+          elapsedTimeMs));
     }
   }
 

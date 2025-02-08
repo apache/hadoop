@@ -89,7 +89,7 @@ public class TestNativeAzureFileSystemBlockCompaction extends AbstractWasbTestBa
       dataOutputStream = (SyncableDataOutputStream) appendStream.getWrappedStream();
     }
 
-    Assertions.assertNotNull(
+    assertNotNull(
        dataOutputStream, "Did not recognize " + dataOutputStream);
 
     return (BlockBlobAppendStream) dataOutputStream.getOutStream();
@@ -98,11 +98,11 @@ public class TestNativeAzureFileSystemBlockCompaction extends AbstractWasbTestBa
   private void verifyBlockList(BlockBlobAppendStream blockBlobStream,
                                int[] testData) throws Throwable {
     List<BlockEntry> blockList = blockBlobStream.getBlockList();
-    Assertions.assertEquals(testData.length, blockList.size(), "Block list length");
+    assertEquals(testData.length, blockList.size(), "Block list length");
 
     int i = 0;
     for (BlockEntry block: blockList) {
-      Assertions.assertTrue(block.getSize() == testData[i++]);
+      assertTrue(block.getSize() == testData[i++]);
     }
   }
 
@@ -136,12 +136,12 @@ public class TestNativeAzureFileSystemBlockCompaction extends AbstractWasbTestBa
       } else if (wrappedStream instanceof SyncableDataOutputStream) {
         dataOutputStream = (SyncableDataOutputStream) wrappedStream;
       } else {
-        Assertions.fail("Unable to determine type of " + wrappedStream
+        fail("Unable to determine type of " + wrappedStream
             + " class of " + wrappedStream.getClass());
       }
 
-      Assertions.assertFalse(
-         dataOutputStream.getOutStream() instanceof BlockBlobAppendStream, "Data output stream is a BlockBlobAppendStream: "
+      assertFalse(dataOutputStream.getOutStream() instanceof BlockBlobAppendStream,
+          "Data output stream is a BlockBlobAppendStream: "
           + dataOutputStream);
 
     }

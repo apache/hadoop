@@ -277,8 +277,7 @@ public class ITestReadAndSeekPageBlobAfterWrite extends AbstractAzureScaleTest {
       long end = Time.monotonicNow();
       LOG.debug("close duration = " + (end - start) + " msec.");
       if (writesSinceHFlush > 0) {
-        assertTrue(
-           end - start >= MINIMUM_EXPECTED_TIME, String.format(
+        assertTrue(end - start >= MINIMUM_EXPECTED_TIME, String.format(
             "close duration with >= 1 pending write is %d, less than minimum expected of %d",
             end - start, MINIMUM_EXPECTED_TIME));
         }
@@ -335,8 +334,8 @@ public class ITestReadAndSeekPageBlobAfterWrite extends AbstractAzureScaleTest {
 
     // Verify we can list the new size. That will prove we expanded the file.
     FileStatus[] status = fs.listStatus(blobPath);
-    assertEquals(
-       numWrites * writeSize, status[0].getLen(), "File size hasn't changed " + status);
+    assertEquals(numWrites * writeSize, status[0].getLen(),
+        "File size hasn't changed " + status);
     LOG.debug("Total bytes written to " + blobPath + " = " + status[0].getLen());
     fs.delete(blobPath, false);
   }

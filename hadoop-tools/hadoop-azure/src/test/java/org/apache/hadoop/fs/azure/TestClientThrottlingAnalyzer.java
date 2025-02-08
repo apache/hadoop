@@ -57,13 +57,11 @@ public class TestClientThrottlingAnalyzer extends AbstractWasbTestWithTimeout {
   }
 
   private void validateLessThanOrEqual(long maxExpected, long actual) {
-    assertTrue(
-    
-       actual < maxExpected, String.format(
-            "The actual value %1$d is not less than or equal to the maximum"
-            + " expected value %2$d.",
-            actual,
-            maxExpected));
+    assertTrue(actual < maxExpected, String.format(
+        "The actual value %1$d is not less than or equal to the maximum"
+        + " expected value %2$d.",
+        actual,
+        maxExpected));
   }
 
   /**

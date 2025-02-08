@@ -32,7 +32,11 @@ import java.util.concurrent.TimeUnit;
 
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,8 +141,8 @@ public class ITestListPerformance extends AbstractAzureScaleTest {
 
     for (Future<Integer> future : futures) {
       assertTrue(future.isDone(), "Future timed out");
-      assertEquals(
-         filesPerThread, future.get().intValue(), "Future did not write all files timed out");
+      assertEquals(filesPerThread, future.get().intValue(),
+          "Future did not write all files timed out");
     }
   }
 
@@ -158,8 +162,8 @@ public class ITestListPerformance extends AbstractAzureScaleTest {
       LOG.info("{}: {}", fileStatus.getPath(),
           fileStatus.isDirectory() ? "dir" : "file");
     }
-    assertEquals(
-       expectedFileCount, fileList.length, "Mismatch between expected files and actual");
+    assertEquals(expectedFileCount, fileList.length,
+        "Mismatch between expected files and actual");
 
 
     // now do a listFiles() recursive
@@ -173,14 +177,14 @@ public class ITestListPerformance extends AbstractAzureScaleTest {
       FileStatus fileStatus = listing.next();
       Path path = fileStatus.getPath();
       FileStatus removed = foundInList.remove(path);
-      assertNotNull(
-         removed, "Did not find "  + path + "{} in the previous listing");
+      assertNotNull(removed,
+          "Did not find "  + path + "{} in the previous listing");
     }
     elapsedMs = timer.elapsedTimeMs();
     LOG.info("time for listFiles() initial call: {} millis;"
         + " time to iterate: {} millis", initialListTime, elapsedMs);
-    assertEquals(
-       0, foundInList.size(), "Not all files from listStatus() were found in listFiles()");
+    assertEquals(0, foundInList.size(),
+        "Not all files from listStatus() were found in listFiles()");
 
   }
 

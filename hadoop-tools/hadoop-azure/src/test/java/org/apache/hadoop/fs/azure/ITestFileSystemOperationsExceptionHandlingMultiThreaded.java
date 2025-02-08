@@ -311,7 +311,7 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
 
   @Test
   public void testMultiThreadedPageBlobSeekScenario(TestInfo testInfo) throws Throwable {
-    assertThrows(FileNotFoundException.class, ()->{
+    assertThrows(FileNotFoundException.class, () -> {
       bindToTestAccount(getPageBlobTestStorageAccount());
 
       Path base = methodPath(testInfo);

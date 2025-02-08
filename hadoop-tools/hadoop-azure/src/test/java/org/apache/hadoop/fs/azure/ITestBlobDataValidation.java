@@ -138,8 +138,8 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
       }
       StorageException cause = (StorageException)ex.getCause();
       assertNotNull(cause);
-      assertEquals(
-         StorageErrorCodeStrings.INVALID_MD5, cause.getErrorCode(), "Unexpected cause: " + cause);
+      assertEquals(StorageErrorCodeStrings.INVALID_MD5, cause.getErrorCode(),
+          "Unexpected cause: " + cause);
     }
   }
 

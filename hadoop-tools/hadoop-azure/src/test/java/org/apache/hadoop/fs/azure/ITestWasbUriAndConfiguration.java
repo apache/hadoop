@@ -436,7 +436,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
         "org.apache.Nonexistant.Class");
     try {
       AzureNativeFileSystemStore.getAccountKeyFromConfiguration(account, conf);
-      Assertions.fail("Nonexistant key provider class should have thrown a "
+      fail("Nonexistant key provider class should have thrown a "
           + "KeyProviderException");
     } catch (KeyProviderException e) {
     }
@@ -450,7 +450,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
     conf.set("fs.azure.account.keyprovider." + account, "java.lang.String");
     try {
       AzureNativeFileSystemStore.getAccountKeyFromConfiguration(account, conf);
-      Assertions.fail("Key provider class that doesn't implement KeyProvider "
+      fail("Key provider class that doesn't implement KeyProvider "
           + "should have thrown a KeyProviderException");
     } catch (KeyProviderException e) {
     }
@@ -656,7 +656,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
 
       conf.setBoolean(RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME, true);
       FileSystem fs1 = FileSystem.newInstance(defaultUri, conf);
-      Assertions.assertEquals("getCanonicalServiceName() should return URI",
+      assertEquals("getCanonicalServiceName() should return URI",
               fs1.getUri().toString(), fs1.getCanonicalServiceName());
     } finally {
       testAccount.cleanup();

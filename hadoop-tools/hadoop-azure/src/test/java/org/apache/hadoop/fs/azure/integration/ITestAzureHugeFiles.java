@@ -201,9 +201,9 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
         timeout, uploadTime, KEY_TEST_TIMEOUT, uploadTime * 2),
         uploadTime < timeout);
 */
-    assertEquals(
-       0, filesize % UPLOAD_BLOCKSIZE, "File size set in " + KEY_HUGE_FILESIZE + " = " + filesize
-            + " is not a multiple of " + UPLOAD_BLOCKSIZE);
+    assertEquals(0, filesize % UPLOAD_BLOCKSIZE,
+        "File size set in " + KEY_HUGE_FILESIZE + " = " + filesize
+        + " is not a multiple of " + UPLOAD_BLOCKSIZE);
 
     byte[] data = SOURCE_DATA;
 

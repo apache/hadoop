@@ -123,10 +123,8 @@ public class ITestNativeAzureFileSystemConcurrencyLive
         }
       }
 
-      assertEquals(
-      
-         1
-,           successCount, "Exactly one delete operation should return true.");
+      assertEquals(1, successCount,
+          "Exactly one delete operation should return true.");
     } finally {
       if (es != null) {
         es.shutdownNow();
