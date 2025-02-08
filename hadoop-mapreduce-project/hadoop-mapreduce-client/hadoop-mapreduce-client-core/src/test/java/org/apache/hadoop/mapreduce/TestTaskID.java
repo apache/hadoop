@@ -26,7 +26,6 @@ import org.apache.hadoop.io.WritableUtils;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -258,7 +257,7 @@ public class TestTaskID {
       TaskID taskId2 = new TaskID(jobId, types[i], i);
 
       assertEquals(taskId1.hashCode(), taskId2.hashCode(),
-         "The hashcode() method gave unequal hash codes for two equal task IDs");
+          "The hashcode() method gave unequal hash codes for two equal task IDs");
     }
   }
 
@@ -331,7 +330,8 @@ public class TestTaskID {
         "The forName() method did not parse the task ID string correctly");
     assertEquals("task_6789_0004_c_000003", TaskID.forName("task_6789_0004_c_000003").toString(),
         "The forName() method did not parse the task ID string correctly");
-    assertEquals("task_12345_0005_t_4000000", TaskID.forName("task_12345_0005_t_4000000").toString(),
+    assertEquals("task_12345_0005_t_4000000",
+        TaskID.forName("task_12345_0005_t_4000000").toString(),
         "The forName() method did not parse the task ID string correctly");
 
     try {
@@ -456,7 +456,7 @@ public class TestTaskID {
    */
   @Test
   public void testGetAllTaskTypes() {
-    assertEquals( "(m|r|s|c|t)", TaskID.getAllTaskTypes(),
+    assertEquals("(m|r|s|c|t)", TaskID.getAllTaskTypes(),
         "The getAllTaskTypes method did not return the expected string");
   }
 }

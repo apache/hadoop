@@ -479,8 +479,7 @@ public class TestLineRecordReader {
     assertNull(key, "Unexpected key returned");
     reader.close();
     // next split: check for duplicate or dropped records
-    split = new FileSplit(inputFile, splitLength,
-        inputData.length () - splitLength, null);
+    split = new FileSplit(inputFile, splitLength, inputData.length() - splitLength, null);
     reader = new LineRecordReader(recordDelimiterBytes);
     reader.initialize(split, context);
     assertTrue(reader.nextKeyValue(), "Expected record got nothing");

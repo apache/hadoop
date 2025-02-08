@@ -191,7 +191,7 @@ public class TestLineRecordReader {
     // The LineRecordReader must fail when trying to read a file that
     // was compressed using an unsplittable file format
     assertThrows(IOException.class, () -> {
-        testSplitRecords("TestSafeguardSplittingUnsplittableFiles.txt.gz", 2);
+      testSplitRecords("TestSafeguardSplittingUnsplittableFiles.txt.gz", 2);
     });
   }
 

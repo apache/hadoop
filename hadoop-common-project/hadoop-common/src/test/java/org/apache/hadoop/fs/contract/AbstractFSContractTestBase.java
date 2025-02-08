@@ -251,20 +251,6 @@ public abstract class AbstractFSContractTestBase extends Assert
   }
 
   /**
-   * Get a path whose name ends with the name of this method.
-   *
-   * This is a temporary requirement for upgrading from JUnit 4 to JUnit 5,
-   * and can be deleted later.
-   *
-   * @param name name of this method.
-   * @return a path implicitly unique amongst all methods in this class
-   * @throws IOException IO problems
-   */
-  protected Path methodPath(String name) throws IOException {
-    return path(name);
-  }
-
-  /**
    * Take a simple path like "/something" and turn it into
    * a qualified path against the test FS.
    * @param filepath path string in

@@ -135,7 +135,7 @@ public class TestFetcher {
   public void teardown(TestInfo testInfo) throws IllegalArgumentException, IOException {
     LOG.info("<<<< " + testInfo.getDisplayName());
     if (fs != null) {
-      fs.delete(new Path(testInfo.getDisplayName()),true);
+      fs.delete(new Path(testInfo.getDisplayName()), true);
     }
   }
   
@@ -290,7 +290,7 @@ public class TestFetcher {
     when(connection.getInputStream()).thenReturn(in);
 
     for (int i = 0; i < 3; ++i) {
-      Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(jobWithRetry,
+      Fetcher<Text, Text> underTest = new FakeFetcher<Text, Text>(jobWithRetry,
           id, ss, mm, r, metrics, except, key, connection);
       underTest.copyFromHost(host);
     }
@@ -424,7 +424,7 @@ public class TestFetcher {
   public void testCopyFromHostWithRetry() throws Exception {
     InMemoryMapOutput<Text, Text> immo = mock(InMemoryMapOutput.class);
     ss = mock(ShuffleSchedulerImpl.class);
-    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(jobWithRetry,
+    Fetcher<Text, Text> underTest = new FakeFetcher<Text, Text>(jobWithRetry,
         id, ss, mm, r, metrics, except, key, connection, true);
 
     String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);

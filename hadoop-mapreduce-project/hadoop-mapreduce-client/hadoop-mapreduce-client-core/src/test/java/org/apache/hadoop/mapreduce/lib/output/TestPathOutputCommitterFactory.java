@@ -156,9 +156,7 @@ public class TestPathOutputCommitterFactory extends Assertions {
     SimpleCommitter sc = createCommitter(
         NamedCommitterFactory.class,
         SimpleCommitter.class, HDFS_PATH, conf);
-    assertEquals(
-       HDFS_PATH
-,         sc.getOutputPath(), "Wrong output path from " + sc);
+    assertEquals(HDFS_PATH, sc.getOutputPath(), "Wrong output path from " + sc);
   }
 
   /**
@@ -214,8 +212,8 @@ public class TestPathOutputCommitterFactory extends Assertions {
     T f = createCommitterFactory(factoryClass, path, conf);
     PathOutputCommitter committer = f.createOutputCommitter(path,
         taskAttempt(conf));
-    assertEquals(
-       committerClass, committer.getClass(), " Wrong committer for path " + path + " from factory " + f);
+    assertEquals(committerClass, committer.getClass(),
+        " Wrong committer for path " + path + " from factory " + f);
     return (U) committer;
   }
 
@@ -235,8 +233,8 @@ public class TestPathOutputCommitterFactory extends Assertions {
       TaskAttemptContext context) throws IOException {
     PathOutputCommitter committer = PathOutputCommitterFactory
         .createCommitter(path, context);
-    assertEquals(
-       committerClass, committer.getClass(), " Wrong committer for path " + path);
+    assertEquals(committerClass, committer.getClass(),
+        " Wrong committer for path " + path);
     return (U) committer;
   }
 
@@ -253,8 +251,8 @@ public class TestPathOutputCommitterFactory extends Assertions {
       Path path,
       Configuration conf) {
     PathOutputCommitterFactory factory = getCommitterFactory(path, conf);
-    assertEquals(
-       factoryClass, factory.getClass(), " Wrong factory for path " + path);
+    assertEquals(factoryClass, factory.getClass(),
+        " Wrong factory for path " + path);
     return (T)factory;
   }
 
@@ -295,9 +293,8 @@ public class TestPathOutputCommitterFactory extends Assertions {
     TextOutputFormat<String, String> off = new TextOutputFormat<>();
     SimpleCommitter committer = (SimpleCommitter)
         off.getOutputCommitter(taskAttempt(conf));
-    assertEquals(
-       HTTP_PATH
-,         committer.getOutputPath(), "Wrong output path from "+ committer);
+    assertEquals(HTTP_PATH,
+        committer.getOutputPath(), "Wrong output path from "+ committer);
   }
 
   /**
@@ -316,8 +313,7 @@ public class TestPathOutputCommitterFactory extends Assertions {
     TextOutputFormat<String, String> off = new TextOutputFormat<>();
     SimpleCommitter committer = (SimpleCommitter)
         off.getOutputCommitter(taskAttempt(conf));
-    assertNull(
-       committer.getOutputPath(), "Output path from "+ committer);
+    assertNull(committer.getOutputPath(), "Output path from "+ committer);
   }
 
   /**

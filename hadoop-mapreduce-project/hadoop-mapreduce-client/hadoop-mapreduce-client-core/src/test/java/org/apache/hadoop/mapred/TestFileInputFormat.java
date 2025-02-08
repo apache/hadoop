@@ -59,9 +59,9 @@ public class TestFileInputFormat {
   
   private int numThreads;
 
-  public void initTestFileInputFormat(int numThreads) {
-    this.numThreads = numThreads;
-    LOG.info("Running with numThreads: " + numThreads);
+  public void initTestFileInputFormat(int pNumThreads) {
+    this.numThreads = pNumThreads;
+    LOG.info("Running with numThreads: " + pNumThreads);
   }
 
   public static Collection<Object[]> data() {
@@ -84,8 +84,8 @@ public class TestFileInputFormat {
 
   @MethodSource("data")
   @ParameterizedTest
-  public void testListLocatedStatus(int numThreads) throws Exception {
-    initTestFileInputFormat(numThreads);
+  public void testListLocatedStatus(int pNumThreads) throws Exception {
+    initTestFileInputFormat(pNumThreads);
     Configuration conf = getConfiguration();
     conf.setBoolean("fs.test.impl.disable.cache", false);
     conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
@@ -106,8 +106,8 @@ public class TestFileInputFormat {
 
   @MethodSource("data")
   @ParameterizedTest
-  public void testIgnoreDirs(int numThreads) throws Exception {
-    initTestFileInputFormat(numThreads);
+  public void testIgnoreDirs(int pNumThreads) throws Exception {
+    initTestFileInputFormat(pNumThreads);
     Configuration conf = getConfiguration();
     conf.setBoolean(FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, true);
     conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
@@ -123,8 +123,8 @@ public class TestFileInputFormat {
 
   @MethodSource("data")
   @ParameterizedTest
-  public void testSplitLocationInfo(int numThreads) throws Exception {
-    initTestFileInputFormat(numThreads);
+  public void testSplitLocationInfo(int pNumThreads) throws Exception {
+    initTestFileInputFormat(pNumThreads);
     Configuration conf = getConfiguration();
     conf.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR,
         "test:///a1/a2");
@@ -148,8 +148,8 @@ public class TestFileInputFormat {
 
   @MethodSource("data")
   @ParameterizedTest
-  public void testListStatusSimple(int numThreads) throws IOException {
-    initTestFileInputFormat(numThreads);
+  public void testListStatusSimple(int pNumThreads) throws IOException {
+    initTestFileInputFormat(pNumThreads);
     Configuration conf = new Configuration();
     conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
 
@@ -167,8 +167,8 @@ public class TestFileInputFormat {
 
   @MethodSource("data")
   @ParameterizedTest
-  public void testListStatusNestedRecursive(int numThreads) throws IOException {
-    initTestFileInputFormat(numThreads);
+  public void testListStatusNestedRecursive(int pNumThreads) throws IOException {
+    initTestFileInputFormat(pNumThreads);
     Configuration conf = new Configuration();
     conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
 
@@ -186,8 +186,8 @@ public class TestFileInputFormat {
 
   @MethodSource("data")
   @ParameterizedTest
-  public void testListStatusNestedNonRecursive(int numThreads) throws IOException {
-    initTestFileInputFormat(numThreads);
+  public void testListStatusNestedNonRecursive(int pNumThreads) throws IOException {
+    initTestFileInputFormat(pNumThreads);
     Configuration conf = new Configuration();
     conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
 
@@ -205,8 +205,8 @@ public class TestFileInputFormat {
 
   @MethodSource("data")
   @ParameterizedTest
-  public void testListStatusErrorOnNonExistantDir(int numThreads) throws IOException {
-    initTestFileInputFormat(numThreads);
+  public void testListStatusErrorOnNonExistantDir(int pNumThreads) throws IOException {
+    initTestFileInputFormat(pNumThreads);
     Configuration conf = new Configuration();
     conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
 

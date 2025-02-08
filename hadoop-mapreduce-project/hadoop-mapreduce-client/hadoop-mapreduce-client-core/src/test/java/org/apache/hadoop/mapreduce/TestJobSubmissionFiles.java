@@ -85,20 +85,20 @@ public class TestJobSubmissionFiles {
   public void testGetStagingWhenFileOwnerNameAndCurrentUserNameDoesNotMatch()
       throws IOException, InterruptedException {
     assertThrows(IOException.class, () -> {
-        Cluster cluster = mock(Cluster.class);
-        Configuration conf = new Configuration();
-        String stagingDirOwner = "someuser";
-        Path stagingPath = mock(Path.class);
-        UserGroupInformation user = UserGroupInformation.createUserForTesting(USER_1, GROUP_NAMES);
-        assertEquals(USER_1, user.getUserName());
-        FileSystem fs = new FileSystemTestHelper.MockFileSystem();
-        FileStatus fileStatus = new FileStatus(1, true, 1, 1, 100L, 100L,
-            FsPermission.getDefault(), stagingDirOwner, stagingDirOwner, stagingPath);
-        when(stagingPath.getFileSystem(conf)).thenReturn(fs);
-        when(fs.getFileStatus(stagingPath)).thenReturn(fileStatus);
-        when(cluster.getStagingAreaDir()).thenReturn(stagingPath);
-        assertEquals(stagingPath,
-            JobSubmissionFiles.getStagingDir(cluster, conf, user));
+      Cluster cluster = mock(Cluster.class);
+      Configuration conf = new Configuration();
+      String stagingDirOwner = "someuser";
+      Path stagingPath = mock(Path.class);
+      UserGroupInformation user = UserGroupInformation.createUserForTesting(USER_1, GROUP_NAMES);
+      assertEquals(USER_1, user.getUserName());
+      FileSystem fs = new FileSystemTestHelper.MockFileSystem();
+      FileStatus fileStatus = new FileStatus(1, true, 1, 1, 100L, 100L,
+          FsPermission.getDefault(), stagingDirOwner, stagingDirOwner, stagingPath);
+      when(stagingPath.getFileSystem(conf)).thenReturn(fs);
+      when(fs.getFileStatus(stagingPath)).thenReturn(fileStatus);
+      when(cluster.getStagingAreaDir()).thenReturn(stagingPath);
+      assertEquals(stagingPath,
+          JobSubmissionFiles.getStagingDir(cluster, conf, user));
     });
   }
 

@@ -153,8 +153,8 @@ public class TestClientDistributedCacheManager {
     // We use get() instead of getBoolean() so we can tell the difference
     // between wrong and missing
     assertEquals("true,true", jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES),
-       "The file paths were not found to be publicly visible " +
-       "even though the full path is publicly accessible");
+        "The file paths were not found to be publicly visible " +
+        "even though the full path is publicly accessible");
     checkCacheEntries(statCache, null, firstCacheFile, relativePath);
 
     job = Job.getInstance(conf);
@@ -167,8 +167,8 @@ public class TestClientDistributedCacheManager {
     // We use get() instead of getBoolean() so we can tell the difference
     // between wrong and missing
     assertEquals("true", jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES),
-       "The file path was not found to be publicly visible " +
-       "even though the full path is publicly accessible");
+        "The file path was not found to be publicly visible " +
+        "even though the full path is publicly accessible");
     checkCacheEntries(statCache, null, wildcardPath.getParent());
 
     Path qualifiedParent = fs.makeQualified(TEST_VISIBILITY_PARENT_DIR);

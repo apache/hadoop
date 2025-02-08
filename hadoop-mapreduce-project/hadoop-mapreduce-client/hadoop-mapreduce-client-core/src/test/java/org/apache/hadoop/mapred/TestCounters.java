@@ -187,7 +187,8 @@ public class TestCounters {
     assertEquals(1, counters.findCounter(
         "org.apache.hadoop.mapred.JobInProgress$Counter",
         "DATA_LOCAL_MAPS").getValue(), "Legacy name");
-    assertEquals(1, counters.findCounter(JobInProgress.Counter.DATA_LOCAL_MAPS).getValue(), "Legacy enum");
+    assertEquals(1,
+        counters.findCounter(JobInProgress.Counter.DATA_LOCAL_MAPS).getValue(), "Legacy enum");
 
     assertEquals(1, counters.findCounter(
         FileSystemCounter.class.getName(), "FILE_BYTES_READ").getValue(), "New name");

@@ -77,7 +77,7 @@ public class TestCombineFileRecordReader {
       CombineFileRecordReader cfrr = new CombineFileRecordReader(conf, combineFileSplit,
         reporter,  TextRecordReaderWrapper.class);
       verify(reporter).progress();
-      assertFalse(cfrr.next(key,value));
+      assertFalse(cfrr.next(key, value));
       verify(reporter, times(3)).progress();
     } finally {
       FileUtil.fullyDelete(new File(outDir.toString()));

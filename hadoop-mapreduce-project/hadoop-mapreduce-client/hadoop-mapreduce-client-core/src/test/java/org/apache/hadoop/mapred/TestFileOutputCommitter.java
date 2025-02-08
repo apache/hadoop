@@ -148,12 +148,12 @@ public class TestFileOutputCommitter {
       assertTrue(jtd2.exists(), "Version 1 recovers to " + jtd2);
       validateContent(jobTempDir2);
     } else {
-        assertFalse(jtd2.exists(), "Version 2 commits to output dir " + jtd2);
-        if (commitVersion == 1) {
-          assertEquals(0, jtd1.list().length,
-              "Version 2  recovery moves to output dir from " + jtd1);
-        }
+     assertFalse(jtd2.exists(), "Version 2 commits to output dir " + jtd2);
+     if (commitVersion == 1) {
+       assertEquals(0, jtd1.list().length,
+           "Version 2  recovery moves to output dir from " + jtd1);
       }
+    }
 
     committer2.commitJob(jContext2);
     validateContent(outDir);
