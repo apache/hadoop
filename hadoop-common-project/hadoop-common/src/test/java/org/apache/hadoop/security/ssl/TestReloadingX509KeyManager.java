@@ -97,7 +97,7 @@ public class TestReloadingX509KeyManager {
         "password", "password");
     try {
       fileMonitoringTimer.schedule(new FileMonitoringTimerTask(
-          Paths.get(keystoreLocation), tm::loadFrom,null), reloadInterval, reloadInterval);
+          Paths.get(keystoreLocation), tm::loadFrom, null), reloadInterval, reloadInterval);
       assertEquals(kp.getPrivate(), tm.getPrivateKey("cert1"));
 
       // Wait so that the file modification time is different
@@ -112,8 +112,8 @@ public class TestReloadingX509KeyManager {
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
           @Override
           public Boolean get() {
-                return tm.getPrivateKey("cert1").equals(kp.getPrivate());
-            }
+            return tm.getPrivateKey("cert1").equals(kp.getPrivate());
+          }
       }, (int) reloadInterval, 100000);
     } finally {
       fileMonitoringTimer.cancel();
@@ -138,7 +138,7 @@ public class TestReloadingX509KeyManager {
 
     try {
       fileMonitoringTimer.schedule(new FileMonitoringTimerTask(
-          Paths.get(keystoreLocation), tm::loadFrom,null), reloadInterval, reloadInterval);
+          Paths.get(keystoreLocation), tm::loadFrom, null), reloadInterval, reloadInterval);
       assertEquals(kp.getPrivate(), tm.getPrivateKey("cert1"));
 
       assertFalse(reloaderLog.getOutput().contains(
@@ -170,7 +170,8 @@ public class TestReloadingX509KeyManager {
     createKeyStore(keystoreLocation, "password", "cert1", kp.getPrivate(), cert1);
 
     long reloadInterval = 10;
-    Timer fileMonitoringTimer = new Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
+    Timer fileMonitoringTimer =
+        new Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
     ReloadingX509KeystoreManager tm =
         new ReloadingX509KeystoreManager("jks", keystoreLocation,
         "password",
@@ -178,7 +179,7 @@ public class TestReloadingX509KeyManager {
 
     try {
       fileMonitoringTimer.schedule(new FileMonitoringTimerTask(
-          Paths.get(keystoreLocation), tm::loadFrom,null), reloadInterval, reloadInterval);
+          Paths.get(keystoreLocation), tm::loadFrom, null), reloadInterval, reloadInterval);
       assertEquals(kp.getPrivate(), tm.getPrivateKey("cert1"));
 
       // Wait so that the file modification time is different

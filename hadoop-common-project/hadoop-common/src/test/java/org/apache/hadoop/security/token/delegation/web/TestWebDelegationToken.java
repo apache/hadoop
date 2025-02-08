@@ -420,7 +420,8 @@ public class TestWebDelegationToken {
       ugi.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          HttpURLConnection conn = aUrl.openConnection(nonAuthURL, new DelegationTokenAuthenticatedURL.Token());
+          HttpURLConnection conn =
+              aUrl.openConnection(nonAuthURL, new DelegationTokenAuthenticatedURL.Token());
           assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
           if (useQS) {
             assertNull(conn.getHeaderField("UsingHeader"));
