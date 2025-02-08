@@ -151,7 +151,7 @@ public class TestFileOutputCommitter {
       assertFalse(jtd2.exists(), "Version 2 commits to output dir " + jtd2);
       if (commitVersion == 1) {
         assertEquals(0, jtd1.list().length,
-           "Version 2  recovery moves to output dir from " + jtd1);
+            "Version 2  recovery moves to output dir from " + jtd1);
       }
     }
 
