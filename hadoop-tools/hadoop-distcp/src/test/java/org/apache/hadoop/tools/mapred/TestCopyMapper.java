@@ -60,7 +60,6 @@ import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -69,6 +68,10 @@ import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestCopyMapper {
   private static final Logger LOG = LoggerFactory.getLogger(TestCopyMapper.class);
@@ -331,10 +334,10 @@ public class TestCopyMapper {
 
     verifyCopy(fs, false, true);
     // verify that we only copied new appended data
-    Assertions.assertEquals(nFiles * DEFAULT_FILE_SIZE * 2, stubContext
+    assertEquals(nFiles * DEFAULT_FILE_SIZE * 2, stubContext
         .getReporter().getCounter(CopyMapper.Counter.BYTESCOPIED)
         .getValue());
-    Assertions.assertEquals(numFiles, stubContext.getReporter().
+    assertEquals(numFiles, stubContext.getReporter().
         getCounter(CopyMapper.Counter.COPY).getValue());
     rb = getMetrics(cluster.getDataNodes().get(0).getMetrics().name());
     /*
@@ -393,24 +396,24 @@ public class TestCopyMapper {
 
     // Check that the maps worked.
     verifyCopy(fs, preserveChecksum, true);
-    Assertions.assertEquals(numFiles, stubContext.getReporter()
+    assertEquals(numFiles, stubContext.getReporter()
         .getCounter(CopyMapper.Counter.COPY).getValue());
-    Assertions.assertEquals(numDirs, stubContext.getReporter()
+    assertEquals(numDirs, stubContext.getReporter()
         .getCounter(CopyMapper.Counter.DIR_COPY).getValue());
     if (!preserveChecksum) {
-      Assertions.assertEquals(nFiles * DEFAULT_FILE_SIZE, stubContext
+      assertEquals(nFiles * DEFAULT_FILE_SIZE, stubContext
           .getReporter().getCounter(CopyMapper.Counter.BYTESCOPIED)
           .getValue());
     } else {
-      Assertions.assertEquals(nFiles * NON_DEFAULT_BLOCK_SIZE * 2, stubContext
+      assertEquals(nFiles * NON_DEFAULT_BLOCK_SIZE * 2, stubContext
           .getReporter().getCounter(CopyMapper.Counter.BYTESCOPIED)
           .getValue());
     }
 
     testCopyingExistingFiles(fs, copyMapper, context);
     for (Text value : stubContext.getWriter().values()) {
-      Assertions.assertTrue(value
-          .toString().startsWith("SKIP:"), value.toString() + " is not skipped");
+      assertTrue(value.toString().startsWith("SKIP:"),
+          value.toString() + " is not skipped");
     }
   }
 
@@ -420,19 +423,19 @@ public class TestCopyMapper {
     for (Path path : pathList) {
       final Path targetPath = new Path(path.toString().replaceAll(SOURCE_PATH,
           TARGET_PATH));
-      Assertions.assertTrue(fs.exists(targetPath));
-      Assertions.assertTrue(fs.isFile(targetPath) == fs.isFile(path));
+      assertTrue(fs.exists(targetPath));
+      assertTrue(fs.isFile(targetPath) == fs.isFile(path));
       FileStatus sourceStatus = fs.getFileStatus(path);
       FileStatus targetStatus = fs.getFileStatus(targetPath);
       if (preserveReplication) {
-        Assertions.assertEquals(sourceStatus.getReplication(),
+        assertEquals(sourceStatus.getReplication(),
             targetStatus.getReplication());
       }
       if (preserveChecksum) {
-        Assertions.assertEquals(sourceStatus.getBlockSize(),
+        assertEquals(sourceStatus.getBlockSize(),
             targetStatus.getBlockSize());
       }
-      Assertions.assertTrue(!fs.isFile(targetPath)
+      assertTrue(!fs.isFile(targetPath)
           || fs.getFileChecksum(targetPath).equals(fs.getFileChecksum(path)));
     }
   }
@@ -445,12 +448,11 @@ public class TestCopyMapper {
                 new CopyListingFileStatus(fs.getFileStatus(path)), context);
       }
 
-      Assertions.assertEquals(nFiles,
+      assertEquals(nFiles,
               context.getCounter(CopyMapper.Counter.SKIP).getValue());
     }
     catch (Exception exception) {
-      Assertions.assertTrue(
-             false, "Caught unexpected exception:" + exception.getMessage());
+      assertTrue(false, "Caught unexpected exception:" + exception.getMessage());
     }
   }
 
@@ -482,7 +484,7 @@ public class TestCopyMapper {
           }
         } catch (IOException | InterruptedException e) {
             LOG.error("Exception encountered ", e);
-            Assertions.fail("Test failed: " + e.getMessage());
+            fail("Test failed: " + e.getMessage());
         }
       }
     };
@@ -497,7 +499,7 @@ public class TestCopyMapper {
       String exceptionAsString = StringUtils.stringifyException(ex);
       if (exceptionAsString.contains(DistCpConstants.LENGTH_MISMATCH_ERROR_MSG) ||
               exceptionAsString.contains(DistCpConstants.CHECKSUM_MISMATCH_ERROR_MSG)) {
-        Assertions.fail("Test failed: " + exceptionAsString);
+        fail("Test failed: " + exceptionAsString);
       }
     } finally {
       scheduledExecutorService.shutdown();
@@ -528,7 +530,7 @@ public class TestCopyMapper {
           pathList.get(0))),
           new CopyListingFileStatus(fs.getFileStatus(pathList.get(0))), context);
 
-      Assertions.assertTrue(false, "There should have been an exception.");
+      assertTrue(false, "There should have been an exception.");
     }
     catch (Exception ignore) {
     }
@@ -565,11 +567,11 @@ public class TestCopyMapper {
               new Path(SOURCE_PATH + "/src/file"))),
             context);
       } catch (IOException e) {
-        Assertions.assertTrue(e.getMessage().startsWith("Can't replace"));
+        assertTrue(e.getMessage().startsWith("Can't replace"));
       }
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
-      Assertions.fail("Test failed: " + e.getMessage());
+      fail("Test failed: " + e.getMessage());
     }
   }
 
@@ -618,7 +620,7 @@ public class TestCopyMapper {
             return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
             LOG.error("Exception encountered ", e);
-            Assertions.fail("Test failed: " + e.getMessage());
+            fail("Test failed: " + e.getMessage());
             throw new RuntimeException("Test ought to fail here");
           }
         }
@@ -633,9 +635,9 @@ public class TestCopyMapper {
                 new CopyListingFileStatus(tmpFS.getFileStatus(
                   new Path(SOURCE_PATH + "/src/file"))),
                 context);
-            Assertions.fail("Expected copy to fail");
+            fail("Expected copy to fail");
           } catch (AccessControlException e) {
-            Assertions.assertTrue(true, "Got exception: " + e.getMessage());
+            assertTrue(true, "Got exception: " + e.getMessage());
           } catch (Exception e) {
             throw new RuntimeException(e);
           }
@@ -644,7 +646,7 @@ public class TestCopyMapper {
       });
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
-      Assertions.fail("Test failed: " + e.getMessage());
+      fail("Test failed: " + e.getMessage());
     }
   }
 
@@ -688,7 +690,7 @@ public class TestCopyMapper {
             return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
             LOG.error("Exception encountered ", e);
-            Assertions.fail("Test failed: " + e.getMessage());
+            fail("Test failed: " + e.getMessage());
             throw new RuntimeException("Test ought to fail here");
           }
         }
@@ -711,7 +713,7 @@ public class TestCopyMapper {
       });
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
-      Assertions.fail("Test failed: " + e.getMessage());
+      fail("Test failed: " + e.getMessage());
     }
   }
 
@@ -764,7 +766,7 @@ public class TestCopyMapper {
             return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
             LOG.error("Exception encountered ", e);
-            Assertions.fail("Test failed: " + e.getMessage());
+            fail("Test failed: " + e.getMessage());
             throw new RuntimeException("Test ought to fail here");
           }
         }
@@ -780,8 +782,8 @@ public class TestCopyMapper {
                   new Path(SOURCE_PATH + "/src/file"))),
                 context);
             assertThat(stubContext.getWriter().values().size()).isEqualTo(1);
-            Assertions.assertTrue(stubContext.getWriter().values().get(0).toString().startsWith("SKIP"));
-            Assertions.assertTrue(stubContext.getWriter().values().get(0).toString().
+            assertTrue(stubContext.getWriter().values().get(0).toString().startsWith("SKIP"));
+            assertTrue(stubContext.getWriter().values().get(0).toString().
                 contains(SOURCE_PATH + "/src/file"));
           } catch (Exception e) {
             throw new RuntimeException(e);
@@ -791,7 +793,7 @@ public class TestCopyMapper {
       });
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
-      Assertions.fail("Test failed: " + e.getMessage());
+      fail("Test failed: " + e.getMessage());
     }
   }
 
@@ -846,7 +848,7 @@ public class TestCopyMapper {
             return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
             LOG.error("Exception encountered ", e);
-            Assertions.fail("Test failed: " + e.getMessage());
+            fail("Test failed: " + e.getMessage());
             throw new RuntimeException("Test ought to fail here");
           }
         }
@@ -861,7 +863,7 @@ public class TestCopyMapper {
                 new CopyListingFileStatus(tmpFS.getFileStatus(
                   new Path(SOURCE_PATH + "/src/file"))),
                 context);
-            Assertions.fail("Didn't expect the file to be copied");
+            fail("Didn't expect the file to be copied");
           } catch (AccessControlException ignore) {
           } catch (Exception e) {
             // We want to make sure the underlying cause of the exception is
@@ -878,7 +880,7 @@ public class TestCopyMapper {
       });
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
-      Assertions.fail("Test failed: " + e.getMessage());
+      fail("Test failed: " + e.getMessage());
     }
   }
 
@@ -904,11 +906,11 @@ public class TestCopyMapper {
               new Path(SOURCE_PATH + "/src/file"))),
             context);
       } catch (IOException e) {
-        Assertions.assertTrue(e.getMessage().startsWith("Can't replace"));
+        assertTrue(e.getMessage().startsWith("Can't replace"));
       }
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
-      Assertions.fail("Test failed: " + e.getMessage());
+      fail("Test failed: " + e.getMessage());
     }
   }
 
@@ -942,15 +944,14 @@ public class TestCopyMapper {
       }
       if (ignoreFailures) {
         for (Text value : stubContext.getWriter().values()) {
-          Assertions.assertTrue(
+          assertTrue(
              value.toString().startsWith("FAIL:"), value.toString() + " is not skipped");
         }
       }
-      Assertions.assertTrue(ignoreFailures, "There should have been an exception.");
+      assertTrue(ignoreFailures, "There should have been an exception.");
     }
     catch (Exception e) {
-      Assertions.assertTrue(
-             !ignoreFailures, "Unexpected exception: " + e.getMessage());
+      assertTrue(!ignoreFailures, "Unexpected exception: " + e.getMessage());
       e.printStackTrace();
     }
   }
@@ -1018,11 +1019,11 @@ public class TestCopyMapper {
                 new CopyListingFileStatus(tmpFS.getFileStatus(
                     new Path(SOURCE_PATH + "/src/file"))),
                 context);
-            Assertions.assertTrue(ignoreFailures, "Should have thrown an IOException if not " +
+            assertTrue(ignoreFailures, "Should have thrown an IOException if not " +
                 "ignoring failures");
           } catch (IOException e) {
             LOG.error("Unexpected exception encountered. ", e);
-            Assertions.assertFalse(ignoreFailures, "Should not have thrown an IOException if " +
+            assertFalse(ignoreFailures, "Should not have thrown an IOException if " +
                 "ignoring failures");
             // the IOException is not thrown again as it's expected
           } catch (Exception e) {
@@ -1034,7 +1035,7 @@ public class TestCopyMapper {
       });
     } catch (Exception e) {
       LOG.error("Unexpected exception encountered. ", e);
-      Assertions.fail("Test failed: " + e.getMessage());
+      fail("Test failed: " + e.getMessage());
     }
   }
 
@@ -1085,7 +1086,7 @@ public class TestCopyMapper {
       if (expectDifferentBlockSizesMultipleBlocksToSucceed()) {
         verifyCopy(fs, false, false);
       } else {
-        Assertions.fail(
+        fail(
             "Copy should have failed because of block-size difference.");
       }
     } catch (Exception exception) {
@@ -1137,7 +1138,7 @@ public class TestCopyMapper {
       if (expectDifferentBytesPerCrcToSucceed()) {
         verifyCopy(fs, false, false);
       } else {
-        Assertions.fail(
+        fail(
             "Copy should have failed because of bytes-per-crc difference.");
       }
     } catch (Exception exception) {
@@ -1197,18 +1198,18 @@ public class TestCopyMapper {
           // in the FileChecksum algorithmName. If we had instead written
           // a large enough file to exceed the blocksize, then the copy
           // would not have succeeded.
-          Assertions.assertTrue(preserve ||
+          assertTrue(preserve ||
                   source.getBlockSize() != target.getBlockSize());
-          Assertions.assertTrue(preserve ||
+          assertTrue(preserve ||
                   source.getReplication() != target.getReplication());
-          Assertions.assertTrue(!preserve ||
+          assertTrue(!preserve ||
                   source.getBlockSize() == target.getBlockSize());
-          Assertions.assertTrue(!preserve ||
+          assertTrue(!preserve ||
                   source.getReplication() == target.getReplication());
         }
       }
     } catch (Exception e) {
-      Assertions.assertTrue(false, "Unexpected exception: " + e.getMessage());
+      assertTrue(false, "Unexpected exception: " + e.getMessage());
       e.printStackTrace();
     }
   }
@@ -1260,7 +1261,7 @@ public class TestCopyMapper {
               new Path(SOURCE_PATH), sourceFilePath)), sourceFileStatus, context);
       long after = fs.getFileStatus(targetFilePath).getModificationTime();
 
-      Assertions.assertTrue(before == after, "File should have been skipped");
+      assertTrue(before == after, "File should have been skipped");
 
       context.getConfiguration().set(
               DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH,
@@ -1273,10 +1274,10 @@ public class TestCopyMapper {
               new Path(SOURCE_PATH), sourceFilePath)), sourceFileStatus, context);
       after = fs.getFileStatus(targetFilePath).getModificationTime();
 
-      Assertions.assertTrue(before < after, "File should have been overwritten.");
+      assertTrue(before < after, "File should have been overwritten.");
 
     } catch (Exception exception) {
-      Assertions.fail("Unexpected exception: " + exception.getMessage());
+      fail("Unexpected exception: " + exception.getMessage());
       exception.printStackTrace();
     }
   }
@@ -1328,19 +1329,19 @@ public class TestCopyMapper {
         final FileStatus source = fs.getFileStatus(path);
         final FileStatus target = fs.getFileStatus(targetPath);
         if (!source.isDirectory()) {
-          Assertions.assertTrue(!preserve || source.getOwner().equals(target.getOwner()));
-          Assertions.assertTrue(!preserve || source.getGroup().equals(target.getGroup()));
-          Assertions.assertTrue(!preserve || source.getPermission().equals(target.getPermission()));
-          Assertions.assertTrue( preserve || !source.getOwner().equals(target.getOwner()));
-          Assertions.assertTrue( preserve || !source.getGroup().equals(target.getGroup()));
-          Assertions.assertTrue( preserve || !source.getPermission().equals(target.getPermission()));
-          Assertions.assertTrue(source.isDirectory() ||
+          assertTrue(!preserve || source.getOwner().equals(target.getOwner()));
+          assertTrue(!preserve || source.getGroup().equals(target.getGroup()));
+          assertTrue(!preserve || source.getPermission().equals(target.getPermission()));
+          assertTrue( preserve || !source.getOwner().equals(target.getOwner()));
+          assertTrue( preserve || !source.getGroup().equals(target.getGroup()));
+          assertTrue( preserve || !source.getPermission().equals(target.getPermission()));
+          assertTrue(source.isDirectory() ||
                   source.getReplication() != target.getReplication());
         }
       }
     }
     catch (Exception e) {
-      Assertions.assertTrue(false, "Unexpected exception: " + e.getMessage());
+      assertTrue(false, "Unexpected exception: " + e.getMessage());
       e.printStackTrace();
     }
   }
@@ -1369,15 +1370,15 @@ public class TestCopyMapper {
     }
 
     // Check that the maps worked.
-    Assertions.assertEquals(numFiles, stubContext.getReporter()
+    assertEquals(numFiles, stubContext.getReporter()
         .getCounter(CopyMapper.Counter.COPY).getValue());
 
     testCopyingExistingFiles(fs, copyMapper, context);
     // verify the verbose log
     // we shouldn't print verbose log since this option is disabled
     for (Text value : stubContext.getWriter().values()) {
-      Assertions.assertTrue(!value.toString().startsWith("FILE_COPIED:"));
-      Assertions.assertTrue(!value.toString().startsWith("FILE_SKIPPED:"));
+      assertTrue(!value.toString().startsWith("FILE_COPIED:"));
+      assertTrue(!value.toString().startsWith("FILE_SKIPPED:"));
     }
 
     // test with verbose logging
@@ -1399,7 +1400,7 @@ public class TestCopyMapper {
           new CopyListingFileStatus(fs.getFileStatus(path)), context);
     }
 
-    Assertions.assertEquals(numFiles, stubContext.getReporter()
+    assertEquals(numFiles, stubContext.getReporter()
         .getCounter(CopyMapper.Counter.COPY).getValue());
 
     // verify the verbose log of COPY log
@@ -1409,7 +1410,7 @@ public class TestCopyMapper {
         numFileCopied++;
       }
     }
-    Assertions.assertEquals(numFiles, numFileCopied);
+    assertEquals(numFiles, numFileCopied);
 
     // verify the verbose log of SKIP log
     int numFileSkipped = 0;
@@ -1419,6 +1420,6 @@ public class TestCopyMapper {
         numFileSkipped++;
       }
     }
-    Assertions.assertEquals(numFiles, numFileSkipped);
+    assertEquals(numFiles, numFileSkipped);
   }
 }

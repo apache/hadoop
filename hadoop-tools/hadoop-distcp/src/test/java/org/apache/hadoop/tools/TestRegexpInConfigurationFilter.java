@@ -40,16 +40,16 @@ public class TestRegexpInConfigurationFilter {
     RegexpInConfigurationFilter defaultCopyFilter =
             new RegexpInConfigurationFilter(configuration);
     Path shouldCopyPath = new Path("/user/bar");
-    assertTrue(
-           defaultCopyFilter.shouldCopy(shouldCopyPath), shouldCopyPath.toString() + " should be copied");
+    assertTrue(defaultCopyFilter.shouldCopy(shouldCopyPath),
+        shouldCopyPath.toString() + " should be copied");
     shouldCopyPath = new Path("/user/bar/_COPYING");
-    assertFalse(
-           defaultCopyFilter.shouldCopy(shouldCopyPath), shouldCopyPath.toString() + " shouldn't be copied");
+    assertFalse(defaultCopyFilter.shouldCopy(shouldCopyPath),
+        shouldCopyPath.toString() + " shouldn't be copied");
     shouldCopyPath = new Path("/user/bar/_COPYING_");
-    assertFalse(
-           defaultCopyFilter.shouldCopy(shouldCopyPath), shouldCopyPath.toString() + " shouldn't be copied");
+    assertFalse(defaultCopyFilter.shouldCopy(shouldCopyPath),
+        shouldCopyPath.toString() + " shouldn't be copied");
     shouldCopyPath = new Path("/temp/");
-    assertTrue(
-           defaultCopyFilter.shouldCopy(shouldCopyPath), shouldCopyPath.toString() + " should be copied");
+    assertTrue(defaultCopyFilter.shouldCopy(shouldCopyPath),
+        shouldCopyPath.toString() + " should be copied");
   }
 }

@@ -23,13 +23,17 @@ import org.apache.hadoop.tools.util.ProducerConsumer;
 import org.apache.hadoop.tools.util.WorkReport;
 import org.apache.hadoop.tools.util.WorkRequest;
 import org.apache.hadoop.tools.util.WorkRequestProcessor;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.lang.Exception;
 import java.lang.Integer;
 import java.util.concurrent.TimeoutException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestProducerConsumer {
   public class CopyProcessor implements WorkRequestProcessor<Integer, Integer> {
@@ -63,9 +67,9 @@ public class TestProducerConsumer {
     worker.put(new WorkRequest<Integer>(42));
     try {
       WorkReport<Integer> report = worker.take();
-      Assertions.assertEquals(42, report.getItem().intValue());
+      assertEquals(42, report.getItem().intValue());
     } catch (InterruptedException ie) {
-      Assertions.assertTrue(false);
+      assertTrue(false);
     }
     worker.shutdown();
   }
@@ -91,8 +95,8 @@ public class TestProducerConsumer {
       sum -= report.getItem().intValue();
       numReports++;
     }
-    Assertions.assertEquals(0, sum);
-    Assertions.assertEquals(numRequests, numReports);
+    assertEquals(0, sum);
+    assertEquals(numRequests, numReports);
     workers.shutdown();
   }
 
@@ -104,11 +108,11 @@ public class TestProducerConsumer {
     worker.put(new WorkRequest<Integer>(42));
     try {
       WorkReport<Integer> report = worker.take();
-      Assertions.assertEquals(42, report.getItem().intValue());
-      Assertions.assertFalse(report.getSuccess());
-      Assertions.assertNotNull(report.getException());
+      assertEquals(42, report.getItem().intValue());
+      assertFalse(report.getSuccess());
+      assertNotNull(report.getException());
     } catch (InterruptedException ie) {
-      Assertions.assertTrue(false);
+      assertTrue(false);
     }
     worker.shutdown();
   }
@@ -162,7 +166,7 @@ public class TestProducerConsumer {
         try {
           while (true) {
             WorkReport<Integer> report = worker.take();
-            Assertions.assertEquals(42, report.getItem().intValue());
+            assertEquals(42, report.getItem().intValue());
           }
         } catch (InterruptedException ie) {
           return;

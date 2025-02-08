@@ -30,8 +30,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import org.assertj.core.api.Assertions;
-
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -95,7 +94,7 @@ public class DistCpTestUtils {
     optsArr[optsArr.length - 2] = src;
     optsArr[optsArr.length - 1] = dst;
 
-    Assertions.assertThat(ToolRunner.run(conf, distCp, optsArr))
+    assertThat(ToolRunner.run(conf, distCp, optsArr))
         .describedAs("Exit code of distcp %s",
             Arrays.stream(optsArr).collect(Collectors.joining(" ")))
         .isEqualTo(exitCode);

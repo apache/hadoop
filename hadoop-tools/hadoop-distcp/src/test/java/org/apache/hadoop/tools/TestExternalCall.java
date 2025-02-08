@@ -19,7 +19,6 @@
 package org.apache.hadoop.tools;
 
 import org.apache.hadoop.mapreduce.Job;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -29,7 +28,6 @@ import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +35,17 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.security.Permission;
 
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestExternalCall {
 
@@ -92,7 +100,7 @@ public class TestExternalCall {
       String[] arg = { soure.toString(), target.toString() };
 
       distcp.run(arg);
-      Assertions.assertTrue(fs.exists(target));
+      assertTrue(fs.exists(target));
 
   
   }
@@ -127,12 +135,12 @@ public class TestExternalCall {
 
       String[] arg = {target.toString(),soure.toString()};
       DistCp.main(arg);
-      Assertions.fail();
+      fail();
 
     } catch (ExitException t) {
-      Assertions.assertTrue(fs.exists(target));
-      Assertions.assertEquals(t.status, 0);
-      Assertions.assertEquals(
+      assertTrue(fs.exists(target));
+      assertEquals(t.status, 0);
+      assertEquals(
           stagingDir.getFileSystem(conf).listStatus(stagingDir).length, 0);
     }
 
@@ -155,16 +163,16 @@ public class TestExternalCall {
 
     DistCp distcp = mock(DistCp.class);
     Job job = spy(Job.class);
-    Mockito.when(distcp.getConf()).thenReturn(conf);
-    Mockito.when(distcp.createAndSubmitJob()).thenReturn(job);
-    Mockito.when(distcp.execute()).thenCallRealMethod();
-    Mockito.when(distcp.execute(Mockito.anyBoolean())).thenCallRealMethod();
-    Mockito.doReturn(true).when(job).waitForCompletion(Mockito.anyBoolean());
-    Mockito.when(distcp.run(Mockito.any())).thenCallRealMethod();
+    when(distcp.getConf()).thenReturn(conf);
+    when(distcp.createAndSubmitJob()).thenReturn(job);
+    when(distcp.execute()).thenCallRealMethod();
+    when(distcp.execute(anyBoolean())).thenCallRealMethod();
+    doReturn(true).when(job).waitForCompletion(anyBoolean());
+    when(distcp.run(any())).thenCallRealMethod();
     String[] arg = { soure.toString(), target.toString() };
 
     distcp.run(arg);
-    Mockito.verify(job, times(1)).close();
+    verify(job, times(1)).close();
   }
 
 

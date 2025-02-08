@@ -21,7 +21,8 @@ package org.apache.hadoop.tools;
 import static org.apache.hadoop.fs.permission.AclEntryScope.*;
 import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.net.URI;
@@ -286,7 +287,7 @@ public class TestDistCpWithAcls {
    * Runs distcp from /src to specified destination, preserving ACLs.  Asserts
    * expected exit code.
    *
-   * @param int exitCode expected exit code
+   * @param exitCode expected exit code
    * @param dst String distcp destination
    * @throws Exception if there is any error
    */

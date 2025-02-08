@@ -43,7 +43,6 @@ import org.apache.hadoop.tools.util.DistCpTestUtils;
 
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.functional.RemoteIterators;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -51,6 +50,7 @@ import org.junit.jupiter.api.Test;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -228,20 +228,13 @@ public class TestDistCpWithRawXAttrs {
     FileStatus destDir1Status = fs.getFileStatus(destDir1);
     FileStatus destSubDir1Status = fs.getFileStatus(destSubDir1);
 
-    assertFalse(
-       srcStatus.isErasureCoded(), "/src is erasure coded!");
-    assertFalse(
-       destStatus.isErasureCoded(), "/dest is erasure coded!");
-    assertTrue(
-       srcDir1Status.isErasureCoded(), "/src/dir1 is not erasure coded!");
-    assertTrue(
-       srcFile2Status.isErasureCoded(), "/src/dir1/file2 is not erasure coded");
-    assertTrue(
-       destDir1Status.isErasureCoded(), "/dest/dir1 is not erasure coded!");
-    assertTrue(
-       srcSubDir1Status.isErasureCoded(), "/src/dir1/subdir1 is not erasure coded!");
-    assertTrue(
-       destSubDir1Status.isErasureCoded(), "/dest/dir1/subdir1 is not erasure coded!");
+    assertFalse(srcStatus.isErasureCoded(), "/src is erasure coded!");
+    assertFalse(destStatus.isErasureCoded(), "/dest is erasure coded!");
+    assertTrue(srcDir1Status.isErasureCoded(), "/src/dir1 is not erasure coded!");
+    assertTrue(srcFile2Status.isErasureCoded(), "/src/dir1/file2 is not erasure coded");
+    assertTrue(destDir1Status.isErasureCoded(), "/dest/dir1 is not erasure coded!");
+    assertTrue(srcSubDir1Status.isErasureCoded(), "/src/dir1/subdir1 is not erasure coded!");
+    assertTrue(destSubDir1Status.isErasureCoded(), "/dest/dir1/subdir1 is not erasure coded!");
 
     // test without -p to check if src is EC then target FS default replication
     // is obeyed on the target file.
@@ -287,10 +280,10 @@ public class TestDistCpWithRawXAttrs {
         assertNotNull(destDir1Status, "FileStatus for path: " + dest2Dir1 + " is null");
         assertNotNull(destSubDir1Status, "FileStatus for path: " + dest2SubDir1 + " is null");
         // check if target paths are erasure coded.
-        assertTrue(
-           dummyEcFs.isPathErasureCoded(destDir1Status.getPath()), "Path is not erasure coded : " + dest2Dir1);
-        assertTrue(
-           dummyEcFs.isPathErasureCoded(destSubDir1Status.getPath()), "Path is not erasure coded : " + dest2SubDir1);
+        assertTrue(dummyEcFs.isPathErasureCoded(destDir1Status.getPath()),
+            "Path is not erasure coded : " + dest2Dir1);
+        assertTrue(dummyEcFs.isPathErasureCoded(destSubDir1Status.getPath()),
+            "Path is not erasure coded : " + dest2SubDir1);
 
         // copy source(DummyECFS) to target (HDFS)
         String dfsTarget = "/dest";
@@ -303,8 +296,8 @@ public class TestDistCpWithRawXAttrs {
         ContractTestUtils.assertPathExists(fs,
             "Path  doesn't exist:" + dfsTargetDir1, dfsTargetDir1);
         FileStatus targetDir1Status = fs.getFileStatus(dfsTargetDir1);
-        assertTrue(
-           targetDir1Status.isErasureCoded(), "Path is not erasure coded : " + targetDir1Status);
+        assertTrue(targetDir1Status.isErasureCoded(),
+            "Path is not erasure coded : " + targetDir1Status);
         fs.delete(dfsTargetPath, true);
       } finally {
         dummyEcFs.delete(new Path(base.getAbsolutePath()),true);
@@ -385,7 +378,7 @@ public class TestDistCpWithRawXAttrs {
     DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),
         dest.toString(), "-useiterator", conf);
 
-    Assertions.assertThat(RemoteIterators.toList(fs.listFiles(dest, true)))
+    assertThat(RemoteIterators.toList(fs.listFiles(dest, true)))
         .describedAs("files").hasSize(1110);
   }
 }

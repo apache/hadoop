@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
 import org.apache.hadoop.fs.FsConstants;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -35,6 +34,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDistCpViewFs {
   private static final Logger LOG = LoggerFactory.getLogger(TestDistCpViewFs.class);
@@ -427,13 +429,13 @@ public class TestDistCpViewFs {
   }
 
   private void checkResult(Path target, int count, String... relPaths) throws IOException {
-    Assertions.assertEquals(count, fs.listStatus(target).length);
+    assertEquals(count, fs.listStatus(target).length);
     if (relPaths == null || relPaths.length == 0) {
-      Assertions.assertTrue(fs.exists(target), target.toString());
+      assertTrue(fs.exists(target), target.toString());
       return;
     }
     for (String relPath : relPaths) {
-      Assertions.assertTrue(fs.exists(new Path(target, relPath)), new Path(target, relPath).toString());
+      assertTrue(fs.exists(new Path(target, relPath)), new Path(target, relPath).toString());
     }
   }
 

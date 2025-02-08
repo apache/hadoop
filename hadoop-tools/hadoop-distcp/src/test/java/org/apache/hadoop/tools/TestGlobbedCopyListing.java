@@ -28,7 +28,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.security.Credentials;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +36,8 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestGlobbedCopyListing {
 
@@ -134,9 +135,9 @@ public class TestGlobbedCopyListing {
       actualValues.put(value.getPath().toString(), key.toString());
     }
 
-    Assertions.assertEquals(expectedValues.size(), actualValues.size());
+    assertEquals(expectedValues.size(), actualValues.size());
     for (Map.Entry<String, String> entry : actualValues.entrySet()) {
-      Assertions.assertEquals(entry.getValue(), expectedValues.get(entry.getKey()));
+      assertEquals(entry.getValue(), expectedValues.get(entry.getKey()));
     }
   }
 }

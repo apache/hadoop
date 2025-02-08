@@ -39,7 +39,6 @@ import org.apache.hadoop.tools.DistCpOptionSwitch;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -66,11 +65,12 @@ import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
 import static org.apache.hadoop.fs.permission.FsAction.READ_WRITE;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestDistCpUtils {
   private static final Logger LOG = LoggerFactory.getLogger(TestDistCpUtils.class);
@@ -140,29 +140,29 @@ public class TestDistCpUtils {
   @Test
   public void testUnpackAttributes() {
     EnumSet<FileAttribute> attributes = EnumSet.allOf(FileAttribute.class);
-    Assertions.assertEquals(attributes, DistCpUtils.unpackAttributes("RCBUGPAXTE"));
+    assertEquals(attributes, DistCpUtils.unpackAttributes("RCBUGPAXTE"));
 
     attributes.remove(FileAttribute.REPLICATION);
     attributes.remove(FileAttribute.CHECKSUMTYPE);
     attributes.remove(FileAttribute.ACL);
     attributes.remove(FileAttribute.XATTR);
     attributes.remove(FileAttribute.ERASURECODINGPOLICY);
-    Assertions.assertEquals(attributes, DistCpUtils.unpackAttributes("BUGPT"));
+    assertEquals(attributes, DistCpUtils.unpackAttributes("BUGPT"));
 
     attributes.remove(FileAttribute.TIMES);
-    Assertions.assertEquals(attributes, DistCpUtils.unpackAttributes("BUGP"));
+    assertEquals(attributes, DistCpUtils.unpackAttributes("BUGP"));
 
     attributes.remove(FileAttribute.BLOCKSIZE);
-    Assertions.assertEquals(attributes, DistCpUtils.unpackAttributes("UGP"));
+    assertEquals(attributes, DistCpUtils.unpackAttributes("UGP"));
 
     attributes.remove(FileAttribute.GROUP);
-    Assertions.assertEquals(attributes, DistCpUtils.unpackAttributes("UP"));
+    assertEquals(attributes, DistCpUtils.unpackAttributes("UP"));
 
     attributes.remove(FileAttribute.USER);
-    Assertions.assertEquals(attributes, DistCpUtils.unpackAttributes("P"));
+    assertEquals(attributes, DistCpUtils.unpackAttributes("P"));
 
     attributes.remove(FileAttribute.PERMISSION);
-    Assertions.assertEquals(attributes, DistCpUtils.unpackAttributes(""));
+    assertEquals(attributes, DistCpUtils.unpackAttributes(""));
   }
 
   @Test
@@ -209,18 +209,17 @@ public class TestDistCpUtils {
         destStatus);
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
-    assertEquals(
-       srcStatus.getPermission(), dstStatus.getPermission(), text + "permission");
-    assertEquals(
-       srcStatus.getOwner(), dstStatus.getOwner(), text + "owner");
-    assertEquals(
-       srcStatus.getGroup(), dstStatus.getGroup(), text + "group");
-    assertEquals(
-       srcStatus.getAccessTime(), dstStatus.getAccessTime(), text + "accessTime");
-    assertEquals(
-       srcStatus.getModificationTime(), dstStatus.getModificationTime(), text + "modificationTime");
-    assertEquals(
-       srcStatus.getReplication(), dstStatus.getReplication(), text + "replication");
+    assertEquals(srcStatus.getPermission(), dstStatus.getPermission(),
+        text + "permission");
+    assertEquals(srcStatus.getOwner(), dstStatus.getOwner(),
+        text + "owner");
+    assertEquals(srcStatus.getGroup(), dstStatus.getGroup(), text + "group");
+    assertEquals(srcStatus.getAccessTime(),
+        dstStatus.getAccessTime(), text + "accessTime");
+    assertEquals(srcStatus.getModificationTime(),
+        dstStatus.getModificationTime(), text + "modificationTime");
+    assertEquals(srcStatus.getReplication(),
+        dstStatus.getReplication(), text + "replication");
   }
 
   private void assertStatusNotEqual(final FileSystem fs,
@@ -234,18 +233,15 @@ public class TestDistCpUtils {
         srcStatus, destStatus);
     // FileStatus.equals only compares path field,
     // must explicitly compare all fields
-    assertNotEquals(
-       srcStatus.getPermission(), dstStatus.getPermission(), text + "permission");
-    assertNotEquals(
-       srcStatus.getOwner(), dstStatus.getOwner(), text + "owner");
-    assertNotEquals(
-       srcStatus.getGroup(), dstStatus.getGroup(), text + "group");
-    assertNotEquals(
-       srcStatus.getAccessTime(), dstStatus.getAccessTime(), text + "accessTime");
-    assertNotEquals(
-       srcStatus.getModificationTime(), dstStatus.getModificationTime(), text + "modificationTime");
-    assertNotEquals(
-       srcStatus.getReplication(), dstStatus.getReplication(), text + "replication");
+    assertNotEquals(srcStatus.getPermission(), dstStatus.getPermission(),
+        text + "permission");
+    assertNotEquals(srcStatus.getOwner(), dstStatus.getOwner(), text + "owner");
+    assertNotEquals(srcStatus.getGroup(), dstStatus.getGroup(), text + "group");
+    assertNotEquals(srcStatus.getAccessTime(), dstStatus.getAccessTime(),
+        text + "accessTime");
+    assertNotEquals(srcStatus.getModificationTime(),
+        dstStatus.getModificationTime(), text + "modificationTime");
+    assertNotEquals(srcStatus.getReplication(), dstStatus.getReplication(), text + "replication");
   }
 
 
@@ -325,7 +321,7 @@ public class TestDistCpUtils {
     List<AclEntry> en1 = fs.getAclStatus(src).getEntries();
     List<AclEntry> dd2 = fs.getAclStatus(dest).getEntries();
 
-    Assertions.assertNotEquals(en1, dd2);
+    assertNotEquals(en1, dd2);
 
     CopyListingFileStatus srcStatus = new CopyListingFileStatus(
         fs.getFileStatus(src));
@@ -344,7 +340,7 @@ public class TestDistCpUtils {
     // fields
     assertStatusEqual(fs, dest, srcStatus);
 
-    Assertions.assertArrayEquals(en1.toArray(), dd2.toArray());
+    assertArrayEquals(en1.toArray(), dd2.toArray());
   }
 
   @Test
@@ -373,12 +369,12 @@ public class TestDistCpUtils {
     CopyListingFileStatus dstStatus = new CopyListingFileStatus(fs.getFileStatus(dst));
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
-    Assertions.assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
-    Assertions.assertTrue(dstStatus.getAccessTime() == 100);
-    Assertions.assertTrue(dstStatus.getModificationTime() == 100);
-    Assertions.assertTrue(dstStatus.getReplication() == 0);
+    assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
+    assertTrue(dstStatus.getAccessTime() == 100);
+    assertTrue(dstStatus.getModificationTime() == 100);
+    assertTrue(dstStatus.getReplication() == 0);
   }
 
   @Test
@@ -405,9 +401,9 @@ public class TestDistCpUtils {
     CopyListingFileStatus dstStatus = new CopyListingFileStatus(fs.getFileStatus(dst));
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
-    Assertions.assertTrue(srcStatus.getPermission().equals(dstStatus.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
+    assertTrue(srcStatus.getPermission().equals(dstStatus.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
   }
 
   @Test
@@ -434,9 +430,9 @@ public class TestDistCpUtils {
     CopyListingFileStatus dstStatus = new CopyListingFileStatus(fs.getFileStatus(dst));
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
-    Assertions.assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
-    Assertions.assertTrue(srcStatus.getGroup().equals(dstStatus.getGroup()));
+    assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
+    assertTrue(srcStatus.getGroup().equals(dstStatus.getGroup()));
   }
 
   @Test
@@ -463,9 +459,9 @@ public class TestDistCpUtils {
     CopyListingFileStatus dstStatus = new CopyListingFileStatus(fs.getFileStatus(dst));
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
-    Assertions.assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
-    Assertions.assertTrue(srcStatus.getOwner().equals(dstStatus.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
+    assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
+    assertTrue(srcStatus.getOwner().equals(dstStatus.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
   }
 
   @Test
@@ -494,11 +490,11 @@ public class TestDistCpUtils {
     CopyListingFileStatus dstStatus = new CopyListingFileStatus(fs.getFileStatus(dst));
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
-    Assertions.assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
+    assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
     // Replication shouldn't apply to dirs so this should still be 0 == 0
-    Assertions.assertTrue(srcStatus.getReplication() == dstStatus.getReplication());
+    assertTrue(srcStatus.getReplication() == dstStatus.getReplication());
   }
 
   @Test
@@ -527,11 +523,11 @@ public class TestDistCpUtils {
     CopyListingFileStatus dstStatus = new CopyListingFileStatus(fs.getFileStatus(dst));
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
-    Assertions.assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
-    Assertions.assertTrue(srcStatus.getAccessTime() == dstStatus.getAccessTime());
-    Assertions.assertTrue(srcStatus.getModificationTime() == dstStatus.getModificationTime());
+    assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
+    assertTrue(srcStatus.getAccessTime() == dstStatus.getAccessTime());
+    assertTrue(srcStatus.getModificationTime() == dstStatus.getModificationTime());
   }
 
   @Test
@@ -593,12 +589,12 @@ public class TestDistCpUtils {
     CopyListingFileStatus dstStatus = new CopyListingFileStatus(fs.getFileStatus(dst));
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
-    Assertions.assertTrue(srcStatus.getPermission().equals(dstStatus.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == dstStatus.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == dstStatus.getModificationTime());
-    Assertions.assertFalse(srcStatus.getReplication() == dstStatus.getReplication());
+    assertTrue(srcStatus.getPermission().equals(dstStatus.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == dstStatus.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == dstStatus.getModificationTime());
+    assertFalse(srcStatus.getReplication() == dstStatus.getReplication());
   }
 
   @Test
@@ -629,12 +625,12 @@ public class TestDistCpUtils {
     CopyListingFileStatus dstStatus = new CopyListingFileStatus(fs.getFileStatus(dst));
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
-    Assertions.assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
-    Assertions.assertTrue(srcStatus.getGroup().equals(dstStatus.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == dstStatus.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == dstStatus.getModificationTime());
-    Assertions.assertFalse(srcStatus.getReplication() == dstStatus.getReplication());
+    assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
+    assertTrue(srcStatus.getGroup().equals(dstStatus.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == dstStatus.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == dstStatus.getModificationTime());
+    assertFalse(srcStatus.getReplication() == dstStatus.getReplication());
   }
 
   @Test
@@ -665,12 +661,12 @@ public class TestDistCpUtils {
     CopyListingFileStatus dstStatus = new CopyListingFileStatus(fs.getFileStatus(dst));
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
-    Assertions.assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
-    Assertions.assertTrue(srcStatus.getOwner().equals(dstStatus.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == dstStatus.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == dstStatus.getModificationTime());
-    Assertions.assertFalse(srcStatus.getReplication() == dstStatus.getReplication());
+    assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
+    assertTrue(srcStatus.getOwner().equals(dstStatus.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == dstStatus.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == dstStatus.getModificationTime());
+    assertFalse(srcStatus.getReplication() == dstStatus.getReplication());
   }
 
   @Test
@@ -701,12 +697,12 @@ public class TestDistCpUtils {
     CopyListingFileStatus dstStatus = new CopyListingFileStatus(fs.getFileStatus(dst));
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
-    Assertions.assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == dstStatus.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == dstStatus.getModificationTime());
-    Assertions.assertTrue(srcStatus.getReplication() == dstStatus.getReplication());
+    assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == dstStatus.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == dstStatus.getModificationTime());
+    assertTrue(srcStatus.getReplication() == dstStatus.getReplication());
   }
 
   @Test
@@ -758,27 +754,24 @@ public class TestDistCpUtils {
     CopyListingFileStatus srcStatus = new CopyListingFileStatus(
         fs.getFileStatus(srcFile));
     if (isSrcEC) {
-      assertTrue(
-         srcStatus.isErasureCoded(), srcFile + "should be erasure coded!");
+      assertTrue(srcStatus.isErasureCoded(), srcFile + "should be erasure coded!");
       assertEquals(INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS,
           srcStatus.getReplication());
     } else {
-      assertEquals(
-         fs.getDefaultReplication(srcFile), srcStatus.getReplication(), "Unexpected replication factor for " + srcFile);
+      assertEquals(fs.getDefaultReplication(srcFile), srcStatus.getReplication(),
+          "Unexpected replication factor for " + srcFile);
     }
 
     createFile(fs, dstFile);
     CopyListingFileStatus dstStatus = new CopyListingFileStatus(
         fs.getFileStatus(dstFile));
     if (isDstEC) {
-      assertTrue(
-         dstStatus.isErasureCoded(), dstFile + "should be erasure coded!");
-      assertEquals(
-         INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS
-,           dstStatus.getReplication(), "Unexpected replication factor for erasure coded file!");
+      assertTrue(dstStatus.isErasureCoded(), dstFile + "should be erasure coded!");
+      assertEquals(INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS,
+          dstStatus.getReplication(), "Unexpected replication factor for erasure coded file!");
     } else {
-      assertEquals(
-         fs.getDefaultReplication(dstFile), dstStatus.getReplication(), "Unexpected replication factor for " + dstFile);
+      assertEquals(fs.getDefaultReplication(dstFile), dstStatus.getReplication(),
+          "Unexpected replication factor for " + dstFile);
     }
 
     // Let srcFile and dstFile differ on their FileAttribute
@@ -796,28 +789,27 @@ public class TestDistCpUtils {
     DistCpUtils.preserve(fs, dstFile, srcStatus, attributes, false);
     dstStatus = new CopyListingFileStatus(fs.getFileStatus(dstFile));
 
-    assertFalse(
-       srcStatus.getPermission().equals(dstStatus.getPermission()), "Permission for " + srcFile + " and " + dstFile +
-            " should not be same after preserve only for replication attr!");
-    assertFalse(
-       srcStatus.getOwner().equals(dstStatus.getOwner()), "File ownership should not match!");
+    assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()),
+        "Permission for " + srcFile + " and " + dstFile +
+        " should not be same after preserve only for replication attr!");
+    assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()),
+        "File ownership should not match!");
     assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
     assertFalse(srcStatus.getAccessTime() == dstStatus.getAccessTime());
     assertFalse(
         srcStatus.getModificationTime() == dstStatus.getModificationTime());
     if (isDstEC) {
-      assertEquals(
-         INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS
-,           dstStatus.getReplication(), "Unexpected replication factor for erasure coded file!");
+      assertEquals(INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS,
+          dstStatus.getReplication(), "Unexpected replication factor for erasure coded file!");
     } else {
-      assertEquals(fs.getDefaultReplication(dstFile)
-,           dstStatus.getReplication(), dstFile + " replication factor should be same as dst " +
-              "filesystem!");
+      assertEquals(fs.getDefaultReplication(dstFile),
+          dstStatus.getReplication(), dstFile + " replication factor should be same as dst " +
+          "filesystem!");
     }
     if (!isSrcEC || !isDstEC) {
-      assertFalse(
-         srcStatus.getReplication() == dstStatus.getReplication(), dstFile + " replication factor should not be " +
-              "same as " + srcFile);
+      assertFalse(srcStatus.getReplication() == dstStatus.getReplication(),
+          dstFile + " replication factor should not be " +
+          "same as " + srcFile);
     }
   }
 
@@ -849,12 +841,12 @@ public class TestDistCpUtils {
     CopyListingFileStatus dstStatus = new CopyListingFileStatus(fs.getFileStatus(dst));
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
-    Assertions.assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
-    Assertions.assertTrue(srcStatus.getAccessTime() == dstStatus.getAccessTime());
-    Assertions.assertTrue(srcStatus.getModificationTime() == dstStatus.getModificationTime());
-    Assertions.assertFalse(srcStatus.getReplication() == dstStatus.getReplication());
+    assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
+    assertTrue(srcStatus.getAccessTime() == dstStatus.getAccessTime());
+    assertTrue(srcStatus.getModificationTime() == dstStatus.getModificationTime());
+    assertFalse(srcStatus.getReplication() == dstStatus.getReplication());
   }
 
   @Test
@@ -918,39 +910,39 @@ public class TestDistCpUtils {
 
     // attributes of src -> f1 ? should be no
     CopyListingFileStatus f1Status = new CopyListingFileStatus(fs.getFileStatus(f1));
-    Assertions.assertFalse(srcStatus.getPermission().equals(f1Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(f1Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(f1Status.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == f1Status.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == f1Status.getModificationTime());
-    Assertions.assertFalse(srcStatus.getReplication() == f1Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(f1Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(f1Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(f1Status.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == f1Status.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == f1Status.getModificationTime());
+    assertFalse(srcStatus.getReplication() == f1Status.getReplication());
 
     // attributes of src -> f0 ? should be no
     CopyListingFileStatus f0Status = new CopyListingFileStatus(fs.getFileStatus(f0));
-    Assertions.assertFalse(srcStatus.getPermission().equals(f0Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(f0Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(f0Status.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == f0Status.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == f0Status.getModificationTime());
-    Assertions.assertFalse(srcStatus.getReplication() == f0Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(f0Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(f0Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(f0Status.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == f0Status.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == f0Status.getModificationTime());
+    assertFalse(srcStatus.getReplication() == f0Status.getReplication());
 
     // attributes of src -> d2 ? should be no
     CopyListingFileStatus d2Status = new CopyListingFileStatus(fs.getFileStatus(d2));
-    Assertions.assertFalse(srcStatus.getPermission().equals(d2Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(d2Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(d2Status.getGroup()));
-    Assertions.assertTrue(d2Status.getAccessTime() == 300);
-    Assertions.assertTrue(d2Status.getModificationTime() == 300);
-    Assertions.assertFalse(srcStatus.getReplication() == d2Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(d2Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(d2Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(d2Status.getGroup()));
+    assertTrue(d2Status.getAccessTime() == 300);
+    assertTrue(d2Status.getModificationTime() == 300);
+    assertFalse(srcStatus.getReplication() == d2Status.getReplication());
 
     // attributes of src -> d1 ? should be no
     CopyListingFileStatus d1Status = new CopyListingFileStatus(fs.getFileStatus(d1));
-    Assertions.assertFalse(srcStatus.getPermission().equals(d1Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(d1Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(d1Status.getGroup()));
-    Assertions.assertTrue(d1Status.getAccessTime() == 400);
-    Assertions.assertTrue(d1Status.getModificationTime() == 400);
-    Assertions.assertFalse(srcStatus.getReplication() == d1Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(d1Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(d1Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(d1Status.getGroup()));
+    assertTrue(d1Status.getAccessTime() == 400);
+    assertTrue(d1Status.getModificationTime() == 400);
+    assertFalse(srcStatus.getReplication() == d1Status.getReplication());
   }
 
   @Test
@@ -1012,48 +1004,48 @@ public class TestDistCpUtils {
     // FileStatus.equals only compares path field, must explicitly compare all fields
     // attributes of src -> d2 ? should be yes
     CopyListingFileStatus d2Status = new CopyListingFileStatus(fs.getFileStatus(d2));
-    Assertions.assertTrue(srcStatus.getPermission().equals(d2Status.getPermission()));
-    Assertions.assertTrue(srcStatus.getOwner().equals(d2Status.getOwner()));
-    Assertions.assertTrue(srcStatus.getGroup().equals(d2Status.getGroup()));
-    Assertions.assertTrue(srcStatus.getAccessTime() == d2Status.getAccessTime());
-    Assertions.assertTrue(srcStatus.getModificationTime() == d2Status.getModificationTime());
-    Assertions.assertTrue(srcStatus.getReplication() != d2Status.getReplication());
+    assertTrue(srcStatus.getPermission().equals(d2Status.getPermission()));
+    assertTrue(srcStatus.getOwner().equals(d2Status.getOwner()));
+    assertTrue(srcStatus.getGroup().equals(d2Status.getGroup()));
+    assertTrue(srcStatus.getAccessTime() == d2Status.getAccessTime());
+    assertTrue(srcStatus.getModificationTime() == d2Status.getModificationTime());
+    assertTrue(srcStatus.getReplication() != d2Status.getReplication());
 
     // attributes of src -> d1 ? should be no
     CopyListingFileStatus d1Status = new CopyListingFileStatus(fs.getFileStatus(d1));
-    Assertions.assertFalse(srcStatus.getPermission().equals(d1Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(d1Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(d1Status.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == d1Status.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == d1Status.getModificationTime());
-    Assertions.assertTrue(srcStatus.getReplication() != d1Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(d1Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(d1Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(d1Status.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == d1Status.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == d1Status.getModificationTime());
+    assertTrue(srcStatus.getReplication() != d1Status.getReplication());
 
     // attributes of src -> f2 ? should be no
     CopyListingFileStatus f2Status = new CopyListingFileStatus(fs.getFileStatus(f2));
-    Assertions.assertFalse(srcStatus.getPermission().equals(f2Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(f2Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(f2Status.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == f2Status.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == f2Status.getModificationTime());
-    Assertions.assertFalse(srcStatus.getReplication() == f2Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(f2Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(f2Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(f2Status.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == f2Status.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == f2Status.getModificationTime());
+    assertFalse(srcStatus.getReplication() == f2Status.getReplication());
 
     // attributes of src -> f1 ? should be no
     CopyListingFileStatus f1Status = new CopyListingFileStatus(fs.getFileStatus(f1));
-    Assertions.assertFalse(srcStatus.getPermission().equals(f1Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(f1Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(f1Status.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == f1Status.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == f1Status.getModificationTime());
-    Assertions.assertFalse(srcStatus.getReplication() == f1Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(f1Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(f1Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(f1Status.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == f1Status.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == f1Status.getModificationTime());
+    assertFalse(srcStatus.getReplication() == f1Status.getReplication());
 
     // attributes of src -> f0 ? should be no
     CopyListingFileStatus f0Status = new CopyListingFileStatus(fs.getFileStatus(f0));
-    Assertions.assertFalse(srcStatus.getPermission().equals(f0Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(f0Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(f0Status.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == f0Status.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == f0Status.getModificationTime());
-    Assertions.assertFalse(srcStatus.getReplication() == f0Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(f0Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(f0Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(f0Status.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == f0Status.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == f0Status.getModificationTime());
+    assertFalse(srcStatus.getReplication() == f0Status.getReplication());
   }
 
   @Test
@@ -1117,39 +1109,39 @@ public class TestDistCpUtils {
 
     // attributes of src -> f1 ? should be no
     CopyListingFileStatus f1Status = new CopyListingFileStatus(fs.getFileStatus(f1));
-    Assertions.assertFalse(srcStatus.getPermission().equals(f1Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(f1Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(f1Status.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == f1Status.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == f1Status.getModificationTime());
-    Assertions.assertFalse(srcStatus.getReplication() == f1Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(f1Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(f1Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(f1Status.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == f1Status.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == f1Status.getModificationTime());
+    assertFalse(srcStatus.getReplication() == f1Status.getReplication());
 
     // attributes of src -> f2 ? should be no
     CopyListingFileStatus f2Status = new CopyListingFileStatus(fs.getFileStatus(f2));
-    Assertions.assertFalse(srcStatus.getPermission().equals(f2Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(f2Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(f2Status.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == f2Status.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == f2Status.getModificationTime());
-    Assertions.assertFalse(srcStatus.getReplication() == f2Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(f2Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(f2Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(f2Status.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == f2Status.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == f2Status.getModificationTime());
+    assertFalse(srcStatus.getReplication() == f2Status.getReplication());
 
     // attributes of src -> d1 ? should be no
     CopyListingFileStatus d1Status = new CopyListingFileStatus(fs.getFileStatus(d1));
-    Assertions.assertFalse(srcStatus.getPermission().equals(d1Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(d1Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(d1Status.getGroup()));
-    Assertions.assertTrue(d1Status.getAccessTime() == 400);
-    Assertions.assertTrue(d1Status.getModificationTime() == 400);
-    Assertions.assertFalse(srcStatus.getReplication() == d1Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(d1Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(d1Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(d1Status.getGroup()));
+    assertTrue(d1Status.getAccessTime() == 400);
+    assertTrue(d1Status.getModificationTime() == 400);
+    assertFalse(srcStatus.getReplication() == d1Status.getReplication());
 
     // attributes of src -> d2 ? should be no
     CopyListingFileStatus d2Status = new CopyListingFileStatus(fs.getFileStatus(d2));
-    Assertions.assertFalse(srcStatus.getPermission().equals(d2Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(d2Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(d2Status.getGroup()));
-    Assertions.assertTrue(d2Status.getAccessTime() == 300);
-    Assertions.assertTrue(d2Status.getModificationTime() == 300);
-    Assertions.assertFalse(srcStatus.getReplication() == d2Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(d2Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(d2Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(d2Status.getGroup()));
+    assertTrue(d2Status.getAccessTime() == 300);
+    assertTrue(d2Status.getModificationTime() == 300);
+    assertFalse(srcStatus.getReplication() == d2Status.getReplication());
   }
 
   @Test
@@ -1216,57 +1208,57 @@ public class TestDistCpUtils {
     // FileStatus.equals only compares path field, must explicitly compare all fields
     // attributes of src -> root ? should be yes
     CopyListingFileStatus rootStatus = new CopyListingFileStatus(fs.getFileStatus(root));
-    Assertions.assertTrue(srcStatus.getPermission().equals(rootStatus.getPermission()));
-    Assertions.assertTrue(srcStatus.getOwner().equals(rootStatus.getOwner()));
-    Assertions.assertTrue(srcStatus.getGroup().equals(rootStatus.getGroup()));
-    Assertions.assertTrue(srcStatus.getAccessTime() == rootStatus.getAccessTime());
-    Assertions.assertTrue(srcStatus.getModificationTime() == rootStatus.getModificationTime());
-    Assertions.assertTrue(srcStatus.getReplication() != rootStatus.getReplication());
+    assertTrue(srcStatus.getPermission().equals(rootStatus.getPermission()));
+    assertTrue(srcStatus.getOwner().equals(rootStatus.getOwner()));
+    assertTrue(srcStatus.getGroup().equals(rootStatus.getGroup()));
+    assertTrue(srcStatus.getAccessTime() == rootStatus.getAccessTime());
+    assertTrue(srcStatus.getModificationTime() == rootStatus.getModificationTime());
+    assertTrue(srcStatus.getReplication() != rootStatus.getReplication());
 
     // attributes of src -> d1 ? should be no
     CopyListingFileStatus d1Status = new CopyListingFileStatus(fs.getFileStatus(d1));
-    Assertions.assertFalse(srcStatus.getPermission().equals(d1Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(d1Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(d1Status.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == d1Status.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == d1Status.getModificationTime());
-    Assertions.assertTrue(srcStatus.getReplication() != d1Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(d1Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(d1Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(d1Status.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == d1Status.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == d1Status.getModificationTime());
+    assertTrue(srcStatus.getReplication() != d1Status.getReplication());
 
     // attributes of src -> d2 ? should be no
     CopyListingFileStatus d2Status = new CopyListingFileStatus(fs.getFileStatus(d2));
-    Assertions.assertFalse(srcStatus.getPermission().equals(d2Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(d2Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(d2Status.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == d2Status.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == d2Status.getModificationTime());
-    Assertions.assertTrue(srcStatus.getReplication() != d2Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(d2Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(d2Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(d2Status.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == d2Status.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == d2Status.getModificationTime());
+    assertTrue(srcStatus.getReplication() != d2Status.getReplication());
 
     // attributes of src -> f0 ? should be no
     CopyListingFileStatus f0Status = new CopyListingFileStatus(fs.getFileStatus(f0));
-    Assertions.assertFalse(srcStatus.getPermission().equals(f0Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(f0Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(f0Status.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == f0Status.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == f0Status.getModificationTime());
-    Assertions.assertFalse(srcStatus.getReplication() == f0Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(f0Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(f0Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(f0Status.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == f0Status.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == f0Status.getModificationTime());
+    assertFalse(srcStatus.getReplication() == f0Status.getReplication());
 
     // attributes of src -> f1 ? should be no
     CopyListingFileStatus f1Status = new CopyListingFileStatus(fs.getFileStatus(f1));
-    Assertions.assertFalse(srcStatus.getPermission().equals(f1Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(f1Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(f1Status.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == f1Status.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == f1Status.getModificationTime());
-    Assertions.assertFalse(srcStatus.getReplication() == f1Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(f1Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(f1Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(f1Status.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == f1Status.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == f1Status.getModificationTime());
+    assertFalse(srcStatus.getReplication() == f1Status.getReplication());
 
     // attributes of src -> f2 ? should be no
     CopyListingFileStatus f2Status = new CopyListingFileStatus(fs.getFileStatus(f2));
-    Assertions.assertFalse(srcStatus.getPermission().equals(f2Status.getPermission()));
-    Assertions.assertFalse(srcStatus.getOwner().equals(f2Status.getOwner()));
-    Assertions.assertFalse(srcStatus.getGroup().equals(f2Status.getGroup()));
-    Assertions.assertFalse(srcStatus.getAccessTime() == f2Status.getAccessTime());
-    Assertions.assertFalse(srcStatus.getModificationTime() == f2Status.getModificationTime());
-    Assertions.assertFalse(srcStatus.getReplication() == f2Status.getReplication());
+    assertFalse(srcStatus.getPermission().equals(f2Status.getPermission()));
+    assertFalse(srcStatus.getOwner().equals(f2Status.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(f2Status.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == f2Status.getAccessTime());
+    assertFalse(srcStatus.getModificationTime() == f2Status.getModificationTime());
+    assertFalse(srcStatus.getReplication() == f2Status.getReplication());
   }
 
   @Test

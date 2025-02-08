@@ -21,11 +21,13 @@ package org.apache.hadoop.tools.util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.jupiter.api.Assertions;
-import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 import java.io.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestThrottledInputStream {
   private static final Logger LOG = LoggerFactory.getLogger(TestThrottledInputStream.class);
@@ -100,9 +102,9 @@ public class TestThrottledInputStream {
         which magnifies the error of getBytesPerSec()
       */
       bandwidth = in.getBytesPerSec();
-      Assertions.assertEquals(in.getTotalBytesRead(), tmpFile.length());
-      Assertions.assertTrue(bandwidth > maxBandwidth / (factor * 1.2));
-      Assertions.assertTrue(in.getTotalSleepTime() >  sleepTime || bandwidth <= maxBPS);
+      assertEquals(in.getTotalBytesRead(), tmpFile.length());
+      assertTrue(bandwidth > maxBandwidth / (factor * 1.2));
+      assertTrue(in.getTotalSleepTime() >  sleepTime || bandwidth <= maxBPS);
     } finally {
       IOUtils.closeStream(in);
       IOUtils.closeStream(out);
@@ -211,10 +213,10 @@ public class TestThrottledInputStream {
     try {
       copyBytes(in, out, BUFF_SIZE);
       LOG.info("{}", in);
-      Assertions.assertEquals(in.getTotalBytesRead(), tmpFile.length());
+      assertEquals(in.getTotalBytesRead(), tmpFile.length());
 
       long bytesPerSec = in.getBytesPerSec();
-      Assertions.assertTrue(bytesPerSec < maxBPS);
+      assertTrue(bytesPerSec < maxBPS);
     } finally {
       IOUtils.closeStream(in);
       IOUtils.closeStream(out);
