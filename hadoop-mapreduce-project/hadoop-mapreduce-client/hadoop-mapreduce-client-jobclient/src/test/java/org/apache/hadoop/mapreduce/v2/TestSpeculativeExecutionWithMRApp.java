@@ -29,7 +29,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.app.speculate.LegacyTaskRuntimeEstimator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.SimpleExponentialTaskRuntimeEstimator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.TaskRuntimeEstimator;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -48,8 +48,9 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -91,7 +92,7 @@ public class TestSpeculativeExecutionWithMRApp {
     this.controlledClk = new ControlledClock();
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     this.controlledClk.setTime(System.currentTimeMillis());
   }
@@ -101,7 +102,8 @@ public class TestSpeculativeExecutionWithMRApp {
    *
    * @throws Exception the exception
    */
-  @Test (timeout = 360000)
+  @Test
+  @Timeout(value = 360)
   public void testSpeculateSuccessfulWithoutUpdateEvents() throws Exception {
     MRApp app =
         new MRApp(NUM_MAPPERS, NUM_REDUCERS, false, "test", true,
@@ -110,8 +112,8 @@ public class TestSpeculativeExecutionWithMRApp {
     app.waitForState(job, JobState.RUNNING);
 
     Map<TaskId, Task> tasks = job.getTasks();
-    Assert.assertEquals("Num tasks is not correct", NUM_MAPPERS + NUM_REDUCERS,
-      tasks.size());
+    Assertions.assertEquals(NUM_MAPPERS + NUM_REDUCERS
+,       tasks.size(), "Num tasks is not correct");
     Iterator<Task> taskIter = tasks.values().iterator();
     while (taskIter.hasNext()) {
       app.waitForState(taskIter.next(), TaskState.RUNNING);
@@ -161,7 +163,8 @@ public class TestSpeculativeExecutionWithMRApp {
    *
    * @throws Exception the exception
    */
-  @Test (timeout = 360000)
+  @Test
+  @Timeout(value = 360)
   public void testSpeculateSuccessfulWithUpdateEvents() throws Exception {
     MRApp app =
         new MRApp(NUM_MAPPERS, NUM_REDUCERS, false, "test", true,
@@ -170,8 +173,8 @@ public class TestSpeculativeExecutionWithMRApp {
     app.waitForState(job, JobState.RUNNING);
 
     Map<TaskId, Task> tasks = job.getTasks();
-    Assert.assertEquals("Num tasks is not correct", NUM_MAPPERS + NUM_REDUCERS,
-      tasks.size());
+    Assertions.assertEquals(NUM_MAPPERS + NUM_REDUCERS
+,       tasks.size(), "Num tasks is not correct");
     Iterator<Task> taskIter = tasks.values().iterator();
     while (taskIter.hasNext()) {
       app.waitForState(taskIter.next(), TaskState.RUNNING);

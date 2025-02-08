@@ -22,16 +22,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobConfigurable;
 
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for the JobConf-related parts of common's ReflectionUtils
  * class.
  */
 public class TestMRCJCReflectionUtils {
-  @Before
+  @BeforeEach
   public void setUp() {
     ReflectionUtils.clearCache();
   }

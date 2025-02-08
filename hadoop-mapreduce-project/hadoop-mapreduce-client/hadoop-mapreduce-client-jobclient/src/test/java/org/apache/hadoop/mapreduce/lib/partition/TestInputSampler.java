@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.lib.partition;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -36,7 +36,8 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestInputSampler {
 
@@ -208,7 +209,8 @@ public class TestInputSampler {
    * Verify SplitSampler contract in mapred.lib.InputSampler, which is added
    * back for binary compatibility of M/R 1.x
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   @SuppressWarnings("unchecked") // IntWritable comparator not typesafe
   public void testMapredSplitSampler() throws Exception {
     final int TOT_SPLITS = 15;
@@ -266,7 +268,8 @@ public class TestInputSampler {
    * Verify IntervalSampler in mapred.lib.InputSampler, which is added back
    * for binary compatibility of M/R 1.x
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   @SuppressWarnings("unchecked") // IntWritable comparator not typesafe
   public void testMapredIntervalSampler() throws Exception {
     final int TOT_SPLITS = 16;

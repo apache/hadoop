@@ -30,8 +30,8 @@ import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.junit.Ignore;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Ignore
 public class TestNoJobSetupCleanup extends HadoopTestCase {
@@ -58,7 +58,7 @@ public class TestNoJobSetupCleanup extends HadoopTestCase {
     assertTrue(job.getTaskReports(TaskType.MAP).length == numMaps);
     assertTrue(job.getTaskReports(TaskType.REDUCE).length == numReds);
     FileSystem fs = FileSystem.get(conf);
-    assertTrue("Job output directory doesn't exit!", fs.exists(outDir));
+    assertTrue(fs.exists(outDir), "Job output directory doesn't exit!");
 
     // job commit done only in cleanup 
     // therefore output should still be in temp location
@@ -67,8 +67,8 @@ public class TestNoJobSetupCleanup extends HadoopTestCase {
     Path tempWorkingPath = new Path(tempWorkingPathStr);
     FileStatus[] list = fs.listStatus(tempWorkingPath, new OutputFilter());
     int numPartFiles = numReds == 0 ? numMaps : numReds;
-    assertTrue("Number of part-files is " + list.length + " and not "
-        + numPartFiles, list.length == numPartFiles);
+    assertTrue(list.length == numPartFiles, "Number of part-files is " + list.length + " and not "
+        + numPartFiles);
     return job;
   }
 

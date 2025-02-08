@@ -57,11 +57,11 @@ import org.apache.hadoop.mapreduce.v2.app.speculate.ExponentiallySmoothedTaskRun
 import org.apache.hadoop.mapreduce.v2.app.speculate.LegacyTaskRuntimeEstimator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.SimpleExponentialTaskRuntimeEstimator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.TaskRuntimeEstimator;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
@@ -175,7 +175,7 @@ public class TestSpeculativeExecOnCluster {
 
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
 
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
@@ -203,7 +203,7 @@ public class TestSpeculativeExecOnCluster {
     chosenSleepCalc = MAP_SLEEP_CALCULATOR_TYPE_DEFAULT;
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (mrCluster != null) {
       mrCluster.stop();
@@ -242,7 +242,7 @@ public class TestSpeculativeExecOnCluster {
       extends InputFormat<IntWritable, IntWritable> {
 
     public List<InputSplit> getSplits(JobContext jobContext) {
-      List<InputSplit> ret = new ArrayList<InputSplit>();
+      List<InputSplit> ret = new ArrayList<>();
       int numSplits = jobContext.getConfiguration().
           getInt(MRJobConfig.NUM_MAPS, 1);
       for (int i = 0; i < numSplits; ++i) {
@@ -641,21 +641,20 @@ public class TestSpeculativeExecOnCluster {
       Job job = runSpecTest();
 
       boolean succeeded = job.waitForCompletion(true);
-      Assert.assertTrue(
-          "Job expected to succeed with estimator " + estimatorClass.getName(),
-          succeeded);
-      Assert.assertEquals(
-          "Job expected to succeed with estimator " + estimatorClass.getName(),
-          JobStatus.State.SUCCEEDED, job.getJobState());
+      Assertions.assertTrue(
+      
+         succeeded, "Job expected to succeed with estimator " + estimatorClass.getName());
+      Assertions.assertEquals(
+      
+         JobStatus.State.SUCCEEDED, job.getJobState(), "Job expected to succeed with estimator " + estimatorClass.getName());
       Counters counters = job.getCounters();
 
       String errorMessage = specEstimator.getErrorMessage(counters);
       boolean didSpeculate = specEstimator.didSpeculate(counters);
-      Assert.assertEquals(errorMessage, didSpeculate,
-          specEstimator.speculativeEstimator);
-      Assert
-          .assertEquals("Failed maps higher than 0 " + estimatorClass.getName(),
-              0, counters.findCounter(JobCounter.NUM_FAILED_MAPS).getValue());
+      Assertions.assertEquals(didSpeculate,
+          specEstimator.speculativeEstimator, errorMessage);
+      Assertions.assertEquals(
+             0, counters.findCounter(JobCounter.NUM_FAILED_MAPS).getValue(), "Failed maps higher than 0 " + estimatorClass.getName());
     }
   }
 
@@ -702,21 +701,20 @@ public class TestSpeculativeExecOnCluster {
       Job job = runSpecTest();
 
       boolean succeeded = job.waitForCompletion(true);
-      Assert.assertTrue(
-          "Job expected to succeed with estimator " + estimatorClass.getName(),
-          succeeded);
-      Assert.assertEquals(
-          "Job expected to succeed with estimator " + estimatorClass.getName(),
-          JobStatus.State.SUCCEEDED, job.getJobState());
+      Assertions.assertTrue(
+      
+         succeeded, "Job expected to succeed with estimator " + estimatorClass.getName());
+      Assertions.assertEquals(
+      
+         JobStatus.State.SUCCEEDED, job.getJobState(), "Job expected to succeed with estimator " + estimatorClass.getName());
       Counters counters = job.getCounters();
 
       String errorMessage = specEstimator.getErrorMessage(counters);
       boolean didSpeculate = specEstimator.didSpeculate(counters);
-      Assert.assertEquals(errorMessage, didSpeculate,
-          specEstimator.speculativeEstimator);
-      Assert
-          .assertEquals("Failed maps higher than 0 " + estimatorClass.getName(),
-              0, counters.findCounter(JobCounter.NUM_FAILED_MAPS).getValue());
+      Assertions.assertEquals(didSpeculate,
+          specEstimator.speculativeEstimator, errorMessage);
+      Assertions.assertEquals(
+          0, counters.findCounter(JobCounter.NUM_FAILED_MAPS).getValue(), "Failed maps higher than 0 " + estimatorClass.getName());
     }
   }
 
@@ -758,21 +756,21 @@ public class TestSpeculativeExecOnCluster {
       Job job = runSpecTest();
 
       boolean succeeded = job.waitForCompletion(true);
-      Assert.assertTrue("Job expected to succeed with estimator "
-          + estimatorClass.getName(), succeeded);
-      Assert.assertEquals("Job expected to succeed with estimator "
-              + estimatorClass.getName(), JobStatus.State.SUCCEEDED,
-          job.getJobState());
+      Assertions.assertTrue(succeeded, "Job expected to succeed with estimator "
+          + estimatorClass.getName());
+      Assertions.assertEquals(JobStatus.State.SUCCEEDED
+,           job.getJobState(), "Job expected to succeed with estimator "
+              + estimatorClass.getName());
       Counters counters = job.getCounters();
 
       String errorMessage = specEstimator.getErrorMessage(counters);
       boolean didSpeculate = specEstimator.didSpeculate(counters);
-      Assert.assertEquals(errorMessage, didSpeculate,
-          specEstimator.speculativeEstimator);
-      Assert.assertEquals("Failed maps higher than 0 "
-              + estimatorClass.getName(), 0,
-          counters.findCounter(JobCounter.NUM_FAILED_MAPS)
-              .getValue());
+      Assertions.assertEquals(didSpeculate,
+          specEstimator.speculativeEstimator, errorMessage);
+      Assertions.assertEquals(0
+,           counters.findCounter(JobCounter.NUM_FAILED_MAPS)
+              .getValue(), "Failed maps higher than 0 "
+              + estimatorClass.getName());
     }
   }
 
@@ -815,21 +813,21 @@ public class TestSpeculativeExecOnCluster {
       Job job = runSpecTest();
 
       boolean succeeded = job.waitForCompletion(true);
-      Assert.assertTrue("Job expected to succeed with estimator "
-          + estimatorClass.getName(), succeeded);
-      Assert.assertEquals("Job expected to succeed with estimator "
-              + estimatorClass.getName(), JobStatus.State.SUCCEEDED,
-          job.getJobState());
+      Assertions.assertTrue(succeeded, "Job expected to succeed with estimator "
+          + estimatorClass.getName());
+      Assertions.assertEquals(JobStatus.State.SUCCEEDED
+,           job.getJobState(), "Job expected to succeed with estimator "
+              + estimatorClass.getName());
       Counters counters = job.getCounters();
 
       String errorMessage = specEstimator.getErrorMessage(counters);
       boolean didSpeculate = specEstimator.didSpeculate(counters);
-      Assert.assertEquals(errorMessage, didSpeculate,
-          specEstimator.speculativeEstimator);
-      Assert.assertEquals("Failed maps higher than 0 "
-              + estimatorClass.getName(), 0,
-          counters.findCounter(JobCounter.NUM_FAILED_MAPS)
-              .getValue());
+      Assertions.assertEquals(didSpeculate,
+          specEstimator.speculativeEstimator, errorMessage);
+      Assertions.assertEquals(0
+,           counters.findCounter(JobCounter.NUM_FAILED_MAPS)
+              .getValue(), "Failed maps higher than 0 "
+              + estimatorClass.getName());
     }
   }
 
@@ -874,17 +872,17 @@ public class TestSpeculativeExecOnCluster {
       Job job = runSpecTest();
 
       boolean succeeded = job.waitForCompletion(true);
-      Assert.assertTrue("Job expected to succeed with estimator "
-          + estimatorClass.getName(), succeeded);
-      Assert.assertEquals("Job expected to succeed with estimator "
-              + estimatorClass.getName(), JobStatus.State.SUCCEEDED,
-          job.getJobState());
+      Assertions.assertTrue(succeeded, "Job expected to succeed with estimator "
+          + estimatorClass.getName());
+      Assertions.assertEquals(JobStatus.State.SUCCEEDED
+,           job.getJobState(), "Job expected to succeed with estimator "
+              + estimatorClass.getName());
       Counters counters = job.getCounters();
 
       String errorMessage = specEstimator.getErrorMessage(counters);
       boolean didSpeculate = specEstimator.didSpeculate(counters);
-      Assert.assertEquals(errorMessage, didSpeculate,
-          specEstimator.speculativeEstimator);
+      Assertions.assertEquals(didSpeculate,
+          specEstimator.speculativeEstimator, errorMessage);
     }
   }
 

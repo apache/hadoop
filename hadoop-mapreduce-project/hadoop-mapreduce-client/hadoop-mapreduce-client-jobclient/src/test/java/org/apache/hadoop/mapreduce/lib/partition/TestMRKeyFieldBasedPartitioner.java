@@ -19,9 +19,9 @@ package org.apache.hadoop.mapreduce.lib.partition;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestMRKeyFieldBasedPartitioner {
 
@@ -36,8 +36,8 @@ public class TestMRKeyFieldBasedPartitioner {
     Configuration conf = new Configuration();
     conf.setInt("num.key.fields.for.partition", 10);
     kfbp.setConf(conf);
-    assertEquals("Empty key should map to 0th partition", 
-                 0, kfbp.getPartition(new Text(), new Text(), numReducers));
+    assertEquals(
+                 0, kfbp.getPartition(new Text(), new Text(), numReducers), "Empty key should map to 0th partition");
     
     // check if the hashcode is correct when no keyspec is specified
     kfbp = new KeyFieldBasedPartitioner<Text, Text>();
@@ -46,8 +46,8 @@ public class TestMRKeyFieldBasedPartitioner {
     String input = "abc\tdef\txyz";
     int hashCode = input.hashCode();
     int expectedPartition = kfbp.getPartition(hashCode, numReducers);
-    assertEquals("Partitioner doesnt work as expected", expectedPartition, 
-                 kfbp.getPartition(new Text(input), new Text(), numReducers));
+    assertEquals(expectedPartition, 
+                 kfbp.getPartition(new Text(input), new Text(), numReducers), "Partitioner doesnt work as expected");
     
     // check if the hashcode is correct with specified keyspec
     kfbp = new KeyFieldBasedPartitioner<Text, Text>();
@@ -58,8 +58,8 @@ public class TestMRKeyFieldBasedPartitioner {
     byte[] eBytes = expectedOutput.getBytes();
     hashCode = kfbp.hashCode(eBytes, 0, eBytes.length - 1, 0);
     expectedPartition = kfbp.getPartition(hashCode, numReducers);
-    assertEquals("Partitioner doesnt work as expected", expectedPartition, 
-                 kfbp.getPartition(new Text(input), new Text(), numReducers));
+    assertEquals(expectedPartition, 
+                 kfbp.getPartition(new Text(input), new Text(), numReducers), "Partitioner doesnt work as expected");
     
     // test with invalid end index in keyspecs
     kfbp = new KeyFieldBasedPartitioner<Text, Text>();
@@ -70,8 +70,8 @@ public class TestMRKeyFieldBasedPartitioner {
     eBytes = expectedOutput.getBytes();
     hashCode = kfbp.hashCode(eBytes, 0, eBytes.length - 1, 0);
     expectedPartition = kfbp.getPartition(hashCode, numReducers);
-    assertEquals("Partitioner doesnt work as expected", expectedPartition, 
-                 kfbp.getPartition(new Text(input), new Text(), numReducers));
+    assertEquals(expectedPartition, 
+                 kfbp.getPartition(new Text(input), new Text(), numReducers), "Partitioner doesnt work as expected");
     
     // test with 0 end index in keyspecs
     kfbp = new KeyFieldBasedPartitioner<Text, Text>();
@@ -82,16 +82,16 @@ public class TestMRKeyFieldBasedPartitioner {
     eBytes = expectedOutput.getBytes();
     hashCode = kfbp.hashCode(eBytes, 0, eBytes.length - 1, 0);
     expectedPartition = kfbp.getPartition(hashCode, numReducers);
-    assertEquals("Partitioner doesnt work as expected", expectedPartition, 
-                 kfbp.getPartition(new Text(input), new Text(), numReducers));
+    assertEquals(expectedPartition, 
+                 kfbp.getPartition(new Text(input), new Text(), numReducers), "Partitioner doesnt work as expected");
     
     // test with invalid keyspecs
     kfbp = new KeyFieldBasedPartitioner<Text, Text>();
     conf = new Configuration();
     conf.set(KeyFieldBasedPartitioner.PARTITIONER_OPTIONS, "-k10");
     kfbp.setConf(conf);
-    assertEquals("Partitioner doesnt work as expected", 0, 
-                 kfbp.getPartition(new Text(input), new Text(), numReducers));
+    assertEquals(0, 
+                 kfbp.getPartition(new Text(input), new Text(), numReducers), "Partitioner doesnt work as expected");
     
     // test with multiple keyspecs
     kfbp = new KeyFieldBasedPartitioner<Text, Text>();
@@ -106,8 +106,8 @@ public class TestMRKeyFieldBasedPartitioner {
     eBytes = expectedOutput.getBytes();
     hashCode = kfbp.hashCode(eBytes, 0, eBytes.length - 1, hashCode);
     expectedPartition = kfbp.getPartition(hashCode, numReducers);
-    assertEquals("Partitioner doesnt work as expected", expectedPartition, 
-                 kfbp.getPartition(new Text(input), new Text(), numReducers));
+    assertEquals(expectedPartition, 
+                 kfbp.getPartition(new Text(input), new Text(), numReducers), "Partitioner doesnt work as expected");
     
     // test with invalid start index in keyspecs
     kfbp = new KeyFieldBasedPartitioner<Text, Text>();
@@ -121,7 +121,7 @@ public class TestMRKeyFieldBasedPartitioner {
     eBytes = expectedOutput.getBytes();
     hashCode = kfbp.hashCode(eBytes, 0, eBytes.length - 1, hashCode);
     expectedPartition = kfbp.getPartition(hashCode, numReducers);
-    assertEquals("Partitioner doesnt work as expected", expectedPartition, 
-                 kfbp.getPartition(new Text(input), new Text(), numReducers));
+    assertEquals(expectedPartition, 
+                 kfbp.getPartition(new Text(input), new Text(), numReducers), "Partitioner doesnt work as expected");
   }
 }

@@ -24,8 +24,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.junit.AfterClass;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.conf.Configuration;
@@ -39,8 +39,9 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,7 +75,7 @@ public class TestMRJobsWithProfiler {
 
   private static final Path APP_JAR = new Path(TEST_ROOT_DIR, "MRAppJar.jar");
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws InterruptedException, IOException {
 
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
@@ -95,7 +96,7 @@ public class TestMRJobsWithProfiler {
     localFs.setPermission(APP_JAR, new FsPermission("700"));
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
@@ -108,7 +109,8 @@ public class TestMRJobsWithProfiler {
     }
   }
 
-  @Test (timeout = 150000)
+  @Test
+  @Timeout(value = 150)
   public void testDefaultProfiler() throws Exception {
     assumeFalse("The hprof agent has been removed since Java 9. Skipping.",
         Shell.isJavaVersionAtLeast(9));
@@ -116,7 +118,8 @@ public class TestMRJobsWithProfiler {
     testProfilerInternal(true);
   }
 
-  @Test (timeout = 150000)
+  @Test
+  @Timeout(value = 150)
   public void testDifferentProfilers() throws Exception {
     LOG.info("Starting testDefaultProfiler");
     testProfilerInternal(false);
@@ -179,7 +182,7 @@ public class TestMRJobsWithProfiler {
         break;
       }
     }
-    Assert.assertEquals(RMAppState.FINISHED, mrCluster.getResourceManager()
+    Assertions.assertEquals(RMAppState.FINISHED, mrCluster.getResourceManager()
       .getRMContext().getRMApps().get(appID).getState());
 
     // Job finished, verify logs
@@ -222,7 +225,7 @@ public class TestMRJobsWithProfiler {
       }
     }
 
-    Assert.assertEquals(4, taLogDirs.size());  // all 4 attempts found
+    Assertions.assertEquals(4, taLogDirs.size());  // all 4 attempts found
 
     // Skip checking the contents because the JFR dumps binary files
     if (Shell.isJavaVersionAtLeast(9)) {
@@ -241,17 +244,17 @@ public class TestMRJobsWithProfiler {
           final BufferedReader br = new BufferedReader(new InputStreamReader(
             localFs.open(profilePath)));
           final String line = br.readLine();
-          Assert.assertTrue("No hprof content found!",
-            line !=null && line.startsWith("JAVA PROFILE"));
+          Assertions.assertTrue(
+           line !=null && line.startsWith("JAVA PROFILE"), "No hprof content found!");
           br.close();
-          Assert.assertEquals(0L, localFs.getFileStatus(stdoutPath).getLen());
+          Assertions.assertEquals(0L, localFs.getFileStatus(stdoutPath).getLen());
         } else {
-          Assert.assertFalse("hprof file should not exist",
-            localFs.exists(profilePath));
+          Assertions.assertFalse(
+           localFs.exists(profilePath), "hprof file should not exist");
         }
       } else {
-        Assert.assertFalse("hprof file should not exist",
-          localFs.exists(profilePath));
+        Assertions.assertFalse(
+         localFs.exists(profilePath), "hprof file should not exist");
         if (tid.getTaskID().getId() == PROFILED_TASK_ID) {
           // reducer is profiled with Xprof
           final BufferedReader br = new BufferedReader(new InputStreamReader(
@@ -265,9 +268,9 @@ public class TestMRJobsWithProfiler {
             }
           }
           br.close();
-          Assert.assertTrue("Xprof flat profile not found!", flatProfFound);
+          Assertions.assertTrue(flatProfFound, "Xprof flat profile not found!");
         } else {
-          Assert.assertEquals(0L, localFs.getFileStatus(stdoutPath).getLen());
+          Assertions.assertEquals(0L, localFs.getFileStatus(stdoutPath).getLen());
         }
       }
     }

@@ -33,11 +33,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
@@ -151,7 +151,7 @@ public class TestMRIntermediateDataEncryption {
     });
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     // setup the test root directory
     testRootDir =
@@ -176,13 +176,13 @@ public class TestMRIntermediateDataEncryption {
     fs.mkdirs(jobsDirPath);
     jobInputDirPath = new Path(jobsDirPath, "in-dir");
     // run the input generator job.
-    Assert.assertEquals("Generating input should succeed", 0,
-        generateInputTextFile());
+    Assertions.assertEquals(0
+,         generateInputTextFile(), "Generating input should succeed");
     // run the reference job
     runReferenceJob();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     // shutdown clusters
     if (mrCluster != null) {
@@ -194,7 +194,7 @@ public class TestMRIntermediateDataEncryption {
     // make sure that generated input file is deleted
     final File textInputFile = new File(testRootDir, "input.txt");
     if (textInputFile.exists()) {
-      Assert.assertTrue(textInputFile.delete());
+      Assertions.assertTrue(textInputFile.delete());
     }
   }
 
@@ -290,19 +290,19 @@ public class TestMRIntermediateDataEncryption {
     if (fs.exists(jobRefDirPath) && !fs.delete(jobRefDirPath, true)) {
       throw new IOException("Could not delete " + jobRefDirPath);
     }
-    Assert.assertTrue(fs.mkdirs(jobRefDirPath));
+    Assertions.assertTrue(fs.mkdirs(jobRefDirPath));
     Path jobRefOutputPath = new Path(jobRefDirPath, "out-dir");
     Configuration referenceConf = new Configuration(commonConfig);
     referenceConf.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, false);
     Job jobReference = runWordCountJob(jobRefLabel, jobRefOutputPath,
         referenceConf, 4, 1);
-    Assert.assertTrue(jobReference.isSuccessful());
+    Assertions.assertTrue(jobReference.isSuccessful());
     FileStatus[] fileStatusArr =
         fs.listStatus(jobRefOutputPath,
             new Utils.OutputFileUtils.OutputFilesFilter());
-    Assert.assertEquals(1, fileStatusArr.length);
+    Assertions.assertEquals(1, fileStatusArr.length);
     checkSumReference = fs.getFileChecksum(fileStatusArr[0].getPath());
-    Assert.assertTrue(fs.delete(jobRefDirPath, true));
+    Assertions.assertTrue(fs.delete(jobRefDirPath, true));
   }
 
   private static Job runWordCountJob(String postfixName, Path jOutputPath,
@@ -346,8 +346,8 @@ public class TestMRIntermediateDataEncryption {
    * @throws Exception if the output is missing or the combiner job fails.
    */
   private boolean validateJobOutput() throws Exception {
-    Assert.assertTrue("Job Output path [" + jobOutputPath + "] should exist",
-        fs.exists(jobOutputPath));
+    Assertions.assertTrue(
+       fs.exists(jobOutputPath), "Job Output path [" + jobOutputPath + "] should exist");
     Path outputPath = jobOutputPath;
     if (numReducers != 1) {
       // combine the result into one file by running a combiner job
@@ -391,7 +391,7 @@ public class TestMRIntermediateDataEncryption {
     return checkSumReference.equals(jobFileChecksum);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     LOG.info("Starting TestMRIntermediateDataEncryption#{}.......",
         testTitleName);
@@ -435,7 +435,7 @@ public class TestMRIntermediateDataEncryption {
           testTitleName, Time.formatTime(System.currentTimeMillis())));
       Job job = runWordCountJob(testTitleName, jobOutputPath, config,
           numMappers, numReducers);
-      Assert.assertTrue(job.isSuccessful());
+      Assertions.assertTrue(job.isSuccessful());
       long endTime = Time.monotonicNow();
       testSummary.append(String.format("%nJob %s ended at %s",
               job.getJobName(), Time.formatTime(System.currentTimeMillis())));
@@ -451,16 +451,16 @@ public class TestMRIntermediateDataEncryption {
                 fStatus.getPath(), fileSize));
       }
       // Validate the checksum of the output.
-      Assert.assertTrue(validateJobOutput());
+      Assertions.assertTrue(validateJobOutput());
       // Check intermediate files and spilling.
       long spilledRecords =
           job.getCounters().findCounter(TaskCounter.SPILLED_RECORDS).getValue();
-      Assert.assertTrue("Spill records must be greater than 0",
-          spilledRecords > 0);
-      Assert.assertFalse("The encrypted spilled files should not be empty.",
-          spillInjector.getEncryptedSpilledFiles().isEmpty());
-      Assert.assertTrue("Invalid access to spill file positions",
-          spillInjector.getInvalidSpillEntries().isEmpty());
+      Assertions.assertTrue(
+         spilledRecords > 0, "Spill records must be greater than 0");
+      Assertions.assertFalse(
+         spillInjector.getEncryptedSpilledFiles().isEmpty(), "The encrypted spilled files should not be empty.");
+      Assertions.assertTrue(
+         spillInjector.getInvalidSpillEntries().isEmpty(), "Invalid access to spill file positions");
     } finally {
       testSummary.append(spillInjector.getSpilledFileReport());
       LOG.info(testSummary.toString());
