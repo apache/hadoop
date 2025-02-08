@@ -203,11 +203,14 @@ public class TestDynamicInputFormat {
         secondInputFormat.getChunkContext(configuration);
     DynamicInputChunkContext fourthContext =
         secondInputFormat.getChunkContext(configuration);
-    assertTrue(firstContext.equals(secondContext), "Chunk contexts from the same DynamicInputFormat " +
+    assertTrue(firstContext.equals(secondContext),
+        "Chunk contexts from the same DynamicInputFormat " +
         "object should be the same.");
-    assertTrue(thirdContext.equals(fourthContext), "Chunk contexts from the same DynamicInputFormat " +
+    assertTrue(thirdContext.equals(fourthContext),
+        "Chunk contexts from the same DynamicInputFormat " +
         "object should be the same.");
-    assertTrue(!firstContext.equals(thirdContext), "Contexts from different DynamicInputFormat " +
+    assertTrue(!firstContext.equals(thirdContext),
+        "Contexts from different DynamicInputFormat " +
         "objects should be different.");
   }
 }

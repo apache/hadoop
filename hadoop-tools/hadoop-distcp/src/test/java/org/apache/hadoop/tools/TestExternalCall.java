@@ -88,21 +88,20 @@ public class TestExternalCall {
   @Test
   public void testCleanup() throws Exception {
 
-      Configuration conf = getConf();
+    Configuration conf = getConf();
 
-      Path stagingDir = JobSubmissionFiles.getStagingDir(new Cluster(conf),
-          conf);
-      stagingDir.getFileSystem(conf).mkdirs(stagingDir);
-      Path soure = createFile("tmp.txt");
-      Path target = createFile("target.txt");
+    Path stagingDir = JobSubmissionFiles.getStagingDir(new Cluster(conf),
+        conf);
+    stagingDir.getFileSystem(conf).mkdirs(stagingDir);
+    Path soure = createFile("tmp.txt");
+    Path target = createFile("target.txt");
 
-      DistCp distcp = new DistCp(conf, null);
-      String[] arg = { soure.toString(), target.toString() };
+    DistCp distcp = new DistCp(conf, null);
+    String[] arg = { soure.toString(), target.toString() };
 
-      distcp.run(arg);
-      assertTrue(fs.exists(target));
+    distcp.run(arg);
+    assertTrue(fs.exists(target));
 
-  
   }
 
   private Path createFile(String fname) throws IOException {

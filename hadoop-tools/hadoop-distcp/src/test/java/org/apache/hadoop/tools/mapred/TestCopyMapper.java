@@ -944,8 +944,8 @@ public class TestCopyMapper {
       }
       if (ignoreFailures) {
         for (Text value : stubContext.getWriter().values()) {
-          assertTrue(
-             value.toString().startsWith("FAIL:"), value.toString() + " is not skipped");
+          assertTrue(value.toString().startsWith("FAIL:"),
+              value.toString() + " is not skipped");
         }
       }
       assertTrue(ignoreFailures, "There should have been an exception.");
@@ -1332,11 +1332,11 @@ public class TestCopyMapper {
           assertTrue(!preserve || source.getOwner().equals(target.getOwner()));
           assertTrue(!preserve || source.getGroup().equals(target.getGroup()));
           assertTrue(!preserve || source.getPermission().equals(target.getPermission()));
-          assertTrue( preserve || !source.getOwner().equals(target.getOwner()));
-          assertTrue( preserve || !source.getGroup().equals(target.getGroup()));
-          assertTrue( preserve || !source.getPermission().equals(target.getPermission()));
+          assertTrue(preserve || !source.getOwner().equals(target.getOwner()));
+          assertTrue(preserve || !source.getGroup().equals(target.getGroup()));
+          assertTrue(preserve || !source.getPermission().equals(target.getPermission()));
           assertTrue(source.isDirectory() ||
-                  source.getReplication() != target.getReplication());
+              source.getReplication() != target.getReplication());
         }
       }
     }

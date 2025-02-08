@@ -409,9 +409,9 @@ public class TestCopyListing extends SimpleCopyListing {
       int idx = 0;
       while (reader.next(currentKey)) {
         reader.getCurrentValue(currentVal);
-        assertEquals(fs.makeQualified(srcFiles.get(idx))
-,             currentVal.getPath(), "srcFiles.size=" + srcFiles.size()
-                + ", idx=" + idx);
+        assertEquals(fs.makeQualified(srcFiles.get(idx)),
+            currentVal.getPath(), "srcFiles.size=" + srcFiles.size() +
+            ", idx=" + idx);
         if (LOG.isDebugEnabled()) {
           LOG.debug("val=" + fs.makeQualified(srcFiles.get(idx)));
         }

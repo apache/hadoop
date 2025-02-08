@@ -206,8 +206,8 @@ public class TestDeletedDirTracker extends Assertions {
   }
 
   private void expectShouldDelete(CopyListingFileStatus status) {
-    assertTrue(
-       shouldDelete(status), "Expected shouldDelete of " + status.getPath());
+    assertTrue(shouldDelete(status),
+        "Expected shouldDelete of " + status.getPath());
   }
 
   private boolean shouldDelete(final Path path, final boolean isDir) {
@@ -223,9 +223,8 @@ public class TestDeletedDirTracker extends Assertions {
   }
 
   private void expectShouldNotDelete(CopyListingFileStatus status) {
-    assertFalse(
-       shouldDelete(status), "Expected !shouldDelete of " + status.getPath()
-            + " but got true");
+    assertFalse(shouldDelete(status),
+        "Expected !shouldDelete of " + status.getPath() + " but got true");
   }
 
   private CopyListingFileStatus newStatus(final Path path,
@@ -242,13 +241,13 @@ public class TestDeletedDirTracker extends Assertions {
   }
 
   private void expectCached(final Path path) {
-    assertTrue(
-       tracker.isContained(path), "Path " + path + " is not in the cache of " + tracker);
+    assertTrue(tracker.isContained(path),
+        "Path " + path + " is not in the cache of " + tracker);
   }
 
   private void expectNotCached(final Path path) {
-    assertFalse(
-       tracker.isContained(path), "Path " + path + " is in the cache of " + tracker);
+    assertFalse(tracker.isContained(path),
+        "Path " + path + " is in the cache of " + tracker);
   }
 
 }

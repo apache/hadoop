@@ -216,8 +216,8 @@ public class TestDistCpSystem {
         "File POSIX permission should match");
     assertEquals(srcStat.getOwner(), dstStat.getOwner(),
         "File user ownership should match");
-    assertEquals(
-       srcStat.getGroup(), dstStat.getGroup(), "File group ownership should match");
+    assertEquals(srcStat.getGroup(), dstStat.getGroup(),
+        "File group ownership should match");
     // TODO; check ACL attributes
 
     if (srcStat.isDirectory()) {

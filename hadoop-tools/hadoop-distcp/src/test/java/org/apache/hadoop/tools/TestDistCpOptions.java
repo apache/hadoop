@@ -121,12 +121,12 @@ public class TestDistCpOptions {
 
   @Test
   public void testSetZeroBandwidth() {
-    assertThrows(IllegalArgumentException.class, ()->{
+    assertThrows(IllegalArgumentException.class, () -> {
       new DistCpOptions.Builder(
-      Collections.singletonList(new Path("hdfs://localhost:8020/source")),
-      new Path("hdfs://localhost:8020/target/"))
-      .withMapBandwidth(0)
-      .build();
+            Collections.singletonList(new Path("hdfs://localhost:8020/source")),
+            new Path("hdfs://localhost:8020/target/"))
+            .withMapBandwidth(0)
+            .build();
     });
   }
 

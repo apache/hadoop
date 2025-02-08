@@ -119,14 +119,14 @@ public class SimpleCopyListing extends CopyListing {
     this.randomizeFileListing = randomizeFileListing;
   }
 
-  protected void initSimpleCopyListing(Configuration configuration,
-    Credentials credentials, int numListstatusThreads, int fileStatusLimit,
-    boolean randomizeFileListing) {
-    setConf(configuration);
-    setCredentials(credentials);
-    this.numListstatusThreads = numListstatusThreads;
-    this.fileStatusLimit = Math.max(1, fileStatusLimit);
-    this.randomizeFileListing = randomizeFileListing;
+  protected void initSimpleCopyListing(Configuration pConfiguration,
+      Credentials pCredentials, int pNumListstatusThreads, int pFileStatusLimit,
+      boolean pRandomizeFileListing) {
+    setConf(pConfiguration);
+    setCredentials(pCredentials);
+    this.numListstatusThreads = pNumListstatusThreads;
+    this.fileStatusLimit = Math.max(1, pFileStatusLimit);
+    this.randomizeFileListing = pRandomizeFileListing;
   }
 
   protected SimpleCopyListing(Configuration configuration,
