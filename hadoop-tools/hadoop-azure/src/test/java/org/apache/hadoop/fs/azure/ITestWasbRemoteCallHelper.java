@@ -408,31 +408,6 @@ public class ITestWasbRemoteCallHelper
     }
   }
 
-  private void setupExpectations() {
-
-    class MatchesPattern extends TypeSafeMatcher<String> {
-      private String pattern;
-
-      MatchesPattern(String pattern) {
-        this.pattern = pattern;
-      }
-
-      @Override protected boolean matchesSafely(String item) {
-        return item.matches(pattern);
-      }
-
-      @Override public void describeTo(Description description) {
-        description.appendText("matches pattern ").appendValue(pattern);
-      }
-
-      @Override protected void describeMismatchSafely(String item,
-          Description mismatchDescription) {
-        mismatchDescription.appendText("does not match");
-      }
-    }
-
-  }
-
   private void performop(HttpClient mockHttpClient) throws Throwable {
 
     Path testPath = new Path("/", "test.dat");
