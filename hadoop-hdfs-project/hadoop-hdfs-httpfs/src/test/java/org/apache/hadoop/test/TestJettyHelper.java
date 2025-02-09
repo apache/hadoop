@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.test;
 
-import java.io.File;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -160,7 +159,8 @@ public class TestJettyHelper implements BeforeEachCallback, AfterEachCallback {
       try {
         server.stop();
       } catch (Exception ex) {
-        throw new RuntimeException("Could not stop embedded servlet container, " + ex.getMessage(), ex);
+        throw new RuntimeException("Could not stop embedded servlet container, " +
+            ex.getMessage(), ex);
       }
     }
   }

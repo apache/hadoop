@@ -49,7 +49,6 @@ import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthentica
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticationHandler;
 import org.apache.hadoop.util.JsonSerialization;
 import org.json.simple.JSONArray;
-import org.junit.jupiter.api.Assertions;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -1670,8 +1669,8 @@ public class TestHttpFSServer extends HFSTestCase {
     assertTrue(location.contains(DataParam.NAME));
     assertFalse(location.contains(NoRedirectParam.NAME));
     assertTrue(location.contains("CREATE"));
-    assertTrue(
-       location.startsWith(TestJettyHelper.getJettyURL().toString()), "Wrong location: " + location);
+    assertTrue(location.startsWith(TestJettyHelper.getJettyURL().toString()),
+        "Wrong location: " + location);
 
     // Use the location to actually write the file
     url = new URL(location);
@@ -1708,8 +1707,8 @@ public class TestHttpFSServer extends HFSTestCase {
     location = (String)json.get("Location");
     assertTrue(!location.contains(NoRedirectParam.NAME));
     assertTrue(location.contains("OPEN"));
-    assertTrue(
-       location.startsWith(TestJettyHelper.getJettyURL().toString()), "Wrong location: " + location);
+    assertTrue(location.startsWith(TestJettyHelper.getJettyURL().toString()),
+        "Wrong location: " + location);
 
     // Use the location to actually read
     url = new URL(location);
@@ -1736,8 +1735,8 @@ public class TestHttpFSServer extends HFSTestCase {
     location = (String)json.get("Location");
     assertTrue(!location.contains(NoRedirectParam.NAME));
     assertTrue(location.contains("GETFILECHECKSUM"));
-    assertTrue(
-       location.startsWith(TestJettyHelper.getJettyURL().toString()), "Wrong location: " + location);
+    assertTrue(location.startsWith(TestJettyHelper.getJettyURL().toString()),
+        "Wrong location: " + location);
 
     // Use the location to actually get the checksum
     url = new URL(location);
@@ -1835,8 +1834,8 @@ public class TestHttpFSServer extends HFSTestCase {
     JSONObject jsonObject = (JSONObject) parser.parse(getFileStatusResponse);
     JSONObject details = (JSONObject) jsonObject.get("FileStatus");
     String ecpolicyForECfile = (String) details.get("ecPolicy");
-    assertEquals(
-       ecpolicyForECfile, ecPolicyName, "EC policy for ecFile should match the set EC policy");
+    assertEquals(ecpolicyForECfile, ecPolicyName,
+        "EC policy for ecFile should match the set EC policy");
 
     // Verify httpFs getFileStatus with WEBHDFS REST API
     WebHdfsFileSystem httpfsWebHdfs = (WebHdfsFileSystem) FileSystem.get(

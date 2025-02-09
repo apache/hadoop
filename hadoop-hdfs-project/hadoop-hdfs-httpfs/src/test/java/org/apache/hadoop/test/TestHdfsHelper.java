@@ -63,7 +63,7 @@ public class TestHdfsHelper extends TestDirHelper {
     private String testName;
     private MiniDFSCluster miniHdfs = null;
 
-    public HdfsStatement(String testName) {
+    HdfsStatement(String testName) {
       this.testName = testName;
     }
 

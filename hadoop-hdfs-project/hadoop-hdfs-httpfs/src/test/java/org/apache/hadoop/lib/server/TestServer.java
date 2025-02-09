@@ -431,7 +431,8 @@ public class TestServer extends HTestCase {
   @TestDir
   public void illegalState1() throws Exception {
     assertThrows(IllegalStateException.class, ()->{
-      Server server = new Server("server", TestDirHelper.getTestDir().getAbsolutePath(), new Configuration(false));
+      Server server = new Server("server",
+          TestDirHelper.getTestDir().getAbsolutePath(), new Configuration(false));
       server.destroy();
     });
   }
@@ -440,7 +441,8 @@ public class TestServer extends HTestCase {
   @TestDir
   public void illegalState2() throws Exception {
     assertThrows(IllegalStateException.class, () -> {
-      Server server = new Server("server", TestDirHelper.getTestDir().getAbsolutePath(), new Configuration(false));
+      Server server = new Server("server",
+          TestDirHelper.getTestDir().getAbsolutePath(), new Configuration(false));
       server.get(Object.class);
     });
   }
@@ -449,7 +451,8 @@ public class TestServer extends HTestCase {
   @TestDir
   public void illegalState3() throws Exception {
     assertThrows(IllegalStateException.class, () -> {
-      Server server = new Server("server", TestDirHelper.getTestDir().getAbsolutePath(), new Configuration(false));
+      Server server = new Server("server",
+          TestDirHelper.getTestDir().getAbsolutePath(), new Configuration(false));
       server.setService(null);
     });
   }

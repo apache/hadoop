@@ -251,7 +251,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     try {
       testCreate(path, false);
       fail("the create should have failed because the file exists " +
-                  "and override is FALSE");
+          "and override is FALSE");
     } catch (IOException ex) {
       System.out.println("#");
     } catch (Exception ex) {
@@ -311,8 +311,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
 
   private void assertPathCapabilityForTruncate(Path file) throws Exception {
     FileSystem fs = this.getHttpFSFileSystem();
-    assertTrue(
-       fs.hasPathCapability(file, CommonPathCapabilities.FS_TRUNCATE), "HttpFS/WebHdfs/SWebHdfs support truncate");
+    assertTrue(fs.hasPathCapability(file, CommonPathCapabilities.FS_TRUNCATE),
+        "HttpFS/WebHdfs/SWebHdfs support truncate");
     fs.close();
   }
 
@@ -482,18 +482,18 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       // Get the FileSystem instance that's being tested
       FileSystem fs = this.getHttpFSFileSystem();
       // Check FileStatus
-      assertFalse(
-         fs.getFileStatus(path).isSnapshotEnabled(), "Snapshot should be disallowed by default");
+      assertFalse(fs.getFileStatus(path).isSnapshotEnabled(),
+          "Snapshot should be disallowed by default");
       // Allow snapshot
       distributedFs.allowSnapshot(path);
       // Check FileStatus
-      assertTrue(
-         fs.getFileStatus(path).isSnapshotEnabled(), "Snapshot enabled bit is not set in FileStatus");
+      assertTrue(fs.getFileStatus(path).isSnapshotEnabled(),
+          "Snapshot enabled bit is not set in FileStatus");
       // Disallow snapshot
       distributedFs.disallowSnapshot(path);
       // Check FileStatus
-      assertFalse(
-         fs.getFileStatus(path).isSnapshotEnabled(), "Snapshot enabled bit is not cleared in FileStatus");
+      assertFalse(fs.getFileStatus(path).isSnapshotEnabled(),
+          "Snapshot enabled bit is not cleared in FileStatus");
       // Cleanup
       fs.delete(path, true);
       fs.close();
@@ -1174,9 +1174,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Path path = new Path(getProxiedFSTestDir(), "policy.txt");
     FileSystem httpfs = getHttpFSFileSystem();
     // test getAllStoragePolicies
-    assertArrayEquals(
-    
-       fs.getAllStoragePolicies().toArray(), httpfs.getAllStoragePolicies().toArray(), "Policy array returned from the DFS and HttpFS should be equals");
+    assertArrayEquals(fs.getAllStoragePolicies().toArray(),
+        httpfs.getAllStoragePolicies().toArray(),
+        "Policy array returned from the DFS and HttpFS should be equals");
 
     // test get/set/unset policies
     DFSTestUtil.createFile(fs, path, 0, (short) 1, 0L);
@@ -1191,14 +1191,12 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     assertEquals(HdfsConstants.COLD_STORAGE_POLICY_NAME.toString(),
         httpFsPolicy.getName(), "Storage policy returned from the get API should" +
         " be same as set policy");
-    assertEquals(
-    
-       httpFsPolicy, dfsPolicy, "Storage policy returned from the DFS and HttpFS should be equals");
+    assertEquals(httpFsPolicy, dfsPolicy,
+        "Storage policy returned from the DFS and HttpFS should be equals");
     // unset policy
     httpfs.unsetStoragePolicy(path);
-     assertEquals(
-           defaultdfsPolicy, httpfs.getStoragePolicy(path), "After unset storage policy, the get API shoudld"
-            + " return the default policy");
+     assertEquals(defaultdfsPolicy, httpfs.getStoragePolicy(path),
+         "After unset storage policy, the get API shoudld return the default policy");
     fs.close();
   }
 
@@ -1433,16 +1431,16 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       }
       Path snapshotsDir = new Path("/tmp/tmp-snap-test/.snapshot");
       FileStatus[] snapshotItems = fs.listStatus(snapshotsDir);
-      assertTrue(
-         snapshotItems.length == 1, "Should have exactly one snapshot.");
+      assertTrue(snapshotItems.length == 1,
+          "Should have exactly one snapshot.");
       String resultingSnapName = snapshotItems[0].getPath().getName();
       if (snapshotName == null) {
         assertTrue(
            Pattern.matches("(s)(\\d{8})(-)(\\d{6})(\\.)(\\d{3})",
                 resultingSnapName), "Snapshot auto generated name not matching pattern");
       } else {
-        assertTrue(
-           snapshotName.equals(resultingSnapName), "Snapshot name is not same as passed name.");
+        assertTrue(snapshotName.equals(resultingSnapName),
+            "Snapshot name is not same as passed name.");
       }
       cleanSnapshotTests(snapshottablePath, resultingSnapName);
     }
@@ -1492,11 +1490,11 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
           "snap-new-name");
       Path snapshotsDir = new Path("/tmp/tmp-snap-test/.snapshot");
       FileStatus[] snapshotItems = fs.listStatus(snapshotsDir);
-      assertTrue(
-         snapshotItems.length == 1, "Should have exactly one snapshot.");
+      assertTrue(snapshotItems.length == 1,
+          "Should have exactly one snapshot.");
       String resultingSnapName = snapshotItems[0].getPath().getName();
-      assertTrue(
-         "snap-new-name".equals(resultingSnapName), "Snapshot name is not same as passed name.");
+      assertTrue("snap-new-name".equals(resultingSnapName),
+          "Snapshot name is not same as passed name.");
       cleanSnapshotTests(snapshottablePath, resultingSnapName);
     }
   }
@@ -1510,12 +1508,12 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       fs.createSnapshot(snapshottablePath, "snap-to-delete");
       Path snapshotsDir = new Path("/tmp/tmp-snap-test/.snapshot");
       FileStatus[] snapshotItems = fs.listStatus(snapshotsDir);
-      assertTrue(
-         snapshotItems.length == 1, "Should have exactly one snapshot.");
+      assertTrue(snapshotItems.length == 1,
+          "Should have exactly one snapshot.");
       fs.deleteSnapshot(snapshottablePath, "snap-to-delete");
       snapshotItems = fs.listStatus(snapshotsDir);
-      assertTrue(
-         snapshotItems.length == 0, "There should be no snapshot anymore.");
+      assertTrue(snapshotItems.length == 0,
+          "There should be no snapshot anymore.");
       fs.delete(snapshottablePath, true);
     }
   }
@@ -1528,8 +1526,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       // Get the FileSystem instance that's being tested
       FileSystem fs = this.getHttpFSFileSystem();
       // Check FileStatus
-      assertFalse(
-         fs.getFileStatus(path).isSnapshotEnabled(), "Snapshot should be disallowed by default");
+      assertFalse(fs.getFileStatus(path).isSnapshotEnabled(),
+          "Snapshot should be disallowed by default");
       // Allow snapshot
       if (fs instanceof HttpFSFileSystem) {
         HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
@@ -1542,8 +1540,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
             " doesn't support allowSnapshot");
       }
       // Check FileStatus
-      assertTrue(
-         fs.getFileStatus(path).isSnapshotEnabled(), "allowSnapshot failed");
+      assertTrue(fs.getFileStatus(path).isSnapshotEnabled(),
+          "allowSnapshot failed");
       // Cleanup
       fs.delete(path, true);
     }
@@ -1557,8 +1555,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       // Get the FileSystem instance that's being tested
       FileSystem fs = this.getHttpFSFileSystem();
       // Check FileStatus
-      assertTrue(
-         fs.getFileStatus(path).isSnapshotEnabled(), "Snapshot should be allowed by DFS");
+      assertTrue(fs.getFileStatus(path).isSnapshotEnabled(),
+          "Snapshot should be allowed by DFS");
       // Disallow snapshot
       if (fs instanceof HttpFSFileSystem) {
         HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
@@ -1571,8 +1569,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
             " doesn't support disallowSnapshot");
       }
       // Check FileStatus
-      assertFalse(
-         fs.getFileStatus(path).isSnapshotEnabled(), "disallowSnapshot failed");
+      assertFalse(fs.getFileStatus(path).isSnapshotEnabled(),
+          "disallowSnapshot failed");
       // Cleanup
       fs.delete(path, true);
     }
@@ -1586,8 +1584,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       // Get the FileSystem instance that's being tested
       FileSystem fs = this.getHttpFSFileSystem();
       // Check FileStatus
-      assertTrue(
-         fs.getFileStatus(path).isSnapshotEnabled(), "Snapshot should be allowed by DFS");
+      assertTrue(fs.getFileStatus(path).isSnapshotEnabled(),
+          "Snapshot should be allowed by DFS");
       // Create some snapshots
       fs.createSnapshot(path, "snap-01");
       fs.createSnapshot(path, "snap-02");
@@ -1619,8 +1617,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       }
       // Check FileStatus, should still be enabled since
       // disallow snapshot should fail
-      assertTrue(
-         fs.getFileStatus(path).isSnapshotEnabled(), "disallowSnapshot should not have succeeded");
+      assertTrue(fs.getFileStatus(path).isSnapshotEnabled(),
+          "disallowSnapshot should not have succeeded");
       // Cleanup
       fs.deleteSnapshot(path, "snap-02");
       fs.deleteSnapshot(path, "snap-01");
@@ -1707,8 +1705,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       // Get the FileSystem instance that's being tested
       FileSystem fs = this.getHttpFSFileSystem();
       // Check FileStatus
-      assertTrue(
-         fs.getFileStatus(path).isSnapshotEnabled(), "Snapshot should be allowed by DFS");
+      assertTrue(fs.getFileStatus(path).isSnapshotEnabled(),
+          "Snapshot should be allowed by DFS");
       assertTrue(fs.getFileStatus(path).isSnapshotEnabled());
       // Get snapshot diff
       testGetSnapshotDiffIllegalParamCase(fs, path, "", "");
@@ -1870,8 +1868,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
       sds = webHdfsFileSystem.getServerDefaults();
     } else {
-      fail(
-          fs.getClass().getSimpleName() + " doesn't support getServerDefaults");
+      fail(fs.getClass().getSimpleName() + " doesn't support getServerDefaults");
     }
     // Verify result with DFS
     FsServerDefaults dfssds = dfs.getServerDefaults();

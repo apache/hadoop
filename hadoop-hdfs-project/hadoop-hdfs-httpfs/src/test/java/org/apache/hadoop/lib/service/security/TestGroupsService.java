@@ -57,7 +57,8 @@ public class TestGroupsService extends HTestCase {
     assertThrows(RuntimeException.class, () -> {
       String dir = TestDirHelper.getTestDir().getAbsolutePath();
       Configuration conf = new Configuration(false);
-      conf.set("server.services", StringUtils.join(",", Arrays.asList(GroupsService.class.getName())));
+      conf.set("server.services", StringUtils.join(",",
+          Arrays.asList(GroupsService.class.getName())));
       conf.set("server.groups.hadoop.security.group.mapping", String.class.getName());
       Server server = new Server("server", dir, dir, dir, dir, conf);
       server.init();

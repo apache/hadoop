@@ -187,7 +187,8 @@ public class TestHttpFSServerWebServer {
         server.getWebAppContext().getServletContext()
             .getAttribute(SIGNER_SECRET_PROVIDER_ATTRIBUTE);
     assertNotNull(secretProvider, "The secret provider must not be null");
-    assertEquals(expected, secretProvider.getClass(), "The secret provider must match the following");
+    assertEquals(expected, secretProvider.getClass(),
+        "The secret provider must match the following");
   }
 
   private void assertServiceRespondsWithOK(URL serviceURL)

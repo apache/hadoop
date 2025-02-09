@@ -49,10 +49,12 @@ public class TestExceptionHelper implements TestExecutionExceptionHandler {
           String regExp = testExceptionAnnotation.msgRegExp();
           Pattern pattern = Pattern.compile(regExp);
           if (!pattern.matcher(cause.getMessage()).find()) {
-            fail("Expected Exception Message pattern: " + regExp + " got message: " + ex.getMessage());
+            fail("Expected Exception Message pattern: " + regExp +
+                " got message: " + ex.getMessage());
           }
         } else {
-          fail("Expected Exception: " + klass.getSimpleName() + " got: " + ex.getClass().getSimpleName());
+          fail("Expected Exception: " + klass.getSimpleName() + " got: " +
+              ex.getClass().getSimpleName());
         }
       } else {
         throw ex;
