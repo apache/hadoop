@@ -102,7 +102,8 @@ public class TestKeyValueTextInputFormat {
           RecordReader<Text, Text> reader =
             format.getRecordReader(splits[j], job, reporter);
           Class readerClass = reader.getClass();
-          assertEquals(KeyValueLineRecordReader.class, readerClass, "reader class is KeyValueLineRecordReader.");        
+          assertEquals(KeyValueLineRecordReader.class, readerClass,
+              "reader class is KeyValueLineRecordReader.");
 
           Text key = reader.createKey();
           Class keyClass = key.getClass();
@@ -145,11 +146,12 @@ public class TestKeyValueTextInputFormat {
       in = makeStream("abcd\u20acbdcd\u20ac");
       Text line = new Text();
       in.readLine(line);
-      assertEquals("readLine changed utf8 characters",
-                   "abcd\u20acbdcd\u20ac", line.toString());
+      assertEquals("abcd\u20acbdcd\u20ac", line.toString(),
+          "readLine changed utf8 characters");
       in = makeStream("abc\u200axyz");
       in.readLine(line);
-      assertEquals("split on fake newline", "abc\u200axyz", line.toString());
+      assertEquals("abc\u200axyz", line.toString(),
+          "split on fake newline");
     } finally {
       if (in != null) {
         in.close();
@@ -244,16 +246,14 @@ public class TestKeyValueTextInputFormat {
     }
     List<Text> results = readSplit(format, splits[0], job);
     assertEquals(6, results.size(), "splits[0] length");
-    assertEquals("splits[0][5]", " dog", results.get(5).toString());
+    assertEquals(" dog", results.get(5).toString(), "splits[0][5]");
     results = readSplit(format, splits[1], job);
     assertEquals(2, results.size(), "splits[1] length");
-    assertEquals("splits[1][0]", "this is a test", 
-                 results.get(0).toString());    
-    assertEquals("splits[1][1]", "of gzip", 
-                 results.get(1).toString());    
+    assertEquals("this is a test", results.get(0).toString(), "splits[1][0]");
+    assertEquals("of gzip", results.get(1).toString(), "splits[1][1]");
   }
   
-  public static void main(String[] args) throws Exception {
+ public static void main(String[] args) throws Exception {
     new TestKeyValueTextInputFormat().testFormat();
   }
 }

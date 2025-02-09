@@ -60,7 +60,7 @@ public class TestResourceMgrDelegate {
     final ApplicationClientProtocol applicationsManager = mock(ApplicationClientProtocol.class);
     GetQueueInfoResponse response = mock(GetQueueInfoResponse.class);
     org.apache.hadoop.yarn.api.records.QueueInfo queueInfo =
-      mock(org.apache.hadoop.yarn.api.records.QueueInfo.class);
+        mock(org.apache.hadoop.yarn.api.records.QueueInfo.class);
     when(response.getQueueInfo()).thenReturn(queueInfo);
     try {
       when(applicationsManager.getQueueInfo(any(

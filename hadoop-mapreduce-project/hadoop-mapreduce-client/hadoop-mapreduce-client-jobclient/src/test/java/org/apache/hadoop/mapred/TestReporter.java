@@ -176,7 +176,7 @@ public class TestReporter {
     throws IOException {
       float reducePhaseProgress = ((float)++recordCount)/INPUT_LINES;
       float weightedReducePhaseProgress = 
-         reducePhaseProgress * REDUCE_PROGRESS_RANGE;
+          reducePhaseProgress * REDUCE_PROGRESS_RANGE;
       assertEquals(SHUFFLE_PROGRESS_RANGE + weightedReducePhaseProgress,
           reporter.getProgress(), 0.02f, "Invalid progress in reduce");
       this.reporter = reporter;

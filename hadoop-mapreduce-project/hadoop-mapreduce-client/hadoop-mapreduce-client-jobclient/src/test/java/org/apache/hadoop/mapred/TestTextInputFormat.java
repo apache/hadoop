@@ -114,9 +114,9 @@ public class TestTextInputFormat {
         LOG.debug("splitting: got =        " + splits.length);
 
         if (length == 0) {
-           assertEquals(1, splits.length,
-               "Files of length 0 are not returned from FileInputFormat.getSplits().");
-           assertEquals(0, splits[0].getLength(), "Empty file length == 0");
+          assertEquals(1, splits.length,
+              "Files of length 0 are not returned from FileInputFormat.getSplits().");
+          assertEquals(0, splits[0].getLength(), "Empty file length == 0");
         }
 
         // check each split

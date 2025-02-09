@@ -78,7 +78,7 @@ public class TestClientServiceDelegate {
   public void initTestClientServiceDelegate(boolean pIsAMReachableFromClient) {
     this.isAMReachableFromClient = pIsAMReachableFromClient;
   }
-  
+
   public static Collection<Object[]> data() {
     Object[][] data = new Object[][] { { true }, { false } };
     return Arrays.asList(data);
@@ -277,8 +277,8 @@ public class TestClientServiceDelegate {
 
     JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
     assertNotNull(jobStatus);
-    assertEquals("TestJobFilePath", jobStatus.getJobFile());                               
-    assertEquals("http://TestTrackingUrl", jobStatus.getTrackingUrl());                    
+    assertEquals("TestJobFilePath", jobStatus.getJobFile());
+    assertEquals("http://TestTrackingUrl", jobStatus.getTrackingUrl());
     assertEquals(1.0f, jobStatus.getMapProgress(), 0.0f);
     assertEquals(1.0f, jobStatus.getReduceProgress(), 0.0f);
   }
@@ -299,7 +299,8 @@ public class TestClientServiceDelegate {
 
     Counters counters = TypeConverter.toYarn(clientServiceDelegate.getJobCounters(oldJobId));
     assertNotNull(counters);
-    assertEquals(1001, counters.getCounterGroup("dummyCounters").getCounter("dummyCounter").getValue());                               
+    assertEquals(1001,
+        counters.getCounterGroup("dummyCounters").getCounter("dummyCounter").getValue());
   }
 
   @MethodSource("data")
@@ -414,20 +415,20 @@ public class TestClientServiceDelegate {
     // Should not reach AM even for second and third times too.
     jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
     assertNotNull(jobStatus);
-    assertEquals("N/A", jobStatus.getJobName());    
+    assertEquals("N/A", jobStatus.getJobName());
     verify(clientServiceDelegate, times(0)).instantiateAMProxy(
         any(InetSocketAddress.class));
     jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
     assertNotNull(jobStatus);
-    assertEquals("N/A", jobStatus.getJobName());    
+    assertEquals("N/A", jobStatus.getJobName());
     verify(clientServiceDelegate, times(0)).instantiateAMProxy(
         any(InetSocketAddress.class));
 
     // The third time around, app is completed, so should go to JHS
     JobStatus jobStatus1 = clientServiceDelegate.getJobStatus(oldJobId);
     assertNotNull(jobStatus1);
-    assertEquals("TestJobFilePath", jobStatus1.getJobFile());                               
-    assertEquals("http://TestTrackingUrl", jobStatus1.getTrackingUrl());                    
+    assertEquals("TestJobFilePath", jobStatus1.getJobFile());
+    assertEquals("http://TestTrackingUrl", jobStatus1.getTrackingUrl());
     assertEquals(1.0f, jobStatus1.getMapProgress(), 0.0f);
     assertEquals(1.0f, jobStatus1.getReduceProgress(), 0.0f);
     

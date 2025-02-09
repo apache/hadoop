@@ -45,7 +45,8 @@ public class TestReduceFetch extends TestReduceFetchFromPartialMem {
     final long spill = c.findCounter(TaskCounter.SPILLED_RECORDS).getCounter();
     final long out = c.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getCounter();
     assertTrue(spill >= 2 * out,
-        "Expected all records spilled during reduce (" + spill + ")"); // all records spill at map, reduce
+        "Expected all records spilled during reduce (" +
+        spill + ")"); // all records spill at map, reduce
     assertTrue(spill >= 2 * out + (out / MAP_TASKS),
         "Expected intermediate merges (" + spill + ")"); // some records hit twice
   }

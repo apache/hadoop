@@ -261,8 +261,8 @@ public class TestNetworkedJob {
       // JobStatus objects correspond to the same Job.
       assertEquals(jobId, client.getJob(jobId)
           .getJobStatus().getJobID(), "Expected matching JobIDs");
-      assertEquals(rj.getJobStatus()
-          .getStartTime(), client.getJob(jobId).getJobStatus().getStartTime(), "Expected matching startTimes");
+      assertEquals(rj.getJobStatus().getStartTime(),
+          client.getJob(jobId).getJobStatus().getStartTime(), "Expected matching startTimes");
     } finally {
       if (fileSys != null) {
         fileSys.delete(testDir, true);

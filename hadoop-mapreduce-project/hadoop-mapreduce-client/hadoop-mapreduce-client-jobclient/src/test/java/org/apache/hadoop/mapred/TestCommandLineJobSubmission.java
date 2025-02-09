@@ -59,7 +59,7 @@ public class TestCommandLineJobSubmission {
       stream.close();
       mr = new MiniMRCluster(2, fs.getUri().toString(), 1);
       File thisbuildDir = new File(buildDir, "jobCommand");
-      assertTrue(thisbuildDir.mkdirs(), "create build dir"); 
+      assertTrue(thisbuildDir.mkdirs(), "create build dir");
       File f = new File(thisbuildDir, "files_tmp");
       FileOutputStream fstream = new FileOutputStream(f);
       fstream.write("somestrings".getBytes());

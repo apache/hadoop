@@ -203,8 +203,8 @@ public class TestJobCleanup {
 
     if (fileName != null) {
       Path testFile = new Path(outDir, fileName);
-      assertTrue(
-         fileSys.exists(testFile), "File " + testFile + " missing for failed job " + id);
+      assertTrue(fileSys.exists(testFile),
+          "File " + testFile + " missing for failed job " + id);
     }
 
     // check if the files from the missing set exists
