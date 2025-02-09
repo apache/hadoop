@@ -242,6 +242,19 @@ public class TestBalancerService {
         }
       }, 100, 10000);
 
+      GenericTestUtils.waitFor(() -> {
+        final String balancerMetricsName =
+            "Balancer-" + cluster.getNameNode(0).getNamesystem().getBlockPoolId();
+        String blockPoolId = cluster.getNameNode(0).getNamesystem().getBlockPoolId();
+        MetricsRecordBuilder metrics = MetricsAsserts.getMetrics(balancerMetricsName);
+        try {
+          MetricsAsserts.assertTag("BlockPoolID", blockPoolId, metrics);
+          return true;
+        } catch (Exception e) {
+          return false;
+        }
+      }, 100, 10000);
+
       TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client, cluster,
           BalancerParameters.DEFAULT);
 
