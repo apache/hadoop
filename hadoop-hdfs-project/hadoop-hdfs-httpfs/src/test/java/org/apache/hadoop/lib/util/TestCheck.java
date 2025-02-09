@@ -37,7 +37,7 @@ public class TestCheck extends HTestCase {
 
   @Test
   public void notNullNull() {
-    assertThrows(IllegalArgumentException.class, ()->{
+    assertThrows(IllegalArgumentException.class, () -> {
       Check.notNull(null, "name");
     });
   }

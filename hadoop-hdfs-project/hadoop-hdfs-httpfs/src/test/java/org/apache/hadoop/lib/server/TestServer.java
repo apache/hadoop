@@ -18,6 +18,14 @@
 
 package org.apache.hadoop.lib.server;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -37,8 +45,6 @@ import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.test.TestException;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class TestServer extends HTestCase {
 
@@ -104,12 +110,14 @@ public class TestServer extends HTestCase {
   @TestException(exception = ServerException.class, msgRegExp = "S02.*")
   @TestDir
   public void initHomeDirNotDir() throws Exception {
-    File homeDir = new File(TestDirHelper.getTestDir(), "home");
-    new FileOutputStream(homeDir).close();
-    Configuration conf = new Configuration(false);
-    conf.set("server.services", TestService.class.getName());
-    Server server = new Server("server", homeDir.getAbsolutePath(), conf);
-    server.init();
+    assertThrows(ServerException.class, () -> {
+      File homeDir = new File(TestDirHelper.getTestDir(), "home");
+      new FileOutputStream(homeDir).close();
+      Configuration conf = new Configuration(false);
+      conf.set("server.services", TestService.class.getName());
+      Server server = new Server("server", homeDir.getAbsolutePath(), conf);
+      server.init();
+    });
   }
 
   @Test

@@ -23,16 +23,13 @@ import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.HTestCase;
-import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@RunWith(value = Parameterized.class)
 public class TestServerConstructor extends HTestCase {
 
-  @Parameterized.Parameters
   public static Collection constructorFailParams() {
     return Arrays.asList(new Object[][]{
       {null, null, null, null, null, null},
@@ -59,20 +56,22 @@ public class TestServerConstructor extends HTestCase {
   private String tempDir;
   private Configuration conf;
 
-  public TestServerConstructor(String name, String homeDir, String configDir, String logDir, String tempDir,
-                               Configuration conf) {
-    this.name = name;
-    this.homeDir = homeDir;
-    this.configDir = configDir;
-    this.logDir = logDir;
-    this.tempDir = tempDir;
-    this.conf = conf;
+  public void initTestServerConstructor(String pName, String pHomeDir,
+      String pConfigDir, String pLogDir, String pTempDir, Configuration pConf) {
+    this.name = pName;
+    this.homeDir = pHomeDir;
+    this.configDir = pConfigDir;
+    this.logDir = pLogDir;
+    this.tempDir = pTempDir;
+    this.conf = pConf;
   }
 
-
-  @Test
-  public void constructorFail() {
-    assertThrows(IllegalArgumentException.class, ()->{
+  @ParameterizedTest
+  @MethodSource("constructorFailParams")
+  public void constructorFail(String pName, String pHomeDir,
+      String pConfigDir, String pLogDir, String pTempDir, Configuration pConf) {
+    initTestServerConstructor(pName, pHomeDir, pConfigDir, pLogDir, pTempDir, pConf);
+    assertThrows(IllegalArgumentException.class, () -> {
       new Server(name, homeDir, configDir, logDir, tempDir, conf);
     });
   }

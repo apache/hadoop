@@ -31,7 +31,6 @@ import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.test.TestHdfs;
 import org.apache.hadoop.test.TestJetty;
 import org.apache.hadoop.test.TestJettyHelper;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
@@ -47,6 +46,9 @@ import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.MessageFormat;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This test class ensures that everything works as expected when XAttr
@@ -100,9 +102,9 @@ public class TestHttpFSServerNoXAttrs extends HTestCase {
    */
   private void createHttpFSServer() throws Exception {
     File homeDir = TestDirHelper.getTestDir();
-    Assertions.assertTrue(new File(homeDir, "conf").mkdir());
-    Assertions.assertTrue(new File(homeDir, "log").mkdir());
-    Assertions.assertTrue(new File(homeDir, "temp").mkdir());
+    assertTrue(new File(homeDir, "conf").mkdir());
+    assertTrue(new File(homeDir, "log").mkdir());
+    assertTrue(new File(homeDir, "temp").mkdir());
     HttpFSServerWebApp.setHomeDirForCurrentThread(homeDir.getAbsolutePath());
 
     File secretFile = new File(new File(homeDir, "conf"), "secret");
@@ -181,12 +183,12 @@ public class TestHttpFSServerNoXAttrs extends HTestCase {
     conn.connect();
     int resp = conn.getResponseCode();
     BufferedReader reader;
-    Assertions.assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, resp);
+    assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, resp);
     reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
     String res = reader.readLine();
-    Assertions.assertTrue(res.contains("RemoteException"));
-    Assertions.assertTrue(res.contains("XAttr"));
-    Assertions.assertTrue(res.contains("rejected"));
+    assertTrue(res.contains("RemoteException"));
+    assertTrue(res.contains("XAttr"));
+    assertTrue(res.contains("rejected"));
   }
 
   /**
@@ -211,13 +213,13 @@ public class TestHttpFSServerNoXAttrs extends HTestCase {
     conn.setRequestMethod("PUT");
     conn.connect();
     int resp = conn.getResponseCode();
-    Assertions.assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, resp);
+    assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, resp);
     BufferedReader reader;
     reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
     String err = reader.readLine();
-    Assertions.assertTrue(err.contains("RemoteException"));
-    Assertions.assertTrue(err.contains("XAttr"));
-    Assertions.assertTrue(err.contains("rejected"));
+    assertTrue(err.contains("RemoteException"));
+    assertTrue(err.contains("XAttr"));
+    assertTrue(err.contains("rejected"));
   }
   
   /**

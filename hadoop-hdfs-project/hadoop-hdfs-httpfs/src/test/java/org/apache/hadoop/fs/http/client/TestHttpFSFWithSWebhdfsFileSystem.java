@@ -26,15 +26,12 @@ import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.TestJettyHelper;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.net.URI;
 import java.net.URL;
 import java.util.UUID;
 
-@RunWith(value = Parameterized.class)
 public class TestHttpFSFWithSWebhdfsFileSystem
   extends TestHttpFSWithHttpFSFileSystem {
   private static String classpathDir;
@@ -76,8 +73,7 @@ public class TestHttpFSFWithSWebhdfsFileSystem
     KeyStoreTestUtil.cleanupSSLConfig(keyStoreDir, classpathDir);
   }
 
-  public TestHttpFSFWithSWebhdfsFileSystem(Operation operation) {
-    super(operation);
+  public TestHttpFSFWithSWebhdfsFileSystem() {
   }
 
   @Override

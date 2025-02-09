@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.fs.http.server;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -205,9 +209,9 @@ public class TestHttpFSServer extends HFSTestCase {
   private Configuration createHttpFSConf(boolean addDelegationTokenAuthHandler,
                                          boolean sslEnabled) throws Exception {
     File homeDir = TestDirHelper.getTestDir();
-    Assertions.assertTrue(new File(homeDir, "conf").mkdir());
-    Assertions.assertTrue(new File(homeDir, "log").mkdir());
-    Assertions.assertTrue(new File(homeDir, "temp").mkdir());
+    assertTrue(new File(homeDir, "conf").mkdir());
+    assertTrue(new File(homeDir, "log").mkdir());
+    assertTrue(new File(homeDir, "temp").mkdir());
     HttpFSServerWebApp.setHomeDirForCurrentThread(homeDir.getAbsolutePath());
 
     File secretFile = new File(new File(homeDir, "conf"), "secret");
@@ -269,7 +273,7 @@ public class TestHttpFSServer extends HFSTestCase {
     File homeDir = TestDirHelper.getTestDir();
     // HDFS configuration
     File hadoopConfDir = new File(new File(homeDir, "conf"), "hadoop-conf");
-    Assertions.assertTrue(hadoopConfDir.exists());
+    assertTrue(hadoopConfDir.exists());
 
     File siteFile = new File(hadoopConfDir, sitename);
     OutputStream os = new FileOutputStream(siteFile);
@@ -313,7 +317,7 @@ public class TestHttpFSServer extends HFSTestCase {
     URL url = new URL(TestJettyHelper.getJettyURL(),
                       "/webhdfs/v1/?op=GETHOMEDIRECTORY");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assertions.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
+    assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
                         conn.getResponseCode());
 
     String tokenSigned = getSignedTokenString();
@@ -323,7 +327,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn = (HttpURLConnection) url.openConnection();
     conn.setRequestProperty("Cookie",
                             AuthenticatedURL.AUTH_COOKIE  + "=" + tokenSigned);
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK,
+    assertEquals(HttpURLConnection.HTTP_OK,
                         conn.getResponseCode());
 
     JSONObject json = (JSONObject)new JSONParser().parse(
@@ -336,7 +340,7 @@ public class TestHttpFSServer extends HFSTestCase {
     Token<AbstractDelegationTokenIdentifier> dToken =
         new Token<AbstractDelegationTokenIdentifier>();
     dToken.decodeFromUrlString(tokenStr);
-    Assertions.assertEquals(sslEnabled ?
+    assertEquals(sslEnabled ?
         WebHdfsConstants.SWEBHDFS_TOKEN_KIND :
         WebHdfsConstants.WEBHDFS_TOKEN_KIND,
         dToken.getKind());
@@ -344,14 +348,14 @@ public class TestHttpFSServer extends HFSTestCase {
     url = new URL(TestJettyHelper.getJettyURL(),
                   "/webhdfs/v1/?op=GETHOMEDIRECTORY&delegation=" + tokenStr);
     conn = (HttpURLConnection) url.openConnection();
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK,
+    assertEquals(HttpURLConnection.HTTP_OK,
                         conn.getResponseCode());
 
     url = new URL(TestJettyHelper.getJettyURL(),
                   "/webhdfs/v1/?op=RENEWDELEGATIONTOKEN&token=" + tokenStr);
     conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod("PUT");
-    Assertions.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
+    assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
                         conn.getResponseCode());
 
     url = new URL(TestJettyHelper.getJettyURL(),
@@ -360,27 +364,27 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod("PUT");
     conn.setRequestProperty("Cookie",
                             AuthenticatedURL.AUTH_COOKIE  + "=" + tokenSigned);
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK,
+    assertEquals(HttpURLConnection.HTTP_OK,
                         conn.getResponseCode());
 
     url = new URL(TestJettyHelper.getJettyURL(),
                   "/webhdfs/v1/?op=CANCELDELEGATIONTOKEN&token=" + tokenStr);
     conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod("PUT");
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK,
+    assertEquals(HttpURLConnection.HTTP_OK,
                         conn.getResponseCode());
 
     url = new URL(TestJettyHelper.getJettyURL(),
                   "/webhdfs/v1/?op=GETHOMEDIRECTORY&delegation=" + tokenStr);
     conn = (HttpURLConnection) url.openConnection();
-    Assertions.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+    assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
                         conn.getResponseCode());
 
     // getTrash test with delegation
     url = new URL(TestJettyHelper.getJettyURL(),
         "/webhdfs/v1/?op=GETTRASHROOT&delegation=" + tokenStr);
     conn = (HttpURLConnection) url.openConnection();
-    Assertions.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+    assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
         conn.getResponseCode());
 
     url = new URL(TestJettyHelper.getJettyURL(),
@@ -388,7 +392,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn = (HttpURLConnection) url.openConnection();
     conn.setRequestProperty("Cookie",
         AuthenticatedURL.AUTH_COOKIE  + "=" + tokenSigned);
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK,
+    assertEquals(HttpURLConnection.HTTP_OK,
         conn.getResponseCode());
   }
 
@@ -403,26 +407,26 @@ public class TestHttpFSServer extends HFSTestCase {
         MessageFormat.format("/webhdfs/v1?user.name={0}&op=instrumentation",
                              "nobody"));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assertions.assertEquals(conn.getResponseCode(),
+    assertEquals(conn.getResponseCode(),
                         HttpURLConnection.HTTP_UNAUTHORIZED);
 
     url = new URL(TestJettyHelper.getJettyURL(),
         MessageFormat.format("/webhdfs/v1?user.name={0}&op=instrumentation",
                              HadoopUsersConfTestHelper.getHadoopUsers()[0]));
     conn = (HttpURLConnection) url.openConnection();
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(
         new InputStreamReader(conn.getInputStream()));
     String line = reader.readLine();
     reader.close();
-    Assertions.assertTrue(line.contains("\"counters\":{"));
+    assertTrue(line.contains("\"counters\":{"));
 
     url = new URL(TestJettyHelper.getJettyURL(),
         MessageFormat.format(
             "/webhdfs/v1/foo?user.name={0}&op=instrumentation",
             HadoopUsersConfTestHelper.getHadoopUsers()[0]));
     conn = (HttpURLConnection) url.openConnection();
-    Assertions.assertEquals(conn.getResponseCode(),
+    assertEquals(conn.getResponseCode(),
                         HttpURLConnection.HTTP_BAD_REQUEST);
   }
 
@@ -439,12 +443,12 @@ public class TestHttpFSServer extends HFSTestCase {
         MessageFormat.format("/webhdfs/v1/?user.name={0}&op=liststatus",
                              user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(
         new InputStreamReader(conn.getInputStream()));
     reader.readLine();
     reader.close();
-    Assertions.assertEquals(1 + oldOpsListStatus,
+    assertEquals(1 + oldOpsListStatus,
         (long) metricsGetter.get("LISTSTATUS").call());
   }
 
@@ -462,11 +466,11 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod("PUT");
     conn.connect();
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     getStatus("/tmp/sub-tmp", "LISTSTATUS");
     long opsStat =
         metricsGetter.get("MKDIRS").call();
-    Assertions.assertEquals(1 + oldMkdirOpsStat, opsStat);
+    assertEquals(1 + oldMkdirOpsStat, opsStat);
   }
 
   @Test
@@ -486,12 +490,12 @@ public class TestHttpFSServer extends HFSTestCase {
         MessageFormat.format(
             "/webhdfs/v1/tmp?user.name={0}&op=liststatus&filter=f*", user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(
         new InputStreamReader(conn.getInputStream()));
     reader.readLine();
     reader.close();
-    Assertions.assertEquals(1 + oldOpsListStatus,
+    assertEquals(1 + oldOpsListStatus,
         (long) metricsGetter.get("LISTSTATUS").call());
   }
 
@@ -539,7 +543,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.addRequestProperty("Content-Type", "application/octet-stream");
     conn.setRequestMethod("PUT");
     conn.connect();
-    Assertions.assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
   }
 
   /**
@@ -577,8 +581,8 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod("PUT");
     conn.connect();
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-    Assertions.assertEquals(1 + oldOpsMkdir,
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(1 + oldOpsMkdir,
         (long) metricsGetter.get("MKDIRS").call());
   }
 
@@ -606,13 +610,13 @@ public class TestHttpFSServer extends HFSTestCase {
     URL url = new URL(TestJettyHelper.getJettyURL(), pathOps);
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.connect();
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
 
     BufferedReader reader =
             new BufferedReader(new InputStreamReader(conn.getInputStream()));
     long opsStat =
         metricsGetter.getOrDefault(command, defaultExitMetricGetter).call();
-    Assertions.assertEquals(oldOpsStat + 1L, opsStat);
+    assertEquals(oldOpsStat + 1L, opsStat);
     return reader.readLine();
   }
 
@@ -624,7 +628,7 @@ public class TestHttpFSServer extends HFSTestCase {
    */
   private void putCmd(String filename, String command,
                       String params) throws Exception {
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK,
+    assertEquals(HttpURLConnection.HTTP_OK,
             putCmdWithReturn(filename, command, params).getResponseCode());
   }
 
@@ -772,19 +776,19 @@ public class TestHttpFSServer extends HFSTestCase {
 
     createWithHttp("/perm/none", null);
     String statusJson = getStatus("/perm/none", "GETFILESTATUS");
-    Assertions.assertTrue("755".equals(getPerms(statusJson)));
+    assertTrue("755".equals(getPerms(statusJson)));
 
     createWithHttp("/perm/p-777", "777");
     statusJson = getStatus("/perm/p-777", "GETFILESTATUS");
-    Assertions.assertTrue("777".equals(getPerms(statusJson)));
+    assertTrue("777".equals(getPerms(statusJson)));
 
     createWithHttp("/perm/p-654", "654");
     statusJson = getStatus("/perm/p-654", "GETFILESTATUS");
-    Assertions.assertTrue("654".equals(getPerms(statusJson)));
+    assertTrue("654".equals(getPerms(statusJson)));
 
     createWithHttp("/perm/p-321", "321");
     statusJson = getStatus("/perm/p-321", "GETFILESTATUS");
-    Assertions.assertTrue("321".equals(getPerms(statusJson)));
+    assertTrue("321".equals(getPerms(statusJson)));
   }
 
   /**
@@ -810,29 +814,29 @@ public class TestHttpFSServer extends HFSTestCase {
     createWithHttp(path, null);
     String statusJson = getStatus(path, "GETXATTRS");
     Map<String, byte[]> xAttrs = getXAttrs(statusJson);
-    Assertions.assertEquals(0, xAttrs.size());
+    assertEquals(0, xAttrs.size());
 
     // Set two xattrs
     putCmd(path, "SETXATTR", setXAttrParam(name1, value1));
     putCmd(path, "SETXATTR", setXAttrParam(name2, value2));
     statusJson = getStatus(path, "GETXATTRS");
     xAttrs = getXAttrs(statusJson);
-    Assertions.assertEquals(2, xAttrs.size());
-    Assertions.assertArrayEquals(value1, xAttrs.get(name1));
-    Assertions.assertArrayEquals(value2, xAttrs.get(name2));
+    assertEquals(2, xAttrs.size());
+    assertArrayEquals(value1, xAttrs.get(name1));
+    assertArrayEquals(value2, xAttrs.get(name2));
 
     // Remove one xattr
     putCmd(path, "REMOVEXATTR", "xattr.name=" + name1);
     statusJson = getStatus(path, "GETXATTRS");
     xAttrs = getXAttrs(statusJson);
-    Assertions.assertEquals(1, xAttrs.size());
-    Assertions.assertArrayEquals(value2, xAttrs.get(name2));
+    assertEquals(1, xAttrs.size());
+    assertArrayEquals(value2, xAttrs.get(name2));
 
     // Remove another xattr, then there is no xattr
     putCmd(path, "REMOVEXATTR", "xattr.name=" + name2);
     statusJson = getStatus(path, "GETXATTRS");
     xAttrs = getXAttrs(statusJson);
-    Assertions.assertEquals(0, xAttrs.size());
+    assertEquals(0, xAttrs.size());
   }
 
   /** Params for setting an xAttr. */
@@ -881,14 +885,14 @@ public class TestHttpFSServer extends HFSTestCase {
 
     /* getfilestatus and liststatus don't have 'aclBit' in their reply */
     statusJson = getStatus(path, "GETFILESTATUS");
-    Assertions.assertEquals(-1, statusJson.indexOf("aclBit"));
+    assertEquals(-1, statusJson.indexOf("aclBit"));
     statusJson = getStatus(dir, "LISTSTATUS");
-    Assertions.assertEquals(-1, statusJson.indexOf("aclBit"));
+    assertEquals(-1, statusJson.indexOf("aclBit"));
 
     /* getaclstatus works and returns no entries */
     statusJson = getStatus(path, "GETACLSTATUS");
     aclEntries = getAclEntries(statusJson);
-    Assertions.assertTrue(aclEntries.size() == 0);
+    assertTrue(aclEntries.size() == 0);
 
     /*
      * Now set an ACL on the file.  (getfile|list)status have aclBit,
@@ -896,41 +900,41 @@ public class TestHttpFSServer extends HFSTestCase {
      */
     putCmd(path, "SETACL", aclSpec);
     statusJson = getStatus(path, "GETFILESTATUS");
-    Assertions.assertNotEquals(-1, statusJson.indexOf("aclBit"));
+    assertNotEquals(-1, statusJson.indexOf("aclBit"));
     statusJson = getStatus(dir, "LISTSTATUS");
-    Assertions.assertNotEquals(-1, statusJson.indexOf("aclBit"));
+    assertNotEquals(-1, statusJson.indexOf("aclBit"));
     statusJson = getStatus(path, "GETACLSTATUS");
     aclEntries = getAclEntries(statusJson);
-    Assertions.assertTrue(aclEntries.size() == 2);
-    Assertions.assertTrue(aclEntries.contains(aclUser1));
-    Assertions.assertTrue(aclEntries.contains(aclGroup1));
+    assertTrue(aclEntries.size() == 2);
+    assertTrue(aclEntries.contains(aclUser1));
+    assertTrue(aclEntries.contains(aclGroup1));
 
     /* Modify acl entries to add another user acl */
     putCmd(path, "MODIFYACLENTRIES", modAclSpec);
     statusJson = getStatus(path, "GETACLSTATUS");
     aclEntries = getAclEntries(statusJson);
-    Assertions.assertTrue(aclEntries.size() == 3);
-    Assertions.assertTrue(aclEntries.contains(aclUser1));
-    Assertions.assertTrue(aclEntries.contains(aclUser2));
-    Assertions.assertTrue(aclEntries.contains(aclGroup1));
+    assertTrue(aclEntries.size() == 3);
+    assertTrue(aclEntries.contains(aclUser1));
+    assertTrue(aclEntries.contains(aclUser2));
+    assertTrue(aclEntries.contains(aclGroup1));
 
     /* Remove the first user acl entry and verify */
     putCmd(path, "REMOVEACLENTRIES", remAclSpec);
     statusJson = getStatus(path, "GETACLSTATUS");
     aclEntries = getAclEntries(statusJson);
-    Assertions.assertTrue(aclEntries.size() == 2);
-    Assertions.assertTrue(aclEntries.contains(aclUser2));
-    Assertions.assertTrue(aclEntries.contains(aclGroup1));
+    assertTrue(aclEntries.size() == 2);
+    assertTrue(aclEntries.contains(aclUser2));
+    assertTrue(aclEntries.contains(aclGroup1));
 
     /* Remove all acls and verify */
     putCmd(path, "REMOVEACL", null);
     statusJson = getStatus(path, "GETACLSTATUS");
     aclEntries = getAclEntries(statusJson);
-    Assertions.assertTrue(aclEntries.size() == 0);
+    assertTrue(aclEntries.size() == 0);
     statusJson = getStatus(path, "GETFILESTATUS");
-    Assertions.assertEquals(-1, statusJson.indexOf("aclBit"));
+    assertEquals(-1, statusJson.indexOf("aclBit"));
     statusJson = getStatus(dir, "LISTSTATUS");
-    Assertions.assertEquals(-1, statusJson.indexOf("aclBit"));
+    assertEquals(-1, statusJson.indexOf("aclBit"));
   }
 
   /**
@@ -962,30 +966,30 @@ public class TestHttpFSServer extends HFSTestCase {
 
     /* getfilestatus and liststatus don't have 'aclBit' in their reply */
     statusJson = getStatus(dir, "GETFILESTATUS");
-    Assertions.assertEquals(-1, statusJson.indexOf("aclBit"));
+    assertEquals(-1, statusJson.indexOf("aclBit"));
 
     /* No ACLs, either */
     statusJson = getStatus(dir, "GETACLSTATUS");
     aclEntries = getAclEntries(statusJson);
-    Assertions.assertTrue(aclEntries.size() == 0);
+    assertTrue(aclEntries.size() == 0);
 
     /* Give it a default ACL and verify */
     putCmd(dir, "SETACL", defSpec1);
     statusJson = getStatus(dir, "GETFILESTATUS");
-    Assertions.assertNotEquals(-1, statusJson.indexOf("aclBit"));
+    assertNotEquals(-1, statusJson.indexOf("aclBit"));
     statusJson = getStatus(dir, "GETACLSTATUS");
     aclEntries = getAclEntries(statusJson);
-    Assertions.assertTrue(aclEntries.size() == 5);
+    assertTrue(aclEntries.size() == 5);
     /* 4 Entries are default:(user|group|mask|other):perm */
-    Assertions.assertTrue(aclEntries.contains(defUser1));
+    assertTrue(aclEntries.contains(defUser1));
 
     /* Remove the default ACL and re-verify */
     putCmd(dir, "REMOVEDEFAULTACL", null);
     statusJson = getStatus(dir, "GETFILESTATUS");
-    Assertions.assertEquals(-1, statusJson.indexOf("aclBit"));
+    assertEquals(-1, statusJson.indexOf("aclBit"));
     statusJson = getStatus(dir, "GETACLSTATUS");
     aclEntries = getAclEntries(statusJson);
-    Assertions.assertTrue(aclEntries.size() == 0);
+    assertTrue(aclEntries.size() == 0);
   }
 
   @Test
@@ -1026,8 +1030,8 @@ public class TestHttpFSServer extends HFSTestCase {
     // Verify ACL
     String statusJson = getStatus(path, "GETACLSTATUS");
     List<String> aclEntries = getAclEntries(statusJson);
-    Assertions.assertTrue(aclEntries.contains(aclUser));
-    Assertions.assertTrue(aclEntries.contains(aclGroup));
+    assertTrue(aclEntries.contains(aclUser));
+    assertTrue(aclEntries.contains(aclGroup));
   }
 
   @Test
@@ -1050,11 +1054,11 @@ public class TestHttpFSServer extends HFSTestCase {
             "/webhdfs/v1/tmp/foo?user.name={0}&op=open&offset=1&length=2",
             user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     InputStream is = conn.getInputStream();
-    Assertions.assertEquals(1, is.read());
-    Assertions.assertEquals(2, is.read());
-    Assertions.assertEquals(-1, is.read());
+    assertEquals(1, is.read());
+    assertEquals(2, is.read());
+    assertEquals(-1, is.read());
   }
 
   @Test
@@ -1089,8 +1093,8 @@ public class TestHttpFSServer extends HFSTestCase {
     AclStatus aclStatus = fs.getAclStatus(new Path(notUnmaskedFile));
     AclEntry theAcl = findAclWithName(aclStatus, "user2");
 
-    Assertions.assertNotNull(theAcl);
-    Assertions.assertEquals(FsAction.NONE,
+    assertNotNull(theAcl);
+    assertEquals(FsAction.NONE,
         aclStatus.getEffectivePermission(theAcl));
 
     // Create another file, this time pass a mask of 777. Now the inherited
@@ -1100,8 +1104,8 @@ public class TestHttpFSServer extends HFSTestCase {
     aclStatus = fs.getAclStatus(new Path(unmaskedFile));
     theAcl = findAclWithName(aclStatus, "user2");
 
-    Assertions.assertNotNull(theAcl);
-    Assertions.assertEquals(FsAction.READ_WRITE,
+    assertNotNull(theAcl);
+    assertEquals(FsAction.READ_WRITE,
         aclStatus.getEffectivePermission(theAcl));
   }
 
@@ -1137,8 +1141,8 @@ public class TestHttpFSServer extends HFSTestCase {
     AclStatus aclStatus = fs.getAclStatus(new Path(notUnmaskedDir));
     AclEntry theAcl = findAclWithName(aclStatus, "user2");
 
-    Assertions.assertNotNull(theAcl);
-    Assertions.assertEquals(FsAction.NONE,
+    assertNotNull(theAcl);
+    assertEquals(FsAction.NONE,
         aclStatus.getEffectivePermission(theAcl));
 
     // Create another file, this time pass a mask of 777. Now the inherited
@@ -1148,8 +1152,8 @@ public class TestHttpFSServer extends HFSTestCase {
     aclStatus = fs.getAclStatus(new Path(unmaskedDir));
     theAcl = findAclWithName(aclStatus, "user2");
 
-    Assertions.assertNotNull(theAcl);
-    Assertions.assertEquals(FsAction.READ_WRITE,
+    assertNotNull(theAcl);
+    assertEquals(FsAction.READ_WRITE,
         aclStatus.getEffectivePermission(theAcl));
   }
 
@@ -1167,7 +1171,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setDoInput(true);
     conn.setDoOutput(true);
     conn.setRequestMethod("PUT");
-    Assertions.assertEquals(conn.getResponseCode(),
+    assertEquals(conn.getResponseCode(),
         HttpURLConnection.HTTP_BAD_REQUEST);
   }
 
@@ -1183,7 +1187,7 @@ public class TestHttpFSServer extends HFSTestCase {
 
     Path expectedPath = new Path(FileSystem.USER_HOME_PREFIX,
         new Path(user, FileSystem.TRASH_PREFIX));
-    Assertions.assertEquals(expectedPath.toUri().getPath(), trashPath);
+    assertEquals(expectedPath.toUri().getPath(), trashPath);
 
     byte[] array = new byte[]{0, 1, 2, 3};
     FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
@@ -1194,7 +1198,7 @@ public class TestHttpFSServer extends HFSTestCase {
 
     trashJson = getStatus("/tmp/foo", "GETTRASHROOT");
     trashPath = getPath(trashJson);
-    Assertions.assertEquals(expectedPath.toUri().getPath(), trashPath);
+    assertEquals(expectedPath.toUri().getPath(), trashPath);
 
     //TestHdfsHelp has already set up EZ environment
     final Path ezFile = TestHdfsHelper.ENCRYPTED_FILE;
@@ -1202,7 +1206,7 @@ public class TestHttpFSServer extends HFSTestCase {
     trashJson = getStatus(ezFile.toUri().getPath(), "GETTRASHROOT");
     trashPath = getPath(trashJson);
     expectedPath = new Path(ezPath, new Path(FileSystem.TRASH_PREFIX, user));
-    Assertions.assertEquals(expectedPath.toUri().getPath(), trashPath);
+    assertEquals(expectedPath.toUri().getPath(), trashPath);
   }
 
   @Test
@@ -1226,7 +1230,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod("PUT");
     conn.connect();
 
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
 
     //needed to make the given dir snapshottable
     Path snapshottablePath = new Path("/tmp/tmp-snap-test");
@@ -1259,7 +1263,7 @@ public class TestHttpFSServer extends HFSTestCase {
     DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(
         path.toUri(), TestHdfsHelper.getHdfsConf());
     // FileStatus should have snapshot enabled bit unset by default
-    Assertions.assertFalse(dfs.getFileStatus(path).isSnapshotEnabled());
+    assertFalse(dfs.getFileStatus(path).isSnapshotEnabled());
     // Send a request with ALLOWSNAPSHOT API
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     URL url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
@@ -1269,9 +1273,9 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod("PUT");
     conn.connect();
     // Should return HTTP_OK
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     // FileStatus should have snapshot enabled bit set
-    Assertions.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
+    assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
     // Clean up
     dfs.delete(path, true);
   }
@@ -1292,7 +1296,7 @@ public class TestHttpFSServer extends HFSTestCase {
     // Allow snapshot
     dfs.allowSnapshot(path);
     // FileStatus should have snapshot enabled bit set so far
-    Assertions.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
+    assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
     // Send a request with DISALLOWSNAPSHOT API
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     URL url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
@@ -1302,9 +1306,9 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod("PUT");
     conn.connect();
     // Should return HTTP_OK
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     // FileStatus should not have snapshot enabled bit set
-    Assertions.assertFalse(dfs.getFileStatus(path).isSnapshotEnabled());
+    assertFalse(dfs.getFileStatus(path).isSnapshotEnabled());
     // Clean up
     dfs.delete(path, true);
   }
@@ -1325,7 +1329,7 @@ public class TestHttpFSServer extends HFSTestCase {
     // Allow snapshot
     dfs.allowSnapshot(path);
     // FileStatus should have snapshot enabled bit set so far
-    Assertions.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
+    assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
     // Create some snapshots
     dfs.createSnapshot(path, "snap-01");
     dfs.createSnapshot(path, "snap-02");
@@ -1338,9 +1342,9 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod("PUT");
     conn.connect();
     // Should not return HTTP_OK
-    Assertions.assertNotEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertNotEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     // FileStatus should still have snapshot enabled bit set
-    Assertions.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
+    assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
     // Clean up
     dfs.deleteSnapshot(path, "snap-02");
     dfs.deleteSnapshot(path, "snap-01");
@@ -1356,17 +1360,17 @@ public class TestHttpFSServer extends HFSTestCase {
     final HttpURLConnection conn = snapshotTestPreconditions("PUT",
         "CREATESNAPSHOT",
         "snapshotname=snap-with-name");
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     final BufferedReader reader =
         new BufferedReader(new InputStreamReader(conn.getInputStream()));
     String result = reader.readLine();
     //Validates if the content format is correct
-    Assertions.assertTrue(result.
+    assertTrue(result.
         equals("{\"Path\":\"/tmp/tmp-snap-test/.snapshot/snap-with-name\"}"));
     //Validates if the snapshot is properly created under .snapshot folder
     result = getStatus("/tmp/tmp-snap-test/.snapshot",
         "LISTSTATUS");
-    Assertions.assertTrue(result.contains("snap-with-name"));
+    assertTrue(result.contains("snap-with-name"));
   }
 
   @Test
@@ -1378,19 +1382,19 @@ public class TestHttpFSServer extends HFSTestCase {
     final HttpURLConnection conn = snapshotTestPreconditions("PUT",
         "CREATESNAPSHOT",
         "");
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     final BufferedReader reader = new BufferedReader(
         new InputStreamReader(conn.getInputStream()));
     String result = reader.readLine();
     //Validates if the content format is correct
-    Assertions.assertTrue(Pattern.matches(
+    assertTrue(Pattern.matches(
         "(\\{\\\"Path\\\"\\:\\\"/tmp/tmp-snap-test/.snapshot/s)" +
             "(\\d{8})(-)(\\d{6})(\\.)(\\d{3})(\\\"\\})", result));
     //Validates if the snapshot is properly created under .snapshot folder
     result = getStatus("/tmp/tmp-snap-test/.snapshot",
         "LISTSTATUS");
 
-    Assertions.assertTrue(Pattern.matches("(.+)(\\\"pathSuffix\\\":\\\"s)" +
+    assertTrue(Pattern.matches("(.+)(\\\"pathSuffix\\\":\\\"s)" +
             "(\\d{8})(-)(\\d{6})(\\.)(\\d{3})(\\\")(.+)",
         result));
   }
@@ -1404,18 +1408,18 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn = snapshotTestPreconditions("PUT",
         "CREATESNAPSHOT",
         "snapshotname=snap-to-rename");
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     conn = snapshotTestPreconditions("PUT",
         "RENAMESNAPSHOT",
         "oldsnapshotname=snap-to-rename" +
             "&snapshotname=snap-renamed");
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     //Validates the snapshot is properly renamed under .snapshot folder
     String result = getStatus("/tmp/tmp-snap-test/.snapshot",
         "LISTSTATUS");
-    Assertions.assertTrue(result.contains("snap-renamed"));
+    assertTrue(result.contains("snap-renamed"));
     //There should be no snapshot named snap-to-rename now
-    Assertions.assertFalse(result.contains("snap-to-rename"));
+    assertFalse(result.contains("snap-to-rename"));
   }
 
   @Test
@@ -1436,15 +1440,15 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn = snapshotTestPreconditions("PUT",
         "CREATESNAPSHOT",
         "snapshotname=snap-to-delete");
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     conn = snapshotTestPreconditions("DELETE",
         "DELETESNAPSHOT",
         "snapshotname=snap-to-delete");
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     //Validates the snapshot is not under .snapshot folder anymore
     String result = getStatus("/tmp/tmp-snap-test/.snapshot",
         "LISTSTATUS");
-    Assertions.assertFalse(result.contains("snap-to-delete"));
+    assertFalse(result.contains("snap-to-delete"));
   }
 
   private HttpURLConnection sendRequestToHttpFSServer(String path, String op,
@@ -1481,7 +1485,7 @@ public class TestHttpFSServer extends HFSTestCase {
         path.toUri(), TestHdfsHelper.getHdfsConf());
     // Enable snapshot
     dfs.allowSnapshot(path);
-    Assertions.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
+    assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
     // Create a file and take a snapshot
     String file1 = pathStr + "/file1";
     createWithHttp(file1, null);
@@ -1495,7 +1499,7 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn = sendRequestGetSnapshotDiff(pathStr,
         "snap1", "snap2");
     // Should return HTTP_OK
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     // Verify the response
     BufferedReader reader =
         new BufferedReader(new InputStreamReader(conn.getInputStream()));
@@ -1504,7 +1508,7 @@ public class TestHttpFSServer extends HFSTestCase {
     // Verify the content of diff with DFS API.
     SnapshotDiffReport dfsDiffReport = dfs.getSnapshotDiffReport(path,
         "snap1", "snap2");
-    Assertions.assertEquals(result, JsonUtil.toJsonString(dfsDiffReport));
+    assertEquals(result, JsonUtil.toJsonString(dfsDiffReport));
     // Clean up
     dfs.deleteSnapshot(path, "snap2");
     dfs.deleteSnapshot(path, "snap1");
@@ -1526,17 +1530,17 @@ public class TestHttpFSServer extends HFSTestCase {
         path.toUri(), TestHdfsHelper.getHdfsConf());
     // Enable snapshot
     dfs.allowSnapshot(path);
-    Assertions.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
+    assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
     // Send requests with GETSNAPSHOTDIFF API
     // Snapshots snap1 and snap2 are not created, expect failures but not NPE
     HttpURLConnection conn = sendRequestGetSnapshotDiff(pathStr, "", "");
-    Assertions.assertNotEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertNotEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     sendRequestGetSnapshotDiff(pathStr, "snap1", "");
-    Assertions.assertNotEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertNotEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     sendRequestGetSnapshotDiff(pathStr, "", "snap2");
-    Assertions.assertNotEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertNotEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     sendRequestGetSnapshotDiff(pathStr, "snap1", "snap2");
-    Assertions.assertNotEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertNotEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     // Clean up
     dfs.delete(path, true);
   }
@@ -1547,7 +1551,7 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn = sendRequestToHttpFSServer("/",
         "GETSNAPSHOTTABLEDIRECTORYLIST", "");
     // Should return HTTP_OK
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     // Verify the response
     BufferedReader reader =
         new BufferedReader(new InputStreamReader(conn.getInputStream()));
@@ -1555,7 +1559,7 @@ public class TestHttpFSServer extends HFSTestCase {
     String dirLst = reader.readLine();
     // Verify the content of diff with DFS API.
     SnapshottableDirectoryStatus[] dfsDirLst = dfs.getSnapshottableDirListing();
-    Assertions.assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
+    assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
   }
 
   private void verifyGetSnapshotList(DistributedFileSystem dfs, Path path)
@@ -1564,7 +1568,7 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn = sendRequestToHttpFSServer(path.toString(),
         "GETSNAPSHOTLIST", "");
     // Should return HTTP_OK
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     // Verify the response
     BufferedReader reader =
         new BufferedReader(new InputStreamReader(conn.getInputStream()));
@@ -1572,7 +1576,7 @@ public class TestHttpFSServer extends HFSTestCase {
     String dirLst = reader.readLine();
     // Verify the content of status with DFS API.
     SnapshotStatus[] dfsDirLst = dfs.getSnapshotListing(path);
-    Assertions.assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
+    assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
   }
 
   @Test
@@ -1594,12 +1598,12 @@ public class TestHttpFSServer extends HFSTestCase {
     verifyGetSnapshottableDirectoryList(dfs);
     // Enable snapshot for path1
     dfs.allowSnapshot(path1);
-    Assertions.assertTrue(dfs.getFileStatus(path1).isSnapshotEnabled());
+    assertTrue(dfs.getFileStatus(path1).isSnapshotEnabled());
     // Verify response when there is one snapshottable directory
     verifyGetSnapshottableDirectoryList(dfs);
     // Enable snapshot for path2
     dfs.allowSnapshot(path2);
-    Assertions.assertTrue(dfs.getFileStatus(path2).isSnapshotEnabled());
+    assertTrue(dfs.getFileStatus(path2).isSnapshotEnabled());
     // Verify response when there are two snapshottable directories
     verifyGetSnapshottableDirectoryList(dfs);
 
@@ -1625,7 +1629,7 @@ public class TestHttpFSServer extends HFSTestCase {
         path.toUri(), TestHdfsHelper.getHdfsConf());
     // Enable snapshot for path1
     dfs.allowSnapshot(path);
-    Assertions.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
+    assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
     // Verify response when there is one snapshottable directory
     verifyGetSnapshotList(dfs, path);
     // Create a file and take a snapshot
@@ -1659,14 +1663,14 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod(HttpMethod.PUT);
     conn.connect();
     // Verify that it returned the final write location
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     JSONObject json = (JSONObject)new JSONParser().parse(
         new InputStreamReader(conn.getInputStream()));
     String location = (String)json.get("Location");
-    Assertions.assertTrue(location.contains(DataParam.NAME));
-    Assertions.assertFalse(location.contains(NoRedirectParam.NAME));
-    Assertions.assertTrue(location.contains("CREATE"));
-    Assertions.assertTrue(
+    assertTrue(location.contains(DataParam.NAME));
+    assertFalse(location.contains(NoRedirectParam.NAME));
+    assertTrue(location.contains("CREATE"));
+    assertTrue(
        location.startsWith(TestJettyHelper.getJettyURL().toString()), "Wrong location: " + location);
 
     // Use the location to actually write the file
@@ -1681,12 +1685,12 @@ public class TestHttpFSServer extends HFSTestCase {
     os.write(testContent.getBytes());
     os.close();
     // Verify that it created the file and returned the location
-    Assertions.assertEquals(
+    assertEquals(
         HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
     json = (JSONObject)new JSONParser().parse(
         new InputStreamReader(conn.getInputStream()));
     location = (String)json.get("Location");
-    Assertions.assertEquals(
+    assertEquals(
         TestJettyHelper.getJettyURL() + "/webhdfs/v1" + path, location);
 
 
@@ -1698,13 +1702,13 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod(HttpMethod.GET);
     conn.connect();
     // Verify that we got the final location to read from
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     json = (JSONObject)new JSONParser().parse(
         new InputStreamReader(conn.getInputStream()));
     location = (String)json.get("Location");
-    Assertions.assertTrue(!location.contains(NoRedirectParam.NAME));
-    Assertions.assertTrue(location.contains("OPEN"));
-    Assertions.assertTrue(
+    assertTrue(!location.contains(NoRedirectParam.NAME));
+    assertTrue(location.contains("OPEN"));
+    assertTrue(
        location.startsWith(TestJettyHelper.getJettyURL().toString()), "Wrong location: " + location);
 
     // Use the location to actually read
@@ -1713,9 +1717,9 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod(HttpMethod.GET);
     conn.connect();
     // Verify that we read what we wrote
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     String content = IOUtils.toString(conn.getInputStream(), StandardCharsets.UTF_8);
-    Assertions.assertEquals(testContent, content);
+    assertEquals(testContent, content);
 
 
     // Get the checksum of the file which shouldn't redirect
@@ -1726,13 +1730,13 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod(HttpMethod.GET);
     conn.connect();
     // Verify that we got the final location to write to
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     json = (JSONObject)new JSONParser().parse(
         new InputStreamReader(conn.getInputStream()));
     location = (String)json.get("Location");
-    Assertions.assertTrue(!location.contains(NoRedirectParam.NAME));
-    Assertions.assertTrue(location.contains("GETFILECHECKSUM"));
-    Assertions.assertTrue(
+    assertTrue(!location.contains(NoRedirectParam.NAME));
+    assertTrue(location.contains("GETFILECHECKSUM"));
+    assertTrue(
        location.startsWith(TestJettyHelper.getJettyURL().toString()), "Wrong location: " + location);
 
     // Use the location to actually get the checksum
@@ -1741,15 +1745,15 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod(HttpMethod.GET);
     conn.connect();
     // Verify that we read what we wrote
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     json = (JSONObject)new JSONParser().parse(
         new InputStreamReader(conn.getInputStream()));
     JSONObject checksum = (JSONObject)json.get("FileChecksum");
-    Assertions.assertEquals(
+    assertEquals(
         "0000020000000000000000001b9c0a445fed3c0bf1e1aa7438d96b1500000000",
         checksum.get("bytes"));
-    Assertions.assertEquals(28L, checksum.get("length"));
-    Assertions.assertEquals("MD5-of-0MD5-of-512CRC32C", checksum.get("algorithm"));
+    assertEquals(28L, checksum.get("length"));
+    assertEquals("MD5-of-0MD5-of-512CRC32C", checksum.get("algorithm"));
   }
 
   private void verifyGetServerDefaults(DistributedFileSystem dfs)
@@ -1758,15 +1762,15 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn =
         sendRequestToHttpFSServer("/", "GETSERVERDEFAULTS", "");
     // Should return HTTP_OK
-    Assertions.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     // Verify the response
     BufferedReader reader =
         new BufferedReader(new InputStreamReader(conn.getInputStream()));
     // The response should be a one-line JSON string.
     String dirLst = reader.readLine();
     FsServerDefaults dfsDirLst = dfs.getServerDefaults();
-    Assertions.assertNotNull(dfsDirLst);
-    Assertions.assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
+    assertNotNull(dfsDirLst);
+    assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
   }
 
   @Test
@@ -1797,10 +1801,10 @@ public class TestHttpFSServer extends HFSTestCase {
 
     HttpURLConnection conn =
         sendRequestToHttpFSServer(dir, "CHECKACCESS", "fsaction=r--");
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     HttpURLConnection conn1 =
         sendRequestToHttpFSServer(dir, "CHECKACCESS", "fsaction=-w-");
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn1.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn1.getResponseCode());
   }
 
   @Test
@@ -1862,19 +1866,19 @@ public class TestHttpFSServer extends HFSTestCase {
 
     HttpURLConnection conn =
         putCmdWithReturn(dir, "SETECPOLICY", "ecpolicy=" + ecPolicyName);
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
 
     HttpURLConnection conn1 = sendRequestToHttpFSServer(dir, "GETECPOLICY", "");
     // Should return HTTP_OK
-    Assertions.assertEquals(conn1.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn1.getResponseCode(), HttpURLConnection.HTTP_OK);
     // Verify the response
     BufferedReader reader =
         new BufferedReader(new InputStreamReader(conn1.getInputStream()));
     // The response should be a one-line JSON string.
     String dirLst = reader.readLine();
     ErasureCodingPolicy dfsDirLst = dfs.getErasureCodingPolicy(path1);
-    Assertions.assertNotNull(dfsDirLst);
-    Assertions.assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
+    assertNotNull(dfsDirLst);
+    assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
 
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     URL url = new URL(TestJettyHelper.getJettyURL(),
@@ -1883,18 +1887,18 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn2 = (HttpURLConnection) url.openConnection();
     conn2.setRequestMethod("POST");
     conn2.connect();
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn2.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn2.getResponseCode());
 
     // response should be null
     dfsDirLst = dfs.getErasureCodingPolicy(path1);
-    Assertions.assertNull(dfsDirLst);
+    assertNull(dfsDirLst);
 
     // test put opeartion with path as "/"
     final String dir1 = "/";
     HttpURLConnection conn3 =
         putCmdWithReturn(dir1, "SETECPOLICY", "ecpolicy=" + ecPolicyName);
     // Should return HTTP_OK
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn3.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn3.getResponseCode());
 
     // test post operation with path as "/"
     final String dir2 = "/";
@@ -1904,7 +1908,7 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn4 = (HttpURLConnection) url1.openConnection();
     conn4.setRequestMethod("POST");
     conn4.connect();
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn4.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn4.getResponseCode());
   }
 
   @Test
@@ -1927,7 +1931,7 @@ public class TestHttpFSServer extends HFSTestCase {
     assertEquals(HdfsConstants.COLD_STORAGE_POLICY_NAME,
         storagePolicy.getName());
     HttpURLConnection conn = putCmdWithReturn(dir, "SATISFYSTORAGEPOLICY", "");
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     Map<String, byte[]> xAttrs = dfs.getXAttrs(path1);
     assertTrue(
         xAttrs.containsKey(HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY));
@@ -1952,14 +1956,14 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM);
     conn.setDoOutput(true);
     conn.connect();
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     JSONObject json = (JSONObject) new JSONParser()
         .parse(new InputStreamReader(conn.getInputStream()));
 
     // get the location to write
     String location = (String) json.get("Location");
-    Assertions.assertTrue(location.contains(DataParam.NAME));
-    Assertions.assertTrue(location.contains("CREATE"));
+    assertTrue(location.contains(DataParam.NAME));
+    assertTrue(location.contains("CREATE"));
     url = new URL(location);
     conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod(HttpMethod.PUT);
@@ -1971,11 +1975,11 @@ public class TestHttpFSServer extends HFSTestCase {
     os.write(writeStr.getBytes());
     os.close();
     // Verify that file got created
-    Assertions.assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
     json = (JSONObject) new JSONParser()
         .parse(new InputStreamReader(conn.getInputStream()));
     location = (String) json.get("Location");
-    Assertions.assertEquals(TestJettyHelper.getJettyURL() + "/webhdfs/v1" + path,
+    assertEquals(TestJettyHelper.getJettyURL() + "/webhdfs/v1" + path,
         location);
   }
 
@@ -2024,9 +2028,9 @@ public class TestHttpFSServer extends HFSTestCase {
     createWithHttp(file1, null);
     HttpURLConnection conn = sendRequestToHttpFSServer(file1,
         "GETFILEBLOCKLOCATIONS", "length=10&offset10");
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     BlockLocation[] locations1 = dfs.getFileBlockLocations(new Path(file1), 0, 1);
-    Assertions.assertNotNull(locations1);
+    assertNotNull(locations1);
 
     Map<?, ?> jsonMap = JsonSerialization.mapReader().readValue(conn.getInputStream());
 

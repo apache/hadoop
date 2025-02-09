@@ -37,22 +37,21 @@ import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
 import org.apache.hadoop.util.Shell;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 
 import static org.apache.hadoop.security.authentication.server.AuthenticationFilter.SIGNER_SECRET_PROVIDER_ATTRIBUTE;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test {@link HttpFSServerWebServer}.
  */
+@Timeout(30)
 public class TestHttpFSServerWebServer {
-
-  @Rule
-  public Timeout timeout = new Timeout(30000);
 
   private File secretFile;
   private HttpFSServerWebServer webServer;
@@ -187,8 +186,8 @@ public class TestHttpFSServerWebServer {
     SignerSecretProvider secretProvider = (SignerSecretProvider)
         server.getWebAppContext().getServletContext()
             .getAttribute(SIGNER_SECRET_PROVIDER_ATTRIBUTE);
-    Assertions.assertNotNull(secretProvider, "The secret provider must not be null");
-    Assertions.assertEquals(expected, secretProvider.getClass(), "The secret provider must match the following");
+    assertNotNull(secretProvider, "The secret provider must not be null");
+    assertEquals(expected, secretProvider.getClass(), "The secret provider must match the following");
   }
 
   private void assertServiceRespondsWithOK(URL serviceURL)
@@ -197,7 +196,7 @@ public class TestHttpFSServerWebServer {
     URL url = new URL(serviceURL, MessageFormat.format(
         "/webhdfs/v1/?user.name={0}&op=liststatus", user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assertions.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     try (BufferedReader reader = new BufferedReader(
         new InputStreamReader(conn.getInputStream()))) {
       reader.readLine();
@@ -247,7 +246,7 @@ public class TestHttpFSServerWebServer {
   }
 
   private void createSecretFile(String content) throws IOException {
-    Assertions.assertTrue(secretFile.createNewFile());
+    assertTrue(secretFile.createNewFile());
     FileUtils.writeStringToFile(secretFile, content, StandardCharsets.UTF_8);
   }
 
