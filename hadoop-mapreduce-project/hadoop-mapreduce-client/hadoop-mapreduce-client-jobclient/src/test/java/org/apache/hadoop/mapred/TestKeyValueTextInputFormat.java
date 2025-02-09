@@ -253,7 +253,7 @@ public class TestKeyValueTextInputFormat {
     assertEquals("of gzip", results.get(1).toString(), "splits[1][1]");
   }
   
- public static void main(String[] args) throws Exception {
+  public static void main(String[] args) throws Exception {
     new TestKeyValueTextInputFormat().testFormat();
   }
 }
