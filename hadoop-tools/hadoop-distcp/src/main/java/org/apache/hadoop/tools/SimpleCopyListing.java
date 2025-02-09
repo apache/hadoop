@@ -119,6 +119,7 @@ public class SimpleCopyListing extends CopyListing {
     this.randomizeFileListing = randomizeFileListing;
   }
 
+  @VisibleForTesting
   protected void initSimpleCopyListing(Configuration pConfiguration,
       Credentials pCredentials, int pNumListstatusThreads, int pFileStatusLimit,
       boolean pRandomizeFileListing) {
