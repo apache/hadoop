@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.applications.distributedshell;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,8 +83,8 @@ public class TestDSTimelineV15 extends DistributedShellBaseTest {
         return true;
       }
     }, scanInterval * 2, TEST_TIME_WINDOW_EXPIRE);
-    Assert.assertNull("Exception in getting listing status",
-        exceptionRef.get());
+    Assertions.assertNull(
+       exceptionRef.get(), "Exception in getting listing status");
     super.checkTimeline(appId, defaultFlow, haveDomain, appReport);
   }
 

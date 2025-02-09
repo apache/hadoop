@@ -26,9 +26,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,18 +137,18 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
       waitForContainersLaunch(yarnClient, 3, appAttemptReportRef,
           containersListRef, appAttemptIdRef, thrownError);
       if (thrownError.get() != null) {
-        Assert.fail(thrownError.get().getMessage());
+        Assertions.fail(thrownError.get().getMessage());
       }
       ContainerId amContainerId = appAttemptReportRef.get().getAMContainerId();
       for (ContainerReport container : containersListRef.get()) {
         if (!container.getContainerId().equals(amContainerId)) {
-          Assert.assertEquals(container.getExecutionType(),
+          Assertions.assertEquals(container.getExecutionType(),
               ExecutionType.OPPORTUNISTIC);
         }
       }
     } catch (Exception e) {
       LOG.error("Job execution with enforce execution type failed.", e);
-      Assert.fail("Exception. " + e.getMessage());
+      Assertions.fail("Exception. " + e.getMessage());
     } finally {
       if (yarnClient != null) {
         yarnClient.stop();
@@ -209,7 +209,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
 
     LOG.info("Initializing DS Client");
     setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
-    Assert.assertTrue(getDSClient().init(args));
+    Assertions.assertTrue(getDSClient().init(args));
     LOG.info("Running DS Client");
     final AtomicBoolean result = new AtomicBoolean(false);
     Thread dsClientRunner = new Thread(() -> {
@@ -228,19 +228,19 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
       waitForContainersLaunch(yarnClient, 2, appAttemptReportRef,
           containersListRef, appAttemptIdRef, thrownExceptionRef);
       if (thrownExceptionRef.get() != null) {
-        Assert.fail(thrownExceptionRef.get().getMessage());
+        Assertions.fail(thrownExceptionRef.get().getMessage());
       }
       ContainerId amContainerId = appAttemptReportRef.get().getAMContainerId();
       ContainerReport report = yarnClient.getContainerReport(amContainerId);
       Resource masterResource = report.getAllocatedResource();
-      Assert.assertEquals(memVars[0], masterResource.getMemorySize());
-      Assert.assertEquals(1, masterResource.getVirtualCores());
+      Assertions.assertEquals(memVars[0], masterResource.getMemorySize());
+      Assertions.assertEquals(1, masterResource.getVirtualCores());
       for (ContainerReport container : containersListRef.get()) {
         if (!container.getContainerId().equals(amContainerId)) {
           Resource containerResource = container.getAllocatedResource();
-          Assert.assertEquals(memVars[1],
+          Assertions.assertEquals(memVars[1],
               containerResource.getMemorySize());
-          Assert.assertEquals(1, containerResource.getVirtualCores());
+          Assertions.assertEquals(1, containerResource.getVirtualCores());
         }
       }
     } finally {
@@ -294,7 +294,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
 
     File tmpRootFolder = new File(tmpRoot);
     try {
-      Assert.assertTrue(tmpRootFolder.isDirectory());
+      Assertions.assertTrue(tmpRootFolder.isDirectory());
       String basePath = tmpRoot +
           YarnConfiguration.DEFAULT_RM_CLUSTER_ID + File.separator +
           UserGroupInformation.getCurrentUser().getShortUserName() +
@@ -436,21 +436,21 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
             TimelineEntity entity = FileSystemTimelineReaderImpl.
                 getTimelineRecordFromJSON(entityLine, TimelineEntity.class);
             TimelineEvent event = entity.getEvents().pollFirst();
-            Assert.assertNotNull(event);
-            Assert.assertTrue("diagnostics",
-                event.getInfo().containsKey(ApplicationMaster.DIAGNOSTICS));
+            Assertions.assertNotNull(event);
+            Assertions.assertTrue(
+               event.getInfo().containsKey(ApplicationMaster.DIAGNOSTICS), "diagnostics");
           }
           if (checkIdPrefix) {
             TimelineEntity entity = FileSystemTimelineReaderImpl.
                 getTimelineRecordFromJSON(entityLine, TimelineEntity.class);
-            Assert.assertTrue("Entity ID prefix expected to be > 0",
-                entity.getIdPrefix() > 0);
+            Assertions.assertTrue(
+               entity.getIdPrefix() > 0, "Entity ID prefix expected to be > 0");
             if (idPrefix == -1) {
               idPrefix = entity.getIdPrefix();
             } else {
-              Assert.assertEquals(
-                  "Entity ID prefix should be same across each publish of "
-                      + "same entity", idPrefix, entity.getIdPrefix());
+              Assertions.assertEquals(
+              idPrefix, entity.getIdPrefix(), "Entity ID prefix should be same across each publish of "
+                      + "same entity");
             }
           }
         }
@@ -463,7 +463,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
     }, sleepTime, (checkTimes + 1) * sleepTime);
 
     if (thrownExceptionRef.get() != null) {
-      Assert.fail("verifyEntityForTimeline failed "
+      Assertions.fail("verifyEntityForTimeline failed "
           + thrownExceptionRef.get().getMessage());
     }
   }
@@ -475,10 +475,10 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
     LOG.info("verifyEntityTypeFileExists output path for entityType {}: {}",
         entityType, outputDirPathForEntity);
     File outputDirForEntity = new File(outputDirPathForEntity);
-    Assert.assertTrue(outputDirForEntity.isDirectory());
+    Assertions.assertTrue(outputDirForEntity.isDirectory());
     String entityFilePath = outputDirPathForEntity + entityFileName;
     File entityFile = new File(entityFilePath);
-    Assert.assertTrue(entityFile.exists());
+    Assertions.assertTrue(entityFile.exists());
     return entityFile;
   }
 }

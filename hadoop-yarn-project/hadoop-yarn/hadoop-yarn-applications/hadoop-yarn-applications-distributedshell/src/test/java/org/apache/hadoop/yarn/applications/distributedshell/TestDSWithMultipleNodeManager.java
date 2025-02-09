@@ -28,13 +28,13 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
@@ -116,24 +116,24 @@ public class TestDSWithMultipleNodeManager {
     return conf;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupUnitTests() throws Exception {
     TestDSTimelineV10.setupUnitTests();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownUnitTests() throws Exception {
     TestDSTimelineV10.tearDownUnitTests();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     distShellTest = new TestDSTimelineV10();
     distShellTest.setupInternal(NUM_NMS,
         getConfiguration(multiNodePlacementEnabled));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (dsClient != null) {
       dsClient.sendStopSignal();
@@ -211,7 +211,7 @@ public class TestDSWithMultipleNodeManager {
       dsClient =
           new Client(
               new Configuration(distShellTest.getYarnClusterConfiguration()));
-      Assert.assertTrue(dsClient.init(args));
+      Assertions.assertTrue(dsClient.init(args));
       LOG.info("Running DS Client");
       boolean result = dsClient.run();
       LOG.info("Client run completed. Result={}", result);
@@ -222,9 +222,9 @@ public class TestDSWithMultipleNodeManager {
       int[] maxRunningContainersOnNMs =
           containerMonitorRunner.getMaxRunningContainersReport();
       // Check no container allocated on NM[0]
-      Assert.assertEquals(0, maxRunningContainersOnNMs[0]);
+      Assertions.assertEquals(0, maxRunningContainersOnNMs[0]);
       // Check there are some containers allocated on NM[1]
-      Assert.assertTrue(maxRunningContainersOnNMs[1] > 0);
+      Assertions.assertTrue(maxRunningContainersOnNMs[1] > 0);
     } finally {
       if (containerMonitorRunner != null) {
         containerMonitorRunner.stopMonitoring();
@@ -253,7 +253,7 @@ public class TestDSWithMultipleNodeManager {
       dsClient =
           new Client(
               new Configuration(distShellTest.getYarnClusterConfiguration()));
-      Assert.assertTrue(dsClient.init(args));
+      Assertions.assertTrue(dsClient.init(args));
       LOG.info("Running DS Client");
       boolean result = dsClient.run();
       LOG.info("Client run completed. Result={}", result);
@@ -276,8 +276,8 @@ public class TestDSWithMultipleNodeManager {
 
       int[] maxRunningContainersOnNMs =
           containerMonitorRunner.getMaxRunningContainersReport();
-      Assert.assertEquals(expectedNMsCount[0], maxRunningContainersOnNMs[0]);
-      Assert.assertEquals(expectedNMsCount[1], maxRunningContainersOnNMs[1]);
+      Assertions.assertEquals(expectedNMsCount[0], maxRunningContainersOnNMs[0]);
+      Assertions.assertEquals(expectedNMsCount[1], maxRunningContainersOnNMs[1]);
     } finally {
       if (containerMonitorRunner != null) {
         containerMonitorRunner.stopMonitoring();
@@ -339,7 +339,7 @@ public class TestDSWithMultipleNodeManager {
           getNodeId();
       NodeId nodeB = distShellTest.getNodeManager(1).getNMContext().
           getNodeId();
-      Assert.assertEquals(2, (expectedNMCounts[0] + expectedNMCounts[1]));
+      Assertions.assertEquals(2, (expectedNMCounts[0] + expectedNMCounts[1]));
       if (expectedNMCounts[0] != expectedNMCounts[1]) {
         taskContainerNodeIdA = masterContainerNodeIdARef.get();
       } else {
@@ -351,7 +351,7 @@ public class TestDSWithMultipleNodeManager {
           new Client(
               new Configuration(distShellTest.getYarnClusterConfiguration()));
       clientB.init(argsB);
-      Assert.assertTrue(clientB.run());
+      Assertions.assertTrue(clientB.run());
       containerMonitorRunner.stopMonitoring();
       apps = distShellTest.getResourceManager().getRMContext().getRMApps();
       Iterator<RMApp> it = apps.values().iterator();
@@ -379,8 +379,8 @@ public class TestDSWithMultipleNodeManager {
       }
       int[] maxRunningContainersOnNMs =
           containerMonitorRunner.getMaxRunningContainersReport();
-      Assert.assertEquals(expectedNMCounts[0], maxRunningContainersOnNMs[0]);
-      Assert.assertEquals(expectedNMCounts[1], maxRunningContainersOnNMs[1]);
+      Assertions.assertEquals(expectedNMCounts[0], maxRunningContainersOnNMs[0]);
+      Assertions.assertEquals(expectedNMCounts[1], maxRunningContainersOnNMs[1]);
 
       try {
         yarnClient = YarnClient.createYarnClient();
