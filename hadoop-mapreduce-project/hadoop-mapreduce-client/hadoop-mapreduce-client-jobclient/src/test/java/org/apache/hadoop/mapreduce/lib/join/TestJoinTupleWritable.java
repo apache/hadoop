@@ -184,8 +184,8 @@ public class TestJoinTupleWritable {
     dTuple.readFields(new DataInputStream(in));
     assertThat(dTuple).withFailMessage("Failed to write/read tuple")
         .isEqualTo(sTuple);
-    assertEquals(
-      -1, in.read(), "All tuple data has not been read from the stream");
+    assertEquals(-1, in.read(),
+        "All tuple data has not been read from the stream");
   }
 
   @Test
@@ -204,8 +204,8 @@ public class TestJoinTupleWritable {
     dTuple.readFields(new DataInputStream(in));
     assertThat(dTuple).withFailMessage("Failed to write/read tuple")
             .isEqualTo(sTuple);
-    assertEquals(
-      -1, in.read(), "All tuple data has not been read from the stream");
+    assertEquals(-1, in.read(),
+        "All tuple data has not been read from the stream");
   }
   
   /**
@@ -230,8 +230,8 @@ public class TestJoinTupleWritable {
     dTuple.readFields(new DataInputStream(in));
     assertThat(dTuple).withFailMessage("Failed to write/read tuple")
         .isEqualTo(sTuple);
-    assertEquals(
-      -1, in.read(), "All tuple data has not been read from the stream");
+    assertEquals(-1, in.read(),
+        "All tuple data has not been read from the stream");
   }
 
   @Test
@@ -250,8 +250,7 @@ public class TestJoinTupleWritable {
         assertTrue(has);
       }
       else {
-        assertFalse(
-         has, "Tuple position is incorrectly labelled as set: " + pos);
+        assertFalse(has, "Tuple position is incorrectly labelled as set: " + pos);
       }
     }
   }
@@ -272,8 +271,7 @@ public class TestJoinTupleWritable {
         assertTrue(has);
       }
       else {
-        assertFalse(
-         has, "Tuple position is incorrectly labelled as set: " + pos);
+        assertFalse(has, "Tuple position is incorrectly labelled as set: " + pos);
       }
     }
   }
@@ -297,8 +295,7 @@ public class TestJoinTupleWritable {
         assertTrue(has);
       }
       else {
-        assertFalse(
-         has, "Tuple position is incorrectly labelled as set: " + pos);
+        assertFalse(has, "Tuple position is incorrectly labelled as set: " + pos);
       }
     }
   }

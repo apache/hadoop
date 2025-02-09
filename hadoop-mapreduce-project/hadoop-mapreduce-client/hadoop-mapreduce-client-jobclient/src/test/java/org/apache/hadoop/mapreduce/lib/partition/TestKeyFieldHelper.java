@@ -411,8 +411,8 @@ public class TestKeyFieldHelper {
     String output = new String(outputBytes);
     LOG.info("output : " + output);
     LOG.info("expected-output : " + expectedOutput);
-    assertEquals(
-                 expectedOutput, output, keySpecs + " failed on input '" + input + "'");
+    assertEquals(expectedOutput, output,
+        keySpecs + " failed on input '" + input + "'");
   }
 
   // check for equality of 2 int arrays

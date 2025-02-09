@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.security;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
@@ -27,7 +28,6 @@ import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -104,8 +104,8 @@ public class TestJHSSecurity {
       // Fake the authentication-method
       UserGroupInformation loggedInUser = UserGroupInformation
           .createRemoteUser("testrenewer@APACHE.ORG");
-      Assertions.assertEquals("testrenewer", loggedInUser.getShortUserName());
-   // Default realm is APACHE.ORG
+      assertEquals("testrenewer", loggedInUser.getShortUserName());
+      // Default realm is APACHE.ORG
       loggedInUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
 
 
@@ -124,7 +124,7 @@ public class TestJHSSecurity {
       try {
         clientUsingDT.getJobReport(jobReportRequest);
       } catch (IOException e) {
-        Assertions.assertEquals("Unknown job job_123456_0001", e.getMessage());
+        assertEquals("Unknown job job_123456_0001", e.getMessage());
       }
       
    // Renew after 50% of token age.
@@ -147,7 +147,7 @@ public class TestJHSSecurity {
       try {
         clientUsingDT.getJobReport(jobReportRequest);
       } catch (IOException e) {
-        Assertions.assertEquals("Unknown job job_123456_0001", e.getMessage());
+        assertEquals("Unknown job job_123456_0001", e.getMessage());
       }
       
       // Wait for expiry.

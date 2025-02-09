@@ -158,8 +158,9 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<String> chk : testJavaStrings) {
-        assertEquals(chk.part
-,             partitioner.getPartition(chk.data, nw, splitJavaStrings.length + 1), chk.data.toString());
+        assertEquals(chk.part,
+            partitioner.getPartition(chk.data, nw, splitJavaStrings.length + 1),
+            chk.data.toString());
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);
@@ -178,8 +179,8 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : testStrings) {
-        assertEquals(chk.part
-,             partitioner.getPartition(chk.data, nw, splitStrings.length + 1), chk.data.toString());
+        assertEquals(chk.part,
+            partitioner.getPartition(chk.data, nw, splitStrings.length + 1), chk.data.toString());
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);
@@ -199,8 +200,8 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : testStrings) {
-        assertEquals(chk.part
-,             partitioner.getPartition(chk.data, nw, splitStrings.length + 1), chk.data.toString());
+        assertEquals(chk.part,
+            partitioner.getPartition(chk.data, nw, splitStrings.length + 1), chk.data.toString());
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);
@@ -248,8 +249,8 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : revCheck) {
-        assertEquals(chk.part
-,             partitioner.getPartition(chk.data, nw, splitStrings.length + 1), chk.data.toString());
+        assertEquals(chk.part,
+            partitioner.getPartition(chk.data, nw, splitStrings.length + 1), chk.data.toString());
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);

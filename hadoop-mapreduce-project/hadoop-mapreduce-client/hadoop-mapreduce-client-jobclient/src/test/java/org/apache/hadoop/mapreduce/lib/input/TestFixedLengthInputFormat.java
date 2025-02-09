@@ -46,7 +46,8 @@ import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestFixedLengthInputFormat {
 
@@ -253,11 +254,11 @@ public class TestFixedLengthInputFormat {
     }
     List<String> results = readSplit(format, splits.get(0), job);
     assertEquals(10, results.size(), "splits[0] length");
-    assertEquals("splits[0][5]", "six  ", results.get(5));
+    assertEquals("six  ", results.get(5), "splits[0][5]");
     results = readSplit(format, splits.get(1), job);
     assertEquals(10, results.size(), "splits[1] length");
-    assertEquals("splits[1][0]", "ten  ", results.get(0));
-    assertEquals("splits[1][1]", "nine ", results.get(1));
+    assertEquals("ten  ", results.get(0), "splits[1][0]");
+    assertEquals("nine ", results.get(1), "splits[1][1]");
   }
 
   // Create a file containing fixed length records with random data
@@ -375,28 +376,28 @@ public class TestFixedLengthInputFormat {
             reader, null, null, MapReduceTestUtil.createDummyReporter(), split);
         reader.initialize(split, mcontext);
         Class<?> clazz = reader.getClass();
-        assertEquals(
-            FixedLengthRecordReader.class, clazz, "RecordReader class should be FixedLengthRecordReader:");
+        assertEquals(FixedLengthRecordReader.class, clazz,
+            "RecordReader class should be FixedLengthRecordReader:");
         // Plow through the records in this split
         while (reader.nextKeyValue()) {
           key = reader.getCurrentKey();
           value = reader.getCurrentValue();
-          assertEquals((long)(recordNumber*recordLength)
-,               key.get(), "Checking key");
+          assertEquals((long) (recordNumber * recordLength),
+              key.get(), "Checking key");
           String valueString = new String(value.getBytes(), 0,
               value.getLength());
-          assertEquals(recordLength
-,               value.getLength(), "Checking record length:");
-          assertTrue(
-             recordNumber < totalRecords, "Checking for more records than expected:");
+          assertEquals(recordLength,
+              value.getLength(), "Checking record length:");
+          assertTrue(recordNumber < totalRecords,
+              "Checking for more records than expected:");
           String origRecord = recordList.get(recordNumber);
           assertEquals(origRecord, valueString, "Checking record content:");
           recordNumber++;
         }
         reader.close();
       }
-      assertEquals(
-         recordList.size(), recordNumber, "Total original records should be total read records:");
+      assertEquals(recordList.size(), recordNumber,
+          "Total original records should be total read records:");
     }
   }
 

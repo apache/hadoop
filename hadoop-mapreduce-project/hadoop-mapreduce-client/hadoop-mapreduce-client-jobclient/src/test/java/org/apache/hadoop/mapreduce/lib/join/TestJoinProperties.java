@@ -259,7 +259,7 @@ public class TestJoinProperties {
   private void validateOuterKeyValue(IntWritable k, TupleWritable v, 
       int tupleSize, boolean firstTuple, boolean secondTuple) {
 	final String kvstr = "Unexpected tuple: " + stringify(k, v);
-	assertTrue(v.size() == tupleSize, kvstr);
+    assertTrue(v.size() == tupleSize, kvstr);
 	int key = k.get();
 	IntWritable val0 = null;
 	IntWritable val1 = null;
@@ -329,14 +329,14 @@ public class TestJoinProperties {
   private void validateInnerKeyValue(IntWritable k, TupleWritable v,
       int tupleSize, boolean firstTuple, boolean secondTuple) {
 	final String kvstr = "Unexpected tuple: " + stringify(k, v);
-	assertTrue(v.size() == tupleSize, kvstr);
+    assertTrue(v.size() == tupleSize, kvstr);
 	int key = k.get();
 	IntWritable val0 = null;
 	IntWritable val1 = null;
 	LongWritable val2 = null;
-	assertTrue(key % 2 == 0 && key / 2 <= ITEMS, kvstr);
-	assertTrue(key % 3 == 0 && key / 3 <= ITEMS, kvstr);
-	assertTrue(key % 4 == 0 && key / 4 <= ITEMS, kvstr);
+    assertTrue(key % 2 == 0 && key / 2 <= ITEMS, kvstr);
+    assertTrue(key % 3 == 0 && key / 3 <= ITEMS, kvstr);
+    assertTrue(key % 4 == 0 && key / 4 <= ITEMS, kvstr);
 	if (firstTuple) {
       TupleWritable v0 = ((TupleWritable)v.get(0));
       val0 = (IntWritable)v0.get(0);

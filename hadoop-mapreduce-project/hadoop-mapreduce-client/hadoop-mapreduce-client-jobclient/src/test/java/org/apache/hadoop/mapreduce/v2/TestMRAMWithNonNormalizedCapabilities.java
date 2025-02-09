@@ -21,8 +21,6 @@ package org.apache.hadoop.mapreduce.v2;
 import java.io.File;
 import java.io.IOException;
 
-import org.junit.jupiter.api.Assertions;
-
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,6 +35,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestMRAMWithNonNormalizedCapabilities {
   private static final Logger LOG =
@@ -102,9 +103,9 @@ public class TestMRAMWithNonNormalizedCapabilities {
     job.addFileToClassPath(APP_JAR); // The AppMaster jar itself.
     job.submit();
     boolean completed = job.waitForCompletion(true);
-    Assertions.assertTrue(completed, "Job should be completed");
-    Assertions.assertEquals(
-                    JobStatus.State.SUCCEEDED, job.getJobState(), "Job should be finished successfully");
+    assertTrue(completed, "Job should be completed");
+    assertEquals(JobStatus.State.SUCCEEDED, job.getJobState(),
+        "Job should be finished successfully");
   }
 
   @AfterEach

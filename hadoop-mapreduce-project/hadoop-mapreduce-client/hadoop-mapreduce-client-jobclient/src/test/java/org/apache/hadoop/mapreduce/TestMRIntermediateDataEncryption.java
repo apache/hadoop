@@ -34,12 +34,10 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,6 +64,10 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 /**
  * This class tests the support of Intermediate data encryption
  * (Spill data encryption).
@@ -86,7 +88,6 @@ import org.apache.hadoop.util.ToolRunner;
  *    combine the output files into a single one.
  * 6- Verify that the maps spilled files.
  */
-@RunWith(Parameterized.class)
 public class TestMRIntermediateDataEncryption {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestMRIntermediateDataEncryption.class);
@@ -113,35 +114,34 @@ public class TestMRIntermediateDataEncryption {
   /**
    * Test parameters.
    */
-  private final String testTitleName;
-  private final int numMappers;
-  private final int numReducers;
-  private final boolean isUber;
+  private String testTitleName;
+  private int numMappers;
+  private int numReducers;
+  private boolean isUber;
   private Configuration config;
   private Path jobOutputPath;
 
   /**
    * Initialized the parametrized JUnit test.
-   * @param testName the name of the unit test to be executed.
-   * @param mappers number of mappers in the tests.
-   * @param reducers number of the reducers.
-   * @param uberEnabled boolean flag for isUber
+   * @param pTestName the name of the unit test to be executed.
+   * @param pMappers number of mappers in the tests.
+   * @param pReducers number of the reducers.
+   * @param pUberEnabled boolean flag for isUber
+   * @throws Exception unit test error.
    */
-  public TestMRIntermediateDataEncryption(String testName, int mappers,
-      int reducers, boolean uberEnabled) {
-    this.testTitleName = testName;
-    this.numMappers = mappers;
-    this.numReducers = reducers;
-    this.isUber = uberEnabled;
+  public void initTestMRIntermediateDataEncryption(String pTestName,
+      int pMappers, int pReducers, boolean pUberEnabled) throws Exception {
+    this.testTitleName = pTestName;
+    this.numMappers = pMappers;
+    this.numReducers = pReducers;
+    this.isUber = pUberEnabled;
+    setup();
   }
 
   /**
    * List of arguments to run the JunitTest.
    * @return
    */
-  @Parameterized.Parameters(
-      name = "{index}: TestMRIntermediateDataEncryption.{0} .. "
-          + "mappers:{1}, reducers:{2}, isUber:{3})")
   public static Collection<Object[]> getTestParameters() {
     return Arrays.asList(new Object[][]{
         {"testSingleReducer", 3, 1, false},
@@ -176,8 +176,8 @@ public class TestMRIntermediateDataEncryption {
     fs.mkdirs(jobsDirPath);
     jobInputDirPath = new Path(jobsDirPath, "in-dir");
     // run the input generator job.
-    Assertions.assertEquals(0
-,         generateInputTextFile(), "Generating input should succeed");
+    assertEquals(0,
+        generateInputTextFile(), "Generating input should succeed");
     // run the reference job
     runReferenceJob();
   }
@@ -194,7 +194,7 @@ public class TestMRIntermediateDataEncryption {
     // make sure that generated input file is deleted
     final File textInputFile = new File(testRootDir, "input.txt");
     if (textInputFile.exists()) {
-      Assertions.assertTrue(textInputFile.delete());
+      assertTrue(textInputFile.delete());
     }
   }
 
@@ -290,19 +290,19 @@ public class TestMRIntermediateDataEncryption {
     if (fs.exists(jobRefDirPath) && !fs.delete(jobRefDirPath, true)) {
       throw new IOException("Could not delete " + jobRefDirPath);
     }
-    Assertions.assertTrue(fs.mkdirs(jobRefDirPath));
+    assertTrue(fs.mkdirs(jobRefDirPath));
     Path jobRefOutputPath = new Path(jobRefDirPath, "out-dir");
     Configuration referenceConf = new Configuration(commonConfig);
     referenceConf.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, false);
     Job jobReference = runWordCountJob(jobRefLabel, jobRefOutputPath,
         referenceConf, 4, 1);
-    Assertions.assertTrue(jobReference.isSuccessful());
+    assertTrue(jobReference.isSuccessful());
     FileStatus[] fileStatusArr =
         fs.listStatus(jobRefOutputPath,
             new Utils.OutputFileUtils.OutputFilesFilter());
-    Assertions.assertEquals(1, fileStatusArr.length);
+    assertEquals(1, fileStatusArr.length);
     checkSumReference = fs.getFileChecksum(fileStatusArr[0].getPath());
-    Assertions.assertTrue(fs.delete(jobRefDirPath, true));
+    assertTrue(fs.delete(jobRefDirPath, true));
   }
 
   private static Job runWordCountJob(String postfixName, Path jOutputPath,
@@ -346,8 +346,8 @@ public class TestMRIntermediateDataEncryption {
    * @throws Exception if the output is missing or the combiner job fails.
    */
   private boolean validateJobOutput() throws Exception {
-    Assertions.assertTrue(
-       fs.exists(jobOutputPath), "Job Output path [" + jobOutputPath + "] should exist");
+    assertTrue(fs.exists(jobOutputPath),
+        "Job Output path [" + jobOutputPath + "] should exist");
     Path outputPath = jobOutputPath;
     if (numReducers != 1) {
       // combine the result into one file by running a combiner job
@@ -391,7 +391,6 @@ public class TestMRIntermediateDataEncryption {
     return checkSumReference.equals(jobFileChecksum);
   }
 
-  @BeforeEach
   public void setup() throws Exception {
     LOG.info("Starting TestMRIntermediateDataEncryption#{}.......",
         testTitleName);
@@ -419,8 +418,12 @@ public class TestMRIntermediateDataEncryption {
     config.setInt("mapreduce.reduce.maxattempts", 1);
   }
 
-  @Test
-  public void testWordCount() throws Exception {
+  @ParameterizedTest(name = "{index}: TestMRIntermediateDataEncryption.{0} .. "
+       + "mappers:{1}, reducers:{2}, isUber:{3})")
+  @MethodSource("getTestParameters")
+  public void testWordCount(String pTestName,
+      int pMappers, int pReducers, boolean pUberEnabled) throws Exception {
+    initTestMRIntermediateDataEncryption(pTestName, pMappers, pReducers, pUberEnabled);
     LOG.info("........Starting main Job Driver #{} starting at {}.......",
         testTitleName, Time.formatTime(System.currentTimeMillis()));
     SpillCallBackPathsFinder spillInjector =
@@ -435,7 +438,7 @@ public class TestMRIntermediateDataEncryption {
           testTitleName, Time.formatTime(System.currentTimeMillis())));
       Job job = runWordCountJob(testTitleName, jobOutputPath, config,
           numMappers, numReducers);
-      Assertions.assertTrue(job.isSuccessful());
+      assertTrue(job.isSuccessful());
       long endTime = Time.monotonicNow();
       testSummary.append(String.format("%nJob %s ended at %s",
               job.getJobName(), Time.formatTime(System.currentTimeMillis())));
@@ -451,16 +454,16 @@ public class TestMRIntermediateDataEncryption {
                 fStatus.getPath(), fileSize));
       }
       // Validate the checksum of the output.
-      Assertions.assertTrue(validateJobOutput());
+      assertTrue(validateJobOutput());
       // Check intermediate files and spilling.
       long spilledRecords =
           job.getCounters().findCounter(TaskCounter.SPILLED_RECORDS).getValue();
-      Assertions.assertTrue(
-         spilledRecords > 0, "Spill records must be greater than 0");
-      Assertions.assertFalse(
-         spillInjector.getEncryptedSpilledFiles().isEmpty(), "The encrypted spilled files should not be empty.");
-      Assertions.assertTrue(
-         spillInjector.getInvalidSpillEntries().isEmpty(), "Invalid access to spill file positions");
+      assertTrue(
+          spilledRecords > 0, "Spill records must be greater than 0");
+      assertFalse(spillInjector.getEncryptedSpilledFiles().isEmpty(),
+          "The encrypted spilled files should not be empty.");
+      assertTrue(spillInjector.getInvalidSpillEntries().isEmpty(),
+          "Invalid access to spill file positions");
     } finally {
       testSummary.append(spillInjector.getSpilledFileReport());
       LOG.info(testSummary.toString());

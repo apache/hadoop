@@ -233,8 +233,8 @@ public class TestDataDrivenDBInputFormat extends HadoopTestCase {
     assertTrue(ret, "job failed");
 
     // Check to see that we imported as much as we thought we did.
-    assertEquals(4
-,         job.getCounters().findCounter(TaskCounter.REDUCE_OUTPUT_RECORDS)
+    assertEquals(4,
+        job.getCounters().findCounter(TaskCounter.REDUCE_OUTPUT_RECORDS)
         .getValue(), "Did not get all the records");
   }
 }

@@ -46,7 +46,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestMRKeyValueTextInputFormat {
   private static final Logger LOG =
@@ -115,8 +117,8 @@ public class TestMRKeyValueTextInputFormat {
           RecordReader<Text, Text> reader = format.createRecordReader(
             splits.get(j), context);
           Class<?> clazz = reader.getClass();
-          assertEquals(
-            KeyValueLineRecordReader.class, clazz, "reader class is KeyValueLineRecordReader.");
+          assertEquals(KeyValueLineRecordReader.class, clazz,
+              "reader class is KeyValueLineRecordReader.");
           MapContext<Text, Text, Text, Text> mcontext = 
             new MapContextImpl<Text, Text, Text, Text>(job.getConfiguration(), 
             context.getTaskAttemptID(), reader, null, null, 
@@ -262,11 +264,12 @@ public class TestMRKeyValueTextInputFormat {
     LineReader in = makeStream("abcd\u20acbdcd\u20ac");
     Text line = new Text();
     in.readLine(line);
-    assertEquals("readLine changed utf8 characters", 
-                 "abcd\u20acbdcd\u20ac", line.toString());
+    assertEquals("abcd\u20acbdcd\u20ac", line.toString(),
+        "readLine changed utf8 characters");
     in = makeStream("abc\u200axyz");
     in.readLine(line);
-    assertEquals("split on fake newline", "abc\u200axyz", line.toString());
+    assertEquals("abc\u200axyz", line.toString(),
+        "split on fake newline");
   }
 
   @Test
@@ -348,21 +351,19 @@ public class TestMRKeyValueTextInputFormat {
     }
     List<Text> results = readSplit(format, splits.get(0), job);
     assertEquals(6, results.size(), "splits[0] length");
-    assertEquals("splits[0][0]", "the quick", results.get(0).toString());
-    assertEquals("splits[0][1]", "brown", results.get(1).toString());
-    assertEquals("splits[0][2]", "fox jumped", results.get(2).toString());
-    assertEquals("splits[0][3]", "over", results.get(3).toString());
-    assertEquals("splits[0][4]", " the lazy", results.get(4).toString());
-    assertEquals("splits[0][5]", " dog", results.get(5).toString());
+    assertEquals("the quick", results.get(0).toString(), "splits[0][0]");
+    assertEquals("brown", results.get(1).toString(), "splits[0][1]");
+    assertEquals("fox jumped", results.get(2).toString(), "splits[0][2]");
+    assertEquals("over", results.get(3).toString(), "splits[0][3]");
+    assertEquals(" the lazy", results.get(4).toString(), "splits[0][4]");
+    assertEquals(" dog", results.get(5).toString(), "splits[0][5]");
     results = readSplit(format, splits.get(1), job);
     assertEquals(2, results.size(), "splits[1] length");
-    assertEquals("splits[1][0]", "this is a test", 
-                 results.get(0).toString());    
-    assertEquals("splits[1][1]", "of gzip", 
-                 results.get(1).toString());    
+    assertEquals("this is a test", results.get(0).toString(), "splits[1][0]");
+    assertEquals("of gzip", results.get(1).toString(), "splits[1][1]");
   }
   
-  public static void main(String[] args) throws Exception {
+/*  public static void main(String[] args) throws Exception {
     new TestMRKeyValueTextInputFormat().testFormat();
-  }
+  }*/
 }

@@ -104,8 +104,8 @@ public class TestCombineTextInputFormat {
       // the block size
       assertEquals(1, splits.size(), "We got more than one splits!");
       InputSplit split = splits.get(0);
-      assertEquals(
-       CombineFileSplit.class, split.getClass(), "It should be CombineFileSplit");
+      assertEquals(CombineFileSplit.class, split.getClass(),
+          "It should be CombineFileSplit");
 
       // check the split
       BitSet bits = new BitSet(length);
@@ -114,8 +114,8 @@ public class TestCombineTextInputFormat {
         createDummyMapTaskAttemptContext(job.getConfiguration());
       RecordReader<LongWritable, Text> reader =
         format.createRecordReader(split, context);
-      assertEquals(
-       CombineFileRecordReader.class, reader.getClass(), "reader class is CombineFileRecordReader.");
+      assertEquals(CombineFileRecordReader.class, reader.getClass(),
+          "reader class is CombineFileRecordReader.");
       MapContext<LongWritable,Text,LongWritable,Text> mcontext =
         new MapContextImpl<LongWritable,Text,LongWritable,Text>(job.getConfiguration(),
         context.getTaskAttemptID(), reader, null, null,
@@ -260,11 +260,11 @@ public class TestCombineTextInputFormat {
   private static void testResults(List<Text> results, String[] first,
     String[] second) {
     for (int i = 0; i < first.length; i++) {
-      assertEquals("splits[0]["+i+"]", first[i], results.get(i).toString());
+      assertEquals(first[i], results.get(i).toString(), "splits[0][" + i + "]");
     }
     for (int i = 0; i < second.length; i++) {
       int j = i + first.length;
-      assertEquals("splits[0]["+j+"]", second[i], results.get(j).toString());
+      assertEquals(second[i], results.get(j).toString(), "splits[0][" + j + "]");
     }
   }
 }

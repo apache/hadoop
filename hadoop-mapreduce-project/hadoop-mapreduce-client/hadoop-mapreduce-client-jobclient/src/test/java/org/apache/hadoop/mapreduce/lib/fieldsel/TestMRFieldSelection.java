@@ -78,7 +78,7 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
     // in the original key.
     //
     String outdata = MapReduceTestUtil.readOutput(outDir, conf);
-    assertEquals("Outputs doesnt match.",expectedOutput.toString(), outdata);
+    assertEquals(expectedOutput.toString(), outdata, "Outputs doesnt match.");
     fs.delete(outDir, true);
   }
 

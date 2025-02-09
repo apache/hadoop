@@ -159,7 +159,8 @@ public class TestJobOutputCommitter extends HadoopTestCase {
     // check if the files from the missing set exists
     for (String ex : exclude) {
       Path file = new Path(outDir, ex);
-      assertFalse(fs.exists(file), "File " + file + " should not be present for successful job "
+      assertFalse(fs.exists(file),
+          "File " + file + " should not be present for successful job "
           + job.getJobID());
     }
   }
@@ -175,8 +176,8 @@ public class TestJobOutputCommitter extends HadoopTestCase {
 
     if (fileName != null) {
       Path testFile = new Path(outDir, fileName);
-      assertTrue(
-         fs.exists(testFile), "File " + testFile + " missing for failed job " + job.getJobID());
+      assertTrue(fs.exists(testFile),
+          "File " + testFile + " missing for failed job " + job.getJobID());
     }
 
     // check if the files from the missing set exists
@@ -207,8 +208,8 @@ public class TestJobOutputCommitter extends HadoopTestCase {
 
     if (fileName != null) {
       Path testFile = new Path(outDir, fileName);
-      assertTrue(fs
-          .exists(testFile), "File " + testFile + " missing for job " + job.getJobID());
+      assertTrue(fs.exists(testFile),
+          "File " + testFile + " missing for job " + job.getJobID());
     }
 
     // check if the files from the missing set exists

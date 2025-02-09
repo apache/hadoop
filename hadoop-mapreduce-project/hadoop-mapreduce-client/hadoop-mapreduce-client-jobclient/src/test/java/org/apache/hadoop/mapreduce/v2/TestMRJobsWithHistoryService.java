@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
 
-import org.junit.jupiter.api.Assertions;
-
 import org.apache.avro.AvroRemoteException;
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.conf.Configuration;
@@ -53,6 +51,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestMRJobsWithHistoryService {
 
@@ -150,14 +151,14 @@ public class TestMRJobsWithHistoryService {
         break;
       }
     }
-    Assertions.assertEquals(RMAppState.FINISHED, mrCluster.getResourceManager()
+    assertEquals(RMAppState.FINISHED, mrCluster.getResourceManager()
       .getRMContext().getRMApps().get(appID).getState());
     Counters counterHS = job.getCounters();
     //TODO the Assert below worked. need to check
     //Should we compare each field or convert to V2 counter and compare
     LOG.info("CounterHS " + counterHS);
     LOG.info("CounterMR " + counterMR);
-    Assertions.assertEquals(counterHS, counterMR);
+    assertEquals(counterHS, counterMR);
     
     HSClientProtocol historyClient = instantiateHistoryProxy();
     GetJobReportRequest gjReq = Records.newRecord(GetJobReportRequest.class);
@@ -168,16 +169,16 @@ public class TestMRJobsWithHistoryService {
 
   private void verifyJobReport(JobReport jobReport, JobId jobId) {
     List<AMInfo> amInfos = jobReport.getAMInfos();
-    Assertions.assertEquals(1, amInfos.size());
+    assertEquals(1, amInfos.size());
     AMInfo amInfo = amInfos.get(0);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(jobId.getAppId(), 1);
     ContainerId amContainerId = ContainerId.newContainerId(appAttemptId, 1);
-    Assertions.assertEquals(appAttemptId, amInfo.getAppAttemptId());
-    Assertions.assertEquals(amContainerId, amInfo.getContainerId());
-    Assertions.assertTrue(jobReport.getSubmitTime() > 0);
-    Assertions.assertTrue(jobReport.getStartTime() > 0
+    assertEquals(appAttemptId, amInfo.getAppAttemptId());
+    assertEquals(amContainerId, amInfo.getContainerId());
+    assertTrue(jobReport.getSubmitTime() > 0);
+    assertTrue(jobReport.getStartTime() > 0
         && jobReport.getStartTime() >= jobReport.getSubmitTime());
-    Assertions.assertTrue(jobReport.getFinishTime() > 0
+    assertTrue(jobReport.getFinishTime() > 0
         && jobReport.getFinishTime() >= jobReport.getStartTime());
   }
   

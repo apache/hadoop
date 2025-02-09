@@ -48,7 +48,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -231,7 +230,7 @@ public class TestBinaryTokenFile {
         os.close();
       }
     } catch (IOException e) {
-      Assertions.fail("Exception " + e);
+      fail("Exception " + e);
     }
   }
 

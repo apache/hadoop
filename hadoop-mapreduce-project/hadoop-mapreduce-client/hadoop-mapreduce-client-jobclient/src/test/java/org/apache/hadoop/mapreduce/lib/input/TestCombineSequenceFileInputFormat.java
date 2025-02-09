@@ -99,8 +99,8 @@ public class TestCombineSequenceFileInputFormat {
       // the block size
       assertEquals(1, splits.size(), "We got more than one splits!");
       InputSplit split = splits.get(0);
-      assertEquals(
-       CombineFileSplit.class, split.getClass(), "It should be CombineFileSplit");
+      assertEquals(CombineFileSplit.class, split.getClass(),
+          "It should be CombineFileSplit");
 
       // check the split
       BitSet bits = new BitSet(length);
@@ -111,8 +111,8 @@ public class TestCombineSequenceFileInputFormat {
         context.getTaskAttemptID(), reader, null, null,
         MapReduceTestUtil.createDummyReporter(), split);
       reader.initialize(split, mcontext);
-      assertEquals(
-       CombineFileRecordReader.class, reader.getClass(), "reader class is CombineFileRecordReader.");
+      assertEquals(CombineFileRecordReader.class, reader.getClass(),
+          "reader class is CombineFileRecordReader.");
 
       try {
         while (reader.nextKeyValue()) {

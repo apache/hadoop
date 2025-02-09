@@ -31,7 +31,7 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil.DataCopyReducer;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests context api and {@link StatusReporter#getProgress()} via 
  * {@link TaskAttemptContext#getProgress()} API . 
  */
-@Ignore
+@Disabled
 public class TestTaskContext extends HadoopTestCase {
   private static final Path rootTempDir =
     new Path(System.getProperty("test.build.data", "/tmp"));
@@ -82,7 +82,7 @@ public class TestTaskContext extends HadoopTestCase {
    * @throws ClassNotFoundException
    */
   @Test
-  @Ignore
+  @Disabled
   public void testContextStatus()
       throws IOException, InterruptedException, ClassNotFoundException {
     Path test = new Path(testRootTempDir, "testContextStatus");

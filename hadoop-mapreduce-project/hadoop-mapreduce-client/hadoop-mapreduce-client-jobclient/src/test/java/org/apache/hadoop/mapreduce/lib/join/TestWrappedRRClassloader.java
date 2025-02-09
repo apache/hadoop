@@ -87,8 +87,8 @@ public class TestWrappedRRClassloader {
 
     @SuppressWarnings("unchecked")
     public RR_ClassLoaderChecker(Configuration conf) {
-      assertTrue(
-         conf.getClassLoader() instanceof Fake_ClassLoader, "The class loader has not been inherited from "
+      assertTrue(conf.getClassLoader() instanceof Fake_ClassLoader,
+          "The class loader has not been inherited from "
           + CompositeRecordReader.class.getSimpleName());
 
     }

@@ -102,8 +102,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.log4j.Level;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.Assume;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -111,6 +109,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class TestMRJobs {
 
@@ -333,7 +338,7 @@ public class TestMRJobs {
     LOG.info("\n\n\nStarting testSleepJob: useRemoteJar=" + useRemoteJar);
 
     if (!jobSubmissionShouldSucceed && violation == null) {
-      Assertions.fail("Test is misconfigured. jobSubmissionShouldSucceed is set"
+      fail("Test is misconfigured. jobSubmissionShouldSucceed is set"
           + " to false and a ResourceViolation is not specified.");
     }
 
@@ -365,38 +370,37 @@ public class TestMRJobs {
     job.setMaxMapAttempts(1); // speed up failures
     try {
       job.submit();
-      Assertions.assertTrue(
-         jobSubmissionShouldSucceed, "JobSubmission succeeded when it should have failed.");
+      assertTrue(jobSubmissionShouldSucceed,
+          "JobSubmission succeeded when it should have failed.");
     } catch (IOException e) {
       if (jobSubmissionShouldSucceed) {
-        Assertions
-            .fail("Job submission failed when it should have succeeded: " + e);
+        fail("Job submission failed when it should have succeeded: " + e);
       }
       switch (violation) {
       case NUMBER_OF_RESOURCES:
         if (!e.getMessage().contains(
             "This job has exceeded the maximum number of"
                 + " submitted resources")) {
-          Assertions.fail("Test failed unexpectedly: " + e);
+          fail("Test failed unexpectedly: " + e);
         }
         break;
 
       case TOTAL_RESOURCE_SIZE:
         if (!e.getMessage().contains(
             "This job has exceeded the maximum size of submitted resources")) {
-          Assertions.fail("Test failed unexpectedly: " + e);
+          fail("Test failed unexpectedly: " + e);
         }
         break;
 
       case SINGLE_RESOURCE_SIZE:
         if (!e.getMessage().contains(
             "This job has exceeded the maximum size of a single submitted")) {
-          Assertions.fail("Test failed unexpectedly: " + e);
+          fail("Test failed unexpectedly: " + e);
         }
         break;
 
       default:
-        Assertions.fail("Test failed unexpectedly: " + e);
+        fail("Test failed unexpectedly: " + e);
         break;
       }
       // we are done with the test (job submission failed)
@@ -405,11 +409,10 @@ public class TestMRJobs {
     String trackingUrl = job.getTrackingURL();
     String jobId = job.getJobID().toString();
     boolean succeeded = job.waitForCompletion(true);
-    Assertions.assertTrue(succeeded);
-    Assertions.assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
-    Assertions.assertTrue( 
-         trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"), "Tracking URL was " + trackingUrl +
-                      " but didn't Match Job ID " + jobId);
+    assertTrue(succeeded);
+    assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
+    assertTrue(trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"),
+        "Tracking URL was " + trackingUrl + " but didn't Match Job ID " + jobId);
     verifySleepJobCounters(job);
     verifyTaskProgress(job);
     
@@ -422,8 +425,8 @@ public class TestMRJobs {
   public void testJobWithChangePriority() throws Exception {
     Configuration sleepConf = new Configuration(mrCluster.getConfig());
     // Assumption can be removed when FS priority support is implemented
-    Assume.assumeFalse(sleepConf.get(YarnConfiguration.RM_SCHEDULER)
-            .equals(FairScheduler.class.getCanonicalName()));
+    assumeFalse(sleepConf.get(YarnConfiguration.RM_SCHEDULER)
+        .equals(FairScheduler.class.getCanonicalName()));
 
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
@@ -462,8 +465,8 @@ public class TestMRJobs {
     assertThat(job.getPriority()).isEqualTo(JobPriority.UNDEFINED_PRIORITY);
 
     boolean succeeded = job.waitForCompletion(true);
-    Assertions.assertTrue(succeeded);
-    Assertions.assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
+    assertTrue(succeeded);
+    assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
   }
 
   @Test
@@ -507,11 +510,11 @@ public class TestMRJobs {
 
     waitForPriorityToUpdate(job, JobPriority.VERY_LOW);
     // Verify the priority from job itself
-    Assertions.assertEquals(JobPriority.VERY_LOW, job.getPriority());
+    assertEquals(JobPriority.VERY_LOW, job.getPriority());
 
     boolean succeeded = job.waitForCompletion(true);
-    Assertions.assertTrue(succeeded);
-    Assertions.assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
+    assertTrue(succeeded);
+    assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
   }
 
   private void waitForPriorityToUpdate(Job job, JobPriority expectedStatus)
@@ -592,8 +595,7 @@ public class TestMRJobs {
     }
     job.submit();
     boolean succeeded = job.waitForCompletion(true);
-    Assertions.assertTrue(
-       succeeded, "Job status: " + job.getStatus().getFailureInfo());
+    assertTrue(succeeded, "Job status: " + job.getStatus().getFailureInfo());
   }
 
   public static class CustomOutputFormat<K,V> extends NullOutputFormat<K,V> {
@@ -644,22 +646,22 @@ public class TestMRJobs {
   protected void verifySleepJobCounters(Job job) throws InterruptedException,
       IOException {
     Counters counters = job.getCounters();
-    Assertions.assertEquals(3, counters.findCounter(JobCounter.OTHER_LOCAL_MAPS)
+    assertEquals(3, counters.findCounter(JobCounter.OTHER_LOCAL_MAPS)
         .getValue());
-    Assertions.assertEquals(3, counters.findCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
+    assertEquals(3, counters.findCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
         .getValue());
-    Assertions.assertEquals(numSleepReducers,
+    assertEquals(numSleepReducers,
         counters.findCounter(JobCounter.TOTAL_LAUNCHED_REDUCES).getValue());
   }
   
   protected void verifyTaskProgress(Job job) throws InterruptedException,
       IOException {
     for (TaskReport taskReport : job.getTaskReports(TaskType.MAP)) {
-      Assertions.assertTrue(0.9999f < taskReport.getProgress()
+      assertTrue(0.9999f < taskReport.getProgress()
           && 1.0001f > taskReport.getProgress());
     }
     for (TaskReport taskReport : job.getTaskReports(TaskType.REDUCE)) {
-      Assertions.assertTrue(0.9999f < taskReport.getProgress()
+      assertTrue(0.9999f < taskReport.getProgress()
           && 1.0001f > taskReport.getProgress());
     }
   }
@@ -690,11 +692,10 @@ public class TestMRJobs {
     String trackingUrl = job.getTrackingURL();
     String jobId = job.getJobID().toString();
     boolean succeeded = job.waitForCompletion(true);
-    Assertions.assertTrue(succeeded);
-    Assertions.assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
-    Assertions.assertTrue( 
-         trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"), "Tracking URL was " + trackingUrl +
-                      " but didn't Match Job ID " + jobId);
+    assertTrue(succeeded);
+    assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
+    assertTrue(trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"),
+        "Tracking URL was " + trackingUrl + " but didn't Match Job ID " + jobId);
     
     // Make sure there are three files in the output-dir
     
@@ -709,7 +710,7 @@ public class TestMRJobs {
         count++;
       }
     }
-    Assertions.assertEquals(3, count, "Number of part files is wrong!");
+    assertEquals(3, count, "Number of part files is wrong!");
     verifyRandomWriterCounters(job);
 
     // TODO later:  add explicit "isUber()" checks of some sort
@@ -718,9 +719,9 @@ public class TestMRJobs {
   protected void verifyRandomWriterCounters(Job job)
       throws InterruptedException, IOException {
     Counters counters = job.getCounters();
-    Assertions.assertEquals(3, counters.findCounter(JobCounter.OTHER_LOCAL_MAPS)
+    assertEquals(3, counters.findCounter(JobCounter.OTHER_LOCAL_MAPS)
         .getValue());
-    Assertions.assertEquals(3, counters.findCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
+    assertEquals(3, counters.findCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
         .getValue());
   }
 
@@ -752,11 +753,11 @@ public class TestMRJobs {
     }
     
     TaskCompletionEvent[] events = job.getTaskCompletionEvents(0, 2);
-    Assertions.assertEquals(TaskCompletionEvent.Status.FAILED, 
+    assertEquals(TaskCompletionEvent.Status.FAILED, 
         events[0].getStatus());
-    Assertions.assertEquals(TaskCompletionEvent.Status.TIPFAILED, 
+    assertEquals(TaskCompletionEvent.Status.TIPFAILED, 
         events[1].getStatus());
-    Assertions.assertEquals(JobStatus.State.FAILED, job.getJobState());
+    assertEquals(JobStatus.State.FAILED, job.getJobState());
     verifyFailingMapperCounters(job);
 
     // TODO later:  add explicit "isUber()" checks of some sort
@@ -765,15 +766,14 @@ public class TestMRJobs {
   protected void verifyFailingMapperCounters(Job job)
       throws InterruptedException, IOException {
     Counters counters = job.getCounters();
-    Assertions.assertEquals(2, counters.findCounter(JobCounter.OTHER_LOCAL_MAPS)
+    assertEquals(2, counters.findCounter(JobCounter.OTHER_LOCAL_MAPS)
         .getValue());
-    Assertions.assertEquals(2, counters.findCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
+    assertEquals(2, counters.findCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
         .getValue());
-    Assertions.assertEquals(2, counters.findCounter(JobCounter.NUM_FAILED_MAPS)
+    assertEquals(2, counters.findCounter(JobCounter.NUM_FAILED_MAPS)
         .getValue());
-    Assertions
-        .assertTrue(counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS) != null
-            && counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue() != 0);
+    assertTrue(counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS) != null
+        && counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue() != 0);
   }
 
   protected Job runFailingMapperJob()
@@ -800,10 +800,10 @@ public class TestMRJobs {
     String trackingUrl = job.getTrackingURL();
     String jobId = job.getJobID().toString();
     boolean succeeded = job.waitForCompletion(true);
-    Assertions.assertFalse(succeeded);
-    Assertions.assertTrue( 
-         trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"), "Tracking URL was " + trackingUrl +
-                      " but didn't Match Job ID " + jobId);
+    assertFalse(succeeded);
+    assertTrue(trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"),
+        "Tracking URL was " + trackingUrl +
+        " but didn't Match Job ID " + jobId);
     return job;
   }
 
@@ -849,10 +849,9 @@ public class TestMRJobs {
         String trackingUrl = job.getTrackingURL();
         String jobId = job.getJobID().toString();
         job.waitForCompletion(true);
-        Assertions.assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
-        Assertions.assertTrue( 
-         trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"), "Tracking URL was " + trackingUrl +
-                          " but didn't Match Job ID " + jobId);
+        assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
+        assertTrue(trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"),
+            "Tracking URL was " + trackingUrl + " but didn't Match Job ID " + jobId);
         return null;
       }
     });
@@ -902,7 +901,7 @@ public class TestMRJobs {
         break;
       }
     }
-    Assertions.assertEquals(RMAppState.FINISHED, mrCluster.getResourceManager()
+    assertEquals(RMAppState.FINISHED, mrCluster.getResourceManager()
         .getRMContext().getRMApps().get(appID).getState());
 
     // Job finished, verify logs
@@ -948,28 +947,26 @@ public class TestMRJobs {
           }
 
           if (foundAppMaster) {
-            Assertions.assertSame(
-               sleepConf.getInt(MRJobConfig.MR_AM_LOG_BACKUPS, 0) + 1
-,                 sysSiblings.length, "Unexpected number of AM sylog* files");
-            Assertions.assertTrue(
-               sysSiblings[1].getLen() >= amLogKb * 1024, "AM syslog.1 length kb should be >= " + amLogKb);
+            assertSame(sleepConf.getInt(MRJobConfig.MR_AM_LOG_BACKUPS, 0) + 1,
+                sysSiblings.length, "Unexpected number of AM sylog* files");
+            assertTrue(sysSiblings[1].getLen() >= amLogKb * 1024,
+                "AM syslog.1 length kb should be >= " + amLogKb);
           } else {
-            Assertions.assertSame(
-               sleepConf.getInt(MRJobConfig.TASK_LOG_BACKUPS, 0) + 1
-,                 sysSiblings.length, "Unexpected number of MR task sylog* files");
-            Assertions.assertTrue(
-               sysSiblings[1].getLen() >= userLogKb * 1024, "MR syslog.1 length kb should be >= " + userLogKb);
+            assertSame(sleepConf.getInt(MRJobConfig.TASK_LOG_BACKUPS, 0) + 1,
+                sysSiblings.length, "Unexpected number of MR task sylog* files");
+            assertTrue(sysSiblings[1].getLen() >= userLogKb * 1024,
+                "MR syslog.1 length kb should be >= " + userLogKb);
           }
         }
       }
     }
     // Make sure we checked non-empty set
     //
-    Assertions.assertEquals(1, numAppMasters, "No AppMaster log found!");
+    assertEquals(1, numAppMasters, "No AppMaster log found!");
     if (sleepConf.getBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false)) {
-      Assertions.assertEquals(0, numMapTasks, "MapTask log with uber found!");
+      assertEquals(0, numMapTasks, "MapTask log with uber found!");
     } else {
-      Assertions.assertEquals(1, numMapTasks, "No MapTask log found!");
+      assertEquals(1, numMapTasks, "No MapTask log found!");
     }
   }
 
@@ -986,27 +983,27 @@ public class TestMRJobs {
 
       // Check that 4 (2 + appjar + DistrubutedCacheChecker jar) files 
       // and 2 archives are present
-      Assertions.assertEquals(4, localFiles.length);
-      Assertions.assertEquals(4, files.length);
-      Assertions.assertEquals(2, localArchives.length);
-      Assertions.assertEquals(2, archives.length);
+      assertEquals(4, localFiles.length);
+      assertEquals(4, files.length);
+      assertEquals(2, localArchives.length);
+      assertEquals(2, archives.length);
 
       // Check lengths of the files
       Map<String, Path> filesMap = pathsToMap(localFiles);
-      Assertions.assertTrue(filesMap.containsKey("distributed.first.symlink"));
-      Assertions.assertEquals(1, localFs.getFileStatus(
+      assertTrue(filesMap.containsKey("distributed.first.symlink"));
+      assertEquals(1, localFs.getFileStatus(
         filesMap.get("distributed.first.symlink")).getLen());
-      Assertions.assertTrue(filesMap.containsKey("distributed.second.jar"));
-      Assertions.assertTrue(localFs.getFileStatus(
+      assertTrue(filesMap.containsKey("distributed.second.jar"));
+      assertTrue(localFs.getFileStatus(
         filesMap.get("distributed.second.jar")).getLen() > 1);
 
       // Check extraction of the archive
       Map<String, Path> archivesMap = pathsToMap(localArchives);
-      Assertions.assertTrue(archivesMap.containsKey("distributed.third.jar"));
-      Assertions.assertTrue(localFs.exists(new Path(
+      assertTrue(archivesMap.containsKey("distributed.third.jar"));
+      assertTrue(localFs.exists(new Path(
         archivesMap.get("distributed.third.jar"), "distributed.jar.inside3")));
-      Assertions.assertTrue(archivesMap.containsKey("distributed.fourth.jar"));
-      Assertions.assertTrue(localFs.exists(new Path(
+      assertTrue(archivesMap.containsKey("distributed.fourth.jar"));
+      assertTrue(localFs.exists(new Path(
         archivesMap.get("distributed.fourth.jar"), "distributed.jar.inside4")));
 
       // Check the class loaders
@@ -1014,29 +1011,29 @@ public class TestMRJobs {
       ClassLoader cl = Thread.currentThread().getContextClassLoader();
       // Both the file and the archive should have been added to classpath, so
       // both should be reachable via the class loader.
-      Assertions.assertNotNull(cl.getResource("distributed.jar.inside2"));
-      Assertions.assertNotNull(cl.getResource("distributed.jar.inside3"));
-      Assertions.assertNotNull(cl.getResource("distributed.jar.inside4"));
+      assertNotNull(cl.getResource("distributed.jar.inside2"));
+      assertNotNull(cl.getResource("distributed.jar.inside3"));
+      assertNotNull(cl.getResource("distributed.jar.inside4"));
       // The Job Jar should have been extracted to a folder named "job.jar" and
       // added to the classpath; the two jar files in the lib folder in the Job
       // Jar should have also been added to the classpath
-      Assertions.assertNotNull(cl.getResource("job.jar/"));
-      Assertions.assertNotNull(cl.getResource("job.jar/lib/lib1.jar"));
-      Assertions.assertNotNull(cl.getResource("job.jar/lib/lib2.jar"));
+      assertNotNull(cl.getResource("job.jar/"));
+      assertNotNull(cl.getResource("job.jar/lib/lib1.jar"));
+      assertNotNull(cl.getResource("job.jar/lib/lib2.jar"));
 
       // Check that the symlink for the renaming was created in the cwd;
       File symlinkFile = new File("distributed.first.symlink");
-      Assertions.assertTrue(symlinkFile.exists());
-      Assertions.assertEquals(1, symlinkFile.length());
+      assertTrue(symlinkFile.exists());
+      assertEquals(1, symlinkFile.length());
       
       // Check that the symlink for the Job Jar was created in the cwd and
       // points to the extracted directory
       File jobJarDir = new File("job.jar");
       if (Shell.WINDOWS) {
-        Assertions.assertTrue(isWindowsSymlinkedDirectory(jobJarDir));
+        assertTrue(isWindowsSymlinkedDirectory(jobJarDir));
       } else {
-        Assertions.assertTrue(FileUtils.isSymlink(jobJarDir));
-        Assertions.assertTrue(jobJarDir.isDirectory());
+        assertTrue(FileUtils.isSymlink(jobJarDir));
+        assertTrue(jobJarDir.isDirectory());
       }
     }
 
@@ -1152,10 +1149,10 @@ public class TestMRJobs {
     job.submit();
     String trackingUrl = job.getTrackingURL();
     String jobId = job.getJobID().toString();
-    Assertions.assertTrue(job.waitForCompletion(false));
-    Assertions.assertTrue( 
-         trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"), "Tracking URL was " + trackingUrl +
-                      " but didn't Match Job ID " + jobId);
+    assertTrue(job.waitForCompletion(false));
+    assertTrue(trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"),
+        "Tracking URL was " + trackingUrl +
+        " but didn't Match Job ID " + jobId);
   }
   
   private void testDistributedCache(boolean withWildcard) throws Exception {
@@ -1283,13 +1280,13 @@ public class TestMRJobs {
           if (foundAppMaster) {
             numAppMasters++;
             if (this instanceof TestUberAM) {
-              Assertions.assertTrue(foundThreadDump, "No thread dump");
+              assertTrue(foundThreadDump, "No thread dump");
             } else {
-              Assertions.assertFalse(foundThreadDump, "Unexpected thread dump");
+              assertFalse(foundThreadDump, "Unexpected thread dump");
             }
           } else {
             numMapTasks++;
-            Assertions.assertTrue(foundThreadDump, "No thread dump");
+            assertTrue(foundThreadDump, "No thread dump");
           }
         }
       }
@@ -1297,11 +1294,11 @@ public class TestMRJobs {
 
     // Make sure we checked non-empty set
     //
-    Assertions.assertEquals(1, numAppMasters, "No AppMaster log found!");
+    assertEquals(1, numAppMasters, "No AppMaster log found!");
     if (sleepConf.getBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false)) {
-      Assertions.assertSame(0, numMapTasks, "MapTask log with uber found!");
+      assertSame(0, numMapTasks, "MapTask log with uber found!");
     } else {
-      Assertions.assertSame(1, numMapTasks, "No MapTask log found!");
+      assertSame(1, numMapTasks, "No MapTask log found!");
     }
   }
 
@@ -1413,9 +1410,9 @@ public class TestMRJobs {
     job.submit();
     String trackingUrl = job.getTrackingURL();
     String jobId = job.getJobID().toString();
-    Assertions.assertTrue(job.waitForCompletion(true));
-    Assertions.assertTrue(
-       trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"), "Tracking URL was " + trackingUrl
+    assertTrue(job.waitForCompletion(true));
+    assertTrue(trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"),
+        "Tracking URL was " + trackingUrl
         + " but didn't Match Job ID " + jobId);
   }
 

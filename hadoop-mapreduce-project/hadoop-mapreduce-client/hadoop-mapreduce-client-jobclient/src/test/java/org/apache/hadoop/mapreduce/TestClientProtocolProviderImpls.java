@@ -91,9 +91,9 @@ public class TestClientProtocolProviderImpls {
       fail("Cluster init should fail because of non-existing FileSystem");
     } catch (IOException ioEx) {
       final String stackTrace = StringUtils.stringifyException(ioEx);
-      assertTrue(
-         stackTrace.contains(UnsupportedFileSystemException.class.getName())
-              && stackTrace.contains("nosuchfs"), "No root cause detected");
+      assertTrue(stackTrace.contains(
+          UnsupportedFileSystemException.class.getName()) && stackTrace.contains("nosuchfs"),
+          "No root cause detected");
     }
   }
 }

@@ -100,8 +100,8 @@ public class TestMRSequenceFileAsTextInputFormat {
             split);
           reader.initialize(split, mcontext);
           Class<?> readerClass = reader.getClass();
-          assertEquals(
-           SequenceFileAsTextRecordReader.class, readerClass, "reader class is SequenceFileAsTextRecordReader.");        
+          assertEquals(SequenceFileAsTextRecordReader.class, readerClass,
+              "reader class is SequenceFileAsTextRecordReader.");
           Text key;
           try {
             int count = 0;

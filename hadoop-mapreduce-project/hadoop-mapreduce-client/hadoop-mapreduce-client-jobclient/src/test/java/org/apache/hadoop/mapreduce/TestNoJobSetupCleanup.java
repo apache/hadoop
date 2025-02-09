@@ -29,11 +29,11 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Ignore
+@Disabled
 public class TestNoJobSetupCleanup extends HadoopTestCase {
   private static String TEST_ROOT_DIR =
     new File(System.getProperty("test.build.data","/tmp"))
@@ -67,7 +67,8 @@ public class TestNoJobSetupCleanup extends HadoopTestCase {
     Path tempWorkingPath = new Path(tempWorkingPathStr);
     FileStatus[] list = fs.listStatus(tempWorkingPath, new OutputFilter());
     int numPartFiles = numReds == 0 ? numMaps : numReds;
-    assertTrue(list.length == numPartFiles, "Number of part-files is " + list.length + " and not "
+    assertTrue(list.length == numPartFiles,
+        "Number of part-files is " + list.length + " and not "
         + numPartFiles);
     return job;
   }

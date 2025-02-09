@@ -41,11 +41,13 @@ import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestMROldApiJobs {
 
@@ -117,12 +119,12 @@ public class TestMROldApiJobs {
     runJobSucceed(conf, in, out);
     
     FileSystem fs = FileSystem.get(conf);
-    Assertions.assertTrue(fs.exists(new Path(out, CustomOutputCommitter.JOB_SETUP_FILE_NAME)));
-    Assertions.assertFalse(fs.exists(new Path(out, CustomOutputCommitter.JOB_ABORT_FILE_NAME)));
-    Assertions.assertTrue(fs.exists(new Path(out, CustomOutputCommitter.JOB_COMMIT_FILE_NAME)));
-    Assertions.assertTrue(fs.exists(new Path(out, CustomOutputCommitter.TASK_SETUP_FILE_NAME)));
-    Assertions.assertFalse(fs.exists(new Path(out, CustomOutputCommitter.TASK_ABORT_FILE_NAME)));
-    Assertions.assertTrue(fs.exists(new Path(out, CustomOutputCommitter.TASK_COMMIT_FILE_NAME)));
+    assertTrue(fs.exists(new Path(out, CustomOutputCommitter.JOB_SETUP_FILE_NAME)));
+    assertFalse(fs.exists(new Path(out, CustomOutputCommitter.JOB_ABORT_FILE_NAME)));
+    assertTrue(fs.exists(new Path(out, CustomOutputCommitter.JOB_COMMIT_FILE_NAME)));
+    assertTrue(fs.exists(new Path(out, CustomOutputCommitter.TASK_SETUP_FILE_NAME)));
+    assertFalse(fs.exists(new Path(out, CustomOutputCommitter.TASK_ABORT_FILE_NAME)));
+    assertTrue(fs.exists(new Path(out, CustomOutputCommitter.TASK_COMMIT_FILE_NAME)));
   }
 
   @Test
@@ -146,12 +148,12 @@ public class TestMROldApiJobs {
     runJobFail(conf, in, out);
     
     FileSystem fs = FileSystem.get(conf);
-    Assertions.assertTrue(fs.exists(new Path(out, CustomOutputCommitter.JOB_SETUP_FILE_NAME)));
-    Assertions.assertTrue(fs.exists(new Path(out, CustomOutputCommitter.JOB_ABORT_FILE_NAME)));
-    Assertions.assertFalse(fs.exists(new Path(out, CustomOutputCommitter.JOB_COMMIT_FILE_NAME)));
-    Assertions.assertTrue(fs.exists(new Path(out, CustomOutputCommitter.TASK_SETUP_FILE_NAME)));
-    Assertions.assertTrue(fs.exists(new Path(out, CustomOutputCommitter.TASK_ABORT_FILE_NAME)));
-    Assertions.assertFalse(fs.exists(new Path(out, CustomOutputCommitter.TASK_COMMIT_FILE_NAME)));
+    assertTrue(fs.exists(new Path(out, CustomOutputCommitter.JOB_SETUP_FILE_NAME)));
+    assertTrue(fs.exists(new Path(out, CustomOutputCommitter.JOB_ABORT_FILE_NAME)));
+    assertFalse(fs.exists(new Path(out, CustomOutputCommitter.JOB_COMMIT_FILE_NAME)));
+    assertTrue(fs.exists(new Path(out, CustomOutputCommitter.TASK_SETUP_FILE_NAME)));
+    assertTrue(fs.exists(new Path(out, CustomOutputCommitter.TASK_ABORT_FILE_NAME)));
+    assertFalse(fs.exists(new Path(out, CustomOutputCommitter.TASK_COMMIT_FILE_NAME)));
   }
 
   //Run a job that will be failed and wait until it completes
@@ -164,7 +166,7 @@ public class TestMROldApiJobs {
     conf.setMaxMapAttempts(1);
     
     boolean success = runJob(conf, inDir, outDir, 1, 0);
-    Assertions.assertFalse(success, "Job expected to fail succeeded");
+    assertFalse(success, "Job expected to fail succeeded");
   }
 
   //Run a job that will be succeeded and wait until it completes
@@ -176,7 +178,7 @@ public class TestMROldApiJobs {
     conf.setReducerClass(IdentityReducer.class);
     
     boolean success = runJob(conf, inDir, outDir, 1 , 1);
-    Assertions.assertTrue(success, "Job expected to succeed failed");
+    assertTrue(success, "Job expected to succeed failed");
   }
 
   static boolean runJob(JobConf conf, Path inDir, Path outDir, int numMaps, 

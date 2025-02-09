@@ -26,13 +26,15 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-@Ignore
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+@Disabled
 public class TestDelegationToken {
   private MiniMRCluster cluster;
   private UserGroupInformation user1;
@@ -102,7 +104,7 @@ public class TestDelegationToken {
       public Void run() throws Exception {
         try {
           bobClient.renewDelegationToken(token);
-          Assertions.fail("bob renew");
+          fail("bob renew");
         } catch (AccessControlException ace) {
           // PASS
         }
@@ -116,7 +118,7 @@ public class TestDelegationToken {
       public Void run() throws Exception {
         try {
           bobClient.cancelDelegationToken(token);
-          Assertions.fail("bob cancel");
+          fail("bob cancel");
         } catch (AccessControlException ace) {
           // PASS
         }
@@ -131,7 +133,7 @@ public class TestDelegationToken {
         client.cancelDelegationToken(token);
         try {
           client.cancelDelegationToken(token);
-          Assertions.fail("second alice cancel");
+          fail("second alice cancel");
         } catch (InvalidToken it) {
           // PASS
         }

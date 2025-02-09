@@ -59,8 +59,8 @@ public class TestLargeSort {
       conf.setInt(MRJobConfig.IO_SORT_MB, ioSortMb);
       conf.setInt(LargeSorter.NUM_MAP_TASKS, 1);
       conf.setInt(LargeSorter.MBS_PER_MAP, ioSortMb);
-      assertEquals(0
-,           ToolRunner.run(conf, new LargeSorter(), args), "Large sort failed for " + ioSortMb);
+      assertEquals(0, ToolRunner.run(conf, new LargeSorter(), args),
+          "Large sort failed for " + ioSortMb);
     }
   }
 }

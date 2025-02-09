@@ -27,7 +27,7 @@ import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
 import org.apache.hadoop.fs.Path;
-import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -55,7 +55,7 @@ public class TestMRCJCRunJar {
     args[1] = "org.apache.hadoop.util.Hello";
     args[2] = outFile.toString();
     RunJar.main(args);
-    Assertions.assertTrue(outFile.exists(), "RunJar failed");
+    assertTrue(outFile.exists(), "RunJar failed");
   }
 
   private File makeTestJar() throws IOException {

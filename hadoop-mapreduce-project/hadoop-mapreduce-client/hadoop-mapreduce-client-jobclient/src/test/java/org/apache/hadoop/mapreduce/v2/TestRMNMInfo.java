@@ -37,13 +37,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMNMInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestRMNMInfo {
   private static final Logger LOG = LoggerFactory.getLogger(TestRMNMInfo.class);
@@ -109,27 +113,24 @@ public class TestRMNMInfo {
     String liveNMs = rmInfo.getLiveNodeManagers();
     ObjectMapper mapper = new ObjectMapper();
     JsonNode jn = mapper.readTree(liveNMs);
-    Assertions.assertEquals(
-                                              NUMNODEMANAGERS, jn.size(), "Unexpected number of live nodes:");
+    assertEquals(NUMNODEMANAGERS, jn.size(), "Unexpected number of live nodes:");
     Iterator<JsonNode> it = jn.iterator();
     while (it.hasNext()) {
       JsonNode n = it.next();
-      Assertions.assertNotNull(n.get("HostName"));
-      Assertions.assertNotNull(n.get("Rack"));
-      Assertions.assertTrue(
-             n.get("State").asText().contains("RUNNING"), "Node " + n.get("NodeId") + " should be RUNNING");
-      Assertions.assertNotNull(n.get("NodeHTTPAddress"));
-      Assertions.assertNotNull(n.get("LastHealthUpdate"));
-      Assertions.assertNotNull(n.get("HealthReport"));
-      Assertions.assertNotNull(n.get("NodeManagerVersion"));
-      Assertions.assertNotNull(n.get("NumContainers"));
-      Assertions.assertEquals(
-      
-             0, n.get("NumContainers").asInt(), n.get("NodeId") + ": Unexpected number of used containers");
-      Assertions.assertEquals(
-      
-             0, n.get("UsedMemoryMB").asInt(), n.get("NodeId") + ": Unexpected amount of used memory");
-      Assertions.assertNotNull(n.get("AvailableMemoryMB"));
+      assertNotNull(n.get("HostName"));
+      assertNotNull(n.get("Rack"));
+      assertTrue(n.get("State").asText().contains("RUNNING"),
+          "Node " + n.get("NodeId") + " should be RUNNING");
+      assertNotNull(n.get("NodeHTTPAddress"));
+      assertNotNull(n.get("LastHealthUpdate"));
+      assertNotNull(n.get("HealthReport"));
+      assertNotNull(n.get("NodeManagerVersion"));
+      assertNotNull(n.get("NumContainers"));
+      assertEquals(0, n.get("NumContainers").asInt(),
+          n.get("NodeId") + ": Unexpected number of used containers");
+      assertEquals(0, n.get("UsedMemoryMB").asInt(),
+          n.get("NodeId") + ": Unexpected amount of used memory");
+      assertNotNull(n.get("AvailableMemoryMB"));
     }
   }
   
@@ -146,22 +147,21 @@ public class TestRMNMInfo {
     String liveNMs = rmInfo.getLiveNodeManagers();
     ObjectMapper mapper = new ObjectMapper();
     JsonNode jn = mapper.readTree(liveNMs);
-    Assertions.assertEquals(
-                                              1, jn.size(), "Unexpected number of live nodes:");
+    assertEquals(1, jn.size(), "Unexpected number of live nodes:");
     Iterator<JsonNode> it = jn.iterator();
     while (it.hasNext()) {
       JsonNode n = it.next();
-      Assertions.assertNotNull(n.get("HostName"));
-      Assertions.assertNotNull(n.get("Rack"));
-      Assertions.assertTrue(
-             n.get("State").asText().contains("RUNNING"), "Node " + n.get("NodeId") + " should be RUNNING");
-      Assertions.assertNotNull(n.get("NodeHTTPAddress"));
-      Assertions.assertNotNull(n.get("LastHealthUpdate"));
-      Assertions.assertNotNull(n.get("HealthReport"));
-      Assertions.assertNotNull(n.get("NodeManagerVersion"));
-      Assertions.assertNull(n.get("NumContainers"));
-      Assertions.assertNull(n.get("UsedMemoryMB"));
-      Assertions.assertNull(n.get("AvailableMemoryMB"));
+      assertNotNull(n.get("HostName"));
+      assertNotNull(n.get("Rack"));
+      assertTrue(n.get("State").asText().contains("RUNNING"),
+          "Node " + n.get("NodeId") + " should be RUNNING");
+      assertNotNull(n.get("NodeHTTPAddress"));
+      assertNotNull(n.get("LastHealthUpdate"));
+      assertNotNull(n.get("HealthReport"));
+      assertNotNull(n.get("NodeManagerVersion"));
+      assertNull(n.get("NumContainers"));
+      assertNull(n.get("UsedMemoryMB"));
+      assertNull(n.get("AvailableMemoryMB"));
     }
   }
 }

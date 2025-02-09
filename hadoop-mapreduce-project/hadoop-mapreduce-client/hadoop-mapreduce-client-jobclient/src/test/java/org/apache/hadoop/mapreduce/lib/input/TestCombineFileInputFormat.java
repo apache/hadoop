@@ -265,8 +265,8 @@ public class TestCombineFileInputFormat {
 
     // Verify that the initial configuration is the one being used.
     // Right after construction the dummy key should have value "STATE1"
-    assertEquals("Invalid initial dummy key value", "STATE1",
-      rr.getCurrentKey().toString());
+    assertEquals("STATE1", rr.getCurrentKey().toString(),
+        "Invalid initial dummy key value");
 
     // Switch the active context for the RecordReader...
     Configuration conf2 = new Configuration();
@@ -275,8 +275,8 @@ public class TestCombineFileInputFormat {
     rr.initialize(split, context2);
 
     // And verify that the new context is updated into the child record reader.
-    assertEquals("Invalid secondary dummy key value", "STATE2",
-      rr.getCurrentKey().toString());
+    assertEquals("STATE2", rr.getCurrentKey().toString(),
+        "Invalid secondary dummy key value");
   }
 
   @Test
@@ -1485,8 +1485,8 @@ public class TestCombineFileInputFormat {
        * {@link CombineFileInputFormat#createSplits},
        * create only one split on rack1. Otherwise create two splits.
        */
-      assertTrue(
-         splits.size() == 1 || splits.size() == 2, "Split size should be 1 or 2.");
+      assertTrue(splits.size() == 1 || splits.size() == 2,
+          "Split size should be 1 or 2.");
       actual.clear();
       reset(mockList);
       for (InputSplit split : splits) {
@@ -1831,7 +1831,7 @@ public class TestCombineFileInputFormat {
     }
   }
 
-  public static void main(String[] args) throws Exception{
+  /*public static void main(String[] args) throws Exception{
 
     // if there are some parameters specified, then use those paths
     if (args.length != 0) {
@@ -1841,5 +1841,5 @@ public class TestCombineFileInputFormat {
       TestCombineFileInputFormat test = new TestCombineFileInputFormat();
       test.testSplitPlacement();
     }
-  }
+  }*/
 }

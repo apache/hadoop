@@ -62,8 +62,8 @@ public class TestYarnClientProtocolProvider {
     }
     
     try {
-      assertTrue(
-         cluster.getClient() instanceof LocalJobRunner, "client is not a LocalJobRunner");
+      assertTrue(cluster.getClient() instanceof LocalJobRunner,
+          "client is not a LocalJobRunner");
     } finally {
       if (cluster != null) {
         cluster.close();
@@ -121,8 +121,8 @@ public class TestYarnClientProtocolProvider {
       };
       yrunner.setResourceMgrDelegate(rmgrDelegate);
       Token t = cluster.getDelegationToken(new Text(" "));
-      assertTrue(
-       "Testclusterkind".equals(t.getKind().toString()), "Token kind is instead " + t.getKind().toString());
+      assertTrue("Testclusterkind".equals(t.getKind().toString()),
+          "Token kind is instead " + t.getKind().toString());
     } finally {
       if (cluster != null) {
         cluster.close();

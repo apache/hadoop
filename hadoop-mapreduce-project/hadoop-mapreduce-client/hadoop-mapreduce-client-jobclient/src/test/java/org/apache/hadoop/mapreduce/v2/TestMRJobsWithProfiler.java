@@ -25,7 +25,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.conf.Configuration;
@@ -45,7 +44,10 @@ import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class TestMRJobsWithProfiler {
 
@@ -112,8 +114,8 @@ public class TestMRJobsWithProfiler {
   @Test
   @Timeout(value = 150)
   public void testDefaultProfiler() throws Exception {
-    assumeFalse("The hprof agent has been removed since Java 9. Skipping.",
-        Shell.isJavaVersionAtLeast(9));
+    assumeFalse(Shell.isJavaVersionAtLeast(9),
+        "The hprof agent has been removed since Java 9. Skipping.");
     LOG.info("Starting testDefaultProfiler");
     testProfilerInternal(true);
   }
@@ -182,7 +184,7 @@ public class TestMRJobsWithProfiler {
         break;
       }
     }
-    Assertions.assertEquals(RMAppState.FINISHED, mrCluster.getResourceManager()
+    assertEquals(RMAppState.FINISHED, mrCluster.getResourceManager()
       .getRMContext().getRMApps().get(appID).getState());
 
     // Job finished, verify logs
@@ -225,7 +227,7 @@ public class TestMRJobsWithProfiler {
       }
     }
 
-    Assertions.assertEquals(4, taLogDirs.size());  // all 4 attempts found
+    assertEquals(4, taLogDirs.size());  // all 4 attempts found
 
     // Skip checking the contents because the JFR dumps binary files
     if (Shell.isJavaVersionAtLeast(9)) {
@@ -244,16 +246,16 @@ public class TestMRJobsWithProfiler {
           final BufferedReader br = new BufferedReader(new InputStreamReader(
             localFs.open(profilePath)));
           final String line = br.readLine();
-          Assertions.assertTrue(
+          assertTrue(
            line !=null && line.startsWith("JAVA PROFILE"), "No hprof content found!");
           br.close();
-          Assertions.assertEquals(0L, localFs.getFileStatus(stdoutPath).getLen());
+          assertEquals(0L, localFs.getFileStatus(stdoutPath).getLen());
         } else {
-          Assertions.assertFalse(
+          assertFalse(
            localFs.exists(profilePath), "hprof file should not exist");
         }
       } else {
-        Assertions.assertFalse(
+        assertFalse(
          localFs.exists(profilePath), "hprof file should not exist");
         if (tid.getTaskID().getId() == PROFILED_TASK_ID) {
           // reducer is profiled with Xprof
@@ -268,9 +270,9 @@ public class TestMRJobsWithProfiler {
             }
           }
           br.close();
-          Assertions.assertTrue(flatProfFound, "Xprof flat profile not found!");
+          assertTrue(flatProfFound, "Xprof flat profile not found!");
         } else {
-          Assertions.assertEquals(0L, localFs.getFileStatus(stdoutPath).getLen());
+          assertEquals(0L, localFs.getFileStatus(stdoutPath).getLen());
         }
       }
     }

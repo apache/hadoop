@@ -42,11 +42,12 @@ import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 @SuppressWarnings("deprecation")
 public class TestMRAppWithCombiner {
@@ -153,7 +154,7 @@ public class TestMRAppWithCombiner {
     public void reduce(K key, Iterator<V> values, OutputCollector<K, V> output,
         Reporter reporter) throws IOException {
       if (Reporter.NULL == reporter) {
-        Assertions.fail("A valid Reporter should have been used but, Reporter.NULL is used");
+        fail("A valid Reporter should have been used but, Reporter.NULL is used");
       }
     }
   }

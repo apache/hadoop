@@ -55,8 +55,8 @@ public class TestIntegerSplitter {
   public void assertLongArrayEquals(long [] expected, long [] actual) {
     for (int i = 0; i < expected.length; i++) {
       try {
-        assertEquals(
-           expected[i], actual[i], "Failure at position " + i + "; got " + actual[i]
+        assertEquals(expected[i], actual[i],
+            "Failure at position " + i + "; got " + actual[i]
             + " instead of " + expected[i] + "; actual array is " + formatLongArray(actual));
       } catch (ArrayIndexOutOfBoundsException oob) {
         fail("Expected array with " + expected.length + " elements; got " + actual.length

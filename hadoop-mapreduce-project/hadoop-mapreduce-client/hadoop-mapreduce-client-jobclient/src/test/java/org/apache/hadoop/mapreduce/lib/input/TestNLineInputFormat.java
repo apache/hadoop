@@ -96,15 +96,15 @@ public class TestNLineInputFormat {
     List<InputSplit> splits = format.getSplits(job);
     int count = 0;
     for (int i = 0; i < splits.size(); i++) {
-      assertEquals(0
-,                    splits.get(i).getLocations().length, "There are no split locations");
+      assertEquals(0,
+          splits.get(i).getLocations().length, "There are no split locations");
       TaskAttemptContext context = MapReduceTestUtil.
         createDummyMapTaskAttemptContext(job.getConfiguration());
       RecordReader<LongWritable, Text> reader = format.createRecordReader(
         splits.get(i), context);
       Class<?> clazz = reader.getClass();
-      assertEquals(
-        LineRecordReader.class, clazz, "reader class is LineRecordReader.");
+      assertEquals(LineRecordReader.class, clazz,
+          "reader class is LineRecordReader.");
       MapContext<LongWritable, Text, LongWritable, Text> mcontext = 
         new MapContextImpl<LongWritable, Text, LongWritable, Text>(
           job.getConfiguration(), context.getTaskAttemptID(), reader, null,
@@ -120,11 +120,11 @@ public class TestNLineInputFormat {
         reader.close();
       }
       if ( i == splits.size() - 1) {
-        assertEquals( 
-                    lastN, count, "number of lines in split(" + i + ") is wrong");
+        assertEquals(lastN, count,
+            "number of lines in split(" + i + ") is wrong");
       } else {
-        assertEquals( 
-                    expectedN, count, "number of lines in split(" + i + ") is wrong");
+        assertEquals(expectedN, count,
+            "number of lines in split(" + i + ") is wrong");
       }
     }
   }
