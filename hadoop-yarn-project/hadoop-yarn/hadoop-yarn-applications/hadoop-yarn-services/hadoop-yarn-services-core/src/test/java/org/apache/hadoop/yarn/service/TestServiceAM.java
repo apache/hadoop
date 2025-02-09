@@ -51,11 +51,12 @@ import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceState;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.util.DockerClientConfigHandler;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,7 +72,7 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.registry.client.api.RegistryConstants.KEY_REGISTRY_ZK_QUORUM;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -87,7 +88,7 @@ public class TestServiceAM extends ServiceTestUtils{
   public ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     basedir = new File("target", "apps");
     if (basedir.exists()) {
@@ -101,7 +102,7 @@ public class TestServiceAM extends ServiceTestUtils{
     LOG.info("ZK cluster: {}", zkCluster.getConnectString());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (basedir != null) {
       FileUtils.deleteDirectory(basedir);
@@ -147,7 +148,7 @@ public class TestServiceAM extends ServiceTestUtils{
 
     am.waitForCompInstanceState(compa0, ComponentInstanceState.INIT);
     // still 1 pending instance
-    Assert.assertEquals(1,
+    Assertions.assertEquals(1,
         am.getComponent("compa").getPendingInstances().size());
     am.stop();
   }
@@ -155,7 +156,8 @@ public class TestServiceAM extends ServiceTestUtils{
   // Test to verify that the containers of previous attempt are not prematurely
   // released. These containers are sent by the RM to the AM in the
   // heartbeat response.
-  @Test(timeout = 200000)
+  @Test
+  @Timeout(value = 200)
   public void testContainersFromPreviousAttemptsWithRMRestart()
       throws Exception {
     ApplicationId applicationId = ApplicationId.newInstance(
@@ -182,23 +184,24 @@ public class TestServiceAM extends ServiceTestUtils{
     am.waitForCompInstanceState(comp10, ComponentInstanceState.STARTED);
 
     // 0 pending instance
-    Assert.assertEquals(0,
+    Assertions.assertEquals(0,
         am.getComponent(comp1Name).getPendingInstances().size());
 
     GenericTestUtils.waitFor(() -> am.getCompInstance(comp1Name, comp1InstName)
         .getContainerStatus() != null, 2000, 200000);
 
-    Assert.assertEquals("container state",
-        org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
-        am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
-            .getState());
+    Assertions.assertEquals(
+       org.apache.hadoop.yarn.api.records.ContainerState.RUNNING
+,         am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
+            .getState(), "container state");
     am.stop();
   }
 
   // Test to verify that the containers of previous attempt are released and the
   // component instance is added to the pending queue when the recovery wait
   // time interval elapses.
-  @Test(timeout = 200000)
+  @Test
+  @Timeout(value = 200)
   public void testContainersReleasedWhenExpired()
       throws Exception {
     ApplicationId applicationId = ApplicationId.newInstance(
@@ -225,22 +228,23 @@ public class TestServiceAM extends ServiceTestUtils{
         .equals(ComponentState.FLEXING), 100, 2000);
 
     // 1 pending instance
-    Assert.assertEquals(1, am.getComponent(comp1Name).getPendingInstances()
+    Assertions.assertEquals(1, am.getComponent(comp1Name).getPendingInstances()
         .size());
 
     am.feedContainerToComp(exampleApp, 2, comp1Name);
 
     GenericTestUtils.waitFor(() -> am.getCompInstance(comp1Name, comp1InstName)
         .getContainerStatus() != null, 2000, 200000);
-    Assert.assertEquals("container state",
-        org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
-        am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
-            .getState());
+    Assertions.assertEquals(
+       org.apache.hadoop.yarn.api.records.ContainerState.RUNNING
+,         am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
+            .getState(), "container state");
   }
 
   // Test to verify that the AM doesn't wait for containers of a different app
   // even though it corresponds to the same service.
-  @Test(timeout = 200000)
+  @Test
+  @Timeout(value = 200)
   public void testContainersFromDifferentApp()
       throws Exception {
     ApplicationId applicationId = ApplicationId.newInstance(
@@ -268,17 +272,17 @@ public class TestServiceAM extends ServiceTestUtils{
     am.start();
     // 1 pending instance since the container in registry belongs to a different
     // app.
-    Assert.assertEquals(1,
+    Assertions.assertEquals(1,
         am.getComponent(comp1Name).getPendingInstances().size());
 
     am.feedContainerToComp(exampleApp, 1, comp1Name);
     GenericTestUtils.waitFor(() -> am.getCompInstance(comp1Name, comp1InstName)
         .getContainerStatus() != null, 2000, 200000);
 
-    Assert.assertEquals("container state",
-        org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
-        am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
-            .getState());
+    Assertions.assertEquals(
+       org.apache.hadoop.yarn.api.records.ContainerState.RUNNING
+,         am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
+            .getState(), "container state");
     am.stop();
   }
 
@@ -314,12 +318,12 @@ public class TestServiceAM extends ServiceTestUtils{
 
     Collection<AMRMClient.ContainerRequest> rr =
         amrmClientAsync.getMatchingRequests(0);
-    Assert.assertEquals(1, rr.size());
+    Assertions.assertEquals(1, rr.size());
 
     org.apache.hadoop.yarn.api.records.Resource capability =
         rr.iterator().next().getCapability();
-    Assert.assertEquals(3333L, capability.getResourceValue("resource-1"));
-    Assert.assertEquals("Gi",
+    Assertions.assertEquals(3333L, capability.getResourceValue("resource-1"));
+    Assertions.assertEquals("Gi",
         capability.getResourceInformation("resource-1").getUnits());
 
     am.stop();
@@ -432,7 +436,7 @@ public class TestServiceAM extends ServiceTestUtils{
 
     assertEquals(2, amCreds.numberOfTokens());
     for (Token<? extends TokenIdentifier> tk : amCreds.getAllTokens()) {
-      Assert.assertTrue(
+      Assertions.assertTrue(
           tk.getKind().equals(DockerCredentialTokenIdentifier.KIND));
     }
 
@@ -463,7 +467,7 @@ public class TestServiceAM extends ServiceTestUtils{
     GenericTestUtils.waitFor(() -> comp1inst0.getContainerStatus() != null,
         2000, 200000);
     // first host status will match the container nodeId
-    Assert.assertEquals("localhost",
+    Assertions.assertEquals("localhost",
         comp1inst0.getContainerStatus().getHost());
 
     LOG.info("Change the IP and host");
@@ -491,7 +495,8 @@ public class TestServiceAM extends ServiceTestUtils{
    In case the id is set to null or unset so it is effectively null,
    Path.checkPathArg throws an IllegalArgumentException.
   **/
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testContainersReleasedWhenPreLaunchFails()
       throws Exception {
     ApplicationId applicationId = ApplicationId.newInstance(
@@ -522,12 +527,13 @@ public class TestServiceAM extends ServiceTestUtils{
         am.getComponent(compA.getName()).getPendingInstances()
         .contains(compAinst0), 2000, 30000);
 
-    Assert.assertEquals(1,
+    Assertions.assertEquals(1,
         am.getComponent("compa").getPendingInstances().size());
     am.stop();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSyncSysFS() {
     ApplicationId applicationId = ApplicationId.newInstance(
         System.currentTimeMillis(), 1);
@@ -554,7 +560,7 @@ public class TestServiceAM extends ServiceTestUtils{
       am.close();
     } catch (Exception e) {
       LOG.error("Fail to sync sysfs.", e);
-      Assert.fail("Fail to sync sysfs.");
+      Assertions.fail("Fail to sync sysfs.");
     }
   }
 
@@ -593,14 +599,14 @@ public class TestServiceAM extends ServiceTestUtils{
 
     Collection<AMRMClient.ContainerRequest> rr =
         amrmClientAsync.getMatchingRequests(0);
-    Assert.assertEquals(1, rr.size());
+    Assertions.assertEquals(1, rr.size());
 
     org.apache.hadoop.yarn.api.records.Resource capability =
         rr.iterator().next().getCapability();
-    Assert.assertEquals(1234L, capability.getResourceValue("test-resource"));
-    Assert.assertEquals("Gi",
+    Assertions.assertEquals(1234L, capability.getResourceValue("test-resource"));
+    Assertions.assertEquals("Gi",
         capability.getResourceInformation("test-resource").getUnits());
-    Assert.assertEquals(2, capability.getResourceInformation("test-resource")
+    Assertions.assertEquals(2, capability.getResourceInformation("test-resource")
         .getAttributes().size());
     am.stop();
   }

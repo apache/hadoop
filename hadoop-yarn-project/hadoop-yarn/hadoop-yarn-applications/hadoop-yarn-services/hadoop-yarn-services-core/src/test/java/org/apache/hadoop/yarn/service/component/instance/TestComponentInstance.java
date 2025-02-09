@@ -42,9 +42,9 @@ import org.apache.hadoop.yarn.service.component.ComponentEvent;
 import org.apache.hadoop.yarn.service.component.ComponentEventType;
 import org.apache.hadoop.yarn.service.component.TestComponent;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.nio.file.Files;
@@ -90,8 +90,8 @@ public class TestComponentInstance {
     instance.handle(instanceEvent);
     Container containerSpec = component.getComponentSpec().getContainer(
         instance.getContainer().getId().toString());
-    Assert.assertEquals("instance not upgrading", ContainerState.UPGRADING,
-        containerSpec.getState());
+    Assertions.assertEquals(ContainerState.UPGRADING
+,         containerSpec.getState(), "instance not upgrading");
   }
 
   @Test
@@ -110,15 +110,15 @@ public class TestComponentInstance {
     instance.handle(instanceEvent);
     instance.handle(new ComponentInstanceEvent(instance.getContainer().getId(),
         ComponentInstanceEventType.START));
-    Assert.assertEquals("instance not running",
-        ContainerState.RUNNING_BUT_UNREADY,
-        component.getComponentSpec().getContainer(instance.getContainer()
-            .getId().toString()).getState());
+    Assertions.assertEquals(
+       ContainerState.RUNNING_BUT_UNREADY
+,         component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState(), "instance not running");
     instance.handle(new ComponentInstanceEvent(instance.getContainer().getId(),
         ComponentInstanceEventType.BECOME_READY));
-    Assert.assertEquals("instance not ready", ContainerState.READY,
-        component.getComponentSpec().getContainer(instance.getContainer()
-            .getId().toString()).getState());
+    Assertions.assertEquals(ContainerState.READY
+,         component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState(), "instance not ready");
   }
 
 
@@ -145,9 +145,9 @@ public class TestComponentInstance {
         .setStatus(containerStatus);
     // this is the call back from NM for the upgrade
     instance.handle(stopEvent);
-    Assert.assertEquals("instance did not fail", ContainerState.FAILED_UPGRADE,
-        component.getComponentSpec().getContainer(instance.getContainer()
-            .getId().toString()).getState());
+    Assertions.assertEquals(ContainerState.FAILED_UPGRADE
+,         component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState(), "instance did not fail");
   }
 
   @Test
@@ -168,10 +168,10 @@ public class TestComponentInstance {
     // NM finished updgrae
     instance.handle(new ComponentInstanceEvent(instance.getContainer().getId(),
         ComponentInstanceEventType.START));
-    Assert.assertEquals("instance not running",
-        ContainerState.RUNNING_BUT_UNREADY,
-        component.getComponentSpec().getContainer(instance.getContainer()
-            .getId().toString()).getState());
+    Assertions.assertEquals(
+       ContainerState.RUNNING_BUT_UNREADY
+,         component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState(), "instance not running");
 
     ContainerStatus containerStatus = mock(ContainerStatus.class);
     when(containerStatus.getExitStatus()).thenReturn(
@@ -181,9 +181,9 @@ public class TestComponentInstance {
         .setStatus(containerStatus);
     // this is the call back from NM for the upgrade
     instance.handle(stopEvent);
-    Assert.assertEquals("instance did not fail", ContainerState.FAILED_UPGRADE,
-        component.getComponentSpec().getContainer(instance.getContainer()
-            .getId().toString()).getState());
+    Assertions.assertEquals(ContainerState.FAILED_UPGRADE
+,         component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState(), "instance did not fail");
   }
 
   @Test
@@ -202,9 +202,9 @@ public class TestComponentInstance {
         ComponentInstanceEventType.CANCEL_UPGRADE);
     instance.handle(cancelEvent);
 
-    Assert.assertEquals("instance not ready", ContainerState.READY,
-        component.getComponentSpec().getContainer(instance.getContainer()
-            .getId().toString()).getState());
+    Assertions.assertEquals(ContainerState.READY
+,         component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState(), "instance not ready");
   }
 
   @Test
@@ -225,8 +225,8 @@ public class TestComponentInstance {
 
     instance.handle(new ComponentInstanceEvent(instance.getContainer().getId(),
         ComponentInstanceEventType.STOP));
-    Assert.assertEquals("instance not init", ComponentInstanceState.INIT,
-        instance.getState());
+    Assertions.assertEquals(ComponentInstanceState.INIT
+,         instance.getState(), "instance not init");
   }
 
   @Test
@@ -244,10 +244,10 @@ public class TestComponentInstance {
         instance.getContainer().getId(), ComponentInstanceEventType.UPGRADE);
     instance.handle(upgradeEvent);
 
-    Assert.assertEquals("instance should start upgrading",
-        ContainerState.NEEDS_UPGRADE,
-        component.getComponentSpec().getContainer(instance.getContainer()
-            .getId().toString()).getState());
+    Assertions.assertEquals(
+       ContainerState.NEEDS_UPGRADE
+,         component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState(), "instance should start upgrading");
   }
 
   @Test
@@ -296,30 +296,30 @@ public class TestComponentInstance {
         LocalizationState.PENDING);
 
     instance.updateLocalizationStatuses(Lists.newArrayList(status));
-    Assert.assertTrue("retriever should still be active",
-        instance.isLclRetrieverActive());
+    Assertions.assertTrue(
+       instance.isLclRetrieverActive(), "retriever should still be active");
 
     Container container = instance.getContainerSpec();
-    Assert.assertTrue(container.getLocalizationStatuses() != null);
-    Assert.assertEquals("dest file",
-        container.getLocalizationStatuses().get(0).getDestFile(),
-        status.getResourceKey());
-    Assert.assertEquals("state",
-        container.getLocalizationStatuses().get(0).getState(),
-        status.getLocalizationState());
+    Assertions.assertTrue(container.getLocalizationStatuses() != null);
+    Assertions.assertEquals(
+       container.getLocalizationStatuses().get(0).getDestFile()
+,         status.getResourceKey(), "dest file");
+    Assertions.assertEquals(
+       container.getLocalizationStatuses().get(0).getState()
+,         status.getLocalizationState(), "state");
 
     status = LocalizationStatus.newInstance("file1",
         LocalizationState.COMPLETED);
     instance.updateLocalizationStatuses(Lists.newArrayList(status));
-    Assert.assertTrue("retriever should not be active",
-        !instance.isLclRetrieverActive());
-    Assert.assertTrue(container.getLocalizationStatuses() != null);
-    Assert.assertEquals("dest file",
-        container.getLocalizationStatuses().get(0).getDestFile(),
-        status.getResourceKey());
-    Assert.assertEquals("state",
-        container.getLocalizationStatuses().get(0).getState(),
-        status.getLocalizationState());
+    Assertions.assertTrue(
+       !instance.isLclRetrieverActive(), "retriever should not be active");
+    Assertions.assertTrue(container.getLocalizationStatuses() != null);
+    Assertions.assertEquals(
+       container.getLocalizationStatuses().get(0).getDestFile()
+,         status.getResourceKey(), "dest file");
+    Assertions.assertEquals(
+       container.getLocalizationStatuses().get(0).getState()
+,         status.getLocalizationState(), "state");
   }
 
   private void validateCancelWhileUpgrading(boolean upgradeSuccessful,
@@ -337,10 +337,10 @@ public class TestComponentInstance {
         instance.getContainer().getId(), ComponentInstanceEventType.UPGRADE);
     instance.handle(upgradeEvent);
 
-    Assert.assertEquals("instance should be upgrading",
-        ContainerState.UPGRADING,
-        component.getComponentSpec().getContainer(instance.getContainer()
-            .getId().toString()).getState());
+    Assertions.assertEquals(
+       ContainerState.UPGRADING
+,         component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState(), "instance should be upgrading");
 
     cancelCompUpgrade(component);
     ComponentInstanceEvent cancelEvent = new ComponentInstanceEvent(
@@ -361,9 +361,9 @@ public class TestComponentInstance {
           ComponentInstanceEventType.STOP));
     }
 
-    Assert.assertEquals("instance not upgrading", ContainerState.UPGRADING,
-        component.getComponentSpec().getContainer(instance.getContainer()
-            .getId().toString()).getState());
+    Assertions.assertEquals(ContainerState.UPGRADING
+,         component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState(), "instance not upgrading");
 
     // response for cancel received
     if (cancelUpgradeSuccessful) {
@@ -377,12 +377,12 @@ public class TestComponentInstance {
           instance.getContainer().getId(), ComponentInstanceEventType.STOP));
     }
     if (cancelUpgradeSuccessful) {
-      Assert.assertEquals("instance not ready", ContainerState.READY,
-          component.getComponentSpec().getContainer(instance.getContainer()
-              .getId().toString()).getState());
+      Assertions.assertEquals(ContainerState.READY
+,           component.getComponentSpec().getContainer(instance.getContainer()
+              .getId().toString()).getState(), "instance not ready");
     } else {
-      Assert.assertEquals("instance not init", ComponentInstanceState.INIT,
-          instance.getState());
+      Assertions.assertEquals(ComponentInstanceState.INIT
+,           instance.getState(), "instance not init");
     }
   }
 

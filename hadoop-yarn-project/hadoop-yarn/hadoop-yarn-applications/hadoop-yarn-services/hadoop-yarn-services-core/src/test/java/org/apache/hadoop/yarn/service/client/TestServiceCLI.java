@@ -34,11 +34,12 @@ import org.apache.hadoop.yarn.service.conf.ExampleAppJson;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,7 +98,7 @@ public class TestServiceCLI {
         "-D", basedirProp, "-save", serviceName,
         ExampleAppJson.resourceName(appDef),
         "-appTypes", DUMMY_APP_TYPE};
-    Assert.assertEquals(EXIT_SUCCESS, runCLI(args));
+    Assertions.assertEquals(EXIT_SUCCESS, runCLI(args));
   }
 
   private void buildApp(String serviceName, String appDef,
@@ -108,7 +109,7 @@ public class TestServiceCLI {
         "-appTypes", DUMMY_APP_TYPE,
         "-updateLifetime", lifetime,
         "-changeQueue", queue};
-    Assert.assertEquals(EXIT_SUCCESS, runCLI(args));
+    Assertions.assertEquals(EXIT_SUCCESS, runCLI(args));
   }
 
   private static Path getDependencyTarGz(File dir) {
@@ -117,7 +118,7 @@ public class TestServiceCLI {
         .DEPENDENCY_TAR_GZ_FILE_EXT).getAbsolutePath());
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Throwable {
     basedir = new File("target", "apps");
     basedirProp = YARN_SERVICE_BASE_PATH + "=" + basedir.getAbsolutePath();
@@ -145,7 +146,7 @@ public class TestServiceCLI {
     createCLI();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (basedir != null) {
       FileUtils.deleteDirectory(basedir);
@@ -153,7 +154,8 @@ public class TestServiceCLI {
     cli.stop();
   }
 
-  @Test (timeout = 180000)
+  @Test
+  @Timeout(value = 180)
   public void testFlexComponents() throws Throwable {
     // currently can only test building apps, since that is the only
     // operation that doesn't require an RM
@@ -176,7 +178,8 @@ public class TestServiceCLI {
     assertThat(result).isEqualTo(0);
   }
 
-  @Test (timeout = 180000)
+  @Test
+  @Timeout(value = 180)
   public void testInitiateAutoFinalizeServiceUpgrade() throws Exception {
     String[] args =  {"app", "-upgrade", "app-1",
         "-initiate", ExampleAppJson.resourceName(ExampleAppJson.APP_JSON),
@@ -233,40 +236,43 @@ public class TestServiceCLI {
     assertThat(result).isEqualTo(0);
   }
 
-  @Test (timeout = 180000)
+  @Test
+  @Timeout(value = 180)
   public void testEnableFastLaunch() throws Exception {
     fs.getFileSystem().create(new Path(basedir.getAbsolutePath(), "test.jar"))
         .close();
 
     Path defaultPath = new Path(dependencyTarGz.toString());
-    Assert.assertFalse("Dependency tarball should not exist before the test",
-        fs.isFile(defaultPath));
+    Assertions.assertFalse(
+       fs.isFile(defaultPath), "Dependency tarball should not exist before the test");
     String[] args = {"app", "-D", dependencyTarGzProp, "-enableFastLaunch",
         "-appTypes", DUMMY_APP_TYPE};
-    Assert.assertEquals(EXIT_SUCCESS, runCLI(args));
-    Assert.assertTrue("Dependency tarball did not exist after the test",
-        fs.isFile(defaultPath));
+    Assertions.assertEquals(EXIT_SUCCESS, runCLI(args));
+    Assertions.assertTrue(
+       fs.isFile(defaultPath), "Dependency tarball did not exist after the test");
 
     File secondBaseDir = new File(dependencyTarGzBaseDir, "2");
     Path secondTarGz = getDependencyTarGz(secondBaseDir);
-    Assert.assertFalse("Dependency tarball should not exist before the test",
-        fs.isFile(secondTarGz));
+    Assertions.assertFalse(
+       fs.isFile(secondTarGz), "Dependency tarball should not exist before the test");
     String[] args2 = {"app", "-D", yarnAdminNoneAclProp, "-D",
         dfsAdminAclProp, "-D", dependencyTarGzProp, "-enableFastLaunch",
         secondBaseDir.getAbsolutePath(), "-appTypes", DUMMY_APP_TYPE};
-    Assert.assertEquals(EXIT_SUCCESS, runCLI(args2));
-    Assert.assertTrue("Dependency tarball did not exist after the test",
-        fs.isFile(secondTarGz));
+    Assertions.assertEquals(EXIT_SUCCESS, runCLI(args2));
+    Assertions.assertTrue(
+       fs.isFile(secondTarGz), "Dependency tarball did not exist after the test");
   }
 
-  @Test (timeout = 180000)
+  @Test
+  @Timeout(value = 180)
   public void testEnableFastLaunchUserPermissions() throws Exception {
     String[] args = {"app", "-D", yarnAdminNoneAclProp, "-D",
         dependencyTarGzProp, "-enableFastLaunch", "-appTypes", DUMMY_APP_TYPE};
-    Assert.assertEquals(EXIT_UNAUTHORIZED, runCLI(args));
+    Assertions.assertEquals(EXIT_UNAUTHORIZED, runCLI(args));
   }
 
-  @Test (timeout = 180000)
+  @Test
+  @Timeout(value = 180)
   public void testEnableFastLaunchFilePermissions() throws Exception {
     File badDir = new File(dependencyTarGzBaseDir, "bad");
     badDir.mkdir();
@@ -275,7 +281,7 @@ public class TestServiceCLI {
 
     String[] args = {"app", "-D", dependencyTarGzProp, "-enableFastLaunch",
         badDir.getAbsolutePath(), "-appTypes", DUMMY_APP_TYPE};
-    Assert.assertEquals(EXIT_UNAUTHORIZED, runCLI(args));
+    Assertions.assertEquals(EXIT_UNAUTHORIZED, runCLI(args));
 
     badDir = new File(badDir, "child");
     badDir.mkdir();
@@ -284,7 +290,7 @@ public class TestServiceCLI {
 
     String[] args2 = {"app", "-D", dependencyTarGzProp, "-enableFastLaunch",
         badDir.getAbsolutePath(), "-appTypes", DUMMY_APP_TYPE};
-    Assert.assertEquals(EXIT_UNAUTHORIZED, runCLI(args2));
+    Assertions.assertEquals(EXIT_UNAUTHORIZED, runCLI(args2));
 
     badDir = new File(dependencyTarGzBaseDir, "badx");
     badDir.mkdir();
@@ -293,24 +299,24 @@ public class TestServiceCLI {
 
     String[] args3 = {"app", "-D", dependencyTarGzProp, "-enableFastLaunch",
         badDir.getAbsolutePath(), "-appTypes", DUMMY_APP_TYPE};
-    Assert.assertEquals(EXIT_UNAUTHORIZED, runCLI(args3));
+    Assertions.assertEquals(EXIT_UNAUTHORIZED, runCLI(args3));
   }
 
   private void checkApp(String serviceName, String compName, long count, Long
       lifetime, String queue) throws IOException {
     Service service = ServiceApiUtil.loadService(fs, serviceName);
-    Assert.assertEquals(serviceName, service.getName());
-    Assert.assertEquals(lifetime, service.getLifetime());
-    Assert.assertEquals(queue, service.getQueue());
+    Assertions.assertEquals(serviceName, service.getName());
+    Assertions.assertEquals(lifetime, service.getLifetime());
+    Assertions.assertEquals(queue, service.getQueue());
     List<Component> components = service.getComponents();
     for (Component component : components) {
       if (component.getName().equals(compName)) {
-        Assert.assertEquals(count, component.getNumberOfContainers()
+        Assertions.assertEquals(count, component.getNumberOfContainers()
             .longValue());
         return;
       }
     }
-    Assert.fail();
+    Assertions.fail();
   }
 
   private static final String DUMMY_APP_TYPE = "dummy";

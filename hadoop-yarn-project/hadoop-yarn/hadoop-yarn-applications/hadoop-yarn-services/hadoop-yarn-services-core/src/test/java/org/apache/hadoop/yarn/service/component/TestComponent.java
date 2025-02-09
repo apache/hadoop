@@ -31,9 +31,9 @@ import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType;
 import org.apache.log4j.Logger;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Iterator;
 
@@ -64,8 +64,8 @@ public class TestComponent {
     ComponentEvent upgradeEvent = new ComponentEvent(comp.getName(),
         ComponentEventType.UPGRADE);
     comp.handle(upgradeEvent);
-    Assert.assertEquals("component not in need upgrade state",
-        ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState());
+    Assertions.assertEquals(
+       ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState(), "component not in need upgrade state");
   }
 
   @Test
@@ -83,17 +83,17 @@ public class TestComponent {
     comp.getUpgradeStatus().decContainersThatNeedUpgrade();
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
-    Assert.assertEquals("component not in need upgrade state",
-        ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState());
+    Assertions.assertEquals(
+       ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState(), "component not in need upgrade state");
 
     // second instance finished upgrading
     comp.getUpgradeStatus().decContainersThatNeedUpgrade();
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
 
-    Assert.assertEquals("component not in stable state",
-        ComponentState.STABLE, comp.getComponentSpec().getState());
-    Assert.assertEquals("component did not upgrade successfully", "val1",
+    Assertions.assertEquals(
+       ComponentState.STABLE, comp.getComponentSpec().getState(), "component not in stable state");
+    Assertions.assertEquals("component did not upgrade successfully", "val1",
         comp.getComponentSpec().getConfiguration().getEnv("key1"));
   }
 
@@ -124,8 +124,8 @@ public class TestComponent {
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
 
-    Assert.assertEquals("component not in needs upgrade state",
-        ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState());
+    Assertions.assertEquals(
+       ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState(), "component not in needs upgrade state");
   }
 
   @Test
@@ -137,10 +137,10 @@ public class TestComponent {
     ComponentEvent upgradeEvent = new ComponentEvent(comp.getName(),
         ComponentEventType.CANCEL_UPGRADE);
     comp.handle(upgradeEvent);
-    Assert.assertEquals("component not in need upgrade state",
-        ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState());
+    Assertions.assertEquals(
+       ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState(), "component not in need upgrade state");
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         org.apache.hadoop.yarn.service.component.ComponentState
             .CANCEL_UPGRADING, comp.getState());
   }
@@ -190,16 +190,16 @@ public class TestComponent {
     comp.handle(stopEvent);
     instance1.handle(new ComponentInstanceEvent(
         instance1.getContainer().getId(), STOP));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         org.apache.hadoop.yarn.service.component.ComponentState
             .CANCEL_UPGRADING, comp.getState());
 
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
 
-    Assert.assertEquals("component not in needs upgrade state",
-        ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState());
-    Assert.assertEquals(
+    Assertions.assertEquals(
+       ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState(), "component not in needs upgrade state");
+    Assertions.assertEquals(
         org.apache.hadoop.yarn.service.component.ComponentState
             .CANCEL_UPGRADING, comp.getState());
 
@@ -214,17 +214,17 @@ public class TestComponent {
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
 
-    Assert.assertEquals("component not in flexing state",
-        ComponentState.FLEXING, comp.getComponentSpec().getState());
+    Assertions.assertEquals(
+       ComponentState.FLEXING, comp.getComponentSpec().getState(), "component not in flexing state");
     // new container get allocated
     context.assignNewContainer(context.attemptId, 10, comp);
 
     comp.handle(new ComponentEvent(comp.getName(),
             ComponentEventType.CHECK_STABLE));
 
-    Assert.assertEquals("component not in stable state",
-        ComponentState.STABLE, comp.getComponentSpec().getState());
-    Assert.assertEquals("cancel upgrade failed", "val0",
+    Assertions.assertEquals(
+       ComponentState.STABLE, comp.getComponentSpec().getState(), "component not in stable state");
+    Assertions.assertEquals("cancel upgrade failed", "val0",
         comp.getComponentSpec().getConfiguration().getEnv("key1"));
   }
 
@@ -249,9 +249,9 @@ public class TestComponent {
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
 
-    Assert.assertEquals("component not in stable state",
-        ComponentState.STABLE, comp.getComponentSpec().getState());
-    Assert.assertEquals("cancel upgrade failed", "val0",
+    Assertions.assertEquals(
+       ComponentState.STABLE, comp.getComponentSpec().getState(), "component not in stable state");
+    Assertions.assertEquals("cancel upgrade failed", "val0",
         comp.getComponentSpec().getConfiguration().getEnv("key1"));
   }
 
@@ -272,8 +272,8 @@ public class TestComponent {
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
 
-    Assert.assertEquals("component not in flexing state",
-        ComponentState.FLEXING, comp.getComponentSpec().getState());
+    Assertions.assertEquals(
+       ComponentState.FLEXING, comp.getComponentSpec().getState(), "component not in flexing state");
 
     for (ComponentInstance instance : comp.getAllComponentInstances()) {
       // new container get allocated
@@ -283,9 +283,9 @@ public class TestComponent {
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
 
-    Assert.assertEquals("component not in stable state",
-        ComponentState.STABLE, comp.getComponentSpec().getState());
-    Assert.assertEquals("cancel upgrade failed", "val0",
+    Assertions.assertEquals(
+       ComponentState.STABLE, comp.getComponentSpec().getState(), "component not in stable state");
+    Assertions.assertEquals("cancel upgrade failed", "val0",
         comp.getComponentSpec().getConfiguration().getEnv("key1"));
   }
 
@@ -327,16 +327,16 @@ public class TestComponent {
         instance1.getContainer().getId(), STOP));
 
     // component should be in cancel upgrade
-    Assert.assertEquals(
+    Assertions.assertEquals(
         org.apache.hadoop.yarn.service.component.ComponentState
             .CANCEL_UPGRADING, comp.getState());
 
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
 
-    Assert.assertEquals("component not in needs upgrade state",
-        ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState());
-    Assert.assertEquals(
+    Assertions.assertEquals(
+       ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState(), "component not in needs upgrade state");
+    Assertions.assertEquals(
         org.apache.hadoop.yarn.service.component.ComponentState
             .CANCEL_UPGRADING, comp.getState());
   }
@@ -362,11 +362,11 @@ public class TestComponent {
       ComponentInstance componentInstance = instanceIter.next();
       Container instanceContainer = componentInstance.getContainer();
 
-      Assert.assertEquals(0, comp.getNumSucceededInstances());
-      Assert.assertEquals(0, comp.getNumFailedInstances());
-      Assert.assertEquals(2, comp.getNumRunningInstances());
-      Assert.assertEquals(2, comp.getNumReadyInstances());
-      Assert.assertEquals(0, comp.getPendingInstances().size());
+      Assertions.assertEquals(0, comp.getNumSucceededInstances());
+      Assertions.assertEquals(0, comp.getNumFailedInstances());
+      Assertions.assertEquals(2, comp.getNumRunningInstances());
+      Assertions.assertEquals(2, comp.getNumReadyInstances());
+      Assertions.assertEquals(0, comp.getPendingInstances().size());
 
       //stop 1 container
       ContainerStatus containerStatus = ContainerStatus.newInstance(
@@ -380,15 +380,15 @@ public class TestComponent {
           new ComponentInstanceEvent(componentInstance.getContainer().getId(),
               ComponentInstanceEventType.STOP).setStatus(containerStatus));
 
-      Assert.assertEquals(1, comp.getNumSucceededInstances());
-      Assert.assertEquals(0, comp.getNumFailedInstances());
-      Assert.assertEquals(1, comp.getNumRunningInstances());
-      Assert.assertEquals(1, comp.getNumReadyInstances());
-      Assert.assertEquals(0, comp.getPendingInstances().size());
+      Assertions.assertEquals(1, comp.getNumSucceededInstances());
+      Assertions.assertEquals(0, comp.getNumFailedInstances());
+      Assertions.assertEquals(1, comp.getNumRunningInstances());
+      Assertions.assertEquals(1, comp.getNumReadyInstances());
+      Assertions.assertEquals(0, comp.getPendingInstances().size());
 
       org.apache.hadoop.yarn.service.component.ComponentState componentState =
           Component.checkIfStable(comp);
-      Assert.assertEquals(
+      Assertions.assertEquals(
           org.apache.hadoop.yarn.service.component.ComponentState.STABLE,
           componentState);
     }
@@ -431,14 +431,14 @@ public class TestComponent {
 
       ComponentState componentState =
           comp.getComponentSpec().getState();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ComponentState.SUCCEEDED,
           componentState);
     }
 
     ServiceState serviceState =
         testService.getState();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ServiceState.SUCCEEDED,
         serviceState);
   }
@@ -484,7 +484,7 @@ public class TestComponent {
         }
         ComponentState componentState =
             comp.getComponentSpec().getState();
-        Assert.assertEquals(
+        Assertions.assertEquals(
             ComponentState.SUCCEEDED,
             componentState);
       }
@@ -492,7 +492,7 @@ public class TestComponent {
 
     ServiceState serviceState =
         testService.getState();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ServiceState.SUCCEEDED,
         serviceState);
   }

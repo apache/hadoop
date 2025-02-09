@@ -29,10 +29,10 @@ import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,7 +47,7 @@ public class TestServiceMonitor extends ServiceTestUtils {
   YarnConfiguration conf = new YarnConfiguration();
   TestingCluster zkCluster;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     basedir = new File("target", "apps");
     if (basedir.exists()) {
@@ -62,7 +62,7 @@ public class TestServiceMonitor extends ServiceTestUtils {
     System.out.println("ZK cluster: " +  zkCluster.getConnectString());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (basedir != null) {
       FileUtils.deleteDirectory(basedir);
@@ -100,9 +100,9 @@ public class TestServiceMonitor extends ServiceTestUtils {
     am.start();
 
     // compa ready
-    Assert.assertTrue(am.getComponent("compa").areDependenciesReady());
+    Assertions.assertTrue(am.getComponent("compa").areDependenciesReady());
     //compb not ready
-    Assert.assertFalse(am.getComponent("compb").areDependenciesReady());
+    Assertions.assertFalse(am.getComponent("compb").areDependenciesReady());
 
     // feed 1 container to compa,
     am.feedContainerToComp(exampleApp, 1, "compa");
@@ -120,7 +120,7 @@ public class TestServiceMonitor extends ServiceTestUtils {
     am.waitForNumDesiredContainers("compa", 2);
 
     // compb dependencies not satisfied again.
-    Assert.assertFalse(am.getComponent("compb").areDependenciesReady());
+    Assertions.assertFalse(am.getComponent("compb").areDependenciesReady());
     am.stop();
   }
 }

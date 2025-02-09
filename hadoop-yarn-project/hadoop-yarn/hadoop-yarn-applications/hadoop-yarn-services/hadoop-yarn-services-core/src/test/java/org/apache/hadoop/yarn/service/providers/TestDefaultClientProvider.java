@@ -27,8 +27,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
 import org.apache.hadoop.yarn.service.provider.defaultImpl.DefaultClientProvider;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestDefaultClientProvider {
   private static final String EXCEPTION_PREFIX = "Should have thrown "
@@ -48,19 +48,19 @@ public class TestDefaultClientProvider {
 
     try {
       defaultClientProvider.validateConfigFile(configFile, compName, mockFs);
-      Assert.fail(EXCEPTION_PREFIX + " dest_file must be relative");
+      Assertions.fail(EXCEPTION_PREFIX + " dest_file must be relative");
     } catch (IllegalArgumentException e) {
       String actualMsg = String.format(
           RestApiErrorMessages.ERROR_CONFIGFILE_DEST_FILE_FOR_COMP_NOT_ABSOLUTE,
           compName, "no", configFile.getDestFile());
-      Assert.assertEquals(actualMsg, e.getLocalizedMessage());
+      Assertions.assertEquals(actualMsg, e.getLocalizedMessage());
     }
 
     configFile.setDestFile("../a.txt");
     try {
       defaultClientProvider.validateConfigFile(configFile, compName, mockFs);
     } catch (IllegalArgumentException e) {
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getLocalizedMessage());
+      Assertions.fail(NO_EXCEPTION_PREFIX + e.getLocalizedMessage());
     }
   }
 }

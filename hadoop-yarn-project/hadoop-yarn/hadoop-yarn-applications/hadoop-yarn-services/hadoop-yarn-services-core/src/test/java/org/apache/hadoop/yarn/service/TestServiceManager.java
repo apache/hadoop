@@ -32,9 +32,10 @@ import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -50,15 +51,17 @@ public class TestServiceManager {
   public ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
-  @Test (timeout = TIMEOUT)
+  @Test
+  @Timeout(value = TIMEOUT)
   public void testUpgrade() throws Exception {
     ServiceContext context = createServiceContext("testUpgrade");
     initUpgrade(context, "v2", false, false, false);
-    Assert.assertEquals("service not upgraded", ServiceState.UPGRADING,
-        context.getServiceManager().getServiceSpec().getState());
+    Assertions.assertEquals(ServiceState.UPGRADING
+,         context.getServiceManager().getServiceSpec().getState(), "service not upgraded");
   }
 
-  @Test (timeout = TIMEOUT)
+  @Test
+  @Timeout(value = TIMEOUT)
   public void testRestartNothingToUpgrade()
       throws Exception {
     ServiceContext context = createServiceContext(
@@ -73,11 +76,12 @@ public class TestServiceManager {
     GenericTestUtils.waitFor(()->
         context.service.getState().equals(ServiceState.STABLE),
         CHECK_EVERY_MILLIS, TIMEOUT);
-    Assert.assertEquals("service not re-started", ServiceState.STABLE,
-        manager.getServiceSpec().getState());
+    Assertions.assertEquals(ServiceState.STABLE
+,         manager.getServiceSpec().getState(), "service not re-started");
   }
 
-  @Test(timeout = TIMEOUT)
+  @Test
+  @Timeout(value = TIMEOUT)
   public void testAutoFinalizeNothingToUpgrade() throws Exception {
     ServiceContext context = createServiceContext(
         "testAutoFinalizeNothingToUpgrade");
@@ -89,11 +93,12 @@ public class TestServiceManager {
     GenericTestUtils.waitFor(()->
         context.service.getState().equals(ServiceState.STABLE),
         CHECK_EVERY_MILLIS, TIMEOUT);
-    Assert.assertEquals("service stable", ServiceState.STABLE,
-        manager.getServiceSpec().getState());
+    Assertions.assertEquals(ServiceState.STABLE
+,         manager.getServiceSpec().getState(), "service stable");
   }
 
-  @Test(timeout = TIMEOUT)
+  @Test
+  @Timeout(value = TIMEOUT)
   public void testRestartWithPendingUpgrade()
       throws Exception {
     ServiceContext context = createServiceContext("testRestart");
@@ -103,17 +108,18 @@ public class TestServiceManager {
     context.scheduler.getDispatcher().getEventHandler().handle(
         new ServiceEvent(ServiceEventType.START));
     context.scheduler.getDispatcher().stop();
-    Assert.assertEquals("service should still be upgrading",
-        ServiceState.UPGRADING, manager.getServiceSpec().getState());
+    Assertions.assertEquals(
+       ServiceState.UPGRADING, manager.getServiceSpec().getState(), "service should still be upgrading");
   }
 
-  @Test(timeout = TIMEOUT)
+  @Test
+  @Timeout(value = TIMEOUT)
   public void testFinalize() throws Exception {
     ServiceContext context = createServiceContext("testCheckState");
     initUpgrade(context, "v2", true, false, false);
     ServiceManager manager = context.getServiceManager();
-    Assert.assertEquals("service not upgrading", ServiceState.UPGRADING,
-        manager.getServiceSpec().getState());
+    Assertions.assertEquals(ServiceState.UPGRADING
+,         manager.getServiceSpec().getState(), "service not upgrading");
 
     //make components stable by upgrading all instances
     upgradeAndReadyAllInstances(context);
@@ -124,13 +130,14 @@ public class TestServiceManager {
     GenericTestUtils.waitFor(()->
         context.service.getState().equals(ServiceState.STABLE),
         CHECK_EVERY_MILLIS, TIMEOUT);
-    Assert.assertEquals("service not re-started", ServiceState.STABLE,
-        manager.getServiceSpec().getState());
+    Assertions.assertEquals(ServiceState.STABLE
+,         manager.getServiceSpec().getState(), "service not re-started");
 
     validateUpgradeFinalization(manager.getName(), "v2");
   }
 
-  @Test(timeout = TIMEOUT)
+  @Test
+  @Timeout(value = TIMEOUT)
   public void testAutoFinalize() throws Exception {
     ServiceContext context = createServiceContext("testCheckStateAutoFinalize");
     ServiceManager manager = context.getServiceManager();
@@ -144,8 +151,8 @@ public class TestServiceManager {
     GenericTestUtils.waitFor(() ->
         context.service.getState().equals(ServiceState.STABLE),
         CHECK_EVERY_MILLIS, TIMEOUT);
-    Assert.assertEquals("service not stable",
-        ServiceState.STABLE, manager.getServiceSpec().getState());
+    Assertions.assertEquals(
+       ServiceState.STABLE, manager.getServiceSpec().getState(), "service not stable");
 
     validateUpgradeFinalization(manager.getName(), "v2");
   }
@@ -165,13 +172,14 @@ public class TestServiceManager {
     try {
       manager.processUpgradeRequest("v2", true, false);
     } catch (Exception ex) {
-      Assert.assertTrue(ex instanceof UnsupportedOperationException);
+      Assertions.assertTrue(ex instanceof UnsupportedOperationException);
       return;
     }
-    Assert.fail();
+    Assertions.fail();
   }
 
-  @Test(timeout = TIMEOUT)
+  @Test
+  @Timeout(value = TIMEOUT)
   public void testExpressUpgrade() throws Exception {
     ServiceContext context = createServiceContext("testExpressUpgrade");
     ServiceManager manager = context.getServiceManager();
@@ -191,19 +199,20 @@ public class TestServiceManager {
             context.service.getState().equals(ServiceState.STABLE),
         CHECK_EVERY_MILLIS, TIMEOUT);
 
-    Assert.assertEquals("service not stable",
-        ServiceState.STABLE, manager.getServiceSpec().getState());
+    Assertions.assertEquals(
+       ServiceState.STABLE, manager.getServiceSpec().getState(), "service not stable");
     validateUpgradeFinalization(manager.getName(), "v2");
   }
 
-  @Test(timeout = TIMEOUT)
+  @Test
+  @Timeout(value = TIMEOUT)
   public void testCancelUpgrade() throws Exception {
     ServiceContext context = createServiceContext("testCancelUpgrade");
     writeInitialDef(context.service);
     initUpgrade(context, "v2", true, false, false);
     ServiceManager manager = context.getServiceManager();
-    Assert.assertEquals("service not upgrading", ServiceState.UPGRADING,
-        manager.getServiceSpec().getState());
+    Assertions.assertEquals(ServiceState.UPGRADING
+,         manager.getServiceSpec().getState(), "service not upgrading");
 
     List<String> comps = ServiceApiUtil.resolveCompsDependency(context.service);
     // wait till instances of first component are upgraded and ready
@@ -220,20 +229,21 @@ public class TestServiceManager {
     GenericTestUtils.waitFor(()->
             context.service.getState().equals(ServiceState.STABLE),
         CHECK_EVERY_MILLIS, TIMEOUT);
-    Assert.assertEquals("service upgrade not cancelled", ServiceState.STABLE,
-        manager.getServiceSpec().getState());
+    Assertions.assertEquals(ServiceState.STABLE
+,         manager.getServiceSpec().getState(), "service upgrade not cancelled");
 
     validateUpgradeFinalization(manager.getName(), "v1");
   }
 
-  @Test(timeout = TIMEOUT)
+  @Test
+  @Timeout(value = TIMEOUT)
   public void testCancelUpgradeAfterInitiate() throws Exception {
     ServiceContext context = createServiceContext("testCancelUpgrade");
     writeInitialDef(context.service);
     initUpgrade(context, "v2", true, false, false);
     ServiceManager manager = context.getServiceManager();
-    Assert.assertEquals("service not upgrading", ServiceState.UPGRADING,
-        manager.getServiceSpec().getState());
+    Assertions.assertEquals(ServiceState.UPGRADING
+,         manager.getServiceSpec().getState(), "service not upgrading");
 
     // cancel upgrade
     context.scheduler.getDispatcher().getEventHandler().handle(
@@ -241,8 +251,8 @@ public class TestServiceManager {
     GenericTestUtils.waitFor(()->
             context.service.getState().equals(ServiceState.STABLE),
         CHECK_EVERY_MILLIS, TIMEOUT);
-    Assert.assertEquals("service upgrade not cancelled", ServiceState.STABLE,
-        manager.getServiceSpec().getState());
+    Assertions.assertEquals(ServiceState.STABLE
+,         manager.getServiceSpec().getState(), "service upgrade not cancelled");
 
     validateUpgradeFinalization(manager.getName(), "v1");
   }
@@ -250,14 +260,14 @@ public class TestServiceManager {
   private void validateUpgradeFinalization(String serviceName,
       String expectedVersion) throws IOException {
     Service savedSpec = ServiceApiUtil.loadService(rule.getFs(), serviceName);
-    Assert.assertEquals("service def not re-written", expectedVersion,
-        savedSpec.getVersion());
-    Assert.assertNotNull("app id not present", savedSpec.getId());
-    Assert.assertEquals("state not stable", ServiceState.STABLE,
-        savedSpec.getState());
+    Assertions.assertEquals(expectedVersion
+,         savedSpec.getVersion(), "service def not re-written");
+    Assertions.assertNotNull(savedSpec.getId(), "app id not present");
+    Assertions.assertEquals(ServiceState.STABLE
+,         savedSpec.getState(), "state not stable");
     savedSpec.getComponents().forEach(compSpec ->
-        Assert.assertEquals("comp not stable", ComponentState.STABLE,
-        compSpec.getState()));
+        Assertions.assertEquals(ComponentState.STABLE
+,         compSpec.getState(), "comp not stable"));
   }
 
   private void initUpgrade(ServiceContext context, String version,
@@ -426,6 +436,6 @@ public class TestServiceManager {
         upgradedDef);
   }
 
-  private static final int TIMEOUT = 10000;
+  private static final int TIMEOUT = 10;
   private static final int CHECK_EVERY_MILLIS = 100;
 }

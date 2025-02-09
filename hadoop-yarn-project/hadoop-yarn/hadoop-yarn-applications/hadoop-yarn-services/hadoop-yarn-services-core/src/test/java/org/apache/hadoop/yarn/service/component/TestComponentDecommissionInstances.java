@@ -27,11 +27,11 @@ import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,13 +58,13 @@ public class TestComponentDecommissionInstances extends ServiceTestUtils {
   @Rule
   public TemporaryFolder tmpFolder = new TemporaryFolder();
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     File tmpYarnDir = new File("target", "tmp");
     FileUtils.deleteQuietly(tmpYarnDir);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     shutdown();
   }
@@ -129,19 +129,19 @@ public class TestComponentDecommissionInstances extends ServiceTestUtils {
       throws IOException, YarnException {
     Service service = client.getStatus(APP_NAME);
     Component component = service.getComponent(COMPA);
-    Assert.assertEquals("Service state should be STABLE", ServiceState.STABLE,
-        service.getState());
-    Assert.assertEquals(instances.length + " containers are expected to be " +
-        "running", instances.length, component.getContainers().size());
+    Assertions.assertEquals(ServiceState.STABLE
+,         service.getState(), "Service state should be STABLE");
+    Assertions.assertEquals(instances.length, component.getContainers().size(), instances.length + " containers are expected to be " +
+        "running");
     Set<String> existingInstances = new HashSet<>();
     for (Container cont : component.getContainers()) {
       existingInstances.add(cont.getComponentInstanceName());
     }
-    Assert.assertEquals(instances.length + " instances are expected to be " +
-        "running", instances.length, existingInstances.size());
+    Assertions.assertEquals(instances.length, existingInstances.size(), instances.length + " instances are expected to be " +
+        "running");
     for (String instance : instances) {
-      Assert.assertTrue("Expected instance did not exist " + instance,
-          existingInstances.contains(instance));
+      Assertions.assertTrue(
+         existingInstances.contains(instance), "Expected instance did not exist " + instance);
     }
   }
 }

@@ -23,28 +23,22 @@ import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
 
 import static org.apache.hadoop.yarn.service.ServiceTestUtils.JSON_SER_DESER;
 
-/**
- * Test loading example resources.
- */
-@RunWith(value = Parameterized.class)
-public class TestLoadExampleAppJson extends Assert {
+
+public class TestLoadExampleAppJson {
   private String resource;
 
   public TestLoadExampleAppJson(String resource) {
     this.resource = resource;
   }
 
-  @Parameterized.Parameters
   public static Collection<String[]> filenames() {
     String[][] stringArray = new String[ExampleAppJson
         .ALL_EXAMPLE_RESOURCES.size()][1];
@@ -55,7 +49,8 @@ public class TestLoadExampleAppJson extends Assert {
     return Arrays.asList(stringArray);
   }
 
-  @Test
+  @MethodSource("filenames")
+  @ParameterizedTest
   public void testLoadResource() throws Throwable {
     try {
       Service service = JSON_SER_DESER.fromResource(resource);

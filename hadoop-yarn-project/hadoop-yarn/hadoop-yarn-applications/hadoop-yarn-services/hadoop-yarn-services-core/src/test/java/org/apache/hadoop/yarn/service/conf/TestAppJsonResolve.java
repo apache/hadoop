@@ -28,8 +28,8 @@ import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,11 +41,12 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.service.conf.ExampleAppJson.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test global configuration resolution.
  */
-public class TestAppJsonResolve extends Assert {
+public class TestAppJsonResolve  {
   protected static final Logger LOG =
       LoggerFactory.getLogger(TestAppJsonResolve.class);
 
@@ -199,18 +200,18 @@ public class TestAppJsonResolve extends Assert {
 
     // Validate worker's resources
     Resource workerResource = orig.getComponent("worker").getResource();
-    Assert.assertEquals(1, workerResource.getCpus().intValue());
-    Assert.assertEquals(1024, workerResource.calcMemoryMB());
-    Assert.assertNotNull(workerResource.getAdditional());
-    Assert.assertEquals(2, workerResource.getAdditional().size());
-    Assert.assertEquals(3333, workerResource.getAdditional().get(
+    Assertions.assertEquals(1, workerResource.getCpus().intValue());
+    Assertions.assertEquals(1024, workerResource.calcMemoryMB());
+    Assertions.assertNotNull(workerResource.getAdditional());
+    Assertions.assertEquals(2, workerResource.getAdditional().size());
+    Assertions.assertEquals(3333, workerResource.getAdditional().get(
         "resource-1").getValue().longValue());
-    Assert.assertEquals("Gi", workerResource.getAdditional().get(
+    Assertions.assertEquals("Gi", workerResource.getAdditional().get(
         "resource-1").getUnit());
 
-    Assert.assertEquals(5, workerResource.getAdditional().get(
+    Assertions.assertEquals(5, workerResource.getAdditional().get(
         "yarn.io/gpu").getValue().longValue());
-    Assert.assertEquals("", workerResource.getAdditional().get(
+    Assertions.assertEquals("", workerResource.getAdditional().get(
         "yarn.io/gpu").getUnit());
 
     other = orig.getComponent("other").getConfiguration();
@@ -221,16 +222,16 @@ public class TestAppJsonResolve extends Assert {
   public void testSetResourceAttributes() throws IOException {
     Service orig = ExampleAppJson.loadResource(EXTERNAL_JSON_3);
     Component component = orig.getComponent("volume-service");
-    Assert.assertNotNull(component);
+    Assertions.assertNotNull(component);
     Map<String, ResourceInformation> adResource = component
         .getResource().getAdditional();
-    Assert.assertNotNull(adResource);
-    Assert.assertEquals(1, adResource.size());
+    Assertions.assertNotNull(adResource);
+    Assertions.assertEquals(1, adResource.size());
     Map.Entry<String, ResourceInformation> volume = adResource
         .entrySet().iterator().next();
-    Assert.assertEquals("yarn.io/csi-volume", volume.getKey());
-    Assert.assertEquals(100L, volume.getValue().getValue().longValue());
-    Assert.assertEquals(2, volume.getValue().getAttributes().size());
-    Assert.assertEquals(1, volume.getValue().getTags().size());
+    Assertions.assertEquals("yarn.io/csi-volume", volume.getKey());
+    Assertions.assertEquals(100L, volume.getValue().getValue().longValue());
+    Assertions.assertEquals(2, volume.getValue().getAttributes().size());
+    Assertions.assertEquals(1, volume.getValue().getTags().size());
   }
 }

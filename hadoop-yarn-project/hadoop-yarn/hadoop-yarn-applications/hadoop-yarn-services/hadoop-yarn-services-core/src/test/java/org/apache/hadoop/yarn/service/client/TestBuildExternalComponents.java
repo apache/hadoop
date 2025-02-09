@@ -25,10 +25,10 @@ import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.conf.ExampleAppJson;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,9 +49,9 @@ public class TestBuildExternalComponents {
   // Check component names match with expected
   private static void checkComponentNames(List<Component> components,
       Set<String> expectedComponents) {
-    Assert.assertEquals(expectedComponents.size(), components.size());
+    Assertions.assertEquals(expectedComponents.size(), components.size());
     for (Component comp : components) {
-      Assert.assertTrue(expectedComponents.contains(comp.getName()));
+      Assertions.assertTrue(expectedComponents.contains(comp.getName()));
     }
   }
 
@@ -70,7 +70,7 @@ public class TestBuildExternalComponents {
     checkComponentNames(components, names);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     basedir = new File("target", "apps");
     if (basedir.exists()) {
@@ -81,7 +81,7 @@ public class TestBuildExternalComponents {
     conf.set(YARN_SERVICE_BASE_PATH, basedir.getAbsolutePath());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (basedir != null) {
       FileUtils.deleteDirectory(basedir);
