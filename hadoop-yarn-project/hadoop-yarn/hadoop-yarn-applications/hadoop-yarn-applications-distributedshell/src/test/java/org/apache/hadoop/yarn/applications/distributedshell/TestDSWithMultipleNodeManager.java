@@ -28,13 +28,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.*;
 import org.junit.Rule;
-import org.junit.jupiter.api.Test;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
@@ -127,10 +122,10 @@ public class TestDSWithMultipleNodeManager {
   }
 
   @BeforeEach
-  public void setup() throws Exception {
+  public void setup(TestInfo testInfo) throws Exception {
     distShellTest = new TestDSTimelineV10();
     distShellTest.setupInternal(NUM_NMS,
-        getConfiguration(multiNodePlacementEnabled));
+        getConfiguration(multiNodePlacementEnabled), testInfo.getDisplayName());
   }
 
   @AfterEach

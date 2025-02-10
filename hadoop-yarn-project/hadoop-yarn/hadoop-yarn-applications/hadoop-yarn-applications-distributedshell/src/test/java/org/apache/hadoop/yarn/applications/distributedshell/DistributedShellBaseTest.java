@@ -28,7 +28,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -36,13 +35,11 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,9 +72,15 @@ import org.apache.hadoop.yarn.server.timeline.NameValuePair;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 /**
  * Base class for testing DistributedShell features.
  */
+@Timeout(160)
 public abstract class DistributedShellBaseTest {
   protected static final int MIN_ALLOCATION_MB = 128;
   protected static final int NUM_DATA_NODES = 1;
@@ -105,13 +108,9 @@ public abstract class DistributedShellBaseTest {
   private static MiniYARNCluster yarnCluster = null;
   private static String yarnSiteBackupPath = null;
   private static String yarnSitePath = null;
-  @Rule
-  public Timeout globalTimeout = new Timeout(TEST_TIME_OUT,
-      TimeUnit.MILLISECONDS);
-  @Rule
-  public TemporaryFolder tmpFolder = new TemporaryFolder();
-  @Rule
-  public TestName name = new TestName();
+  @TempDir
+  public java.nio.file.Path tmpFolder;
+
   private Client dsClient;
   private YarnConfiguration conf = null;
   // location of the filesystem timeline writer for timeline service v.2
@@ -212,12 +211,12 @@ public abstract class DistributedShellBaseTest {
   }
 
   public void setTimelineV2StorageDir() throws Exception {
-    timelineV2StorageDir = tmpFolder.newFolder().getAbsolutePath();
+    timelineV2StorageDir = tmpFolder.toFile().getAbsolutePath();
   }
 
   @BeforeEach
-  public void setup() throws Exception {
-    setupInternal(NUM_NMS, new YarnConfiguration());
+  public void setup(TestInfo testInfo) throws Exception {
+    setupInternal(NUM_NMS, new YarnConfiguration(), getMethodName(testInfo));
   }
 
   @AfterEach
@@ -232,8 +231,8 @@ public abstract class DistributedShellBaseTest {
     shutdownHdfsCluster();
   }
 
-  protected String[] createArgumentsWithAppName(String... args) {
-    return createArguments(() -> generateAppName(), args);
+  protected String[] createArgumentsWithAppName(String methodName, String... args) {
+    return createArguments(() -> generateAppName(methodName), args);
   }
 
   protected void waitForContainersLaunch(YarnClient client, int nContainers,
@@ -307,9 +306,10 @@ public abstract class DistributedShellBaseTest {
     return dsClient;
   }
 
-  protected void baseTestDSShell(boolean haveDomain, boolean defaultFlow)
+  protected void baseTestDSShell(String methodName, boolean haveDomain, boolean defaultFlow)
       throws Exception {
     String[] baseArgs = createArgumentsWithAppName(
+         methodName,
         "--num_containers",
         "2",
         "--shell_command",
@@ -329,7 +329,7 @@ public abstract class DistributedShellBaseTest {
     YarnClient yarnClient;
     dsClient = setAndGetDSClient(new Configuration(yarnCluster.getConfig()));
     boolean initSuccess = dsClient.init(args);
-    Assertions.assertTrue(initSuccess);
+    assertTrue(initSuccess);
     LOG.info("Running DS Client");
     final AtomicBoolean result = new AtomicBoolean(false);
     Thread t = new Thread(() -> {
@@ -379,17 +379,17 @@ public abstract class DistributedShellBaseTest {
     t.join();
     if (waitResult.get() == 2) {
       // Exception was raised
-      Assertions.fail("Exception in getting application report. Failed");
+      fail("Exception in getting application report. Failed");
     }
     if (waitResult.get() == 1) {
-      Assertions.assertEquals(
+      assertEquals(
          -1, appReportRef.get().getRpcPort(), "Failed waiting for expected rpc port to be -1.");
     }
     checkTimeline(appIdRef.get(), defaultFlow, haveDomain, appReportRef.get());
   }
 
-  protected void baseTestDSShell(boolean haveDomain) throws Exception {
-    baseTestDSShell(haveDomain, true);
+  protected void baseTestDSShell(String methodName, boolean haveDomain) throws Exception {
+    baseTestDSShell(methodName, haveDomain, true);
   }
 
   protected void checkTimeline(ApplicationId appId,
@@ -399,22 +399,22 @@ public abstract class DistributedShellBaseTest {
     if (haveDomain) {
       domain = yarnCluster.getApplicationHistoryServer()
           .getTimelineStore().getDomain("TEST_DOMAIN");
-      Assertions.assertNotNull(domain);
-      Assertions.assertEquals("reader_user reader_group", domain.getReaders());
-      Assertions.assertEquals("writer_user writer_group", domain.getWriters());
+      assertNotNull(domain);
+      assertEquals("reader_user reader_group", domain.getReaders());
+      assertEquals("writer_user writer_group", domain.getWriters());
     }
     TimelineEntities entitiesAttempts = yarnCluster
         .getApplicationHistoryServer()
         .getTimelineStore()
         .getEntities(ApplicationMaster.DSEntity.DS_APP_ATTEMPT.toString(),
             null, null, null, null, null, null, null, null, null);
-    Assertions.assertNotNull(entitiesAttempts);
-    Assertions.assertEquals(1, entitiesAttempts.getEntities().size());
-    Assertions.assertEquals(2, entitiesAttempts.getEntities().get(0).getEvents()
+    assertNotNull(entitiesAttempts);
+    assertEquals(1, entitiesAttempts.getEntities().size());
+    assertEquals(2, entitiesAttempts.getEntities().get(0).getEvents()
         .size());
-    Assertions.assertEquals(entitiesAttempts.getEntities().get(0).getEntityType(),
+    assertEquals(entitiesAttempts.getEntities().get(0).getEntityType(),
         ApplicationMaster.DSEntity.DS_APP_ATTEMPT.toString());
-    Assertions.assertEquals(haveDomain ? domain.getId() : "DEFAULT",
+    assertEquals(haveDomain ? domain.getId() : "DEFAULT",
         entitiesAttempts.getEntities().get(0).getDomainId());
     String currAttemptEntityId =
         entitiesAttempts.getEntities().get(0).getEntityId();
@@ -428,9 +428,9 @@ public abstract class DistributedShellBaseTest {
         .getTimelineStore()
         .getEntities(ApplicationMaster.DSEntity.DS_CONTAINER.toString(), null,
             null, null, null, null, primaryFilter, null, null, null);
-    Assertions.assertNotNull(entities);
-    Assertions.assertEquals(2, entities.getEntities().size());
-    Assertions.assertEquals(entities.getEntities().get(0).getEntityType(),
+    assertNotNull(entities);
+    assertEquals(2, entities.getEntities().size());
+    assertEquals(entities.getEntities().get(0).getEntityType(),
         ApplicationMaster.DSEntity.DS_CONTAINER.toString());
 
     String entityId = entities.getEntities().get(0).getEntityId();
@@ -438,9 +438,9 @@ public abstract class DistributedShellBaseTest {
         yarnCluster.getApplicationHistoryServer().getTimelineStore()
             .getEntity(entityId,
                 ApplicationMaster.DSEntity.DS_CONTAINER.toString(), null);
-    Assertions.assertNotNull(entity);
-    Assertions.assertEquals(entityId, entity.getEntityId());
-    Assertions.assertEquals(haveDomain ? domain.getId() : "DEFAULT",
+    assertNotNull(entity);
+    assertEquals(entityId, entity.getEntityId());
+    assertEquals(haveDomain ? domain.getId() : "DEFAULT",
         entities.getEntities().get(0).getDomainId());
   }
 
@@ -452,12 +452,12 @@ public abstract class DistributedShellBaseTest {
     return res;
   }
 
-  protected String generateAppName() {
-    return generateAppName(null);
+  protected String generateAppName(String methodName) {
+    return generateAppName(methodName,null);
   }
 
-  protected String generateAppName(String postFix) {
-    return name.getMethodName().replaceFirst("test", "")
+  protected String generateAppName(String methodName, String postFix) {
+    return methodName.replaceFirst("test", "")
         .concat(postFix == null ? "" : "-" + postFix);
   }
 
@@ -501,9 +501,9 @@ public abstract class DistributedShellBaseTest {
   }
 
   protected void setupInternal(int numNodeManagers,
-      YarnConfiguration yarnConfig) throws Exception {
+      YarnConfiguration yarnConfig, String methodName) throws Exception {
     LOG.info("========== Setting UP UnitTest {}#{} ==========",
-        getClass().getCanonicalName(), name.getMethodName());
+        getClass().getCanonicalName(), methodName);
     LOG.info("Starting up YARN cluster. Timeline version {}",
         getTimelineVersion());
     conf = yarnConfig;
@@ -603,5 +603,9 @@ public abstract class DistributedShellBaseTest {
 
   protected MiniDFSCluster getHDFSCluster() {
     return hdfsCluster;
+  }
+
+  public String getMethodName(TestInfo testInfo) {
+    return testInfo.getTestMethod().get().getName();
   }
 }
