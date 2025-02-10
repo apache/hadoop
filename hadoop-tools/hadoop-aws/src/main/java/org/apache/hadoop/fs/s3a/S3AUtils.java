@@ -24,6 +24,7 @@ import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
 import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.retry.RetryUtils;
+import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
@@ -72,8 +73,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.AWSCredentialProviderList.maybeTranslateCredentialException;
@@ -134,6 +138,12 @@ public final class S3AUtils {
       = "Data read has a different length than the expected";
 
   private static final String BUCKET_PATTERN = FS_S3A_BUCKET_PREFIX + "%s.%s";
+
+  public static final Set<ChecksumAlgorithm> SUPPORTED_CHECKSUM_ALGORITHMS = ImmutableSet.of(
+      ChecksumAlgorithm.CRC32,
+      ChecksumAlgorithm.CRC32_C,
+      ChecksumAlgorithm.SHA1,
+      ChecksumAlgorithm.SHA256);
 
   private S3AUtils() {
   }
@@ -1741,6 +1751,28 @@ public final class S3AUtils {
                       "from the classloader that instantiated the Configuration object: {}",
               conf.getClassLoader());
     }
+  }
+
+  /**
+   * Get the checksum algorithm to be used for data integrity check of the objects in S3.
+   * This operation includes validating if the provided value is a supported checksum algorithm.
+   * @param conf configuration to scan
+   * @return the checksum algorithm to be passed on S3 requests
+   * @throws IllegalArgumentException if the checksum algorithm is not known or not supported
+   */
+  public static ChecksumAlgorithm getChecksumAlgorithm(Configuration conf) {
+    final String checksumAlgorithmString = conf.get(CHECKSUM_ALGORITHM);
+    if (StringUtils.isBlank(checksumAlgorithmString)) {
+      return null;
+    }
+    final ChecksumAlgorithm checksumAlgorithm =
+        ChecksumAlgorithm.fromValue(checksumAlgorithmString);
+    if (!SUPPORTED_CHECKSUM_ALGORITHMS.contains(checksumAlgorithm)) {
+      // Throw when the configuration value is not known or the checksum algorithm is not supported
+      throw new IllegalArgumentException("Checksum algorithm is not supported: "
+          + checksumAlgorithmString);
+    }
+    return checksumAlgorithm;
   }
 
 }

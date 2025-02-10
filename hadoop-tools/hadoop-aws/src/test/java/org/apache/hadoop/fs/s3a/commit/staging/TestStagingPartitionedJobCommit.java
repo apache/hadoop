@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.PathCommitException;
+import org.apache.hadoop.fs.s3a.commit.files.Etag;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
@@ -100,8 +101,8 @@ public class TestStagingPartitionedJobCommit
           commit.setDestinationKey(key);
           commit.setUri("s3a://" + BUCKET + "/" + key);
           commit.setUploadId(uploadId);
-          ArrayList<String> etags = new ArrayList<>();
-          etags.add("tag1");
+          ArrayList<Etag> etags = new ArrayList<>();
+          etags.add(new Etag("tag1", null, null));
           commit.setEtags(etags);
           pendingSet.add(commit);
           // register the upload so commit operations are not rejected

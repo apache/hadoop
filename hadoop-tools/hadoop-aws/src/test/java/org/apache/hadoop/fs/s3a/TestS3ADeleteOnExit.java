@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.when;
@@ -87,6 +88,17 @@ public class TestS3ADeleteOnExit extends AbstractS3AMockTest {
     testFs.deleteOnExit(path);
     testFs.close();
     assertEquals(0, testFs.getDeleteOnDnExitCount());
+  }
+
+  @Test
+  public void testCreateRequestFactoryWithInvalidChecksumAlgorithm() throws Exception {
+    Configuration conf = createConfiguration();
+    conf.set(Constants.CHECKSUM_ALGORITHM, "INVALID");
+    TestS3AFileSystem testFs  = new TestS3AFileSystem();
+    URI uri = URI.create(FS_S3A + "://" + BUCKET);
+    final IllegalArgumentException exception = intercept(IllegalArgumentException.class,
+        () -> testFs.initialize(uri, conf));
+    assertEquals("Checksum algorithm is not supported: INVALID", exception.getMessage());
   }
 
   private ArgumentMatcher<HeadObjectRequest> correctGetMetadataRequest(

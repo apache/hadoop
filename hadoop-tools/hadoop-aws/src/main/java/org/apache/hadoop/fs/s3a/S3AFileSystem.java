@@ -1309,6 +1309,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withStorageClass(storageClass)
         .withMultipartUploadEnabled(isMultipartUploadEnabled)
         .withPartUploadTimeout(partUploadTimeout)
+        .withChecksumAlgorithm(S3AUtils.getChecksumAlgorithm(getConf()))
         .build();
   }
 

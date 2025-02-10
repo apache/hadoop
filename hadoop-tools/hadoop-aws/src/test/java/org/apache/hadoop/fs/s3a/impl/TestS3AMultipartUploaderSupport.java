@@ -20,14 +20,17 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.Map;
 
 import org.junit.Test;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.PartHandlePayload;
 import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.buildPartHandlePayload;
 import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.parsePartHandlePayload;
+import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.extractChecksum;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -41,35 +44,52 @@ public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
 
   @Test
   public void testRoundTrip() throws Throwable {
-    PartHandlePayload result = roundTrip(999, "tag", 1);
+    PartHandlePayload result = roundTrip(999, "tag", 1, null, null);
     assertEquals(PATH, result.getPath());
     assertEquals(UPLOAD, result.getUploadId());
     assertEquals(999, result.getPartNumber());
     assertEquals("tag", result.getEtag());
     assertEquals(1, result.getLen());
+    assertNull(result.getChecksumAlgorithm());
+    assertNull(result.getChecksum());
   }
 
   @Test
   public void testRoundTrip2() throws Throwable {
     long len = 1L + Integer.MAX_VALUE;
     PartHandlePayload result =
-        roundTrip(1, "11223344", len);
+        roundTrip(1, "11223344", len, null, null);
     assertEquals(1, result.getPartNumber());
     assertEquals("11223344", result.getEtag());
     assertEquals(len, result.getLen());
+    assertNull(result.getChecksumAlgorithm());
+    assertNull(result.getChecksum());
+  }
+
+  @Test
+  public void testRoundTripWithChecksum() throws Throwable {
+    PartHandlePayload result = roundTrip(999, "tag", 1,
+        "SHA256", "checksum");
+    assertEquals(PATH, result.getPath());
+    assertEquals(UPLOAD, result.getUploadId());
+    assertEquals(999, result.getPartNumber());
+    assertEquals("tag", result.getEtag());
+    assertEquals(1, result.getLen());
+    assertEquals("SHA256", result.getChecksumAlgorithm());
+    assertEquals("checksum", result.getChecksum());
   }
 
   @Test
   public void testNoEtag() throws Throwable {
     intercept(IllegalArgumentException.class,
         () -> buildPartHandlePayload(PATH, UPLOAD,
-            0, "", 1));
+            0, "", 1, null, null));
   }
 
   @Test
   public void testNoLen() throws Throwable {
     intercept(IllegalArgumentException.class,
-        () -> buildPartHandlePayload(PATH, UPLOAD, 0, "tag", -1));
+        () -> buildPartHandlePayload(PATH, UPLOAD, 0, "tag", -1, null, null));
   }
 
   @Test
@@ -80,17 +100,81 @@ public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
 
   @Test
   public void testBadHeader() throws Throwable {
-    byte[] bytes = buildPartHandlePayload(PATH, UPLOAD, 0, "tag", 1);
+    byte[] bytes = buildPartHandlePayload(PATH, UPLOAD, 0, "tag", 1, null, null);
     bytes[2] = 'f';
     intercept(IOException.class, "header",
         () -> parsePartHandlePayload(bytes));
   }
 
+  @Test
+  public void testNoChecksumAlgorithm() throws Exception {
+    intercept(IllegalArgumentException.class,
+        () -> buildPartHandlePayload(PATH, UPLOAD,
+            999, "tag", 1, "", "checksum"));
+  }
+
+  @Test
+  public void testNoChecksum() throws Exception {
+    intercept(IllegalArgumentException.class,
+        () -> buildPartHandlePayload(PATH, UPLOAD,
+            999, "tag", 1, "SHA256", ""));
+  }
+
+  @Test
+  public void testExtractChecksumCRC32() {
+    final UploadPartResponse uploadPartResponse = UploadPartResponse.builder()
+        .checksumCRC32("checksum")
+        .build();
+    final Map.Entry<String, String> checksum = extractChecksum(uploadPartResponse);
+    assertEquals("CRC32", checksum.getKey());
+    assertEquals("checksum", checksum.getValue());
+  }
+
+  @Test
+  public void testExtractChecksumCRC32C() {
+    final UploadPartResponse uploadPartResponse = UploadPartResponse.builder()
+        .checksumCRC32C("checksum")
+        .build();
+    final Map.Entry<String, String> checksum = extractChecksum(uploadPartResponse);
+    assertEquals("CRC32C", checksum.getKey());
+    assertEquals("checksum", checksum.getValue());
+  }
+
+  @Test
+  public void testExtractChecksumSHA1() {
+    final UploadPartResponse uploadPartResponse = UploadPartResponse.builder()
+        .checksumSHA1("checksum")
+        .build();
+    final Map.Entry<String, String> checksum = extractChecksum(uploadPartResponse);
+    assertEquals("SHA1", checksum.getKey());
+    assertEquals("checksum", checksum.getValue());
+  }
+
+  @Test
+  public void testExtractChecksumSHA256() {
+    final UploadPartResponse uploadPartResponse = UploadPartResponse.builder()
+        .checksumSHA256("checksum")
+        .build();
+    final Map.Entry<String, String> checksum = extractChecksum(uploadPartResponse);
+    assertEquals("SHA256", checksum.getKey());
+    assertEquals("checksum", checksum.getValue());
+  }
+
+  @Test
+  public void testExtractChecksumEmpty() {
+    final UploadPartResponse uploadPartResponse = UploadPartResponse.builder().build();
+    final Map.Entry<String, String> checksum = extractChecksum(uploadPartResponse);
+    assertNull(checksum);
+  }
+
   private PartHandlePayload roundTrip(
       int partNumber,
       String tag,
-      long len) throws IOException {
-    byte[] bytes = buildPartHandlePayload(PATH, UPLOAD, partNumber, tag, len);
+      long len,
+      String checksumAlgorithm,
+      String checksum) throws IOException {
+    byte[] bytes = buildPartHandlePayload(PATH, UPLOAD, partNumber, tag, len,
+        checksumAlgorithm, checksum);
     return parsePartHandlePayload(bytes);
   }
 }
