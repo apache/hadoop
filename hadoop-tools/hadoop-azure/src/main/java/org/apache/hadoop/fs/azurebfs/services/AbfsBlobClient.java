@@ -1303,21 +1303,38 @@ public class AbfsBlobClient extends AbfsClient {
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
     BlobDeleteHandler blobDeleteHandler = getBlobDeleteHandler(path, recursive,
         tracingContext);
-    if (blobDeleteHandler.execute()) {
-      final AbfsUriQueryBuilder abfsUriQueryBuilder
-          = createDefaultUriQueryBuilder();
-      final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-      final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-      final AbfsRestOperation successOp = getAbfsRestOperation(
-          AbfsRestOperationType.DeletePath, HTTP_METHOD_DELETE,
-          url, requestHeaders);
-      successOp.hardSetResult(HTTP_OK);
-      return successOp;
-    } else {
-      throw new AbfsRestOperationException(HTTP_INTERNAL_ERROR,
-          AzureServiceErrorCode.UNKNOWN.getErrorCode(),
-          ERR_DELETE_BLOB + path,
-          null);
+    final AbfsUriQueryBuilder abfsUriQueryBuilder
+        = createDefaultUriQueryBuilder();
+    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    final AbfsRestOperation op = new AbfsRestOperation(
+        AbfsRestOperationType.DeletePath, this,
+        HTTP_METHOD_DELETE, url, requestHeaders, getAbfsConfiguration());
+
+    try {
+      if (blobDeleteHandler.execute()) {
+        op.hardSetResult(HttpURLConnection.HTTP_OK);
+        return op;
+      } else {
+        throw new AbfsRestOperationException(HTTP_INTERNAL_ERROR,
+            AzureServiceErrorCode.UNKNOWN.getErrorCode(),
+            ERR_DELETE_BLOB + path,
+            null);
+      }
+    } catch (AzureBlobFileSystemException e) {
+      if (!op.hasResult()) {
+        throw e;
+      }
+
+      final AbfsRestOperation idempotencyOp = deleteIdempotencyCheckOp(op);
+      if (idempotencyOp.getResult().getStatusCode()
+          == op.getResult().getStatusCode()) {
+        // idempotency did not return different result
+        // throw back the exception
+        throw e;
+      } else {
+        return idempotencyOp;
+      }
     }
   }
 

@@ -34,6 +34,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -55,6 +56,7 @@ import org.apache.hadoop.test.ReflectionUtils;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
+import static java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
@@ -196,6 +198,22 @@ public class ITestAzureBlobFileSystemDelete extends
     when(op.isARetriedRequest()).thenReturn(true);
 
     // Case 1: Mock instance of Http Operation response. This will return
+    // HTTP:TIMEOUT
+    AbfsHttpOperation http504Op = mock(AbfsHttpOperation.class);
+    when(http504Op.getStatusCode()).thenReturn(HTTP_GATEWAY_TIMEOUT);
+
+    // Mock delete response to 504
+    when(op.getResult()).thenReturn(http504Op);
+    when(op.hasResult()).thenReturn(true);
+
+    Assertions.assertThat(testClient.deleteIdempotencyCheckOp(op)
+            .getResult()
+            .getStatusCode())
+        .describedAs(
+            "Idempotency check to happen only for HTTP 404 response.")
+        .isEqualTo(HTTP_GATEWAY_TIMEOUT);
+
+    // Case 2: Mock instance of Http Operation response. This will return
     // HTTP:Not Found
     AbfsHttpOperation http404Op = mock(AbfsHttpOperation.class);
     when(http404Op.getStatusCode()).thenReturn(HTTP_NOT_FOUND);
@@ -211,7 +229,7 @@ public class ITestAzureBlobFileSystemDelete extends
             "Delete is considered idempotent by default and should return success.")
         .isEqualTo(HTTP_OK);
 
-    // Case 2: Mock instance of Http Operation response. This will return
+    // Case 3: Mock instance of Http Operation response. This will return
     // HTTP:Bad Request
     AbfsHttpOperation http400Op = mock(AbfsHttpOperation.class);
     when(http400Op.getStatusCode()).thenReturn(HTTP_BAD_REQUEST);
@@ -286,6 +304,7 @@ public class ITestAzureBlobFileSystemDelete extends
     doReturn(idempotencyRetOp).when(mockClient).deleteIdempotencyCheckOp(any());
     TracingContext tracingContext = getTestTracingContext(fs, false);
     doReturn(tracingContext).when(idempotencyRetOp).createNewTracingContext(any());
+    //To-discuss: If DFS service type, this if case can be removed?
     if (mockClient instanceof AbfsBlobClient) {
       doCallRealMethod().when((AbfsBlobClient) mockClient)
               .getBlobDeleteHandler(Mockito.nullable(String.class),
@@ -345,6 +364,122 @@ public class ITestAzureBlobFileSystemDelete extends
   }
 
   /**
+   * Test the deletion of file in an implicit directory.
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
+  @Test
+  public void testDeleteFileInImplicitDir() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    assumeBlobServiceType();
+
+    Path p = new Path("/testDir/dir1");
+    Path p1 = new Path("/testDir/dir1/file1");
+    Path p2 = new Path("/testDir/dir1/file2");
+
+    fs.create(p1);
+    fs.create(p2);
+    AbfsBlobClient client = (AbfsBlobClient) fs.getAbfsClient();
+    client.deleteBlobPath(p, null,
+        getTestTracingContext(fs, true));
+
+    // Deletion of file with different recursion values
+    fs.delete(p1, false);
+    fs.delete(p2, true);
+
+    Assertions.assertThat(fs.exists(p))
+        .describedAs("The directory should exist.")
+        .isTrue();
+    Assertions.assertThat(fs.exists(p1))
+        .describedAs("Deleted file should not be present.").isFalse();
+    Assertions.assertThat(fs.exists(p2))
+        .describedAs("Deleted file should not be present.").isFalse();
+  }
+
+  /**
+   * Test that the file status of an empty explicit dir
+   * should not exist after its deletion.
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
+  @Test
+  public void testDeleteEmptyExplicitDir() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+
+    Path p1 = new Path("/testDir1/");
+
+    fs.mkdirs(p1);
+    fs.delete(p1, false);
+
+    Assertions.assertThat(fs.exists(p1))
+        .describedAs("The deleted directory should not exist.")
+        .isFalse();
+  }
+
+  /**
+   * Test that deleting a non-empty explicit directory
+   * can only be done with the recursive flag set to true.
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
+  @Test
+  public void testDeleteNonEmptyExplicitDir() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+
+    Path p1 = new Path("/testDir1");
+    Path p2 = new Path("/testDir2");
+
+    fs.create(new Path("/testDir1/f1.txt"));
+    fs.create(new Path("/testDir2/f2.txt"));
+
+    fs.delete(p1, true);
+
+    //Deleting non-empty dir with recursion set as
+    // false returns a FileAlreadyExistsException: 409-DirectoryNotEmpty
+    intercept(FileAlreadyExistsException.class,
+        () -> fs.delete(p2, false));
+
+    Assertions.assertThat(!fs.exists(p1))
+        .describedAs("FileStatus of the deleted directory should not exist.")
+        .isTrue();
+    Assertions.assertThat(!fs.exists(p1))
+        .describedAs("FileStatus of the deleted directory should not exist.")
+        .isTrue();
+  }
+
+  /**
+   * Assert that deleting a non-existing path
+   * leads to a FileNotFoundException.
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
+  @Test
+  public void testDeleteNonExistingPath() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+
+    Path p = new Path("/nonExistingPath");
+    intercept(FileNotFoundException.class,
+        () -> assertDeleted(fs, p, true));
+  }
+
+  /**
+   * Test to check if fileNotFoundException is
+   * injected after the file has already been deleted.
+   *
+   * @throws Exception if an error occurs during the test execution
+   */
+  @Test
+  public void testExceptionForDeletedFile() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path testFile = path("/testFile");
+    fs.create(testFile);
+    fs.delete(testFile, false);
+
+    intercept(FileNotFoundException.class,
+        () -> assertDeleted(fs, testFile, true));
+  }
+
+  /**
    * Tests deleting an implicit directory and its contents. The test verifies that after deletion,
    * both the directory and its child file no longer exist.
    *
@@ -359,6 +494,11 @@ public class ITestAzureBlobFileSystemDelete extends
     AbfsBlobClient client = (AbfsBlobClient) fs.getAbfsClient();
     client.deleteBlobPath(new Path("/testDir/dir1"),
             null, getTestTracingContext(fs, true));
+
+    //Deleting non-empty dir with recursion set as
+    // false returns a FileAlreadyExistsException: 409-DirectoryNotEmpty
+    intercept(FileAlreadyExistsException.class,
+        () -> fs.delete(new Path("/testDir/dir1"), false));
     fs.delete(new Path("/testDir/dir1"), true);
     Assertions.assertThat(!fs.exists(new Path("/testDir/dir1")))
             .describedAs("FileStatus of the deleted directory should not exist")
