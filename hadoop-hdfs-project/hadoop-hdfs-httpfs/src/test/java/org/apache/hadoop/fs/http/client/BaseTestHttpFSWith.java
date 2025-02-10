@@ -1195,8 +1195,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
         "Storage policy returned from the DFS and HttpFS should be equals");
     // unset policy
     httpfs.unsetStoragePolicy(path);
-     assertEquals(defaultdfsPolicy, httpfs.getStoragePolicy(path),
-         "After unset storage policy, the get API shoudld return the default policy");
+    assertEquals(defaultdfsPolicy, httpfs.getStoragePolicy(path),
+        "After unset storage policy, the get API shoudld return the default policy");
     fs.close();
   }
 
@@ -1435,9 +1435,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
           "Should have exactly one snapshot.");
       String resultingSnapName = snapshotItems[0].getPath().getName();
       if (snapshotName == null) {
-        assertTrue(
-           Pattern.matches("(s)(\\d{8})(-)(\\d{6})(\\.)(\\d{3})",
-                resultingSnapName), "Snapshot auto generated name not matching pattern");
+        assertTrue(Pattern.matches("(s)(\\d{8})(-)(\\d{6})(\\.)(\\d{3})",
+            resultingSnapName), "Snapshot auto generated name not matching pattern");
       } else {
         assertTrue(snapshotName.equals(resultingSnapName),
             "Snapshot name is not same as passed name.");
