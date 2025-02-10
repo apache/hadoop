@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.tools;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test {@link CopyFilter}.
@@ -34,8 +34,8 @@ public class TestCopyFilter {
   public void testGetCopyFilterTrueCopyFilter() {
     Configuration configuration = new Configuration(false);
     CopyFilter copyFilter = CopyFilter.getCopyFilter(configuration);
-    assertTrue("copyFilter should be instance of TrueCopyFilter",
-            copyFilter instanceof TrueCopyFilter);
+    assertTrue(copyFilter instanceof TrueCopyFilter,
+        "copyFilter should be instance of TrueCopyFilter");
   }
 
   @Test
@@ -43,8 +43,8 @@ public class TestCopyFilter {
     Configuration configuration = new Configuration(false);
     configuration.set(DistCpConstants.CONF_LABEL_FILTERS_FILE, "random");
     CopyFilter copyFilter = CopyFilter.getCopyFilter(configuration);
-    assertTrue("copyFilter should be instance of RegexCopyFilter",
-            copyFilter instanceof RegexCopyFilter);
+    assertTrue(copyFilter instanceof RegexCopyFilter,
+        "copyFilter should be instance of RegexCopyFilter");
   }
 
   @Test
@@ -54,8 +54,8 @@ public class TestCopyFilter {
     Configuration configuration = new Configuration(false);
     configuration.set(DistCpConstants.CONF_LABEL_FILTERS_CLASS, filterName);
     CopyFilter copyFilter = CopyFilter.getCopyFilter(configuration);
-    assertTrue("copyFilter should be instance of RegexpInConfigurationFilter",
-            copyFilter instanceof RegexpInConfigurationFilter);
+    assertTrue(copyFilter instanceof RegexpInConfigurationFilter,
+        "copyFilter should be instance of RegexpInConfigurationFilter");
   }
 
   @Test
