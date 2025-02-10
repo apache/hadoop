@@ -99,7 +99,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
 
   @Test
   public void testDSShellWithoutDomain(TestInfo testInfo) throws Exception {
-    baseTestDSShell(getMethodName(testInfo),false);
+    baseTestDSShell(getMethodName(testInfo), false);
   }
 
   @Test
@@ -661,8 +661,8 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
                 }
               } else if (output.getName().trim().equals("stdout")) {
                 if (!Shell.WINDOWS) {
-                  assertEquals(
-                     expectedContent.get(numOffline), sCurrentLine.trim(), "The current is" + sCurrentLine);
+                  assertEquals(expectedContent.get(numOffline), sCurrentLine.trim(),
+                      "The current is" + sCurrentLine);
                   numOffline++;
                 } else {
                   stdOutContent.add(sCurrentLine.trim());

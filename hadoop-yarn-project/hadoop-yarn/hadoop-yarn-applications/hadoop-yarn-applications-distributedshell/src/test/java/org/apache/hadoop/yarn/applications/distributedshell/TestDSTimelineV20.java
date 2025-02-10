@@ -445,20 +445,19 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
                 getTimelineRecordFromJSON(entityLine, TimelineEntity.class);
             TimelineEvent event = entity.getEvents().pollFirst();
             assertNotNull(event);
-            assertTrue(
-               event.getInfo().containsKey(ApplicationMaster.DIAGNOSTICS), "diagnostics");
+            assertTrue(event.getInfo().containsKey(ApplicationMaster.DIAGNOSTICS),
+                "diagnostics");
           }
           if (checkIdPrefix) {
             TimelineEntity entity = FileSystemTimelineReaderImpl.
                 getTimelineRecordFromJSON(entityLine, TimelineEntity.class);
-            assertTrue(
-               entity.getIdPrefix() > 0, "Entity ID prefix expected to be > 0");
+            assertTrue(entity.getIdPrefix() > 0,
+                "Entity ID prefix expected to be > 0");
             if (idPrefix == -1) {
               idPrefix = entity.getIdPrefix();
             } else {
-              assertEquals(
-              idPrefix, entity.getIdPrefix(), "Entity ID prefix should be same across each publish of "
-                      + "same entity");
+              assertEquals(idPrefix, entity.getIdPrefix(),
+                  "Entity ID prefix should be same across each publish of same entity");
             }
           }
         }

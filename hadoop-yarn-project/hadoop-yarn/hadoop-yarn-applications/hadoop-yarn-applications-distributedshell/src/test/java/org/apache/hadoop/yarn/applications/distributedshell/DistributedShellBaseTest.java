@@ -109,7 +109,7 @@ public abstract class DistributedShellBaseTest {
   private static String yarnSiteBackupPath = null;
   private static String yarnSitePath = null;
   @TempDir
-  public java.nio.file.Path tmpFolder;
+  private java.nio.file.Path tmpFolder;
 
   private Client dsClient;
   private YarnConfiguration conf = null;
@@ -382,8 +382,8 @@ public abstract class DistributedShellBaseTest {
       fail("Exception in getting application report. Failed");
     }
     if (waitResult.get() == 1) {
-      assertEquals(
-         -1, appReportRef.get().getRpcPort(), "Failed waiting for expected rpc port to be -1.");
+      assertEquals(-1, appReportRef.get().getRpcPort(),
+          "Failed waiting for expected rpc port to be -1.");
     }
     checkTimeline(appIdRef.get(), defaultFlow, haveDomain, appReportRef.get());
   }
@@ -453,7 +453,7 @@ public abstract class DistributedShellBaseTest {
   }
 
   protected String generateAppName(String methodName) {
-    return generateAppName(methodName,null);
+    return generateAppName(methodName, null);
   }
 
   protected String generateAppName(String methodName, String postFix) {
