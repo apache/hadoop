@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.service.api.records.Configuration;
 import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -38,6 +37,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -169,8 +169,8 @@ public class TestProviderUtils {
     Mockito.verify(launcher).addLocalResource(
         Mockito.eq("sourceFile4"), any(LocalResource.class));
 
-    Assertions.assertEquals(3, resolved.getResolvedRsrcPaths().size());
-    Assertions.assertEquals(resolved.getResolvedRsrcPaths().get("destFile1"),
+    assertEquals(3, resolved.getResolvedRsrcPaths().size());
+    assertEquals(resolved.getResolvedRsrcPaths().get("destFile1"),
         "destFile1");
   }
 
@@ -179,7 +179,7 @@ public class TestProviderUtils {
     String command = "ls  -l \" space\"";
     String expected = "ls,-l, space";
     String actual = ProviderUtils.replaceSpacesWithDelimiter(command, ",");
-    Assertions.assertEquals(
-       expected, actual, "replaceSpaceWithDelimiter produces unexpected result.");
+    assertEquals(expected, actual,
+        "replaceSpaceWithDelimiter produces unexpected result.");
   }
 }

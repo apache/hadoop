@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.service.providers;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -27,7 +29,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
 import org.apache.hadoop.yarn.service.provider.defaultImpl.DefaultClientProvider;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class TestDefaultClientProvider {
@@ -48,19 +49,19 @@ public class TestDefaultClientProvider {
 
     try {
       defaultClientProvider.validateConfigFile(configFile, compName, mockFs);
-      Assertions.fail(EXCEPTION_PREFIX + " dest_file must be relative");
+      fail(EXCEPTION_PREFIX + " dest_file must be relative");
     } catch (IllegalArgumentException e) {
       String actualMsg = String.format(
           RestApiErrorMessages.ERROR_CONFIGFILE_DEST_FILE_FOR_COMP_NOT_ABSOLUTE,
           compName, "no", configFile.getDestFile());
-      Assertions.assertEquals(actualMsg, e.getLocalizedMessage());
+      assertEquals(actualMsg, e.getLocalizedMessage());
     }
 
     configFile.setDestFile("../a.txt");
     try {
       defaultClientProvider.validateConfigFile(configFile, compName, mockFs);
     } catch (IllegalArgumentException e) {
-      Assertions.fail(NO_EXCEPTION_PREFIX + e.getLocalizedMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getLocalizedMessage());
     }
   }
 }

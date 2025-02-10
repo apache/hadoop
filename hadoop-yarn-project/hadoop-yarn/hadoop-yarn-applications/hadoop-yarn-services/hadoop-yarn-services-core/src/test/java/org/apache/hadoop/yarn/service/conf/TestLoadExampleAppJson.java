@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -32,11 +33,11 @@ import java.util.Collection;
 import static org.apache.hadoop.yarn.service.ServiceTestUtils.JSON_SER_DESER;
 
 
-public class TestLoadExampleAppJson {
+public class TestLoadExampleAppJson extends Assertions {
   private String resource;
 
-  public TestLoadExampleAppJson(String resource) {
-    this.resource = resource;
+  public void initTestLoadExampleAppJson(String pResource) {
+    this.resource = pResource;
   }
 
   public static Collection<String[]> filenames() {
@@ -51,7 +52,8 @@ public class TestLoadExampleAppJson {
 
   @MethodSource("filenames")
   @ParameterizedTest
-  public void testLoadResource() throws Throwable {
+  public void testLoadResource(String pResource) throws Throwable {
+    initTestLoadExampleAppJson(pResource);
     try {
       Service service = JSON_SER_DESER.fromResource(resource);
 

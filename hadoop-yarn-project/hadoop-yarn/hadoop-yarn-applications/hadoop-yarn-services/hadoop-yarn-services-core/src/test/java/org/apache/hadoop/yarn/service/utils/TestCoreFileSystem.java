@@ -21,16 +21,17 @@ package org.apache.hadoop.yarn.service.utils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
-import org.junit.jupiter.api.Assertions;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests for {@link CoreFileSystem}.
  */
 public class TestCoreFileSystem {
 
-  @Rule
+  @RegisterExtension
   public ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
@@ -40,7 +41,7 @@ public class TestCoreFileSystem {
     String version = "v1";
     Path expectedPath = new Path(rule.getFs().buildClusterDirPath(serviceName),
         YarnServiceConstants.UPGRADE_DIR + "/" + version);
-    Assertions.assertEquals(expectedPath
-,         rule.getFs().buildClusterUpgradeDirPath(serviceName, version), "incorrect upgrade path");
+    assertEquals(expectedPath, rule.getFs().buildClusterUpgradeDirPath(serviceName, version),
+        "incorrect upgrade path");
   }
 }

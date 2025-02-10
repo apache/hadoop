@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -40,6 +39,8 @@ import java.util.Collections;
 
 import static org.apache.hadoop.registry.client.api.RegistryConstants
     .KEY_REGISTRY_ZK_QUORUM;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestServiceMonitor extends ServiceTestUtils {
 
@@ -100,9 +101,9 @@ public class TestServiceMonitor extends ServiceTestUtils {
     am.start();
 
     // compa ready
-    Assertions.assertTrue(am.getComponent("compa").areDependenciesReady());
+    assertTrue(am.getComponent("compa").areDependenciesReady());
     //compb not ready
-    Assertions.assertFalse(am.getComponent("compb").areDependenciesReady());
+    assertFalse(am.getComponent("compb").areDependenciesReady());
 
     // feed 1 container to compa,
     am.feedContainerToComp(exampleApp, 1, "compa");
@@ -120,7 +121,7 @@ public class TestServiceMonitor extends ServiceTestUtils {
     am.waitForNumDesiredContainers("compa", 2);
 
     // compb dependencies not satisfied again.
-    Assertions.assertFalse(am.getComponent("compb").areDependenciesReady());
+    assertFalse(am.getComponent("compb").areDependenciesReady());
     am.stop();
   }
 }

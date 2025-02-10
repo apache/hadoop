@@ -52,11 +52,10 @@ import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.util.DockerClientConfigHandler;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,6 +72,8 @@ import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.registry.client.api.RegistryConstants.KEY_REGISTRY_ZK_QUORUM;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -84,7 +85,7 @@ public class TestServiceAM extends ServiceTestUtils{
   private File basedir;
   YarnConfiguration conf = new YarnConfiguration();
   TestingCluster zkCluster;
-  @Rule
+  @RegisterExtension
   public ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
@@ -148,8 +149,7 @@ public class TestServiceAM extends ServiceTestUtils{
 
     am.waitForCompInstanceState(compa0, ComponentInstanceState.INIT);
     // still 1 pending instance
-    Assertions.assertEquals(1,
-        am.getComponent("compa").getPendingInstances().size());
+    assertEquals(1, am.getComponent("compa").getPendingInstances().size());
     am.stop();
   }
 
@@ -184,16 +184,15 @@ public class TestServiceAM extends ServiceTestUtils{
     am.waitForCompInstanceState(comp10, ComponentInstanceState.STARTED);
 
     // 0 pending instance
-    Assertions.assertEquals(0,
+    assertEquals(0,
         am.getComponent(comp1Name).getPendingInstances().size());
 
     GenericTestUtils.waitFor(() -> am.getCompInstance(comp1Name, comp1InstName)
         .getContainerStatus() != null, 2000, 200000);
 
-    Assertions.assertEquals(
-       org.apache.hadoop.yarn.api.records.ContainerState.RUNNING
-,         am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
-            .getState(), "container state");
+    assertEquals(org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
+        am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
+        .getState(), "container state");
     am.stop();
   }
 
@@ -228,17 +227,16 @@ public class TestServiceAM extends ServiceTestUtils{
         .equals(ComponentState.FLEXING), 100, 2000);
 
     // 1 pending instance
-    Assertions.assertEquals(1, am.getComponent(comp1Name).getPendingInstances()
+    assertEquals(1, am.getComponent(comp1Name).getPendingInstances()
         .size());
 
     am.feedContainerToComp(exampleApp, 2, comp1Name);
 
     GenericTestUtils.waitFor(() -> am.getCompInstance(comp1Name, comp1InstName)
         .getContainerStatus() != null, 2000, 200000);
-    Assertions.assertEquals(
-       org.apache.hadoop.yarn.api.records.ContainerState.RUNNING
-,         am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
-            .getState(), "container state");
+    assertEquals(org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
+        am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
+        .getState(), "container state");
   }
 
   // Test to verify that the AM doesn't wait for containers of a different app
@@ -272,17 +270,16 @@ public class TestServiceAM extends ServiceTestUtils{
     am.start();
     // 1 pending instance since the container in registry belongs to a different
     // app.
-    Assertions.assertEquals(1,
+    assertEquals(1,
         am.getComponent(comp1Name).getPendingInstances().size());
 
     am.feedContainerToComp(exampleApp, 1, comp1Name);
     GenericTestUtils.waitFor(() -> am.getCompInstance(comp1Name, comp1InstName)
         .getContainerStatus() != null, 2000, 200000);
 
-    Assertions.assertEquals(
-       org.apache.hadoop.yarn.api.records.ContainerState.RUNNING
-,         am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
-            .getState(), "container state");
+    assertEquals(org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
+        am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
+        .getState(), "container state");
     am.stop();
   }
 
@@ -318,13 +315,12 @@ public class TestServiceAM extends ServiceTestUtils{
 
     Collection<AMRMClient.ContainerRequest> rr =
         amrmClientAsync.getMatchingRequests(0);
-    Assertions.assertEquals(1, rr.size());
+    assertEquals(1, rr.size());
 
     org.apache.hadoop.yarn.api.records.Resource capability =
         rr.iterator().next().getCapability();
-    Assertions.assertEquals(3333L, capability.getResourceValue("resource-1"));
-    Assertions.assertEquals("Gi",
-        capability.getResourceInformation("resource-1").getUnits());
+    assertEquals(3333L, capability.getResourceValue("resource-1"));
+    assertEquals("Gi", capability.getResourceInformation("resource-1").getUnits());
 
     am.stop();
   }
@@ -436,8 +432,7 @@ public class TestServiceAM extends ServiceTestUtils{
 
     assertEquals(2, amCreds.numberOfTokens());
     for (Token<? extends TokenIdentifier> tk : amCreds.getAllTokens()) {
-      Assertions.assertTrue(
-          tk.getKind().equals(DockerCredentialTokenIdentifier.KIND));
+      assertTrue(tk.getKind().equals(DockerCredentialTokenIdentifier.KIND));
     }
 
     am.stop();
@@ -467,7 +462,7 @@ public class TestServiceAM extends ServiceTestUtils{
     GenericTestUtils.waitFor(() -> comp1inst0.getContainerStatus() != null,
         2000, 200000);
     // first host status will match the container nodeId
-    Assertions.assertEquals("localhost",
+    assertEquals("localhost",
         comp1inst0.getContainerStatus().getHost());
 
     LOG.info("Change the IP and host");
@@ -527,8 +522,7 @@ public class TestServiceAM extends ServiceTestUtils{
         am.getComponent(compA.getName()).getPendingInstances()
         .contains(compAinst0), 2000, 30000);
 
-    Assertions.assertEquals(1,
-        am.getComponent("compa").getPendingInstances().size());
+    assertEquals(1, am.getComponent("compa").getPendingInstances().size());
     am.stop();
   }
 
@@ -560,7 +554,7 @@ public class TestServiceAM extends ServiceTestUtils{
       am.close();
     } catch (Exception e) {
       LOG.error("Fail to sync sysfs.", e);
-      Assertions.fail("Fail to sync sysfs.");
+      fail("Fail to sync sysfs.");
     }
   }
 
@@ -599,14 +593,14 @@ public class TestServiceAM extends ServiceTestUtils{
 
     Collection<AMRMClient.ContainerRequest> rr =
         amrmClientAsync.getMatchingRequests(0);
-    Assertions.assertEquals(1, rr.size());
+    assertEquals(1, rr.size());
 
     org.apache.hadoop.yarn.api.records.Resource capability =
         rr.iterator().next().getCapability();
-    Assertions.assertEquals(1234L, capability.getResourceValue("test-resource"));
-    Assertions.assertEquals("Gi",
+    assertEquals(1234L, capability.getResourceValue("test-resource"));
+    assertEquals("Gi",
         capability.getResourceInformation("test-resource").getUnits());
-    Assertions.assertEquals(2, capability.getResourceInformation("test-resource")
+    assertEquals(2, capability.getResourceInformation("test-resource")
         .getAttributes().size());
     am.stop();
   }

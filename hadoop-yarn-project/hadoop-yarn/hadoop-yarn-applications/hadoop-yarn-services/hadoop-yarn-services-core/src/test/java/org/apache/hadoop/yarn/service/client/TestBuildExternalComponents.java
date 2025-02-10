@@ -26,7 +26,6 @@ import org.apache.hadoop.yarn.service.conf.ExampleAppJson;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +36,8 @@ import java.util.List;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test for building / resolving components of type SERVICE.
@@ -49,9 +50,9 @@ public class TestBuildExternalComponents {
   // Check component names match with expected
   private static void checkComponentNames(List<Component> components,
       Set<String> expectedComponents) {
-    Assertions.assertEquals(expectedComponents.size(), components.size());
+    assertEquals(expectedComponents.size(), components.size());
     for (Component comp : components) {
-      Assertions.assertTrue(expectedComponents.contains(comp.getName()));
+      assertTrue(expectedComponents.contains(comp.getName()));
     }
   }
 

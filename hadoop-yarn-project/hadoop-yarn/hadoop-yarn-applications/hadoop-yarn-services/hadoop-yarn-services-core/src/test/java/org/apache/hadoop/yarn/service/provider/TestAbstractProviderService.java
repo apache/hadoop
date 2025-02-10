@@ -37,15 +37,15 @@ import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
 import org.apache.hadoop.yarn.service.provider.docker.DockerProviderService;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -58,7 +58,7 @@ public class TestAbstractProviderService {
   private Service testService;
   private AbstractLauncher launcher;
 
-  @Rule
+  @RegisterExtension
   public ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
@@ -91,8 +91,8 @@ public class TestAbstractProviderService {
         rule.getFs(), serviceContext.scheduler.getConfig(), container, clc,
         null);
 
-    Assertions.assertEquals(Lists.newArrayList(clc.getLaunchCommand())
-,         launcher.getCommands(), "commands");
+    assertEquals(Lists.newArrayList(clc.getLaunchCommand()),
+        launcher.getCommands(), "commands");
   }
 
   @Test
@@ -110,8 +110,8 @@ public class TestAbstractProviderService {
         rule.getFs(), serviceContext.scheduler.getConfig(), container, clc,
         null);
 
-    Assertions.assertEquals(
-       Lists.newArrayList("ls,-l, space"), launcher.getCommands(), "commands don't match.");
+    assertEquals(Lists.newArrayList("ls,-l, space"),
+        launcher.getCommands(), "commands don't match.");
   }
 
   @Test
@@ -132,8 +132,8 @@ public class TestAbstractProviderService {
     providerService.buildContainerLaunchContext(launcher, testService, instance,
         rule.getFs(), serviceContext.scheduler.getConfig(), container, clc);
 
-    Assertions.assertEquals(clc.getArtifact().getId()
-,         launcher.getDockerImage(), "artifact");
+    assertEquals(clc.getArtifact().getId(),
+        launcher.getDockerImage(), "artifact");
   }
 
   private static ContainerLaunchService.ComponentLaunchContext
