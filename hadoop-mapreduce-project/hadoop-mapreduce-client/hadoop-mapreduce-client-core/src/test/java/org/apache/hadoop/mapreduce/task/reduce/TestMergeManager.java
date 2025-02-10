@@ -18,8 +18,8 @@
 package org.apache.hadoop.mapreduce.task.reduce;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -43,12 +43,13 @@ import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestMergeManager {
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testMemoryMerge() throws Exception {
     final int TOTAL_MEM_BYTES = 10000;
     final int OUTPUT_SIZE = 7950;
@@ -65,13 +66,11 @@ public class TestMergeManager {
 
     // reserve enough map output to cause a merge when it is committed
     MapOutput<Text, Text> out1 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertTrue("Should be a memory merge",
-                      (out1 instanceof InMemoryMapOutput));
+    assertTrue((out1 instanceof InMemoryMapOutput), "Should be a memory merge");
     InMemoryMapOutput<Text, Text> mout1 = (InMemoryMapOutput<Text, Text>)out1;
     fillOutput(mout1);
     MapOutput<Text, Text> out2 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertTrue("Should be a memory merge",
-                      (out2 instanceof InMemoryMapOutput));
+    assertTrue((out2 instanceof InMemoryMapOutput), "Should be a memory merge");
     InMemoryMapOutput<Text, Text> mout2 = (InMemoryMapOutput<Text, Text>)out2;
     fillOutput(mout2);
 
@@ -85,17 +84,15 @@ public class TestMergeManager {
     mout2.commit();
     mergeStart.await();
 
-    Assert.assertEquals(1, mgr.getNumMerges());
+    assertEquals(1, mgr.getNumMerges());
 
     // reserve enough map output to cause another merge when committed
     out1 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertTrue("Should be a memory merge",
-                       (out1 instanceof InMemoryMapOutput));
+    assertTrue((out1 instanceof InMemoryMapOutput), "Should be a memory merge");
     mout1 = (InMemoryMapOutput<Text, Text>)out1;
     fillOutput(mout1);
     out2 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertTrue("Should be a memory merge",
-                       (out2 instanceof InMemoryMapOutput));
+    assertTrue((out2 instanceof InMemoryMapOutput), "Should be a memory merge");
     mout2 = (InMemoryMapOutput<Text, Text>)out2;
     fillOutput(mout2);
 
@@ -112,14 +109,13 @@ public class TestMergeManager {
 
     // start the second merge and verify
     mergeStart.await();
-    Assert.assertEquals(2, mgr.getNumMerges());
+    assertEquals(2, mgr.getNumMerges());
 
     // trigger the end of the second merge
     mergeComplete.await();
 
-    Assert.assertEquals(2, mgr.getNumMerges());
-    Assert.assertEquals("exception reporter invoked",
-        0, reporter.getNumExceptions());
+    assertEquals(2, mgr.getNumMerges());
+    assertEquals(0, reporter.getNumExceptions(), "exception reporter invoked");
   }
 
   private void fillOutput(InMemoryMapOutput<Text, Text> output) throws IOException {
@@ -214,7 +210,8 @@ public class TestMergeManager {
   }
 
   @SuppressWarnings({ "unchecked", "deprecation" })
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testOnDiskMerger() throws IOException {
     JobConf jobConf = new JobConf();
     final int SORT_FACTOR = 5;
@@ -222,9 +219,9 @@ public class TestMergeManager {
 
     MapOutputFile mapOutputFile = new MROutputFiles();
     FileSystem fs = FileSystem.getLocal(jobConf);
-    MergeManagerImpl<IntWritable, IntWritable> manager =
-      new MergeManagerImpl<IntWritable, IntWritable>(null, jobConf, fs, null
-        , null, null, null, null, null, null, null, null, null, mapOutputFile);
+    MergeManagerImpl<IntWritable, IntWritable> manager = new MergeManagerImpl<>(
+        null, jobConf, fs, null,
+        null, null, null, null, null, null, null, null, null, mapOutputFile);
 
     MergeThread onDiskMerger = manager.getOnDiskMerger();
     int mergeFactor = onDiskMerger.getMergeFactor();
@@ -240,22 +237,21 @@ public class TestMergeManager {
     Random rand = new Random();
     for(int i = 0; i < 2*SORT_FACTOR; ++i) {
       Path path = new Path("somePath");
-      CompressAwarePath cap = new CompressAwarePath(path, 1l, rand.nextInt());
+      CompressAwarePath cap = new CompressAwarePath(path, 1L, rand.nextInt());
       manager.closeOnDiskFile(cap);
     }
 
     //Check that the files pending to be merged are in sorted order.
     LinkedList<List<CompressAwarePath>> pendingToBeMerged = onDiskMerger.getPendingToBeMerged();
-    assertTrue("No inputs were added to list pending to merge",
-      pendingToBeMerged.size() > 0);
+    assertTrue(pendingToBeMerged.size() > 0,
+        "No inputs were added to list pending to merge");
     for(int i = 0; i < pendingToBeMerged.size(); ++i) {
       List<CompressAwarePath> inputs = pendingToBeMerged.get(i);
       for(int j = 1; j < inputs.size(); ++j) {
-        assertTrue("Not enough / too many inputs were going to be merged",
-          inputs.size() > 0 && inputs.size() <= SORT_FACTOR);
-        assertTrue("Inputs to be merged were not sorted according to size: ",
-          inputs.get(j).getCompressedSize()
-          >= inputs.get(j-1).getCompressedSize());
+        assertTrue(inputs.size() > 0 && inputs.size() <= SORT_FACTOR,
+            "Not enough / too many inputs were going to be merged");
+        assertTrue(inputs.get(j).getCompressedSize() >= inputs.get(j - 1).getCompressedSize(),
+            "Inputs to be merged were not sorted according to size: ");
       }
     }
 
@@ -280,16 +276,16 @@ public class TestMergeManager {
     // M4 = M1 fraction of map outputs remaining in memory for a reduce
     conf.setFloat(MRJobConfig.REDUCE_INPUT_BUFFER_PERCENT, 1.0f);
 
-    final MergeManagerImpl<Text, Text> mgr = new MergeManagerImpl<Text, Text>(
+    final MergeManagerImpl<Text, Text> mgr = new MergeManagerImpl<>(
         null, conf, mock(LocalFileSystem.class), null, null, null, null, null,
         null, null, null, null, null, new MROutputFiles());
-    assertTrue("Large shuffle area unusable: " + mgr.memoryLimit,
-        mgr.memoryLimit > Integer.MAX_VALUE);
+    assertTrue(mgr.memoryLimit > Integer.MAX_VALUE,
+        "Large shuffle area unusable: " + mgr.memoryLimit);
     final long maxInMemReduce = mgr.getMaxInMemReduceLimit();
-    assertTrue("Large in-memory reduce area unusable: " + maxInMemReduce,
-        maxInMemReduce > Integer.MAX_VALUE);
-    assertEquals("maxSingleShuffleLimit to be capped at Integer.MAX_VALUE",
-        Integer.MAX_VALUE, mgr.maxSingleShuffleLimit);
+    assertTrue(maxInMemReduce > Integer.MAX_VALUE,
+        "Large in-memory reduce area unusable: " + maxInMemReduce);
+    assertEquals(Integer.MAX_VALUE, mgr.maxSingleShuffleLimit,
+        "maxSingleShuffleLimit to be capped at Integer.MAX_VALUE");
     verifyReservedMapOutputType(mgr, 10L, "MEMORY");
     verifyReservedMapOutputType(mgr, 1L + Integer.MAX_VALUE, "DISK");
   }
@@ -298,8 +294,8 @@ public class TestMergeManager {
       long size, String expectedShuffleMode) throws IOException {
     final TaskAttemptID mapId = TaskAttemptID.forName("attempt_0_1_m_1_1");
     final MapOutput<Text, Text> mapOutput = mgr.reserve(mapId, size, 1);
-    assertEquals("Shuffled bytes: " + size, expectedShuffleMode,
-        mapOutput.getDescription());
+    assertEquals(expectedShuffleMode,
+        mapOutput.getDescription(), "Shuffled bytes: " + size);
     mgr.unreserve(size);
   }
 

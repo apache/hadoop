@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,7 +28,7 @@ import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the job acls manager
@@ -56,10 +56,10 @@ public class TestJobAclsManager {
     // cluster admin should have access
     boolean val = aclsManager.checkAccess(callerUGI, JobACL.VIEW_JOB, jobOwner,
         jobACLs.get(JobACL.VIEW_JOB));
-    assertTrue("cluster admin should have view access", val);
+    assertTrue(val, "cluster admin should have view access");
     val = aclsManager.checkAccess(callerUGI, JobACL.MODIFY_JOB, jobOwner,
         jobACLs.get(JobACL.MODIFY_JOB));
-    assertTrue("cluster admin should have modify access", val);
+    assertTrue(val, "cluster admin should have modify access");
   }
 
   @Test
@@ -80,20 +80,20 @@ public class TestJobAclsManager {
     // random user should not have access
     boolean val = aclsManager.checkAccess(callerUGI, JobACL.VIEW_JOB, jobOwner,
         jobACLs.get(JobACL.VIEW_JOB));
-    assertFalse("random user should not have view access", val);
+    assertFalse(val, "random user should not have view access");
     val = aclsManager.checkAccess(callerUGI, JobACL.MODIFY_JOB, jobOwner,
         jobACLs.get(JobACL.MODIFY_JOB));
-    assertFalse("random user should not have modify access", val);
+    assertFalse(val, "random user should not have modify access");
 
     callerUGI = UserGroupInformation.createUserForTesting(jobOwner,
         new String[] {});
     // Owner should have access
     val = aclsManager.checkAccess(callerUGI, JobACL.VIEW_JOB, jobOwner,
         jobACLs.get(JobACL.VIEW_JOB));
-    assertTrue("owner should have view access", val);
+    assertTrue(val, "owner should have view access");
     val = aclsManager.checkAccess(callerUGI, JobACL.MODIFY_JOB, jobOwner,
         jobACLs.get(JobACL.MODIFY_JOB));
-    assertTrue("owner should have modify access", val);
+    assertTrue(val, "owner should have modify access");
   }
 
   @Test
@@ -114,7 +114,7 @@ public class TestJobAclsManager {
     // acls off so anyone should have access
     boolean val = aclsManager.checkAccess(callerUGI, JobACL.VIEW_JOB, jobOwner,
         jobACLs.get(JobACL.VIEW_JOB));
-    assertTrue("acls off so anyone should have access", val);
+    assertTrue(val, "acls off so anyone should have access");
   }
 
   @Test
@@ -137,6 +137,6 @@ public class TestJobAclsManager {
     // acls off so anyone should have access
     boolean val = aclsManager.checkAccess(callerUGI, JobACL.VIEW_JOB, jobOwner,
         jobACLs.get(JobACL.VIEW_JOB));
-    assertTrue("user in admin group should have access", val);
+    assertTrue(val, "user in admin group should have access");
   }
 }

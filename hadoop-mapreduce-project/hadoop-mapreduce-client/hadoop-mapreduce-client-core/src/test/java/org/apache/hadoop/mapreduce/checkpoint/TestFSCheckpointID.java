@@ -22,7 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestFSCheckpointID {
 

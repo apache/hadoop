@@ -23,8 +23,13 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.WritableUtils;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test the {@link TaskID} class.
@@ -38,13 +43,13 @@ public class TestTaskID {
     JobID jobId = new JobID("1234", 0);
     TaskID taskId = new TaskID(jobId, TaskType.MAP, 0);
 
-    assertSame("TaskID did not store the JobID correctly",
-        jobId, taskId.getJobID());
+    assertSame(jobId, taskId.getJobID(),
+        "TaskID did not store the JobID correctly");
 
     taskId = new TaskID();
 
-    assertEquals("Job ID was set unexpectedly in default contsructor",
-        "", taskId.getJobID().getJtIdentifier());
+    assertEquals("", taskId.getJobID().getJtIdentifier(),
+        "Job ID was set unexpectedly in default constructor");
   }
 
   /**
@@ -58,18 +63,18 @@ public class TestTaskID {
       TaskID taskId = new TaskID(jobId, type, 0);
 
       if (type == TaskType.MAP) {
-        assertTrue("TaskID for map task did not correctly identify itself "
-            + "as a map task", taskId.isMap());
+        assertTrue(taskId.isMap(),
+            "TaskID for map task did not correctly identify itself as a map task");
       } else {
-        assertFalse("TaskID for " + type + " task incorrectly identified "
-            + "itself as a map task", taskId.isMap());
+        assertFalse(taskId.isMap(),
+            "TaskID for " + type + " task incorrectly identified itself as a map task");
       }
     }
 
     TaskID taskId = new TaskID();
 
-    assertFalse("TaskID of default type incorrectly identified itself as a "
-        + "map task", taskId.isMap());
+    assertFalse(taskId.isMap(),
+        "TaskID of default type incorrectly identified itself as a map task");
   }
 
   /**
@@ -82,14 +87,14 @@ public class TestTaskID {
     for (TaskType type : TaskType.values()) {
       TaskID taskId = new TaskID(jobId, type, 0);
 
-      assertEquals("TaskID incorrectly reported its type",
-          type, taskId.getTaskType());
+      assertEquals(type, taskId.getTaskType(),
+          "TaskID incorrectly reported its type");
     }
 
     TaskID taskId = new TaskID();
 
-    assertEquals("TaskID of default type incorrectly reported its type",
-        TaskType.REDUCE, taskId.getTaskType());
+    assertEquals(TaskType.REDUCE, taskId.getTaskType(),
+        "TaskID of default type incorrectly reported its type");
   }
 
   /**
@@ -102,18 +107,20 @@ public class TestTaskID {
     TaskID taskId1 = new TaskID(jobId1, TaskType.MAP, 0);
     TaskID taskId2 = new TaskID(jobId1, TaskType.MAP, 0);
 
-    assertTrue("The equals() method reported two equal task IDs were not equal",
-        taskId1.equals(taskId2));
+    assertTrue(taskId1.equals(taskId2),
+        "The equals() method reported two equal task IDs were not equal");
 
     taskId2 = new TaskID(jobId2, TaskType.MAP, 0);
 
-    assertFalse("The equals() method reported two task IDs with different "
-        + "job IDs were equal", taskId1.equals(taskId2));
+    assertFalse(taskId1.equals(taskId2),
+        "The equals() method reported two task IDs with different " +
+        "job IDs were equal");
 
     taskId2 = new TaskID(jobId1, TaskType.MAP, 1);
 
-    assertFalse("The equals() method reported two task IDs with different IDs "
-        + "were equal", taskId1.equals(taskId2));
+    assertFalse(taskId1.equals(taskId2),
+        "The equals() method reported two task IDs with different IDs " +
+        "were equal");
 
     TaskType[] types = TaskType.values();
 
@@ -123,20 +130,21 @@ public class TestTaskID {
         taskId2 = new TaskID(jobId1, types[j], 0);
 
         if (i == j) {
-          assertTrue("The equals() method reported two equal task IDs were not "
-              + "equal", taskId1.equals(taskId2));
+          assertTrue(taskId1.equals(taskId2),
+              "The equals() method reported two equal task IDs were not equal");
         } else {
-          assertFalse("The equals() method reported two task IDs with "
-              + "different types were equal", taskId1.equals(taskId2));
+          assertFalse(taskId1.equals(taskId2),
+              "The equals() method reported two task IDs with " +
+              "different types were equal");
         }
       }
     }
 
-    assertFalse("The equals() method matched against a JobID object",
-        taskId1.equals(jobId1));
+    assertFalse(taskId1.equals(jobId1),
+        "The equals() method matched against a JobID object");
 
-    assertFalse("The equals() method matched against a null object",
-        taskId1.equals(null));
+    assertFalse(taskId1.equals(null),
+        "The equals() method matched against a null object");
   }
 
   /**
@@ -148,13 +156,13 @@ public class TestTaskID {
     TaskID taskId1 = new TaskID(jobId, TaskType.REDUCE, 0);
     TaskID taskId2 = new TaskID(jobId, TaskType.REDUCE, 0);
 
-    assertEquals("The compareTo() method returned non-zero for two equal "
-        + "task IDs", 0, taskId1.compareTo(taskId2));
+    assertEquals(0, taskId1.compareTo(taskId2),
+        "The compareTo() method returned non-zero for two equal task IDs");
 
     taskId2 = new TaskID(jobId, TaskType.MAP, 1);
 
-    assertTrue("The compareTo() method did not weigh task type more than task "
-        + "ID", taskId1.compareTo(taskId2) > 0);
+    assertTrue(taskId1.compareTo(taskId2) > 0,
+        "The compareTo() method did not weigh task type more than task ID");
 
     TaskType[] types = TaskType.values();
 
@@ -164,14 +172,16 @@ public class TestTaskID {
         taskId2 = new TaskID(jobId, types[j], 0);
 
         if (i == j) {
-          assertEquals("The compareTo() method returned non-zero for two equal "
-              + "task IDs", 0, taskId1.compareTo(taskId2));
+          assertEquals(0, taskId1.compareTo(taskId2),
+              "The compareTo() method returned non-zero for two equal task IDs");
         } else if (i < j) {
-          assertTrue("The compareTo() method did not order " + types[i]
-              + " before " + types[j], taskId1.compareTo(taskId2) < 0);
+          assertTrue(taskId1.compareTo(taskId2) < 0,
+              "The compareTo() method did not order " + types[i]
+              + " before " + types[j]);
         } else {
-          assertTrue("The compareTo() method did not order " + types[i]
-              + " after " + types[j], taskId1.compareTo(taskId2) > 0);
+          assertTrue(taskId1.compareTo(taskId2) > 0,
+              "The compareTo() method did not order " + types[i]
+              + " after " + types[j]);
         }
       }
     }
@@ -203,8 +213,8 @@ public class TestTaskID {
       String str = String.format("task_1234_0001_%c_000000",
           TaskID.getRepresentingCharacter(type));
 
-      assertEquals("The toString() method returned the wrong value",
-          str, taskId.toString());
+      assertEquals(str, taskId.toString(),
+          "The toString() method returned the wrong value");
     }
   }
 
@@ -222,8 +232,8 @@ public class TestTaskID {
       String str = String.format("_1234_0001_%c_000000",
           TaskID.getRepresentingCharacter(type));
 
-      assertEquals("The appendTo() method appended the wrong value",
-          str, taskId.appendTo(builder).toString());
+      assertEquals(str, taskId.appendTo(builder).toString(),
+          "The appendTo() method appended the wrong value.");
     }
 
     try {
@@ -246,8 +256,8 @@ public class TestTaskID {
       TaskID taskId1 = new TaskID(jobId, types[i], i);
       TaskID taskId2 = new TaskID(jobId, types[i], i);
 
-      assertTrue("The hashcode() method gave unequal hash codes for two equal "
-          + "task IDs", taskId1.hashCode() == taskId2.hashCode());
+      assertEquals(taskId1.hashCode(), taskId2.hashCode(),
+          "The hashcode() method gave unequal hash codes for two equal task IDs");
     }
   }
 
@@ -273,8 +283,8 @@ public class TestTaskID {
 
     instance.readFields(in);
 
-    assertEquals("The readFields() method did not produce the expected task ID",
-        "task_1234_0001_r_000000", instance.toString());
+    assertEquals("task_1234_0001_r_000000", instance.toString(),
+        "The readFields() method did not produce the expected task ID");
   }
 
   /**
@@ -294,17 +304,17 @@ public class TestTaskID {
 
     in.reset(ByteBuffer.wrap(baos.toByteArray()));
 
-    assertEquals("The write() method did not write the expected task ID",
-        0, in.readInt());
-    assertEquals("The write() method did not write the expected job ID",
-        1, in.readInt());
-    assertEquals("The write() method did not write the expected job "
-        + "identifier length", 4, WritableUtils.readVInt(in));
+    assertEquals(0, in.readInt(),
+        "The write() method did not write the expected task ID");
+    assertEquals(1, in.readInt(),
+        "The write() method did not write the expected job ID");
+    assertEquals(4, WritableUtils.readVInt(in),
+        "The write() method did not write the expected job identifier length");
     in.readFully(buffer, 0, 4);
-    assertEquals("The write() method did not write the expected job "
-        + "identifier length", "1234", new String(buffer));
-    assertEquals("The write() method did not write the expected task type",
-        TaskType.JOB_SETUP, WritableUtils.readEnum(in, TaskType.class));
+    assertEquals("1234", new String(buffer),
+        "The write() method did not write the expected job identifier length");
+    assertEquals(TaskType.JOB_SETUP, WritableUtils.readEnum(in, TaskType.class),
+        "The write() method did not write the expected task type");
   }
 
   /**
@@ -312,34 +322,28 @@ public class TestTaskID {
    */
   @Test
   public void testForName() {
-    assertEquals("The forName() method did not parse the task ID string "
-        + "correctly", "task_1_0001_m_000000",
-        TaskID.forName("task_1_0001_m_000").toString());
-    assertEquals("The forName() method did not parse the task ID string "
-        + "correctly", "task_23_0002_r_000001",
-        TaskID.forName("task_23_0002_r_0001").toString());
-    assertEquals("The forName() method did not parse the task ID string "
-        + "correctly", "task_345_0003_s_000002",
-        TaskID.forName("task_345_0003_s_00002").toString());
-    assertEquals("The forName() method did not parse the task ID string "
-        + "correctly", "task_6789_0004_c_000003",
-        TaskID.forName("task_6789_0004_c_000003").toString());
-    assertEquals("The forName() method did not parse the task ID string "
-        + "correctly", "task_12345_0005_t_4000000",
-        TaskID.forName("task_12345_0005_t_4000000").toString());
+    assertEquals("task_1_0001_m_000000", TaskID.forName("task_1_0001_m_000").toString(),
+        "The forName() method did not parse the task ID string correctly");
+    assertEquals("task_23_0002_r_000001", TaskID.forName("task_23_0002_r_0001").toString(),
+        "The forName() method did not parse the task ID string correctly");
+    assertEquals("task_345_0003_s_000002", TaskID.forName("task_345_0003_s_00002").toString(),
+        "The forName() method did not parse the task ID string correctly");
+    assertEquals("task_6789_0004_c_000003", TaskID.forName("task_6789_0004_c_000003").toString(),
+        "The forName() method did not parse the task ID string correctly");
+    assertEquals("task_12345_0005_t_4000000",
+        TaskID.forName("task_12345_0005_t_4000000").toString(),
+        "The forName() method did not parse the task ID string correctly");
 
     try {
       TaskID.forName("tisk_12345_0005_t_4000000");
-      fail("The forName() method parsed an invalid job ID: "
-          + "tisk_12345_0005_t_4000000");
+      fail("The forName() method parsed an invalid job ID: tisk_12345_0005_t_4000000");
     } catch (IllegalArgumentException ex) {
       // Expected
     }
 
     try {
       TaskID.forName("tisk_12345_0005_t_4000000");
-      fail("The forName() method parsed an invalid job ID: "
-          + "tisk_12345_0005_t_4000000");
+      fail("The forName() method parsed an invalid job ID: tisk_12345_0005_t_4000000");
     } catch (IllegalArgumentException ex) {
       // Expected
     }
@@ -414,21 +418,18 @@ public class TestTaskID {
    */
   @Test
   public void testGetRepresentingCharacter() {
-    assertEquals("The getRepresentingCharacter() method did not return the "
-        + "expected character", 'm',
-        TaskID.getRepresentingCharacter(TaskType.MAP));
-    assertEquals("The getRepresentingCharacter() method did not return the "
-        + "expected character", 'r',
-        TaskID.getRepresentingCharacter(TaskType.REDUCE));
-    assertEquals("The getRepresentingCharacter() method did not return the "
-        + "expected character", 's',
-        TaskID.getRepresentingCharacter(TaskType.JOB_SETUP));
-    assertEquals("The getRepresentingCharacter() method did not return the "
-        + "expected character", 'c',
-        TaskID.getRepresentingCharacter(TaskType.JOB_CLEANUP));
-    assertEquals("The getRepresentingCharacter() method did not return the "
-        + "expected character", 't',
-        TaskID.getRepresentingCharacter(TaskType.TASK_CLEANUP));
+    assertEquals('m', TaskID.getRepresentingCharacter(TaskType.MAP),
+        "The getRepresentingCharacter() method did not return the expected character");
+    assertEquals('r', TaskID.getRepresentingCharacter(TaskType.REDUCE),
+        "The getRepresentingCharacter() method did not return the " +
+        "expected character");
+    assertEquals('s', TaskID.getRepresentingCharacter(TaskType.JOB_SETUP),
+        "The getRepresentingCharacter() method did not return the "
+        + "expected character");
+    assertEquals('c', TaskID.getRepresentingCharacter(TaskType.JOB_CLEANUP),
+        "The getRepresentingCharacter() method did not return the expected character");
+    assertEquals('t', TaskID.getRepresentingCharacter(TaskType.TASK_CLEANUP),
+        "The getRepresentingCharacter() method did not return the expected character");
   }
 
   /**
@@ -436,23 +437,18 @@ public class TestTaskID {
    */
   @Test
   public void testGetTaskTypeChar() {
-    assertEquals("The getTaskType() method did not return the expected type",
-        TaskType.MAP,
-        TaskID.getTaskType('m'));
-    assertEquals("The getTaskType() method did not return the expected type",
-        TaskType.REDUCE,
-        TaskID.getTaskType('r'));
-    assertEquals("The getTaskType() method did not return the expected type",
-        TaskType.JOB_SETUP,
-        TaskID.getTaskType('s'));
-    assertEquals("The getTaskType() method did not return the expected type",
-        TaskType.JOB_CLEANUP,
-        TaskID.getTaskType('c'));
-    assertEquals("The getTaskType() method did not return the expected type",
-        TaskType.TASK_CLEANUP,
-        TaskID.getTaskType('t'));
-    assertNull("The getTaskType() method did not return null for an unknown "
-        + "type", TaskID.getTaskType('x'));
+    assertEquals(TaskType.MAP, TaskID.getTaskType('m'),
+        "The getTaskType() method did not return the expected type");
+    assertEquals(TaskType.REDUCE, TaskID.getTaskType('r'),
+        "The getTaskType() method did not return the expected type");
+    assertEquals(TaskType.JOB_SETUP, TaskID.getTaskType('s'),
+        "The getTaskType() method did not return the expected type");
+    assertEquals(TaskType.JOB_CLEANUP,
+        TaskID.getTaskType('c'), "The getTaskType() method did not return the expected type");
+    assertEquals(TaskType.TASK_CLEANUP,
+        TaskID.getTaskType('t'), "The getTaskType() method did not return the expected type");
+    assertNull(TaskID.getTaskType('x'),
+        "The getTaskType() method did not return null for an unknown type");
   }
 
   /**
@@ -460,7 +456,7 @@ public class TestTaskID {
    */
   @Test
   public void testGetAllTaskTypes() {
-    assertEquals("The getAllTaskTypes method did not return the expected "
-        + "string", "(m|r|s|c|t)", TaskID.getAllTaskTypes());
+    assertEquals("(m|r|s|c|t)", TaskID.getAllTaskTypes(),
+        "The getAllTaskTypes method did not return the expected string");
   }
 }

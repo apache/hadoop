@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.mapreduce.tools;
 
-import static org.junit.Assert.*;
-
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,9 +29,11 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.JobPriority;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.JobStatus.State;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -71,13 +71,11 @@ public class TestCLI {
     int retCode_completed = cli.run(new String[] { "-list-attempt-ids",
         jobIdStr, "REDUCE", "completed" });
 
-    assertEquals("MAP is a valid input,exit code should be 0", 0, retCode_MAP);
-    assertEquals("map is a valid input,exit code should be 0", 0, retCode_map);
-    assertEquals("REDUCE is a valid input,exit code should be 0", 0,
-        retCode_REDUCE);
-    assertEquals(
-        "REDUCE and completed are a valid inputs to -list-attempt-ids,exit code should be 0",
-        0, retCode_completed);
+    assertEquals(0, retCode_MAP, "MAP is a valid input,exit code should be 0");
+    assertEquals(0, retCode_map, "map is a valid input,exit code should be 0");
+    assertEquals(0, retCode_REDUCE, "REDUCE is a valid input,exit code should be 0");
+    assertEquals(0, retCode_completed,
+        "REDUCE and completed are a valid inputs to -list-attempt-ids,exit code should be 0");
 
     verify(job, times(2)).getTaskReports(TaskType.MAP);
     verify(job, times(2)).getTaskReports(TaskType.REDUCE);
@@ -106,14 +104,14 @@ public class TestCLI {
     int retCode_invalidJobId = cli.run(new String[] { "-list-attempt-ids",
         jobIdStr2, "MAP", "running" });
 
-    assertEquals("JOB_SETUP is an invalid input,exit code should be -1", -1,
-        retCode_JOB_SETUP);
-    assertEquals("JOB_CLEANUP is an invalid input,exit code should be -1", -1,
-        retCode_JOB_CLEANUP);
-    assertEquals("complete is an invalid input,exit code should be -1", -1,
-        retCode_invalidTaskState);
-    assertEquals("Non existing job id should be skippted with -1", -1,
-        retCode_invalidJobId);
+    assertEquals(-1, retCode_JOB_SETUP,
+        "JOB_SETUP is an invalid input,exit code should be -1");
+    assertEquals(-1, retCode_JOB_CLEANUP,
+        "JOB_CLEANUP is an invalid input,exit code should be -1");
+    assertEquals(-1, retCode_invalidTaskState,
+        "complete is an invalid input,exit code should be -1");
+    assertEquals(-1, retCode_invalidJobId,
+        "Non existing job id should be skipped with -1");
 
   }
 
@@ -173,7 +171,7 @@ public class TestCLI {
     cli.cluster = mockCluster;
 
     Job job = cli.getJob(JobID.forName("job_1234654654_001"));
-    Assert.assertTrue("job is not null", job == null);
+    assertTrue(job == null, "job is not null");
   }
 
   @Test
@@ -189,7 +187,7 @@ public class TestCLI {
     cli.cluster = mockCluster;
 
     Job job = cli.getJob(JobID.forName("job_1234654654_001"));
-    Assert.assertTrue("job is null", job != null);
+    assertNotNull(job, "job is null");
   }
 
   @Test

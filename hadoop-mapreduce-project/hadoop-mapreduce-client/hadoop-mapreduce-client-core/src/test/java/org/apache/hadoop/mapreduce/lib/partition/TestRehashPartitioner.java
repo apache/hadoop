@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.lib.partition;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -26,7 +26,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 
-import org.junit.*;
+import org.junit.jupiter.api.Test;
 
 public class TestRehashPartitioner {
 
@@ -66,6 +66,6 @@ public class TestRehashPartitioner {
         badbuckets++;
     }
     System.out.println(badbuckets + " of "+PARTITIONS+" are too small or large buckets");
-    assertTrue("too many overflow buckets", badbuckets < PARTITIONS * MAX_BADBUCKETS);
+    assertTrue(badbuckets < PARTITIONS * MAX_BADBUCKETS, "too many overflow buckets");
   }
 }
