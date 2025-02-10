@@ -31,18 +31,22 @@ import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapred.lib.db.DBConfiguration;
 import org.apache.hadoop.mapreduce.lib.db.DriverForTest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
 
 public class TestDBInputFormat {
 
   /**
    * test DBInputFormat class. Class should split result for chunks
-   * @throws Exception
+   * @throws Exception Execution that occurs during unit test execution.
    */
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDBInputFormat() throws Exception {
     JobConf configuration = new JobConf();
     setupDriver(configuration);
@@ -70,7 +74,8 @@ public class TestDBInputFormat {
   /** 
    * test configuration for db. should works DBConfiguration.* parameters. 
    */
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testSetInput() {
     JobConf configuration = new JobConf();
 
@@ -121,11 +126,12 @@ public class TestDBInputFormat {
   }
 
   /**
-   * 
-   * test DBRecordReader. This reader should creates keys, values, know about position.. 
+   *
+   * test DBRecordReader. This reader should creates keys, values, know about position..
    */
   @SuppressWarnings("unchecked")
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testDBRecordReader() throws Exception {
 
     JobConf job = mock(JobConf.class);
@@ -139,9 +145,8 @@ public class TestDBInputFormat {
     LongWritable key = reader.createKey();
     assertEquals(0, key.get());
     DBWritable value = reader.createValue();
-    assertEquals(
-        "org.apache.hadoop.mapred.lib.db.DBInputFormat$NullDBWritable", value
-            .getClass().getName());
+    assertEquals("org.apache.hadoop.mapred.lib.db.DBInputFormat$NullDBWritable", value
+        .getClass().getName());
     assertEquals(0, reader.getPos());
     assertFalse(reader.next(key, value));
 

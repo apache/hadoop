@@ -18,21 +18,22 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 /**
- *  test Clock class
- *
+ * test Clock class
  */
 public class TestClock {
 
-  @Test  (timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testClock(){
-    Clock clock= new Clock();
-    long templateTime=System.currentTimeMillis();
-    long time=clock.getTime();
-    assertEquals(templateTime, time,30);
-
+    Clock clock = new Clock();
+    long templateTime = System.currentTimeMillis();
+    long time = clock.getTime();
+    assertEquals(templateTime, time, 30);
   }
 }

@@ -34,17 +34,19 @@ import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.util.Lists;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@RunWith(value = Parameterized.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 public class TestFileInputFormat {
   
   private static final Logger LOG =
@@ -56,19 +58,18 @@ public class TestFileInputFormat {
   private static FileSystem localFs;
   
   private int numThreads;
-  
-  public TestFileInputFormat(int numThreads) {
-    this.numThreads = numThreads;
-    LOG.info("Running with numThreads: " + numThreads);
+
+  public void initTestFileInputFormat(int pNumThreads) {
+    this.numThreads = pNumThreads;
+    LOG.info("Running with numThreads: " + pNumThreads);
   }
-  
-  @Parameters
+
   public static Collection<Object[]> data() {
-    Object[][] data = new Object[][] { { 1 }, { 5 }};
+    Object[][] data = new Object[][]{{1}, {5}};
     return Arrays.asList(data);
   }
   
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     LOG.info("Using Test Dir: " + TEST_ROOT_DIR);
     localFs = FileSystem.getLocal(new Configuration());
@@ -76,13 +77,15 @@ public class TestFileInputFormat {
     localFs.mkdirs(TEST_ROOT_DIR);
   }
   
-  @After
+  @AfterEach
   public void cleanup() throws IOException {
     localFs.delete(TEST_ROOT_DIR, true);
   }
-  
-  @Test
-  public void testListLocatedStatus() throws Exception {
+
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testListLocatedStatus(int pNumThreads) throws Exception {
+    initTestFileInputFormat(pNumThreads);
     Configuration conf = getConfiguration();
     conf.setBoolean("fs.test.impl.disable.cache", false);
     conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
@@ -90,20 +93,21 @@ public class TestFileInputFormat {
         "test:///a1/a2");
     MockFileSystem mockFs =
         (MockFileSystem) new Path("test:///").getFileSystem(conf);
-    Assert.assertEquals("listLocatedStatus already called",
-        0, mockFs.numListLocatedStatusCalls);
+    assertEquals(0, mockFs.numListLocatedStatusCalls,
+        "listLocatedStatus already called");
     JobConf job = new JobConf(conf);
     TextInputFormat fileInputFormat = new TextInputFormat();
     fileInputFormat.configure(job);
     InputSplit[] splits = fileInputFormat.getSplits(job, 1);
-    Assert.assertEquals("Input splits are not correct", 2, splits.length);
-    Assert.assertEquals("listLocatedStatuss calls",
-        1, mockFs.numListLocatedStatusCalls);
+    assertEquals(2, splits.length, "Input splits are not correct");
+    assertEquals(1, mockFs.numListLocatedStatusCalls, "listLocatedStatus calls");
     FileSystem.closeAll();
   }
 
-  @Test
-  public void testIgnoreDirs() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testIgnoreDirs(int pNumThreads) throws Exception {
+    initTestFileInputFormat(pNumThreads);
     Configuration conf = getConfiguration();
     conf.setBoolean(FileInputFormat.INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, true);
     conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
@@ -113,12 +117,14 @@ public class TestFileInputFormat {
     TextInputFormat fileInputFormat = new TextInputFormat();
     fileInputFormat.configure(job);
     InputSplit[] splits = fileInputFormat.getSplits(job, 1);
-    Assert.assertEquals("Input splits are not correct", 1, splits.length);
+    assertEquals(1, splits.length, "Input splits are not correct");
     FileSystem.closeAll();
   }
 
-  @Test
-  public void testSplitLocationInfo() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testSplitLocationInfo(int pNumThreads) throws Exception {
+    initTestFileInputFormat(pNumThreads);
     Configuration conf = getConfiguration();
     conf.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR,
         "test:///a1/a2");
@@ -127,21 +133,23 @@ public class TestFileInputFormat {
     fileInputFormat.configure(job);
     FileSplit[] splits = (FileSplit[]) fileInputFormat.getSplits(job, 1);
     String[] locations = splits[0].getLocations();
-    Assert.assertEquals(2, locations.length);
+    assertEquals(2, locations.length);
     SplitLocationInfo[] locationInfo = splits[0].getLocationInfo();
-    Assert.assertEquals(2, locationInfo.length);
+    assertEquals(2, locationInfo.length);
     SplitLocationInfo localhostInfo = locations[0].equals("localhost") ?
         locationInfo[0] : locationInfo[1];
     SplitLocationInfo otherhostInfo = locations[0].equals("otherhost") ?
         locationInfo[0] : locationInfo[1];
-    Assert.assertTrue(localhostInfo.isOnDisk());
-    Assert.assertTrue(localhostInfo.isInMemory());
-    Assert.assertTrue(otherhostInfo.isOnDisk());
-    Assert.assertFalse(otherhostInfo.isInMemory());
+    assertTrue(localhostInfo.isOnDisk());
+    assertTrue(localhostInfo.isInMemory());
+    assertTrue(otherhostInfo.isOnDisk());
+    assertFalse(otherhostInfo.isInMemory());
   }
-  
-  @Test
-  public void testListStatusSimple() throws IOException {
+
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testListStatusSimple(int pNumThreads) throws IOException {
+    initTestFileInputFormat(pNumThreads);
     Configuration conf = new Configuration();
     conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
 
@@ -154,12 +162,13 @@ public class TestFileInputFormat {
     FileStatus[] statuses = fif.listStatus(jobConf);
 
     org.apache.hadoop.mapreduce.lib.input.TestFileInputFormat
-        .verifyFileStatuses(expectedPaths, Lists.newArrayList(statuses),
-            localFs);
+        .verifyFileStatuses(expectedPaths, Lists.newArrayList(statuses), localFs);
   }
 
-  @Test
-  public void testListStatusNestedRecursive() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testListStatusNestedRecursive(int pNumThreads) throws IOException {
+    initTestFileInputFormat(pNumThreads);
     Configuration conf = new Configuration();
     conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
 
@@ -175,8 +184,10 @@ public class TestFileInputFormat {
             localFs);
   }
 
-  @Test
-  public void testListStatusNestedNonRecursive() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testListStatusNestedNonRecursive(int pNumThreads) throws IOException {
+    initTestFileInputFormat(pNumThreads);
     Configuration conf = new Configuration();
     conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
 
@@ -189,11 +200,13 @@ public class TestFileInputFormat {
 
     org.apache.hadoop.mapreduce.lib.input.TestFileInputFormat
         .verifyFileStatuses(expectedPaths, Lists.newArrayList(statuses),
-            localFs);
+        localFs);
   }
 
-  @Test
-  public void testListStatusErrorOnNonExistantDir() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testListStatusErrorOnNonExistantDir(int pNumThreads) throws IOException {
+    initTestFileInputFormat(pNumThreads);
     Configuration conf = new Configuration();
     conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
 
@@ -204,13 +217,12 @@ public class TestFileInputFormat {
     fif.configure(jobConf);
     try {
       fif.listStatus(jobConf);
-      Assert.fail("Expecting an IOException for a missing Input path");
+      fail("Expecting an IOException for a missing Input path");
     } catch (IOException e) {
       Path expectedExceptionPath = new Path(TEST_ROOT_DIR, "input2");
       expectedExceptionPath = localFs.makeQualified(expectedExceptionPath);
-      Assert.assertTrue(e instanceof InvalidInputException);
-      Assert.assertEquals(
-          "Input path does not exist: " + expectedExceptionPath.toString(),
+      assertInstanceOf(InvalidInputException.class, e);
+      assertEquals("Input path does not exist: " + expectedExceptionPath.toString(),
           e.getMessage());
     }
   }
