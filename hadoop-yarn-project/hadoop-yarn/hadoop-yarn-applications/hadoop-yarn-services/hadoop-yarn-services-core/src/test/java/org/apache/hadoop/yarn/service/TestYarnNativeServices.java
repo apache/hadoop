@@ -82,7 +82,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestYarnNativeServices.class);
-  
+
   @BeforeEach
   public void setup() throws Exception {
     File tmpYarnDir = new File("target", "tmp");
@@ -145,8 +145,8 @@ public class TestYarnNativeServices extends ServiceTestUtils {
         report.getFinalApplicationStatus());
     String serviceZKPath = RegistryUtils.servicePath(RegistryUtils
         .currentUser(), YarnServiceConstants.APP_TYPE, exampleApp.getName());
-    assertFalse(
-       getCuratorService().zkPathExists(serviceZKPath), "Registry ZK service path still exists after stop");
+    assertFalse(getCuratorService().zkPathExists(serviceZKPath),
+        "Registry ZK service path still exists after stop");
 
     LOG.info("Destroy the service");
     // destroy the service and check the app dir is deleted from fs.
@@ -350,8 +350,8 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     GenericTestUtils.waitFor(() ->
         getYarnCluster().getResourceManager().getServiceState() ==
             org.apache.hadoop.service.Service.STATE.STARTED, 2000, 200000);
-    assertTrue(
-       getYarnCluster().waitForNodeManagersToConnect(5000), "node managers connected");
+    assertTrue(getYarnCluster().waitForNodeManagersToConnect(5000),
+        "node managers connected");
 
     ApplicationId exampleAppId = ApplicationId.fromString(exampleApp.getId());
     ApplicationAttemptId applicationAttemptId = client.getYarnClient()
@@ -374,10 +374,10 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     Multimap<String, String> containersAfterFailure = waitForAllCompToBeReady(
         client, exampleApp);
     containersBeforeFailure.keys().forEach(compName -> {
-      assertEquals(
-         containersBeforeFailure.get(compName).size()
-,           containersAfterFailure.get(compName) == null ? 0 :
-              containersAfterFailure.get(compName).size(), "num containers after by restart for " + compName);
+      assertEquals(containersBeforeFailure.get(compName).size(),
+          containersAfterFailure.get(compName) == null ? 0 :
+          containersAfterFailure.get(compName).size(),
+          "num containers after by restart for " + compName);
     });
 
     LOG.info("Stop/destroy service {}", exampleApp);
@@ -421,8 +421,8 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     client.actionStart(service.getName());
     waitForServiceToBeStable(client, service);
     Service active = client.getStatus(service.getName());
-    assertEquals(ComponentState.STABLE
-,         active.getComponent(component.getName()).getState(), "component not stable");
+    assertEquals(ComponentState.STABLE,
+        active.getComponent(component.getName()).getState(), "component not stable");
     assertEquals("val1", active.getComponent(component.getName()).getConfiguration()
         .getEnv("key1"), "comp does not have new env");
     LOG.info("Stop/destroy service {}", service);
@@ -455,10 +455,10 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     // wait for upgrade to complete
     waitForServiceToBeStable(client, service);
     Service active = client.getStatus(service.getName());
-    assertEquals(service.getVersion()
-,         active.getVersion(), "version mismatch");
-    assertEquals(ComponentState.STABLE
-,         active.getComponent(component.getName()).getState(), "component not stable");
+    assertEquals(service.getVersion(),
+        active.getVersion(), "version mismatch");
+    assertEquals(ComponentState.STABLE,
+        active.getComponent(component.getName()).getState(), "component not stable");
     assertEquals("val1", active.getComponent(component.getName()).getConfiguration()
         .getEnv("key1"), "compa does not have new env");
     assertEquals("val2", active.getComponent(component2.getName()).getConfiguration()
@@ -502,11 +502,11 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     client.actionCancelUpgrade(service.getName());
     waitForServiceToBeStable(client, service);
     Service active = client.getStatus(service.getName());
-    assertEquals(ComponentState.STABLE
-,         active.getComponent(component.getName()).getState(), "component not stable");
+    assertEquals(ComponentState.STABLE,
+        active.getComponent(component.getName()).getState(), "component not stable");
     assertEquals("val0",
         active.getComponent(component.getName()).getConfiguration()
-            .getEnv("key1"),"comp does not have new env");
+        .getEnv("key1"),"comp does not have new env");
     LOG.info("Stop/destroy service {}", service);
     client.actionStop(service.getName(), true);
     client.actionDestroy(service.getName());
@@ -552,10 +552,10 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     // Check service is stable and all 3 containers are running
     Service service = client.getStatus(exampleApp.getName());
     Component component = service.getComponent("compa");
-    assertEquals(ServiceState.STABLE
-,         service.getState(), "Service state should be STABLE");
-    assertEquals(3
-,         component.getContainers().size(), "3 containers are expected to be running");
+    assertEquals(ServiceState.STABLE,
+        service.getState(), "Service state should be STABLE");
+    assertEquals(3,
+        component.getContainers().size(), "3 containers are expected to be running");
     // Prepare a map of non-AM containers for later lookup
     Set<String> nonAMContainerIdSet = new HashSet<>();
     for (Container cont : component.getContainers()) {
@@ -600,12 +600,12 @@ public class TestYarnNativeServices extends ServiceTestUtils {
       // running and the fourth one should not get allocated.
       service = client.getStatus(exampleApp.getName());
       component = service.getComponent("compa");
-      assertNotEquals(
-         ServiceState.STABLE, service.getState(), "Service state should not be STABLE");
-      assertEquals(
-         ComponentState.FLEXING, component.getState(), "Component state should be FLEXING");
-      assertEquals(3
-,           component.getContainers().size(), "3 containers are expected to be running");
+      assertNotEquals(ServiceState.STABLE, service.getState(),
+          "Service state should not be STABLE");
+      assertEquals(ComponentState.FLEXING, component.getState(),
+          "Component state should be FLEXING");
+      assertEquals(3, component.getContainers().size(),
+          "3 containers are expected to be running");
     }
 
     // Flex compa down to 4 now, which is still more containers than the no of
@@ -629,12 +629,12 @@ public class TestYarnNativeServices extends ServiceTestUtils {
       // running and the fourth one should not get allocated.
       service = client.getStatus(exampleApp.getName());
       component = service.getComponent("compa");
-      assertNotEquals(
-         ServiceState.STABLE, service.getState(), "Service state should not be STABLE");
-      assertEquals(
-         ComponentState.FLEXING, component.getState(), "Component state should be FLEXING");
-      assertEquals(3
-,           component.getContainers().size(), "3 containers are expected to be running");
+      assertNotEquals(ServiceState.STABLE, service.getState(),
+          "Service state should not be STABLE");
+      assertEquals(ComponentState.FLEXING, component.getState(),
+          "Component state should be FLEXING");
+      assertEquals(3, component.getContainers().size(),
+          "3 containers are expected to be running");
     }
 
     // Finally flex compa down to 3, which is exactly the number of containers
@@ -778,10 +778,10 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     // Check service is stable and all 3 containers are running
     Service service = client.getStatus(exampleApp.getName());
     Component component = service.getComponent("compa");
-    assertEquals(ServiceState.STABLE
-,         service.getState(), "Service state should be STABLE");
-    assertEquals(3
-,         component.getContainers().size(), "3 containers are expected to be running");
+    assertEquals(ServiceState.STABLE,
+        service.getState(), "Service state should be STABLE");
+    assertEquals(3, component.getContainers().size(),
+        "3 containers are expected to be running");
 
     // Flex compa up to 4 - will make health 75% (3 out of 4 running), but still
     // above threshold of 65%, so service will continue to run.
@@ -802,12 +802,12 @@ public class TestYarnNativeServices extends ServiceTestUtils {
       // Check that service state is STARTED and only 3 containers are running
       service = client.getStatus(exampleApp.getName());
       component = service.getComponent("compa");
-      assertEquals(
-         ServiceState.STARTED, service.getState(), "Service state should be STARTED");
-      assertEquals(
-         ComponentState.FLEXING, component.getState(), "Component state should be FLEXING");
-      assertEquals(3
-,           component.getContainers().size(), "3 containers are expected to be running");
+      assertEquals(ServiceState.STARTED, service.getState(),
+          "Service state should be STARTED");
+      assertEquals(ComponentState.FLEXING, component.getState(),
+          "Component state should be FLEXING");
+      assertEquals(3, component.getContainers().size(),
+          "3 containers are expected to be running");
     }
 
     // Flex compa up to 5 - will make health 60% (3 out of 5 running), so
@@ -947,8 +947,8 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     client.actionStart(exampleApp.getName());
     waitForServiceToBeStable(client, exampleApp);
     Service service = client.getStatus(exampleApp.getName());
-    assertEquals(
-       ServiceState.STABLE, service.getState(), "Restarted service state should be STABLE");
+    assertEquals(ServiceState.STABLE, service.getState(),
+        "Restarted service state should be STABLE");
   }
 
   @Test

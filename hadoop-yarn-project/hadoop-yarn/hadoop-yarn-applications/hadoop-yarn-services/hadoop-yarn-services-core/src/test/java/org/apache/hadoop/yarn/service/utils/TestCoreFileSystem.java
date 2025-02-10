@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class TestCoreFileSystem {
 
   @RegisterExtension
-  public ServiceTestUtils.ServiceFSWatcher rule =
+  private ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
   @Test

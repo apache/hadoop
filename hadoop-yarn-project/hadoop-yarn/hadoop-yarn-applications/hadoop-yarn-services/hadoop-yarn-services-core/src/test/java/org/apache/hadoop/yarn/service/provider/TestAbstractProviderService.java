@@ -59,7 +59,7 @@ public class TestAbstractProviderService {
   private AbstractLauncher launcher;
 
   @RegisterExtension
-  public ServiceTestUtils.ServiceFSWatcher rule =
+  private ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
   @BeforeEach

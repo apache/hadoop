@@ -86,7 +86,7 @@ public class TestServiceAM extends ServiceTestUtils{
   YarnConfiguration conf = new YarnConfiguration();
   TestingCluster zkCluster;
   @RegisterExtension
-  public ServiceTestUtils.ServiceFSWatcher rule =
+  private ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
   @BeforeEach

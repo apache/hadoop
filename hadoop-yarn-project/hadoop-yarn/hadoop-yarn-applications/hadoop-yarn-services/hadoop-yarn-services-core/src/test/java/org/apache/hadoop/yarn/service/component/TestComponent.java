@@ -52,7 +52,7 @@ public class TestComponent {
   static final Logger LOG = Logger.getLogger(TestComponent.class);
 
   @RegisterExtension
-  public ServiceTestUtils.ServiceFSWatcher rule =
+  private ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
   @Test
@@ -124,8 +124,8 @@ public class TestComponent {
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
 
-    assertEquals(
-       ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState(), "component not in needs upgrade state");
+    assertEquals(ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState(),
+        "component not in needs upgrade state");
   }
 
   @Test
@@ -137,8 +137,8 @@ public class TestComponent {
     ComponentEvent upgradeEvent = new ComponentEvent(comp.getName(),
         ComponentEventType.CANCEL_UPGRADE);
     comp.handle(upgradeEvent);
-    assertEquals(
-       ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState(), "component not in need upgrade state");
+    assertEquals(ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState(),
+        "component not in need upgrade state");
 
     assertEquals(
         org.apache.hadoop.yarn.service.component.ComponentState
@@ -197,8 +197,8 @@ public class TestComponent {
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
 
-    assertEquals(
-       ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState(), "component not in needs upgrade state");
+    assertEquals(ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState(),
+        "component not in needs upgrade state");
     assertEquals(
         org.apache.hadoop.yarn.service.component.ComponentState
             .CANCEL_UPGRADING, comp.getState());
@@ -214,8 +214,8 @@ public class TestComponent {
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
 
-    assertEquals(
-       ComponentState.FLEXING, comp.getComponentSpec().getState(), "component not in flexing state");
+    assertEquals(ComponentState.FLEXING, comp.getComponentSpec().getState(),
+        "component not in flexing state");
     // new container get allocated
     context.assignNewContainer(context.attemptId, 10, comp);
 
@@ -249,8 +249,8 @@ public class TestComponent {
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
 
-    assertEquals(
-       ComponentState.STABLE, comp.getComponentSpec().getState(), "component not in stable state");
+    assertEquals(ComponentState.STABLE, comp.getComponentSpec().getState(),
+        "component not in stable state");
     assertEquals("val0", comp.getComponentSpec().getConfiguration().getEnv("key1"),
         "cancel upgrade failed");
   }
@@ -272,8 +272,8 @@ public class TestComponent {
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
 
-    assertEquals(
-       ComponentState.FLEXING, comp.getComponentSpec().getState(), "component not in flexing state");
+    assertEquals(ComponentState.FLEXING, comp.getComponentSpec().getState(),
+        "component not in flexing state");
 
     for (ComponentInstance instance : comp.getAllComponentInstances()) {
       // new container get allocated
@@ -285,8 +285,8 @@ public class TestComponent {
 
     assertEquals(ComponentState.STABLE, comp.getComponentSpec().getState(),
         "component not in stable state");
-    assertEquals("val0",
-        comp.getComponentSpec().getConfiguration().getEnv("key1"), "cancel upgrade failed");
+    assertEquals("val0", comp.getComponentSpec().getConfiguration().getEnv("key1"),
+        "cancel upgrade failed");
   }
 
   private void cancelUpgradeWhileUpgrading(
@@ -334,8 +334,8 @@ public class TestComponent {
     comp.handle(new ComponentEvent(comp.getName(),
         ComponentEventType.CHECK_STABLE));
 
-    assertEquals(
-       ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState(), "component not in needs upgrade state");
+    assertEquals(ComponentState.NEEDS_UPGRADE, comp.getComponentSpec().getState(),
+        "component not in needs upgrade state");
     assertEquals(
         org.apache.hadoop.yarn.service.component.ComponentState
             .CANCEL_UPGRADING, comp.getState());

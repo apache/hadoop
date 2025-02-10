@@ -73,7 +73,7 @@ import static org.mockito.Mockito.when;
 public class TestComponentInstance {
 
   @RegisterExtension
-  public ServiceTestUtils.ServiceFSWatcher rule =
+  private ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
   @Test
@@ -301,8 +301,8 @@ public class TestComponentInstance {
     assertTrue(container.getLocalizationStatuses() != null);
     assertEquals(container.getLocalizationStatuses().get(0).getDestFile(),
         status.getResourceKey(), "dest file");
-    assertEquals(container.getLocalizationStatuses().get(0).getState()
-,       status.getLocalizationState(), "state");
+    assertEquals(container.getLocalizationStatuses().get(0).getState(),
+        status.getLocalizationState(), "state");
 
     status = LocalizationStatus.newInstance("file1",
         LocalizationState.COMPLETED);

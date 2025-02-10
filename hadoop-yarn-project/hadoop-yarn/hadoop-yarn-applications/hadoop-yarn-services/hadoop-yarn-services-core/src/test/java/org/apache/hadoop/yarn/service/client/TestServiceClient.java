@@ -75,7 +75,7 @@ public class TestServiceClient {
       TestServiceClient.class);
 
   @RegisterExtension
-  public ServiceTestUtils.ServiceFSWatcher rule =
+  private ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
   @Test
@@ -243,8 +243,8 @@ public class TestServiceClient {
 
       ApplicationAttemptReport attemptReport =
           ApplicationAttemptReport.newInstance(client.attemptId, "localhost", 0,
-              null, null, null,
-              YarnApplicationAttemptState.RUNNING, null);
+          null, null, null,
+          YarnApplicationAttemptState.RUNNING, null);
       when(yarnClient.getApplicationAttemptReport(any()))
           .thenReturn(attemptReport);
       when(yarnClient.getApplicationReport(client.appId)).thenReturn(appReport);

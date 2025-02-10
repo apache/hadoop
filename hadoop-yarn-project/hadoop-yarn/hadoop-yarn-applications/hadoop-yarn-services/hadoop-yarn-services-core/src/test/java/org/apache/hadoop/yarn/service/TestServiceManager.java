@@ -52,7 +52,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class TestServiceManager {
 
   @RegisterExtension
-  public ServiceTestUtils.ServiceFSWatcher rule =
+  private ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
   @Test

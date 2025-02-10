@@ -626,7 +626,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     try {
       ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
     } catch (NullPointerException e) {
-        fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
   }
 
@@ -645,8 +645,8 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     expected.add("compb");
     expected.add("compa");
     for (int i = 0; i < expected.size(); i++) {
-      assertEquals(expected.get(i)
-,           order.get(i), "Components are not equal.");
+      assertEquals(expected.get(i),
+          order.get(i), "Components are not equal.");
     }
   }
 
@@ -665,8 +665,8 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     expected.add("compa");
     expected.add("compb");
     for (int i = 0; i < expected.size(); i++) {
-      assertEquals(expected.get(i)
-,           order.get(i), "Components are not equal.");
+      assertEquals(expected.get(i),
+          order.get(i), "Components are not equal.");
     }
   }
 
@@ -688,8 +688,8 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     expected.add("compa");
     expected.add("compb");
     for (int i = 0; i < expected.size(); i++) {
-      assertEquals(expected.get(i)
-,           order.get(i), "Components are not equal.");
+      assertEquals(expected.get(i),
+          order.get(i), "Components are not equal.");
     }
   }
 
@@ -705,8 +705,8 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     expected.add("compa");
     expected.add("compb");
     for (int i = 0; i < expected.size(); i++) {
-      assertEquals(expected.get(i)
-,           order.get(i), "Components are not equal.");
+      assertEquals(expected.get(i),
+          order.get(i), "Components are not equal.");
     }
   }
 

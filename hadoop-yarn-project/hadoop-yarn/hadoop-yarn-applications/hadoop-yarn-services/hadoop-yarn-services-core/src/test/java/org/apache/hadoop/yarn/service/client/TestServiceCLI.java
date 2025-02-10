@@ -242,8 +242,8 @@ public class TestServiceCLI {
         .close();
 
     Path defaultPath = new Path(dependencyTarGz.toString());
-    assertFalse(
-       fs.isFile(defaultPath), "Dependency tarball should not exist before the test");
+    assertFalse(fs.isFile(defaultPath),
+        "Dependency tarball should not exist before the test");
     String[] args = {"app", "-D", dependencyTarGzProp, "-enableFastLaunch",
         "-appTypes", DUMMY_APP_TYPE};
     assertEquals(EXIT_SUCCESS, runCLI(args));
@@ -252,14 +252,14 @@ public class TestServiceCLI {
 
     File secondBaseDir = new File(dependencyTarGzBaseDir, "2");
     Path secondTarGz = getDependencyTarGz(secondBaseDir);
-    assertFalse(
-       fs.isFile(secondTarGz), "Dependency tarball should not exist before the test");
+    assertFalse(fs.isFile(secondTarGz),
+        "Dependency tarball should not exist before the test");
     String[] args2 = {"app", "-D", yarnAdminNoneAclProp, "-D",
         dfsAdminAclProp, "-D", dependencyTarGzProp, "-enableFastLaunch",
         secondBaseDir.getAbsolutePath(), "-appTypes", DUMMY_APP_TYPE};
     assertEquals(EXIT_SUCCESS, runCLI(args2));
-    assertTrue(
-       fs.isFile(secondTarGz), "Dependency tarball did not exist after the test");
+    assertTrue(fs.isFile(secondTarGz),
+        "Dependency tarball did not exist after the test");
   }
 
   @Test
