@@ -1765,6 +1765,15 @@ public final class Constants {
   public static final boolean CHECKSUM_VALIDATION_DEFAULT = false;
 
   /**
+   * Indicates the algorithm used to create the checksum for the object
+   * to be uploaded to S3. Unset by default. It supports the following values:
+   * 'CRC32', 'CRC32C', 'SHA1', and 'SHA256'
+   * value:{@value}
+   */
+  public static final String CHECKSUM_ALGORITHM =
+      "fs.s3a.create.checksum.algorithm";
+
+  /**
    * Are extensions classes, such as {@code fs.s3a.aws.credentials.provider},
    * going to be loaded from the same classloader that loaded
    * the {@link S3AFileSystem}?

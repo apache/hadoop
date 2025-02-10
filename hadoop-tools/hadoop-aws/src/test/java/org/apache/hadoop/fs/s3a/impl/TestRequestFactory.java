@@ -19,22 +19,29 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.junit.Test;
 import software.amazon.awssdk.awscore.AwsRequest;
 import software.amazon.awssdk.awscore.AwsRequestOverrideConfiguration;
 import software.amazon.awssdk.core.SdkRequest;
+import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Request;
+import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
-
+import software.amazon.awssdk.utils.Md5Utils;
 
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
@@ -274,5 +281,78 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
         .build();
     assertApiTimeouts(partDuration, upload);
 
+  }
+
+  @Test
+  public void testRequestFactoryWithChecksumAlgorithmCRC32() throws IOException {
+    testRequestFactoryWithChecksumAlgorithm(ChecksumAlgorithm.CRC32);
+  }
+
+  @Test
+  public void testRequestFactoryWithChecksumAlgorithmCRC32C() throws IOException {
+    testRequestFactoryWithChecksumAlgorithm(ChecksumAlgorithm.CRC32_C);
+  }
+
+  @Test
+  public void testRequestFactoryWithChecksumAlgorithmSHA1() throws IOException {
+    testRequestFactoryWithChecksumAlgorithm(ChecksumAlgorithm.SHA1);
+  }
+
+  @Test
+  public void testRequestFactoryWithChecksumAlgorithmSHA256() throws IOException {
+    testRequestFactoryWithChecksumAlgorithm(ChecksumAlgorithm.SHA256);
+  }
+
+  private void testRequestFactoryWithChecksumAlgorithm(ChecksumAlgorithm checksumAlgorithm)
+      throws IOException {
+    String path = "path";
+    String path2 = "path2";
+    HeadObjectResponse md = HeadObjectResponse.builder().contentLength(128L).build();
+
+    RequestFactory factory = RequestFactoryImpl.builder()
+        .withBucket("bucket")
+        .withChecksumAlgorithm(checksumAlgorithm)
+        .build();
+    createFactoryObjects(factory);
+
+    final CopyObjectRequest copyObjectRequest = factory.newCopyObjectRequestBuilder(path,
+            path2, md).build();
+    Assertions.assertThat(copyObjectRequest.checksumAlgorithm()).isEqualTo(checksumAlgorithm);
+
+    final PutObjectRequest putObjectRequest = factory.newPutObjectRequestBuilder(path,
+        PutObjectOptions.keepingDirs(), 1024, false).build();
+    Assertions.assertThat(putObjectRequest.checksumAlgorithm()).isEqualTo(checksumAlgorithm);
+
+    final CreateMultipartUploadRequest multipartUploadRequest =
+        factory.newMultipartUploadRequestBuilder(path, null).build();
+    Assertions.assertThat(multipartUploadRequest.checksumAlgorithm()).isEqualTo(checksumAlgorithm);
+
+    final UploadPartRequest uploadPartRequest = factory.newUploadPartRequestBuilder(path,
+        "id", 2, true, 128_000_000).build();
+    Assertions.assertThat(uploadPartRequest.checksumAlgorithm()).isEqualTo(checksumAlgorithm);
+  }
+
+  @Test
+  public void testCompleteMultipartUploadRequestWithChecksumAlgorithmAndSSEC() throws IOException {
+    final byte[] encryptionKey = "encryptionKey".getBytes(StandardCharsets.UTF_8);
+    final String encryptionKeyBase64 = Base64.getEncoder()
+        .encodeToString(encryptionKey);
+    final String encryptionKeyMd5 = Md5Utils.md5AsBase64(encryptionKey);
+    final EncryptionSecrets encryptionSecrets = new EncryptionSecrets(S3AEncryptionMethods.SSE_C,
+        encryptionKeyBase64, null);
+    RequestFactory factory = RequestFactoryImpl.builder()
+        .withBucket("bucket")
+        .withChecksumAlgorithm(ChecksumAlgorithm.CRC32_C)
+        .withEncryptionSecrets(encryptionSecrets)
+        .build();
+    createFactoryObjects(factory);
+
+    final CompleteMultipartUploadRequest request =
+        factory.newCompleteMultipartUploadRequestBuilder("path", "1", new ArrayList<>())
+            .build();
+    Assertions.assertThat(request.sseCustomerAlgorithm())
+        .isEqualTo(ServerSideEncryption.AES256.name());
+    Assertions.assertThat(request.sseCustomerKey()).isEqualTo(encryptionKeyBase64);
+    Assertions.assertThat(request.sseCustomerKeyMD5()).isEqualTo(encryptionKeyMd5);
   }
 }

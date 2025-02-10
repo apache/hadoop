@@ -71,7 +71,7 @@ import static org.apache.hadoop.util.StringUtils.join;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class SinglePendingCommit extends PersistentCommitData<SinglePendingCommit>
-    implements Iterable<String> {
+    implements Iterable<UploadEtag> {
 
   /**
    * Serialization ID: {@value}.
@@ -118,7 +118,7 @@ public class SinglePendingCommit extends PersistentCommitData<SinglePendingCommi
   private String text = "";
 
   /** Ordered list of etags. */
-  private List<String> etags;
+  private List<UploadEtag> etags;
 
   /**
    * Any custom extra data committer subclasses may choose to add.
@@ -222,7 +222,7 @@ public class SinglePendingCommit extends PersistentCommitData<SinglePendingCommi
     for (CompletedPart part : parts) {
       verify(part.partNumber() == counter,
           "Expected part number %s but got %s", counter, part.partNumber());
-      etags.add(part.eTag());
+      etags.add(UploadEtag.fromCompletedPart(part));
       counter++;
     }
   }
@@ -237,9 +237,10 @@ public class SinglePendingCommit extends PersistentCommitData<SinglePendingCommi
     verify(length >= 0, "Invalid length: " + length);
     destinationPath();
     verify(etags != null, "No etag list");
-    validateCollectionClass(etags, String.class);
-    for (String etag : etags) {
-      verify(StringUtils.isNotEmpty(etag), "Empty etag");
+    validateCollectionClass(etags, UploadEtag.class);
+    for (UploadEtag etag : etags) {
+      verify(etag != null && StringUtils.isNotEmpty(etag.getEtag()),
+          "Empty etag");
     }
     if (extraData != null) {
       validateCollectionClass(extraData.keySet(), String.class);
@@ -313,7 +314,7 @@ public class SinglePendingCommit extends PersistentCommitData<SinglePendingCommi
    * @return an iterator.
    */
   @Override
-  public Iterator<String> iterator() {
+  public Iterator<UploadEtag> iterator() {
     return etags.iterator();
   }
 
@@ -442,11 +443,11 @@ public class SinglePendingCommit extends PersistentCommitData<SinglePendingCommi
   }
 
   /** @return ordered list of etags. */
-  public List<String> getEtags() {
+  public List<UploadEtag> getEtags() {
     return etags;
   }
 
-  public void setEtags(List<String> etags) {
+  public void setEtags(List<UploadEtag> etags) {
     this.etags = etags;
   }
 

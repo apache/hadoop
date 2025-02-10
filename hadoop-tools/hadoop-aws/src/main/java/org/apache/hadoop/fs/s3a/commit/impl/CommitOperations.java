@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.WriteOperations;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.PathCommitException;
+import org.apache.hadoop.fs.s3a.commit.files.UploadEtag;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
@@ -165,9 +166,9 @@ public class CommitOperations extends AbstractStoreOperation
    * @param tagIds list of tags
    * @return same list, now in numbered tuples
    */
-  public static List<CompletedPart> toPartEtags(List<String> tagIds) {
+  public static List<CompletedPart> toPartEtags(List<UploadEtag> tagIds) {
     return IntStream.range(0, tagIds.size())
-        .mapToObj(i -> CompletedPart.builder().partNumber(i + 1).eTag(tagIds.get(i)).build())
+        .mapToObj(i -> UploadEtag.toCompletedPart(tagIds.get(i), i + 1))
         .collect(Collectors.toList());
   }
 
@@ -655,6 +656,10 @@ public class CommitOperations extends AbstractStoreOperation
       parts.add(CompletedPart.builder()
           .partNumber(partNumber)
           .eTag(response.eTag())
+          .checksumCRC32(response.checksumCRC32())
+          .checksumCRC32C(response.checksumCRC32C())
+          .checksumSHA1(response.checksumSHA1())
+          .checksumSHA256(response.checksumSHA256())
           .build());
     }
     return parts;
