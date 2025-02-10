@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -32,9 +36,9 @@ import java.util.jar.Manifest;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +61,7 @@ public class TestClasspath {
   private ByteArrayOutputStream stdout, stderr;
   private PrintStream printStdout, printStderr;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     assertTrue(FileUtil.fullyDelete(TEST_DIR));
     assertTrue(TEST_DIR.mkdirs());
@@ -73,7 +77,7 @@ public class TestClasspath {
     System.setErr(printStderr);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     System.setOut(oldStdout);
     System.setErr(oldStderr);

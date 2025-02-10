@@ -21,7 +21,7 @@ package org.apache.hadoop.security.ssl;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.util.NativeCodeLoader;
 

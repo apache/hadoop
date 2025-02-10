@@ -20,13 +20,14 @@ package org.apache.hadoop.ipc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.ipc.WeightedRoundRobinMultiplexer.IPC_CALLQUEUE_WRRMUX_WEIGHTS_KEY;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestWeightedRoundRobinMultiplexer {
   public static final Logger LOG =
@@ -34,24 +35,29 @@ public class TestWeightedRoundRobinMultiplexer {
 
   private WeightedRoundRobinMultiplexer mux;
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test
   public void testInstantiateNegativeMux() {
-    mux = new WeightedRoundRobinMultiplexer(-1, "", new Configuration());
+    assertThrows(IllegalArgumentException.class, () -> {
+      mux = new WeightedRoundRobinMultiplexer(-1, "", new Configuration());
+    });
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test
   public void testInstantiateZeroMux() {
-    mux = new WeightedRoundRobinMultiplexer(0, "", new Configuration());
+    assertThrows(IllegalArgumentException.class, () -> {
+      mux = new WeightedRoundRobinMultiplexer(0, "", new Configuration());
+    });
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test
   public void testInstantiateIllegalMux() {
-    Configuration conf = new Configuration();
-    conf.setStrings("namespace." + IPC_CALLQUEUE_WRRMUX_WEIGHTS_KEY,
-      "1", "2", "3");
-
-    // ask for 3 weights with 2 queues
-    mux = new WeightedRoundRobinMultiplexer(2, "namespace", conf);
+    assertThrows(IllegalArgumentException.class, ()->{
+      Configuration conf = new Configuration();
+      conf.setStrings("namespace." + IPC_CALLQUEUE_WRRMUX_WEIGHTS_KEY,
+          "1", "2", "3");
+      // ask for 3 weights with 2 queues
+      mux = new WeightedRoundRobinMultiplexer(2, "namespace", conf);
+    });
   }
 
   @Test

@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.hadoop.service.Service;
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -48,7 +47,9 @@ import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests the state machine with respect to Job/Task/TaskAttempt kill scenarios.
@@ -66,7 +67,7 @@ public class TestKill {
     //blocked
     Job job = app.submit(new Configuration());
     
-    //wait and vailidate for Job to become RUNNING
+    //wait and validate for Job to become RUNNING
     app.waitForInternalState((JobImpl) job, JobStateInternal.RUNNING);
 
     //send the kill signal to Job
@@ -83,18 +84,15 @@ public class TestKill {
     app.waitForState(Service.STATE.STOPPED);
 
     Map<TaskId,Task> tasks = job.getTasks();
-    Assert.assertEquals("No of tasks is not correct", 1, 
-        tasks.size());
+    assertEquals(1, tasks.size(), "No of tasks is not correct");
     Task task = tasks.values().iterator().next();
-    Assert.assertEquals("Task state not correct", TaskState.KILLED, 
-        task.getReport().getTaskState());
+    assertEquals(TaskState.KILLED, task.getReport().getTaskState(), "Task state not correct");
     Map<TaskAttemptId, TaskAttempt> attempts = 
       tasks.values().iterator().next().getAttempts();
-    Assert.assertEquals("No of attempts is not correct", 1, 
-        attempts.size());
+    assertEquals(1, attempts.size(), "No of attempts is not correct");
     Iterator<TaskAttempt> it = attempts.values().iterator();
-    Assert.assertEquals("Attempt state not correct", TaskAttemptState.KILLED, 
-          it.next().getReport().getTaskAttemptState());
+    assertEquals(TaskAttemptState.KILLED, it.next().getReport().getTaskAttemptState(),
+        "Attempt state not correct");
   }
 
   @Test
@@ -104,11 +102,10 @@ public class TestKill {
     //this will start the job but job won't complete as Task is blocked
     Job job = app.submit(new Configuration());
     
-    //wait and vailidate for Job to become RUNNING
+    //wait and validate for Job to become RUNNING
     app.waitForInternalState((JobImpl) job, JobStateInternal.RUNNING);
     Map<TaskId,Task> tasks = job.getTasks();
-    Assert.assertEquals("No of tasks is not correct", 2, 
-        tasks.size());
+    assertEquals(2, tasks.size(), "No of tasks is not correct");
     Iterator<Task> it = tasks.values().iterator();
     Task task1 = it.next();
     Task task2 = it.next();
@@ -126,23 +123,22 @@ public class TestKill {
     //first Task is killed and second is Succeeded
     //Job is succeeded
     
-    Assert.assertEquals("Task state not correct", TaskState.KILLED, 
-        task1.getReport().getTaskState());
-    Assert.assertEquals("Task state not correct", TaskState.SUCCEEDED, 
-        task2.getReport().getTaskState());
+    assertEquals(TaskState.KILLED, task1.getReport().getTaskState(),
+        "Task state not correct");
+    assertEquals(TaskState.SUCCEEDED, task2.getReport().getTaskState(),
+        "Task state not correct");
     Map<TaskAttemptId, TaskAttempt> attempts = task1.getAttempts();
-    Assert.assertEquals("No of attempts is not correct", 1, 
-        attempts.size());
+    assertEquals(1, attempts.size(),
+        "No of attempts is not correct");
     Iterator<TaskAttempt> iter = attempts.values().iterator();
-    Assert.assertEquals("Attempt state not correct", TaskAttemptState.KILLED, 
-          iter.next().getReport().getTaskAttemptState());
+    assertEquals(TaskAttemptState.KILLED, iter.next().getReport().getTaskAttemptState(),
+        "Attempt state not correct");
 
     attempts = task2.getAttempts();
-    Assert.assertEquals("No of attempts is not correct", 1, 
-        attempts.size());
+    assertEquals(1, attempts.size(), "No of attempts is not correct");
     iter = attempts.values().iterator();
-    Assert.assertEquals("Attempt state not correct", TaskAttemptState.SUCCEEDED, 
-          iter.next().getReport().getTaskAttemptState());
+    assertEquals(TaskAttemptState.SUCCEEDED, iter.next().getReport().getTaskAttemptState(),
+        "Attempt state not correct");
   }
 
   @Test
@@ -194,7 +190,7 @@ public class TestKill {
     Job job = app.submit(new Configuration());
     JobId jobId = app.getJobId();
     app.waitForState(job, JobState.RUNNING);
-    Assert.assertEquals("Num tasks not correct", 2, job.getTasks().size());
+    assertEquals(2, job.getTasks().size(), "Num tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task mapTask = it.next();
     Task reduceTask = it.next();
@@ -232,7 +228,7 @@ public class TestKill {
     Job job = app.submit(new Configuration());
     JobId jobId = app.getJobId();
     app.waitForState(job, JobState.RUNNING);
-    Assert.assertEquals("Num tasks not correct", 2, job.getTasks().size());
+    assertEquals(2, job.getTasks().size(), "Num tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task mapTask = it.next();
     Task reduceTask = it.next();
@@ -280,7 +276,7 @@ public class TestKill {
     Job job = app.submit(new Configuration());
     JobId jobId = app.getJobId();
     app.waitForState(job, JobState.RUNNING);
-    Assert.assertEquals("Num tasks not correct", 2, job.getTasks().size());
+    assertEquals(2, job.getTasks().size(), "Num tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task mapTask = it.next();
     Task reduceTask = it.next();
@@ -367,11 +363,10 @@ public class TestKill {
     //this will start the job but job won't complete as Task is blocked
     Job job = app.submit(new Configuration());
     
-    //wait and vailidate for Job to become RUNNING
+    //wait and validate for Job to become RUNNING
     app.waitForState(job, JobState.RUNNING);
     Map<TaskId,Task> tasks = job.getTasks();
-    Assert.assertEquals("No of tasks is not correct", 2, 
-        tasks.size());
+    assertEquals(2, tasks.size(), "No of tasks is not correct");
     Iterator<Task> it = tasks.values().iterator();
     Task task1 = it.next();
     Task task2 = it.next();
@@ -394,26 +389,24 @@ public class TestKill {
     
     //first Task will have two attempts 1st is killed, 2nd Succeeds
     //both Tasks and Job succeeds
-    Assert.assertEquals("Task state not correct", TaskState.SUCCEEDED, 
-        task1.getReport().getTaskState());
-    Assert.assertEquals("Task state not correct", TaskState.SUCCEEDED, 
-        task2.getReport().getTaskState());
+    assertEquals(TaskState.SUCCEEDED, task1.getReport().getTaskState(),
+        "Task state not correct");
+    assertEquals(TaskState.SUCCEEDED, task2.getReport().getTaskState(),
+        "Task state not correct");
  
     Map<TaskAttemptId, TaskAttempt> attempts = task1.getAttempts();
-    Assert.assertEquals("No of attempts is not correct", 2, 
-        attempts.size());
+    assertEquals(2, attempts.size(), "No of attempts is not correct");
     Iterator<TaskAttempt> iter = attempts.values().iterator();
-    Assert.assertEquals("Attempt state not correct", TaskAttemptState.KILLED, 
-          iter.next().getReport().getTaskAttemptState());
-    Assert.assertEquals("Attempt state not correct", TaskAttemptState.SUCCEEDED, 
-        iter.next().getReport().getTaskAttemptState());
+    assertEquals(TaskAttemptState.KILLED, iter.next().getReport().getTaskAttemptState(),
+        "Attempt state not correct");
+    assertEquals(TaskAttemptState.SUCCEEDED, iter.next().getReport().getTaskAttemptState(),
+        "Attempt state not correct");
     
     attempts = task2.getAttempts();
-    Assert.assertEquals("No of attempts is not correct", 1, 
-        attempts.size());
+    assertEquals(1, attempts.size(), "No of attempts is not correct");
     iter = attempts.values().iterator();
-    Assert.assertEquals("Attempt state not correct", TaskAttemptState.SUCCEEDED, 
-          iter.next().getReport().getTaskAttemptState());
+    assertEquals(TaskAttemptState.SUCCEEDED, iter.next().getReport().getTaskAttemptState(),
+        "Attempt state not correct");
   }
 
   static class BlockingMRApp extends MRApp {

@@ -80,7 +80,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.eclipse.jetty.http.HttpHeader;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -93,10 +93,10 @@ import static org.apache.hadoop.mapred.ShuffleHandler.SHUFFLE_CONNECTION_KEEP_AL
 import static org.apache.hadoop.mapred.ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT;
 import static org.apache.hadoop.mapred.ShuffleHandler.TIMEOUT_HANDLER;
 import static org.apache.hadoop.mapreduce.security.SecureShuffleUtils.HTTP_HEADER_URL_HASH;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
   private static final org.slf4j.Logger LOG =
@@ -163,12 +163,12 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
         t.getExpectedHttpResponse(req, true, 46),
         t.getAttemptData(new Attempt(TEST_ATTEMPT_1, TEST_DATA_A))
     );
-    assertTrue("keep-alive", shuffle.isActive());
+    assertTrue(shuffle.isActive(), "keep-alive");
 
     TimeUnit.SECONDS.sleep(3);
     shuffle.runScheduledPendingTasks();
 
-    assertFalse("closed", shuffle.isActive());
+    assertFalse(shuffle.isActive(), "closed");
   }
 
   @Test
@@ -193,7 +193,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
     assertEquals(getExpectedHttpResponse(HttpResponseStatus.BAD_REQUEST).toString(),
         actual.toString());
 
-    assertFalse("closed", shuffle.isActive()); // known-issue
+    assertFalse(shuffle.isActive(), "closed"); // known-issue
   }
 
   @Test
@@ -216,7 +216,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
     assertEquals(getExpectedHttpResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR).toString(),
         actual.toString());
 
-    assertFalse("closed", shuffle.isActive());
+    assertFalse(shuffle.isActive(), "closed");
   }
 
   @Test
@@ -225,7 +225,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
     final EmbeddedChannel shuffle = t.createShuffleHandlerChannelFileRegion();
 
     String dataFile = getDataFile(TEST_USER, tempDir.toAbsolutePath().toString(), TEST_ATTEMPT_2);
-    assertTrue("should delete", new File(dataFile).delete());
+    assertTrue(new File(dataFile).delete(), "should delete");
 
     FullHttpRequest req = t.createRequest(getUri(TEST_JOB_ID, 0,
         Arrays.asList(TEST_ATTEMPT_1, TEST_ATTEMPT_2), false));
@@ -243,7 +243,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
     assertEquals(getExpectedHttpResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR).toString(),
         actual.toString());
 
-    assertFalse("closed", shuffle.isActive());
+    assertFalse(shuffle.isActive(), "closed");
   }
 
   private DefaultHttpResponse getExpectedHttpResponse(HttpResponseStatus status) {
@@ -362,7 +362,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
           getExpectedHttpResponse(request, false, 138),
           getAllAttemptsForReduce0()
       );
-      assertFalse("no keep-alive", shuffle.isActive());
+      assertFalse(shuffle.isActive(), "no keep-alive");
     }
 
     private void testKeepAlive(java.util.Queue<Object> messages,
@@ -374,7 +374,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
           getExpectedHttpResponse(req1, true, 46),
           getAttemptData(new Attempt(TEST_ATTEMPT_1, TEST_DATA_A))
       );
-      assertTrue("keep-alive", shuffle.isActive());
+      assertTrue(shuffle.isActive(), "keep-alive");
       messages.clear();
 
       final FullHttpRequest req2 = createRequest(
@@ -384,7 +384,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
           getExpectedHttpResponse(req2, true, 46),
           getAttemptData(new Attempt(TEST_ATTEMPT_2, TEST_DATA_B))
       );
-      assertTrue("keep-alive", shuffle.isActive());
+      assertTrue(shuffle.isActive(), "keep-alive");
       messages.clear();
 
       final FullHttpRequest req3 = createRequest(
@@ -394,7 +394,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
           getExpectedHttpResponse(req3, false, 46),
           getAttemptData(new Attempt(TEST_ATTEMPT_3, TEST_DATA_C))
       );
-      assertFalse("no keep-alive", shuffle.isActive());
+      assertFalse(shuffle.isActive(), "no keep-alive");
     }
 
     private ArrayList<ByteBuf> getAllAttemptsForReduce0() throws IOException {
@@ -437,15 +437,15 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
           assertEquals(response.toString(), resp.toString());
         }
         if (i > 0 && i <= content.size()) {
-          assertEquals("data should match",
-              ByteBufUtil.prettyHexDump(content.get(i - 1)), actualHexdump);
+          assertEquals(ByteBufUtil.prettyHexDump(content.get(i - 1)),
+              actualHexdump, "data should match");
         }
 
         i++;
       }
 
       // This check is done after to have better debug logs on failure.
-      assertEquals("all data should match", content.size() + 1, outboundMessages.size());
+      assertEquals(content.size() + 1, outboundMessages.size(), "all data should match");
     }
 
     public EmbeddedChannel createShuffleHandlerChannelFileRegion() {

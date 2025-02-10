@@ -56,13 +56,17 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.RackResolver;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /*
-test JobHistoryServer protocols....
+ * test JobHistoryServer protocols....
  */
 public class TestJobHistoryServer {
   private static RecordFactory recordFactory = RecordFactoryProvider
@@ -71,7 +75,8 @@ public class TestJobHistoryServer {
   JobHistoryServer historyServer=null;
 
   // simple test init/start/stop   JobHistoryServer. Status should change.
-  @Test (timeout= 50000 )
+  @Test
+  @Timeout(value = 50)
   public void testStartStopServer() throws Exception {
     historyServer = new JobHistoryServer();
     Configuration config = new Configuration();
@@ -90,7 +95,8 @@ public class TestJobHistoryServer {
   }
 
   //Test reports of  JobHistoryServer. History server should get log files from  MRApp and read them
-  @Test (timeout= 50000 )
+  @Test
+  @Timeout(value = 50)
   public void testReports() throws Exception {
     Configuration config = new Configuration();
     config
@@ -117,7 +123,7 @@ public class TestJobHistoryServer {
         jobHistory = (JobHistory) service;
       }
     };
-    
+
     Map<JobId, Job> jobs= jobHistory.getAllJobs();
     
     assertEquals(1, jobs.size());
@@ -159,10 +165,10 @@ public class TestJobHistoryServer {
     assertEquals(1.0f, reportResponse.getTaskReport().getProgress(), 0.01);
     // report has corrected taskId
     assertEquals(taskId.toString(), reportResponse.getTaskReport().getTaskId()
-            .toString());
+         .toString());
     // Task state should be SUCCEEDED
     assertEquals(TaskState.SUCCEEDED, reportResponse.getTaskReport()
-            .getTaskState());
+         .getTaskState());
 
     // For invalid jobid, throw IOException
     GetTaskReportsRequest gtreportsRequest =
@@ -198,20 +204,21 @@ public class TestJobHistoryServer {
   }
 
   // test launch method
-  @Test (timeout =60000)
+  @Test
+  @Timeout(value = 60)
   public void testLaunch() throws Exception {
 
     ExitUtil.disableSystemExit();
     try {
       historyServer = JobHistoryServer.launchJobHistoryServer(new String[0]);
     } catch (ExitUtil.ExitException e) {
-      assertEquals(0,e.status);
+      assertEquals(0, e.status);
       ExitUtil.resetFirstExitException();
       fail();
     }
   }
   
-  @After
+  @AfterEach
   public void stop(){
     if(historyServer != null) {
       historyServer.stop();
