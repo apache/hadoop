@@ -19,10 +19,11 @@
 package org.apache.hadoop.tools;
 
 import static org.apache.hadoop.test.GenericTestUtils.getMethodName;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -48,10 +49,9 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.util.DistCpTestUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * A JUnit test for copying files recursively.
@@ -85,7 +85,7 @@ public class TestDistCpSystem {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws IOException {
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, BLOCK_SIZE);
@@ -94,7 +94,7 @@ public class TestDistCpSystem {
     cluster.waitActive();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -202,7 +202,7 @@ public class TestDistCpSystem {
     }
     FileStatus[] dststat = getFileStatus(fs, realTgtPath, dstEntries);
     for(int i = 0; i < dststat.length; i++) {
-      assertEquals("i=" + i, "u" + i, dststat[i].getOwner());
+      assertEquals("u" + i, dststat[i].getOwner(), "i=" + i);
     }
     deldir(fs, testRoot);
   }
@@ -212,20 +212,20 @@ public class TestDistCpSystem {
     LOG.info("Comparing " + srcStat + " and " + dstStat);
     assertEquals(srcStat.isDirectory(), dstStat.isDirectory());
     assertEquals(srcStat.getReplication(), dstStat.getReplication());
-    assertEquals("File POSIX permission should match",
-        srcStat.getPermission(), dstStat.getPermission());
-    assertEquals("File user ownership should match",
-        srcStat.getOwner(), dstStat.getOwner());
-    assertEquals("File group ownership should match",
-        srcStat.getGroup(), dstStat.getGroup());
+    assertEquals(srcStat.getPermission(), dstStat.getPermission(),
+        "File POSIX permission should match");
+    assertEquals(srcStat.getOwner(), dstStat.getOwner(),
+        "File user ownership should match");
+    assertEquals(srcStat.getGroup(), dstStat.getGroup(),
+        "File group ownership should match");
     // TODO; check ACL attributes
 
     if (srcStat.isDirectory()) {
       return;
     }
 
-    assertEquals("File length should match (" + srcStat.getPath() + ")",
-        srcStat.getLen(), dstStat.getLen());
+    assertEquals(srcStat.getLen(), dstStat.getLen(),
+        "File length should match (" + srcStat.getPath() + ")");
 
     FSDataInputStream srcIn = fs.open(srcStat.getPath());
     FSDataInputStream dstIn = fs.open(dstStat.getPath());
@@ -251,12 +251,12 @@ public class TestDistCpSystem {
           LOG.info("______ compared src and dst files for "
               + totalComparedBytes + " bytes, content match.");
           if (srcBytesRead != tgtBytesRead) {
-            Assert.fail("Read mismatching size, compared "
+            fail("Read mismatching size, compared "
                 + totalComparedBytes + " bytes between src and dst file "
                 + srcStat + " and " + dstStat);
           }
           if (totalComparedBytes != srcStat.getLen()) {
-            Assert.fail("Only read/compared " + totalComparedBytes +
+            fail("Only read/compared " + totalComparedBytes +
                 " bytes between src and dst file " + srcStat +
                 " and " + dstStat);
           } else {
@@ -267,7 +267,7 @@ public class TestDistCpSystem {
         for (; srcIdx < srcBytesRead && tgtIdx < tgtBytesRead;
             ++srcIdx, ++tgtIdx) {
           if (readSrc[srcIdx] != readDst[tgtIdx]) {
-            Assert.fail("src and dst file does not match at "
+            fail("src and dst file does not match at "
                 + totalComparedBytes + " between "
                 + srcStat + " and " + dstStat);
           }
@@ -456,8 +456,8 @@ public class TestDistCpSystem {
 
     String realTgtPath = testDst;
     FileStatus[] dststat = getFileStatus(fs, realTgtPath, srcfiles);
-    assertEquals("File length should match", srcLen,
-        dststat[dststat.length - 1].getLen());
+    assertEquals(srcLen, dststat[dststat.length - 1].getLen(),
+        "File length should match");
 
     this.compareFiles(fs,  srcstats[srcstats.length-1],
         dststat[dststat.length-1]);
@@ -544,7 +544,7 @@ public class TestDistCpSystem {
     Path tgtPath = new Path(testRoot + "/nodir");
     String tgtStr = fs.makeQualified(tgtPath).toString();
     String[] args = new String[]{rootStr, tgtStr};
-    Assert.assertThat(ToolRunner.run(conf, new DistCp(), args), is(0));
+    assertThat(ToolRunner.run(conf, new DistCp(), args)).isEqualTo(0);
 
     // Case 2. The target exists.
 
@@ -552,7 +552,7 @@ public class TestDistCpSystem {
     assertTrue(fs.mkdirs(tgtPath2));
     String tgtStr2 = fs.makeQualified(tgtPath2).toString();
     String[] args2 = new String[]{rootStr, tgtStr2};
-    Assert.assertThat(ToolRunner.run(conf, new DistCp(), args2), is(0));
+    assertThat(ToolRunner.run(conf, new DistCp(), args2)).isEqualTo(0);
   }
 
   @Test

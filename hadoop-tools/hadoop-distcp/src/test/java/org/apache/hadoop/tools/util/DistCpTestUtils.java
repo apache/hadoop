@@ -30,11 +30,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import org.assertj.core.api.Assertions;
-
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Utility class for DistCpTests
@@ -54,7 +53,7 @@ public class DistCpTestUtils {
       Map<String, byte[]> expectedXAttrs)
       throws Exception {
     Map<String, byte[]> xAttrs = fs.getXAttrs(path);
-    assertEquals(path.toString(), expectedXAttrs.size(), xAttrs.size());
+    assertEquals(expectedXAttrs.size(), xAttrs.size(), path.toString());
     Iterator<Entry<String, byte[]>> i = expectedXAttrs.entrySet().iterator();
     while (i.hasNext()) {
       Entry<String, byte[]> e = i.next();
@@ -95,7 +94,7 @@ public class DistCpTestUtils {
     optsArr[optsArr.length - 2] = src;
     optsArr[optsArr.length - 1] = dst;
 
-    Assertions.assertThat(ToolRunner.run(conf, distCp, optsArr))
+    assertThat(ToolRunner.run(conf, distCp, optsArr))
         .describedAs("Exit code of distcp %s",
             Arrays.stream(optsArr).collect(Collectors.joining(" ")))
         .isEqualTo(exitCode);

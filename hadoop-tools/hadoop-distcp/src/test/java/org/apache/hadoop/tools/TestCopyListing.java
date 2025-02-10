@@ -18,7 +18,14 @@
 
 package org.apache.hadoop.tools;
 
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.mockito.Mockito;
@@ -33,14 +40,11 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-import org.junit.Test;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,7 +56,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-@RunWith(value = Parameterized.class)
 public class TestCopyListing extends SimpleCopyListing {
   private static final Logger LOG = LoggerFactory.getLogger(TestCopyListing.class);
 
@@ -61,31 +64,31 @@ public class TestCopyListing extends SimpleCopyListing {
   private static final Configuration config = new Configuration();
   private static MiniDFSCluster cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void create() throws IOException {
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).format(true)
                                                 .build();
   }
 
-  @AfterClass
+  @AfterAll
   public static void destroy() {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Parameters
   public static Collection<Object[]> data() {
-    Object[][] data = new Object[][] { { 1 }, { 2 }, { 10 }, { 20} };
+    Object[][] data = new Object[][]{{1}, {2}, {10}, {20}};
     return Arrays.asList(data);
   }
 
-  public TestCopyListing(int numListstatusThreads) {
-    super(config, CREDENTIALS, numListstatusThreads, 0, false);
+  public TestCopyListing() {
+    super(config, CREDENTIALS, 1, 0, false);
   }
 
-  protected TestCopyListing(Configuration configuration) {
-    super(configuration, CREDENTIALS);
+  public void initTestCopyListing(int numListstatusThreads) {
+    initSimpleCopyListing(config, CREDENTIALS,
+        numListstatusThreads, 0, false);
   }
 
   @Override
@@ -98,8 +101,12 @@ public class TestCopyListing extends SimpleCopyListing {
     return 0;
   }
 
-  @Test(timeout=10000)
-  public void testMultipleSrcToFile() {
+
+  @Timeout(value = 10)
+  @ParameterizedTest
+  @MethodSource("data")
+  public void testMultipleSrcToFile(int pNumListstatusThreads) {
+    initTestCopyListing(pNumListstatusThreads);
     FileSystem fs = null;
     try {
       fs = FileSystem.get(getConf());
@@ -119,7 +126,7 @@ public class TestCopyListing extends SimpleCopyListing {
       fs.create(target).close();
       try {
         validatePaths(new DistCpContext(options));
-        Assert.fail("Invalid inputs accepted");
+        fail("Invalid inputs accepted");
       } catch (InvalidInputException ignore) { }
       TestDistCpUtils.delete(fs, "/tmp");
 
@@ -129,19 +136,22 @@ public class TestCopyListing extends SimpleCopyListing {
       fs.create(target).close();
       try {
         validatePaths(new DistCpContext(options));
-        Assert.fail("Invalid inputs accepted");
+        fail("Invalid inputs accepted");
       } catch (InvalidInputException ignore) { }
       TestDistCpUtils.delete(fs, "/tmp");
     } catch (IOException e) {
       LOG.error("Exception encountered ", e);
-      Assert.fail("Test input validation failed");
+      fail("Test input validation failed");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
   }
 
-  @Test(timeout=10000)
-  public void testDuplicates() {
+  @ParameterizedTest
+  @Timeout(value = 10)
+  @MethodSource("data")
+  public void testDuplicates(int pNumListstatusThreads) {
+    initTestCopyListing(pNumListstatusThreads);
     FileSystem fs = null;
     try {
       fs = FileSystem.get(getConf());
@@ -158,38 +168,47 @@ public class TestCopyListing extends SimpleCopyListing {
           context);
       try {
         listing.buildListing(listingFile, context);
-        Assert.fail("Duplicates not detected");
+        fail("Duplicates not detected");
       } catch (DuplicateFileException ignore) {
       }
     } catch (IOException e) {
       LOG.error("Exception encountered in test", e);
-      Assert.fail("Test failed " + e.getMessage());
+      fail("Test failed " + e.getMessage());
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
   }
 
-  @Test(expected = DuplicateFileException.class, timeout = 10000)
-  public void testDiffBasedSimpleCopyListing() throws IOException {
-    FileSystem fs = null;
-    Configuration configuration = getConf();
-    DistCpSync distCpSync = Mockito.mock(DistCpSync.class);
-    Path listingFile = new Path("/tmp/list");
-    // Throws DuplicateFileException as it recursively traverses src3 directory
-    // and also adds 3.txt,4.txt twice
-    configuration.setBoolean(
-        DistCpConstants.CONF_LABEL_DIFF_COPY_LISTING_TRAVERSE_DIRECTORY, true);
-    try {
-      fs = FileSystem.get(getConf());
-      buildListingUsingSnapshotDiff(fs, configuration, distCpSync, listingFile);
-    } finally {
-      TestDistCpUtils.delete(fs, "/tmp");
-    }
-  }
-
-  @Test(timeout=10000)
-  public void testDiffBasedSimpleCopyListingWithoutTraverseDirectory()
+  @ParameterizedTest
+  @Timeout(value = 10)
+  @MethodSource("data")
+  public void testDiffBasedSimpleCopyListing(int pNumListstatusThreads)
       throws IOException {
+    initTestCopyListing(pNumListstatusThreads);
+    assertThrows(DuplicateFileException.class, () -> {
+      FileSystem fs = null;
+      Configuration configuration = getConf();
+      DistCpSync distCpSync = Mockito.mock(DistCpSync.class);
+      Path listingFile = new Path("/tmp/list");
+      // Throws DuplicateFileException as it recursively traverses src3 directory
+      // and also adds 3.txt,4.txt twice
+      configuration.setBoolean(
+          DistCpConstants.CONF_LABEL_DIFF_COPY_LISTING_TRAVERSE_DIRECTORY, true);
+      try {
+        fs = FileSystem.get(getConf());
+        buildListingUsingSnapshotDiff(fs, configuration, distCpSync, listingFile);
+      } finally {
+        TestDistCpUtils.delete(fs, "/tmp");
+      }
+    });
+  }
+
+  @ParameterizedTest
+  @Timeout(value = 10)
+  @MethodSource("data")
+  public void testDiffBasedSimpleCopyListingWithoutTraverseDirectory(
+      int pNumListstatusThreads) throws IOException {
+    initTestCopyListing(pNumListstatusThreads);
     FileSystem fs = null;
     Configuration configuration = getConf();
     DistCpSync distCpSync = Mockito.mock(DistCpSync.class);
@@ -235,8 +254,10 @@ public class TestCopyListing extends SimpleCopyListing {
     listing.buildListing(listingFile, context);
   }
 
-  @Test
-  public void testDuplicateSourcePaths() throws Exception {
+  @ParameterizedTest
+  @MethodSource("data")
+  public void testDuplicateSourcePaths(int pNumListstatusThreads) throws Exception {
+    initTestCopyListing(pNumListstatusThreads);
     FileSystem fs = FileSystem.get(getConf());
     List<Path> srcPaths = new ArrayList<Path>();
     try {
@@ -252,14 +273,17 @@ public class TestCopyListing extends SimpleCopyListing {
       CopyListing listing =
           CopyListing.getCopyListing(getConf(), CREDENTIALS, context);
       listing.buildListing(listingFile, context);
-      Assert.assertTrue(fs.exists(listingFile));
+      assertTrue(fs.exists(listingFile));
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
   }
 
-  @Test(timeout=10000)
-  public void testBuildListing() {
+  @ParameterizedTest
+  @Timeout(value = 10)
+  @MethodSource("data")
+  public void testBuildListing(int pNumListstatusThreads) {
+    initTestCopyListing(pNumListstatusThreads);
     FileSystem fs = null;
     try {
       fs = FileSystem.get(getConf());
@@ -294,7 +318,7 @@ public class TestCopyListing extends SimpleCopyListing {
       CopyListing listing = new SimpleCopyListing(getConf(), CREDENTIALS);
       try {
         listing.buildListing(listingFile, new DistCpContext(options));
-        Assert.fail("Duplicates not detected");
+        fail("Duplicates not detected");
       } catch (DuplicateFileException ignore) {
       }
       assertThat(listing.getBytesToCopy()).isEqualTo(10);
@@ -303,20 +327,24 @@ public class TestCopyListing extends SimpleCopyListing {
 
       try {
         listing.buildListing(listingFile, new DistCpContext(options));
-        Assert.fail("Invalid input not detected");
+        fail("Invalid input not detected");
       } catch (InvalidInputException ignore) {
       }
       TestDistCpUtils.delete(fs, "/tmp");
     } catch (IOException e) {
       LOG.error("Exception encountered ", e);
-      Assert.fail("Test build listing failed");
+      fail("Test build listing failed");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp");
     }
   }
 
-  @Test(timeout=60000)
-  public void testWithRandomFileListing() throws IOException {
+  @ParameterizedTest
+  @Timeout(value = 60)
+  @MethodSource("data")
+  public void testWithRandomFileListing(int pNumListstatusThreads)
+      throws IOException {
+    initTestCopyListing(pNumListstatusThreads);
     FileSystem fs = null;
     try {
       fs = FileSystem.get(getConf());
@@ -346,7 +374,7 @@ public class TestCopyListing extends SimpleCopyListing {
       SimpleCopyListing listing = new SimpleCopyListing(getConf(), CREDENTIALS);
       listing.buildListing(listingFile, new DistCpContext(options));
 
-      Assert.assertEquals(listing.getNumberOfPaths(), pathCount);
+      assertEquals(listing.getNumberOfPaths(), pathCount);
       validateFinalListing(listingFile, srcFiles);
       fs.delete(listingFile, true);
 
@@ -359,7 +387,7 @@ public class TestCopyListing extends SimpleCopyListing {
       long seed = System.nanoTime();
       listing.setSeedForRandomListing(seed);
       listing.buildListing(listingFile, new DistCpContext(options));
-      Assert.assertEquals(listing.getNumberOfPaths(), pathCount);
+      assertEquals(listing.getNumberOfPaths(), pathCount);
 
       // validate randomness
       Collections.shuffle(srcFiles, new Random(seed));
@@ -381,9 +409,9 @@ public class TestCopyListing extends SimpleCopyListing {
       int idx = 0;
       while (reader.next(currentKey)) {
         reader.getCurrentValue(currentVal);
-        Assert.assertEquals("srcFiles.size=" + srcFiles.size()
-                + ", idx=" + idx, fs.makeQualified(srcFiles.get(idx)),
-            currentVal.getPath());
+        assertEquals(fs.makeQualified(srcFiles.get(idx)),
+            currentVal.getPath(), "srcFiles.size=" + srcFiles.size() +
+            ", idx=" + idx);
         if (LOG.isDebugEnabled()) {
           LOG.debug("val=" + fs.makeQualified(srcFiles.get(idx)));
         }
@@ -393,8 +421,11 @@ public class TestCopyListing extends SimpleCopyListing {
   }
 
 
-  @Test(timeout=10000)
-  public void testBuildListingForSingleFile() {
+  @ParameterizedTest
+  @Timeout(value = 10)
+  @MethodSource("data")
+  public void testBuildListingForSingleFile(int pNumListstatusThreads) {
+    initTestCopyListing(pNumListstatusThreads);
     FileSystem fs = null;
     String testRootString = "/singleFileListing";
     Path testRoot = new Path(testRootString);
@@ -426,11 +457,11 @@ public class TestCopyListing extends SimpleCopyListing {
 
       CopyListingFileStatus fileStatus = new CopyListingFileStatus();
       Text relativePath = new Text();
-      Assert.assertTrue(reader.next(relativePath, fileStatus));
-      Assert.assertTrue(relativePath.toString().equals(""));
+      assertTrue(reader.next(relativePath, fileStatus));
+      assertTrue(relativePath.toString().equals(""));
     }
     catch (Exception e) {
-      Assert.fail("Unexpected exception encountered.");
+      fail("Unexpected exception encountered.");
       LOG.error("Unexpected exception: ", e);
     }
     finally {
@@ -438,9 +469,11 @@ public class TestCopyListing extends SimpleCopyListing {
       IOUtils.closeStream(reader);
     }
   }
-  
-  @Test
-  public void testFailOnCloseError() throws IOException {
+
+  @ParameterizedTest
+  @MethodSource("data")
+  public void testFailOnCloseError(int pNumListstatusThreads) throws IOException {
+    initTestCopyListing(pNumListstatusThreads);
     File inFile = File.createTempFile("TestCopyListingIn", null);
     inFile.deleteOnExit();
     File outFile = File.createTempFile("TestCopyListingOut", null);
@@ -461,7 +494,7 @@ public class TestCopyListing extends SimpleCopyListing {
     } catch (Exception e) {
       actualEx = e;
     }
-    Assert.assertNotNull("close writer didn't fail", actualEx);
-    Assert.assertEquals(expectedEx, actualEx);
+    assertNotNull(actualEx, "close writer didn't fail");
+    assertEquals(expectedEx, actualEx);
   }
 }

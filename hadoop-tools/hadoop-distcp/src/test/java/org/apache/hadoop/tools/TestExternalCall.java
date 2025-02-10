@@ -19,7 +19,6 @@
 package org.apache.hadoop.tools;
 
 import org.apache.hadoop.mapreduce.Job;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -28,16 +27,25 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.Permission;
 
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestExternalCall {
 
@@ -54,7 +62,7 @@ public class TestExternalCall {
     return conf;
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
 
     securityManager = System.getSecurityManager();
@@ -69,7 +77,7 @@ public class TestExternalCall {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     System.setSecurityManager(securityManager);
   }
@@ -80,21 +88,20 @@ public class TestExternalCall {
   @Test
   public void testCleanup() throws Exception {
 
-      Configuration conf = getConf();
+    Configuration conf = getConf();
 
-      Path stagingDir = JobSubmissionFiles.getStagingDir(new Cluster(conf),
-          conf);
-      stagingDir.getFileSystem(conf).mkdirs(stagingDir);
-      Path soure = createFile("tmp.txt");
-      Path target = createFile("target.txt");
+    Path stagingDir = JobSubmissionFiles.getStagingDir(new Cluster(conf),
+        conf);
+    stagingDir.getFileSystem(conf).mkdirs(stagingDir);
+    Path soure = createFile("tmp.txt");
+    Path target = createFile("target.txt");
 
-      DistCp distcp = new DistCp(conf, null);
-      String[] arg = { soure.toString(), target.toString() };
+    DistCp distcp = new DistCp(conf, null);
+    String[] arg = {soure.toString(), target.toString()};
 
-      distcp.run(arg);
-      Assert.assertTrue(fs.exists(target));
+    distcp.run(arg);
+    assertTrue(fs.exists(target));
 
-  
   }
 
   private Path createFile(String fname) throws IOException {
@@ -127,12 +134,12 @@ public class TestExternalCall {
 
       String[] arg = {target.toString(),soure.toString()};
       DistCp.main(arg);
-      Assert.fail();
+      fail();
 
     } catch (ExitException t) {
-      Assert.assertTrue(fs.exists(target));
-      Assert.assertEquals(t.status, 0);
-      Assert.assertEquals(
+      assertTrue(fs.exists(target));
+      assertEquals(t.status, 0);
+      assertEquals(
           stagingDir.getFileSystem(conf).listStatus(stagingDir).length, 0);
     }
 
@@ -155,16 +162,16 @@ public class TestExternalCall {
 
     DistCp distcp = mock(DistCp.class);
     Job job = spy(Job.class);
-    Mockito.when(distcp.getConf()).thenReturn(conf);
-    Mockito.when(distcp.createAndSubmitJob()).thenReturn(job);
-    Mockito.when(distcp.execute()).thenCallRealMethod();
-    Mockito.when(distcp.execute(Mockito.anyBoolean())).thenCallRealMethod();
-    Mockito.doReturn(true).when(job).waitForCompletion(Mockito.anyBoolean());
-    Mockito.when(distcp.run(Mockito.any())).thenCallRealMethod();
+    when(distcp.getConf()).thenReturn(conf);
+    when(distcp.createAndSubmitJob()).thenReturn(job);
+    when(distcp.execute()).thenCallRealMethod();
+    when(distcp.execute(anyBoolean())).thenCallRealMethod();
+    doReturn(true).when(job).waitForCompletion(anyBoolean());
+    when(distcp.run(any())).thenCallRealMethod();
     String[] arg = { soure.toString(), target.toString() };
 
     distcp.run(arg);
-    Mockito.verify(job, times(1)).close();
+    verify(job, times(1)).close();
   }
 
 
