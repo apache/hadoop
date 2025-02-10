@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecretOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
+import org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -341,7 +342,7 @@ public class RequestFactoryImpl implements RequestFactory {
   public PutObjectRequest.Builder newPutObjectRequestBuilder(String key,
       final PutObjectOptions options,
       long length,
-      boolean isDirectoryMarker, final PutObjectOptions putOptions) {
+      boolean isDirectoryMarker) {
 
     Preconditions.checkArgument(isNotEmpty(key), "Null/empty key");
 
@@ -364,14 +365,16 @@ public class RequestFactoryImpl implements RequestFactory {
       setRequestTimeout(putObjectRequestBuilder, partUploadTimeout);
     }
 
-    if (putOptions.isNoObjectOverwrite()) {
-      LOG.debug("setting if none-match");
-      putObjectRequestBuilder.overrideConfiguration(
-              override -> override.putHeader(IF_NONE_MATCH, IF_NONE_MATCH_STAR));
-    }
-    if (!isEmpty(putOptions.getEtagOverwrite())) {
-      // TODO: add etag
-      LOG.warn("etag match not yet supported");
+    if (options != null) {
+      if (options.isNoObjectOverwrite()) {
+        LOG.debug("setting if none-match");
+        putObjectRequestBuilder.overrideConfiguration(
+                override -> override.putHeader(IF_NONE_MATCH, IF_NONE_MATCH_STAR));
+      }
+      if (options.hasFlag(WriteObjectFlags.ConditionalOverwriteEtag)) {
+        // TODO: add etag
+        LOG.warn("etag match not yet supported");
+      }
     }
 
 

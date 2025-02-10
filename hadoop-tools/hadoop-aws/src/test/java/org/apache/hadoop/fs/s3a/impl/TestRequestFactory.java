@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 import software.amazon.awssdk.awscore.AwsRequest;
@@ -42,9 +43,11 @@ import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
+import org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PART_UPLOAD_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.impl.PutObjectOptions.defaultOptions;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -96,7 +99,8 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     String path2 = "path2";
     HeadObjectResponse md = HeadObjectResponse.builder().contentLength(128L).build();
 
-    Assertions.assertThat(factory.newPutObjectRequestBuilder(path, null, 128, false, null)
+    Assertions.assertThat(factory.newPutObjectRequestBuilder(path,
+                defaultOptions(), 128, false)
             .build()
             .acl()
             .toString())
@@ -167,7 +171,10 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     String id = "1";
     a(factory.newAbortMultipartUploadRequestBuilder(path, id));
     a(factory.newCompleteMultipartUploadRequestBuilder(path, id,
-        new ArrayList<>(), new PutObjectOptions("some class", Collections.emptyMap(), false, null)));
+        new ArrayList<>(), new PutObjectOptions("some class",
+            Collections.emptyMap(),
+            EnumSet.noneOf(WriteObjectFlags.class),
+            "")));
     a(factory.newCopyObjectRequestBuilder(path, path2,
         HeadObjectResponse.builder().build()));
     a(factory.newDeleteObjectRequestBuilder(path));
@@ -180,7 +187,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     a(factory.newListObjectsV2RequestBuilder(path, "/", 1));
     a(factory.newMultipartUploadRequestBuilder(path, null));
     a(factory.newPutObjectRequestBuilder(path,
-        PutObjectOptions.defaultOptions(), -1, true, null));
+        defaultOptions(), -1, true));
   }
 
   /**
@@ -264,7 +271,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
 
     // A simple PUT
     final PutObjectRequest put = factory.newPutObjectRequestBuilder(path,
-        PutObjectOptions.defaultOptions(), 1024, false, null).build();
+        defaultOptions(), 1024, false).build();
     assertApiTimeouts(partDuration, put);
 
     // multipart part

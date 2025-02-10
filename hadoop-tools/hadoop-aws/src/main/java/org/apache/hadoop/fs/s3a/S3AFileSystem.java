@@ -2122,7 +2122,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // put options are derived from the option builder.
     boolean conditionalCreate = options.isConditionalOverwrite();
     final PutObjectOptions putOptions =
-        new PutObjectOptions(null, options.getHeaders(), conditionalCreate, null);
+        new PutObjectOptions(null,
+            options.getHeaders(),
+            options.writeObjectFlags(),
+            options.etag());
 
 
     validateOutputStreamConfiguration(path, getConf());
@@ -3197,8 +3200,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public PutObjectRequest.Builder newPutObjectRequestBuilder(String key,
       long length,
       boolean isDirectoryMarker) {
-    return requestFactory.newPutObjectRequestBuilder(key, null, length, isDirectoryMarker,
-        PutObjectOptions.defaultOptions());
+    return requestFactory.newPutObjectRequestBuilder(key, PutObjectOptions.defaultOptions(), length, isDirectoryMarker);
   }
 
   /**

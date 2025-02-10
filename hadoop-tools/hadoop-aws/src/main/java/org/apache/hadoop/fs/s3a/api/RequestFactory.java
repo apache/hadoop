@@ -118,14 +118,12 @@ public interface RequestFactory {
    * @param options options for the request
    * @param length length of object to be uploaded
    * @param isDirectoryMarker true if object to be uploaded is a directory marker
-   * @param putOptions
    * @return the request builder
    */
   PutObjectRequest.Builder newPutObjectRequestBuilder(String key,
       PutObjectOptions options,
       long length,
-      boolean isDirectoryMarker,
-      PutObjectOptions putOptions);
+      boolean isDirectoryMarker);
 
   /**
    * Create a {@link PutObjectRequest} request for creating

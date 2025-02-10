@@ -18,8 +18,16 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.util.EnumSet;
 import java.util.Map;
 import javax.annotation.Nullable;
+
+import org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags.ConditionalOverwrite;
+import static org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags.ConditionalOverwriteEtag;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
  * Extensible structure for options when putting/writing objects.
@@ -37,9 +45,9 @@ public final class PutObjectOptions {
   private final Map<String, String> headers;
 
   /**
-   * Prevent overwriting an existing object?
+   * Flags to control the write process.
    */
-  private final boolean noObjectOverwrite;
+  private final EnumSet<WriteObjectFlags> writeObjectFlags;
 
   /**
    * If set, allows overwriting an object only if the object's ETag matches this value.
@@ -49,18 +57,24 @@ public final class PutObjectOptions {
   /**
    * Constructor.
    * @param storageClass Storage class, if not null.
-   * @param noObjectOverwrite Prevent overwriting existing object?
    * @param headers Headers; may be null.
+   * @param writeObjectFlags flags for writing
+   * @param etagOverwrite etag for etag writes.
+   *                      MUST not be empty if etag overwrite flag is set.
    */
   public PutObjectOptions(
       @Nullable final String storageClass,
       @Nullable final Map<String, String> headers,
-      final boolean noObjectOverwrite,
-      final String etagOverwrite) {
-    this.noObjectOverwrite = noObjectOverwrite;
-    this.etagOverwrite = etagOverwrite;
+      final EnumSet<WriteObjectFlags> writeObjectFlags,
+      @Nullable final String etagOverwrite) {
     this.storageClass = storageClass;
     this.headers = headers;
+    this.writeObjectFlags = writeObjectFlags;
+    this.etagOverwrite = etagOverwrite;
+    if (isEtagOverwrite()) {
+      checkArgument(!isEmpty(etagOverwrite),
+          "etag overwrite is enabled but the etag string is null/empty");
+    }
   }
 
   /**
@@ -68,7 +82,25 @@ public final class PutObjectOptions {
    * @return true if object override not allowed.
    */
   public boolean isNoObjectOverwrite() {
-    return noObjectOverwrite;
+    return hasFlag(ConditionalOverwrite);
+  }
+
+  /**
+   * Get the isEtagOverwrite flag.
+   * @return true if the write MUST overwrite an object with the
+   * supplied etag.
+   */
+  public boolean isEtagOverwrite() {
+    return hasFlag(ConditionalOverwriteEtag);
+  }
+
+  /**
+   * Does the flag set contain the specific flag.
+   * @param flag flag to look for
+   * @return true if the flag is set.
+   */
+  public boolean hasFlag(WriteObjectFlags flag) {
+    return writeObjectFlags.contains(flag);
   }
 
   /**
@@ -87,17 +119,28 @@ public final class PutObjectOptions {
     return headers;
   }
 
+  public EnumSet<WriteObjectFlags> getWriteObjectFlags() {
+    return writeObjectFlags;
+  }
+
   @Override
   public String toString() {
     return "PutObjectOptions{" +
-        ", storageClass='" + storageClass + '\'' +
+        "storageClass='" + storageClass + '\'' +
+        ", headers=" + headers +
+        ", writeObjectFlags=" + writeObjectFlags +
+        ", etagOverwrite='" + etagOverwrite + '\'' +
         '}';
   }
 
   /**
    * Empty options.
    */
-  private static final PutObjectOptions EMPTY_OPTIONS = new PutObjectOptions(null, null, false, null);
+  private static final PutObjectOptions EMPTY_OPTIONS = new PutObjectOptions(
+      null,
+      null,
+      EnumSet.noneOf(WriteObjectFlags.class),
+      null);
 
     /**
    * Get the default options.

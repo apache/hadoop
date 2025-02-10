@@ -33,22 +33,22 @@ import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags;
 import org.apache.hadoop.util.Progressable;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG;
 import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONTENT_TYPE;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_MULTIPART;
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.CONTENT_TYPE;
-import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.ExtractedCreateFileSwitch.ConditionalOverwrite;
-import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.ExtractedCreateFileSwitch.ConditionalOverwriteEtag;
-import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.ExtractedCreateFileSwitch.CreateMultipart;
-import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.ExtractedCreateFileSwitch.Performance;
-import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.ExtractedCreateFileSwitch.Recursive;
+import static org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags.ConditionalOverwrite;
+import static org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags.ConditionalOverwriteEtag;
+import static org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags.CreateMultipart;
+import static org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags.Performance;
+import static org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags.Recursive;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CREATE_FILE_KEYS;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
  * Builder used in create file; takes a callback to the operation
@@ -126,8 +126,8 @@ public class CreateFileBuilder extends
     final Configuration options = getOptions();
     final Map<String, String> headers = new HashMap<>();
     final Set<String> mandatoryKeys = getMandatoryKeys();
-    final EnumSet<ExtractedCreateFileSwitch> createFileSwitches = EnumSet.noneOf(
-        ExtractedCreateFileSwitch.class);
+    final EnumSet<WriteObjectFlags> createFileSwitches = EnumSet.noneOf(
+        WriteObjectFlags.class);
 
     // pick up all headers from the mandatory list and strip them before
     // validating the keys
@@ -178,7 +178,7 @@ public class CreateFileBuilder extends
     if (CreateMultipart.isEnabled(options)) {
       createFileSwitches.add(CreateMultipart);
     }
-        if (ConditionalOverwrite.isEnabled(options)) {
+    if (ConditionalOverwrite.isEnabled(options)) {
       createFileSwitches.add(ConditionalOverwrite);
     }
     // etag is a string so is checked for then extracted.
@@ -256,7 +256,7 @@ public class CreateFileBuilder extends
     /**
      * Create File switches.
      */
-    private final EnumSet<ExtractedCreateFileSwitch> createFileSwitches;
+    private final EnumSet<WriteObjectFlags> writeObjectFlags;
 
     /**
      * Etag. Only used if the create file switches enable it.
@@ -274,13 +274,14 @@ public class CreateFileBuilder extends
      */
     public CreateFileOptions(
         final EnumSet<CreateFlag> flags,
-        final EnumSet<ExtractedCreateFileSwitch> createFileSwitches,
+        final EnumSet<WriteObjectFlags> writeObjectFlags,
         final String etag,
         final Map<String, String> headers) {
       this.flags = requireNonNull(flags);
-      this.createFileSwitches = requireNonNull(createFileSwitches);
-      if (createFileSwitches().contains(ConditionalOverwriteEtag)) {
-        requireNonNull(etag);
+      this.writeObjectFlags = requireNonNull(writeObjectFlags);
+      if (writeObjectFlags().contains(ConditionalOverwriteEtag)) {
+        checkArgument(!isEmpty(etag),
+            "etag overwrite is enabled but the etag string is null/empty");
       }
       this.etag = etag;
       this.headers = headers;
@@ -290,7 +291,7 @@ public class CreateFileBuilder extends
     public String toString() {
       return "CreateFileOptions{" +
           "flags=" + flags +
-          ", switches" + createFileSwitches +
+          ", writeObjectFlags=" + writeObjectFlags +
           ", headers=" + headers +
           '}';
     }
@@ -315,8 +316,8 @@ public class CreateFileBuilder extends
       return isSet(ConditionalOverwriteEtag);
     }
 
-    public boolean isSet(ExtractedCreateFileSwitch val) {
-      return createFileSwitches().contains(val);
+    public boolean isSet(WriteObjectFlags val) {
+      return writeObjectFlags().contains(val);
     }
 
     public Map<String, String> getHeaders() {
@@ -327,34 +328,9 @@ public class CreateFileBuilder extends
       return etag;
     }
 
-    public EnumSet<ExtractedCreateFileSwitch> createFileSwitches() {
-      return createFileSwitches;
+    public EnumSet<WriteObjectFlags> writeObjectFlags() {
+      return writeObjectFlags;
     }
   }
 
-  /**
-   * Create File switches extracted from create options.
-   */
-  public enum ExtractedCreateFileSwitch {
-    CreateMultipart(FS_S3A_CREATE_MULTIPART),
-    ConditionalOverwrite(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE),
-    ConditionalOverwriteEtag(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG),
-    Performance(FS_S3A_CREATE_PERFORMANCE),
-    Recursive("");
-
-    private String key;
-
-    ExtractedCreateFileSwitch(final String key) {
-      this.key = key;
-    }
-
-    /**
-     * does the configuration contain this option as a boolean?
-     * @param options options to scan
-     * @return true if this is defined as a boolean
-     */
-    boolean isEnabled(Configuration options) {
-      return options.getBoolean(key, false);
-    }
-  }
 }
