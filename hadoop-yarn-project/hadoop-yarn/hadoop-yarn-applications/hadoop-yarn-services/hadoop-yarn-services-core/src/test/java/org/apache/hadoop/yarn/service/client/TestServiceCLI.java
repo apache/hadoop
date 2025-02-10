@@ -35,7 +35,6 @@ import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -124,7 +123,7 @@ public class TestServiceCLI {
     basedirProp = YARN_SERVICE_BASE_PATH + "=" + basedir.getAbsolutePath();
     conf.set(YARN_SERVICE_BASE_PATH, basedir.getAbsolutePath());
     fs = new SliderFileSystem(conf);
-    dependencyTarGzBaseDir = tempDir.getRoot().toFile();
+    dependencyTarGzBaseDir = tempDir.toFile();
     fs.getFileSystem()
         .setPermission(new Path(dependencyTarGzBaseDir.getAbsolutePath()),
             new FsPermission("755"));
