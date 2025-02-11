@@ -1376,11 +1376,15 @@ public final class Constants {
   /**
    * List of custom headers to be set on the service client.
    * Multiple parameters can be used to specify custom headers.
-   * fs.s3a.client.s3.custom.headers - headers to add on all the s3 requests.
-   * fs.s3a.client.sts.custom.headers - headers to add on all the sts requests.
-   * Examples
-   * CustomHeader {@literal ->} 'Header1:Value1'
-   * CustomHeaders {@literal ->} 'Header1=Value1;Value2,Header2=Value1'
+   * <pre>
+   * Usage:
+   * fs.s3a.client.s3.custom.headers - Headers to add on all the S3 requests.
+   * fs.s3a.client.sts.custom.headers - Headers to add on all the STS requests.
+   *
+   * Examples:
+   * CustomHeader -> 'Header1:Value1'
+   * CustomHeaders -> 'Header1=Value1;Value2,Header2=Value1'
+   * </pre>
    */
   public static final String CUSTOM_HEADERS_STS =
       FS_S3A_CLIENT_PREFIX + AWS_SERVICE_IDENTIFIER_STS.toLowerCase(Locale.ROOT)
