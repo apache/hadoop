@@ -247,8 +247,8 @@ public class TestServiceCLI {
     String[] args = {"app", "-D", dependencyTarGzProp, "-enableFastLaunch",
         "-appTypes", DUMMY_APP_TYPE};
     assertEquals(EXIT_SUCCESS, runCLI(args));
-    assertTrue(
-       fs.isFile(defaultPath), "Dependency tarball did not exist after the test");
+    assertTrue(fs.isFile(defaultPath),
+        "Dependency tarball did not exist after the test");
 
     File secondBaseDir = new File(dependencyTarGzBaseDir, "2");
     Path secondTarGz = getDependencyTarGz(secondBaseDir);

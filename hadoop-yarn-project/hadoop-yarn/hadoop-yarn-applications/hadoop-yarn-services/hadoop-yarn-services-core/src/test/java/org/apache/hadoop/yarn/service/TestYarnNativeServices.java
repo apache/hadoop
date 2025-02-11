@@ -506,7 +506,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
         active.getComponent(component.getName()).getState(), "component not stable");
     assertEquals("val0",
         active.getComponent(component.getName()).getConfiguration()
-        .getEnv("key1"),"comp does not have new env");
+        .getEnv("key1"), "comp does not have new env");
     LOG.info("Stop/destroy service {}", service);
     client.actionStop(service.getName(), true);
     client.actionDestroy(service.getName());
