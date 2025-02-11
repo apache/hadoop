@@ -309,7 +309,7 @@ public abstract class DistributedShellBaseTest {
   protected void baseTestDSShell(String methodName, boolean haveDomain, boolean defaultFlow)
       throws Exception {
     String[] baseArgs = createArgumentsWithAppName(
-         methodName,
+        methodName,
         "--num_containers",
         "2",
         "--shell_command",
