@@ -93,7 +93,7 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
   }
 
   private void testStoreBlobMd5(boolean expectMd5Stored, TestInfo testInfo) throws Exception {
-    assumeTrue(testAccount != null);
+    assumeNotNull(testAccount);
     // Write a test file.
     NativeAzureFileSystem fs = testAccount.getFileSystem();
     Path testFilePath = AzureTestUtils.pathForTests(fs,
@@ -212,7 +212,7 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
 
   private void testCheckBlockMd5(final boolean expectMd5Checked)
       throws Exception {
-    assumeTrue(testAccount != null);
+    assumeNotNull(testAccount);
     Path testFilePath = new Path("/testFile");
 
     // Add a hook to check that for GET/PUT requests we set/don't set

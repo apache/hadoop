@@ -53,7 +53,7 @@ public abstract class AbstractWasbTestBase extends AbstractWasbTestWithTimeout
   @BeforeEach
   public void setUp(TestInfo testInfo) throws Exception {
     AzureBlobStorageTestAccount account = createTestAccount();
-    assumeTrue(account != null, "test account");
+    assumeNotNull(account, "test account");
     bindToTestAccount(account);
   }
 

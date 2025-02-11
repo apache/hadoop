@@ -157,7 +157,7 @@ public class ITestAzureFileSystemErrorConditions extends
     // Need to do this test against a live storage account
     AzureBlobStorageTestAccount testAccount =
         AzureBlobStorageTestAccount.create();
-    assumeTrue(testAccount != null);
+    assumeNotNull(testAccount);
     try {
       NativeAzureFileSystem fs = testAccount.getFileSystem();
       injectTransientError(fs, new ConnectionRecognizer() {
@@ -200,7 +200,7 @@ public class ITestAzureFileSystemErrorConditions extends
     // Need to do this test against a live storage account
     AzureBlobStorageTestAccount testAccount =
         AzureBlobStorageTestAccount.create();
-    assumeTrue(testAccount != null);
+    assumeNotNull(testAccount);
     try {
       NativeAzureFileSystem fs = testAccount.getFileSystem();
       injectTransientError(fs, new ConnectionRecognizer() {
@@ -224,7 +224,7 @@ public class ITestAzureFileSystemErrorConditions extends
     // Need to do this test against a live storage account
     AzureBlobStorageTestAccount testAccount =
         AzureBlobStorageTestAccount.create();
-    assumeTrue(testAccount != null);
+    assumeNotNull(testAccount);
     try {
       NativeAzureFileSystem fs = testAccount.getFileSystem();
       Path testFile = new Path("/a/b");

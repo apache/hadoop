@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import static org.junit.Assume.assumeNotNull;
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.cleanupTestAccount;
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.readStringFromFile;
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.writeStringToFile;

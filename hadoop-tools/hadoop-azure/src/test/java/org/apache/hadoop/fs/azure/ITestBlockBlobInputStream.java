@@ -46,8 +46,6 @@ import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils.NanoTimer;
 
-import static org.junit.Assume.assumeNotNull;
-
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 /**

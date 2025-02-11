@@ -61,7 +61,7 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
   @Test
   public void testContainerExistAfterDoesNotExist() throws Exception {
     testAccount = blobStorageTestAccount();
-    assumeTrue(testAccount != null);
+    assumeNotNull(testAccount);
     CloudBlobContainer container = testAccount.getRealContainer();
     FileSystem fs = testAccount.getFileSystem();
 
@@ -74,8 +74,8 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
       fs.listStatus(new Path("/"));
       assertTrue(false, "Should've thrown.");
     } catch (FileNotFoundException ex) {
-      assertTrue(
-         ex.getMessage().contains("is not found"), "Unexpected exception: " + ex);
+      assertTrue(ex.getMessage().contains("is not found"),
+          "Unexpected exception: " + ex);
     }
     assertFalse(container.exists());
 
@@ -101,7 +101,7 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
   @Test
   public void testContainerCreateAfterDoesNotExist() throws Exception {
     testAccount = blobStorageTestAccount();
-    assumeTrue(testAccount != null);
+    assumeNotNull(testAccount);
     CloudBlobContainer container = testAccount.getRealContainer();
     FileSystem fs = testAccount.getFileSystem();
 
@@ -114,8 +114,8 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
       assertNull(fs.listStatus(new Path("/")));
       assertTrue(false, "Should've thrown.");
     } catch (FileNotFoundException ex) {
-      assertTrue(
-         ex.getMessage().contains("is not found"), "Unexpected exception: " + ex);
+      assertTrue(ex.getMessage().contains("is not found"),
+          "Unexpected exception: " + ex);
     }
     assertFalse(container.exists());
 
@@ -127,7 +127,7 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
   @Test
   public void testContainerCreateOnWrite() throws Exception {
     testAccount = blobStorageTestAccount();
-    assumeTrue(testAccount != null);
+    assumeNotNull(testAccount);
     CloudBlobContainer container = testAccount.getRealContainer();
     FileSystem fs = testAccount.getFileSystem();
 
@@ -139,8 +139,8 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
       fs.listStatus(new Path("/"));
       assertTrue(false, "Should've thrown.");
     } catch (FileNotFoundException ex) {
-      assertTrue(
-         ex.getMessage().contains("is not found"), "Unexpected exception: " + ex);
+      assertTrue(ex.getMessage().contains("is not found"),
+          "Unexpected exception: " + ex);
     }
     assertFalse(container.exists());
 
@@ -173,7 +173,7 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
     assumeFalse(runningInSASMode);
     testAccount = AzureBlobStorageTestAccount.create("",
         EnumSet.of(CreateOptions.UseSas));
-    assumeTrue(testAccount != null);
+    assumeNotNull(testAccount);
     CloudBlobContainer container = testAccount.getRealContainer();
     FileSystem fs = testAccount.getFileSystem();
 

@@ -21,8 +21,7 @@ package org.apache.hadoop.fs.azure;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azure.NativeAzureFileSystem.RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -655,8 +654,8 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
 
       conf.setBoolean(RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME, true);
       FileSystem fs1 = FileSystem.newInstance(defaultUri, conf);
-      assertEquals("getCanonicalServiceName() should return URI",
-              fs1.getUri().toString(), fs1.getCanonicalServiceName());
+      assertEquals(fs1.getUri().toString(), fs1.getCanonicalServiceName(),
+          "getCanonicalServiceName() should return URI");
     } finally {
       testAccount.cleanup();
       FileSystem.closeAll();

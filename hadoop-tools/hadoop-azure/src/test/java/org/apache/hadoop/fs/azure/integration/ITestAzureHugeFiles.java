@@ -23,10 +23,7 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Iterator;
 
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,6 +77,7 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
 
   private Path testPath;
 
+  @BeforeEach
   @Override
   public void setUp(TestInfo testInfo) throws Exception {
     super.setUp(testInfo);

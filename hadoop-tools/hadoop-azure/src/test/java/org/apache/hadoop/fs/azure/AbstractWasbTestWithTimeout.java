@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 /**
  * Base class for any Wasb test with timeouts & named threads.
  * This class does not attempt to bind to Azure.
@@ -58,4 +60,11 @@ public class AbstractWasbTestWithTimeout extends Assertions {
     return AzureTestConstants.AZURE_TEST_TIMEOUT;
   }
 
+  public static void assumeNotNull(Object objects) {
+    assumeTrue(objects != null);
+  }
+
+  public static void assumeNotNull(Object objects, String message) {
+    assumeTrue(objects != null, message);
+  }
 }
