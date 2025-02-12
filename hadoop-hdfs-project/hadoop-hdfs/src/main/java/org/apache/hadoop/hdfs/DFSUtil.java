@@ -141,6 +141,7 @@ public class DFSUtil {
   public static class ServiceComparator implements Comparator<DatanodeInfo> {
     @Override
     public int compare(DatanodeInfo a, DatanodeInfo b) {
+      LOG.info("test {}, {}", a, b);
       // Decommissioned nodes will be moved to the end of the list.
       if (a.isDecommissioned()) {
         return b.isDecommissioned() ? 0 : 1;
