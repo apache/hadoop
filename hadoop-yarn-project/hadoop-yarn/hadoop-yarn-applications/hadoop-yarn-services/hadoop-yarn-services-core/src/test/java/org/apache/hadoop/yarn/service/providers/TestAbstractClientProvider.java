@@ -23,13 +23,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -69,21 +69,21 @@ public class TestAbstractClientProvider {
 
     try {
       clientProvider.validateConfigFiles(configFiles, compName, mockFs);
-      Assert.fail(EXCEPTION_PREFIX + "null file type");
+      fail(EXCEPTION_PREFIX + "null file type");
     } catch (IllegalArgumentException e) {
     }
 
     configFile.setType(ConfigFile.TypeEnum.TEMPLATE);
     try {
       clientProvider.validateConfigFiles(configFiles, compName, mockFs);
-      Assert.fail(EXCEPTION_PREFIX + "empty src_file for type template");
+      fail(EXCEPTION_PREFIX + "empty src_file for type template");
     } catch (IllegalArgumentException e) {
     }
 
     configFile.setSrcFile("srcfile");
     try {
       clientProvider.validateConfigFiles(configFiles, compName, mockFs);
-      Assert.fail(EXCEPTION_PREFIX + "empty dest file");
+      fail(EXCEPTION_PREFIX + "empty dest file");
     } catch (IllegalArgumentException e) {
     }
 
@@ -91,7 +91,7 @@ public class TestAbstractClientProvider {
     try {
       clientProvider.validateConfigFiles(configFiles, compName, mockFs);
     } catch (IllegalArgumentException e) {
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
 
     configFile = new ConfigFile();
@@ -101,7 +101,7 @@ public class TestAbstractClientProvider {
     configFiles.add(configFile);
     try {
       clientProvider.validateConfigFiles(configFiles, compName, mockFs);
-      Assert.fail(EXCEPTION_PREFIX + "dest file with multiple path elements");
+      fail(EXCEPTION_PREFIX + "dest file with multiple path elements");
     } catch (IllegalArgumentException e) {
     }
 
@@ -109,13 +109,13 @@ public class TestAbstractClientProvider {
     try {
       clientProvider.validateConfigFiles(configFiles, compName, mockFs);
     } catch (IllegalArgumentException e) {
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+      fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
 
     configFile.setDestFile("destfile");
     try {
       clientProvider.validateConfigFiles(configFiles, compName, mockFs);
-      Assert.fail(EXCEPTION_PREFIX + "duplicate dest file");
+      fail(EXCEPTION_PREFIX + "duplicate dest file");
     } catch (IllegalArgumentException e) {
     }
 
@@ -127,14 +127,14 @@ public class TestAbstractClientProvider {
     configFiles.add(configFile);
     try {
       clientProvider.validateConfigFiles(configFiles, compName, mockFs);
-      Assert.fail(EXCEPTION_PREFIX + "dest file with multiple path elements");
+      fail(EXCEPTION_PREFIX + "dest file with multiple path elements");
     } catch (IllegalArgumentException e) {
     }
 
     configFile.setDestFile("/path/destfile3");
     try {
       clientProvider.validateConfigFiles(configFiles, compName, mockFs);
-      Assert.fail(EXCEPTION_PREFIX + "src file should be specified");
+      fail(EXCEPTION_PREFIX + "src file should be specified");
     } catch (IllegalArgumentException e) {
     }
 
@@ -156,7 +156,7 @@ public class TestAbstractClientProvider {
 
     try {
       clientProvider.validateConfigFiles(configFiles, compName, mockFs);
-      Assert.fail(EXCEPTION_PREFIX + "src file is a directory");
+      fail(EXCEPTION_PREFIX + "src file is a directory");
     } catch (IllegalArgumentException e) {
     }
   }

@@ -22,12 +22,12 @@ import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Service;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.*;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for {@link UpgradeComponentsFinder.DefaultUpgradeComponentsFinder}.
@@ -44,9 +44,9 @@ public class TestDefaultUpgradeComponentsFinder {
     targetDef.getComponents().forEach(x -> x.setArtifact(
         TestServiceManager.createTestArtifact("v1")));
 
-    assertEquals("all components need upgrade",
-        targetDef.getComponents(), finder.findTargetComponentSpecs(currentDef,
-            targetDef));
+    assertEquals(targetDef.getComponents(),
+        finder.findTargetComponentSpecs(currentDef,
+        targetDef), "all components need upgrade");
   }
 
   @Test
@@ -60,7 +60,7 @@ public class TestDefaultUpgradeComponentsFinder {
 
     try {
       finder.findTargetComponentSpecs(currentDef, targetDef);
-      Assert.fail("Expected error since component does not exist in service "
+      fail("Expected error since component does not exist in service "
           + "definition");
     } catch (UnsupportedOperationException usoe) {
       assertEquals(
@@ -83,9 +83,8 @@ public class TestDefaultUpgradeComponentsFinder {
     List<Component> expected = new ArrayList<>();
     expected.add(targetDef.getComponents().get(0));
 
-    assertEquals("single components needs upgrade",
-        expected, finder.findTargetComponentSpecs(currentDef,
-            targetDef));
+    assertEquals(expected, finder.findTargetComponentSpecs(currentDef,
+        targetDef), "single components needs upgrade");
   }
 
   @Test
@@ -117,7 +116,7 @@ public class TestDefaultUpgradeComponentsFinder {
     List<Component> expected = new ArrayList<>();
     expected.addAll(targetDef.getComponents());
 
-    assertEquals("all components needs upgrade",
-        expected, finder.findTargetComponentSpecs(currentDef, targetDef));
+    assertEquals(expected, finder.findTargetComponentSpecs(currentDef, targetDef),
+        "all components needs upgrade");
   }
 }

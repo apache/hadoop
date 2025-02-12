@@ -26,16 +26,17 @@ import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.TestServiceManager;
 import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class TestFilterUtils {
 
-  @Rule
-  public ServiceTestUtils.ServiceFSWatcher rule =
+  @RegisterExtension
+  private ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
   @Test
@@ -45,9 +46,9 @@ public class TestFilterUtils {
     List<ComponentContainers> compContainers = FilterUtils.filterInstances(
         new MockRunningServiceContext(rule,
             TestServiceManager.createBaseDef("service")), req);
-    Assert.assertEquals("num comps", 2, compContainers.size());
+    assertEquals(2, compContainers.size(), "num comps");
     compContainers.forEach(item -> {
-      Assert.assertEquals("num containers", 2, item.getContainers().size());
+      assertEquals(2, item.getContainers().size(), "num containers");
     });
   }
 
@@ -58,12 +59,9 @@ public class TestFilterUtils {
     List<ComponentContainers> compContainers = FilterUtils.filterInstances(
         new MockRunningServiceContext(rule,
             TestServiceManager.createBaseDef("service")), req);
-    Assert.assertEquals("num comps", 1, compContainers.size());
-    Assert.assertEquals("comp name", "compa",
-        compContainers.get(0).getComponentName());
-
-    Assert.assertEquals("num containers", 2,
-        compContainers.get(0).getContainers().size());
+    assertEquals(1, compContainers.size(), "num comps");
+    assertEquals("compa", compContainers.get(0).getComponentName(), "comp name");
+    assertEquals(2, compContainers.get(0).getContainers().size(), "num containers");
   }
 
   @Test
@@ -74,15 +72,14 @@ public class TestFilterUtils {
         GetCompInstancesRequestProto.newBuilder();
 
     reqBuilder.setVersion("v2");
-    Assert.assertEquals("num comps", 0,
-        FilterUtils.filterInstances(sc, reqBuilder.build()).size());
+    assertEquals(0, FilterUtils.filterInstances(sc, reqBuilder.build()).size(),
+        "num comps");
 
     reqBuilder.addAllComponentNames(Lists.newArrayList("compa"))
         .setVersion("v1").build();
 
-    Assert.assertEquals("num containers", 2,
-        FilterUtils.filterInstances(sc, reqBuilder.build()).get(0)
-            .getContainers().size());
+    assertEquals(2, FilterUtils.filterInstances(sc, reqBuilder.build()).get(0)
+        .getContainers().size(), "num containers");
   }
 
   @Test
@@ -96,16 +93,16 @@ public class TestFilterUtils {
         ContainerState.READY.toString()));
     List<ComponentContainers> compContainers = FilterUtils.filterInstances(sc,
         reqBuilder.build());
-    Assert.assertEquals("num comps", 2, compContainers.size());
+    assertEquals(2, compContainers.size(), "num comps");
     compContainers.forEach(item -> {
-      Assert.assertEquals("num containers", 2, item.getContainers().size());
+      assertEquals(2, item.getContainers().size(), "num containers");
     });
 
     reqBuilder.clearContainerStates();
     reqBuilder.addAllContainerStates(Lists.newArrayList(
         ContainerState.STOPPED.toString()));
-    Assert.assertEquals("num comps", 0,
-        FilterUtils.filterInstances(sc, reqBuilder.build()).size());
+    assertEquals(0, FilterUtils.filterInstances(sc, reqBuilder.build()).size(),
+        "num comps");
   }
 
 }
