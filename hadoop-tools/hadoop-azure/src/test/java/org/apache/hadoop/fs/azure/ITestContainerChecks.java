@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azure;
 
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.FileNotFoundException;
 import java.util.EnumSet;

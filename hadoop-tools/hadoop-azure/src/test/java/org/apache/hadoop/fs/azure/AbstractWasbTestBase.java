@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.io.IOUtils;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.*;
 
 /**

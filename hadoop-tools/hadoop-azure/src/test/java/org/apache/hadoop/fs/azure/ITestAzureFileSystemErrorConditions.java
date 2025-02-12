@@ -41,7 +41,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.NO_ACCESS_TO_CONTAINER_MSG;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Error handling.
