@@ -34,10 +34,10 @@ import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.Utils;
-import org.junit.After;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -133,7 +133,7 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
     }
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     FileUtil.fullyDelete(TEST_DIR);
   }

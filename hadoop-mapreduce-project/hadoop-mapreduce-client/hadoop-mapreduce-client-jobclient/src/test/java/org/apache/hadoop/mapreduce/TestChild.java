@@ -30,13 +30,12 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.log4j.Level;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class TestChild extends HadoopTestCase {
   private static String TEST_ROOT_DIR =
@@ -63,25 +62,21 @@ public class TestChild extends HadoopTestCase {
       boolean oldConfigs = conf.getBoolean(OLD_CONFIGS, false);
       if (oldConfigs) {
         String javaOpts = conf.get(JobConf.MAPRED_TASK_JAVA_OPTS);
-        assertNotNull(JobConf.MAPRED_TASK_JAVA_OPTS + " is null!", 
-                      javaOpts);
-        assertEquals(JobConf.MAPRED_TASK_JAVA_OPTS + " has value of: " + 
-                     javaOpts, 
-                     javaOpts, TASK_OPTS_VAL);
+        assertNotNull(javaOpts, JobConf.MAPRED_TASK_JAVA_OPTS + " is null!");
+        assertEquals(javaOpts, TASK_OPTS_VAL,
+            JobConf.MAPRED_TASK_JAVA_OPTS + " has value of: " + javaOpts);
       } else {
         String mapJavaOpts = conf.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS);
-        assertNotNull(JobConf.MAPRED_MAP_TASK_JAVA_OPTS + " is null!", 
-                      mapJavaOpts);
-        assertEquals(JobConf.MAPRED_MAP_TASK_JAVA_OPTS + " has value of: " + 
-                     mapJavaOpts, 
-                     mapJavaOpts, MAP_OPTS_VAL);
+        assertNotNull(mapJavaOpts, JobConf.MAPRED_MAP_TASK_JAVA_OPTS + " is null!");
+        assertEquals(mapJavaOpts, MAP_OPTS_VAL,
+            JobConf.MAPRED_MAP_TASK_JAVA_OPTS + " has value of: " + mapJavaOpts);
       }
       
       Level logLevel = 
         Level.toLevel(conf.get(JobConf.MAPRED_MAP_TASK_LOG_LEVEL, 
                                Level.INFO.toString()));  
-      assertEquals(JobConf.MAPRED_MAP_TASK_LOG_LEVEL + "has value of " + 
-                   logLevel, logLevel, Level.OFF);
+      assertEquals(logLevel, Level.OFF,
+          JobConf.MAPRED_MAP_TASK_LOG_LEVEL + "has value of " + logLevel);
     }
   }
   
@@ -95,25 +90,22 @@ public class TestChild extends HadoopTestCase {
       boolean oldConfigs = conf.getBoolean(OLD_CONFIGS, false);
       if (oldConfigs) {
         String javaOpts = conf.get(JobConf.MAPRED_TASK_JAVA_OPTS);
-        assertNotNull(JobConf.MAPRED_TASK_JAVA_OPTS + " is null!", 
-                      javaOpts);
-        assertEquals(JobConf.MAPRED_TASK_JAVA_OPTS + " has value of: " + 
-                     javaOpts, 
-                     javaOpts, TASK_OPTS_VAL);
+        assertNotNull(javaOpts, JobConf.MAPRED_TASK_JAVA_OPTS + " is null!");
+        assertEquals(javaOpts, TASK_OPTS_VAL,
+            JobConf.MAPRED_TASK_JAVA_OPTS + " has value of: " + javaOpts);
       } else {
         String reduceJavaOpts = conf.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS);
-        assertNotNull(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS + " is null!", 
-                      reduceJavaOpts);
-        assertEquals(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS + " has value of: " + 
-                     reduceJavaOpts, 
-                     reduceJavaOpts, REDUCE_OPTS_VAL);
+        assertNotNull(reduceJavaOpts,
+            JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS + " is null!");
+        assertEquals(reduceJavaOpts, REDUCE_OPTS_VAL,
+            JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS + " has value of: " + reduceJavaOpts);
       }
       
       Level logLevel = 
         Level.toLevel(conf.get(JobConf.MAPRED_REDUCE_TASK_LOG_LEVEL, 
                                Level.INFO.toString()));  
-      assertEquals(JobConf.MAPRED_REDUCE_TASK_LOG_LEVEL + "has value of " + 
-                   logLevel, logLevel, Level.OFF);
+      assertEquals(logLevel, Level.OFF,
+          JobConf.MAPRED_REDUCE_TASK_LOG_LEVEL + "has value of " + logLevel);
     }
   }
   
@@ -135,21 +127,21 @@ public class TestChild extends HadoopTestCase {
                 numMaps, numReds);
     job.setMapperClass(MyMapper.class);
     job.setReducerClass(MyReducer.class);
-    assertFalse("Job already has a job tracker connection, before it's submitted",
-                job.isConnected());
+    assertFalse(job.isConnected(),
+        "Job already has a job tracker connection, before it's submitted");
     job.submit();
-    assertTrue("Job doesn't have a job tracker connection, even though it's been submitted",
-               job.isConnected());
+    assertTrue(job.isConnected(),
+        "Job doesn't have a job tracker connection, even though it's been submitted");
     job.waitForCompletion(true);
     assertTrue(job.isSuccessful());
 
     // Check output directory
     FileSystem fs = FileSystem.get(conf);
-    assertTrue("Job output directory doesn't exit!", fs.exists(outDir));
+    assertTrue(fs.exists(outDir), "Job output directory doesn't exit!");
     FileStatus[] list = fs.listStatus(outDir, new OutputFilter());
     int numPartFiles = numReds == 0 ? numMaps : numReds;
-    assertTrue("Number of part-files is " + list.length + " and not "
-        + numPartFiles, list.length == numPartFiles);
+    assertTrue(list.length == numPartFiles, "Number of part-files is " + list.length + " and not "
+        + numPartFiles);
     return job;
   }
 

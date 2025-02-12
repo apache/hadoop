@@ -48,11 +48,11 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**********************************************************
  * MapredLoadTest generates a bunch of work that exercises
@@ -254,7 +254,7 @@ public class TestMapRed extends Configured implements Tool {
   private static int counts = 100;
   private static Random r = new Random();
 
-  @After
+  @AfterEach
   public void cleanup() {
     FileUtil.fullyDelete(TEST_DIR);
   }
@@ -309,12 +309,11 @@ public class TestMapRed extends Configured implements Tool {
         mapOutputFile.setConf(conf);
         Path input = mapOutputFile.getInputFile(0);
         FileSystem fs = FileSystem.get(conf);
-        assertTrue("reduce input exists " + input, fs.exists(input));
+        assertTrue(fs.exists(input), "reduce input exists " + input);
         SequenceFile.Reader rdr = 
           new SequenceFile.Reader(fs, input, conf);
-        assertEquals("is reduce input compressed " + input, 
-                     compressInput, 
-                     rdr.isCompressed());
+        assertEquals(compressInput, rdr.isCompressed(),
+            "is reduce input compressed " + input);
         rdr.close();          
       }
     }
@@ -372,10 +371,10 @@ public class TestMapRed extends Configured implements Tool {
         new Path(testdir, "nullout/part-00000"), conf);
     m = "AAAAAAAAAAAAAA";
     for (int i = 1; r.next(NullWritable.get(), t); ++i) {
-      assertTrue("Unexpected value: " + t, values.remove(t.toString()));
+      assertTrue(values.remove(t.toString()), "Unexpected value: " + t);
       m = m.replace((char)('A' + i - 1), (char)('A' + i));
     }
-    assertTrue("Missing values: " + values.toString(), values.isEmpty());
+    assertTrue(values.isEmpty(), "Missing values: " + values.toString());
   }
 
   private void checkCompression(boolean compressMapOutputs,
@@ -415,16 +414,15 @@ public class TestMapRed extends Configured implements Tool {
       f.writeBytes("Is this done, yet?\n");
       f.close();
       RunningJob rj = JobClient.runJob(conf);
-      assertTrue("job was complete", rj.isComplete());
-      assertTrue("job was successful", rj.isSuccessful());
+      assertTrue(rj.isComplete(), "job was complete");
+      assertTrue(rj.isSuccessful(), "job was successful");
       Path output = new Path(outDir,
                              Task.getOutputName(0));
-      assertTrue("reduce output exists " + output, fs.exists(output));
+      assertTrue(fs.exists(output), "reduce output exists " + output);
       SequenceFile.Reader rdr = 
         new SequenceFile.Reader(fs, output, conf);
-      assertEquals("is reduce output compressed " + output, 
-                   redCompression != CompressionType.NONE, 
-                   rdr.isCompressed());
+      assertEquals(redCompression != CompressionType.NONE,
+          rdr.isCompressed(), "is reduce output compressed " + output);
       rdr.close();
     } finally {
       fs.delete(testdir, true);
@@ -663,7 +661,7 @@ public class TestMapRed extends Configured implements Tool {
     } finally {
       bw.close();
     }
-    assertTrue("testMapRed failed", success);
+    assertTrue(success, "testMapRed failed");
     fs.delete(testdir, true);
   }
 
@@ -778,7 +776,7 @@ public class TestMapRed extends Configured implements Tool {
 
       JobClient.runJob(conf);
     } catch (Exception e) {
-      assertTrue("Threw exception:" + e,false);
+      assertTrue(false, "Threw exception:" + e);
     }
   }
 
