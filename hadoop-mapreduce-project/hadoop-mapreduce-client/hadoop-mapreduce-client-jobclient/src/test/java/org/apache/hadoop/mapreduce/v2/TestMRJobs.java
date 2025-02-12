@@ -753,9 +753,9 @@ public class TestMRJobs {
     }
     
     TaskCompletionEvent[] events = job.getTaskCompletionEvents(0, 2);
-    assertEquals(TaskCompletionEvent.Status.FAILED, 
+    assertEquals(TaskCompletionEvent.Status.FAILED,
         events[0].getStatus());
-    assertEquals(TaskCompletionEvent.Status.TIPFAILED, 
+    assertEquals(TaskCompletionEvent.Status.TIPFAILED,
         events[1].getStatus());
     assertEquals(JobStatus.State.FAILED, job.getJobState());
     verifyFailingMapperCounters(job);

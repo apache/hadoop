@@ -49,19 +49,19 @@ public class TestCounters {
       long expectedValue = initValue;
       Counter counter = new Counters().findCounter("test", "foo");
       counter.setValue(initValue);
-      assertEquals(
-         expectedValue, counter.getValue(), "Counter value is not initialized correctly");
+      assertEquals(expectedValue, counter.getValue(),
+          "Counter value is not initialized correctly");
       for (int j = 0; j < NUMBER_INC; j++) {
         int incValue = rand.nextInt();
         counter.increment(incValue);
         expectedValue += incValue;
-        assertEquals(
-           expectedValue, counter.getValue(), "Counter value is not incremented correctly");
+        assertEquals(expectedValue, counter.getValue(),
+            "Counter value is not incremented correctly");
       }
       expectedValue = rand.nextInt();
       counter.setValue(expectedValue);
-      assertEquals(
-         expectedValue, counter.getValue(), "Counter value is not set correctly");
+      assertEquals(expectedValue, counter.getValue(),
+          "Counter value is not set correctly");
     }
   }
 

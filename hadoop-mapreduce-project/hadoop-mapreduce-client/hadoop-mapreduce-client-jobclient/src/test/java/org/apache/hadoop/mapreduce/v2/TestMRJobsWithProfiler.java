@@ -246,17 +246,17 @@ public class TestMRJobsWithProfiler {
           final BufferedReader br = new BufferedReader(new InputStreamReader(
             localFs.open(profilePath)));
           final String line = br.readLine();
-          assertTrue(
-           line !=null && line.startsWith("JAVA PROFILE"), "No hprof content found!");
+          assertTrue(line !=null && line.startsWith("JAVA PROFILE"),
+              "No hprof content found!");
           br.close();
           assertEquals(0L, localFs.getFileStatus(stdoutPath).getLen());
         } else {
-          assertFalse(
-           localFs.exists(profilePath), "hprof file should not exist");
+          assertFalse(localFs.exists(profilePath),
+              "hprof file should not exist");
         }
       } else {
-        assertFalse(
-         localFs.exists(profilePath), "hprof file should not exist");
+        assertFalse(localFs.exists(profilePath),
+            "hprof file should not exist");
         if (tid.getTaskID().getId() == PROFILED_TASK_ID) {
           // reducer is profiled with Xprof
           final BufferedReader br = new BufferedReader(new InputStreamReader(

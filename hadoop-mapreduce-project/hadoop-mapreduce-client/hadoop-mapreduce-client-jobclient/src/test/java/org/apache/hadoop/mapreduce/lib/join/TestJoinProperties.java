@@ -322,7 +322,7 @@ public class TestJoinProperties {
       assertTrue(val1.get() == 1, kvstr);
     }
 	if (val2 != null) {
-      assertTrue( val2.get() == 2, kvstr);
+      assertTrue(val2.get() == 2, kvstr);
     }
   }
 
