@@ -68,8 +68,8 @@ public class ITestWasbRemoteCallHelper
 
   @BeforeEach
   @Override
-  public void setUp(TestInfo testInfo) throws Exception {
-    super.setUp(testInfo);
+  public void setUp() throws Exception {
+    super.setUp();
     boolean useSecureMode = fs.getConf().getBoolean(KEY_USE_SECURE_MODE, false);
     boolean useAuthorization = fs.getConf()
         .getBoolean(NativeAzureFileSystem.KEY_AZURE_AUTHORIZATION, false);

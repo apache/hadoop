@@ -22,7 +22,6 @@ import java.io.FileNotFoundException;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -48,8 +47,8 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
 
   @BeforeEach
   @Override
-  public void setUp(TestInfo testInfo) throws Exception {
-    super.setUp(testInfo);
+  public void setUp() throws Exception {
+    super.setUp();
     testPath = path("testfile.dat");
     testFolderPath = path("testfolder");
   }
@@ -60,12 +59,12 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
   }
 
   @Override
-  public void tearDown(TestInfo info) throws Exception {
+  public void tearDown() throws Exception {
 
     IOUtils.closeStream(inputStream);
     ContractTestUtils.rm(fs, testPath, true, false);
     ContractTestUtils.rm(fs, testFolderPath, true, false);
-    super.tearDown(info);
+    super.tearDown();
   }
 
   /**
@@ -87,11 +86,11 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
    * scenario for block blobs.
    */
   @Test
-  public void testMultiThreadedBlockBlobReadScenario(TestInfo testInfo) throws Throwable {
+  public void testMultiThreadedBlockBlobReadScenario() throws Throwable {
     assertThrows(FileNotFoundException.class, () -> {
       AzureBlobStorageTestAccount testAccount = createTestAccount();
       NativeAzureFileSystem fs = testAccount.getFileSystem();
-      Path base = methodPath(testInfo);
+      Path base = methodPath();
       Path testFilePath1 = new Path(base, "test1.dat");
       Path renamePath = new Path(base, "test2.dat");
       getInputStreamToTest(fs, testFilePath1);
@@ -111,13 +110,13 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
    * scenario for block blobs.
    */
   @Test
-  public void testMultiThreadBlockBlobSeekScenario(TestInfo testInfo) throws Throwable {
+  public void testMultiThreadBlockBlobSeekScenario() throws Throwable {
     assertThrows(FileNotFoundException.class, () -> {
       /*
        * AzureBlobStorageTestAccount testAccount = createTestAccount();
        * fs = testAccount.getFileSystem();
        */
-      Path base = methodPath(testInfo);
+      Path base = methodPath();
       Path testFilePath1 = new Path(base, "test1.dat");
       Path renamePath = new Path(base, "test2.dat");
 
@@ -286,10 +285,10 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
    * scenario for page blobs.
    */
   @Test
-  public void testMultiThreadedPageBlobReadScenario(TestInfo testInfo) throws Throwable {
+  public void testMultiThreadedPageBlobReadScenario() throws Throwable {
     assertThrows(FileNotFoundException.class, () -> {
       bindToTestAccount(getPageBlobTestStorageAccount());
-      Path base = methodPath(testInfo);
+      Path base = methodPath();
       Path testFilePath1 = new Path(base, "test1.dat");
       Path renamePath = new Path(base, "test2.dat");
 
@@ -310,11 +309,11 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
    */
 
   @Test
-  public void testMultiThreadedPageBlobSeekScenario(TestInfo testInfo) throws Throwable {
+  public void testMultiThreadedPageBlobSeekScenario() throws Throwable {
     assertThrows(FileNotFoundException.class, () -> {
       bindToTestAccount(getPageBlobTestStorageAccount());
 
-      Path base = methodPath(testInfo);
+      Path base = methodPath();
       Path testFilePath1 = new Path(base, "test1.dat");
       Path renamePath = new Path(base, "test2.dat");
 

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azure.integration;
 
-import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,9 +45,10 @@ public abstract class AbstractAzureScaleTest
     return AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS;
   }
 
+  @BeforeEach
   @Override
-  public void setUp(TestInfo info) throws Exception {
-    super.setUp(info);
+  public void setUp() throws Exception {
+    super.setUp();
     LOG.debug("Scale test operation count = {}", getOperationCount());
     assumeScaleTestsEnabled(getConfiguration());
   }

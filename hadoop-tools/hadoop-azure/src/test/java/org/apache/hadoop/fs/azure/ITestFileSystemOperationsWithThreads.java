@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.azure.NativeAzureFileSystem.FolderRenamePending;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -49,8 +48,8 @@ public class ITestFileSystemOperationsWithThreads extends AbstractWasbTestBase {
   private LogCapturer logs = null;
 
   @BeforeEach
-  public void setUp(TestInfo testInfo) throws Exception {
-    super.setUp(testInfo);
+  public void setUp() throws Exception {
+    super.setUp();
     Configuration conf = fs.getConf();
 
     // By default enable parallel threads for rename and delete operations.

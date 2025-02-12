@@ -42,7 +42,6 @@ import org.apache.hadoop.util.StringUtils;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
@@ -89,8 +88,8 @@ public class TestNativeAzureFileSystemAuthorization
 
   @Override
   @BeforeEach
-  public void setUp(TestInfo testInfo) throws Exception {
-    super.setUp(testInfo);
+  public void setUp() throws Exception {
+    super.setUp();
     boolean useSecureMode = fs.getConf().getBoolean(KEY_USE_SECURE_MODE, false);
     boolean useAuthorization = fs.getConf().getBoolean(NativeAzureFileSystem.KEY_AZURE_AUTHORIZATION, false);
     assumeTrue((useSecureMode && useAuthorization),

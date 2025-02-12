@@ -56,8 +56,8 @@ public class ITestNativeAzureFileSystemConcurrencyLive
    */
   @Test
   @Timeout(TEST_EXECUTION_TIMEOUT)
-  public void testConcurrentCreateDeleteFile(TestInfo testInfo) throws Exception {
-    Path testFile = methodPath(testInfo);
+  public void testConcurrentCreateDeleteFile() throws Exception {
+    Path testFile = methodPath();
 
     List<CreateFileTask> tasks = new ArrayList<>(THREAD_COUNT);
 

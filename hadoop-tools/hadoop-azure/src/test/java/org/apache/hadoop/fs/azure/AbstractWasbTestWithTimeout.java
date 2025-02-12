@@ -21,10 +21,10 @@ package org.apache.hadoop.fs.azure;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
-
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.apache.hadoop.test.TestName;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -34,6 +34,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  */
 @Timeout(AzureTestConstants.AZURE_TEST_TIMEOUT)
 public class AbstractWasbTestWithTimeout extends Assertions {
+
+  /**
+   * The name of the current method.
+   */
+  @RegisterExtension
+  public TestName methodName = new TestName();
 
   /**
    * Name the junit thread for the class. This will overridden
@@ -48,8 +54,8 @@ public class AbstractWasbTestWithTimeout extends Assertions {
    * Name the thread to the current test method.
    */
   @BeforeEach
-  public void nameThread(TestInfo testInfo) {
-    Thread.currentThread().setName("JUnit-" + testInfo.getDisplayName());
+  public void nameThread() {
+    Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
   }
 
   /**

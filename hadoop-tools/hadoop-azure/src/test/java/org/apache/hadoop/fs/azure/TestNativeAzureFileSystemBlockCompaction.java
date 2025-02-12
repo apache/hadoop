@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
@@ -48,8 +47,8 @@ public class TestNativeAzureFileSystemBlockCompaction extends AbstractWasbTestBa
   private AzureBlobStorageTestAccount testAccount = null;
 
   @BeforeEach
-  public void setUp(TestInfo testInfo) throws Exception {
-    super.setUp(testInfo);
+  public void setUp( ) throws Exception {
+    super.setUp();
     testAccount = createTestAccount();
     fs = testAccount.getFileSystem();
     Configuration conf = fs.getConf();

@@ -29,7 +29,6 @@ import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
-import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,8 +74,8 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
 
   @BeforeEach
   @Override
-  public void setUp(TestInfo testInfo) throws Exception {
-    super.setUp(testInfo);
+  public void setUp() throws Exception {
+    super.setUp();
     Configuration conf = new Configuration();
     conf.setInt(AzureNativeFileSystemStore.KEY_INPUT_STREAM_VERSION, 1);
 

@@ -142,11 +142,11 @@ public class ITestNativeAzureFileSystemLive extends
    * held lease on the blob when doing some DDL operation
    */
   @Test
-  public void testDeleteThrowsExceptionWithLeaseExistsErrorMessage(TestInfo testInfo)
+  public void testDeleteThrowsExceptionWithLeaseExistsErrorMessage()
       throws Exception {
     LOG.info("Starting test");
     // Create the file
-    Path path = methodPath(testInfo);
+    Path path = methodPath();
     fs.create(path);
     assertPathExists("test file", path);
     NativeAzureFileSystem nfs = fs;
@@ -290,10 +290,10 @@ public class ITestNativeAzureFileSystemLive extends
    * under the same path.
    */
   @Test
-  public void testMkdirOnExistingFolderWithLease(TestInfo testInfo) throws Exception {
+  public void testMkdirOnExistingFolderWithLease() throws Exception {
     SelfRenewingLease lease;
     // Create the folder
-    Path path = methodPath(testInfo);
+    Path path = methodPath();
     fs.mkdirs(path);
     NativeAzureFileSystem nfs = fs;
     String fullKey = nfs.pathToKey(nfs.makeAbsolute(path));

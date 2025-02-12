@@ -64,8 +64,8 @@ public class ITestPageBlobInputStream extends AbstractWasbTestBase {
 
   @BeforeEach
   @Override
-  public void setUp(TestInfo testInfo) throws Exception {
-    super.setUp(testInfo);
+  public void setUp() throws Exception {
+    super.setUp();
     createTestAccount();
 
     hugefile = fs.makeQualified(TEST_FILE_PATH);

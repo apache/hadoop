@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.azure.AbstractWasbTestBase;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
-import org.junit.jupiter.api.TestInfo;
 
 /**
  * This looks like a test, but it is really a command to invoke to
@@ -48,8 +47,8 @@ public class CleanupTestContainers extends AbstractWasbTestBase {
   }
 
   @Test
-  public void testEnumContainers(TestInfo testInfo) throws Throwable {
-    describe(testInfo, "Enumerating all the WASB test containers");
+  public void testEnumContainers() throws Throwable {
+    describe("Enumerating all the WASB test containers");
 
     int count = 0;
     CloudStorageAccount storageAccount = getTestAccount().getRealAccount();
@@ -66,8 +65,8 @@ public class CleanupTestContainers extends AbstractWasbTestBase {
   }
 
   @Test
-  public void testDeleteContainers(TestInfo testInfo) throws Throwable {
-    describe(testInfo, "Delete all the WASB test containers");
+  public void testDeleteContainers() throws Throwable {
+    describe("Delete all the WASB test containers");
     int count = 0;
     CloudStorageAccount storageAccount = getTestAccount().getRealAccount();
     CloudBlobClient blobClient = storageAccount.createCloudBlobClient();

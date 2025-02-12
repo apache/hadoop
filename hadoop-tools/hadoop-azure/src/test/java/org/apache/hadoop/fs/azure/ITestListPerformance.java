@@ -73,8 +73,8 @@ public class ITestListPerformance extends AbstractAzureScaleTest {
 
   @BeforeEach
   @Override
-  public void setUp(TestInfo testInfo) throws Exception {
-    super.setUp(testInfo);
+  public void setUp() throws Exception {
+    super.setUp();
     Configuration conf = getConfiguration();
     // fail fast
     threads = AzureTestUtils.getTestPropertyInt(conf,
