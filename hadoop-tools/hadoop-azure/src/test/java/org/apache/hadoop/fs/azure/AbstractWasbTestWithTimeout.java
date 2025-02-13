@@ -39,7 +39,7 @@ public class AbstractWasbTestWithTimeout extends Assertions {
    * The name of the current method.
    */
   @RegisterExtension
-  public TestName methodName = new TestName();
+  private TestName methodName = new TestName();
 
   /**
    * Name the junit thread for the class. This will overridden

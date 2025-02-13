@@ -26,14 +26,14 @@ import org.junit.jupiter.api.extension.ExtensionContext;
  */
 public class TestName implements BeforeEachCallback {
 
-    private volatile String name;
+  private volatile String name;
 
-    @Override
-    public void beforeEach(ExtensionContext extensionContext) throws Exception {
-        name = extensionContext.getTestMethod().get().getName();
-    }
+  @Override
+  public void beforeEach(ExtensionContext extensionContext) throws Exception {
+    name = extensionContext.getTestMethod().get().getName();
+  }
 
-    public String getMethodName() {
-        return this.name;
-    }
+  public String getMethodName() {
+    return this.name;
+  }
 }
