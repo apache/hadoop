@@ -1831,7 +1831,7 @@ public class TestCombineFileInputFormat {
     }
   }
 
-  /*public static void main(String[] args) throws Exception{
+  public static void main(String[] args) throws Exception{
 
     // if there are some parameters specified, then use those paths
     if (args.length != 0) {
@@ -1841,5 +1841,5 @@ public class TestCombineFileInputFormat {
       TestCombineFileInputFormat test = new TestCombineFileInputFormat();
       test.testSplitPlacement();
     }
-  }*/
+  }
 }
