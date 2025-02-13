@@ -90,6 +90,7 @@ public class BlobDeleteHandler extends ListActionTaker {
   private boolean deleteInternal(final Path path)
       throws AzureBlobFileSystemException {
     getAbfsClient().deleteBlobPath(path, null, tracingContext);
+    getAbfsClient().incrementAbfsDeleteFile();
     deleteCount.incrementAndGet();
     return true;
   }

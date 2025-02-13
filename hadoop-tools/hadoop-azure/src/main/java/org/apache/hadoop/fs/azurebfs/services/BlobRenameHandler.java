@@ -121,6 +121,7 @@ public class BlobRenameHandler extends ListActionTaker {
    * @throws AzureBlobFileSystemException if server call fails
    */
   public boolean execute() throws AzureBlobFileSystemException {
+    getAbfsClient().incrementAbfsRenamePath();
     PathInformation pathInformation = getPathInformation(src, tracingContext);
     boolean result = false;
     if (preCheck(src, dst, pathInformation)) {
@@ -439,7 +440,9 @@ public class BlobRenameHandler extends ListActionTaker {
     boolean operated = false;
     try {
       copyPath(path, destinationPathForBlobPartOfRenameSrcDir, leaseId);
+      getAbfsClient().incrementAbfsCopyFile();
       getAbfsClient().deleteBlobPath(path, leaseId, tracingContext);
+      getAbfsClient().incrementAbfsDeleteFile();
       operated = true;
     } finally {
       if (abfsLease != null) {

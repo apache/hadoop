@@ -424,7 +424,7 @@ public class AbfsBlobClient extends AbfsClient {
     }
     List<BlobListResultEntrySchema> filteredEntries = new ArrayList<>();
     for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
-      if (!takeListPathAtomicRenameKeyAction(entry.path(),
+      if (!takeListPathAtomicRenameKeyAction(entry.path(), entry.isDirectory(),
           entry.contentLength().intValue(), tracingContext)) {
         filteredEntries.add(entry);
       }
@@ -444,6 +444,7 @@ public class AbfsBlobClient extends AbfsClient {
       }
       getPathStatus(parentPath.toUri().getPath(), false,
           tracingContext, null);
+      incrementAbfsGetPathStatus();
     } catch (AbfsRestOperationException ex) {
       if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
         throw new FileNotFoundException("Cannot create file "
@@ -451,8 +452,6 @@ public class AbfsBlobClient extends AbfsClient {
             + " because parent folder does not exist.");
       }
       throw ex;
-    } finally {
-      getAbfsCounters().incrementCounter(CALL_GET_FILE_STATUS, 1);
     }
   }
 
@@ -510,6 +509,7 @@ public class AbfsBlobClient extends AbfsClient {
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
+    incrementAbfsCreateFile();
     return createPathRestOp(path, false, false, false, eTag,
         contextEncryptionAdapter, tracingContext);
   }
@@ -807,7 +807,6 @@ public class AbfsBlobClient extends AbfsClient {
     BlobRenameHandler blobRenameHandler = getBlobRenameHandler(source,
         destination, sourceEtag, isAtomicRenameKey(source), tracingContext
     );
-    incrementAbfsRenamePath();
     if (blobRenameHandler.execute()) {
       final AbfsUriQueryBuilder abfsUriQueryBuilder
           = createDefaultUriQueryBuilder();
@@ -1751,6 +1750,7 @@ public class AbfsBlobClient extends AbfsClient {
       pendingJsonFileStatus = getPathStatus(
           pendingJsonPath.toUri().getPath(), tracingContext,
           null, false);
+      incrementAbfsGetPathStatus();
       if (checkIsDir(pendingJsonFileStatus.getResult())) {
         return;
       }
@@ -1805,11 +1805,11 @@ public class AbfsBlobClient extends AbfsClient {
    * @throws AzureBlobFileSystemException server error
    */
   private boolean takeListPathAtomicRenameKeyAction(final Path path,
-      final int renamePendingJsonLen,
+      final boolean isDirectory, final int renamePendingJsonLen,
       final TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     if (path == null || path.isRoot() || !isAtomicRenameKey(
-        path.toUri().getPath()) || !path.toUri()
+        path.toUri().getPath()) || isDirectory || !path.toUri()
         .getPath()
         .endsWith(RenameAtomicity.SUFFIX)) {
       return false;
@@ -1837,7 +1837,7 @@ public class AbfsBlobClient extends AbfsClient {
   }
 
   @VisibleForTesting
-  RenameAtomicity getRedoRenameAtomicity(final Path renamePendingJsonPath,
+  public RenameAtomicity getRedoRenameAtomicity(final Path renamePendingJsonPath,
       int fileLen,
       final TracingContext tracingContext) {
     return new RenameAtomicity(renamePendingJsonPath,

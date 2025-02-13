@@ -54,6 +54,7 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_CREATED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_DELETED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.ERROR_IGNORED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_COPIED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_CREATED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_DELETED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.GET_RESPONSES;
@@ -134,7 +135,8 @@ public class AbfsCountersImpl implements AbfsCounters {
       SERVER_UNAVAILABLE,
       RENAME_RECOVERY,
       METADATA_INCOMPLETE_RENAME_FAILURES,
-      RENAME_PATH_ATTEMPTS
+      RENAME_PATH_ATTEMPTS,
+      FILES_COPIED
   };
 
   private static final AbfsStatistic[] DURATION_TRACKER_LIST = {
