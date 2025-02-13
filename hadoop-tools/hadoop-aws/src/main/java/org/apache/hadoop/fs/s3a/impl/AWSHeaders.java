@@ -39,6 +39,7 @@ public interface AWSHeaders {
   String ETAG = "ETag";
   String LAST_MODIFIED = "Last-Modified";
   String IF_NONE_MATCH = "If-None-Match";
+  String IF_MATCH = "If-Match";
 
   /*
    * Amazon HTTP Headers used by S3A.

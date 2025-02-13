@@ -35,6 +35,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_ARRAY;
 import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_MULTIPART;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_OVERWRITE_SUPPORTED;
 import static org.apache.hadoop.fs.s3a.Constants.IF_NONE_MATCH_STAR;
 import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
@@ -102,12 +103,20 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
     private static void createFileWithIfNoneMatchFlag(
             FileSystem fs,
             Path path,
-            byte[] data) throws Exception {
-        FSDataOutputStream stream = getStreamWithIfNoneMatchFlag(fs, path);
+            byte[] data,
+            boolean forceMultipart) throws Exception {
+        FSDataOutputStream stream = getStreamWithIfNoneMatchFlag(fs, path, forceMultipart);
         if (data != null && data.length > 0) {
             stream.write(data);
         }
         stream.close();
+    }
+
+    private static void createFileWithIfNoneMatchFlag(
+            FileSystem fs,
+            Path path,
+            byte[] data) throws Exception {
+        createFileWithIfNoneMatchFlag(fs, path, data, false);
     }
 
     /**
@@ -117,11 +126,21 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
      */
      private static FSDataOutputStream getStreamWithIfNoneMatchFlag(
             FileSystem fs,
-            Path path) throws Exception {
+            Path path,
+            boolean forceMultipart) throws Exception {
         FSDataOutputStreamBuilder builder = fs.createFile(path);
         builder.must(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE, "true");
         builder.opt(FS_S3A_CREATE_HEADER + "." + IF_NONE_MATCH, IF_NONE_MATCH_STAR);
+        if (forceMultipart) {
+            builder.opt(FS_S3A_CREATE_MULTIPART, "true");
+        }
         return builder.create().build();
+    }
+
+    private static FSDataOutputStream getStreamWithIfNoneMatchFlag(
+            FileSystem fs,
+            Path path) throws Exception {
+        return getStreamWithIfNoneMatchFlag(fs, path, false);
     }
 
     @Test
@@ -158,14 +177,14 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
         Assume.assumeTrue("Skipping as multipart upload not supported",
                 fs.hasPathCapability(testFile, STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED));
 
-        createFileWithIfNoneMatchFlag(fs, testFile, MULTIPART_FILE_BYTES);
+        createFileWithIfNoneMatchFlag(fs, testFile, MULTIPART_FILE_BYTES, true);
 
         RemoteFileChangedException firstException = intercept(RemoteFileChangedException.class,
-                () -> createFileWithIfNoneMatchFlag(fs, testFile, MULTIPART_FILE_BYTES));
+                () -> createFileWithIfNoneMatchFlag(fs, testFile, MULTIPART_FILE_BYTES, true));
         assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, firstException);
 
         RemoteFileChangedException secondException = intercept(RemoteFileChangedException.class,
-                () -> createFileWithIfNoneMatchFlag(fs, testFile, MULTIPART_FILE_BYTES));
+                () -> createFileWithIfNoneMatchFlag(fs, testFile, MULTIPART_FILE_BYTES, true));
         assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, secondException);
     }
 
@@ -179,7 +198,7 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
                 fs.hasPathCapability(testFile, STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED));
 
         // Create a file with multipart upload but do not close the stream
-        FSDataOutputStream stream = getStreamWithIfNoneMatchFlag(fs, testFile);
+        FSDataOutputStream stream = getStreamWithIfNoneMatchFlag(fs, testFile, true);
         stream.write(MULTIPART_FILE_BYTES);
 
         // create and close another small file in parallel
@@ -200,11 +219,11 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
                 fs.hasPathCapability(testFile, STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED));
 
         // Create a file with multipart upload but do not close the stream
-        FSDataOutputStream stream = getStreamWithIfNoneMatchFlag(fs, testFile);
+        FSDataOutputStream stream = getStreamWithIfNoneMatchFlag(fs, testFile, true);
         stream.write(MULTIPART_FILE_BYTES);
 
         // create and close another multipart file in parallel
-        createFileWithIfNoneMatchFlag(fs, testFile, MULTIPART_FILE_BYTES);
+        createFileWithIfNoneMatchFlag(fs, testFile, MULTIPART_FILE_BYTES, true);
 
         // Closing the first stream should throw RemoteFileChangedException
         RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream::close);

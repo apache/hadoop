@@ -67,6 +67,7 @@ import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PART_UPLOAD_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.IF_NONE_MATCH_STAR;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.UNKNOWN_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.setRequestTimeout;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_MATCH;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_NONE_MATCH;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
@@ -367,16 +368,16 @@ public class RequestFactoryImpl implements RequestFactory {
 
     if (options != null) {
       if (options.isNoObjectOverwrite()) {
-        LOG.debug("setting if none-match");
+        LOG.debug("setting If-None-Match");
         putObjectRequestBuilder.overrideConfiguration(
                 override -> override.putHeader(IF_NONE_MATCH, IF_NONE_MATCH_STAR));
       }
       if (options.hasFlag(WriteObjectFlags.ConditionalOverwriteEtag)) {
-        // TODO: add etag
-        LOG.warn("etag match not yet supported");
+        LOG.debug("setting If-Match");
+        putObjectRequestBuilder.overrideConfiguration(
+                override -> override.putHeader(IF_MATCH, options.getEtagOverwrite()));
       }
     }
-
 
     return prepareRequest(putObjectRequestBuilder);
   }
@@ -560,13 +561,14 @@ public class RequestFactoryImpl implements RequestFactory {
     requestBuilder = CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
             .multipartUpload(CompletedMultipartUpload.builder().parts(partETags).build());
     if (putOptions.isNoObjectOverwrite()) {
-      LOG.debug("setting if none-match");
+      LOG.debug("setting If-None-Match");
       requestBuilder.overrideConfiguration(
               override -> override.putHeader(IF_NONE_MATCH, IF_NONE_MATCH_STAR));
     }
     if (!isEmpty(putOptions.getEtagOverwrite())) {
-      // TODO: add etag
-      LOG.warn("etag match not yet supported");
+      LOG.debug("setting if If-Match");
+      requestBuilder.overrideConfiguration(
+              override -> override.putHeader(IF_MATCH, putOptions.getEtagOverwrite()));
     }
 
     return prepareRequest(requestBuilder);
