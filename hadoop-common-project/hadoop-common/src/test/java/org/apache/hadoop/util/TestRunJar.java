@@ -18,10 +18,10 @@
 package org.apache.hadoop.util;
 
 import static org.apache.hadoop.util.RunJar.MATCH_ANY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -46,10 +46,9 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestRunJar {
   private static final String FOOBAR_TXT = "foobar.txt";
@@ -62,7 +61,7 @@ public class TestRunJar {
   private static final long MOCKED_NOW = 1_460_389_972_000L;
   private static final long MOCKED_NOW_PLUS_TWO_SEC = MOCKED_NOW + 2_000;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_ROOT_DIR = GenericTestUtils.getTestDir(getClass().getSimpleName());
     if (!TEST_ROOT_DIR.exists()) {
@@ -72,7 +71,7 @@ public class TestRunJar {
     makeTestJar();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     FileUtil.fullyDelete(TEST_ROOT_DIR);
   }
@@ -106,10 +105,10 @@ public class TestRunJar {
     // Unjar everything
     RunJar.unJar(new File(TEST_ROOT_DIR, TEST_JAR_NAME),
                  unjarDir, MATCH_ANY);
-    assertTrue("foobar unpacked",
-               new File(unjarDir, TestRunJar.FOOBAR_TXT).exists());
-    assertTrue("foobaz unpacked",
-               new File(unjarDir, FOOBAZ_TXT).exists());
+    assertTrue(new File(unjarDir, TestRunJar.FOOBAR_TXT).exists(),
+        "foobar unpacked");
+    assertTrue(new File(unjarDir, FOOBAZ_TXT).exists(),
+        "foobaz unpacked");
   }
 
   /**
@@ -123,10 +122,9 @@ public class TestRunJar {
     RunJar.unJar(new File(TEST_ROOT_DIR, TEST_JAR_NAME),
                  unjarDir,
                  Pattern.compile(".*baz.*"));
-    assertFalse("foobar not unpacked",
-                new File(unjarDir, TestRunJar.FOOBAR_TXT).exists());
-    assertTrue("foobaz unpacked",
-               new File(unjarDir, FOOBAZ_TXT).exists());
+    assertFalse(new File(unjarDir, TestRunJar.FOOBAR_TXT).exists(),
+        "foobar not unpacked");
+    assertTrue(new File(unjarDir, FOOBAZ_TXT).exists(), "foobaz unpacked");
   }
 
   private File generateBigJar(File dir) throws Exception {
@@ -157,18 +155,18 @@ public class TestRunJar {
   public void testBigJar() throws Exception {
     Random r = new Random(System.currentTimeMillis());
     File dir = new File(TEST_ROOT_DIR, Long.toHexString(r.nextLong()));
-    Assert.assertTrue(dir.mkdirs());
+    assertTrue(dir.mkdirs());
     File input = generateBigJar(dir);
     File output = new File(dir, "job2.jar");
     try {
       try (InputStream is = new FileInputStream(input)) {
         RunJar.unJarAndSave(is, dir, "job2.jar", Pattern.compile(".*"));
       }
-      Assert.assertEquals(input.length(), output.length());
+      assertEquals(input.length(), output.length());
       for (int i = 0; i < 10; ++i) {
         File subdir = new File(dir, ((i % 2 == 0) ? "dir/" : ""));
         File f = new File(subdir, "f" + Integer.toString(i));
-        Assert.assertEquals(756, f.length());
+        assertEquals(756, f.length());
       }
     } finally {
       // Clean up
@@ -186,14 +184,16 @@ public class TestRunJar {
             unjarDir, MATCH_ANY);
 
     String failureMessage = "Last modify time was lost during unJar";
-    assertEquals(failureMessage, MOCKED_NOW, new File(unjarDir, TestRunJar.FOOBAR_TXT).lastModified());
-    assertEquals(failureMessage, MOCKED_NOW_PLUS_TWO_SEC, new File(unjarDir, FOOBAZ_TXT).lastModified());
+    assertEquals(MOCKED_NOW, new File(unjarDir, TestRunJar.FOOBAR_TXT).lastModified(),
+        failureMessage);
+    assertEquals(MOCKED_NOW_PLUS_TWO_SEC, new File(unjarDir, FOOBAZ_TXT).lastModified(),
+        failureMessage);
   }
 
   private File getUnjarDir(String dirName) {
     File unjarDir = new File(TEST_ROOT_DIR, dirName);
-    assertFalse("unjar dir shouldn't exist at test start",
-                new File(unjarDir, TestRunJar.FOOBAR_TXT).exists());
+    assertFalse(new File(unjarDir, TestRunJar.FOOBAR_TXT).exists(),
+        "unjar dir shouldn't exist at test start");
     return unjarDir;
   }
 

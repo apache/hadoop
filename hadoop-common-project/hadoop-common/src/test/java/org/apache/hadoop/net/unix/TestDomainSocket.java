@@ -37,12 +37,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.DomainSocket.DomainChannel;
@@ -51,23 +50,30 @@ import org.apache.hadoop.util.Shell;
 
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 public class TestDomainSocket {
   private static TemporarySocketDirectory sockDir;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() {
     sockDir = new TemporarySocketDirectory();
     DomainSocket.disableBindPathValidation();
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws IOException {
     sockDir.close();
   }
   
-  @Before
+  @BeforeEach
   public void before() {
-    Assume.assumeTrue(DomainSocket.getLoadingFailureReason() == null);
+    assumeTrue(DomainSocket.getLoadingFailureReason() == null);
   }
     
   /**
@@ -76,7 +82,8 @@ public class TestDomainSocket {
    *
    * @throws IOException
    */
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testSocketCreateAndClose() throws IOException {
     DomainSocket serv = DomainSocket.bindAndListen(
       new File(sockDir.getDir(), "test_sock_create_and_close").
@@ -89,9 +96,10 @@ public class TestDomainSocket {
    *
    * @throws IOException
    */
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testSocketPathSetGet() throws IOException {
-    Assert.assertEquals("/var/run/hdfs/sock.100",
+    assertEquals("/var/run/hdfs/sock.100",
         DomainSocket.getEffectivePath("/var/run/hdfs/sock._PORT", 100));
   }
 
@@ -100,7 +108,8 @@ public class TestDomainSocket {
    *
    * @throws IOException
    */
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testSocketReadEof() throws Exception {
     final String TEST_PATH = new File(sockDir.getDir(),
         "testSocketReadEof").getAbsolutePath();
@@ -119,7 +128,7 @@ public class TestDomainSocket {
           buf[i] = 0;
         }
         try {
-          Assert.assertEquals(-1, conn.getInputStream().read());
+          assertEquals(-1, conn.getInputStream().read());
         } catch (IOException e) {
           throw new RuntimeException("unexpected IOException", e);
         }
@@ -140,7 +149,8 @@ public class TestDomainSocket {
    *
    * @throws IOException
    */
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testSocketAcceptAndClose() throws Exception {
     final String TEST_PATH =
         new File(sockDir.getDir(), "test_sock_accept_and_close").getAbsolutePath();
@@ -245,12 +255,14 @@ public class TestDomainSocket {
     serverFuture.get(2, TimeUnit.MINUTES);
   }
   
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testAsyncCloseDuringWrite() throws Exception {
     testAsyncCloseDuringIO(true);
   }
   
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testAsyncCloseDuringRead() throws Exception {
     testAsyncCloseDuringIO(false);
   }
@@ -260,7 +272,8 @@ public class TestDomainSocket {
    *
    * @throws IOException
    */
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testInvalidOperations() throws IOException {
     try {
       DomainSocket.connect(
@@ -276,7 +289,8 @@ public class TestDomainSocket {
    *
    * @throws IOException
    */
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testServerOptions() throws Exception {
     final String TEST_PATH = new File(sockDir.getDir(),
         "test_sock_server_options").getAbsolutePath();
@@ -286,19 +300,19 @@ public class TestDomainSocket {
     int newBufSize = bufSize / 2;
     serv.setAttribute(DomainSocket.RECEIVE_BUFFER_SIZE, newBufSize);
     int nextBufSize = serv.getAttribute(DomainSocket.RECEIVE_BUFFER_SIZE);
-    Assert.assertEquals(newBufSize, nextBufSize);
+    assertEquals(newBufSize, nextBufSize);
     // Let's set a server timeout
     int newTimeout = 1000;
     serv.setAttribute(DomainSocket.RECEIVE_TIMEOUT, newTimeout);
     int nextTimeout = serv.getAttribute(DomainSocket.RECEIVE_TIMEOUT);
-    Assert.assertEquals(newTimeout, nextTimeout);
+    assertEquals(newTimeout, nextTimeout);
 
     ExecutorService exeServ = Executors.newSingleThreadExecutor();
     Callable<Void> callable = new Callable<Void>() {
       public Void call() {
         try {
           serv.accept();
-          Assert.fail("expected the accept() to time out and fail");
+          fail("expected the accept() to time out and fail");
         } catch (SocketTimeoutException e) {
           GenericTestUtils.assertExceptionContains("accept(2) error: ", e);
         } catch (AsynchronousCloseException e) {
@@ -313,7 +327,7 @@ public class TestDomainSocket {
     Thread.sleep(500);
     serv.close(true);
     future.get();
-    Assert.assertFalse(serv.isOpen());
+    assertFalse(serv.isOpen());
   }
   
   /**
@@ -454,17 +468,17 @@ public class TestDomainSocket {
           ReadStrategy reader = readStrategyClass.newInstance();
           reader.init(conn);
           reader.readFully(in1, 0, in1.length);
-          Assert.assertTrue(Arrays.equals(clientMsg1, in1));
+          assertTrue(Arrays.equals(clientMsg1, in1));
           WriteStrategy writer = writeStrategyClass.newInstance();
           writer.init(conn);
           writer.write(serverMsg1);
           InputStream connInputStream = conn.getInputStream();
           int in2 = connInputStream.read();
-          Assert.assertEquals((int)clientMsg2, in2);
+          assertEquals((int)clientMsg2, in2);
           conn.close();
         } catch (Throwable e) {
           threadResults.add(e);
-          Assert.fail(e.getMessage());
+          fail(e.getMessage());
         }
         threadResults.add(new Success());
       }
@@ -483,7 +497,7 @@ public class TestDomainSocket {
           reader.init(client);
           byte in1[] = new byte[serverMsg1.length];
           reader.readFully(in1, 0, in1.length);
-          Assert.assertTrue(Arrays.equals(serverMsg1, in1));
+          assertTrue(Arrays.equals(serverMsg1, in1));
           OutputStream clientOutputStream = client.getOutputStream();
           clientOutputStream.write(clientMsg2);
           client.close();
@@ -498,7 +512,7 @@ public class TestDomainSocket {
     for (int i = 0; i < 2; i++) {
       Throwable t = threadResults.take();
       if (!(t instanceof Success)) {
-        Assert.fail(t.getMessage() + ExceptionUtils.getStackTrace(t));
+        fail(t.getMessage() + ExceptionUtils.getStackTrace(t));
       }
     }
     serverThread.join(120000);
@@ -508,37 +522,43 @@ public class TestDomainSocket {
     }
   }
 
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testClientServerOutStreamInStream() throws Exception {
     testClientServer1(OutputStreamWriteStrategy.class,
         InputStreamReadStrategy.class, null);
   }
 
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testClientServerOutStreamInStreamWithSocketpair() throws Exception {
     testClientServer1(OutputStreamWriteStrategy.class,
         InputStreamReadStrategy.class, DomainSocket.socketpair());
   }
 
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testClientServerOutStreamInDbb() throws Exception {
     testClientServer1(OutputStreamWriteStrategy.class,
         DirectByteBufferReadStrategy.class, null);
   }
 
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testClientServerOutStreamInDbbWithSocketpair() throws Exception {
     testClientServer1(OutputStreamWriteStrategy.class,
         DirectByteBufferReadStrategy.class, DomainSocket.socketpair());
   }
 
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testClientServerOutStreamInAbb() throws Exception {
     testClientServer1(OutputStreamWriteStrategy.class,
         ArrayBackedByteBufferReadStrategy.class, null);
   }
 
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testClientServerOutStreamInAbbWithSocketpair() throws Exception {
     testClientServer1(OutputStreamWriteStrategy.class,
         ArrayBackedByteBufferReadStrategy.class, DomainSocket.socketpair());
@@ -589,7 +609,8 @@ public class TestDomainSocket {
    *
    * @throws IOException
    */
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testFdPassing() throws Exception {
     final String TEST_PATH =
         new File(sockDir.getDir(), "test_sock").getAbsolutePath();
@@ -614,14 +635,14 @@ public class TestDomainSocket {
           byte in1[] = new byte[clientMsg1.length];
           InputStream connInputStream = conn.getInputStream();
           IOUtils.readFully(connInputStream, in1, 0, in1.length);
-          Assert.assertTrue(Arrays.equals(clientMsg1, in1));
+          assertTrue(Arrays.equals(clientMsg1, in1));
           DomainSocket domainConn = (DomainSocket)conn;
           domainConn.sendFileDescriptors(passedFds, serverMsg1, 0,
               serverMsg1.length);
           conn.close();
         } catch (Throwable e) {
           threadResults.add(e);
-          Assert.fail(e.getMessage());
+          fail(e.getMessage());
         }
         threadResults.add(new Success());
       }
@@ -640,11 +661,11 @@ public class TestDomainSocket {
           FileInputStream recvFis[] = new FileInputStream[passedFds.length];
           int r = domainConn.
               recvFileInputStreams(recvFis, in1, 0, in1.length - 1);
-          Assert.assertTrue(r > 0);
+          assertTrue(r > 0);
           IOUtils.readFully(clientInputStream, in1, r, in1.length - r);
-          Assert.assertTrue(Arrays.equals(serverMsg1, in1));
+          assertTrue(Arrays.equals(serverMsg1, in1));
           for (int i = 0; i < passedFds.length; i++) {
-            Assert.assertNotNull(recvFis[i]);
+            assertNotNull(recvFis[i]);
             passedFiles[i].checkInputStream(recvFis[i]);
           }
           for (FileInputStream fis : recvFis) {
@@ -662,7 +683,7 @@ public class TestDomainSocket {
     for (int i = 0; i < 2; i++) {
       Throwable t = threadResults.take();
       if (!(t instanceof Success)) {
-        Assert.fail(t.getMessage() + ExceptionUtils.getStackTrace(t));
+        fail(t.getMessage() + ExceptionUtils.getStackTrace(t));
       }
     }
     serverThread.join(120000);
@@ -700,7 +721,8 @@ public class TestDomainSocket {
    *
    * @throws IOException
    */
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testFdPassingPathSecurity() throws Exception {
     TemporarySocketDirectory tmp = new TemporarySocketDirectory();
     try {
@@ -739,7 +761,8 @@ public class TestDomainSocket {
     }
   }
 
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testShutdown() throws Exception {
     final AtomicInteger bytesRead = new AtomicInteger(0);
     final AtomicBoolean failed = new AtomicBoolean(false);
@@ -765,11 +788,11 @@ public class TestDomainSocket {
     socks[0].getOutputStream().write(1);
     socks[0].getOutputStream().write(2);
     socks[0].getOutputStream().write(3);
-    Assert.assertTrue(readerThread.isAlive());
+    assertTrue(readerThread.isAlive());
     socks[0].shutdown();
     readerThread.join();
-    Assert.assertFalse(failed.get());
-    Assert.assertEquals(3, bytesRead.get());
+    assertFalse(failed.get());
+    assertEquals(3, bytesRead.get());
     IOUtils.cleanupWithLogger(null, socks);
   }
 }

@@ -30,14 +30,12 @@ import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 
-import org.assertj.core.api.Assertions;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.ajax.JSON;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +70,8 @@ import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestHttpServer extends HttpServerFunctionalTest {
   static final Logger LOG = LoggerFactory.getLogger(TestHttpServer.class);
@@ -143,7 +143,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }
   }
 
-  @BeforeClass public static void setup() throws Exception {
+  @BeforeAll
+  public static void setup() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, MAX_THREADS);
     conf.setBoolean(
@@ -160,7 +161,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     LOG.info("HTTP server started: "+ baseUrl);
   }
   
-  @AfterClass public static void cleanup() throws Exception {
+  @AfterAll
+  public static void cleanup() throws Exception {
     server.stop();
   }
   
@@ -181,8 +183,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
             assertEquals("a:b\nc:d\n",
                          readOutput(new URL(baseUrl, "/echo?a=b&c=d")));
             int serverThreads = server.webServer.getThreadPool().getThreads();
-            assertTrue("More threads are started than expected, Server Threads count: "
-                    + serverThreads, serverThreads <= MAX_THREADS);
+            assertTrue(serverThreads <= MAX_THREADS,
+                "More threads are started than expected, Server Threads count: " + serverThreads);
             System.out.println("Number of threads = " + serverThreads +
                 " which is less or equal than the max = " + MAX_THREADS);
           } catch (Exception e) {
@@ -280,9 +282,9 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     final HttpURLConnection conn =
         (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
-    Assertions.assertThat(conn.getResponseCode()).isEqualTo(200);
+    assertThat(conn.getResponseCode()).isEqualTo(200);
     final int after = metrics.responses2xx();
-    Assertions.assertThat(after).isGreaterThan(before);
+    assertThat(after).isGreaterThan(before);
   }
 
   /**
@@ -329,7 +331,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     try {
       HttpURLConnection conn = getHttpURLConnection(httpServer);
       String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
-      assertTrue("X-FRAME-OPTIONS is absent in the header", xfoHeader != null);
+      assertTrue(xfoHeader != null, "X-FRAME-OPTIONS is absent in the header");
       assertTrue(xfoHeader.endsWith(option.toString()));
     } finally {
       httpServer.stop();
@@ -345,7 +347,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     try {
       HttpURLConnection conn = getHttpURLConnection(httpServer);
       String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
-      assertTrue("Unexpected X-FRAME-OPTIONS in header", xfoHeader == null);
+      assertTrue(xfoHeader == null, "Unexpected X-FRAME-OPTIONS in header");
     } finally {
       httpServer.stop();
     }
@@ -542,9 +544,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.doReturn(null).when(request).getParameterValues("dummy");
     RequestQuoter requestQuoter = new RequestQuoter(request);
     String[] parameterValues = requestQuoter.getParameterValues("dummy");
-    Assert.assertNull(
-        "It should return null " + "when there are no values for the parameter",
-        parameterValues);
+    assertNull(parameterValues,
+        "It should return null when there are no values for the parameter");
   }
 
   @Test
@@ -554,8 +555,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.doReturn(values).when(request).getParameterValues("dummy");
     RequestQuoter requestQuoter = new RequestQuoter(request);
     String[] parameterValues = requestQuoter.getParameterValues("dummy");
-    Assert.assertTrue("It should return Parameter Values", Arrays.equals(
-        values, parameterValues));
+    assertTrue(Arrays.equals(values, parameterValues),
+        "It should return Parameter Values");
   }
 
   @SuppressWarnings("unchecked")
@@ -585,32 +586,32 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
     //authorization OFF
-    Assert.assertTrue(HttpServer2.hasAdministratorAccess(context, request, response));
+    assertTrue(HttpServer2.hasAdministratorAccess(context, request, response));
 
     //authorization ON & user NULL
     response = Mockito.mock(HttpServletResponse.class);
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
-    Assert.assertFalse(HttpServer2.hasAdministratorAccess(context, request, response));
+    assertFalse(HttpServer2.hasAdministratorAccess(context, request, response));
     Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_FORBIDDEN), Mockito.anyString());
 
     //authorization ON & user NOT NULL & ACLs NULL
     response = Mockito.mock(HttpServletResponse.class);
     Mockito.when(request.getRemoteUser()).thenReturn("foo");
-    Assert.assertTrue(HttpServer2.hasAdministratorAccess(context, request, response));
+    assertTrue(HttpServer2.hasAdministratorAccess(context, request, response));
 
     //authorization ON & user NOT NULL & ACLs NOT NULL & user not in ACLs
     response = Mockito.mock(HttpServletResponse.class);
     AccessControlList acls = Mockito.mock(AccessControlList.class);
     Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation>any())).thenReturn(false);
     Mockito.when(context.getAttribute(HttpServer2.ADMINS_ACL)).thenReturn(acls);
-    Assert.assertFalse(HttpServer2.hasAdministratorAccess(context, request, response));
+    assertFalse(HttpServer2.hasAdministratorAccess(context, request, response));
     Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_FORBIDDEN), Mockito.anyString());
 
     //authorization ON & user NOT NULL & ACLs NOT NULL & user in in ACLs
     response = Mockito.mock(HttpServletResponse.class);
     Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation>any())).thenReturn(true);
     Mockito.when(context.getAttribute(HttpServer2.ADMINS_ACL)).thenReturn(acls);
-    Assert.assertTrue(HttpServer2.hasAdministratorAccess(context, request, response));
+    assertTrue(HttpServer2.hasAdministratorAccess(context, request, response));
 
   }
 
@@ -623,7 +624,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
     //requires admin access to instrumentation, FALSE by default
-    Assert.assertTrue(HttpServer2.isInstrumentationAccessAllowed(context, request, response));
+    assertTrue(HttpServer2.isInstrumentationAccessAllowed(context, request, response));
 
     //requires admin access to instrumentation, TRUE
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN, true);
@@ -631,7 +632,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     AccessControlList acls = Mockito.mock(AccessControlList.class);
     Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation>any())).thenReturn(false);
     Mockito.when(context.getAttribute(HttpServer2.ADMINS_ACL)).thenReturn(acls);
-    Assert.assertFalse(HttpServer2.isInstrumentationAccessAllowed(context, request, response));
+    assertFalse(HttpServer2.isInstrumentationAccessAllowed(context, request, response));
   }
 
   @Test public void testBindAddress() throws Exception {

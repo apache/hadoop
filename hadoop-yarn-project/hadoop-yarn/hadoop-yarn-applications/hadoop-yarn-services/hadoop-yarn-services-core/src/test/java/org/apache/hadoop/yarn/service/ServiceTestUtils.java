@@ -51,8 +51,9 @@ import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -393,17 +394,22 @@ public class ServiceTestUtils {
    * Watcher to initialize yarn service base path under target and deletes the
    * the test directory when finishes.
    */
-  public static class ServiceFSWatcher extends TestWatcher {
+  public static class ServiceFSWatcher implements BeforeEachCallback, AfterEachCallback {
     private YarnConfiguration conf;
     private SliderFileSystem fs;
     private java.nio.file.Path serviceBasePath;
 
     @Override
-    protected void starting(Description description) {
+    public void afterEach(ExtensionContext context) throws Exception {
+      delete(context);
+    }
+
+    @Override
+    public void beforeEach(ExtensionContext context) throws Exception {
       conf = new YarnConfiguration();
-      delete(description);
+      delete(context);
       serviceBasePath = Paths.get("target",
-          description.getClassName(), description.getMethodName());
+          getClassName(context), getMethodName(context));
       conf.set(YARN_SERVICE_BASE_PATH, serviceBasePath.toString());
       try {
         Files.createDirectories(serviceBasePath);
@@ -415,14 +421,17 @@ public class ServiceTestUtils {
       }
     }
 
-    @Override
-    protected void finished(Description description) {
-      delete(description);
+    private void delete(ExtensionContext context) {
+      FileUtils.deleteQuietly(Paths.get("target", getClassName(context)).toFile());
     }
 
-    private void delete(Description description) {
-      FileUtils.deleteQuietly(Paths.get("target",
-          description.getClassName()).toFile());
+    private String getClassName(ExtensionContext context) {
+      Class<?> requiredTestClass = context.getRequiredTestClass();
+      return requiredTestClass.getName();
+    }
+
+    private String getMethodName(ExtensionContext context) {
+      return context.getTestMethod().get().getName();
     }
 
     /**

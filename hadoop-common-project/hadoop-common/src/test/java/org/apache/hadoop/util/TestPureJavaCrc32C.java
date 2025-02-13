@@ -19,9 +19,9 @@ package org.apache.hadoop.util;
 
 import java.util.zip.Checksum;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 public class TestPureJavaCrc32C {
@@ -32,6 +32,6 @@ public class TestPureJavaCrc32C {
     long crc1 = csum.getValue();
     csum.reset();
     long crc2 = csum.getValue();
-    assertEquals("reset should give same as initial value", crc1, crc2);
+    assertEquals(crc1, crc2, "reset should give same as initial value");
   }
 }

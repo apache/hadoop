@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.test;
 
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -34,11 +35,11 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.junit.rules.MethodRule;
-import org.junit.runners.model.FrameworkMethod;
-import org.junit.runners.model.Statement;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
-public class TestJettyHelper implements MethodRule {
+public class TestJettyHelper implements BeforeEachCallback, AfterEachCallback {
   private boolean ssl;
   private String keyStoreType;
   private String keyStore;
@@ -59,32 +60,6 @@ public class TestJettyHelper implements MethodRule {
 
   private static final ThreadLocal<TestJettyHelper> TEST_JETTY_TL =
       new InheritableThreadLocal<TestJettyHelper>();
-
-  @Override
-  public Statement apply(final Statement statement, final FrameworkMethod frameworkMethod, final Object o) {
-    return new Statement() {
-      @Override
-      public void evaluate() throws Throwable {
-        TestJetty testJetty = frameworkMethod.getAnnotation(TestJetty.class);
-        if (testJetty != null) {
-          server = createJettyServer();
-        }
-        try {
-          TEST_JETTY_TL.set(TestJettyHelper.this);
-          statement.evaluate();
-        } finally {
-          TEST_JETTY_TL.remove();
-          if (server != null && server.isRunning()) {
-            try {
-              server.stop();
-            } catch (Exception ex) {
-              throw new RuntimeException("Could not stop embedded servlet container, " + ex.getMessage(), ex);
-            }
-          }
-        }
-      }
-    };
-  }
 
   private Server createJettyServer() {
     try {
@@ -177,4 +152,26 @@ public class TestJettyHelper implements MethodRule {
     }
   }
 
+  @Override
+  public void afterEach(ExtensionContext context) throws Exception {
+    TEST_JETTY_TL.remove();
+    if (server != null && server.isRunning()) {
+      try {
+        server.stop();
+      } catch (Exception ex) {
+        throw new RuntimeException("Could not stop embedded servlet container, " +
+            ex.getMessage(), ex);
+      }
+    }
+  }
+
+  @Override
+  public void beforeEach(ExtensionContext context) throws Exception {
+    Method testMethod = context.getRequiredTestMethod();
+    TestJetty testJetty = testMethod.getAnnotation(TestJetty.class);
+    if (testJetty != null) {
+      server = createJettyServer();
+    }
+    TEST_JETTY_TL.set(TestJettyHelper.this);
+  }
 }

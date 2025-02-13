@@ -19,8 +19,8 @@
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -53,7 +53,7 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
@@ -112,7 +112,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
       jobStates.remove(entry.getValue().getState());
     }
 
-    assertTrue("No unused job states", jobStates.size() > 0);
+    assertTrue(jobStates.size() > 0, "No unused job states");
     JobState notInUse = jobStates.get(0);
 
     Response response = r.path("ws").path("v1").path("history")
@@ -122,8 +122,8 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("jobs is not empty", "", json.get("jobs").toString());
+    assertEquals(1, json.length(), "incorrect number of elements");
+    assertEquals("", json.get("jobs").toString(), "jobs is not empty");
   }
 
   @Test
@@ -144,12 +144,12 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject jsonJobs = json.getJSONObject("jobs");
     JSONObject jsonJob = jsonJobs.getJSONObject("job");
     JSONArray arr = new JSONArray();
     arr.put(jsonJob);
-    assertEquals("incorrect number of elements", 1, arr.length());
+    assertEquals(1, arr.length(), "incorrect number of elements");
     JSONObject info = arr.getJSONObject(0);
     Job job = appContext.getPartialJob(jid);
     VerifyJobsUtils.verifyHsJobPartial(info, job);
@@ -168,7 +168,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -193,8 +193,8 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("jobs is not empty", "", json.get("jobs").toString());
+    assertEquals(1, json.length(), "incorrect number of elements");
+    assertEquals("", json.get("jobs").toString(), "jobs is not empty");
   }
 
   @Test
@@ -207,10 +207,10 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
 
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject jobs = json.getJSONObject("jobs");
     JSONArray arr = jobs.getJSONArray("job");
-    assertEquals("incorrect number of elements", 3, arr.length());
+    assertEquals(3, arr.length(), "incorrect number of elements");
     // just verify one of them.
     JSONObject info = arr.getJSONObject(0);
     Job job = appContext.getPartialJob(MRApps.toJobID(info.getString("id")));
@@ -226,11 +226,11 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject jobs = json.getJSONObject("jobs");
     JSONArray arr = jobs.getJSONArray("job");
     // make sure we get 2 back
-    assertEquals("incorrect number of elements", 2, arr.length());
+    assertEquals(2, arr.length(), "incorrect number of elements");
   }
 
   @Test
@@ -246,7 +246,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -267,10 +267,10 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject jobs = json.getJSONObject("jobs");
     JSONArray arr = jobs.getJSONArray("job");
-    assertEquals("incorrect number of elements", 3, arr.length());
+    assertEquals(3, arr.length(), "incorrect number of elements");
   }
 
   @Test
@@ -282,8 +282,8 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("jobs is not empty", "", json.get("jobs").toString());
+    assertEquals(1, json.length(), "incorrect number of elements");
+    assertEquals("", json.get("jobs").toString(), "jobs is not empty");
   }
 
   @Test
@@ -298,10 +298,10 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject jobs = json.getJSONObject("jobs");
     JSONArray arr = jobs.getJSONArray("job");
-    assertEquals("incorrect number of elements", 3, arr.length());
+    assertEquals(3, arr.length(), "incorrect number of elements");
   }
 
   @Test
@@ -316,8 +316,8 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("jobs is not empty", "", json.get("jobs").toString());
+    assertEquals(1, json.length(), "incorrect number of elements");
+    assertEquals("", json.get("jobs").toString(), "jobs is not empty");
   }
 
   @Test
@@ -332,7 +332,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     }
     Collections.sort(startTime);
 
-    assertTrue("Error we must have atleast 3 jobs", size >= 3);
+    assertTrue(size >= 3, "Error we must have atleast 3 jobs");
     long midStartTime = startTime.get(size - 2);
 
     Response response = r.path("ws").path("v1").path("history")
@@ -343,10 +343,10 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject jobs = json.getJSONObject("jobs");
     JSONArray arr = jobs.getJSONArray("job");
-    assertEquals("incorrect number of elements", size - 1, arr.length());
+    assertEquals(size - 1, arr.length(), "incorrect number of elements");
   }
 
   @Test
@@ -364,7 +364,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -390,7 +390,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -417,7 +417,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -444,7 +444,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -471,7 +471,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -496,7 +496,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -521,7 +521,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -548,7 +548,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -575,7 +575,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -602,7 +602,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject msg = response.readEntity(JSONObject.class);
     JSONObject exception = msg.getJSONObject("RemoteException");
-    assertEquals("incorrect number of elements", 3, exception.length());
+    assertEquals(3, exception.length(), "incorrect number of elements");
     String message = exception.getString("message");
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
@@ -629,10 +629,10 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject jobs = json.getJSONObject("jobs");
     JSONArray arr = jobs.getJSONArray("job");
-    assertEquals("incorrect number of elements", 3, arr.length());
+    assertEquals(3, arr.length(), "incorrect number of elements");
   }
 
   @Test
@@ -647,8 +647,8 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("jobs is not empty", "", json.get("jobs").toString());
+    assertEquals(1, json.length(), "incorrect number of elements");
+    assertEquals("", json.get("jobs").toString(), "jobs is not empty");
   }
 
   @Test
@@ -664,7 +664,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     }
     Collections.sort(finishTime);
 
-    assertTrue("Error we must have atleast 3 jobs", size >= 3);
+    assertTrue(size >= 3, "Error we must have atleast 3 jobs");
     long midFinishTime = finishTime.get(size - 2);
 
     Response response = r.path("ws").path("v1").path("history")
@@ -675,10 +675,10 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject jobs = json.getJSONObject("jobs");
     JSONArray arr = jobs.getJSONArray("job");
-    assertEquals("incorrect number of elements", size - 1, arr.length());
+    assertEquals(size - 1, arr.length(), "incorrect number of elements");
   }
 
 }

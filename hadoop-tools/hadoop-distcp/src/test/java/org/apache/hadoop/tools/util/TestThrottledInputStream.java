@@ -21,12 +21,13 @@ package org.apache.hadoop.tools.util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.Assert;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.junit.Assert.assertThat;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestThrottledInputStream {
   private static final Logger LOG = LoggerFactory.getLogger(TestThrottledInputStream.class);
@@ -101,9 +102,9 @@ public class TestThrottledInputStream {
         which magnifies the error of getBytesPerSec()
       */
       bandwidth = in.getBytesPerSec();
-      Assert.assertEquals(in.getTotalBytesRead(), tmpFile.length());
-      Assert.assertTrue(bandwidth > maxBandwidth / (factor * 1.2));
-      Assert.assertTrue(in.getTotalSleepTime() >  sleepTime || bandwidth <= maxBPS);
+      assertEquals(in.getTotalBytesRead(), tmpFile.length());
+      assertTrue(bandwidth > maxBandwidth / (factor * 1.2));
+      assertTrue(in.getTotalSleepTime() >  sleepTime || bandwidth <= maxBPS);
     } finally {
       IOUtils.closeStream(in);
       IOUtils.closeStream(out);
@@ -198,8 +199,8 @@ public class TestThrottledInputStream {
       // Check whether the speed limit is successfully limited
       long end = System.currentTimeMillis();
       LOG.info("end: " + end);
-      assertThat((int) (end - begin) / 1000,
-          greaterThanOrEqualTo(testFileCnt * fileSize / bandwidth));
+      assertThat((int) (end - begin) / 1000).
+          isGreaterThanOrEqualTo(testFileCnt * fileSize / bandwidth);
     } catch (IOException e) {
       LOG.error("Exception encountered ", e);
     }
@@ -212,10 +213,10 @@ public class TestThrottledInputStream {
     try {
       copyBytes(in, out, BUFF_SIZE);
       LOG.info("{}", in);
-      Assert.assertEquals(in.getTotalBytesRead(), tmpFile.length());
+      assertEquals(in.getTotalBytesRead(), tmpFile.length());
 
       long bytesPerSec = in.getBytesPerSec();
-      Assert.assertTrue(bytesPerSec < maxBPS);
+      assertTrue(bytesPerSec < maxBPS);
     } finally {
       IOUtils.closeStream(in);
       IOUtils.closeStream(out);

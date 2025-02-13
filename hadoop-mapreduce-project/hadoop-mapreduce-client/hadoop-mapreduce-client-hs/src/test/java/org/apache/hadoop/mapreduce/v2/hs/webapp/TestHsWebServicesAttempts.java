@@ -20,10 +20,10 @@ package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -62,7 +62,7 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -201,7 +201,7 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
         is.setCharacterStream(new StringReader(xml));
         Document dom = db.parse(is);
         NodeList attempts = dom.getElementsByTagName("taskAttempts");
-        assertEquals("incorrect number of elements", 1, attempts.getLength());
+        assertEquals(1, attempts.getLength(), "incorrect number of elements");
 
         NodeList nodes = dom.getElementsByTagName("taskAttempt");
         verifyHsTaskAttemptsXML(nodes, task);
@@ -231,7 +231,7 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
           assertEquals(MediaType.APPLICATION_JSON_TYPE + ";"
                   + JettyUtils.UTF_8, response.getMediaType().toString());
           JSONObject json = response.readEntity(JSONObject.class);
-          assertEquals("incorrect number of elements", 1, json.length());
+          assertEquals(1, json.length(), "incorrect number of elements");
           JSONObject info = json.getJSONObject("taskAttempt");
           verifyHsTaskAttempt(info, att, task.getType());
         }
@@ -261,7 +261,7 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
           assertEquals(MediaType.APPLICATION_JSON_TYPE + ";"
               + JettyUtils.UTF_8, response.getMediaType().toString());
           JSONObject json = response.readEntity(JSONObject.class);
-          assertEquals("incorrect number of elements", 1, json.length());
+          assertEquals(1, json.length(), "incorrect number of elements");
           JSONObject info = json.getJSONObject("taskAttempt");
           verifyHsTaskAttempt(info, att, task.getType());
         }
@@ -291,7 +291,7 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
           assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
               response.getMediaType().toString());
           JSONObject json = response.readEntity(JSONObject.class);
-          assertEquals("incorrect number of elements", 1, json.length());
+          assertEquals(1, json.length(), "incorrect number of elements");
           JSONObject info = json.getJSONObject("taskAttempt");
           verifyHsTaskAttempt(info, att, task.getType());
         }
@@ -392,7 +392,7 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
               + JettyUtils.UTF_8, response.getMediaType().toString());
           JSONObject msg = response.readEntity(JSONObject.class);
           JSONObject exception = msg.getJSONObject("RemoteException");
-          assertEquals("incorrect number of elements", 3, exception.length());
+          assertEquals(3, exception.length(), "incorrect number of elements");
           String message = exception.getString("message");
           String type = exception.getString("exception");
           String classname = exception.getString("javaClassName");
@@ -433,9 +433,9 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
   public void verifyHsTaskAttempt(JSONObject info, TaskAttempt att,
       TaskType ttype) throws JSONException {
     if (ttype == TaskType.REDUCE) {
-      assertEquals("incorrect number of elements", 17, info.length());
+      assertEquals(17, info.length(), "incorrect number of elements");
     } else {
-      assertEquals("incorrect number of elements", 12, info.length());
+      assertEquals(12, info.length(), "incorrect number of elements");
     }
 
     verifyTaskAttemptGeneric(att, ttype, info.getString("id"),
@@ -454,9 +454,9 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
 
   public void verifyHsTaskAttempts(JSONObject json, Task task)
       throws JSONException {
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject attempts = json.getJSONObject("taskAttempts");
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject taskAttempt = attempts.getJSONObject("taskAttempt");
     JSONArray arr = new JSONArray();
     arr.put(taskAttempt);
@@ -472,13 +472,13 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
           verifyHsTaskAttempt(info, att, task.getType());
         }
       }
-      assertTrue("task attempt with id: " + attid
-          + " not in web service output", found);
+      assertTrue(found, "task attempt with id: " + attid
+          + " not in web service output");
     }
   }
 
   public void verifyHsTaskAttemptsXML(NodeList nodes, Task task) {
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
 
     for (TaskAttempt att : task.getAttempts().values()) {
       TaskAttemptId id = att.getID();
@@ -492,7 +492,7 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
           verifyHsTaskAttemptXML(element, att, task.getType());
         }
       }
-      assertTrue("task with id: " + attid + " not in web service output", found);
+      assertTrue(found, "task with id: " + attid + " not in web service output");
     }
   }
 
@@ -527,26 +527,25 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
         ta.getAssignedContainerID().toString(),
         assignedContainerId);
 
-    assertEquals("startTime wrong", ta.getLaunchTime(), startTime);
-    assertEquals("finishTime wrong", ta.getFinishTime(), finishTime);
-    assertEquals("elapsedTime wrong", finishTime - startTime, elapsedTime);
-    assertEquals("progress wrong", ta.getProgress() * 100, progress, 1e-3f);
+    assertEquals(ta.getLaunchTime(), startTime, "startTime wrong");
+    assertEquals(ta.getFinishTime(), finishTime, "finishTime wrong");
+    assertEquals(finishTime - startTime, elapsedTime, "elapsedTime wrong");
+    assertEquals(ta.getProgress() * 100, progress, 1e-3f, "progress wrong");
   }
 
   public void verifyReduceTaskAttemptGeneric(TaskAttempt ta,
       long shuffleFinishTime, long mergeFinishTime, long elapsedShuffleTime,
       long elapsedMergeTime, long elapsedReduceTime) {
 
-    assertEquals("shuffleFinishTime wrong", ta.getShuffleFinishTime(),
-        shuffleFinishTime);
-    assertEquals("mergeFinishTime wrong", ta.getSortFinishTime(),
-        mergeFinishTime);
-    assertEquals("elapsedShuffleTime wrong",
-        ta.getShuffleFinishTime() - ta.getLaunchTime(), elapsedShuffleTime);
-    assertEquals("elapsedMergeTime wrong",
-        ta.getSortFinishTime() - ta.getShuffleFinishTime(), elapsedMergeTime);
-    assertEquals("elapsedReduceTime wrong",
-        ta.getFinishTime() - ta.getSortFinishTime(), elapsedReduceTime);
+    assertEquals(ta.getShuffleFinishTime(), shuffleFinishTime,
+        "shuffleFinishTime wrong");
+    assertEquals(ta.getSortFinishTime(), mergeFinishTime, "mergeFinishTime wrong");
+    assertEquals(ta.getShuffleFinishTime() - ta.getLaunchTime(), elapsedShuffleTime,
+        "elapsedShuffleTime wrong");
+    assertEquals(ta.getSortFinishTime() - ta.getShuffleFinishTime(), elapsedMergeTime,
+        "elapsedMergeTime wrong");
+    assertEquals(ta.getFinishTime() - ta.getSortFinishTime(), elapsedReduceTime,
+        "elapsedReduceTime wrong");
   }
 
   @Test
@@ -571,7 +570,7 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
           assertEquals(MediaType.APPLICATION_JSON_TYPE + ";"
               + JettyUtils.UTF_8, response.getMediaType().toString());
           JSONObject json = response.readEntity(JSONObject.class);
-          assertEquals("incorrect number of elements", 1, json.length());
+          assertEquals(1, json.length(), "incorrect number of elements");
           JSONObject info = json.getJSONObject("jobTaskAttemptCounters");
           verifyHsJobTaskAttemptCounters(info, att);
         }
@@ -616,7 +615,7 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
   public void verifyHsJobTaskAttemptCounters(JSONObject info, TaskAttempt att)
       throws JSONException {
 
-    assertEquals("incorrect number of elements", 2, info.length());
+    assertEquals(2, info.length(), "incorrect number of elements");
 
     WebServicesTestUtils.checkStringMatch("id", MRApps.toString(att.getID()),
         info.getString("id"));
@@ -627,15 +626,15 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
     for (int i = 0; i < counterGroups.length(); i++) {
       JSONObject counterGroup = counterGroups.getJSONObject(i);
       String name = counterGroup.getString("counterGroupName");
-      assertTrue("name not set", (name != null && !name.isEmpty()));
+      assertTrue((name != null && !name.isEmpty()), "name not set");
       JSONArray counters = counterGroup.getJSONArray("counter");
       for (int j = 0; j < counters.length(); j++) {
         JSONObject counter = counters.getJSONObject(j);
         String counterName = counter.getString("name");
-        assertTrue("name not set",
-            (counterName != null && !counterName.isEmpty()));
+        assertTrue((counterName != null && !counterName.isEmpty()),
+            "name not set");
         long value = counter.getLong("value");
-        assertTrue("value  >= 0", value >= 0);
+        assertTrue(value >= 0, "value  >= 0");
       }
     }
   }
@@ -653,20 +652,20 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
 
       for (int j = 0; j < groups.getLength(); j++) {
         Element counters = (Element) groups.item(j);
-        assertNotNull("should have counters in the web service info", counters);
+        assertNotNull(counters, "should have counters in the web service info");
         String name = WebServicesTestUtils.getXmlString(counters,
             "counterGroupName");
-        assertTrue("name not set", (name != null && !name.isEmpty()));
+        assertTrue((name != null && !name.isEmpty()), "name not set");
         NodeList counterArr = counters.getElementsByTagName("counter");
         for (int z = 0; z < counterArr.getLength(); z++) {
           Element counter = (Element) counterArr.item(z);
           String counterName = WebServicesTestUtils.getXmlString(counter,
               "name");
-          assertTrue("counter name not set",
-              (counterName != null && !counterName.isEmpty()));
+          assertTrue((counterName != null && !counterName.isEmpty()),
+              "counter name not set");
 
           long value = WebServicesTestUtils.getXmlLong(counter, "value");
-          assertTrue("value not >= 0", value >= 0);
+          assertTrue(value >= 0, "value not >= 0");
 
         }
       }

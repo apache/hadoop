@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.test;
 
-import org.junit.Rule;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
 
-import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Class for test units to extend in order that their individual tests will
@@ -29,9 +26,7 @@ import java.util.concurrent.TimeUnit;
  * This provides an automatic regression check for tests that begin running
  * longer than expected.
  */
+@Timeout(10)
 public class UnitTestcaseTimeLimit {
   public final int timeOutSecs = 10;
-  
-  @Rule public TestRule globalTimeout =
-      new Timeout(timeOutSecs, TimeUnit.SECONDS);
 }

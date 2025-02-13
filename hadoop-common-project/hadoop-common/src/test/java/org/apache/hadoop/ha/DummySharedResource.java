@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.ha;
 
-import org.junit.Assert;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * A fake shared resource, for use in automatic failover testing.
@@ -47,6 +47,6 @@ public class DummySharedResource {
   }
   
   public synchronized void assertNoViolations() {
-    Assert.assertEquals(0, violations);
+    assertEquals(0, violations);
   }
 }

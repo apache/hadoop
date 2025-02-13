@@ -96,8 +96,8 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        // 1 create request = 1 connection made and 1 send request
       if (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)) {
         expectedRequestsSent += (directory);
-        // Per directory, we have 2 calls :- GetBlobProperties and PutBlob and 1 ListBlobs call (implicit check) for the path.
-        expectedConnectionsMade += ((directory * 2) + 1);
+        // Per directory, we have 2 calls :- 1 PutBlob and 1 ListBlobs call.
+        expectedConnectionsMade += ((directory * 2));
       } else {
         expectedRequestsSent++;
         expectedConnectionsMade++;
@@ -176,12 +176,12 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        *    + getFileStatus to fetch the file ETag
        *    + create overwrite=true
        *    = 3 connections and 2 send requests in case of Dfs Client
-       *    = 7 connections (5 GBP and 2 PutBlob calls) in case of Blob Client
+       *    = 1 ListBlob + 2 GPS + 2 PutBlob
        */
       if (fs.getAbfsStore().getAbfsConfiguration().isConditionalCreateOverwriteEnabled()) {
         if (client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)) {
           expectedRequestsSent += 2;
-          expectedConnectionsMade += 7;
+          expectedConnectionsMade += 5;
         } else {
           expectedConnectionsMade += 3;
           expectedRequestsSent += 2;

@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.net.InetSocketAddress;
 
@@ -25,8 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.SshFenceByTcpPort.Args;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.event.Level;
 
 public class TestSshFenceByTcpPort {
@@ -55,9 +59,10 @@ public class TestSshFenceByTcpPort {
     new DummyHAService(HAServiceState.ACTIVE,
         new InetSocketAddress("8.8.8.8", 1234));
 
-  @Test(timeout=20000)
+  @Test
+  @Timeout(value = 20)
   public void testFence() throws BadFencingConfigurationException {
-    Assume.assumeTrue(isConfigured());
+    assumeTrue(isConfigured());
     Configuration conf = new Configuration();
     conf.set(SshFenceByTcpPort.CONF_IDENTITIES_KEY, TEST_KEYFILE);
     SshFenceByTcpPort fence = new SshFenceByTcpPort();
@@ -72,7 +77,8 @@ public class TestSshFenceByTcpPort {
    * Make sure that it times out and returns false, but doesn't throw
    * any exception
    */
-  @Test(timeout=20000)
+  @Test
+  @Timeout(value = 20)
   public void testConnectTimeout() throws BadFencingConfigurationException {
     Configuration conf = new Configuration();
     conf.setInt(SshFenceByTcpPort.CONF_CONNECT_TIMEOUT_KEY, 3000);

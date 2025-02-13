@@ -16,14 +16,14 @@
  */
 package org.apache.hadoop.security;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 public class TestNetgroupCache {
 
@@ -33,7 +33,7 @@ public class TestNetgroupCache {
   private static final String GROUP1 = "group1";
   private static final String GROUP2 = "group2";
 
-  @After
+  @AfterEach
   public void teardown() {
     NetgroupCache.clear();
   }

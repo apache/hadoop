@@ -43,9 +43,9 @@ import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,7 +106,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   static final String INCLUDED_PROTOCOLS = "TLSv1.2";
   static final String INCLUDED_PROTOCOLS_JDK11 = "TLSv1.3,TLSv1.2";
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     turnOnSSLDebugLogging();
     storeHttpsCipherSuites();
@@ -156,7 +156,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     server.start();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws Exception {
     server.stop();
     FileUtil.fullyDelete(new File(BASEDIR));
@@ -286,7 +286,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     URL url = new URL(baseUrl, SERVLET_PATH_ECHO + "?a=b&c=d");
     HttpsURLConnection conn = getConnectionWithSSLSocketFactory(url,
         EXCLUDED_CIPHERS);
-    assertFalse("excludedCipher list is empty", EXCLUDED_CIPHERS.isEmpty());
+    assertFalse(EXCLUDED_CIPHERS.isEmpty(), "excludedCipher list is empty");
     try {
       readFromConnection(conn);
       fail("No Ciphers in common, SSLHandshake must fail.");
@@ -306,8 +306,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     HttpsURLConnection conn =
         getConnectionWithPreferredProtocolSSLSocketFactory(url,
             includedProtocols);
-    assertFalse("included protocol list is empty",
-        includedProtocols.isEmpty());
+    assertFalse(includedProtocols.isEmpty(), "included protocol list is empty");
 
     readFromConnection(conn);
 
@@ -351,7 +350,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
       IOException, GeneralSecurityException {
     URL url = new URL(baseUrl, SERVLET_PATH_ECHO + "?a=b&c=d");
     HttpsURLConnection conn = getConnectionWithSSLSocketFactory(url, ciphers);
-    assertFalse("excludedCipher list is empty", ciphers.isEmpty());
+    assertFalse(ciphers.isEmpty(), "excludedCipher list is empty");
     String out = readFromConnection(conn);
     assertEquals(out, "a:b\nc:d\n");
     LOG.info("At least one additional enabled cipher than excluded ciphers,"

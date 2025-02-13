@@ -43,18 +43,18 @@ import org.apache.hadoop.tools.util.DistCpTestUtils;
 
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.functional.RemoteIterators;
-import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests distcp in combination with HDFS raw.* XAttrs.
@@ -84,7 +84,7 @@ public class TestDistCpWithRawXAttrs {
 
   private static final String TEST_ROOT_DIR = base.getAbsolutePath();
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
@@ -96,7 +96,7 @@ public class TestDistCpWithRawXAttrs {
     fs = cluster.getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() {
     IOUtils.cleanupWithLogger(null, fs);
     if (cluster != null) {
@@ -213,7 +213,7 @@ public class TestDistCpWithRawXAttrs {
     fs.create(file1).close();
     fs.create(FILE_2).close();
     int res = ToolRunner.run(conf, new ECAdmin(conf), args);
-    assertEquals("Unable to set EC policy on " + subDir1.toString(), res, 0);
+    assertEquals(res, 0, "Unable to set EC policy on " + subDir1.toString());
 
     // preserve all attributes
     DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, src, dest,
@@ -228,20 +228,13 @@ public class TestDistCpWithRawXAttrs {
     FileStatus destDir1Status = fs.getFileStatus(destDir1);
     FileStatus destSubDir1Status = fs.getFileStatus(destSubDir1);
 
-    assertFalse("/src is erasure coded!",
-        srcStatus.isErasureCoded());
-    assertFalse("/dest is erasure coded!",
-        destStatus.isErasureCoded());
-    assertTrue("/src/dir1 is not erasure coded!",
-        srcDir1Status.isErasureCoded());
-    assertTrue("/src/dir1/file2 is not erasure coded",
-        srcFile2Status.isErasureCoded());
-    assertTrue("/dest/dir1 is not erasure coded!",
-        destDir1Status.isErasureCoded());
-    assertTrue("/src/dir1/subdir1 is not erasure coded!",
-        srcSubDir1Status.isErasureCoded());
-    assertTrue("/dest/dir1/subdir1 is not erasure coded!",
-        destSubDir1Status.isErasureCoded());
+    assertFalse(srcStatus.isErasureCoded(), "/src is erasure coded!");
+    assertFalse(destStatus.isErasureCoded(), "/dest is erasure coded!");
+    assertTrue(srcDir1Status.isErasureCoded(), "/src/dir1 is not erasure coded!");
+    assertTrue(srcFile2Status.isErasureCoded(), "/src/dir1/file2 is not erasure coded");
+    assertTrue(destDir1Status.isErasureCoded(), "/dest/dir1 is not erasure coded!");
+    assertTrue(srcSubDir1Status.isErasureCoded(), "/src/dir1/subdir1 is not erasure coded!");
+    assertTrue(destSubDir1Status.isErasureCoded(), "/dest/dir1/subdir1 is not erasure coded!");
 
     // test without -p to check if src is EC then target FS default replication
     // is obeyed on the target file.
@@ -269,7 +262,7 @@ public class TestDistCpWithRawXAttrs {
     dfs.setErasureCodingPolicy(dir1, "XOR-2-1-1024k");
     fs.create(file1).close();
     int res = ToolRunner.run(conf, new ECAdmin(conf), args);
-    assertEquals("Unable to set EC policy on " + subDir1.toString(), 0, res);
+    assertEquals(0, res, "Unable to set EC policy on " + subDir1.toString());
     String src = "/src/*";
     Path dest = new Path(TEST_ROOT_DIR, "dest");
     final Path dest2Dir1 = new Path(dest, "dir1");
@@ -284,13 +277,13 @@ public class TestDistCpWithRawXAttrs {
       try {
         FileStatus destDir1Status = dummyEcFs.getFileStatus(dest2Dir1);
         FileStatus destSubDir1Status = dummyEcFs.getFileStatus(dest2SubDir1);
-        assertNotNull("FileStatus for path: " + dest2Dir1 + " is null", destDir1Status);
-        assertNotNull("FileStatus for path: " + dest2SubDir1 + " is null", destSubDir1Status);
+        assertNotNull(destDir1Status, "FileStatus for path: " + dest2Dir1 + " is null");
+        assertNotNull(destSubDir1Status, "FileStatus for path: " + dest2SubDir1 + " is null");
         // check if target paths are erasure coded.
-        assertTrue("Path is not erasure coded : " + dest2Dir1,
-            dummyEcFs.isPathErasureCoded(destDir1Status.getPath()));
-        assertTrue("Path is not erasure coded : " + dest2SubDir1,
-            dummyEcFs.isPathErasureCoded(destSubDir1Status.getPath()));
+        assertTrue(dummyEcFs.isPathErasureCoded(destDir1Status.getPath()),
+            "Path is not erasure coded : " + dest2Dir1);
+        assertTrue(dummyEcFs.isPathErasureCoded(destSubDir1Status.getPath()),
+            "Path is not erasure coded : " + dest2SubDir1);
 
         // copy source(DummyECFS) to target (HDFS)
         String dfsTarget = "/dest";
@@ -303,8 +296,8 @@ public class TestDistCpWithRawXAttrs {
         ContractTestUtils.assertPathExists(fs,
             "Path  doesn't exist:" + dfsTargetDir1, dfsTargetDir1);
         FileStatus targetDir1Status = fs.getFileStatus(dfsTargetDir1);
-        assertTrue("Path is not erasure coded : " + targetDir1Status,
-            targetDir1Status.isErasureCoded());
+        assertTrue(targetDir1Status.isErasureCoded(),
+            "Path is not erasure coded : " + targetDir1Status);
         fs.delete(dfsTargetPath, true);
       } finally {
         dummyEcFs.delete(new Path(base.getAbsolutePath()),true);
@@ -385,7 +378,7 @@ public class TestDistCpWithRawXAttrs {
     DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),
         dest.toString(), "-useiterator", conf);
 
-    Assertions.assertThat(RemoteIterators.toList(fs.listFiles(dest, true)))
+    assertThat(RemoteIterators.toList(fs.listFiles(dest, true)))
         .describedAs("files").hasSize(1110);
   }
 }

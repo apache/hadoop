@@ -26,9 +26,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,6 +56,12 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCo
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Unit tests implementations for distributed shell on TimeLineV2.
@@ -91,7 +96,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
   }
 
   @Test
-  public void testDSShellWithEnforceExecutionType() throws Exception {
+  public void testDSShellWithEnforceExecutionType(TestInfo testInfo) throws Exception {
     YarnClient yarnClient = null;
     AtomicReference<Throwable> thrownError = new AtomicReference<>(null);
     AtomicReference<List<ContainerReport>> containersListRef =
@@ -101,6 +106,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
     AtomicReference<ApplicationAttemptReport> appAttemptReportRef =
         new AtomicReference<>(null);
     String[] args = createArgumentsWithAppName(
+        getMethodName(testInfo),
         "--num_containers",
         "2",
         "--master_memory",
@@ -137,18 +143,18 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
       waitForContainersLaunch(yarnClient, 3, appAttemptReportRef,
           containersListRef, appAttemptIdRef, thrownError);
       if (thrownError.get() != null) {
-        Assert.fail(thrownError.get().getMessage());
+        fail(thrownError.get().getMessage());
       }
       ContainerId amContainerId = appAttemptReportRef.get().getAMContainerId();
       for (ContainerReport container : containersListRef.get()) {
         if (!container.getContainerId().equals(amContainerId)) {
-          Assert.assertEquals(container.getExecutionType(),
+          assertEquals(container.getExecutionType(),
               ExecutionType.OPPORTUNISTIC);
         }
       }
     } catch (Exception e) {
       LOG.error("Job execution with enforce execution type failed.", e);
-      Assert.fail("Exception. " + e.getMessage());
+      fail("Exception. " + e.getMessage());
     } finally {
       if (yarnClient != null) {
         yarnClient.stop();
@@ -157,17 +163,18 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
   }
 
   @Test
-  public void testDistributedShellWithResources() throws Exception {
-    doTestDistributedShellWithResources(false);
+  public void testDistributedShellWithResources(TestInfo testInfo) throws Exception {
+    doTestDistributedShellWithResources(getMethodName(testInfo), false);
   }
 
   @Test
-  public void testDistributedShellWithResourcesWithLargeContainers()
-      throws Exception {
-    doTestDistributedShellWithResources(true);
+  public void testDistributedShellWithResourcesWithLargeContainers(TestInfo testInfo)
+          throws Exception {
+    doTestDistributedShellWithResources(getMethodName(testInfo), true);
   }
 
-  private void doTestDistributedShellWithResources(boolean largeContainers)
+  private void doTestDistributedShellWithResources(
+      String methodName, boolean largeContainers)
       throws Exception {
     AtomicReference<Throwable> thrownExceptionRef =
         new AtomicReference<>(null);
@@ -183,10 +190,10 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
     String containerMemoryString = "512 Mi";
     long[] memVars = {1024, 512};
     YarnClient yarnClient = null;
-    Assume.assumeTrue("The cluster doesn't have enough memory for this test",
-        clusterResource.getMemorySize() >= memVars[0] + memVars[1]);
-    Assume.assumeTrue("The cluster doesn't have enough cores for this test",
-        clusterResource.getVirtualCores() >= 2);
+    assumeTrue(clusterResource.getMemorySize() >= memVars[0] + memVars[1],
+        "The cluster doesn't have enough memory for this test");
+    assumeTrue(clusterResource.getVirtualCores() >= 2,
+        "The cluster doesn't have enough cores for this test");
     if (largeContainers) {
       memVars[0] = clusterResource.getMemorySize() * 2 / 3;
       memVars[0] = memVars[0] - memVars[0] % MIN_ALLOCATION_MB;
@@ -197,6 +204,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
     }
 
     String[] args = createArgumentsWithAppName(
+        methodName,
         "--num_containers",
         "2",
         "--shell_command",
@@ -209,7 +217,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
 
     LOG.info("Initializing DS Client");
     setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
-    Assert.assertTrue(getDSClient().init(args));
+    assertTrue(getDSClient().init(args));
     LOG.info("Running DS Client");
     final AtomicBoolean result = new AtomicBoolean(false);
     Thread dsClientRunner = new Thread(() -> {
@@ -228,19 +236,19 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
       waitForContainersLaunch(yarnClient, 2, appAttemptReportRef,
           containersListRef, appAttemptIdRef, thrownExceptionRef);
       if (thrownExceptionRef.get() != null) {
-        Assert.fail(thrownExceptionRef.get().getMessage());
+        fail(thrownExceptionRef.get().getMessage());
       }
       ContainerId amContainerId = appAttemptReportRef.get().getAMContainerId();
       ContainerReport report = yarnClient.getContainerReport(amContainerId);
       Resource masterResource = report.getAllocatedResource();
-      Assert.assertEquals(memVars[0], masterResource.getMemorySize());
-      Assert.assertEquals(1, masterResource.getVirtualCores());
+      assertEquals(memVars[0], masterResource.getMemorySize());
+      assertEquals(1, masterResource.getVirtualCores());
       for (ContainerReport container : containersListRef.get()) {
         if (!container.getContainerId().equals(amContainerId)) {
           Resource containerResource = container.getAllocatedResource();
-          Assert.assertEquals(memVars[1],
+          assertEquals(memVars[1],
               containerResource.getMemorySize());
-          Assert.assertEquals(1, containerResource.getVirtualCores());
+          assertEquals(1, containerResource.getVirtualCores());
         }
       }
     } finally {
@@ -253,18 +261,18 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
   }
 
   @Test
-  public void testDSShellWithoutDomain() throws Exception {
-    baseTestDSShell(false);
+  public void testDSShellWithoutDomain(TestInfo testInfo) throws Exception {
+    baseTestDSShell(getMethodName(testInfo), false);
   }
 
   @Test
-  public void testDSShellWithoutDomainDefaultFlow() throws Exception {
-    baseTestDSShell(false, true);
+  public void testDSShellWithoutDomainDefaultFlow(TestInfo testInfo) throws Exception {
+    baseTestDSShell(getMethodName(testInfo), false, true);
   }
 
   @Test
-  public void testDSShellWithoutDomainCustomizedFlow() throws Exception {
-    baseTestDSShell(false, false);
+  public void testDSShellWithoutDomainCustomizedFlow(TestInfo testInfo) throws Exception {
+    baseTestDSShell(getMethodName(testInfo), false, false);
   }
 
   @Override
@@ -294,7 +302,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
 
     File tmpRootFolder = new File(tmpRoot);
     try {
-      Assert.assertTrue(tmpRootFolder.isDirectory());
+      assertTrue(tmpRootFolder.isDirectory());
       String basePath = tmpRoot +
           YarnConfiguration.DEFAULT_RM_CLUSTER_ID + File.separator +
           UserGroupInformation.getCurrentUser().getShortUserName() +
@@ -436,21 +444,20 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
             TimelineEntity entity = FileSystemTimelineReaderImpl.
                 getTimelineRecordFromJSON(entityLine, TimelineEntity.class);
             TimelineEvent event = entity.getEvents().pollFirst();
-            Assert.assertNotNull(event);
-            Assert.assertTrue("diagnostics",
-                event.getInfo().containsKey(ApplicationMaster.DIAGNOSTICS));
+            assertNotNull(event);
+            assertTrue(event.getInfo().containsKey(ApplicationMaster.DIAGNOSTICS),
+                "diagnostics");
           }
           if (checkIdPrefix) {
             TimelineEntity entity = FileSystemTimelineReaderImpl.
                 getTimelineRecordFromJSON(entityLine, TimelineEntity.class);
-            Assert.assertTrue("Entity ID prefix expected to be > 0",
-                entity.getIdPrefix() > 0);
+            assertTrue(entity.getIdPrefix() > 0,
+                "Entity ID prefix expected to be > 0");
             if (idPrefix == -1) {
               idPrefix = entity.getIdPrefix();
             } else {
-              Assert.assertEquals(
-                  "Entity ID prefix should be same across each publish of "
-                      + "same entity", idPrefix, entity.getIdPrefix());
+              assertEquals(idPrefix, entity.getIdPrefix(),
+                  "Entity ID prefix should be same across each publish of same entity");
             }
           }
         }
@@ -463,7 +470,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
     }, sleepTime, (checkTimes + 1) * sleepTime);
 
     if (thrownExceptionRef.get() != null) {
-      Assert.fail("verifyEntityForTimeline failed "
+      fail("verifyEntityForTimeline failed "
           + thrownExceptionRef.get().getMessage());
     }
   }
@@ -475,10 +482,10 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
     LOG.info("verifyEntityTypeFileExists output path for entityType {}: {}",
         entityType, outputDirPathForEntity);
     File outputDirForEntity = new File(outputDirPathForEntity);
-    Assert.assertTrue(outputDirForEntity.isDirectory());
+    assertTrue(outputDirForEntity.isDirectory());
     String entityFilePath = outputDirPathForEntity + entityFileName;
     File entityFile = new File(entityFilePath);
-    Assert.assertTrue(entityFile.exists());
+    assertTrue(entityFile.exists());
     return entityFile;
   }
 }

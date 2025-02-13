@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.util;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import java.math.BigInteger;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestCpuTimeTracker {
   @Test
@@ -29,24 +29,18 @@ public class TestCpuTimeTracker {
         BigInteger.valueOf(100),
         System.currentTimeMillis());
     float val1 = tracker.getCpuTrackerUsagePercent();
-    assertTrue(
-        "Not invalid CPU usage",
-        val1 == -1.0);
+    assertTrue(val1 == -1.0, "Not invalid CPU usage");
     Thread.sleep(1000);
     tracker.updateElapsedJiffies(
         BigInteger.valueOf(200),
         System.currentTimeMillis());
     float val2 = tracker.getCpuTrackerUsagePercent();
-    assertTrue(
-        "Not positive CPU usage",
-        val2 > 0);
+    assertTrue(val2 > 0, "Not positive CPU usage");
     Thread.sleep(1000);
     tracker.updateElapsedJiffies(
         BigInteger.valueOf(0),
         System.currentTimeMillis());
     float val3 = tracker.getCpuTrackerUsagePercent();
-    assertTrue(
-        "Not positive CPU usage",
-        val3 == 0.0);
+    assertTrue(val3 == 0.0, "Not positive CPU usage");
   }
 }

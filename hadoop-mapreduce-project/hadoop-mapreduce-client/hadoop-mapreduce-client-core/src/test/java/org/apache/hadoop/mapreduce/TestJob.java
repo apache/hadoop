@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.mapreduce;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 
@@ -31,8 +35,7 @@ import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestJob {
   @Test
@@ -52,7 +55,7 @@ public class TestJob {
     when(client.getTaskCompletionEvents(jobid, 0, 10)).thenReturn(
         TaskCompletionEvent.EMPTY_ARRAY);
     Job job = Job.getInstance(cluster, status, new JobConf());
-    Assert.assertNotNull(job.toString());
+    assertNotNull(job.toString());
   }
 
   @Test
@@ -68,8 +71,8 @@ public class TestJob {
     Job job = Job.getInstance(cluster, status, new JobConf());
 
     // ensurer job status is RUNNING
-    Assert.assertNotNull(job.getStatus());
-    Assert.assertTrue(job.getStatus().getState() == State.RUNNING);
+    assertNotNull(job.getStatus());
+    assertTrue(job.getStatus().getState() == State.RUNNING);
 
     // when updating job status, job client could not retrieve
     // job status, and status reset to null
@@ -78,15 +81,15 @@ public class TestJob {
     try {
       job.updateStatus();
     } catch (IOException e) {
-      Assert.assertTrue(e != null
+      assertTrue(e != null
           && e.getMessage().contains("Job status not available"));
     }
 
     try {
       ControlledJob cj = new ControlledJob(job, null);
-      Assert.assertNotNull(cj.toString());
+      assertNotNull(cj.toString());
     } catch (NullPointerException e) {
-      Assert.fail("job API fails with NPE");
+      fail("job API fails with NPE");
     }
   }
 

@@ -28,15 +28,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -77,7 +77,7 @@ public class TestFairCallQueue {
   }
 
   @SuppressWarnings("deprecation")
-  @Before
+  @BeforeEach
   public void setUp() {
     Configuration conf = new Configuration();
     conf.setInt("ns." + FairCallQueue.IPC_CALLQUEUE_PRIORITY_LEVELS_KEY, 2);
@@ -407,21 +407,21 @@ public class TestFairCallQueue {
   private void checkOverflowException(Exception ex, RpcStatusProto status,
       boolean failOverTriggered) {
     // should be an overflow exception
-    assertTrue(ex.getClass().getName() + " != CallQueueOverflowException",
-        ex instanceof CallQueueOverflowException);
+    assertTrue(ex instanceof CallQueueOverflowException,
+        ex.getClass().getName() + " != CallQueueOverflowException");
     IOException ioe = ((CallQueueOverflowException)ex).getCause();
     assertNotNull(ioe);
-    assertTrue(ioe.getClass().getName() + " != RpcServerException",
-        ioe instanceof RpcServerException);
+    assertTrue(ioe instanceof RpcServerException,
+        ioe.getClass().getName() + " != RpcServerException");
     RpcServerException rse = (RpcServerException)ioe;
     // check error/fatal status and if it embeds a retriable ex or standby ex.
     assertEquals(status, rse.getRpcStatusProto());
     if (failOverTriggered) {
-      assertTrue(rse.getClass().getName() + " != RetriableException",
-          rse.getCause() instanceof StandbyException);
+      assertTrue(rse.getCause() instanceof StandbyException,
+          rse.getClass().getName() + " != RetriableException");
     } else {
-      assertTrue(rse.getClass().getName() + " != RetriableException",
-          rse.getCause() instanceof RetriableException);
+      assertTrue(rse.getCause() instanceof RetriableException,
+          rse.getClass().getName() + " != RetriableException");
     }
   }
 

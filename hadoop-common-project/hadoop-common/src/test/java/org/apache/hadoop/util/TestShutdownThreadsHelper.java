@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.util;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestShutdownThreadsHelper {
   private Runnable sampleRunnable = new Runnable() {
@@ -35,14 +36,15 @@ public class TestShutdownThreadsHelper {
     }
   };
 
-  @Test (timeout = 3000)
+  @Test
+  @Timeout(value = 3)
   public void testShutdownThread() {
     Thread thread = new Thread(sampleRunnable);
     thread.start();
     boolean ret = ShutdownThreadsHelper.shutdownThread(thread);
     boolean isTerminated = !thread.isAlive();
-    assertEquals("Incorrect return value", ret, isTerminated);
-    assertTrue("Thread is not shutdown", isTerminated);
+    assertEquals(ret, isTerminated, "Incorrect return value");
+    assertTrue(isTerminated, "Thread is not shutdown");
 
   }
 
@@ -52,7 +54,7 @@ public class TestShutdownThreadsHelper {
     executor.execute(sampleRunnable);
     boolean ret = ShutdownThreadsHelper.shutdownExecutorService(executor);
     boolean isTerminated = executor.isTerminated();
-    assertEquals("Incorrect return value", ret, isTerminated);
-    assertTrue("ExecutorService is not shutdown", isTerminated);
+    assertEquals(ret, isTerminated, "Incorrect return value");
+    assertTrue(isTerminated, "ExecutorService is not shutdown");
   }
 }

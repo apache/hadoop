@@ -19,8 +19,13 @@ package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * test SkipBadRecords
@@ -28,7 +33,8 @@ import static org.junit.Assert.*;
  * 
  */
 public class TestSkipBadRecords {
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testSkipBadRecords() {
     // test default values
     Configuration conf = new Configuration();
