@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -46,6 +47,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
@@ -194,60 +196,96 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void createPathRetryIdempotency() throws Exception {
-    final AzureBlobFileSystem currentFs = getFileSystem();
     Configuration config = new Configuration(this.getRawConfiguration());
-    config.set("fs.azure.enable.client.transaction.id", "true");
-    final AzureBlobFileSystem fs =
-        (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
-            config);
-    assumeDfsServiceType();
-    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
-    AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
-    AbfsDfsClient abfsClient = (AbfsDfsClient) Mockito.spy(clientHandler.getClient());
-    fs.getAbfsStore().setClient(abfsClient);
-    fs.getAbfsStore().setClientHandler(clientHandler);
-    Mockito.doReturn(abfsClient).when(clientHandler).getIngressClient();
-    final Path nonOverwriteFile = new Path(
-        "/NonOverwriteTest_FileName_" + UUID.randomUUID());
-    final List<AbfsHttpHeader> headers = new ArrayList<>();
-    TestAbfsClient.mockAbfsOperationCreation(abfsClient,
-        new MockIntercept<AbfsRestOperation>() {
-      private int count = 0;
-      @Override
-      public void answer(final AbfsRestOperation mockedObj,
-          final InvocationOnMock answer) throws AbfsRestOperationException {
-        if (count == 0) {
-          count = 1;
-          AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
-          Mockito.doReturn("PUT").when(op).getMethod();
-          Mockito.doReturn("").when(op).getStorageErrorMessage();
-          Mockito.doReturn(true).when(mockedObj).hasResult();
-          Mockito.doReturn(op).when(mockedObj).getResult();
-          Mockito.doReturn(HTTP_CONFLICT).when(op).getStatusCode();
-          headers.addAll(mockedObj.getRequestHeaders());
-          throw new AbfsRestOperationException(HTTP_CONFLICT,
-              AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(), "", null, op);
+    config.set(FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID, "true");
+    try (final AzureBlobFileSystem fs = getFileSystem(config)) {
+      assumeDfsServiceType();
+      AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+      AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
+      AbfsDfsClient abfsClient = (AbfsDfsClient) Mockito.spy(
+          clientHandler.getClient());
+      fs.getAbfsStore().setClient(abfsClient);
+      fs.getAbfsStore().setClientHandler(clientHandler);
+      Mockito.doReturn(abfsClient).when(clientHandler).getIngressClient();
+      final Path nonOverwriteFile = new Path(
+          "/NonOverwriteTest_FileName_" + UUID.randomUUID());
+      final List<AbfsHttpHeader> headers = new ArrayList<>();
+      TestAbfsClient.mockAbfsOperationCreation(abfsClient,
+          new MockIntercept<AbfsRestOperation>() {
+            private int count = 0;
+
+            @Override
+            public void answer(final AbfsRestOperation mockedObj,
+                final InvocationOnMock answer)
+                throws AbfsRestOperationException {
+              if (count == 0) {
+                count = 1;
+                AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
+                Mockito.doReturn("PUT").when(op).getMethod();
+                Mockito.doReturn("").when(op).getStorageErrorMessage();
+                Mockito.doReturn(true).when(mockedObj).hasResult();
+                Mockito.doReturn(op).when(mockedObj).getResult();
+                Mockito.doReturn(HTTP_CONFLICT).when(op).getStatusCode();
+                headers.addAll(mockedObj.getRequestHeaders());
+                throw new AbfsRestOperationException(HTTP_CONFLICT,
+                    AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(), "",
+                    null, op);
+              }
+            }
+          });
+      AbfsRestOperation getPathRestOp = Mockito.mock(AbfsRestOperation.class);
+      AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
+      Mockito.doAnswer(answer -> {
+        String requiredHeader = null;
+        for (AbfsHttpHeader httpHeader : headers) {
+          if (X_MS_CLIENT_TRANSACTION_ID.equalsIgnoreCase(
+              httpHeader.getName())) {
+            requiredHeader = httpHeader.getValue();
+            break;
+          }
         }
-      }
-    });
-    AbfsRestOperation getPathRestOp = Mockito.mock(AbfsRestOperation.class);
-    AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
-    Mockito.doAnswer(answer -> {
-      String requiredHeader = null;
-      for (AbfsHttpHeader httpHeader : headers) {
-        if (X_MS_CLIENT_TRANSACTION_ID.equalsIgnoreCase(httpHeader.getName())) {
-          requiredHeader = httpHeader.getValue();
-          break;
-        }
-      }
-      return requiredHeader;
-    }).when(op).getResponseHeader(X_MS_CLIENT_TRANSACTION_ID);
-    Mockito.doReturn(true).when(getPathRestOp).hasResult();
-    Mockito.doReturn(op).when(getPathRestOp).getResult();
-    Mockito.doReturn(getPathRestOp).when(abfsClient).getPathStatus(
-        Mockito.nullable(String.class), Mockito.nullable(Boolean.class),
-        Mockito.nullable(TracingContext.class),
-        Mockito.nullable(ContextEncryptionAdapter.class));
-    fs.create(nonOverwriteFile, false);
+        return requiredHeader;
+      }).when(op).getResponseHeader(X_MS_CLIENT_TRANSACTION_ID);
+      Mockito.doReturn(true).when(getPathRestOp).hasResult();
+      Mockito.doReturn(op).when(getPathRestOp).getResult();
+      Mockito.doReturn(getPathRestOp).when(abfsClient).getPathStatus(
+          Mockito.nullable(String.class), Mockito.nullable(Boolean.class),
+          Mockito.nullable(TracingContext.class),
+          Mockito.nullable(ContextEncryptionAdapter.class));
+      fs.create(nonOverwriteFile, false);
+    }
+  }
+
+  /**
+   * Test to verify that the client transaction ID is included in the response header
+   * during the creation of a new file in Azure Blob Storage.
+   * <p>
+   * This test ensures that when a new file is created, the Azure Blob FileSystem client
+   * correctly includes the client transaction ID in the response header for the created file.
+   * The test uses a configuration where client transaction ID is enabled and verifies
+   * its presence after the file creation operation.
+   * </p>
+   *
+   * @throws Exception if any error occurs during test execution
+   */
+  @Test
+  public void getClientTransactionIdAfterCreate() throws Exception {
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.set(FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID, "true");
+    try (final AzureBlobFileSystem fs = getFileSystem(config)) {
+      assumeDfsServiceType();
+      AbfsDfsClient abfsDfsClient = (AbfsDfsClient) fs.getAbfsClient();
+      final Path nonOverwriteFile = new Path(
+          "/NonOverwriteTest_FileName_" + UUID.randomUUID());
+      fs.create(nonOverwriteFile, false);
+
+      final AbfsHttpOperation getPathStatusOp =
+          abfsDfsClient.getPathStatus(nonOverwriteFile.toUri().getPath(), false,
+              getTestTracingContext(fs, true), null).getResult();
+      Assertions.assertThat(
+          getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))
+          .describedAs("Client transaction ID should be set during create")
+          .isNotNull();
+    }
   }
 }

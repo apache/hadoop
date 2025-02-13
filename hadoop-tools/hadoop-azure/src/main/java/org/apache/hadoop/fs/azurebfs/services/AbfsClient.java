@@ -215,6 +215,11 @@ public abstract class AbfsClient implements Closeable {
       encryptionType = EncryptionType.GLOBAL_KEY;
     }
 
+    // Version update needed to support x-ms-client-transaction-id header
+    if (abfsConfiguration.getIsClientTransactionIdEnabled()) {
+      xMsVersion = ApiVersion.NOV_04_2024;
+    }
+
     String sslProviderName = null;
 
     if (this.baseUrl.toString().startsWith(HTTPS_SCHEME)) {

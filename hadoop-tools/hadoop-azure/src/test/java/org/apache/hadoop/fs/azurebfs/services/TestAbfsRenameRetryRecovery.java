@@ -78,6 +78,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
   public TestAbfsRenameRetryRecovery() throws Exception {
     isNamespaceEnabled = getConfiguration()
             .getBoolean(TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
+    Assume.assumeTrue(getConfiguration().getIsClientTransactionIdEnabled());
   }
 
   /**
