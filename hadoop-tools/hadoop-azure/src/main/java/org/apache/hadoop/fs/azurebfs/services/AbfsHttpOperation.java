@@ -75,6 +75,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   private String requestId = "";
   private String expectedAppendPos = "";
   private ListResultSchema listResultSchema = null;
+  private InputStream listResultStream = null;
   private List<String> blockIdList = null;
 
   // metrics
@@ -395,7 +396,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
           if (url.toString().contains(QUERY_PARAM_COMP + EQUAL + BLOCKLIST)) {
             parseBlockListResponse(stream);
           } else {
-            parseListFilesResponse(stream);
+            listResultStream = stream;
           }
         } else {
           if (buffer != null) {
@@ -578,6 +579,10 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public final long getRecvLatency() {
     return recvResponseTimeMs;
+  }
+
+  public final InputStream getListResultStream() {
+    return listResultStream;
   }
 
   /**

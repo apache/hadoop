@@ -19,12 +19,14 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.net.UnknownHostException;
@@ -42,11 +44,13 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.jcraft.jsch.IO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -66,18 +70,27 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultEntrySchema;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResponseData;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformer;
+import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformerInterface;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
@@ -495,9 +508,9 @@ public abstract class AbfsClient implements Closeable {
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
    */
-  public abstract AbfsRestOperation listPath(String relativePath, boolean recursive,
-      int listMaxResults, String continuation, TracingContext tracingContext)
-      throws IOException;
+  public abstract ListResponseData listPath(String relativePath, boolean recursive,
+      int listMaxResults, String continuation, TracingContext tracingContext,
+      IdentityTransformerInterface identityTransformer, URI uri) throws IOException;
 
   /**
    * Retrieves user-defined metadata on filesystem.
@@ -1682,7 +1695,8 @@ public abstract class AbfsClient implements Closeable {
    * @return ListResultSchema
    * @throws IOException if parsing fails
    */
-  public abstract ListResultSchema parseListPathResults(InputStream stream) throws IOException;
+  public abstract ListResponseData parseListPathResults(InputStream stream,
+      IdentityTransformerInterface identityTransformer, URI uri) throws IOException;
 
   /**
    * Parses response of Get Block List from server based on Endpoint used.
@@ -1733,4 +1747,64 @@ public abstract class AbfsClient implements Closeable {
    * @throws UnsupportedEncodingException if decoding fails
    */
   public abstract String decodeAttribute(byte[] value) throws UnsupportedEncodingException;
+
+  private String getPrimaryUserGroup() throws IOException {
+    String primaryUserGroup;
+    if (!getAbfsConfiguration().getSkipUserGroupMetadataDuringInitialization()) {
+      try {
+        primaryUserGroup = UserGroupInformation.getCurrentUser().getPrimaryGroupName();
+      } catch (IOException ex) {
+        LOG.error("Failed to get primary group for {}, using user name as primary group name",
+            getPrimaryUser());
+        primaryUserGroup = getPrimaryUser();
+      }
+    } else {
+      //Provide a default group name
+      primaryUserGroup = getPrimaryUser();
+    }
+    return primaryUserGroup;
+  }
+
+  private String getPrimaryUser() throws IOException {
+    return UserGroupInformation.getCurrentUser().getShortUserName();
+  }
+
+  protected VersionedFileStatus getFileStatusFromEntry(
+      ListResultEntrySchema entry,
+      IdentityTransformerInterface identityTransformer,
+      URI uri) throws IOException {
+    final String owner = identityTransformer.transformIdentityForGetRequest(
+        entry.owner(), true, getPrimaryUser());
+    final String group = identityTransformer.transformIdentityForGetRequest(
+        entry.group(), false, getPrimaryUserGroup());
+    final String encryptionContext = entry.getXMsEncryptionContext();
+    final FsPermission fsPermission = entry.permissions() == null
+        ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
+        : AbfsPermission.valueOf(entry.permissions());
+    final boolean hasAcl = AbfsPermission.isExtendedAcl(entry.permissions());
+
+    long lastModifiedMillis = 0;
+    long contentLength = entry.contentLength() == null ? 0 : entry.contentLength();
+    boolean isDirectory = entry.isDirectory() == null ? false : entry.isDirectory();
+    if (entry.lastModified() != null && !entry.lastModified().isEmpty()) {
+      lastModifiedMillis = DateTimeUtils.parseLastModifiedTime(
+          entry.lastModified());
+    }
+
+    Path entryPath = new Path(File.separator + entry.name());
+    entryPath = entryPath.makeQualified(uri, entryPath);
+    return new VersionedFileStatus(
+        owner,
+        group,
+        fsPermission,
+        hasAcl,
+        contentLength,
+        isDirectory,
+        1,
+        getAbfsConfiguration().getAzureBlockSize(),
+        lastModifiedMillis,
+        entryPath,
+        entry.eTag(),
+        encryptionContext);
+  }
 }

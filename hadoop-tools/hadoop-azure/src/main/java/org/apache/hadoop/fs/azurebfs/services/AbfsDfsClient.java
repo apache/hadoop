@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -30,6 +32,7 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +43,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -55,15 +59,24 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperati
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidFileSystemPropertyException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.contracts.services.DfsListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.DfsListResultSchema;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResponseData;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformerInterface;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
+import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -304,11 +317,12 @@ public class AbfsDfsClient extends AbfsClient {
    * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
    */
   @Override
-  public AbfsRestOperation listPath(final String relativePath,
+  public ListResponseData listPath(final String relativePath,
       final boolean recursive,
       final int listMaxResults,
       final String continuation,
-      TracingContext tracingContext) throws IOException {
+      TracingContext tracingContext,
+      IdentityTransformerInterface identityTransformer, URI uri) throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -328,8 +342,11 @@ public class AbfsDfsClient extends AbfsClient {
     final AbfsRestOperation op = getAbfsRestOperation(
         AbfsRestOperationType.ListPaths,
         HTTP_METHOD_GET, url, requestHeaders);
-    op.execute(tracingContext);
-    return op;
+    InputStream listResultInputStream = op.executeAndGetContentInputStream(tracingContext);
+    ListResponseData listResponseData = parseListPathResults(listResultInputStream, identityTransformer, uri);
+    listResponseData.setContinuationToken(getContinuationFromResponse(op.getResult()));
+    listResponseData.setOp(op);
+    return listResponseData;
   }
 
   /**
@@ -1401,7 +1418,8 @@ public class AbfsDfsClient extends AbfsClient {
    * @throws IOException if parsing fails.
    */
   @Override
-  public ListResultSchema parseListPathResults(final InputStream stream) throws IOException {
+  public ListResponseData parseListPathResults(final InputStream stream,
+      IdentityTransformerInterface identityTransformer, URI uri) throws IOException {
     DfsListResultSchema listResultSchema;
     try {
       final ObjectMapper objectMapper = new ObjectMapper();
@@ -1410,7 +1428,23 @@ public class AbfsDfsClient extends AbfsClient {
       LOG.error("Unable to deserialize list results", ex);
       throw ex;
     }
-    return listResultSchema;
+
+    if (listResultSchema == null) {
+      throw new AbfsRestOperationException(
+          AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+          AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+          "listStatusAsync path not found",
+          null);
+    }
+
+    List<FileStatus> fileStatuses = new ArrayList<>();
+    for (DfsListResultEntrySchema entry : listResultSchema.paths()) {
+      fileStatuses.add(getFileStatusFromEntry(entry, identityTransformer, uri));
+    }
+    ListResponseData listResponseData = new ListResponseData();
+    listResponseData.setFileStatusList(fileStatuses);
+    listResponseData.setRenamePendingJsonPaths(null);
+    return listResponseData;
   }
 
   @Override
