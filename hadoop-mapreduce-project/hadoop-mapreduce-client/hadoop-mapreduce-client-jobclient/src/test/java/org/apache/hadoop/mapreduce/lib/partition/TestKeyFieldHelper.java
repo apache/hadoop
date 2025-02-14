@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.mapreduce.lib.partition;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestKeyFieldHelper {
   private static final Logger LOG =
@@ -39,7 +39,7 @@ public class TestKeyFieldHelper {
     String eKeySpecs = keySpecs;
     helper.parseOption(keySpecs);
     String actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     // test -k a.b
     keySpecs = "-k 1.2";
@@ -47,28 +47,28 @@ public class TestKeyFieldHelper {
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-nr -k1.2,3.4";
     eKeySpecs = "-k1.2,3.4nr";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-nr -k1.2,3.4n";
     eKeySpecs = "-k1.2,3.4n";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-nr -k1.2,3.4r";
     eKeySpecs = "-k1.2,3.4r";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-nr -k1.2,3.4 -k5.6,7.8n -k9.10,11.12r -k13.14,15.16nr";
     //1st
@@ -76,142 +76,142 @@ public class TestKeyFieldHelper {
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     // 2nd
     eKeySpecs = "-k5.6,7.8n";
     actKeySpecs = helper.keySpecs().get(1).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     //3rd
     eKeySpecs = "-k9.10,11.12r";
     actKeySpecs = helper.keySpecs().get(2).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     //4th
     eKeySpecs = "-k13.14,15.16nr";
     actKeySpecs = helper.keySpecs().get(3).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-k1.2n,3.4";
     eKeySpecs = "-k1.2,3.4n";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-k1.2r,3.4";
     eKeySpecs = "-k1.2,3.4r";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-k1.2nr,3.4";
     eKeySpecs = "-k1.2,3.4nr";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-k1.2,3.4n";
     eKeySpecs = "-k1.2,3.4n";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-k1.2,3.4r";
     eKeySpecs = "-k1.2,3.4r";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-k1.2,3.4nr";
     eKeySpecs = "-k1.2,3.4nr";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-nr -k1.2,3.4 -k5.6,7.8";
     eKeySpecs = "-k1.2,3.4nr";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     eKeySpecs = "-k5.6,7.8nr";
     actKeySpecs = helper.keySpecs().get(1).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-n -k1.2,3.4 -k5.6,7.8";
     eKeySpecs = "-k1.2,3.4n";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     eKeySpecs = "-k5.6,7.8n";
     actKeySpecs = helper.keySpecs().get(1).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-r -k1.2,3.4 -k5.6,7.8";
     eKeySpecs = "-k1.2,3.4r";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     eKeySpecs = "-k5.6,7.8r";
     actKeySpecs = helper.keySpecs().get(1).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-k1.2,3.4n -k5.6,7.8";
     eKeySpecs = "-k1.2,3.4n";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     eKeySpecs = "-k5.6,7.8";
     actKeySpecs = helper.keySpecs().get(1).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-k1.2,3.4r -k5.6,7.8";
     eKeySpecs = "-k1.2,3.4r";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     eKeySpecs = "-k5.6,7.8";
     actKeySpecs = helper.keySpecs().get(1).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-k1.2,3.4nr -k5.6,7.8";
     eKeySpecs = "-k1.2,3.4nr";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     eKeySpecs = "-k5.6,7.8";
     actKeySpecs = helper.keySpecs().get(1).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-n";
     eKeySpecs = "-k1.1,0.0n";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-r";
     eKeySpecs = "-k1.1,0.0r";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
     
     keySpecs = "-nr";
     eKeySpecs = "-k1.1,0.0nr";
     helper = new KeyFieldHelper();
     helper.parseOption(keySpecs);
     actKeySpecs = helper.keySpecs().get(0).toString();
-    assertEquals("KeyFieldHelper's parsing is garbled", eKeySpecs, actKeySpecs);
+    assertEquals(eKeySpecs, actKeySpecs, "KeyFieldHelper's parsing is garbled");
   }
   
   /**
@@ -395,7 +395,7 @@ public class TestKeyFieldHelper {
                                       helper.keySpecs().get(0));
     LOG.info("start : " + start);
     if (expectedOutput == null) {
-      assertEquals("Expected -1 when the start index is invalid", -1, start);
+      assertEquals(-1, start, "Expected -1 when the start index is invalid");
       return;
     }
     // get the end index
@@ -411,8 +411,8 @@ public class TestKeyFieldHelper {
     String output = new String(outputBytes);
     LOG.info("output : " + output);
     LOG.info("expected-output : " + expectedOutput);
-    assertEquals(keySpecs + " failed on input '" + input + "'", 
-                 expectedOutput, output);
+    assertEquals(expectedOutput, output,
+        keySpecs + " failed on input '" + input + "'");
   }
 
   // check for equality of 2 int arrays

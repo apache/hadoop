@@ -26,19 +26,21 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
-@Ignore
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+@Disabled
 public class TestDelegationToken {
   private MiniMRCluster cluster;
   private UserGroupInformation user1;
   private UserGroupInformation user2;
   
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     user1 = UserGroupInformation.createUserForTesting("alice", 
                                                       new String[]{"users"});
@@ -83,8 +85,8 @@ public class TestDelegationToken {
     System.out.println("create time: " + createTime);
     System.out.println("current time: " + currentTime);
     System.out.println("max time: " + maxTime);
-    assertTrue("createTime < current", createTime < currentTime);
-    assertTrue("current < maxTime", currentTime < maxTime);
+    assertTrue(createTime < currentTime, "createTime < current");
+    assertTrue(currentTime < maxTime, "current < maxTime");
 
     // renew should work as user alice
     user1.doAs(new PrivilegedExceptionAction<Void>() {
@@ -102,7 +104,7 @@ public class TestDelegationToken {
       public Void run() throws Exception {
         try {
           bobClient.renewDelegationToken(token);
-          Assert.fail("bob renew");
+          fail("bob renew");
         } catch (AccessControlException ace) {
           // PASS
         }
@@ -116,7 +118,7 @@ public class TestDelegationToken {
       public Void run() throws Exception {
         try {
           bobClient.cancelDelegationToken(token);
-          Assert.fail("bob cancel");
+          fail("bob cancel");
         } catch (AccessControlException ace) {
           // PASS
         }
@@ -131,7 +133,7 @@ public class TestDelegationToken {
         client.cancelDelegationToken(token);
         try {
           client.cancelDelegationToken(token);
-          Assert.fail("second alice cancel");
+          fail("second alice cancel");
         } catch (InvalidToken it) {
           // PASS
         }

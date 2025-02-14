@@ -34,11 +34,10 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -46,17 +45,19 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class TestEncryptedShuffle {
 
   private static File testRootDir;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     testRootDir =
         GenericTestUtils.setupTestRootDir(TestEncryptedShuffle.class);
   }
 
-  @Before
+  @BeforeEach
   public void createCustomYarnClasspath() throws Exception {
     classpathDir = KeyStoreTestUtil.getClasspathDir(TestEncryptedShuffle.class);
     new File(classpathDir, "core-site.xml").delete();
@@ -64,7 +65,7 @@ public class TestEncryptedShuffle {
         Time.monotonicNow()));
   }
 
-  @After
+  @AfterEach
   public void cleanUpMiniClusterSpecialConfig() throws Exception {
     new File(classpathDir, "core-site.xml").delete();
     String keystoresDir = testRootDir.getAbsolutePath();
@@ -151,8 +152,8 @@ public class TestEncryptedShuffle {
       JobClient jobClient = new JobClient(jobConf);
       RunningJob runJob = jobClient.submitJob(jobConf);
       runJob.waitForCompletion();
-      Assert.assertTrue(runJob.isComplete());
-      Assert.assertTrue(runJob.isSuccessful());
+      assertTrue(runJob.isComplete());
+      assertTrue(runJob.isSuccessful());
     } finally {
       stopCluster();
     }

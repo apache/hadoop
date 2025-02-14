@@ -140,8 +140,8 @@ public class TestChild extends HadoopTestCase {
     assertTrue(fs.exists(outDir), "Job output directory doesn't exit!");
     FileStatus[] list = fs.listStatus(outDir, new OutputFilter());
     int numPartFiles = numReds == 0 ? numMaps : numReds;
-    assertTrue(list.length == numPartFiles, "Number of part-files is " + list.length + " and not "
-        + numPartFiles);
+    assertTrue(list.length == numPartFiles,
+        "Number of part-files is " + list.length + " and not " + numPartFiles);
     return job;
   }
 

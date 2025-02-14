@@ -18,8 +18,8 @@
 package org.apache.hadoop.mapreduce.security;
 
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -47,10 +47,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestBinaryTokenFile {
 
@@ -175,7 +174,7 @@ public class TestBinaryTokenFile {
 
   private static Path p1;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     final Configuration conf = new Configuration();
 
@@ -201,7 +200,7 @@ public class TestBinaryTokenFile {
     p1 = fs.makeQualified(p1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if(mrCluster != null) {
       mrCluster.stop();
@@ -231,7 +230,7 @@ public class TestBinaryTokenFile {
         os.close();
       }
     } catch (IOException e) {
-      Assert.fail("Exception " + e);
+      fail("Exception " + e);
     }
   }
 
@@ -259,7 +258,7 @@ public class TestBinaryTokenFile {
       e.printStackTrace(System.out);
       fail("Job failed");
     }
-    assertEquals("dist job res is not 0:", 0, res);
+    assertEquals(0, res, "dist job res is not 0:");
   }
 
   /**
@@ -288,6 +287,6 @@ public class TestBinaryTokenFile {
       e.printStackTrace(System.out);
       fail("Job failed");
     }
-    assertEquals("dist job res is not 0:", 0, res);
+    assertEquals(0, res, "dist job res is not 0:");
   }
 }
