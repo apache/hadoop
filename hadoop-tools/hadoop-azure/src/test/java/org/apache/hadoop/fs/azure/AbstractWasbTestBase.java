@@ -153,16 +153,6 @@ public abstract class AbstractWasbTestBase extends AbstractWasbTestWithTimeout
   }
 
   /**
-   * Return a blob path bonded to this method name, unique to this fork during
-   * parallel execution.
-   * @return a method name unique to (fork, method).
-   * @throws IOException IO problems
-   */
-  protected Path methodBlobPath() throws IOException {
-    return blobPath(methodName.getMethodName());
-  }
-
-  /**
    * Describe a test in the logs.
    * @param text text to print
    * @param args arguments to format in the printing
