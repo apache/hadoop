@@ -1773,10 +1773,16 @@ public abstract class AbfsClient implements Closeable {
       ListResultEntrySchema entry,
       IdentityTransformerInterface identityTransformer,
       URI uri) throws IOException {
-    final String owner = identityTransformer.transformIdentityForGetRequest(
-        entry.owner(), true, getPrimaryUser());
-    final String group = identityTransformer.transformIdentityForGetRequest(
-        entry.group(), false, getPrimaryUserGroup());
+    final String owner, group;
+    if (identityTransformer != null) {
+      owner = identityTransformer.transformIdentityForGetRequest(
+          entry.owner(), true, getPrimaryUser());
+      group = identityTransformer.transformIdentityForGetRequest(
+          entry.group(), false, getPrimaryUserGroup());
+    } else {
+      owner = null;
+      group = null;
+    }
     final String encryptionContext = entry.getXMsEncryptionContext();
     final FsPermission fsPermission = entry.permissions() == null
         ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
@@ -1785,14 +1791,16 @@ public abstract class AbfsClient implements Closeable {
 
     long lastModifiedMillis = 0;
     long contentLength = entry.contentLength() == null ? 0 : entry.contentLength();
-    boolean isDirectory = entry.isDirectory() == null ? false : entry.isDirectory();
+    boolean isDirectory = entry.isDirectory() != null && entry.isDirectory();
     if (entry.lastModified() != null && !entry.lastModified().isEmpty()) {
       lastModifiedMillis = DateTimeUtils.parseLastModifiedTime(
           entry.lastModified());
     }
 
     Path entryPath = new Path(File.separator + entry.name());
-    entryPath = entryPath.makeQualified(uri, entryPath);
+    if (uri != null) {
+      entryPath = new Path(uri.getPath(), entryPath);
+    }
     return new VersionedFileStatus(
         owner,
         group,

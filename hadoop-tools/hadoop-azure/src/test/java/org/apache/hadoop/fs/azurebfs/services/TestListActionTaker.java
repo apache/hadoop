@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
@@ -32,6 +33,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformerInterface;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_LIST_MAX_RESULTS;
@@ -135,7 +137,8 @@ public class TestListActionTaker extends AbstractAbfsTestWithTimeout {
           return op;
         }).when(client)
         .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
-            Mockito.nullable(String.class), Mockito.any(TracingContext.class));
+            Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(
+                IdentityTransformerInterface.class), Mockito.nullable(URI.class));
 
     listActionTaker.listRecursiveAndTakeAction();
   }

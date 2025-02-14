@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformerInterface;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
@@ -56,6 +58,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.BlobRenameHandler;
 import org.apache.hadoop.fs.azurebfs.services.RenameAtomicity;
 import org.apache.hadoop.fs.azurebfs.services.RenameAtomicityTestUtils;
+import org.apache.hadoop.fs.azurebfs.services.VersionedFileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
@@ -779,8 +782,8 @@ public class ITestAzureBlobFileSystemRename extends
     /*
      * Create renameJson file.
      */
-    AzureBlobFileSystemStore.VersionedFileStatus fileStatus
-        = (AzureBlobFileSystemStore.VersionedFileStatus) fs.getFileStatus(path);
+    VersionedFileStatus fileStatus
+        = (VersionedFileStatus) fs.getFileStatus(path);
     int jsonLen = new RenameAtomicity(path,
         new Path("/hbase/test4"), renameJson,
         getTestTracingContext(fs, true), fileStatus.getEtag(),
@@ -1343,12 +1346,13 @@ public class ITestAzureBlobFileSystemRename extends
           String continuation = answer.getArgument(3);
           TracingContext context = answer.getArgument(4);
           return getFileSystem().getAbfsClient()
-              .listPath(path, recursive, 1, continuation, context);
+              .listPath(path, recursive, 1, continuation, context, null, null);
         })
         .when(spiedClient)
         .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
             Mockito.nullable(String.class),
-            Mockito.any(TracingContext.class));
+            Mockito.any(TracingContext.class), Mockito.nullable(
+                IdentityTransformerInterface.class), Mockito.nullable(URI.class));
     fs.rename(new Path("/testDir/dir1"), new Path("/testDir/dir2"));
     for (int i = 0; i < 10; i++) {
       Assertions.assertThat(fs.exists(new Path("/testDir/dir2/file" + i)))
@@ -1426,13 +1430,13 @@ public class ITestAzureBlobFileSystemRename extends
             listCallInvocation[0]++;
             return getFileSystem().getAbfsClient().listPath(answer.getArgument(0),
                 answer.getArgument(1), 1,
-                answer.getArgument(3), answer.getArgument(4));
+                answer.getArgument(3), answer.getArgument(4), answer.getArgument(5), answer.getArgument(6));
           }
           return answer.callRealMethod();
         })
         .when(spiedClient)
         .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
-            Mockito.nullable(String.class), Mockito.any(TracingContext.class));
+            Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(IdentityTransformerInterface.class), Mockito.nullable(URI.class));
     intercept(AccessDeniedException.class,
         () -> {
           fs.rename(new Path("/src"), new Path("/dst"));
