@@ -31,10 +31,10 @@ import org.apache.hadoop.fs.crypto.CryptoFSDataOutputStream;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestHdfsCryptoStreams extends CryptoStreamsTestBase {
   private static MiniDFSCluster dfsCluster;
@@ -43,7 +43,7 @@ public class TestHdfsCryptoStreams extends CryptoStreamsTestBase {
   private static Path path;
   private static Path file;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     Configuration conf = new HdfsConfiguration();
     dfsCluster = new MiniDFSCluster.Builder(conf).build();
@@ -52,14 +52,14 @@ public class TestHdfsCryptoStreams extends CryptoStreamsTestBase {
     codec = CryptoCodec.getInstance(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws Exception {
     if (dfsCluster != null) {
       dfsCluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws IOException {
     ++pathCount;
@@ -70,7 +70,7 @@ public class TestHdfsCryptoStreams extends CryptoStreamsTestBase {
     super.setUp();
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws IOException {
     fs.delete(path, true);
   }
