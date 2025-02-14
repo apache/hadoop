@@ -230,6 +230,7 @@ import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.Listing.toLocatedFileStatusIterator;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.isRejectOutOfSpan;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.INITIALIZE_SPAN;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.createAWSCredentialProviderList;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_ALLOW_KMS_RW;
@@ -256,6 +257,7 @@ import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.isS3ExpressStore;
+import static org.apache.hadoop.fs.s3a.impl.streams.StreamFactoryRequirements.Requirements.ExpectUnauditedGetRequests;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.checkNoS3Guard;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
@@ -301,6 +303,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   private String username;
 
+  /**
+   * Store back end.
+   */
   private S3AStore store;
 
   /**
@@ -683,6 +688,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       signerManager = new SignerManager(bucket, this, conf, owner);
       signerManager.initCustomSigners();
 
+      // start auditing
+      // extra configuration will be passed down later.
+      initializeAuditService();
+
+      // create the requestFactory.
+      // requires the audit manager to be initialized.
+      requestFactory = createRequestFactory();
+
       // create an initial span for all other operations.
       span = createSpan(INITIALIZE_SPAN, bucket, null);
 
@@ -690,6 +703,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // the FS came with a DT
       // this may do some patching of the configuration (e.g. setting
       // the encryption algorithms)
+      // requires the audit manager to be initialized.
       ClientManager clientManager = createClientManager(name, delegationTokensEnabled);
 
       inputPolicy = S3AInputPolicy.getPolicy(
@@ -770,14 +784,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       int rateLimitCapacity = intOption(conf, S3A_IO_RATE_LIMIT, DEFAULT_S3A_IO_RATE_LIMIT, 0);
 
-      // start auditing.
-      // extra configuration will be passed down later.
-      initializeAuditService();
-
-      // create the requestFactory.
-      // requires the audit manager to be initialized.
-      requestFactory = createRequestFactory();
-
       // now create and initialize the store
       store = createS3AStore(clientManager, rateLimitCapacity);
       // the s3 client is created through the store, rather than
@@ -792,8 +798,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // If the input stream can issue get requests outside spans,
       // the auditor is forced to disable rejection of unaudited requests.
       final EnumSet<AuditorFlags> flags = EnumSet.noneOf(AuditorFlags.class);
-      if (factoryRequirements.requires(
-          StreamFactoryRequirements.Requirements.ExpectUnauditedGetRequests)) {
+      if (factoryRequirements.requires(ExpectUnauditedGetRequests)) {
         flags.add(AuditorFlags.PermitOutOfBandOperations);
       }
       getAuditManager().setAuditFlags(flags);

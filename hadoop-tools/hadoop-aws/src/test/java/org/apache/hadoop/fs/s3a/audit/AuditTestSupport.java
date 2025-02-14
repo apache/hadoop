@@ -32,6 +32,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_ACCESS_CHECK_FAILURE;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_FAILURE;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_REQUEST_EXECUTION;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_SPAN_CREATION;
+import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.isRejectOutOfSpan;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_SERVICE_CLASSNAME;
@@ -156,6 +157,6 @@ public final class AuditTestSupport {
    * @return true if out of span calls raise exceptions
    */
   private static boolean outOfSpanOperationAreRejected(final S3AFileSystem fs) {
-    return fs.getAuditManager().getConfig().getBoolean(REJECT_OUT_OF_SPAN_OPERATIONS, false);
+    return isRejectOutOfSpan(fs.getAuditManager().getConfig());
   }
 }

@@ -79,7 +79,7 @@ public class NoopAuditManagerS3A extends CompositeService
   @Override
   protected void serviceInit(final Configuration conf) throws Exception {
     super.serviceInit(conf);
-    NoopAuditor audit = new NoopAuditor(this);
+    NoopAuditor audit = new NoopAuditor("NoopAuditor", this);
     final OperationAuditorOptions options =
         OperationAuditorOptions.builder()
             .withConfiguration(conf)

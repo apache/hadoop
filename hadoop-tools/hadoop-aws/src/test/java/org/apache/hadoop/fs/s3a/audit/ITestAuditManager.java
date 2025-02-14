@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.audit;
 
 import java.nio.file.AccessDeniedException;
+import java.util.EnumSet;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -113,6 +114,10 @@ public class ITestAuditManager extends AbstractS3ACostTest {
         .isGreaterThan(exec0);
     assertThatStatisticCounter(iostats(), AUDIT_FAILURE.getSymbol())
         .isGreaterThan(failures0);
+
+    // stop rejecting out of span requests
+    fs.getAuditManager().setAuditFlags(EnumSet.of(AuditorFlags.PermitOutOfBandOperations));
+    writer.listMultipartUploads("/");
   }
 
   @Test
