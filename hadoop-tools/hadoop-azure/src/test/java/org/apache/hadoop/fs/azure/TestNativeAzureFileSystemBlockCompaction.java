@@ -47,7 +47,7 @@ public class TestNativeAzureFileSystemBlockCompaction extends AbstractWasbTestBa
   private AzureBlobStorageTestAccount testAccount = null;
 
   @BeforeEach
-  public void setUp( ) throws Exception {
+  public void setUp() throws Exception {
     super.setUp();
     testAccount = createTestAccount();
     fs = testAccount.getFileSystem();
