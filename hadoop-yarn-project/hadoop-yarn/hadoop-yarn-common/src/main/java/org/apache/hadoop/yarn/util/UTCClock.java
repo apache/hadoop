@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
  * Implementation of {@link Clock} that gives the current UTC time in
  * milliseconds.
  * @deprecated This class has been moved to {@link org.apache.hadoop.util.UTCClock}
- * in hadoop-common-project and will be removed in Hadoop 4.0.0.
+ * in hadoop-common-project and will be removed in future version.
  * Please use {@link org.apache.hadoop.util.UTCClock} instead.
  */
 @Deprecated
