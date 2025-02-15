@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.client;
 
 import java.util.List;
 
-import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
@@ -44,14 +43,14 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Timeout(180)
 public class TestApplicationClientProtocolOnHA extends ProtocolHATestBase {
   private YarnClient client = null;
 
@@ -68,9 +67,6 @@ public class TestApplicationClientProtocolOnHA extends ProtocolHATestBase {
       client.stop();
     }
   }
-
-  @Rule
-  public Timeout timeout = new Timeout(180, TimeUnit.SECONDS);
 
   @Test
   public void testGetApplicationReportOnHA() throws Exception {

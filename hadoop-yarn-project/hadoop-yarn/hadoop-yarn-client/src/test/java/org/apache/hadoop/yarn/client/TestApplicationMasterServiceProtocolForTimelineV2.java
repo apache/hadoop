@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.client;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -34,7 +33,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineW
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -42,10 +41,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 /**
  * Tests Application Master Protocol with timeline service v2 enabled.
  */
+@Timeout(180)
 public class TestApplicationMasterServiceProtocolForTimelineV2
     extends ApplicationMasterServiceProtoTestBase {
-
-  public Timeout timeout = new Timeout(180, TimeUnit.SECONDS);
 
   @BeforeEach
   public void initialize() throws Exception {

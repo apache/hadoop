@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.client;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -35,17 +34,14 @@ import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-
+@Timeout(180)
 public class TestApplicationMasterServiceProtocolOnHA
     extends ApplicationMasterServiceProtoTestBase {
-  @Rule
-  public Timeout timeout = new Timeout(180, TimeUnit.SECONDS);
 
   @BeforeEach
   public void initialize() throws Exception {

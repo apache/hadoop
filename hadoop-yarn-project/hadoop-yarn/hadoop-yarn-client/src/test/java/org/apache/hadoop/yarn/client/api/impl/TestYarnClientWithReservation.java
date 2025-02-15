@@ -53,9 +53,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.UTCClock;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -75,7 +74,6 @@ import static org.junit.jupiter.api.Assertions.fail;
  * This class is to test class {@link YarnClient) and {@link YarnClientImpl}
  * with Reservation.
  */
-@RunWith(Parameterized.class)
 public class TestYarnClientWithReservation {
   protected final static String TEST_DIR =
       new File(System.getProperty("test.build.data", "/tmp")).getAbsolutePath();
@@ -88,13 +86,12 @@ public class TestYarnClientWithReservation {
 
   private SchedulerType schedulerType;
 
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> getParameters() {
     return Arrays.stream(SchedulerType.values()).map(
         type -> new Object[]{type}).collect(Collectors.toList());
   }
 
-  public TestYarnClientWithReservation(SchedulerType scheduler) {
+  public void initTestYarnClientWithReservation(SchedulerType scheduler) {
     this.schedulerType = scheduler;
   }
 
@@ -186,8 +183,10 @@ public class TestYarnClientWithReservation {
     DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
-  @Test
-  public void testCreateReservation() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testCreateReservation(SchedulerType scheduler) throws Exception {
+    initTestYarnClientWithReservation(scheduler);
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
@@ -225,8 +224,10 @@ public class TestYarnClientWithReservation {
     }
   }
 
-  @Test
-  public void testUpdateReservation() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testUpdateReservation(SchedulerType scheduler) throws Exception {
+    initTestYarnClientWithReservation(scheduler);
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
@@ -282,8 +283,11 @@ public class TestYarnClientWithReservation {
   }
 
 
-  @Test
-  public void testListReservationsByReservationId() throws Exception{
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testListReservationsByReservationId(SchedulerType scheduler)
+      throws Exception{
+    initTestYarnClientWithReservation(scheduler);
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
@@ -314,8 +318,11 @@ public class TestYarnClientWithReservation {
     }
   }
 
-  @Test
-  public void testListReservationsByTimeInterval() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testListReservationsByTimeInterval(SchedulerType scheduler)
+      throws Exception {
+    initTestYarnClientWithReservation(scheduler);
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
@@ -369,8 +376,11 @@ public class TestYarnClientWithReservation {
     }
   }
 
-  @Test
-  public void testListReservationsByInvalidTimeInterval() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testListReservationsByInvalidTimeInterval(SchedulerType scheduler)
+      throws Exception {
+    initTestYarnClientWithReservation(scheduler);
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
@@ -409,9 +419,11 @@ public class TestYarnClientWithReservation {
     }
   }
 
-  @Test
-  public void testListReservationsByTimeIntervalContainingNoReservations()
-      throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testListReservationsByTimeIntervalContainingNoReservations(
+      SchedulerType scheduler) throws Exception {
+    initTestYarnClientWithReservation(scheduler);
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
@@ -480,8 +492,10 @@ public class TestYarnClientWithReservation {
     }
   }
 
-  @Test
-  public void testReservationDelete() throws Exception {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  public void testReservationDelete(SchedulerType scheduler) throws Exception {
+    initTestYarnClientWithReservation(scheduler);
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {

@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.client;
 
 import java.io.IOException;
 
-import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.apache.hadoop.ipc.RPC;
@@ -34,18 +33,15 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Timeout(180)
 public class TestResourceTrackerOnHA extends ProtocolHATestBase {
 
   private ResourceTracker resourceTracker = null;
-
-  @Rule
-  public Timeout timeout = new Timeout(180, TimeUnit.SECONDS);
 
   @BeforeEach
   public void initiate() throws Exception {
