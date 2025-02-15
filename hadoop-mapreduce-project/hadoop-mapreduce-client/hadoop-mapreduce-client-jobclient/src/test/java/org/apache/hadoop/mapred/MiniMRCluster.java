@@ -176,7 +176,7 @@ public class MiniMRCluster {
       String[] hosts, UserGroupInformation ugi, JobConf conf,
       int numTrackerToExclude) throws IOException {
     this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, numDir,
-        racks, hosts, ugi, conf, numTrackerToExclude, new SystemClock());
+        racks, hosts, ugi, conf, numTrackerToExclude, SystemClock.getInstance());
   }
 
   public MiniMRCluster(int jobTrackerPort, int taskTrackerPort,
