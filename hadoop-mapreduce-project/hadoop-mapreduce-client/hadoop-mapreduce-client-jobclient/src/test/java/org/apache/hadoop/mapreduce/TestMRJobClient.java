@@ -30,8 +30,8 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,11 +50,11 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  test CLI class. CLI class implemented  the Tool interface. 
@@ -65,7 +65,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMRJobClient.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     setupClassBase(TestMRJobClient.class);
   }
@@ -133,8 +133,8 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
         job.getConfiguration());
     Path submitJobDir = new Path(jobStagingArea, "JobId");
     Path submitJobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);
-    assertFalse("Shouldn't have created a job file if job specs failed.",
-        FileSystem.get(conf).exists(submitJobFile));
+    assertFalse(FileSystem.get(conf).exists(submitJobFile),
+        "Shouldn't have created a job file if job specs failed.");
   }
 
   /**
@@ -191,7 +191,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     // TaskAttemptId is not set
     int exitCode = runTool(conf, jc, new String[] { "-fail-task" }, out);
-    assertEquals("Exit code", -1, exitCode);
+    assertEquals(-1, exitCode, "Exit code");
 
     runTool(conf, jc, new String[] { "-fail-task", taid.toString() }, out);
     String answer = new String(out.toByteArray(), StandardCharsets.UTF_8);
@@ -209,7 +209,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     // bad parameters
     int exitCode = runTool(conf, jc, new String[] { "-kill-task" }, out);
-    assertEquals("Exit code", -1, exitCode);
+    assertEquals(-1, exitCode, "Exit code");
 
     runTool(conf, jc, new String[] { "-kill-task", taid.toString() }, out);
     String answer = new String(out.toByteArray(), StandardCharsets.UTF_8);
@@ -227,10 +227,10 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     // without jobId
     int exitCode = runTool(conf, jc, new String[] { "-kill" }, out);
-    assertEquals("Exit code", -1, exitCode);
+    assertEquals(-1, exitCode, "Exit code");
     // good parameters
     exitCode = runTool(conf, jc, new String[] { "-kill", jobId }, out);
-    assertEquals("Exit code", 0, exitCode);
+    assertEquals(0, exitCode, "Exit code");
     
     String answer = new String(out.toByteArray(), StandardCharsets.UTF_8);
     assertTrue(answer.contains("Killed job " + jobId));
@@ -257,12 +257,12 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     // bad parameters
     int exitCode = runTool(conf, jc, new String[] { "-submit" }, out);
-    assertEquals("Exit code", -1, exitCode);
+    assertEquals(-1, exitCode, "Exit code");
     
     
     exitCode = runTool(conf, jc,
         new String[] { "-submit", fconUri }, out);
-    assertEquals("Exit code", 0, exitCode);
+    assertEquals(0, exitCode, "Exit code");
     String answer = new String(out.toByteArray());
     // in console was written
     assertTrue(answer.contains("Created job "));
@@ -312,10 +312,10 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     int exitCode = runTool(conf, jc, new String[] {
         "-list-blacklisted-trackers", "second in" }, out);
-    assertEquals("Exit code", -1, exitCode);
+    assertEquals(-1, exitCode, "Exit code");
     exitCode = runTool(conf, jc, new String[] { "-list-blacklisted-trackers" },
         out);
-    assertEquals("Exit code", 0, exitCode);
+    assertEquals(0, exitCode, "Exit code");
     String line;
     BufferedReader br = new BufferedReader(new InputStreamReader(
         new ByteArrayInputStream(out.toByteArray())));
@@ -334,10 +334,10 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     CLI jc = createJobClient();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     int exitCode = runTool(conf, jc, new String[] { "-list-attempt-ids" }, out);
-    assertEquals("Exit code", -1, exitCode);
+    assertEquals(-1, exitCode, "Exit code");
     exitCode = runTool(conf, jc, new String[] { "-list-attempt-ids", jobId,
         "MAP", "completed" }, out);
-    assertEquals("Exit code", 0, exitCode);
+    assertEquals(0, exitCode, "Exit code");
     String line;
     BufferedReader br = new BufferedReader(new InputStreamReader(
         new ByteArrayInputStream(out.toByteArray())));
@@ -356,9 +356,9 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     int exitCode = runTool(conf, jc, new String[] { "-list-active-trackers",
         "second parameter" }, out);
-    assertEquals("Exit code", -1, exitCode);
+    assertEquals(-1, exitCode, "Exit code");
     exitCode = runTool(conf, jc, new String[] { "-list-active-trackers" }, out);
-    assertEquals("Exit code", 0, exitCode);
+    assertEquals(0, exitCode, "Exit code");
     String line;
     BufferedReader br = new BufferedReader(new InputStreamReader(
         new ByteArrayInputStream(out.toByteArray())));
@@ -387,7 +387,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
         historyFileUri = file.getPath().toUri().toString();
       }
     }
-    assertNotNull("Could not find jhist file", historyFileUri);
+    assertNotNull(historyFileUri, "Could not find jhist file");
 
     for (String historyFileOrJobId : new String[]{historyFileUri, jobId}) {
       // Try a bunch of different valid combinations of the command
@@ -396,7 +396,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
           "all",
           historyFileOrJobId,
       }, out);
-      assertEquals("Exit code", 0, exitCode);
+      assertEquals(0, exitCode, "Exit code");
       checkHistoryHumanOutput(jobId, out);
       File outFile = File.createTempFile("myout", ".txt");
       exitCode = runTool(conf, jc, new String[]{
@@ -406,7 +406,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
           "-outfile",
           outFile.getAbsolutePath()
       }, out);
-      assertEquals("Exit code", 0, exitCode);
+      assertEquals(0, exitCode, "Exit code");
       checkHistoryHumanFileOutput(jobId, out, outFile);
       outFile = File.createTempFile("myout", ".txt");
       exitCode = runTool(conf, jc, new String[]{
@@ -418,7 +418,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
           "-format",
           "human"
       }, out);
-      assertEquals("Exit code", 0, exitCode);
+      assertEquals(0, exitCode, "Exit code");
       checkHistoryHumanFileOutput(jobId, out, outFile);
       exitCode = runTool(conf, jc, new String[]{
           "-history",
@@ -426,7 +426,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
           "-format",
           "human"
       }, out);
-      assertEquals("Exit code", 0, exitCode);
+      assertEquals(0, exitCode, "Exit code");
       checkHistoryHumanOutput(jobId, out);
       exitCode = runTool(conf, jc, new String[]{
           "-history",
@@ -435,7 +435,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
           "-format",
           "json"
       }, out);
-      assertEquals("Exit code", 0, exitCode);
+      assertEquals(0, exitCode, "Exit code");
       checkHistoryJSONOutput(jobId, out);
       outFile = File.createTempFile("myout", ".txt");
       exitCode = runTool(conf, jc, new String[]{
@@ -447,7 +447,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
           "-format",
           "json"
       }, out);
-      assertEquals("Exit code", 0, exitCode);
+      assertEquals(0, exitCode, "Exit code");
       checkHistoryJSONFileOutput(jobId, out, outFile);
       exitCode = runTool(conf, jc, new String[]{
           "-history",
@@ -455,7 +455,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
           "-format",
           "json"
       }, out);
-      assertEquals("Exit code", 0, exitCode);
+      assertEquals(0, exitCode, "Exit code");
       checkHistoryJSONOutput(jobId, out);
 
       // Check some bad arguments
@@ -464,19 +464,19 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
           historyFileOrJobId,
           "foo"
       }, out);
-      assertEquals("Exit code", -1, exitCode);
+      assertEquals(-1, exitCode, "Exit code");
       exitCode = runTool(conf, jc, new String[]{
           "-history",
           historyFileOrJobId,
           "-format"
       }, out);
-      assertEquals("Exit code", -1, exitCode);
+      assertEquals(-1, exitCode, "Exit code");
       exitCode = runTool(conf, jc, new String[]{
           "-history",
           historyFileOrJobId,
           "-outfile",
       }, out);
-      assertEquals("Exit code", -1, exitCode);
+      assertEquals(-1, exitCode, "Exit code");
       try {
         runTool(conf, jc, new String[]{
             "-history",
@@ -553,16 +553,16 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
 
     // bad arguments
     int exitCode = runTool(conf, jc, new String[] { "-config" }, out);
-    assertEquals("Exit code", -1, exitCode);
+    assertEquals(-1, exitCode, "Exit code");
     exitCode = runTool(conf, jc, new String[] { "-config job_invalid foo.xml" },
         out);
-    assertEquals("Exit code", -1, exitCode);
+    assertEquals(-1, exitCode, "Exit code");
 
     // good arguments
     File outFile = File.createTempFile("config", ".xml");
     exitCode = runTool(conf, jc, new String[] { "-config", jobId,
         outFile.toString()}, out);
-    assertEquals("Exit code", 0, exitCode);
+    assertEquals(0, exitCode, "Exit code");
     BufferedReader br = new BufferedReader(new FileReader(outFile));
     String line = br.readLine();
     br.close();
@@ -577,11 +577,11 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     CLI jc = createJobClient();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     int exitCode = runTool(conf, jc, new String[] { "-events" }, out);
-    assertEquals("Exit code", -1, exitCode);
+    assertEquals(-1, exitCode, "Exit code");
 
     exitCode = runTool(conf, jc, new String[] { "-events", jobId, "0", "100" },
         out);
-    assertEquals("Exit code", 0, exitCode);
+    assertEquals(0, exitCode, "Exit code");
     String line;
     BufferedReader br = new BufferedReader(new InputStreamReader(
         new ByteArrayInputStream(out.toByteArray())));
@@ -603,10 +603,10 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     // bad options
     int exitCode = runTool(conf, jc, new String[] { "-status" }, out);
-    assertEquals("Exit code", -1, exitCode);
+    assertEquals(-1, exitCode, "Exit code");
 
     exitCode = runTool(conf, jc, new String[] { "-status", jobId }, out);
-    assertEquals("Exit code", 0, exitCode);
+    assertEquals(0, exitCode, "Exit code");
     String line;
     BufferedReader br = new BufferedReader(new InputStreamReader(
         new ByteArrayInputStream(out.toByteArray())));
@@ -629,14 +629,14 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     // bad command 
     int exitCode = runTool(conf, createJobClient(),
         new String[] { "-counter", }, out);
-    assertEquals("Exit code", -1, exitCode);
+    assertEquals(-1, exitCode, "Exit code");
     
     exitCode = runTool(conf, createJobClient(),
         new String[] { "-counter", jobId,
             "org.apache.hadoop.mapreduce.TaskCounter", "MAP_INPUT_RECORDS" },
         out);
-    assertEquals("Exit code", 0, exitCode);
-    assertEquals("Counter", "3", out.toString().trim());
+    assertEquals(0, exitCode, "Exit code");
+    assertEquals("3", out.toString().trim(), "Counter");
   }
   /**
    * print a job list 
@@ -648,11 +648,11 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
 
     int exitCode = runTool(conf, createJobClient(), new String[] { "-list",
         "alldata" }, out);
-    assertEquals("Exit code", -1, exitCode);
+    assertEquals(-1, exitCode, "Exit code");
     exitCode = runTool(conf, createJobClient(),
         // all jobs
         new String[] { "-list", "all" }, out);
-    assertEquals("Exit code", 0, exitCode);
+    assertEquals(0, exitCode, "Exit code");
     BufferedReader br = new BufferedReader(new InputStreamReader(
         new ByteArrayInputStream(out.toByteArray())));
     String line;
@@ -675,7 +675,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     // only submitted
     int exitCode =
         runTool(conf, createJobClient(), new String[] { "-list" }, out);
-    assertEquals("Exit code", 0, exitCode);
+    assertEquals(0, exitCode, "Exit code");
     BufferedReader br =
         new BufferedReader(new InputStreamReader(new ByteArrayInputStream(
           out.toByteArray())));
@@ -695,7 +695,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     PipedInputStream pis = new PipedInputStream();
     PipedOutputStream pos = new PipedOutputStream(pis);
     int exitCode = runTool(conf, jc, new String[] { "-list", "all" }, pos);
-    assertEquals("Exit code", 0, exitCode);
+    assertEquals(0, exitCode, "Exit code");
     BufferedReader br = new BufferedReader(new InputStreamReader(pis));
     String line;
     while ((line = br.readLine()) != null) {
@@ -713,10 +713,10 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
       throws Exception {
     int exitCode = runTool(conf, createJobClient(),
         new String[] { "-set-priority" }, new ByteArrayOutputStream());
-    assertEquals("Exit code", -1, exitCode);
+    assertEquals(-1, exitCode, "Exit code");
     exitCode = runTool(conf, createJobClient(), new String[] { "-set-priority",
         jobId, "VERY_LOW" }, new ByteArrayOutputStream());
-    assertEquals("Exit code", 0, exitCode);
+    assertEquals(0, exitCode, "Exit code");
     // set-priority is fired after job is completed in YARN, hence need not
     // have to update the priority.
     verifyJobPriority(jobId, "DEFAULT", conf, createJobClient());
@@ -752,7 +752,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     PipedOutputStream pos = new PipedOutputStream(pis);
     int exitCode = runTool(conf, jc,
         new String[] { "-list", "all" }, pos);
-    assertEquals("Exit code", 0, exitCode);
+    assertEquals(0, exitCode, "Exit code");
     BufferedReader br = new BufferedReader(new InputStreamReader(pis));
     String line = null;
     while ((line = br.readLine()) != null) {

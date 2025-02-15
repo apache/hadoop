@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.mapred.lib;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestKeyFieldBasedPartitioner {
 
@@ -35,8 +35,8 @@ public class TestKeyFieldBasedPartitioner {
     JobConf conf = new JobConf();
     conf.setInt("num.key.fields.for.partition", 10);
     kfbp.configure(conf);
-    assertEquals("Empty key should map to 0th partition", 
-                 0, kfbp.getPartition(new Text(), new Text(), 10));
+    assertEquals(0, kfbp.getPartition(new Text(), new Text(), 10),
+        "Empty key should map to 0th partition");
   }
 
   @Test

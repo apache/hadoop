@@ -32,7 +32,7 @@ import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.Task.CombineOutputCollector;
 import org.apache.hadoop.mapred.Task.TaskReporter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestCombineOutputCollector {
   private CombineOutputCollector<String, Integer> coc;

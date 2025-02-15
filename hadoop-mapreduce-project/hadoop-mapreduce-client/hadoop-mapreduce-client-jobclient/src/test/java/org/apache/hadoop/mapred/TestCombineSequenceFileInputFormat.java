@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.util.BitSet;
@@ -33,7 +33,8 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.apache.hadoop.mapred.lib.CombineSequenceFileInputFormat;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +58,8 @@ public class TestCombineSequenceFileInputFormat {
       System.getProperty("test.build.data", "/tmp"),
       "TestCombineSequenceFileInputFormat"));
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testFormat() throws Exception {
     JobConf job = new JobConf(conf);
 
@@ -92,10 +94,10 @@ public class TestCombineSequenceFileInputFormat {
 
       // we should have a single split as the length is comfortably smaller than
       // the block size
-      assertEquals("We got more than one splits!", 1, splits.length);
+      assertEquals(1, splits.length, "We got more than one splits!");
       InputSplit split = splits[0];
-      assertEquals("It should be CombineFileSplit",
-        CombineFileSplit.class, split.getClass());
+      assertEquals(CombineFileSplit.class, split.getClass(),
+          "It should be CombineFileSplit");
 
       // check each split
       BitSet bits = new BitSet(length);
@@ -103,13 +105,13 @@ public class TestCombineSequenceFileInputFormat {
         format.getRecordReader(split, job, reporter);
       try {
         while (reader.next(key, value)) {
-          assertFalse("Key in multiple partitions.", bits.get(key.get()));
+          assertFalse(bits.get(key.get()), "Key in multiple partitions.");
           bits.set(key.get());
         }
       } finally {
         reader.close();
       }
-      assertEquals("Some keys in no partition.", length, bits.cardinality());
+      assertEquals(length, bits.cardinality(), "Some keys in no partition.");
     }
   }
 
