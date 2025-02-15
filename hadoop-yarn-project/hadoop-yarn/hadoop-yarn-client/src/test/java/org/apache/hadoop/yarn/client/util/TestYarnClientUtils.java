@@ -298,8 +298,8 @@ public class TestYarnClientUtils {
       if (!seen.add(key)) {
         // Here we use master.get() instead of property.getValue() because
         // they're not the same thing.
-        assertEquals(master.get(key), copy.get(key), "New configuration changed the value of "
-            + key);
+        assertEquals(master.get(key), copy.get(key),
+            "New configuration changed the value of " + key);
       }
     }
 
@@ -310,9 +310,8 @@ public class TestYarnClientUtils {
       String key = property.getKey();
 
       if (!seen.contains(property.getKey())) {
-        assertEquals(copy.get(key)
-,             master.get(key), "New configuration changed the value of "
-            + key);
+        assertEquals(copy.get(key),
+            master.get(key), "New configuration changed the value of " + key);
       }
     }
   }

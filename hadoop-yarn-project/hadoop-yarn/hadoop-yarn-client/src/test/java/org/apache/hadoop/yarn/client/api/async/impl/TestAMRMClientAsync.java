@@ -78,20 +78,20 @@ public class TestAMRMClientAsync {
   public void testAMRMClientAsync() throws Exception {
     Configuration conf = new Configuration();
     final AtomicBoolean heartbeatBlock = new AtomicBoolean(true);
-    List<ContainerStatus> completed1 = Collections.singletonList(
+    List<ContainerStatus> completed1 = Arrays.asList(
         ContainerStatus.newInstance(newContainerId(0, 0, 0, 0),
-        ContainerState.COMPLETE, "", 0));
+            ContainerState.COMPLETE, "", 0));
     List<Container> containers = Arrays.asList(
         Container.newInstance(null, null, null, null, null, null));
     final AllocateResponse response1 = createAllocateResponse(
-        new ArrayList<>(), containers, null);
+        new ArrayList<ContainerStatus>(), containers, null);
     final AllocateResponse response2 = createAllocateResponse(completed1,
-        new ArrayList<>(), null);
+        new ArrayList<Container>(), null);
     final AllocateResponse response3 = createAllocateResponse(
-        new ArrayList<>(), new ArrayList<>(),
+        new ArrayList<ContainerStatus>(), new ArrayList<Container>(),
         containers, containers, null);
     final AllocateResponse emptyResponse = createAllocateResponse(
-        new ArrayList<>(), new ArrayList<>(), null);
+        new ArrayList<ContainerStatus>(), new ArrayList<Container>(), null);
 
     TestCallbackHandler callbackHandler = new TestCallbackHandler();
     final AMRMClient<ContainerRequest> client = mock(AMRMClientImpl.class);

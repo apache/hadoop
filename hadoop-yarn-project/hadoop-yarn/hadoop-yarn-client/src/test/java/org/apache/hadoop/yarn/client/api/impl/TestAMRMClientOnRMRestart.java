@@ -177,8 +177,8 @@ public class TestAMRMClientOnRMRestart {
 
     AllocateResponse allocateResponse = amClient.allocate(0.1f);
     rm1.drainEvents();
-    Assertions.assertEquals(0, allocateResponse
-        .getAllocatedContainers().size(), "No of assignments must be 0");
+    Assertions.assertEquals(0, allocateResponse.getAllocatedContainers().size(),
+        "No of assignments must be 0");
 
     // Why 4 ask, why not 3 ask even h2 is blacklisted?
     // On blacklisting host,applicationmaster has to remove ask request from
@@ -194,8 +194,8 @@ public class TestAMRMClientOnRMRestart {
     allocateResponse = amClient.allocate(0.2f);
     rm1.drainEvents();
     // 3 containers are allocated i.e for cRequest1, cRequest2 and cRequest3.
-    Assertions.assertEquals(3, allocateResponse
-        .getAllocatedContainers().size(), "No of assignments must be 0");
+    Assertions.assertEquals(3, allocateResponse.getAllocatedContainers().size(),
+        "No of assignments must be 0");
     assertAsksAndReleases(0, 0, rm1);
     assertBlacklistAdditionsAndRemovals(0, 0, rm1);
 
@@ -208,8 +208,8 @@ public class TestAMRMClientOnRMRestart {
 
     allocateResponse = amClient.allocate(0.2f);
     rm1.drainEvents();
-    Assertions.assertEquals(0, allocateResponse
-        .getAllocatedContainers().size(), "No of assignments must be 0");
+    Assertions.assertEquals(0, allocateResponse.getAllocatedContainers().size(),
+        "No of assignments must be 0");
     assertAsksAndReleases(4, 0, rm1);
     assertBlacklistAdditionsAndRemovals(0, 0, rm1);
 
@@ -243,8 +243,8 @@ public class TestAMRMClientOnRMRestart {
 
     allocateResponse = amClient.allocate(0.3f);
     rm1.drainEvents();
-    Assertions.assertEquals(0, allocateResponse
-        .getAllocatedContainers().size(), "No of assignments must be 0");
+    Assertions.assertEquals(0, allocateResponse.getAllocatedContainers().size(),
+        "No of assignments must be 0");
     assertAsksAndReleases(3, pendingRelease, rm1);
     // Verify there is one increase and zero decrease
     assertChanges(1, 0, rm1);
@@ -313,8 +313,8 @@ public class TestAMRMClientOnRMRestart {
     // Step-5 : Allocater after resync command
     allocateResponse = amClient.allocate(0.5f);
     rm2.drainEvents();
-    Assertions.assertEquals(0, allocateResponse
-        .getAllocatedContainers().size(), "No of assignments must be 0");
+    Assertions.assertEquals(0, allocateResponse.getAllocatedContainers().size(),
+        "No of assignments must be 0");
 
     assertAsksAndReleases(5, 0, rm2);
     // Verify there is no increase or decrease requests any more
@@ -337,8 +337,7 @@ public class TestAMRMClientOnRMRestart {
     }
 
     // Step-6 : RM allocates containers i.e cRequest4,cRequest5 and cRequest6
-    Assertions.assertEquals(3
-,         noAssignedContainer, "Number of container should be 3");
+    Assertions.assertEquals(3, noAssignedContainer, "Number of container should be 3");
 
     amClient.stop();
     rm1.stop();
@@ -496,8 +495,7 @@ public class TestAMRMClientOnRMRestart {
       }
       Thread.sleep(500);
     }
-    Assertions
-      .assertTrue(amrmTokenSecretManagerForRM1.getNextMasterKeyData() == null);
+    Assertions.assertTrue(amrmTokenSecretManagerForRM1.getNextMasterKeyData() == null);
     Assertions.assertTrue(amrmTokenSecretManagerForRM1.getCurrnetMasterKeyData()
       .getMasterKey().getKeyId() == newToken.decodeIdentifier().getKeyId());
 

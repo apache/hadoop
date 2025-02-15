@@ -587,41 +587,34 @@ public class TestLogsCLI {
     exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
         "-logFiles", "stdout"});
     assertTrue(exitCode == 0, "Failed with -logFiles");
-    assertFalse(sysOutStream.toString().contains(
-        logMessage(containerId1, "syslog")), "Failed with -logFiles");
-    assertFalse(sysOutStream.toString().contains(
-        logMessage(containerId2, "syslog")), "Failed with -logFiles");
-    assertFalse(sysOutStream.toString().contains(
-        logMessage(containerId3, "syslog")), "Failed with -logFiles");
-    assertTrue(sysOutStream.toString().contains(
-        logMessage(containerId3, "stdout")), "Failed with -logFiles");
-    assertFalse(sysOutStream.toString().contains(
-        logMessage(containerId3, "stdout1234")), "Failed with -logFiles");
-    assertFalse(sysOutStream.toString().contains(
-        createEmptyLog("empty")), "Failed with -logFiles");
+    assertFalse(sysOutStream.toString().contains(logMessage(containerId1, "syslog")),
+        "Failed with -logFiles");
+    assertFalse(sysOutStream.toString().contains(logMessage(containerId2, "syslog")),
+        "Failed with -logFiles");
+    assertFalse(sysOutStream.toString().contains(logMessage(containerId3, "syslog")),
+        "Failed with -logFiles");
+    assertTrue(sysOutStream.toString().contains(logMessage(containerId3, "stdout")),
+        "Failed with -logFiles");
+    assertFalse(sysOutStream.toString().contains(logMessage(containerId3, "stdout1234")),
+        "Failed with -logFiles");
+    assertFalse(sysOutStream.toString().contains(createEmptyLog("empty")), "Failed with -logFiles");
     sysOutStream.reset();
 
     // Check -log_files supercedes -logFiles
     exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
         "-log_files", "stdout", "-logFiles", "syslog"});
     assertTrue(exitCode == 0, "Failed with -logFiles and -log_files");
-    assertFalse(
-       sysOutStream.toString().contains(
-        logMessage(containerId1, "syslog")), "Failed with -logFiles and -log_files");
-    assertFalse(
-       sysOutStream.toString().contains(
-        logMessage(containerId2, "syslog")), "Failed with -logFiles and -log_files");
-    assertFalse(
-       sysOutStream.toString().contains(
-        logMessage(containerId3, "syslog")), "Failed with -logFiles and -log_files");
-    assertTrue(
-       sysOutStream.toString().contains(
-        logMessage(containerId3, "stdout")), "Failed with -logFiles and -log_files");
-    assertFalse(
-       sysOutStream.toString().contains(
-        logMessage(containerId3, "stdout1234")), "Failed with -logFiles and -log_files");
-    assertFalse(
-       sysOutStream.toString().contains(
+    assertFalse(sysOutStream.toString().contains(logMessage(containerId1, "syslog")),
+        "Failed with -logFiles and -log_files");
+    assertFalse(sysOutStream.toString().contains(logMessage(containerId2, "syslog")),
+        "Failed with -logFiles and -log_files");
+    assertFalse(sysOutStream.toString().contains(logMessage(containerId3, "syslog")),
+        "Failed with -logFiles and -log_files");
+    assertTrue(sysOutStream.toString().contains(logMessage(containerId3, "stdout")),
+        "Failed with -logFiles and -log_files");
+    assertFalse(sysOutStream.toString().contains(logMessage(containerId3, "stdout1234")),
+        "Failed with -logFiles and -log_files");
+    assertFalse(sysOutStream.toString().contains(
         createEmptyLog("empty")), "Failed with -logFiles and -log_files");
     sysOutStream.reset();
 
@@ -869,9 +862,8 @@ public class TestLogsCLI {
       Assertions.fail("Exception expected! "
           + "NodeManager should be off to run this test. ");
     } catch (IOException ce) {
-      Assertions.assertTrue(
-      
-         ce.getMessage().contains("Connection retries limit exceeded"), "Handler exception for reason other than retry: " + ce.getMessage());
+      Assertions.assertTrue(ce.getMessage().contains("Connection retries limit exceeded"),
+          "Handler exception for reason other than retry: " + ce.getMessage());
     }
   }
 

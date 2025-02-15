@@ -778,7 +778,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       //setting an instance NMTokenCache
       amClient.setNMTokenCache(new NMTokenCache());
       //asserting we are not using the singleton instance cache
-      Assertions.assertNotSame(NMTokenCache.getSingleton(), 
+      Assertions.assertNotSame(NMTokenCache.getSingleton(),
           amClient.getNMTokenCache());
 
       amClient.init(conf);

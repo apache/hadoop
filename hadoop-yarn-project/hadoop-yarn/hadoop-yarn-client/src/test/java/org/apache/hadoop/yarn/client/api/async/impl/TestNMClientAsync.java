@@ -107,8 +107,8 @@ public class TestNMClientAsync {
 
     asyncClient = new MockNMClientAsync1(expectedSuccess, expectedFailure);
     asyncClient.init(conf);
-    Assertions.assertEquals(
-       10, asyncClient.maxThreadPoolSize, "The max thread pool size is not correctly set");
+    Assertions.assertEquals(10, asyncClient.maxThreadPoolSize,
+        "The max thread pool size is not correctly set");
     asyncClient.start();
 
 
@@ -151,25 +151,24 @@ public class TestNMClientAsync {
             .errorMsgs) {
       System.out.println(errorMsg);
     }
-    Assertions.assertEquals(0
-,         ((TestCallbackHandler1) asyncClient.getCallbackHandler())
-            .errorMsgs.size(), "Error occurs in CallbackHandler");
+    Assertions.assertEquals(0,
+        ((TestCallbackHandler1) asyncClient.getCallbackHandler())
+        .errorMsgs.size(), "Error occurs in CallbackHandler");
     for (String errorMsg : ((MockNMClientAsync1) asyncClient).errorMsgs) {
       System.out.println(errorMsg);
     }
-    Assertions.assertEquals(0
-,         ((MockNMClientAsync1) asyncClient).errorMsgs.size(), "Error occurs in ContainerEventProcessor");
+    Assertions.assertEquals(0, ((MockNMClientAsync1) asyncClient).errorMsgs.size(),
+        "Error occurs in ContainerEventProcessor");
     // When the callback functions are all executed, the event processor threads
     // may still not terminate and the containers may still not removed.
     while (asyncClient.containers.size() > 0) {
       Thread.sleep(10);
     }
     asyncClient.stop();
-    Assertions.assertFalse(
-    
-       asyncClient.eventDispatcherThread.isAlive(), "The thread of Container Management Event Dispatcher is still alive");
-    Assertions.assertTrue(
-       asyncClient.threadPool.isShutdown(), "The thread pool is not shut down");
+    Assertions.assertFalse(asyncClient.eventDispatcherThread.isAlive(),
+        "The thread of Container Management Event Dispatcher is still alive");
+    Assertions.assertTrue(asyncClient.threadPool.isShutdown(),
+        "The thread pool is not shut down");
   }
 
   private class MockNMClientAsync1 extends NMClientAsyncImpl {
@@ -793,9 +792,8 @@ public class TestNMClientAsync {
     asyncClient.stopContainerAsync(container.getId(), container.getNodeId());
     barrierC.await();
 
-    Assertions.assertFalse(
-       ((TestCallbackHandler2) asyncClient.getCallbackHandler())
-            .exceptionOccurred.get(), "Starting and stopping should be out of order");
+    Assertions.assertFalse(((TestCallbackHandler2) asyncClient.getCallbackHandler())
+        .exceptionOccurred.get(), "Starting and stopping should be out of order");
   }
 
   private class MockNMClientAsync2 extends NMClientAsyncImpl {

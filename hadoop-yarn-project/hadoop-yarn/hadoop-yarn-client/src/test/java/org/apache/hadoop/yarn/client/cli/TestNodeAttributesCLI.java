@@ -195,8 +195,7 @@ public class TestNodeAttributesCLI {
     // --------------------------------
     // parenthesis not match
     String[] args = new String[] {"-replace", "x("};
-    assertTrue(
-       0 != runTool(args), "It should have failed as no node is specified");
+    assertTrue(0 != runTool(args), "It should have failed as no node is specified");
     assertFailureMessageContains(NodeAttributesCLI.INVALID_MAPPING_ERR_MSG);
 
     // parenthesis not match
@@ -208,14 +207,13 @@ public class TestNodeAttributesCLI {
         "Attribute for node x is not properly configured : (=abc");
 
     args = new String[] {"-replace", "x:()=abc"};
-    assertTrue(
-       0 != runTool(args), "It should have failed as no type specified inside parenthesis");
+    assertTrue(0 != runTool(args),
+        "It should have failed as no type specified inside parenthesis");
     assertFailureMessageContains(
         "Attribute for node x is not properly configured : ()=abc");
 
     args = new String[] {"-replace", ":x(string)"};
-    assertTrue(
-       0 != runTool(args), "It should have failed as no node is specified");
+    assertTrue(0 != runTool(args), "It should have failed as no node is specified");
     assertFailureMessageContains("Node name cannot be empty");
 
     // Not expected key=value specifying inner parenthesis
@@ -226,15 +224,14 @@ public class TestNodeAttributesCLI {
 
     // Should fail as no attributes specified
     args = new String[] {"-replace"};
-    assertTrue(
-       0 != runTool(args), "Should fail as no attribute mappings specified");
+    assertTrue(0 != runTool(args), "Should fail as no attribute mappings specified");
     assertFailureMessageContains(NodeAttributesCLI.MISSING_ARGUMENT);
 
     // no labels, should fail
     args = new String[] {"-replace", "-failOnUnknownNodes",
         "x:key(string)=value,key2=val2"};
-    assertTrue(
-       0 != runTool(args), "Should fail as no attribute mappings specified for replace");
+    assertTrue(0 != runTool(args),
+        "Should fail as no attribute mappings specified for replace");
     assertFailureMessageContains(NodeAttributesCLI.MISSING_ARGUMENT);
 
     // no labels, should fail
@@ -250,8 +247,8 @@ public class TestNodeAttributesCLI {
     // --------------------------------
     args = new String[] {"-replace",
         "x:key(string)=value,key2=val2 y:key2=val23,key3 z:key4"};
-    assertTrue(
-       0 == runTool(args), "Should not fail as attribute has been properly mapped");
+    assertTrue(0 == runTool(args),
+        "Should not fail as attribute has been properly mapped");
     List<NodeToAttributes> nodeAttributesList = new ArrayList<>();
     List<NodeAttribute> attributes = new ArrayList<>();
     attributes.add(
@@ -295,8 +292,8 @@ public class TestNodeAttributesCLI {
     // --------------------------------
     // parenthesis not match
     String[] args = new String[] {"-remove", "x:"};
-    assertTrue(
-       0 != runTool(args), "It should have failed as no node is specified");
+    assertTrue(0 != runTool(args),
+        "It should have failed as no node is specified");
     assertFailureMessageContains(
         "Attributes cannot be null or empty for Operation [remove] on the "
             + "node x");
@@ -305,8 +302,8 @@ public class TestNodeAttributesCLI {
     // --------------------------------
     args =
         new String[] {"-remove", "x:key2,key3 z:key4", "-failOnUnknownNodes"};
-    assertTrue(
-       0 == runTool(args), "Should not fail as attribute has been properly mapped");
+    assertTrue(0 == runTool(args),
+        "Should not fail as attribute has been properly mapped");
     List<NodeToAttributes> nodeAttributesList = new ArrayList<>();
     List<NodeAttribute> attributes = new ArrayList<>();
     attributes
@@ -334,8 +331,8 @@ public class TestNodeAttributesCLI {
     // --------------------------------
     // parenthesis not match
     String[] args = new String[] {"-add", "x:"};
-    assertTrue(
-       0 != runTool(args), "It should have failed as no node is specified");
+    assertTrue(0 != runTool(args),
+        "It should have failed as no node is specified");
     assertFailureMessageContains(
         "Attributes cannot be null or empty for Operation [add] on the node x");
     // --------------------------------
@@ -343,8 +340,8 @@ public class TestNodeAttributesCLI {
     // --------------------------------
     args = new String[] {"-add", "x:key2=123,key3=abc z:key4(string)",
         "-failOnUnknownNodes"};
-    assertTrue(
-       0 == runTool(args), "Should not fail as attribute has been properly mapped");
+    assertTrue(0 == runTool(args),
+        "Should not fail as attribute has been properly mapped");
     List<NodeToAttributes> nodeAttributesList = new ArrayList<>();
     List<NodeAttribute> attributes = new ArrayList<>();
     attributes.add(
@@ -369,8 +366,8 @@ public class TestNodeAttributesCLI {
     // --------------------------------
     args = new String[] {"-add", "x:key2=123,key3=abc x:key4(string)",
         "-failOnUnknownNodes"};
-    assertTrue(
-       0 == runTool(args), "Should not fail as attribute has been properly mapped");
+    assertTrue(0 == runTool(args),
+        "Should not fail as attribute has been properly mapped");
     nodeAttributesList = new ArrayList<>();
     attributes = new ArrayList<>();
     attributes
@@ -406,8 +403,8 @@ public class TestNodeAttributesCLI {
     // Success scenarios
     // --------------------------------
     String[] args = new String[] {"-list"};
-    assertTrue(
-       0 == runTool(args), "It should be success since it list all attributes");
+    assertTrue(0 == runTool(args),
+        "It should be success since it list all attributes");
     assertSysOutContains("Attribute\t           Type",
         "rm.yarn.io/GPU\t         STRING");
   }
@@ -433,14 +430,14 @@ public class TestNodeAttributesCLI {
     // Failure scenarios
     // --------------------------------
     String[] args = new String[] {"-nodetoattributes", "-nodes"};
-    assertTrue(
-       0 != runTool(args), "It should not success since nodes are not specified");
+    assertTrue(0 != runTool(args),
+        "It should not success since nodes are not specified");
     assertErrorContains(NodeAttributesCLI.INVALID_COMMAND_USAGE);
 
     // Missing argument for nodes
     args = new String[] {"-nodestoattributes", "-nodes"};
-    assertTrue(
-       0 != runTool(args), "It should not success since nodes are not specified");
+    assertTrue(0 != runTool(args),
+        "It should not success since nodes are not specified");
     assertErrorContains(NodeAttributesCLI.MISSING_ARGUMENT);
 
     // --------------------------------
@@ -473,8 +470,8 @@ public class TestNodeAttributesCLI {
     // Success scenarios
     // --------------------------------
     String[] args = new String[] {"-attributestonodes"};
-    assertTrue(
-       0 == runTool(args), "It should be success since it list all attributes");
+    assertTrue(0 == runTool(args),
+        "It should be success since it list all attributes");
     assertSysOutContains("Hostname\tAttribute-value", "rm.yarn.io/GPU :",
         "host1\t            ARM");
 
@@ -482,17 +479,16 @@ public class TestNodeAttributesCLI {
     // fail scenario argument filter missing
     // --------------------------------
     args = new String[] {"-attributestonodes", "-attributes"};
-    assertTrue(
-    
-       0 != runTool(args), "It should not success since attributes for filter are not specified");
+    assertTrue(0 != runTool(args),
+        "It should not success since attributes for filter are not specified");
     assertErrorContains(NodeAttributesCLI.MISSING_ARGUMENT);
 
     // --------------------------------
     // fail scenario argument filter missing
     // --------------------------------
     args = new String[] {"-attributestonodes", "-attributes", "fail/da/fail"};
-    assertTrue(
-       0 != runTool(args), "It should not success since attributes format is not correct");
+    assertTrue(0 != runTool(args),
+        "It should not success since attributes format is not correct");
     assertErrorContains(
         "Attribute format not correct. Should be <[prefix]/[name]> "
             + ":fail/da/fail");

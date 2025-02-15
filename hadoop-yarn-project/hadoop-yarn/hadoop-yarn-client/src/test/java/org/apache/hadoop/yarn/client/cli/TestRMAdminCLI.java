@@ -275,12 +275,11 @@ public class TestRMAdminCLI {
     NodeId nodeId = NodeId.fromString(nodeIdStr);
     Resource expectedResource = Resources.createResource(memSize, cores);
     ResourceOption resource = resourceMap.get(nodeId);
-    assertNotNull(
-       resource, "resource for " + nodeIdStr + " shouldn't be null.");
-    assertEquals(
-       ResourceOption.newInstance(expectedResource,
-            ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT)
-,         resource, "resource value for " + nodeIdStr + " is not as expected.");
+    assertNotNull(resource,
+        "resource for " + nodeIdStr + " shouldn't be null.");
+    assertEquals(ResourceOption.newInstance(expectedResource,
+        ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT),
+        resource, "resource value for " + nodeIdStr + " is not as expected.");
   }
 
   @Test
@@ -301,10 +300,9 @@ public class TestRMAdminCLI {
     NodeId nodeId = NodeId.fromString(nodeIdStr);
     Resource expectedResource = Resources.createResource(memSize, cores);
     ResourceOption resource = resourceMap.get(nodeId);
-    assertNotNull(
-       resource, "resource for " + nodeIdStr + " shouldn't be null.");
-    assertEquals(
-       ResourceOption.newInstance(expectedResource, timeout), resource, "resource value for " + nodeIdStr + " is not as expected.");
+    assertNotNull(resource, "resource for " + nodeIdStr + " shouldn't be null.");
+    assertEquals(ResourceOption.newInstance(expectedResource, timeout), resource,
+        "resource value for " + nodeIdStr + " is not as expected.");
   }
 
   @Test
@@ -347,11 +345,10 @@ public class TestRMAdminCLI {
         resource.getResource().getResourceInformation("memory-mb").getValue());
     assertEquals("Mi",
         resource.getResource().getResourceInformation("memory-mb").getUnits());
-    assertNotNull(
-       resource, "resource for " + nodeIdStr + " shouldn't be null.");
-    assertEquals(
-       ResourceOption.newInstance(expectedResource,
-            ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT), resource, "resource value for " + nodeIdStr + " is not as expected.");
+    assertNotNull(resource, "resource for " + nodeIdStr + " shouldn't be null.");
+    assertEquals(ResourceOption.newInstance(expectedResource,
+        ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT), resource,
+        "resource value for " + nodeIdStr + " is not as expected.");
   }
 
   @Test
@@ -378,10 +375,9 @@ public class TestRMAdminCLI {
         ResourceInformation.newInstance("resource2", "m", 2));
 
     ResourceOption resource = resourceMap.get(nodeId);
-    assertNotNull(
-       resource, "resource for " + nodeIdStr + " shouldn't be null.");
-    assertEquals(
-       ResourceOption.newInstance(expectedResource, timeout), resource, "resource value for " + nodeIdStr + " is not as expected.");
+    assertNotNull(resource, "resource for " + nodeIdStr + " shouldn't be null.");
+    assertEquals(ResourceOption.newInstance(expectedResource, timeout), resource,
+        "resource value for " + nodeIdStr + " is not as expected.");
   }
 
   @Test
@@ -807,8 +803,8 @@ public class TestRMAdminCLI {
               + "[-getServiceState <serviceId>] [-getAllServiceState] "
               + "[-checkHealth <serviceId>] [-help [cmd]]";
       String actualHelpMsg = dataOut.toString();
-      assertTrue(actualHelpMsg.contains(expectedHelpMsg
-              ), String.format("Help messages: %n " + actualHelpMsg + " %n doesn't include expected " +
+      assertTrue(actualHelpMsg.contains(expectedHelpMsg),
+          String.format("Help messages: %n " + actualHelpMsg + " %n doesn't include expected " +
           "messages: %n" + expectedHelpMsg));
     } finally {
       System.setOut(oldOutPrintStream);
@@ -1039,8 +1035,8 @@ public class TestRMAdminCLI {
 
     args = new String[] { "-replaceLabelsOnNode", "node1= node2=",
         "-directlyAccessNodeLabelStore" };
-    assertTrue(
-       0 == rmAdminCLI.run(args), "Labels should get replaced even '=' is used ");
+    assertTrue(0 == rmAdminCLI.run(args),
+        "Labels should get replaced even '=' is used ");
   }
 
   private void testError(String[] args, String template,
@@ -1048,8 +1044,8 @@ public class TestRMAdminCLI {
     int actualResultCode = rmAdminCLI.run(args);
     assertEquals(resultCode, actualResultCode, "Expected result code: " + resultCode + 
         ", actual result code is: " + actualResultCode);
-    assertTrue(
-        data.toString().contains(template), String.format("Expected error message: %n" + template + 
+    assertTrue(data.toString().contains(template),
+        String.format("Expected error message: %n" + template +
         " is not included in messages: %n" + data.toString()));
     data.reset();
   }

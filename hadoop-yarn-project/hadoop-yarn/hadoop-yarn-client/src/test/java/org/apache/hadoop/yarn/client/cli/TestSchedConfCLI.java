@@ -181,8 +181,8 @@ public class TestSchedConfCLI extends JerseyTest {
     try {
       int exitCode = cli.getSchedulerConf("", target());
       assertEquals(0, exitCode, "SchedConfCLI failed to run");
-      assertTrue(
-         sysOutStream.toString().contains("testqueue"), "Failed to get scheduler configuration");
+      assertTrue(sysOutStream.toString().contains("testqueue"),
+          "Failed to get scheduler configuration");
     } finally {
       cleanUp();
     }

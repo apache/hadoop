@@ -205,8 +205,8 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     int newActiveRMIndex = (activeRMIndex + 1) % 2;
     getAdminService(activeRMIndex).transitionToStandby(req);
     getAdminService(newActiveRMIndex).transitionToActive(req);
-    assertEquals(newActiveRMIndex
-,         cluster.getActiveRMIndex(), "Failover failed");
+    assertEquals(newActiveRMIndex,
+        cluster.getActiveRMIndex(), "Failover failed");
   }
 
   protected YarnClient createAndStartYarnClient(Configuration conf) {
@@ -219,8 +219,8 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
 
   protected void verifyConnections() throws InterruptedException,
       YarnException {
-    assertTrue(
-       cluster.waitForNodeManagersToConnect(5000), "NMs failed to connect to the RM");
+    assertTrue(cluster.waitForNodeManagersToConnect(5000),
+        "NMs failed to connect to the RM");
     verifyClientConnection();
   }
 

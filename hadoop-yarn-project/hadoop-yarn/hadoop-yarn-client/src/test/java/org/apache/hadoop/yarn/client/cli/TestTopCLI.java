@@ -164,8 +164,8 @@ public class TestTopCLI {
     String expected = "NodeManager(s)"
         + ": 0 total, 3 active, 5 unhealthy, 1 decommissioning,"
         + " 2 decommissioned, 4 lost, 6 rebooted, 7 shutdown";
-    Assertions.assertTrue(
-    
-       actual.contains(expected), String.format("Expected output to contain [%s], actual output was [%s].", expected, actual));
+    Assertions.assertTrue(actual.contains(expected),
+        String.format("Expected output to contain [%s], actual output was [%s].",
+        expected, actual));
   }
 }
