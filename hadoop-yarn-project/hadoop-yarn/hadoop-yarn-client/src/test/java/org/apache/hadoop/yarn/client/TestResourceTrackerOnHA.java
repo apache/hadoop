@@ -22,7 +22,6 @@ import java.io.IOException;
 
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -38,6 +37,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
 import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestResourceTrackerOnHA extends ProtocolHATestBase {
 
@@ -69,7 +70,7 @@ public class TestResourceTrackerOnHA extends ProtocolHATestBase {
         RegisterNodeManagerRequest.newInstance(nodeId, 0, resource,
             YarnVersionInfo.getVersion(), null, null);
     resourceTracker.registerNodeManager(request);
-    Assertions.assertTrue(waitForNodeManagerToConnect(200, nodeId));
+    assertTrue(waitForNodeManagerToConnect(200, nodeId));
 
     // restart the failover thread, and make sure nodeHeartbeat works
     failoverThread = createAndStartFailoverThread();

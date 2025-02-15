@@ -45,11 +45,12 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.resourcemanager.HATestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
@@ -206,8 +207,8 @@ public class TestFederationRMFailoverProxyProvider {
   }
 
   private void checkResponse(GetClusterMetricsResponse response) {
-    Assertions.assertNotNull(response.getClusterMetrics());
-    Assertions.assertEquals(0,
+    assertNotNull(response.getClusterMetrics());
+    assertEquals(0,
         response.getClusterMetrics().getNumActiveNodeManagers());
   }
 
@@ -270,7 +271,7 @@ public class TestFederationRMFailoverProxyProvider {
     });
 
     final ProxyInfo currentProxy = provider.getProxy();
-    Assertions.assertEquals("user1", provider.getLastProxyUGI().getUserName());
+    assertEquals("user1", provider.getLastProxyUGI().getUserName());
 
     user2.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
@@ -279,7 +280,7 @@ public class TestFederationRMFailoverProxyProvider {
         return null;
       }
     });
-    Assertions.assertEquals("user1", provider.getLastProxyUGI().getUserName());
+    assertEquals("user1", provider.getLastProxyUGI().getUserName());
 
     provider.close();
   }

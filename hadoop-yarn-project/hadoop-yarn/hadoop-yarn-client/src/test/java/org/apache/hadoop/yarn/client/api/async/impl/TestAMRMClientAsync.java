@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.client.api.async.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyFloat;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -32,7 +34,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -58,7 +59,6 @@ import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
@@ -150,11 +150,11 @@ public class TestAMRMClientAsync {
     }
     
     // allocated containers should come before completed containers
-    Assertions.assertNull(callbackHandler.takeCompletedContainers());
+    assertNull(callbackHandler.takeCompletedContainers());
     
     // wait for the allocated containers from the first heartbeat's response
     while (callbackHandler.takeAllocatedContainers() == null) {
-      Assertions.assertNull(callbackHandler.takeCompletedContainers());
+      assertNull(callbackHandler.takeCompletedContainers());
       Thread.sleep(10);
     }
 
@@ -170,9 +170,9 @@ public class TestAMRMClientAsync {
 
     asyncClient.stop();
 
-    Assertions.assertNull(callbackHandler.takeAllocatedContainers());
-    Assertions.assertNull(callbackHandler.takeCompletedContainers());
-    Assertions.assertNull(callbackHandler.takeChangedContainers());
+    assertNull(callbackHandler.takeAllocatedContainers());
+    assertNull(callbackHandler.takeCompletedContainers());
+    assertNull(callbackHandler.takeChangedContainers());
   }
 
   @Test
@@ -215,12 +215,12 @@ public class TestAMRMClientAsync {
         }
       }
     }
-    Assertions.assertTrue(callbackHandler.savedException.getMessage().contains(
+    assertTrue(callbackHandler.savedException.getMessage().contains(
         ex.getMessage()));
     
     asyncClient.stop();
     // stopping should have joined all threads and completed all callbacks
-    Assertions.assertTrue(callbackHandler.callbackCount > 0);
+    assertTrue(callbackHandler.callbackCount > 0);
   }
 
   @Test
@@ -275,7 +275,7 @@ public class TestAMRMClientAsync {
 
     asyncClient.stop();
     // stopping should have joined all threads and completed all callbacks
-    Assertions.assertTrue(callbackHandler.callbackCount == 0);
+    assertTrue(callbackHandler.callbackCount == 0);
 
     verify(client, times(1)).allocate(anyFloat());
     asyncClient.stop();
@@ -348,7 +348,7 @@ public class TestAMRMClientAsync {
 
     asyncClient.registerApplicationMaster("localhost", 1234, null);
     asyncClient.waitFor(checker);
-    Assertions.assertTrue(checker.get());
+    assertTrue(checker.get());
   }
 
   void runCallBackThrowOutException(TestCallbackHandler2 callbackHandler) throws

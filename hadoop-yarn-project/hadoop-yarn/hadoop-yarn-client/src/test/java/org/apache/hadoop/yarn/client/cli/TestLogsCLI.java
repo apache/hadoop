@@ -22,9 +22,11 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -93,7 +95,6 @@ import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregation
 import org.apache.hadoop.yarn.webapp.util.WebServiceClient;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -379,7 +380,7 @@ public class TestLogsCLI {
     pw.println("                                              fetch all logs.");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
-    Assertions.assertTrue(sysOutStream.toString().contains(appReportStr));
+    assertTrue(sysOutStream.toString().contains(appReportStr));
   }
 
   @Test
@@ -698,7 +699,7 @@ public class TestLogsCLI {
         "-containerId", containerId3.toString(), "-log_files", "stdout",
         "-size", "5"});
     assertTrue(exitCode == 0);
-    Assertions.assertEquals(new String(logMessage.getBytes(), 0, 5),
+    assertEquals(new String(logMessage.getBytes(), 0, 5),
         new String(sysOutStream.toByteArray(),
         (fullContextSize - fileContentSize - tailContentSize), 5));
     sysOutStream.reset();
@@ -718,7 +719,7 @@ public class TestLogsCLI {
         "-containerId", containerId3.toString(), "-log_files", "stdout",
         "-size", "-5"});
     assertTrue(exitCode == 0);
-    Assertions.assertEquals(new String(logMessage.getBytes(),
+    assertEquals(new String(logMessage.getBytes(),
         logMessage.getBytes().length - 5, 5),
         new String(sysOutStream.toByteArray(),
         (fullContextSize - fileContentSize - tailContentSize), 5));
@@ -729,7 +730,7 @@ public class TestLogsCLI {
         "-containerId", containerId3.toString(), "-log_files", "stdout",
         "-size", Long.toString(negative)});
     assertTrue(exitCode == 0);
-    Assertions.assertEquals(fullContext, sysOutStream.toString());
+    assertEquals(fullContext, sysOutStream.toString());
     sysOutStream.reset();
 
     // Uploaded the empty log for container0.
@@ -859,10 +860,10 @@ public class TestLogsCLI {
     try {
       cli.run(new String[] {"-containerId",
           containerId1.toString(), "-client_max_retries", "5"});
-      Assertions.fail("Exception expected! "
+      fail("Exception expected! "
           + "NodeManager should be off to run this test. ");
     } catch (IOException ce) {
-      Assertions.assertTrue(ce.getMessage().contains("Connection retries limit exceeded"),
+      assertTrue(ce.getMessage().contains("Connection retries limit exceeded"),
           "Handler exception for reason other than retry: " + ce.getMessage());
     }
   }
@@ -1030,11 +1031,11 @@ public class TestLogsCLI {
     // Verify that the log-type is "ALL"
     List<ContainerLogsRequest> capturedRequests =
         logsRequestCaptor.getAllValues();
-    Assertions.assertEquals(2, capturedRequests.size());
+    assertEquals(2, capturedRequests.size());
     Set<String> logTypes0 = capturedRequests.get(0).getLogTypes();
     Set<String> logTypes1 = capturedRequests.get(1).getLogTypes();
-    Assertions.assertTrue(logTypes0.contains("ALL") && (logTypes0.size() == 1));
-    Assertions.assertTrue(logTypes1.contains("ALL") && (logTypes1.size() == 1));
+    assertTrue(logTypes0.contains("ALL") && (logTypes0.size() == 1));
+    assertTrue(logTypes1.contains("ALL") && (logTypes1.size() == 1));
 
     mockYarnClient = createMockYarnClientWithException(
         YarnApplicationState.RUNNING, ugi.getShortUserName());

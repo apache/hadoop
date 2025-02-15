@@ -73,10 +73,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestAMRMClientOnRMRestart {
   static Configuration conf = new Configuration();
@@ -177,7 +180,7 @@ public class TestAMRMClientOnRMRestart {
 
     AllocateResponse allocateResponse = amClient.allocate(0.1f);
     rm1.drainEvents();
-    Assertions.assertEquals(0, allocateResponse.getAllocatedContainers().size(),
+    assertEquals(0, allocateResponse.getAllocatedContainers().size(),
         "No of assignments must be 0");
 
     // Why 4 ask, why not 3 ask even h2 is blacklisted?
@@ -194,7 +197,7 @@ public class TestAMRMClientOnRMRestart {
     allocateResponse = amClient.allocate(0.2f);
     rm1.drainEvents();
     // 3 containers are allocated i.e for cRequest1, cRequest2 and cRequest3.
-    Assertions.assertEquals(3, allocateResponse.getAllocatedContainers().size(),
+    assertEquals(3, allocateResponse.getAllocatedContainers().size(),
         "No of assignments must be 0");
     assertAsksAndReleases(0, 0, rm1);
     assertBlacklistAdditionsAndRemovals(0, 0, rm1);
@@ -208,7 +211,7 @@ public class TestAMRMClientOnRMRestart {
 
     allocateResponse = amClient.allocate(0.2f);
     rm1.drainEvents();
-    Assertions.assertEquals(0, allocateResponse.getAllocatedContainers().size(),
+    assertEquals(0, allocateResponse.getAllocatedContainers().size(),
         "No of assignments must be 0");
     assertAsksAndReleases(4, 0, rm1);
     assertBlacklistAdditionsAndRemovals(0, 0, rm1);
@@ -243,7 +246,7 @@ public class TestAMRMClientOnRMRestart {
 
     allocateResponse = amClient.allocate(0.3f);
     rm1.drainEvents();
-    Assertions.assertEquals(0, allocateResponse.getAllocatedContainers().size(),
+    assertEquals(0, allocateResponse.getAllocatedContainers().size(),
         "No of assignments must be 0");
     assertAsksAndReleases(3, pendingRelease, rm1);
     // Verify there is one increase and zero decrease
@@ -261,7 +264,7 @@ public class TestAMRMClientOnRMRestart {
 
     // NM should be rebooted on heartbeat, even first heartbeat for nm2
     NodeHeartbeatResponse hbResponse = nm1.nodeHeartbeat(true);
-    Assertions.assertEquals(NodeAction.RESYNC, hbResponse.getNodeAction());
+    assertEquals(NodeAction.RESYNC, hbResponse.getNodeAction());
 
     // new NM to represent NM re-register
     nm1 = new MockNM("h1:1234", 10240, rm2.getResourceTrackerService());
@@ -313,7 +316,7 @@ public class TestAMRMClientOnRMRestart {
     // Step-5 : Allocater after resync command
     allocateResponse = amClient.allocate(0.5f);
     rm2.drainEvents();
-    Assertions.assertEquals(0, allocateResponse.getAllocatedContainers().size(),
+    assertEquals(0, allocateResponse.getAllocatedContainers().size(),
         "No of assignments must be 0");
 
     assertAsksAndReleases(5, 0, rm2);
@@ -337,7 +340,7 @@ public class TestAMRMClientOnRMRestart {
     }
 
     // Step-6 : RM allocates containers i.e cRequest4,cRequest5 and cRequest6
-    Assertions.assertEquals(3, noAssignedContainer, "Number of container should be 3");
+    assertEquals(3, noAssignedContainer, "Number of container should be 3");
 
     amClient.stop();
     rm1.stop();
@@ -393,7 +396,7 @@ public class TestAMRMClientOnRMRestart {
 
     // NM should be rebooted on heartbeat, even first heartbeat for nm2
     NodeHeartbeatResponse hbResponse = nm1.nodeHeartbeat(true);
-    Assertions.assertEquals(NodeAction.RESYNC, hbResponse.getNodeAction());
+    assertEquals(NodeAction.RESYNC, hbResponse.getNodeAction());
 
     // new NM to represent NM re-register
     nm1 = new MockNM("h1:1234", 10240, rm2.getResourceTrackerService());
@@ -474,7 +477,7 @@ public class TestAMRMClientOnRMRestart {
         // DO NOTHING
       }
     }
-    Assertions.assertTrue(amrmTokenSecretManagerForRM1.getMasterKey()
+    assertTrue(amrmTokenSecretManagerForRM1.getMasterKey()
       .getMasterKey().getKeyId() != token.decodeIdentifier().getKeyId());
 
     amClient.allocate(0.1f);
@@ -495,8 +498,8 @@ public class TestAMRMClientOnRMRestart {
       }
       Thread.sleep(500);
     }
-    Assertions.assertTrue(amrmTokenSecretManagerForRM1.getNextMasterKeyData() == null);
-    Assertions.assertTrue(amrmTokenSecretManagerForRM1.getCurrnetMasterKeyData()
+    assertTrue(amrmTokenSecretManagerForRM1.getNextMasterKeyData() == null);
+    assertTrue(amrmTokenSecretManagerForRM1.getCurrnetMasterKeyData()
       .getMasterKey().getKeyId() == newToken.decodeIdentifier().getKeyId());
 
     // start 2nd RM
@@ -507,10 +510,9 @@ public class TestAMRMClientOnRMRestart {
 
     AMRMTokenSecretManager amrmTokenSecretManagerForRM2 =
         rm2.getRMContext().getAMRMTokenSecretManager();
-    Assertions.assertTrue(amrmTokenSecretManagerForRM2.getCurrnetMasterKeyData()
+    assertTrue(amrmTokenSecretManagerForRM2.getCurrnetMasterKeyData()
       .getMasterKey().getKeyId() == newToken.decodeIdentifier().getKeyId());
-    Assertions
-      .assertTrue(amrmTokenSecretManagerForRM2.getNextMasterKeyData() == null);
+    assertTrue(amrmTokenSecretManagerForRM2.getNextMasterKeyData() == null);
 
     try {
       UserGroupInformation testUser =
@@ -526,10 +528,10 @@ public class TestAMRMClientOnRMRestart {
             rm2.getApplicationMasterService().getBindAddress(), conf);
         }
       }).allocate(Records.newRecord(AllocateRequest.class));
-      Assertions.fail("The old Token should not work");
+      fail("The old Token should not work");
     } catch (Exception ex) {
-      Assertions.assertTrue(ex instanceof InvalidToken);
-      Assertions.assertTrue(ex.getMessage().contains(
+      assertTrue(ex instanceof InvalidToken);
+      assertTrue(ex.getMessage().contains(
         "Invalid AMRMToken from "
             + token.decodeIdentifier().getApplicationAttemptId()));
     }
@@ -667,24 +669,24 @@ public class TestAMRMClientOnRMRestart {
 
   private static void assertBlacklistAdditionsAndRemovals(
       int expectedAdditions, int expectedRemovals, MyResourceManager rm) {
-    Assertions.assertEquals(expectedAdditions,
+    assertEquals(expectedAdditions,
         rm.getMyFifoScheduler().lastBlacklistAdditions.size());
-    Assertions.assertEquals(expectedRemovals,
+    assertEquals(expectedRemovals,
         rm.getMyFifoScheduler().lastBlacklistRemovals.size());
   }
 
   private static void assertAsksAndReleases(int expectedAsk,
       int expectedRelease, MyResourceManager rm) {
-    Assertions.assertEquals(expectedAsk, rm.getMyFifoScheduler().lastAsk.size());
-    Assertions.assertEquals(expectedRelease,
+    assertEquals(expectedAsk, rm.getMyFifoScheduler().lastAsk.size());
+    assertEquals(expectedRelease,
         rm.getMyFifoScheduler().lastRelease.size());
   }
 
   private static void assertChanges(
       int expectedIncrease, int expectedDecrease, MyResourceManager rm) {
-    Assertions.assertEquals(
+    assertEquals(
         expectedIncrease, rm.getMyFifoScheduler().lastIncrease.size());
-    Assertions.assertEquals(
+    assertEquals(
         expectedDecrease, rm.getMyFifoScheduler().lastDecrease.size());
   }
 

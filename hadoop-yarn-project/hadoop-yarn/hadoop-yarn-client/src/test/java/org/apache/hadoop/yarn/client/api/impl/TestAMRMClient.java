@@ -21,7 +21,10 @@ package org.apache.hadoop.yarn.client.api.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -778,7 +781,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       //setting an instance NMTokenCache
       amClient.setNMTokenCache(new NMTokenCache());
       //asserting we are not using the singleton instance cache
-      Assertions.assertNotSame(NMTokenCache.getSingleton(),
+      assertNotSame(NMTokenCache.getSingleton(),
           amClient.getNMTokenCache());
 
       amClient.init(conf);
@@ -835,7 +838,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       if (ResourceRequest.ANY.equals(req.getResourceName())) {
         assertEquals("y", req.getNodeLabelExpression());
       } else {
-        Assertions.assertNull(req.getNodeLabelExpression());
+        assertNull(req.getNodeLabelExpression());
       }
     }
     // set container with nodes and racks with labels
@@ -846,7 +849,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       if (ResourceRequest.ANY.equals(req.getResourceName())) {
         assertEquals("y", req.getNodeLabelExpression());
       } else {
-        Assertions.assertNull(req.getNodeLabelExpression());
+        assertNull(req.getNodeLabelExpression());
       }
     }
   }
@@ -883,18 +886,18 @@ public class TestAMRMClient extends BaseAMRMClientTest{
     try {
       // start am rm client
       amClient = AMRMClient.createAMRMClient();
-      Assertions.assertNotNull(amClient);
+      assertNotNull(amClient);
       // asserting we are using the singleton instance cache
-      Assertions.assertSame(
+      assertSame(
           NMTokenCache.getSingleton(), amClient.getNMTokenCache());
       amClient.init(conf);
       amClient.start();
       assertEquals(STATE.STARTED, amClient.getServiceState());
       // start am nm client
       NMClientImpl nmClient = (NMClientImpl) NMClient.createNMClient();
-      Assertions.assertNotNull(nmClient);
+      assertNotNull(nmClient);
       // asserting we are using the singleton instance cache
-      Assertions.assertSame(
+      assertSame(
           NMTokenCache.getSingleton(), nmClient.getNMTokenCache());
       nmClient.init(conf);
       nmClient.start();
@@ -1041,7 +1044,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       }
     }
 
-    Assertions.assertEquals(1, updateResponse.size(), "Container resource change update failed");
+    assertEquals(1, updateResponse.size(), "Container resource change update failed");
   }
 
   @Test
@@ -1055,7 +1058,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
 
     // start am nm client
     NMClientImpl nmClient = (NMClientImpl) NMClient.createNMClient();
-    Assertions.assertNotNull(nmClient);
+    assertNotNull(nmClient);
     nmClient.init(conf);
     nmClient.start();
     assertEquals(STATE.STARTED, nmClient.getServiceState());
@@ -1185,16 +1188,16 @@ public class TestAMRMClient extends BaseAMRMClientTest{
         (AMRMClientImpl<AMRMClient.ContainerRequest>) AMRMClient
             .createAMRMClient();
     //asserting we are not using the singleton instance cache
-    Assertions.assertSame(NMTokenCache.getSingleton(),
+    assertSame(NMTokenCache.getSingleton(),
         amClient.getNMTokenCache());
     amClient.init(conf);
     amClient.start();
 
     // start am nm client
     NMClientImpl nmClient = (NMClientImpl) NMClient.createNMClient();
-    Assertions.assertNotNull(nmClient);
+    assertNotNull(nmClient);
     // asserting we are using the singleton instance cache
-    Assertions.assertSame(
+    assertSame(
         NMTokenCache.getSingleton(), nmClient.getNMTokenCache());
     nmClient.init(conf);
     nmClient.start();
@@ -1327,15 +1330,15 @@ public class TestAMRMClient extends BaseAMRMClientTest{
         (AMRMClientImpl<AMRMClient.ContainerRequest>) AMRMClient
             .createAMRMClient();
     //asserting we are not using the singleton instance cache
-    Assertions.assertSame(NMTokenCache.getSingleton(),
+    assertSame(NMTokenCache.getSingleton(),
         amClient.getNMTokenCache());
     amClient.init(conf);
     amClient.start();
 
     NMClientImpl nmClient = (NMClientImpl) NMClient.createNMClient();
-    Assertions.assertNotNull(nmClient);
+    assertNotNull(nmClient);
     // asserting we are using the singleton instance cache
-    Assertions.assertSame(
+    assertSame(
         NMTokenCache.getSingleton(), nmClient.getNMTokenCache());
     nmClient.init(conf);
     nmClient.start();
@@ -1813,7 +1816,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
 
       org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> amrmToken_1 =
           getAMRMToken();
-      Assertions.assertNotNull(amrmToken_1);
+      assertNotNull(amrmToken_1);
       assertEquals(amrmToken_1.decodeIdentifier().getKeyId(),
         amrmTokenSecretManager.getMasterKey().getMasterKey().getKeyId());
 
@@ -1828,11 +1831,11 @@ public class TestAMRMClient extends BaseAMRMClientTest{
 
       org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> amrmToken_2 =
           getAMRMToken();
-      Assertions.assertNotNull(amrmToken_2);
+      assertNotNull(amrmToken_2);
       assertEquals(amrmToken_2.decodeIdentifier().getKeyId(),
         amrmTokenSecretManager.getMasterKey().getMasterKey().getKeyId());
 
-      Assertions.assertNotEquals(amrmToken_1, amrmToken_2);
+      assertNotEquals(amrmToken_1, amrmToken_2);
 
       // can do the allocate call with latest AMRMToken
       AllocateResponse response = amClient.allocate(0.1f);

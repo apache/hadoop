@@ -387,13 +387,13 @@ public class TestNMClient {
       // container status
       if (status.getState() == state) {
         assertEquals(container.getId(), status.getContainerId());
-        assertTrue(
-               status.getDiagnostics().contains(diagnostics), index + ": " + status.getDiagnostics());
+        assertTrue(status.getDiagnostics().contains(diagnostics),
+            index + ": " + status.getDiagnostics());
 
-        assertTrue(
-               exitStatuses.contains(status.getExitStatus()), "Exit Statuses are supposed to be in: " + exitStatuses +
-                        ", but the actual exit status code is: " +
-                        status.getExitStatus());
+        assertTrue(exitStatuses.contains(status.getExitStatus()),
+            "Exit Statuses are supposed to be in: " + exitStatuses +
+            ", but the actual exit status code is: " +
+            status.getExitStatus());
         break;
       }
     }
@@ -440,7 +440,8 @@ public class TestNMClient {
 
   private void assertYarnException(Executable runnable, String text) {
     YarnException e = assertThrows(YarnException.class, runnable);
-    assertTrue(e.getMessage().contains(text), String.format("The thrown exception is not expected cause it has text [%s]"
+    assertTrue(e.getMessage().contains(text),
+        String.format("The thrown exception is not expected cause it has text [%s]"
         + ", what not contains text [%s]", e.getMessage(), text));
   }
 

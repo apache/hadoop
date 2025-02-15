@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -40,7 +41,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -116,7 +116,7 @@ public class TestAHSv2ClientImpl {
     assertThat(report.getApplicationId()).isEqualTo(appId);
     assertThat(report.getAppNodeLabelExpression()).
         isEqualTo("test_node_label");
-    Assertions.assertTrue(report.getApplicationTags().contains("Test_APP_TAGS_1"));
+    assertTrue(report.getApplicationTags().contains("Test_APP_TAGS_1"));
     assertThat(report.getYarnApplicationState()).
         isEqualTo(YarnApplicationState.FINISHED);
   }

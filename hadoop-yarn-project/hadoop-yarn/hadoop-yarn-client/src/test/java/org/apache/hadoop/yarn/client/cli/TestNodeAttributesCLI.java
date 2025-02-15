@@ -200,9 +200,8 @@ public class TestNodeAttributesCLI {
 
     // parenthesis not match
     args = new String[] {"-replace", "x:(=abc"};
-    assertTrue(
-    
-       0 != runTool(args), "It should have failed as no closing parenthesis is not specified");
+    assertTrue(0 != runTool(args),
+        "It should have failed as no closing parenthesis is not specified");
     assertFailureMessageContains(
         "Attribute for node x is not properly configured : (=abc");
 

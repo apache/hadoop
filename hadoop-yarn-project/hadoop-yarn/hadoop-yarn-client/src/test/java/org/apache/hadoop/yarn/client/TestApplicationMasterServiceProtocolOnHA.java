@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -39,6 +38,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
 import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 public class TestApplicationMasterServiceProtocolOnHA
@@ -59,7 +60,7 @@ public class TestApplicationMasterServiceProtocolOnHA
         RegisterApplicationMasterRequest.newInstance("localhost", 0, "");
     RegisterApplicationMasterResponse response =
         getAMClient().registerApplicationMaster(request);
-    Assertions.assertEquals(response,
+    assertEquals(response,
         this.cluster.createFakeRegisterApplicationMasterResponse());
   }
 
@@ -71,7 +72,7 @@ public class TestApplicationMasterServiceProtocolOnHA
             FinalApplicationStatus.SUCCEEDED, "", "");
     FinishApplicationMasterResponse response =
         getAMClient().finishApplicationMaster(request);
-    Assertions.assertEquals(response,
+    assertEquals(response,
         this.cluster.createFakeFinishApplicationMasterResponse());
   }
 
@@ -83,6 +84,6 @@ public class TestApplicationMasterServiceProtocolOnHA
         ResourceBlacklistRequest.newInstance(new ArrayList<String>(),
             new ArrayList<String>()));
     AllocateResponse response = getAMClient().allocate(request);
-    Assertions.assertEquals(response, this.cluster.createFakeAllocateResponse());
+    assertEquals(response, this.cluster.createFakeAllocateResponse());
   }
 }

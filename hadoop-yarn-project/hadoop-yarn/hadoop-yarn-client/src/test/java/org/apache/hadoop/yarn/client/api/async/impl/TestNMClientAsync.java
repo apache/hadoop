@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.client.api.async.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doNothing;
@@ -41,7 +44,6 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.ServiceOperations;
@@ -107,7 +109,7 @@ public class TestNMClientAsync {
 
     asyncClient = new MockNMClientAsync1(expectedSuccess, expectedFailure);
     asyncClient.init(conf);
-    Assertions.assertEquals(10, asyncClient.maxThreadPoolSize,
+    assertEquals(10, asyncClient.maxThreadPoolSize,
         "The max thread pool size is not correctly set");
     asyncClient.start();
 
@@ -151,13 +153,13 @@ public class TestNMClientAsync {
             .errorMsgs) {
       System.out.println(errorMsg);
     }
-    Assertions.assertEquals(0,
+    assertEquals(0,
         ((TestCallbackHandler1) asyncClient.getCallbackHandler())
         .errorMsgs.size(), "Error occurs in CallbackHandler");
     for (String errorMsg : ((MockNMClientAsync1) asyncClient).errorMsgs) {
       System.out.println(errorMsg);
     }
-    Assertions.assertEquals(0, ((MockNMClientAsync1) asyncClient).errorMsgs.size(),
+    assertEquals(0, ((MockNMClientAsync1) asyncClient).errorMsgs.size(),
         "Error occurs in ContainerEventProcessor");
     // When the callback functions are all executed, the event processor threads
     // may still not terminate and the containers may still not removed.
@@ -165,9 +167,9 @@ public class TestNMClientAsync {
       Thread.sleep(10);
     }
     asyncClient.stop();
-    Assertions.assertFalse(asyncClient.eventDispatcherThread.isAlive(),
+    assertFalse(asyncClient.eventDispatcherThread.isAlive(),
         "The thread of Container Management Event Dispatcher is still alive");
-    Assertions.assertTrue(asyncClient.threadPool.isShutdown(),
+    assertTrue(asyncClient.threadPool.isShutdown(),
         "The thread pool is not shut down");
   }
 
@@ -698,7 +700,7 @@ public class TestNMClientAsync {
 
     private void assertAtomicIntegerArray(AtomicIntegerArray array) {
       for (int i = 0; i < array.length(); ++i) {
-        Assertions.assertEquals(1, array.get(i));
+        assertEquals(1, array.get(i));
       }
     }
   }
@@ -792,7 +794,7 @@ public class TestNMClientAsync {
     asyncClient.stopContainerAsync(container.getId(), container.getNodeId());
     barrierC.await();
 
-    Assertions.assertFalse(((TestCallbackHandler2) asyncClient.getCallbackHandler())
+    assertFalse(((TestCallbackHandler2) asyncClient.getCallbackHandler())
         .exceptionOccurred.get(), "Starting and stopping should be out of order");
   }
 

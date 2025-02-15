@@ -19,6 +19,9 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -27,8 +30,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
-import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
@@ -84,7 +85,7 @@ public class TestAHSClient {
         ((MockAHSClient) client).getReports();
 
     List<ApplicationReport> reports = client.getApplications();
-    Assertions.assertEquals(reports, expectedReports);
+    assertEquals(reports, expectedReports);
 
     reports = client.getApplications();
     assertThat(reports).hasSize(4);
@@ -103,10 +104,10 @@ public class TestAHSClient {
         ((MockAHSClient) client).getReports();
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     ApplicationReport report = client.getApplicationReport(applicationId);
-    Assertions.assertEquals(report, expectedReports.get(0));
-    Assertions.assertEquals(report.getApplicationId().toString(), expectedReports
+    assertEquals(report, expectedReports.get(0));
+    assertEquals(report.getApplicationId().toString(), expectedReports
       .get(0).getApplicationId().toString());
-    Assertions.assertEquals(report.getSubmitTime(), expectedReports.get(0)
+    assertEquals(report.getSubmitTime(), expectedReports.get(0)
       .getSubmitTime());
     client.stop();
   }
@@ -122,10 +123,10 @@ public class TestAHSClient {
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     List<ApplicationAttemptReport> reports =
         client.getApplicationAttempts(applicationId);
-    Assertions.assertNotNull(reports);
-    Assertions.assertEquals(reports.get(0).getApplicationAttemptId(),
+    assertNotNull(reports);
+    assertEquals(reports.get(0).getApplicationAttemptId(),
       ApplicationAttemptId.newInstance(applicationId, 1));
-    Assertions.assertEquals(reports.get(1).getApplicationAttemptId(),
+    assertEquals(reports.get(1).getApplicationAttemptId(),
       ApplicationAttemptId.newInstance(applicationId, 2));
     client.stop();
   }
@@ -146,8 +147,8 @@ public class TestAHSClient {
         ApplicationAttemptId.newInstance(applicationId, 1);
     ApplicationAttemptReport report =
         client.getApplicationAttemptReport(appAttemptId);
-    Assertions.assertNotNull(report);
-    Assertions.assertEquals(report.getApplicationAttemptId().toString(),
+    assertNotNull(report);
+    assertEquals(report.getApplicationAttemptId().toString(),
       expectedReports.get(0).getCurrentApplicationAttemptId().toString());
     client.stop();
   }
@@ -164,10 +165,10 @@ public class TestAHSClient {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(applicationId, 1);
     List<ContainerReport> reports = client.getContainers(appAttemptId);
-    Assertions.assertNotNull(reports);
-    Assertions.assertEquals(reports.get(0).getContainerId(),
+    assertNotNull(reports);
+    assertEquals(reports.get(0).getContainerId(),
       (ContainerId.newContainerId(appAttemptId, 1)));
-    Assertions.assertEquals(reports.get(1).getContainerId(),
+    assertEquals(reports.get(1).getContainerId(),
       (ContainerId.newContainerId(appAttemptId, 2)));
     client.stop();
   }
@@ -188,8 +189,8 @@ public class TestAHSClient {
         ApplicationAttemptId.newInstance(applicationId, 1);
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     ContainerReport report = client.getContainerReport(containerId);
-    Assertions.assertNotNull(report);
-    Assertions.assertEquals(report.getContainerId().toString(), (ContainerId
+    assertNotNull(report);
+    assertEquals(report.getContainerId().toString(), (ContainerId
       .newContainerId(expectedReports.get(0).getCurrentApplicationAttemptId(), 1))
       .toString());
     client.stop();
@@ -247,9 +248,9 @@ public class TestAHSClient {
           .thenReturn(mockContainerResponse);
 
       } catch (YarnException e) {
-        Assertions.fail("Exception is not expected.");
+        fail("Exception is not expected.");
       } catch (IOException e) {
-        Assertions.fail("Exception is not expected.");
+        fail("Exception is not expected.");
       }
     }
 

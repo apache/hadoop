@@ -48,13 +48,13 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceReque
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test ResourceManagerAdministrationProtocolPBClientImpl. Test a methods and the proxy without  logic.
@@ -104,7 +104,7 @@ public class TestResourceManagerAdministrationProtocolPBClientImpl {
     }.start();
 
     boolean rmStarted = rmStartedSignal.await(60000L, TimeUnit.MILLISECONDS);
-    Assertions.assertTrue(rmStarted, "ResourceManager failed to start up.");
+    assertTrue(rmStarted, "ResourceManager failed to start up.");
 
     LOG.info("ResourceManager RMAdmin address: {}.",
             configuration.get(YarnConfiguration.RM_ADMIN_ADDRESS));

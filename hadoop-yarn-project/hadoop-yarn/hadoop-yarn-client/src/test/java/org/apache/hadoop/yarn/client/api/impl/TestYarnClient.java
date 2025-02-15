@@ -77,7 +77,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -98,7 +97,12 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -150,8 +154,8 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
         new CreateTimelineClientErrorVerifier(1) {
           @Override
           public void verifyError(Throwable e) {
-            Assertions.assertTrue(e instanceof NoClassDefFoundError);
-            Assertions.assertTrue(e.getMessage() != null &&
+            assertTrue(e instanceof NoClassDefFoundError);
+            assertTrue(e.getMessage() != null &&
                 e.getMessage().contains(
                     YarnConfiguration.TIMELINE_SERVICE_ENABLED));
           }
@@ -166,7 +170,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
         new NoClassDefFoundError("Mock a NoClassDefFoundError"),
         new CreateTimelineClientErrorVerifier(0) {
           @Override public void verifyError(Throwable e) {
-            Assertions.fail("NoClassDefFoundError while creating timeline client"
+            fail("NoClassDefFoundError while creating timeline client"
                 + "should be tolerated when timeline service is disabled.");
           }
         }
@@ -180,8 +184,8 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
         new NoClassDefFoundError("Mock a NoClassDefFoundError"),
         new CreateTimelineClientErrorVerifier(1) {
           @Override public void verifyError(Throwable e) {
-            Assertions.assertTrue(e instanceof NoClassDefFoundError);
-            Assertions.assertTrue(e.getMessage() != null &&
+            assertTrue(e instanceof NoClassDefFoundError);
+            assertTrue(e.getMessage() != null &&
                 e.getMessage().contains(
                     YarnConfiguration.TIMELINE_SERVICE_ENABLED));
           }
@@ -198,7 +202,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
         new CreateTimelineClientErrorVerifier(1) {
           @Override
           public void verifyError(Throwable e) {
-            Assertions.assertTrue(e instanceof IOException);
+            assertTrue(e instanceof IOException);
           }
         }
     );
@@ -213,7 +217,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
         new CreateTimelineClientErrorVerifier(0) {
           @Override
           public void verifyError(Throwable e) {
-            Assertions.fail("IOException while creating timeline client"
+            fail("IOException while creating timeline client"
                 + "should be tolerated when best effort is true");
           }
         }
@@ -244,10 +248,10 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
         mock(ApplicationSubmissionContext.class);
     try {
       client.submitApplication(contextWithoutApplicationId);
-      Assertions.fail("Should throw the ApplicationIdNotProvidedException");
+      fail("Should throw the ApplicationIdNotProvidedException");
     } catch (YarnException e) {
-      Assertions.assertTrue(e instanceof ApplicationIdNotProvidedException);
-      Assertions.assertTrue(e.getMessage().contains(
+      assertTrue(e instanceof ApplicationIdNotProvidedException);
+      assertTrue(e.getMessage().contains(
           "ApplicationId is not provided in ApplicationSubmissionContext"));
     }
 
@@ -315,7 +319,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
         appSubmitThread.join();
       } catch (InterruptedException e) {
       }
-      Assertions.assertTrue(appSubmitThread.isInterrupted, "Expected an InterruptedException wrapped inside a " +
+      assertTrue(appSubmitThread.isInterrupted, "Expected an InterruptedException wrapped inside a " +
           "YarnException");
     }
   }
@@ -361,9 +365,9 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
 
       // Submit the application to the applications manager
       rmClient.submitApplication(appContext);
-      Assertions.fail("Job submission should have thrown an exception");
+      fail("Job submission should have thrown an exception");
     } catch (YarnException e) {
-      Assertions.assertTrue(e.getMessage().contains("Failed to submit"));
+      assertTrue(e.getMessage().contains("Failed to submit"));
     } finally {
       if (rmClient != null) {
         rmClient.stop();
@@ -407,8 +411,8 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
                 .withCredentials(null)
                 .withAppType("MAPREDUCE")
                 .build());
-    Assertions.assertEquals("YARN", app.getApplicationType());
-    Assertions.assertEquals("MAPREDUCE", app1.getApplicationType());
+    assertEquals("YARN", app.getApplicationType());
+    assertEquals("MAPREDUCE", app1.getApplicationType());
     rm.stop();
   }
 
@@ -430,7 +434,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
                 .withCredentials(null)
                 .withAppType("MAPREDUCE-LENGTH-IS-20")
                 .build());
-    Assertions.assertEquals("MAPREDUCE-LENGTH-IS-", app1.getApplicationType());
+    assertEquals("MAPREDUCE-LENGTH-IS-", app1.getApplicationType());
     rm.stop();
   }
 
@@ -453,13 +457,12 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     reports =
         client.getApplications(appTypes, null);
     assertThat(reports).hasSize(2);
-    Assertions
-        .assertTrue((reports.get(0).getApplicationType().equals("YARN") && reports
-            .get(1).getApplicationType().equals("NON-YARN"))
-            || (reports.get(1).getApplicationType().equals("YARN") && reports
-                .get(0).getApplicationType().equals("NON-YARN")));
+    assertTrue((reports.get(0).getApplicationType().equals("YARN") && reports
+        .get(1).getApplicationType().equals("NON-YARN"))
+        || (reports.get(1).getApplicationType().equals("YARN") && reports
+        .get(0).getApplicationType().equals("NON-YARN")));
     for(ApplicationReport report : reports) {
-      Assertions.assertTrue(expectedReports.contains(report));
+      assertTrue(expectedReports.contains(report));
     }
 
     EnumSet<YarnApplicationState> appStates =
@@ -468,20 +471,19 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     appStates.add(YarnApplicationState.FAILED);
     reports = client.getApplications(null, appStates);
     assertThat(reports).hasSize(2);
-    Assertions
-    .assertTrue((reports.get(0).getApplicationType().equals("NON-YARN") && reports
+    assertTrue((reports.get(0).getApplicationType().equals("NON-YARN") && reports
         .get(1).getApplicationType().equals("NON-MAPREDUCE"))
         || (reports.get(1).getApplicationType().equals("NON-YARN") && reports
-            .get(0).getApplicationType().equals("NON-MAPREDUCE")));
+        .get(0).getApplicationType().equals("NON-MAPREDUCE")));
     for (ApplicationReport report : reports) {
-      Assertions.assertTrue(expectedReports.contains(report));
+      assertTrue(expectedReports.contains(report));
     }
 
     reports = client.getApplications(appTypes, appStates);
-    Assertions.assertEquals(1, reports.size());
-    Assertions.assertEquals("NON-YARN", reports.get(0).getApplicationType());
+    assertEquals(1, reports.size());
+    assertEquals("NON-YARN", reports.get(0).getApplicationType());
     for (ApplicationReport report : reports) {
-      Assertions.assertTrue(expectedReports.contains(report));
+      assertTrue(expectedReports.contains(report));
     }
 
     client.stop();
@@ -497,7 +499,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     List<ApplicationAttemptReport> reports = client
         .getApplicationAttempts(applicationId);
-    Assertions.assertNotNull(reports);
+    assertNotNull(reports);
     assertThat(reports.get(0).getApplicationAttemptId()).isEqualTo(
         ApplicationAttemptId.newInstance(applicationId, 1));
     assertThat(reports.get(1).getApplicationAttemptId()).isEqualTo(
@@ -521,7 +523,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
         applicationId, 1);
     ApplicationAttemptReport report = client
         .getApplicationAttemptReport(appAttemptId);
-    Assertions.assertNotNull(report);
+    assertNotNull(report);
     assertThat(report.getApplicationAttemptId().toString()).isEqualTo(
         expectedReports.get(0).getCurrentApplicationAttemptId().toString());
     client.stop();
@@ -542,7 +544,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         applicationId, 1);
     List<ContainerReport> reports = client.getContainers(appAttemptId);
-    Assertions.assertNotNull(reports);
+    assertNotNull(reports);
     assertThat(reports.get(0).getContainerId()).isEqualTo(
         (ContainerId.newContainerId(appAttemptId, 1)));
     assertThat(reports.get(1).getContainerId()).isEqualTo(
@@ -552,11 +554,11 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     
     //First2 containers should come from RM with updated state information and 
     // 3rd container is not there in RM and should
-    Assertions.assertEquals(ContainerState.RUNNING,
+    assertEquals(ContainerState.RUNNING,
         (reports.get(0).getContainerState()));
-    Assertions.assertEquals(ContainerState.RUNNING,
+    assertEquals(ContainerState.RUNNING,
         (reports.get(1).getContainerState()));
-    Assertions.assertEquals(ContainerState.COMPLETE,
+    assertEquals(ContainerState.COMPLETE,
         (reports.get(2).getContainerState()));
     client.stop();
   }
@@ -584,17 +586,17 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         applicationId, 1);
     List<ContainerReport> reports = client.getContainers(appAttemptId);
-    Assertions.assertNotNull(reports);
-    Assertions.assertTrue(reports.size() == 2);
+    assertNotNull(reports);
+    assertTrue(reports.size() == 2);
     assertThat(reports.get(0).getContainerId()).isEqualTo(
         (ContainerId.newContainerId(appAttemptId, 1)));
     assertThat(reports.get(1).getContainerId()).isEqualTo(
         (ContainerId.newContainerId(appAttemptId, 2)));
 
     //Only 2 running containers from RM are present when AHS throws exception
-    Assertions.assertEquals(ContainerState.RUNNING,
+    assertEquals(ContainerState.RUNNING,
         (reports.get(0).getContainerState()));
-    Assertions.assertEquals(ContainerState.RUNNING,
+    assertEquals(ContainerState.RUNNING,
         (reports.get(1).getContainerState()));
     client.stop();
   }
@@ -618,17 +620,17 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
         applicationId, 1);
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     ContainerReport report = client.getContainerReport(containerId);
-    Assertions.assertNotNull(report);
+    assertNotNull(report);
     assertThat(report.getContainerId().toString()).isEqualTo(
         (ContainerId.newContainerId(expectedReports.get(0)
             .getCurrentApplicationAttemptId(), 1)).toString());
     containerId = ContainerId.newContainerId(appAttemptId, 3);
     report = client.getContainerReport(containerId);
-    Assertions.assertNotNull(report);
+    assertNotNull(report);
     assertThat(report.getContainerId().toString()).isEqualTo(
         (ContainerId.newContainerId(expectedReports.get(0)
             .getCurrentApplicationAttemptId(), 3)).toString());
-    Assertions.assertNotNull(report.getExecutionType());
+    assertNotNull(report.getExecutionType());
     client.stop();
   }
 
@@ -746,7 +748,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
         historyClient = mock(AHSClient.class);
 
       } catch (Exception e) {
-        Assertions.fail("Unexpected exception caught: " + e);
+        fail("Unexpected exception caught: " + e);
       }
 
       when(mockResponse.getApplicationReport()).thenReturn(mockReport);
@@ -1079,19 +1081,19 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
       ApplicationId appId = createApp(rmClient, false);
       waitTillAccepted(rmClient, appId, false);
       //managed AMs don't return AMRM token
-      Assertions.assertNull(rmClient.getAMRMToken(appId));
+      assertNull(rmClient.getAMRMToken(appId));
 
       appId = createApp(rmClient, true);
       waitTillAccepted(rmClient, appId, true);
       long start = System.currentTimeMillis();
       while (rmClient.getAMRMToken(appId) == null) {
         if (System.currentTimeMillis() - start > 20 * 1000) {
-          Assertions.fail("AMRM token is null");
+          fail("AMRM token is null");
         }
         Thread.sleep(100);
       }
       //unmanaged AMs do return AMRM token
-      Assertions.assertNotNull(rmClient.getAMRMToken(appId));
+      assertNotNull(rmClient.getAMRMToken(appId));
       
       UserGroupInformation other =
         UserGroupInformation.createUserForTesting("foo", new String[]{});
@@ -1107,17 +1109,17 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
             long start = System.currentTimeMillis();
             while (rmClient.getAMRMToken(appId) == null) {
               if (System.currentTimeMillis() - start > 20 * 1000) {
-                Assertions.fail("AMRM token is null");
+                fail("AMRM token is null");
               }
               Thread.sleep(100);
             }
             //unmanaged AMs do return AMRM token
-            Assertions.assertNotNull(rmClient.getAMRMToken(appId));
+            assertNotNull(rmClient.getAMRMToken(appId));
             return appId;
           }
         });
       //other users don't get AMRM token
-      Assertions.assertNull(rmClient.getAMRMToken(appId));
+      assertNull(rmClient.getAMRMToken(appId));
     } finally {
       if (rmClient != null) {
         rmClient.stop();
@@ -1176,7 +1178,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
       Thread.sleep(200);
       report = rmClient.getApplicationReport(appId);
     }
-    Assertions.assertEquals(unmanagedApplication, report.isUnmanagedApp());
+    assertEquals(unmanagedApplication, report.isUnmanagedApp());
   }
 
   @Test
@@ -1231,8 +1233,8 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     verify(((MockYarnClient) client).getRMClient())
         .signalToContainer(signalReqCaptor.capture());
     SignalContainerRequest request = signalReqCaptor.getValue();
-    Assertions.assertEquals(containerId, request.getContainerId());
-    Assertions.assertEquals(command, request.getCommand());
+    assertEquals(containerId, request.getContainerId());
+    assertEquals(command, request.getCommand());
   }
 
   private void testCreateTimelineClientWithError(

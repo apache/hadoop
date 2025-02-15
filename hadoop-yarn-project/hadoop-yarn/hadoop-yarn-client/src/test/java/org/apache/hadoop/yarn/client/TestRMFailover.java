@@ -20,9 +20,9 @@ package org.apache.hadoop.yarn.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -57,7 +57,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEventType;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -225,9 +224,9 @@ public class TestRMFailover extends ClientBaseWithFixes {
       webAppProxyServer.init(conf);
 
       // Start webAppProxyServer
-      Assertions.assertEquals(STATE.INITED, webAppProxyServer.getServiceState());
+      assertEquals(STATE.INITED, webAppProxyServer.getServiceState());
       webAppProxyServer.start();
-      Assertions.assertEquals(STATE.STARTED, webAppProxyServer.getServiceState());
+      assertEquals(STATE.STARTED, webAppProxyServer.getServiceState());
 
       // send httpRequest with fakeApplicationId
       // expect to get "Not Found" response and 404 response code

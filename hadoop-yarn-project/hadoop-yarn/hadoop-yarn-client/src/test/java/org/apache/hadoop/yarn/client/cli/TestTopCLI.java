@@ -38,10 +38,12 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test class for TopCli.
@@ -108,11 +110,11 @@ public class TestTopCLI {
     topcli.getConf().set(YarnConfiguration.RM_HA_IDS,
         RM1_NODE_ID + "," + RM2_NODE_ID);
     URL clusterUrl = topcli.getHAClusterUrl(conf, RM1_NODE_ID);
-    Assertions.assertEquals("http", clusterUrl.getProtocol());
-    Assertions.assertEquals(rm1Address, clusterUrl.getAuthority());
+    assertEquals("http", clusterUrl.getProtocol());
+    assertEquals(rm1Address, clusterUrl.getAuthority());
     clusterUrl = topcli.getHAClusterUrl(conf, RM2_NODE_ID);
-    Assertions.assertEquals("http", clusterUrl.getProtocol());
-    Assertions.assertEquals(rm2Address, clusterUrl.getAuthority());
+    assertEquals("http", clusterUrl.getProtocol());
+    assertEquals(rm2Address, clusterUrl.getAuthority());
     // https
     rm1Address = "host2:9088";
     rm2Address = "host3:9088";
@@ -125,8 +127,8 @@ public class TestTopCLI {
     conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + "," + RM2_NODE_ID);
     conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY, "HTTPS_ONLY");
     clusterUrl = topcli.getHAClusterUrl(conf, RM1_NODE_ID);
-    Assertions.assertEquals("https", clusterUrl.getProtocol());
-    Assertions.assertEquals(rm1Address, clusterUrl.getAuthority());
+    assertEquals("https", clusterUrl.getProtocol());
+    assertEquals(rm1Address, clusterUrl.getAuthority());
   }
 
   @Test
@@ -164,7 +166,7 @@ public class TestTopCLI {
     String expected = "NodeManager(s)"
         + ": 0 total, 3 active, 5 unhealthy, 1 decommissioning,"
         + " 2 decommissioned, 4 lost, 6 rebooted, 7 shutdown";
-    Assertions.assertTrue(actual.contains(expected),
+    assertTrue(actual.contains(expected),
         String.format("Expected output to contain [%s], actual output was [%s].",
         expected, actual));
   }

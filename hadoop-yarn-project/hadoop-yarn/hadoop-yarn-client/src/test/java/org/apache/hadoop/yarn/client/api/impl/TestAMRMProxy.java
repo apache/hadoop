@@ -43,11 +43,17 @@ import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * End-to-End test cases for the AMRMProxy Service.
@@ -98,17 +104,17 @@ public class TestAMRMProxy extends BaseAMRMProxyE2ETest {
           client.registerApplicationMaster(RegisterApplicationMasterRequest
               .newInstance(NetUtils.getHostname(), 1024, ""));
 
-      Assertions.assertNotNull(responseRegister);
-      Assertions.assertNotNull(responseRegister.getQueue());
-      Assertions.assertNotNull(responseRegister.getApplicationACLs());
-      Assertions.assertNotNull(responseRegister.getClientToAMTokenMasterKey());
-      Assertions.assertNotNull(responseRegister.getContainersFromPreviousAttempts());
-      Assertions.assertNotNull(responseRegister.getSchedulerResourceTypes());
-      Assertions.assertNotNull(responseRegister.getMaximumResourceCapability());
+      assertNotNull(responseRegister);
+      assertNotNull(responseRegister.getQueue());
+      assertNotNull(responseRegister.getApplicationACLs());
+      assertNotNull(responseRegister.getClientToAMTokenMasterKey());
+      assertNotNull(responseRegister.getContainersFromPreviousAttempts());
+      assertNotNull(responseRegister.getSchedulerResourceTypes());
+      assertNotNull(responseRegister.getMaximumResourceCapability());
 
       RMApp rmApp =
           cluster.getResourceManager().getRMContext().getRMApps().get(appId);
-      Assertions.assertEquals(RMAppState.RUNNING, rmApp.getState());
+      assertEquals(RMAppState.RUNNING, rmApp.getState());
 
       LOG.info("testAMRMProxyE2E - Allocate Resources Application Master");
 
@@ -116,8 +122,8 @@ public class TestAMRMProxy extends BaseAMRMProxyE2ETest {
           createAllocateRequest(rmClient.getNodeReports(NodeState.RUNNING));
 
       AllocateResponse allocResponse = client.allocate(request);
-      Assertions.assertNotNull(allocResponse);
-      Assertions.assertEquals(0, allocResponse.getAllocatedContainers().size());
+      assertNotNull(allocResponse);
+      assertEquals(0, allocResponse.getAllocatedContainers().size());
 
       request.setAskList(new ArrayList<ResourceRequest>());
       request.setResponseId(request.getResponseId() + 1);
@@ -126,8 +132,8 @@ public class TestAMRMProxy extends BaseAMRMProxyE2ETest {
 
       // RM should allocate container within 2 calls to allocate()
       allocResponse = client.allocate(request);
-      Assertions.assertNotNull(allocResponse);
-      Assertions.assertEquals(2, allocResponse.getAllocatedContainers().size());
+      assertNotNull(allocResponse);
+      assertEquals(2, allocResponse.getAllocatedContainers().size());
 
       LOG.info("testAMRMPRoxy - Finish Application Master");
 
@@ -135,10 +141,10 @@ public class TestAMRMProxy extends BaseAMRMProxyE2ETest {
           client.finishApplicationMaster(FinishApplicationMasterRequest
               .newInstance(FinalApplicationStatus.SUCCEEDED, "success", null));
 
-      Assertions.assertNotNull(responseFinish);
+      assertNotNull(responseFinish);
 
       Thread.sleep(500);
-      Assertions.assertNotEquals(RMAppState.FINISHED, rmApp.getState());
+      assertNotEquals(RMAppState.FINISHED, rmApp.getState());
 
     }
   }
@@ -209,7 +215,7 @@ public class TestAMRMProxy extends BaseAMRMProxyE2ETest {
 
       }
 
-      Assertions.assertFalse(response.getAMRMToken().equals(lastToken));
+      assertFalse(response.getAMRMToken().equals(lastToken));
 
       LOG.info("testAMRMPRoxy - Finish Application Master");
 
@@ -249,9 +255,9 @@ public class TestAMRMProxy extends BaseAMRMProxyE2ETest {
       try {
         client.registerApplicationMaster(RegisterApplicationMasterRequest
             .newInstance(NetUtils.getHostname(), 1024, ""));
-        Assertions.fail();
+        fail();
       } catch (IOException e) {
-        Assertions.assertTrue(
+        assertTrue(
             e.getMessage().startsWith("Invalid AMRMToken from appattempt_"));
       }
 

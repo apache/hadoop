@@ -64,7 +64,6 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -85,6 +84,9 @@ import java.util.TreeSet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Class that tests the allocation of OPPORTUNISTIC containers through the
@@ -224,7 +226,7 @@ public class TestOpportunisticContainerAllocationE2E {
     //setting an instance NMTokenCache
     amClient.setNMTokenCache(new NMTokenCache());
     //asserting we are not using the singleton instance cache
-    Assertions.assertNotSame(NMTokenCache.getSingleton(),
+    assertNotSame(NMTokenCache.getSingleton(),
         amClient.getNMTokenCache());
 
     amClient.init(conf);
@@ -290,7 +292,7 @@ public class TestOpportunisticContainerAllocationE2E {
     int iterationsLeft = 50;
 
     amClient.getNMTokenCache().clearCache();
-    Assertions.assertEquals(0,
+    assertEquals(0,
         amClient.getNMTokenCache().numberOfTokensInCache());
     HashMap<String, Token> receivedNMTokens = new HashMap<>();
 
@@ -333,10 +335,10 @@ public class TestOpportunisticContainerAllocationE2E {
           c, UpdateContainerRequest.newInstance(c.getVersion(),
               c.getId(), ContainerUpdateType.PROMOTE_EXECUTION_TYPE,
               null, ExecutionType.OPPORTUNISTIC));
-      Assertions.fail("Should throw Exception..");
+      fail("Should throw Exception..");
     } catch (IllegalArgumentException e) {
       System.out.println("## " + e.getMessage());
-      Assertions.assertTrue(e.getMessage().contains(
+      assertTrue(e.getMessage().contains(
           "target should be GUARANTEED and original should be OPPORTUNISTIC"));
     }
 
@@ -412,7 +414,7 @@ public class TestOpportunisticContainerAllocationE2E {
     int iterationsLeft = 50;
 
     amClient.getNMTokenCache().clearCache();
-    Assertions.assertEquals(0,
+    assertEquals(0,
         amClient.getNMTokenCache().numberOfTokensInCache());
     HashMap<String, Token> receivedNMTokens = new HashMap<>();
 
@@ -455,10 +457,10 @@ public class TestOpportunisticContainerAllocationE2E {
           c, UpdateContainerRequest.newInstance(c.getVersion(),
               c.getId(), ContainerUpdateType.DEMOTE_EXECUTION_TYPE,
               null, ExecutionType.GUARANTEED));
-      Assertions.fail("Should throw Exception..");
+      fail("Should throw Exception..");
     } catch (IllegalArgumentException e) {
       System.out.println("## " + e.getMessage());
-      Assertions.assertTrue(e.getMessage().contains(
+      assertTrue(e.getMessage().contains(
           "target should be OPPORTUNISTIC and original should be GUARANTEED"));
     }
 
@@ -598,7 +600,7 @@ public class TestOpportunisticContainerAllocationE2E {
     Set<ContainerId> releases = new TreeSet<>();
 
     amClient.getNMTokenCache().clearCache();
-    Assertions.assertEquals(0,
+    assertEquals(0,
         amClient.getNMTokenCache().numberOfTokensInCache());
     HashMap<String, Token> receivedNMTokens = new HashMap<>();
 
@@ -713,7 +715,7 @@ public class TestOpportunisticContainerAllocationE2E {
     Set<ContainerId> releases = new TreeSet<>();
 
     amClient.getNMTokenCache().clearCache();
-    Assertions.assertEquals(0,
+    assertEquals(0,
         amClient.getNMTokenCache().numberOfTokensInCache());
     HashMap<String, Token> receivedNMTokens = new HashMap<>();
 

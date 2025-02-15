@@ -275,8 +275,7 @@ public class TestRMAdminCLI {
     NodeId nodeId = NodeId.fromString(nodeIdStr);
     Resource expectedResource = Resources.createResource(memSize, cores);
     ResourceOption resource = resourceMap.get(nodeId);
-    assertNotNull(resource,
-        "resource for " + nodeIdStr + " shouldn't be null.");
+    assertNotNull(resource, "resource for " + nodeIdStr + " shouldn't be null.");
     assertEquals(ResourceOption.newInstance(expectedResource,
         ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT),
         resource, "resource value for " + nodeIdStr + " is not as expected.");
@@ -1042,7 +1041,7 @@ public class TestRMAdminCLI {
   private void testError(String[] args, String template,
       ByteArrayOutputStream data, int resultCode) throws Exception {
     int actualResultCode = rmAdminCLI.run(args);
-    assertEquals(resultCode, actualResultCode, "Expected result code: " + resultCode + 
+    assertEquals(resultCode, actualResultCode, "Expected result code: " + resultCode +
         ", actual result code is: " + actualResultCode);
     assertTrue(data.toString().contains(template),
         String.format("Expected error message: %n" + template +

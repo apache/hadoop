@@ -32,11 +32,12 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestGetGroups extends GetGroupsTestBase {
   
@@ -77,7 +78,7 @@ public class TestGetGroups extends GetGroupsTestBase {
     }.start();
 
     boolean rmStarted = rmStartedSignal.await(60000L, TimeUnit.MILLISECONDS);
-    Assertions.assertTrue(rmStarted, "ResourceManager failed to start up.");
+    assertTrue(rmStarted, "ResourceManager failed to start up.");
 
     LOG.info("ResourceManager RMAdmin address: {}.",
         conf.get(YarnConfiguration.RM_ADMIN_ADDRESS));
