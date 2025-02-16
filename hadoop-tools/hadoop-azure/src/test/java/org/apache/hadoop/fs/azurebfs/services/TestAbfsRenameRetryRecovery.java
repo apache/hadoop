@@ -78,7 +78,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
   public TestAbfsRenameRetryRecovery() throws Exception {
     isNamespaceEnabled = getConfiguration()
             .getBoolean(TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
-    Assume.assumeTrue(getConfiguration().getIsClientTransactionIdEnabled());
+    Assume.assumeFalse(getConfiguration().getIsClientTransactionIdEnabled());
   }
 
   /**
@@ -276,15 +276,9 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // 5 calls should have happened in total for rename
     // 1 -> original rename rest call, 2 -> first retry,
     // +2 for getPathStatus calls
-    Long expectedConnectionsMade = 5 + connMadeBeforeRename;
-    if (fs.getAbfsStore().getAbfsConfiguration()
-        .getIsClientTransactionIdEnabled()) {
-      // 1 extra connection for the HEAD request to get the source path status
-      expectedConnectionsMade++;
-    }
     assertThatStatisticCounter(ioStats,
-            CONNECTIONS_MADE.getStatName())
-            .isEqualTo(expectedConnectionsMade);
+        CONNECTIONS_MADE.getStatName())
+        .isEqualTo(5 + connMadeBeforeRename);
     // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
     // retries happen internally within AbfsRestOperation execute()
     // the stat for RENAME_PATH_ATTEMPTS is updated only once before execute() is called
@@ -360,15 +354,9 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // 1 -> original rename rest call, 2 -> first retry,
     // +1 for getPathStatus calls
     // last getPathStatus call should be skipped
-    Long expectedConnectionsMade = 4 + connMadeBeforeRename;
-    if (fs.getAbfsStore().getAbfsConfiguration()
-        .getIsClientTransactionIdEnabled()) {
-      // 1 extra connection for the HEAD request to get the source path status
-      expectedConnectionsMade++;
-    }
     assertThatStatisticCounter(ioStats,
-            CONNECTIONS_MADE.getStatName())
-            .isEqualTo(expectedConnectionsMade);
+        CONNECTIONS_MADE.getStatName())
+        .isEqualTo(4 + connMadeBeforeRename);
 
 
 

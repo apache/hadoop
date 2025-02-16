@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
@@ -732,5 +733,36 @@ public abstract class AbstractAbfsIntegrationTest extends
       }
     }
     assertEquals(exceptionCaught, exceptionVal);
+  }
+
+  /**
+   * Assumes that recovery through client transaction ID is enabled.
+   * Namespace is enabled for the given AzureBlobFileSystem.
+   * Service type is DFS.
+   * Assumes that the client transaction ID is enabled in the configuration.
+   *
+   * @param fs the AzureBlobFileSystem instance to check
+   * @throws AzureBlobFileSystemException in case of an error
+   */
+  protected void assumeRecoveryThroughClientTransactionID(
+      AzureBlobFileSystem fs, boolean isCreate)
+      throws AzureBlobFileSystemException {
+    // Assumes that recovery through client transaction ID is enabled.
+    Assume.assumeTrue(getConfiguration().getIsClientTransactionIdEnabled());
+    // Assumes that service type is DFS.
+    assumeDfsServiceType();
+    // Assumes that namespace is enabled for the given AzureBlobFileSystem.
+    Assume.assumeTrue(
+        fs.getIsNamespaceEnabled(getTestTracingContext(fs, true)));
+    if (isCreate) {
+      // Assume that create client is DFS client.
+      Assume.assumeTrue(
+          fs.getAbfsStore().getClientHandler().getIngressClient()
+              instanceof AbfsDfsClient);
+      // Assume that append blob is not enabled in DFS client.
+      Assume.assumeTrue(
+          StringUtils.isEmpty(
+              fs.getAbfsStore().getAbfsConfiguration().getAppendBlobDirs()));
+    }
   }
 }

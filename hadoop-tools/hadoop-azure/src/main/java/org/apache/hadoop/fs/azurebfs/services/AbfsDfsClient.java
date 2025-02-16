@@ -406,14 +406,21 @@ public class AbfsDfsClient extends AbfsClient {
       if (!op.hasResult()) {
         throw ex;
       }
-      if (op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
-        if (!isFile) {
+      if (!isFile) {
+        if (op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
           String existingResource =
               op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
           if (existingResource != null && existingResource.equals(DIRECTORY)) {
             return op; //don't throw ex on mkdirs for existing directory
           }
-        } else if (clientTransactionId != null) {
+        }
+      } else {
+        // recovery using client transaction id only if it is a retried request.
+        if (op.isARetriedRequest() && clientTransactionId != null
+            && (op.getResult().getStatusCode() ==
+            HttpURLConnection.HTTP_CONFLICT
+            || op.getResult().getStatusCode() ==
+            HttpURLConnection.HTTP_PRECON_FAILED)) {
           try {
             final AbfsHttpOperation getPathStatusOp =
                 getPathStatus(path, false,
@@ -725,8 +732,10 @@ public class AbfsDfsClient extends AbfsClient {
         throw e;
       }
 
-      if (clientTransactionId != null && SOURCE_PATH_NOT_FOUND.getErrorCode()
-          .equalsIgnoreCase(op.getResult().getStorageErrorCode())) {
+      // recovery using client transaction id only if it is a retried request.
+      if (op.isARetriedRequest() && clientTransactionId != null
+          && SOURCE_PATH_NOT_FOUND.getErrorCode().equalsIgnoreCase(
+              op.getResult().getStorageErrorCode())) {
         try {
           final AbfsHttpOperation abfsHttpOperation =
               getPathStatus(destination, false,
@@ -1630,7 +1639,8 @@ public class AbfsDfsClient extends AbfsClient {
    */
   private String addClientTransactionIdToHeader(List<AbfsHttpHeader> requestHeaders) {
     String clientTransactionId = null;
-    if (getAbfsConfiguration().getIsClientTransactionIdEnabled()) {
+    // Set client transaction ID if the namespace and client transaction ID config are enabled.
+    if (getIsNamespaceEnabled() && getAbfsConfiguration().getIsClientTransactionIdEnabled()) {
       clientTransactionId = UUID.randomUUID().toString();
       requestHeaders.add(
           new AbfsHttpHeader(X_MS_CLIENT_TRANSACTION_ID, clientTransactionId));

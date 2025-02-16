@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.permission.FsPermission;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
@@ -196,10 +197,10 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void createPathRetryIdempotency() throws Exception {
-    Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID, "true");
-    try (final AzureBlobFileSystem fs = getFileSystem(config)) {
-      assumeDfsServiceType();
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.set(FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID, "true");
+    try (AzureBlobFileSystem fs = getFileSystem(configuration)) {
+      assumeRecoveryThroughClientTransactionID(fs, true);
       AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
       AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
       AbfsDfsClient abfsClient = (AbfsDfsClient) Mockito.spy(
@@ -270,10 +271,8 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void getClientTransactionIdAfterCreate() throws Exception {
-    Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID, "true");
-    try (final AzureBlobFileSystem fs = getFileSystem(config)) {
-      assumeDfsServiceType();
+    try (AzureBlobFileSystem fs = getFileSystem()) {
+      assumeRecoveryThroughClientTransactionID(fs, true);
       AbfsDfsClient abfsDfsClient = (AbfsDfsClient) fs.getAbfsClient();
       final Path nonOverwriteFile = new Path(
           "/NonOverwriteTest_FileName_" + UUID.randomUUID());
@@ -284,6 +283,39 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
               getTestTracingContext(fs, true), null).getResult();
       Assertions.assertThat(
           getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))
+          .describedAs("Client transaction ID should be set during create")
+          .isNotNull();
+    }
+  }
+
+  /**
+   * Test to verify that the client transaction ID is included in the response header
+   * after two consecutive create operations on the same file in Azure Blob Storage.
+   * <p>
+   * This test ensures that even after performing two create operations (with overwrite)
+   * on the same file, the Azure Blob FileSystem client includes the client transaction ID
+   * in the response header for the created file. The test checks for the presence of
+   * the client transaction ID in the response after the second create call.
+   * </p>
+   *
+   * @throws Exception if any error occurs during test execution
+   */
+  @Test
+  public void testClientTransactionIdAfterTwoCreateCalls() throws Exception {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
+      assumeRecoveryThroughClientTransactionID(fs, true);
+      AbfsDfsClient abfsDfsClient = (AbfsDfsClient) fs.getAbfsClient();
+      Path testPath = path("testfile");
+      AzureBlobFileSystemStore.Permissions permissions
+          = new AzureBlobFileSystemStore.Permissions(false,
+          FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
+      fs.create(testPath, false);
+      fs.create(testPath, true);
+      final AbfsHttpOperation getPathStatusOp =
+          abfsDfsClient.getPathStatus(testPath.toUri().getPath(), false,
+              getTestTracingContext(fs, true), null).getResult();
+      Assertions.assertThat(
+              getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))
           .describedAs("Client transaction ID should be set during create")
           .isNotNull();
     }

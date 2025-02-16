@@ -167,6 +167,7 @@ public class TestAbfsClient {
                 return null;
               }).when(op)
               .execute(any());
+          Mockito.doReturn(true).when(op).isARetriedRequest();
           return op;
         }).when(abfsClient)
         .getAbfsRestOperation(any(), any(), any(), any());

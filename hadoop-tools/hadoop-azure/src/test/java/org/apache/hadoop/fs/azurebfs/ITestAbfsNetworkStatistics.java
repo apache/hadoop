@@ -185,11 +185,6 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
         } else {
           expectedConnectionsMade += 3;
           expectedRequestsSent += 2;
-          if (fs.getAbfsStore().getAbfsConfiguration()
-              .getIsClientTransactionIdEnabled()) {
-            // 1 extra connection for the HEAD request to get the source path status
-            expectedConnectionsMade++;
-          }
         }
       } else {
         expectedConnectionsMade += 1;

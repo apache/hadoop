@@ -1659,10 +1659,10 @@ public class ITestAzureBlobFileSystemRename extends
    */
   @Test
   public void renamePathRetryIdempotency() throws Exception {
-    Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID, "true");
-    try (final AzureBlobFileSystem fs = getFileSystem(config)) {
-      assumeDfsServiceType();
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.set(FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID, "true");
+    try (AzureBlobFileSystem fs = getFileSystem()) {
+      assumeRecoveryThroughClientTransactionID(fs, false);
       AbfsClient abfsClient = Mockito.spy(fs.getAbfsClient());
       fs.getAbfsStore().setClient(abfsClient);
       Path sourceDir = path("/testSrc");
@@ -1736,10 +1736,8 @@ public class ITestAzureBlobFileSystemRename extends
    */
   @Test
   public void getClientTransactionIdAfterRename() throws Exception {
-    Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID, "true");
-    try (final AzureBlobFileSystem fs = getFileSystem(config)) {
-      assumeDfsServiceType();
+    try (AzureBlobFileSystem fs = getFileSystem()) {
+      assumeRecoveryThroughClientTransactionID(fs, false);
       AbfsDfsClient abfsDfsClient = (AbfsDfsClient) fs.getAbfsClient();
       Path sourceDir = path("/testSrc");
       assertMkdirs(fs, sourceDir);
