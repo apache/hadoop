@@ -496,6 +496,7 @@ public class ITestAzureBlobFileSystemCreate extends
         // Only single tryGetFileStatus should happen
         // 1. getFileStatus on DFS endpoint : 1
         //    getFileStatus on Blob endpoint: 1 (No Additional List blob call as file exists)
+
         createRequestCount += (
             client instanceof AbfsBlobClient && !getIsNamespaceEnabled(fs)
                 ? 2
@@ -551,7 +552,6 @@ public class ITestAzureBlobFileSystemCreate extends
         } else {
           createRequestCount += (client instanceof AbfsBlobClient
               && !getIsNamespaceEnabled(fs)) ? 2 : 1;
-
         }
 
         assertAbfsStatistics(
