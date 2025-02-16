@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestContainerManager;
-import org.junit.After;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.Assume;
 
 public class TestContainerManagerWithLCE extends TestContainerManager {
@@ -62,7 +62,7 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
             (short) 0777));
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws IOException, InterruptedException {
     if (shouldRunTest()) {
