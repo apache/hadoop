@@ -417,10 +417,8 @@ public class AbfsDfsClient extends AbfsClient {
       } else {
         // recovery using client transaction id only if it is a retried request.
         if (op.isARetriedRequest() && clientTransactionId != null
-            && (op.getResult().getStatusCode() ==
-            HttpURLConnection.HTTP_CONFLICT
-            || op.getResult().getStatusCode() ==
-            HttpURLConnection.HTTP_PRECON_FAILED)) {
+            && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT
+            || op.getResult().getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED)) {
           try {
             final AbfsHttpOperation getPathStatusOp =
                 getPathStatus(path, false,
