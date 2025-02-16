@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -78,9 +78,9 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreServ
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
@@ -99,7 +99,7 @@ public class TestNonAggregatingLogHandler {
   ContainerId container11;
   LocalDirsHandlerService dirsHandler;
 
-  @Before
+  @BeforeEach
   @SuppressWarnings("unchecked")
   public void setup() {
     mockDelService = mock(DeletionService.class);
@@ -113,7 +113,7 @@ public class TestNonAggregatingLogHandler {
     dirsHandler = new LocalDirsHandlerService();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     dirsHandler.stop();
     dirsHandler.close();
