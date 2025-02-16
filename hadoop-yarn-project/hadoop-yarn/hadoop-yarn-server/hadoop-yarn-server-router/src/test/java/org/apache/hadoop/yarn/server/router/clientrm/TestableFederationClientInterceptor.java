@@ -58,7 +58,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,7 +101,7 @@ public class TestableFederationClientInterceptor
           MockNM nm = mockRM.registerNode("127.0.0.1:1234", 8*1024, 4);
           mockNMs.put(subClusterId, nm);
         } catch (Exception e) {
-          Assert.fail(e.getMessage());
+          Assertions.fail(e.getMessage());
         }
         mockRMs.put(subClusterId, mockRM);
       }

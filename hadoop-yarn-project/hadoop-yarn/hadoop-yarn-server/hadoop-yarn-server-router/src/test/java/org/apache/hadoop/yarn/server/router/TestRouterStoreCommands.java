@@ -29,8 +29,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHome
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestRouterStoreCommands {
 
@@ -41,7 +41,7 @@ public class TestRouterStoreCommands {
   private MemoryFederationStateStore stateStore;
   private FederationStateStoreFacade facade;
 
-  @Before
+  @BeforeEach
   public void setup() throws YarnException {
     conf = new YarnConfiguration();
     stateStore = new MemoryFederationStateStore();

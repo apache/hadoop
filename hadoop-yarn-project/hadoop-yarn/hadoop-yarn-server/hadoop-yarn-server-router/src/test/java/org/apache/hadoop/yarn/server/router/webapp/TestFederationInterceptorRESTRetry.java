@@ -47,8 +47,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.router.clientrm.PassThroughClientRequestInterceptor;
 import org.apache.hadoop.yarn.server.router.clientrm.TestableFederationClientInterceptor;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -133,7 +133,7 @@ public class TestFederationInterceptorRESTRetry
       }
     } catch (YarnException e) {
       LOG.error(e.getMessage());
-      Assert.fail();
+      Assertions.fail();
     }
   }
 
@@ -176,8 +176,8 @@ public class TestFederationInterceptorRESTRetry
     setupCluster(Arrays.asList(bad2));
 
     Response response = interceptor.createNewApplication(null);
-    Assert.assertEquals(SERVICE_UNAVAILABLE, response.getStatus());
-    Assert.assertEquals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE,
+    Assertions.assertEquals(SERVICE_UNAVAILABLE, response.getStatus());
+    Assertions.assertEquals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE,
         response.getEntity());
   }
 
@@ -194,8 +194,8 @@ public class TestFederationInterceptorRESTRetry
     setupCluster(Arrays.asList(bad1, bad2));
 
     Response response = interceptor.createNewApplication(null);
-    Assert.assertEquals(SERVICE_UNAVAILABLE, response.getStatus());
-    Assert.assertEquals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE,
+    Assertions.assertEquals(SERVICE_UNAVAILABLE, response.getStatus());
+    Assertions.assertEquals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE,
         response.getEntity());
   }
 
@@ -211,16 +211,16 @@ public class TestFederationInterceptorRESTRetry
 
     setupCluster(Arrays.asList(good, bad2));
     Response response = interceptor.createNewApplication(null);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(OK, response.getStatus());
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(OK, response.getStatus());
 
     NewApplication newApp = (NewApplication) response.getEntity();
-    Assert.assertNotNull(newApp);
+    Assertions.assertNotNull(newApp);
 
     ApplicationId appId = ApplicationId.fromString(newApp.getApplicationId());
-    Assert.assertNotNull(appId);
+    Assertions.assertNotNull(appId);
 
-    Assert.assertEquals(Integer.parseInt(good.getId()), appId.getClusterTimestamp());
+    Assertions.assertEquals(Integer.parseInt(good.getId()), appId.getClusterTimestamp());
   }
 
   /**
@@ -242,8 +242,8 @@ public class TestFederationInterceptorRESTRetry
     context.setApplicationId(appId.toString());
 
     Response response = interceptor.submitApplication(context, null);
-    Assert.assertEquals(SERVICE_UNAVAILABLE, response.getStatus());
-    Assert.assertEquals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE,
+    Assertions.assertEquals(SERVICE_UNAVAILABLE, response.getStatus());
+    Assertions.assertEquals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE,
         response.getEntity());
   }
 
@@ -263,8 +263,8 @@ public class TestFederationInterceptorRESTRetry
     context.setApplicationId(appId.toString());
 
     Response response = interceptor.submitApplication(context, null);
-    Assert.assertEquals(SERVICE_UNAVAILABLE, response.getStatus());
-    Assert.assertEquals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE,
+    Assertions.assertEquals(SERVICE_UNAVAILABLE, response.getStatus());
+    Assertions.assertEquals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE,
         response.getEntity());
   }
 
@@ -285,9 +285,9 @@ public class TestFederationInterceptorRESTRetry
     context.setApplicationId(appId.toString());
     Response response = interceptor.submitApplication(context, null);
 
-    Assert.assertEquals(ACCEPTED, response.getStatus());
+    Assertions.assertEquals(ACCEPTED, response.getStatus());
 
-    Assert.assertEquals(good,
+    Assertions.assertEquals(good,
         stateStore
             .getApplicationHomeSubCluster(
                 GetApplicationHomeSubClusterRequest.newInstance(appId))
@@ -306,7 +306,7 @@ public class TestFederationInterceptorRESTRetry
 
     AppsInfo response = interceptor.getApps(null, null, null, null, null, null,
         null, null, null, null, null, null, null, null, null);
-    Assert.assertNull(response);
+    Assertions.assertNull(response);
   }
 
   /**
@@ -320,7 +320,7 @@ public class TestFederationInterceptorRESTRetry
 
     AppsInfo response = interceptor.getApps(null, null, null, null, null, null,
         null, null, null, null, null, null, null, null, null);
-    Assert.assertNull(response);
+    Assertions.assertNull(response);
   }
 
   /**
@@ -334,8 +334,8 @@ public class TestFederationInterceptorRESTRetry
 
     AppsInfo response = interceptor.getApps(null, null, null, null, null, null,
         null, null, null, null, null, null, null, null, null);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(1, response.getApps().size());
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(1, response.getApps().size());
   }
 
   /**
@@ -349,9 +349,9 @@ public class TestFederationInterceptorRESTRetry
     setupCluster(Arrays.asList(bad2));
     try {
       interceptor.getNode("testGetNodeOneBadSC");
-      Assert.fail();
+      Assertions.fail();
     } catch (NotFoundException e) {
-      Assert.assertTrue(
+      Assertions.assertTrue(
           e.getMessage().contains("nodeId, testGetNodeOneBadSC, is not found"));
     }
   }
@@ -367,9 +367,9 @@ public class TestFederationInterceptorRESTRetry
 
     try {
       interceptor.getNode("testGetNodeTwoBadSCs");
-      Assert.fail();
+      Assertions.fail();
     } catch (NotFoundException e) {
-      Assert.assertTrue(e.getMessage()
+      Assertions.assertTrue(e.getMessage()
           .contains("nodeId, testGetNodeTwoBadSCs, is not found"));
     }
   }
@@ -384,9 +384,9 @@ public class TestFederationInterceptorRESTRetry
     setupCluster(Arrays.asList(good, bad2));
 
     NodeInfo response = interceptor.getNode(null);
-    Assert.assertNotNull(response);
+    Assertions.assertNotNull(response);
     // Check if the only node came from Good SubCluster
-    Assert.assertEquals(good.getId(),
+    Assertions.assertEquals(good.getId(),
         Long.toString(response.getLastHealthUpdate()));
   }
 
@@ -439,7 +439,7 @@ public class TestFederationInterceptorRESTRetry
     setupCluster(Arrays.asList(bad2));
 
     ClusterMetricsInfo response = interceptor.getClusterMetricsInfo();
-    Assert.assertNotNull(response);
+    Assertions.assertNotNull(response);
     // check if we got an empty metrics
     checkEmptyMetrics(response);
   }
@@ -455,9 +455,9 @@ public class TestFederationInterceptorRESTRetry
     setupCluster(Arrays.asList(bad1, bad2));
 
     ClusterMetricsInfo response = interceptor.getClusterMetricsInfo();
-    Assert.assertNotNull(response);
+    Assertions.assertNotNull(response);
     // check if we got an empty metrics
-    Assert.assertEquals(0, response.getAppsSubmitted());
+    Assertions.assertEquals(0, response.getAppsSubmitted());
   }
 
   /**
@@ -473,56 +473,56 @@ public class TestFederationInterceptorRESTRetry
     setupCluster(Arrays.asList(good, bad2));
 
     ClusterMetricsInfo response = interceptor.getClusterMetricsInfo();
-    Assert.assertNotNull(response);
+    Assertions.assertNotNull(response);
     checkMetricsFromGoodSC(response);
     // The merge operations is tested in TestRouterWebServiceUtil
   }
 
   private void checkMetricsFromGoodSC(ClusterMetricsInfo response) {
-    Assert.assertEquals(Integer.parseInt(good.getId()),
+    Assertions.assertEquals(Integer.parseInt(good.getId()),
         response.getAppsSubmitted());
-    Assert.assertEquals(Integer.parseInt(good.getId()),
+    Assertions.assertEquals(Integer.parseInt(good.getId()),
         response.getAppsCompleted());
-    Assert.assertEquals(Integer.parseInt(good.getId()),
+    Assertions.assertEquals(Integer.parseInt(good.getId()),
         response.getAppsPending());
-    Assert.assertEquals(Integer.parseInt(good.getId()),
+    Assertions.assertEquals(Integer.parseInt(good.getId()),
         response.getAppsRunning());
-    Assert.assertEquals(Integer.parseInt(good.getId()),
+    Assertions.assertEquals(Integer.parseInt(good.getId()),
         response.getAppsFailed());
-    Assert.assertEquals(Integer.parseInt(good.getId()),
+    Assertions.assertEquals(Integer.parseInt(good.getId()),
         response.getAppsKilled());
   }
 
   private void checkEmptyMetrics(ClusterMetricsInfo response) {
-    Assert.assertEquals(0, response.getAppsSubmitted());
-    Assert.assertEquals(0, response.getAppsCompleted());
-    Assert.assertEquals(0, response.getAppsPending());
-    Assert.assertEquals(0, response.getAppsRunning());
-    Assert.assertEquals(0, response.getAppsFailed());
-    Assert.assertEquals(0, response.getAppsKilled());
+    Assertions.assertEquals(0, response.getAppsSubmitted());
+    Assertions.assertEquals(0, response.getAppsCompleted());
+    Assertions.assertEquals(0, response.getAppsPending());
+    Assertions.assertEquals(0, response.getAppsRunning());
+    Assertions.assertEquals(0, response.getAppsFailed());
+    Assertions.assertEquals(0, response.getAppsKilled());
 
-    Assert.assertEquals(0, response.getReservedMB());
-    Assert.assertEquals(0, response.getAvailableMB());
-    Assert.assertEquals(0, response.getAllocatedMB());
+    Assertions.assertEquals(0, response.getReservedMB());
+    Assertions.assertEquals(0, response.getAvailableMB());
+    Assertions.assertEquals(0, response.getAllocatedMB());
 
-    Assert.assertEquals(0, response.getReservedVirtualCores());
-    Assert.assertEquals(0, response.getAvailableVirtualCores());
-    Assert.assertEquals(0, response.getAllocatedVirtualCores());
+    Assertions.assertEquals(0, response.getReservedVirtualCores());
+    Assertions.assertEquals(0, response.getAvailableVirtualCores());
+    Assertions.assertEquals(0, response.getAllocatedVirtualCores());
 
-    Assert.assertEquals(0, response.getContainersAllocated());
-    Assert.assertEquals(0, response.getReservedContainers());
-    Assert.assertEquals(0, response.getPendingContainers());
+    Assertions.assertEquals(0, response.getContainersAllocated());
+    Assertions.assertEquals(0, response.getReservedContainers());
+    Assertions.assertEquals(0, response.getPendingContainers());
 
-    Assert.assertEquals(0, response.getTotalMB());
-    Assert.assertEquals(0, response.getTotalVirtualCores());
-    Assert.assertEquals(0, response.getTotalNodes());
-    Assert.assertEquals(0, response.getLostNodes());
-    Assert.assertEquals(0, response.getUnhealthyNodes());
-    Assert.assertEquals(0, response.getDecommissioningNodes());
-    Assert.assertEquals(0, response.getDecommissionedNodes());
-    Assert.assertEquals(0, response.getRebootedNodes());
-    Assert.assertEquals(0, response.getActiveNodes());
-    Assert.assertEquals(0, response.getShutdownNodes());
+    Assertions.assertEquals(0, response.getTotalMB());
+    Assertions.assertEquals(0, response.getTotalVirtualCores());
+    Assertions.assertEquals(0, response.getTotalNodes());
+    Assertions.assertEquals(0, response.getLostNodes());
+    Assertions.assertEquals(0, response.getUnhealthyNodes());
+    Assertions.assertEquals(0, response.getDecommissioningNodes());
+    Assertions.assertEquals(0, response.getDecommissionedNodes());
+    Assertions.assertEquals(0, response.getRebootedNodes());
+    Assertions.assertEquals(0, response.getActiveNodes());
+    Assertions.assertEquals(0, response.getShutdownNodes());
   }
 
   @Test
@@ -535,7 +535,7 @@ public class TestFederationInterceptorRESTRetry
     setupCluster(Arrays.asList(bad2));
 
     NodesInfo nodesInfo = interceptor.getNodes(null);
-    Assert.assertNotNull(nodesInfo);
+    Assertions.assertNotNull(nodesInfo);
 
     // We need to set allowPartialResult=false
     interceptor.setAllowPartialResult(false);
@@ -551,7 +551,7 @@ public class TestFederationInterceptorRESTRetry
     setupCluster(Arrays.asList(bad1, bad2));
 
     NodesInfo nodesInfo = interceptor.getNodes(null);
-    Assert.assertNotNull(nodesInfo);
+    Assertions.assertNotNull(nodesInfo);
 
     // We need to set allowPartialResult=false
     interceptor.setAllowPartialResult(false);
@@ -566,10 +566,10 @@ public class TestFederationInterceptorRESTRetry
     setupCluster(Arrays.asList(good, bad2));
 
     NodesInfo response = interceptor.getNodes(null);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(1, response.getNodes().size());
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(1, response.getNodes().size());
     // Check if the only node came from Good SubCluster
-    Assert.assertEquals(good.getId(),
+    Assertions.assertEquals(good.getId(),
         Long.toString(response.getNodes().get(0).getLastHealthUpdate()));
 
     // allowPartialResult = false,

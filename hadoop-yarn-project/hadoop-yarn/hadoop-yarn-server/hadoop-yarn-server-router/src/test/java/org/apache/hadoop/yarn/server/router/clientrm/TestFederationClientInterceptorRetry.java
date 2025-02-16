@@ -52,9 +52,9 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -151,7 +151,7 @@ public class TestFederationClientInterceptorRetry
       }
     } catch (YarnException e) {
       LOG.error(e.getMessage());
-      Assert.fail();
+      Assertions.fail();
     }
   }
 
@@ -221,8 +221,8 @@ public class TestFederationClientInterceptorRetry
     GetNewApplicationRequest request = GetNewApplicationRequest.newInstance();
     GetNewApplicationResponse response = interceptor.getNewApplication(request);
 
-    Assert.assertNotNull(response);
-    Assert.assertEquals(ResourceManager.getClusterTimeStamp(),
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(ResourceManager.getClusterTimeStamp(),
         response.getApplicationId().getClusterTimestamp());
   }
 
@@ -289,19 +289,19 @@ public class TestFederationClientInterceptorRetry
 
     final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
     SubmitApplicationResponse response = interceptor.submitApplication(request);
-    Assert.assertNotNull(response);
+    Assertions.assertNotNull(response);
 
     GetApplicationHomeSubClusterRequest getAppRequest =
         GetApplicationHomeSubClusterRequest.newInstance(appId);
     GetApplicationHomeSubClusterResponse getAppResponse =
         stateStore.getApplicationHomeSubCluster(getAppRequest);
-    Assert.assertNotNull(getAppResponse);
+    Assertions.assertNotNull(getAppResponse);
 
     ApplicationHomeSubCluster responseHomeSubCluster =
         getAppResponse.getApplicationHomeSubCluster();
-    Assert.assertNotNull(responseHomeSubCluster);
+    Assertions.assertNotNull(responseHomeSubCluster);
     SubClusterId respSubClusterId = responseHomeSubCluster.getHomeSubCluster();
-    Assert.assertEquals(good, respSubClusterId);
+    Assertions.assertEquals(good, respSubClusterId);
   }
 
   @Test
@@ -335,7 +335,7 @@ public class TestFederationClientInterceptorRetry
     // 1st time will use bad2, 2nd time will use bad1, 3rd good
     interceptor.setNumSubmitRetries(2);
     SubmitApplicationResponse submitAppResponse = interceptor.submitApplication(request);
-    Assert.assertNotNull(submitAppResponse);
+    Assertions.assertNotNull(submitAppResponse);
 
     // We will get good
     checkSubmitSubCluster(appId, good);
@@ -347,13 +347,13 @@ public class TestFederationClientInterceptorRetry
         GetApplicationHomeSubClusterRequest.newInstance(appId);
     GetApplicationHomeSubClusterResponse getAppResponse =
         stateStore.getApplicationHomeSubCluster(getAppRequest);
-    Assert.assertNotNull(getAppResponse);
-    Assert.assertNotNull(getAppResponse);
+    Assertions.assertNotNull(getAppResponse);
+    Assertions.assertNotNull(getAppResponse);
     ApplicationHomeSubCluster responseHomeSubCluster =
         getAppResponse.getApplicationHomeSubCluster();
-    Assert.assertNotNull(responseHomeSubCluster);
+    Assertions.assertNotNull(responseHomeSubCluster);
     SubClusterId respSubClusterId = responseHomeSubCluster.getHomeSubCluster();
-    Assert.assertEquals(expectSubCluster, respSubClusterId);
+    Assertions.assertEquals(expectSubCluster, respSubClusterId);
   }
 
   @Test
@@ -419,7 +419,7 @@ public class TestFederationClientInterceptorRetry
     GetClusterMetricsRequest request = GetClusterMetricsRequest.newInstance();
 
     GetClusterMetricsResponse clusterMetrics = interceptor.getClusterMetrics(request);
-    Assert.assertNotNull(clusterMetrics);
+    Assertions.assertNotNull(clusterMetrics);
 
     // If partial results are not allowed to be returned, an exception will be thrown.
     interceptor.setAllowPartialResult(false);

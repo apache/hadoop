@@ -57,9 +57,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Base class for all the RouterRMAdminService test cases. It provides utility
@@ -82,11 +82,11 @@ public abstract class BaseRouterRMAdminTest {
   public final static int TEST_MAX_CACHE_SIZE = 10;
 
   protected MockRouterRMAdminService getRouterRMAdminService() {
-    Assert.assertNotNull(this.rmAdminService);
+    Assertions.assertNotNull(this.rmAdminService);
     return this.rmAdminService;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     this.conf = createConfiguration();
     this.dispatcher = new AsyncDispatcher();
@@ -120,7 +120,7 @@ public abstract class BaseRouterRMAdminTest {
     return config;
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (rmAdminService != null) {
       rmAdminService.stop();

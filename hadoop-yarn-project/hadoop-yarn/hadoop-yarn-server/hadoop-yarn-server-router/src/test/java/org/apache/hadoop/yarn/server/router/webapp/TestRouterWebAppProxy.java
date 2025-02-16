@@ -44,8 +44,9 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,7 +60,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
 public class TestRouterWebAppProxy {
@@ -79,7 +80,7 @@ public class TestRouterWebAppProxy {
   /**
    * Simple http server. Server should send answer with status 200
    */
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     mockServer = new Server(0);
     ((QueuedThreadPool) mockServer.getThreadPool()).setMaxThreads(20);
@@ -96,7 +97,8 @@ public class TestRouterWebAppProxy {
     LOG.info("Running embedded servlet container at: http://localhost:" + mockServerPort);
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testRouterWebAppProxyFed() throws Exception {
 
     Configuration conf = new Configuration();

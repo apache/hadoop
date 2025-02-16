@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.yarn.server.router;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -34,8 +34,8 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.webapp.WebAppContext;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import javax.servlet.FilterChain;
@@ -107,7 +107,7 @@ public class TestRouter {
     for (Class<?> protocolClass : manager.getProtocolsWithAcls()) {
       AccessControlList accessList = manager.getProtocolsAcls(protocolClass);
       if (protocolClass == protocol) {
-        Assert.assertEquals(accessList.getAclString(), aclString);
+        Assertions.assertEquals(accessList.getAclString(), aclString);
       }
     }
   }
@@ -164,9 +164,9 @@ public class TestRouter {
 
     // Why is 5, because when Filter passes,
     // CrossOriginFilter will set 5 values to Map
-    Assert.assertEquals(5, mockRes.getHeaders().size());
+    Assertions.assertEquals(5, mockRes.getHeaders().size());
     String allowResult = mockRes.getHeader("Access-Control-Allow-Credentials");
-    Assert.assertEquals("true", allowResult);
+    Assertions.assertEquals("true", allowResult);
 
     // 2. Simulate [example.org] for access
     HttpServletRequest mockReq2 = Mockito.mock(HttpServletRequest.class);
@@ -184,7 +184,7 @@ public class TestRouter {
 
     // Why is 0, because when the Filter fails,
     // CrossOriginFilter will not set any value
-    Assert.assertEquals(0, mockRes2.getHeaders().size());
+    Assertions.assertEquals(0, mockRes2.getHeaders().size());
 
     router.stop();
   }
