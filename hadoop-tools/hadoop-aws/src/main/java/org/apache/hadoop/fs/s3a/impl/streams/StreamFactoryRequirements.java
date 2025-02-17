@@ -25,7 +25,12 @@ import org.apache.hadoop.fs.s3a.VectoredIOContext;
 
 /**
  * Requirements for requirements for streams from this factory,
- * including threading and vector IO.
+ * including threading and vector IO, and of
+ * the Filesystem instance itself via
+ * {@link Requirements}.
+ * The FS is expected to adapt its internal configuration based on
+ * the requirements passed back by the stream factory after its
+ * creation.
  */
 public class StreamFactoryRequirements {
 
@@ -121,7 +126,7 @@ public class StreamFactoryRequirements {
   }
 
   /**
-   * An enum of options.
+   * Requirements a factory may have.
    */
   public enum Requirements {
 

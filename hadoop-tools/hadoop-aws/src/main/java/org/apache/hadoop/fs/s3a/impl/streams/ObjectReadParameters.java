@@ -54,7 +54,7 @@ public final class ObjectReadParameters {
   private ObjectInputStreamCallbacks callbacks;
 
   /**
-   * Stream statistics.
+   * Stream statistics callback.
    */
   private S3AInputStreamStatistics streamStatistics;
 
@@ -77,7 +77,7 @@ public final class ObjectReadParameters {
   }
 
   /**
-   * Set builder value.
+   * Set read operation context.
    * @param value new value
    * @return the builder
    */
@@ -94,7 +94,7 @@ public final class ObjectReadParameters {
   }
 
   /**
-   * Set builder value.
+   * Set object attributes.
    * @param value new value
    * @return the builder
    */
@@ -104,14 +104,14 @@ public final class ObjectReadParameters {
   }
 
   /**
-   * @return callbacks to the store.
+   * @return callbacks to store read operations.
    */
   public ObjectInputStreamCallbacks getCallbacks() {
     return callbacks;
   }
 
   /**
-   * Set builder value.
+   * Set callbacks to store read operation.
    * @param value new value
    * @return the builder
    */
@@ -128,7 +128,7 @@ public final class ObjectReadParameters {
   }
 
   /**
-   * Set builder value.
+   * Set SetStream statistics callback.
    * @param value new value
    * @return the builder
    */
@@ -145,7 +145,7 @@ public final class ObjectReadParameters {
   }
 
   /**
-   * Set builder value.
+   * Set bounded thread pool.
    * @param value new value
    * @return the builder
    */
@@ -154,12 +154,16 @@ public final class ObjectReadParameters {
     return this;
   }
 
+  /**
+   * Getter.
+   * @return Allocator of local FS storage.
+   */
   public LocalDirAllocator getDirectoryAllocator() {
     return directoryAllocator;
   }
 
   /**
-   * Set builder value.
+   * Set allocator of local FS storage.
    * @param value new value
    * @return the builder
    */

@@ -115,7 +115,7 @@ public class RequestFactoryImpl implements RequestFactory {
   /**
    * Callback to prepare requests.
    */
-  private PrepareRequest requestPreparer;
+  private final PrepareRequest requestPreparer;
 
   /**
    * Content encoding (null for none).

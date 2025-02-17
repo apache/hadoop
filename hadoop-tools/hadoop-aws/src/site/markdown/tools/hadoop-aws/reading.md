@@ -23,7 +23,7 @@ and in collaboration with other projects.
 
 * Data is read from S3 through an instance of an `ObjectInputStream`.
 * There are different implementations of this in the codebase:
-  `classic`, `prefetch` and `analytics`; these are called "stream types"
+  `classic`, `analytics` and `prefetch`; these are called _stream types_
 * The choice of which stream type to use is made in the hadoop configuration.
 
 Configuration Options
@@ -31,7 +31,116 @@ Configuration Options
 
 | Property                   | Permitted Values                                        | Default   | Meaning                    |
 |----------------------------|---------------------------------------------------------|-----------|----------------------------|
-| `fs.s3a.input.stream.type` | `default`, `classic`, `prefetch`, `analytics`, `custom` | `classic` | name of stream type to use |
+| `fs.s3a.input.stream.type` | `default`, `classic`, `analytics`, `prefetch`, `custom` | `classic` | Name of stream type to use |
+
+### Stream type `default`
+
+The default implementation for this release of Hadoop.
+
+```xml
+<property>
+  <name>fs.s3a.input.stream.type</name>
+  <value>default</value>
+</property>
+```
+
+The choice of which stream type to use by default may change in future releases.
+
+It is currently `classic`.
+
+### Stream type `classic`
+
+This is the classic S3A input stream, present since the original addition of the S3A connector
+to the Hadoop codebase.
+
+```xml
+<property>
+  <name>fs.s3a.input.stream.type</name>
+  <value>classic</value>
+</property>
+```
+
+Strengths
+* Stable
+* Petabytes of data are read through the connector a day,  so well tested in production.
+* Resilience to network and service failures acquired "a stack trace at at time"
+* Implements Vector IO through parallel HTTP requests.
+
+Weaknesses
+* Takes effort to tune for different file formats/read strategies (sequential, random etc),
+  and suboptimal if not correctly tuned for the workloads.
+* Non-vectored reads are blocking, with the sole buffering being that from
+  the http client library and layers beneath.
+* Can keep HTTP connections open too long/not returned to the connection pool.
+  This can consume both network resources and can consume all connections
+  in the pool if streams are not correctly closed by applications.
+
+### Stream type `analytics`
+
+An input stream aware-of and adapted-to the columnar storage
+formats used in production, currently with specific support for
+Apache Parquet.
+
+```xml
+<property>
+  <name>fs.s3a.input.stream.type</name>
+  <value>default</value>
+</property>
+```
+
+Strengths
+* Significant speedup measured when reading Parquet files through Spark.
+* Prefetching can also help other read patterns/file formats.
+* Parquet V1 Footer caching reduces HEAD/GET requests when opening
+  and reading files.
+
+Weaknesses
+* Requires an extra library.
+* Currently considered in "stabilization".
+* Likely to need more tuning on failure handling, either in the S3A code or
+  (better) the underlying library.
+* Not yet benchmarked with other applications (Apache Hive or ORC).
+* Vector IO API falls back to a series of sequential read calls.
+  For Parquet the format-aware prefetching will satisfy the requests,
+  but for ORC this may be be very inefficient.
+
+It delivers tangible speedup for reading Parquet files where the reader
+is deployed within AWS infrastructure, it will just take time to encounter
+all the failure conditions which the classic connectors have encountered
+and had to address.
+
+This library is where all future feature development is focused,
+including benchmark-based tuning for other file formats.
+
+
+### Stream type `prefetch`
+
+This input stream prefetches data in multi-MB blocks and caches these
+on the local disk's buffer directory.
+
+```xml
+<property>
+  <name>fs.s3a.input.stream.type</name>
+  <value>prefetch</value>
+</property>
+```
+
+Strengths
+* Format agnostic.
+* Asynchronous, parallel pre-fetching of blocks.
+* Blocking on-demand reads of any blocks which are required and not cached.
+  This may be done in multiple parallel reads, as required.
+* Blocks are cached, so that backwards and random IO is very
+  efficient if using data already read/prefetched.
+
+Weaknesses
+* Caching of blocks is for the duration of the filesystem instance,
+  this works for transient worker processes, but not for
+  long-lived processes such as Spark or HBase workers.
+* No prediction of which blocks are to be prefetched next,
+  so can be wasteful of prefetch reads, while still blocking on application
+  read operations.
+
 
 
 ## Vector IO and Stream Types
@@ -44,7 +153,14 @@ All streams support VectorIO to some degree.
 | `prefetch`  | Sequential reads, using prefetched blocks as appropriate    |
 | `analytics` | Sequential reads, using prefetched blocks as where possible |
 
-Because the analytics streams is doing parquet-aware RowGroup prefetch
+Because the analytics streams is doing parquet-aware RowGroup prefetch, its
+prefetched blocks should align with Parquet read sequences through vectored
+reads, as well the unvectored reads.
+
+This does not hold for ORC.
+When reading ORC files with a version of the ORC library which is
+configured to use the vector IO API, it is likely to be significantly
+faster to use the classic stream and its parallel reads.
 
 
 ## Developer Topics
@@ -98,7 +214,7 @@ property `fs.s3a.input.stream.custom.factory`.
 
 This must be a classname to an implementation of the factory service,
 `org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory`.
-Consult the source and javadocs of package `org.apache.hadoop.fs.s3a.impl.streams` for
+Consult the source and javadocs of the package `org.apache.hadoop.fs.s3a.impl.streams` for
 details.
 
 *Note* this is very much internal code and unstable: any use of this should be considered

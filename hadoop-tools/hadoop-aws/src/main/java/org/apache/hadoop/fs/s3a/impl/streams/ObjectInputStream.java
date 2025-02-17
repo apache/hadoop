@@ -73,7 +73,7 @@ public abstract class ObjectInputStream extends FSInputStream
   private final ObjectInputStreamCallbacks callbacks;
 
   /**
-   * Thread pool used for vectored IO operation.
+   * Thread pool used for bounded IO operations.
    */
   private final ExecutorService boundedThreadPool;
 
@@ -300,46 +300,90 @@ public abstract class ObjectInputStream extends FSInputStream
     }
   }
 
+  /**
+   * Read-specific operation context structure.
+   * @return Read-specific operation context structure.
+   */
   protected final S3AReadOpContext getContext() {
     return context;
   }
 
+  /**
+   * Callbacks for reading input stream data from the S3 Store.
+   * @return Callbacks for reading input stream data from the S3 Store.
+   */
   protected final ObjectInputStreamCallbacks getCallbacks() {
     return callbacks;
   }
 
+  /**
+   * Thread pool used for bounded IO operations.
+   * @return Thread pool used for bounded IO operations.
+   */
   protected final ExecutorService getBoundedThreadPool() {
     return boundedThreadPool;
   }
 
+  /**
+   * URI of path.
+   * @return URI of path.
+   */
   protected final String getUri() {
     return uri;
   }
 
+  /**
+   * Store bucket.
+   * @return Store bucket.
+   */
   protected final String getBucket() {
     return bucket;
   }
 
+  /**
+   * Store key.
+   * @return Store key.
+   */
   protected final String getKey() {
     return key;
   }
 
+  /**
+   * Path URI as a string.
+   * @return Path URI as a string.
+   */
   protected final String getPathStr() {
     return pathStr;
   }
 
+  /**
+   * Content length from HEAD or openFile option.
+   * @return Content length from HEAD or openFile option.
+   */
   protected final long getContentLength() {
     return contentLength;
   }
 
+  /**
+   * Aggregator used to aggregate per thread IOStatistics.
+   * @return Aggregator used to aggregate per thread IOStatistics.
+   */
   protected final IOStatisticsAggregator getThreadIOStatistics() {
     return threadIOStatistics;
   }
 
+  /**
+   * Attributes of the remote object.
+   * @return Attributes of the remote object.
+   */
   protected final S3ObjectAttributes getObjectAttributes() {
     return objectAttributes;
   }
 
+  /**
+   * Get Vectored IO context.
+   * @return Vectored IO context.
+   */
   protected VectoredIOContext getVectoredIOContext() {
     return vectoredIOContext;
   }

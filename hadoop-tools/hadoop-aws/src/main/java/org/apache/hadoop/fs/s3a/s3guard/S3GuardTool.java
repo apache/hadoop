@@ -457,7 +457,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
               "none");
 
       // stream input
-      printOption(out, "\tInput seek policy", INPUT_STREAM_TYPE,
+      printOption(out, "\tInput stream type", INPUT_STREAM_TYPE,
           DEFAULT_STREAM_TYPE.getName());
       printOption(out, "\tInput seek policy", INPUT_STREAM_TYPE,
           Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT);
