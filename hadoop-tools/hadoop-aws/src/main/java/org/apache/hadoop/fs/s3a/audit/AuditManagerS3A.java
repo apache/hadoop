@@ -96,5 +96,5 @@ public interface AuditManagerS3A extends Service,
    * Update audit flags, especially the out of span rejection option.
    * @param flags audit flags.
    */
-  void setAuditFlags(final EnumSet<AuditorFlags> flags);
+  void setAuditFlags(EnumSet<AuditorFlags> flags);
 }

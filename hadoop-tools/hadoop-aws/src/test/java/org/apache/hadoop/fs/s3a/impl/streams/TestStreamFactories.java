@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.impl.streams;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
-import org.assertj.core.api.AbstractBooleanAssert;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -77,17 +76,24 @@ public class TestStreamFactories extends AbstractHadoopTestBase {
     Assertions.assertThat(requirements.requiresFuturePool())
         .describedAs("requires future pool of %s", requirements)
         .isFalse();
-    expectRequirement(requirements,
+    assertRequirement(requirements,
         ExpectUnauditedGetRequests,
         false);
   }
 
-  private static AbstractBooleanAssert<?> expectRequirement(final StreamFactoryRequirements requirements,
-      final StreamFactoryRequirements.Requirements r,
-      final boolean expected) {
-    return Assertions.assertThat(requirements.requires(r))
-        .describedAs("%s of %s", r, requirements)
-        .isEqualTo(expected);
+  /**
+   * Asset taht the requirements matches the specified need.
+   * @param requirements requirements instance
+   * @param probe requirement to probe for.
+   * @param shouldMatch is the requirement to be met to to fail?
+   */
+  private static void assertRequirement(
+      final StreamFactoryRequirements requirements,
+      final StreamFactoryRequirements.Requirements probe,
+      final boolean shouldMatch) {
+    Assertions.assertThat(requirements.requires(probe))
+        .describedAs("%s of %s", probe, requirements)
+        .isEqualTo(shouldMatch);
   }
 
   /**
@@ -103,10 +109,10 @@ public class TestStreamFactories extends AbstractHadoopTestBase {
     Assertions.assertThat(requirements.requiresFuturePool())
         .describedAs("requires future pool of %s", requirements)
         .isTrue();
-    expectRequirement(requirements,
+    assertRequirement(requirements,
         ExpectUnauditedGetRequests,
-        false);    
-    expectRequirement(requirements,
+        false);
+    assertRequirement(requirements,
         RequiresFuturePool,
         true);
   }
@@ -137,8 +143,8 @@ public class TestStreamFactories extends AbstractHadoopTestBase {
     // no elements
     final StreamFactoryRequirements r1 =
         new StreamFactoryRequirements(1, 2, vertex);
-    expectRequirement(r1, ExpectUnauditedGetRequests, false);
-    expectRequirement(r1, RequiresFuturePool, false);
+    assertRequirement(r1, ExpectUnauditedGetRequests, false);
+    assertRequirement(r1, RequiresFuturePool, false);
     Assertions.assertThat(r1.requiresFuturePool())
         .describedAs("requiresFuturePool() %s", r1)
         .isFalse();
@@ -157,8 +163,8 @@ public class TestStreamFactories extends AbstractHadoopTestBase {
 
     final StreamFactoryRequirements r1 =
         new StreamFactoryRequirements(1, 2, vertex, RequiresFuturePool);
-    expectRequirement(r1, ExpectUnauditedGetRequests, false);
-    expectRequirement(r1, RequiresFuturePool, true);
+    assertRequirement(r1, ExpectUnauditedGetRequests, false);
+    assertRequirement(r1, RequiresFuturePool, true);
     Assertions.assertThat(r1.requiresFuturePool())
         .describedAs("requiresFuturePool() %s", r1)
         .isTrue();
@@ -170,8 +176,8 @@ public class TestStreamFactories extends AbstractHadoopTestBase {
 
     final StreamFactoryRequirements r1 =
         new StreamFactoryRequirements(1, 2, vertex, ExpectUnauditedGetRequests);
-    expectRequirement(r1, ExpectUnauditedGetRequests, true);
-    expectRequirement(r1, RequiresFuturePool, false);
+    assertRequirement(r1, ExpectUnauditedGetRequests, true);
+    assertRequirement(r1, RequiresFuturePool, false);
   }
 
 

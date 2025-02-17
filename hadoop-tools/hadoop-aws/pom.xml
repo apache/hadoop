@@ -50,7 +50,6 @@
 
     <!-- stream type to use in tests; passed down in fs.s3a.input.stream.type  -->
     <stream>classic</stream>
-    
     <!-- Job ID; allows for parallel jobs on same bucket -->
     <!-- job.id is used to build the path for tests; default is 00.-->
     <job.id>00</job.id>

@@ -46,7 +46,7 @@ public interface OperationAuditor extends Service,
    * Update audit flags, especially the out of span rejection option.
    * @param flags audit flags.
    */
-  void setAuditFlags(final EnumSet<AuditorFlags> flags);
+  void setAuditFlags(EnumSet<AuditorFlags> flags);
 
   /**
    * Get the unbonded span to use after deactivating an active

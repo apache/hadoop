@@ -105,7 +105,6 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.impl.FlagSet.createFlagSet;
-import static org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration.DEFAULT_STREAM_TYPE;
 import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Prefetch;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;

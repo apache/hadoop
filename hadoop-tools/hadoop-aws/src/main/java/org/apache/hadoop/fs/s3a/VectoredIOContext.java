@@ -108,7 +108,7 @@ public final class VectoredIOContext {
   }
 
   /**
-   * The largest size that we should group ranges
+   * The largest size that we should group ranges.
    * together during vectored read operation
    * @return a number >= 0
    */
@@ -128,9 +128,9 @@ public final class VectoredIOContext {
   /**
    * Maximum number of active range read operation a single
    * input stream can have.
+   * @param activeReads number of extra threads for reading, or zero.
    * @return this instance.
    * number of extra threads for reading, or zero.
-   * @param activeReads number of extra threads for reading, or zero.
    */
   public VectoredIOContext setVectoredActiveRangeReads(
       final int activeReads) {
@@ -143,9 +143,9 @@ public final class VectoredIOContext {
   @Override
   public String toString() {
     return "VectoredIOContext{" +
-            "minSeekForVectorReads=" + minSeekForVectorReads +
-            ", maxReadSizeForVectorReads=" + maxReadSizeForVectorReads +
-            ", vectoredActiveRangeReads=" + vectoredActiveRangeReads +
-            '}';
+        "minSeekForVectorReads=" + minSeekForVectorReads +
+        ", maxReadSizeForVectorReads=" + maxReadSizeForVectorReads +
+        ", vectoredActiveRangeReads=" + vectoredActiveRangeReads +
+        '}';
   }
 }

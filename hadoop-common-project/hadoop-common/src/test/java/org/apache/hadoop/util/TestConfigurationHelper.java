@@ -222,9 +222,7 @@ public class TestConfigurationHelper extends AbstractHadoopTestBase {
    */
   private void assertEnumResolution(final String value, final SimpleEnum expected) {
     Assertions.assertThat(resolveEnum(confWithKey(value),
-            "key",
-            SimpleEnum.class,
-            (v) -> null))
+            "key", SimpleEnum.class, (v) -> null))
         .describedAs("Resolution of %s", value)
         .isEqualTo(expected);
   }
@@ -236,9 +234,7 @@ public class TestConfigurationHelper extends AbstractHadoopTestBase {
    */
   private void assertUpperEnumResolution(final String value, UppercaseEnum expected) {
     Assertions.assertThat(resolveEnum(confWithKey(value),
-            "key",
-            UppercaseEnum.class,
-            (v) -> null))
+            "key", UppercaseEnum.class, (v) -> null))
         .describedAs("Resolution of %s", value)
         .isEqualTo(expected);
   }
