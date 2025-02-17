@@ -40,6 +40,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -1635,7 +1636,8 @@ public class AbfsDfsClient extends AbfsClient {
    *
    * @return client transaction id
    */
-  private String addClientTransactionIdToHeader(List<AbfsHttpHeader> requestHeaders) {
+  @VisibleForTesting
+  public String addClientTransactionIdToHeader(List<AbfsHttpHeader> requestHeaders) {
     String clientTransactionId = null;
     // Set client transaction ID if the namespace and client transaction ID config are enabled.
     if (getIsNamespaceEnabled() && getAbfsConfiguration().getIsClientTransactionIdEnabled()) {

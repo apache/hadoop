@@ -74,6 +74,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STA
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_FAILED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_PENDING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DIRECTORY;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_LEASE_THREADS;
@@ -1683,8 +1685,8 @@ public class ITestAzureBlobFileSystemRename extends
               if (count == 0) {
                 count = 1;
                 AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
-                Mockito.doReturn("PUT").when(op).getMethod();
-                Mockito.doReturn("").when(op).getStorageErrorMessage();
+                Mockito.doReturn(HTTP_METHOD_PUT).when(op).getMethod();
+                Mockito.doReturn(EMPTY_STRING).when(op).getStorageErrorMessage();
                 Mockito.doReturn(SOURCE_PATH_NOT_FOUND.getErrorCode()).when(op)
                     .getStorageErrorCode();
                 Mockito.doReturn(true).when(mockedObj).hasResult();
@@ -1692,7 +1694,7 @@ public class ITestAzureBlobFileSystemRename extends
                 Mockito.doReturn(HTTP_NOT_FOUND).when(op).getStatusCode();
                 headers.addAll(mockedObj.getRequestHeaders());
                 throw new AbfsRestOperationException(HTTP_NOT_FOUND,
-                    SOURCE_PATH_NOT_FOUND.getErrorCode(), "", null, op);
+                    SOURCE_PATH_NOT_FOUND.getErrorCode(), EMPTY_STRING, null, op);
               }
             }
           });
@@ -1738,7 +1740,10 @@ public class ITestAzureBlobFileSystemRename extends
   public void getClientTransactionIdAfterRename() throws Exception {
     try (AzureBlobFileSystem fs = getFileSystem()) {
       assumeRecoveryThroughClientTransactionID(fs, false);
-      AbfsDfsClient abfsDfsClient = (AbfsDfsClient) fs.getAbfsClient();
+      AbfsDfsClient abfsDfsClient = (AbfsDfsClient) Mockito.spy(fs.getAbfsClient());
+      fs.getAbfsStore().setClient(abfsDfsClient);
+      final String[] clientTransactionId = new String[1];
+      mockAddClientTransactionIdToHeader(abfsDfsClient, clientTransactionId);
       Path sourceDir = path("/testSrc");
       assertMkdirs(fs, sourceDir);
       String filename = "file1";
@@ -1754,6 +1759,10 @@ public class ITestAzureBlobFileSystemRename extends
               getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))
           .describedAs("Client transaction id should be present in dest file")
           .isNotNull();
+      Assertions.assertThat(
+              getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))
+          .describedAs("Client transaction ID should be equal to the one set in the header")
+          .isEqualTo(clientTransactionId[0]);
     }
   }
 }

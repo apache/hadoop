@@ -54,6 +54,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -1875,7 +1876,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     long contentLength;
     String contentLengthHeader = op.getResponseHeader(
         HttpHeaderConfigurations.CONTENT_LENGTH);
-    if (!Strings.isNullOrEmpty(contentLengthHeader)) {
+    if (!StringUtils.isEmpty(contentLengthHeader)) {
       contentLength = Long.parseLong(contentLengthHeader);
     } else {
       contentLength = 0;

@@ -32,6 +32,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +48,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
@@ -71,6 +73,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.FILE_SYSTEM_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -757,12 +760,30 @@ public abstract class AbstractAbfsIntegrationTest extends
     if (isCreate) {
       // Assume that create client is DFS client.
       Assume.assumeTrue(
-          fs.getAbfsStore().getClientHandler().getIngressClient()
-              instanceof AbfsDfsClient);
+          AbfsServiceType.DFS.equals(
+              fs.getAbfsStore().getAbfsConfiguration().getIngressServiceType()));
       // Assume that append blob is not enabled in DFS client.
-      Assume.assumeTrue(
-          StringUtils.isEmpty(
-              fs.getAbfsStore().getAbfsConfiguration().getAppendBlobDirs()));
+      Assume.assumeFalse(isAppendBlobEnabled());
     }
+  }
+
+  /**
+   * Mocks the behavior of adding a client transaction ID to the request headers
+   * for the given AzureBlobFileSystem. This method generates a random transaction ID
+   * and adds it to the headers of the {@link AbfsDfsClient}.
+   *
+   * @param abfsDfsClient The {@link AbfsDfsClient} mocked AbfsDfsClient.
+   * @param clientTransactionId An array to hold the generated transaction ID.
+   */
+  protected void mockAddClientTransactionIdToHeader(AbfsDfsClient abfsDfsClient,
+      String[] clientTransactionId) {
+    Mockito.doAnswer( addClientTransactionId -> {
+      clientTransactionId[0] = UUID.randomUUID().toString();
+      List<AbfsHttpHeader> headers = addClientTransactionId.getArgument(0);
+      headers.add(
+          new AbfsHttpHeader(X_MS_CLIENT_TRANSACTION_ID,
+              clientTransactionId[0]));
+      return clientTransactionId[0];
+    }).when(abfsDfsClient).addClientTransactionIdToHeader(Mockito.anyList());
   }
 }
