@@ -492,6 +492,22 @@ public class ITestAzureBlobFileSystemAppend extends
     }
   }
 
+  @Test
+  public void testFlush() throws IOException {
+    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    final AzureBlobFileSystem fs = getFileSystem();
+    final Path filePath = path(TEST_FILE_PATH);
+    fs.create(filePath);
+    Assume.assumeTrue(getIngressServiceType() == AbfsServiceType.BLOB);
+    FSDataOutputStream outputStream = fs.append(filePath);
+    outputStream.write(TEN);
+    outputStream.write(20);
+    outputStream.hsync();
+    outputStream.write(30);
+    outputStream.write(40);
+    outputStream.close();
+  }
+
   /**
    * Recreate directory between append and flush. Etag mismatch happens.
    **/
@@ -971,9 +987,8 @@ public class ITestAzureBlobFileSystemAppend extends
       new Random().nextBytes(bytes);
       // Write some bytes and attempt to flush, which should retry
       out.write(bytes);
-      List<String> list = new ArrayList<>();
-      list.add(generateBlockId(out, 0));
-      String blockListXml = generateBlockListXml(list);
+      String blockId = generateBlockId(out, 0);
+      String blockListXml = generateBlockListXml(blockId);
 
       Mockito.doAnswer(answer -> {
         // Set up the mock for the flush operation
@@ -1069,9 +1084,8 @@ public class ITestAzureBlobFileSystemAppend extends
       new Random().nextBytes(bytes);
       // Write some bytes and attempt to flush, which should retry
       out.write(bytes);
-      List<String> list = new ArrayList<>();
-      list.add(generateBlockId(out, 0));
-      String blockListXml = generateBlockListXml(list);
+      String blockId = generateBlockId(out, 0);
+      String blockListXml = generateBlockListXml(blockId);
 
       Mockito.doAnswer(answer -> {
         // Set up the mock for the flush operation

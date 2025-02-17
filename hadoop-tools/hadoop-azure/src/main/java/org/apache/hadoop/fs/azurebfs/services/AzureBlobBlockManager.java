@@ -38,9 +38,8 @@ public class AzureBlobBlockManager extends AzureBlockManager {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsOutputStream.class);
 
-
-  /** The list of already committed blocks is stored in this list. */
-  private List<String> committedBlockEntries = new ArrayList<>();
+  /** Cached list of committed block IDs */
+  private final StringBuilder committedBlockEntries = new StringBuilder();
 
   /** The list to store blockId, position, and status. */
   private final LinkedList<BlockEntry> blockEntryList = new LinkedList<>();
@@ -60,7 +59,10 @@ public class AzureBlobBlockManager extends AzureBlockManager {
       throws AzureBlobFileSystemException {
     super(abfsOutputStream, blockFactory, bufferSize);
     if (abfsOutputStream.getPosition() > 0 && !abfsOutputStream.isAppendBlob()) {
-      this.committedBlockEntries = getBlockList(abfsOutputStream.getTracingContext());
+      List<String> committedBlocks = getBlockList(abfsOutputStream.getTracingContext());
+      if (!committedBlocks.isEmpty()) {
+        committedBlockEntries.append(String.join(",", committedBlocks)).append(",");
+      }
     }
     LOG.debug("Created a new Blob Block Manager for AbfsOutputStream instance {} for path {}",
         abfsOutputStream.getStreamID(), abfsOutputStream.getPath());
@@ -151,6 +153,7 @@ public class AzureBlobBlockManager extends AzureBlockManager {
     if (blockEntryList.isEmpty()) {
       return false; // No entries to commit
     }
+
     while (!blockEntryList.isEmpty()) {
       BlockEntry current = blockEntryList.poll();
       if (current.getStatus() != AbfsBlockStatus.SUCCESS) {
@@ -177,7 +180,11 @@ public class AzureBlobBlockManager extends AzureBlockManager {
           throw new IOException(errorMessage);
         }
       }
-      committedBlockEntries.add(current.getBlockId());
+      // Append the current block's ID to the committedBlockBuilder
+      if (committedBlockEntries.length() > 0) {
+        committedBlockEntries.append(",");
+      }
+      committedBlockEntries.append(current.getBlockId());
       LOG.debug("Block {} added to committed entries.", current.getBlockId());
     }
     return true;
@@ -188,7 +195,7 @@ public class AzureBlobBlockManager extends AzureBlockManager {
    *
    * @return the block ID list
    */
-  protected List<String> getBlockIdList() {
-    return committedBlockEntries;
+  protected String getBlockIdList() {
+    return committedBlockEntries.toString();
   }
 }
