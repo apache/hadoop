@@ -36,9 +36,9 @@ import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @see TestDelegatingInputFormat
@@ -64,7 +64,7 @@ public class TestMultipleInputs extends HadoopTestCase {
     return dir;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     Path rootDir = getDir(ROOT_DIR);

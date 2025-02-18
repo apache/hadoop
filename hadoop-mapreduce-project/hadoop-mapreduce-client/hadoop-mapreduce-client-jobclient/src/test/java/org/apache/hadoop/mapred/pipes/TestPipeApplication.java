@@ -68,10 +68,12 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestPipeApplication {
   private static File workSpace = new File("target",
@@ -82,7 +84,7 @@ public class TestPipeApplication {
   /**
    * test PipesMapRunner    test the transfer data from reader
    *
-   * @throws Exception
+   * @throws Exception The exception thrown during unit testing.
    */
   @Test
   public void testRunner() throws Exception {
@@ -284,7 +286,7 @@ public class TestPipeApplication {
     } catch (ExitUtil.ExitException e) {
       // System.exit prohibited! output message test
       assertTrue(out.toString().contains(""));
-      assertTrue(out.toString(), out.toString().contains("pipes"));
+      assertTrue(out.toString().contains("pipes"), out.toString());
       assertTrue(out.toString().contains("[-input <path>] // Input directory"));
       assertTrue(out.toString()
               .contains("[-output <path>] // Output directory"));
@@ -343,7 +345,7 @@ public class TestPipeApplication {
       String[] args = new String[22];
       File input = new File(workSpace + File.separator + "input");
       if (!input.exists()) {
-        Assert.assertTrue(input.createNewFile());
+        assertTrue(input.createNewFile());
       }
       File outPut = new File(workSpace + File.separator + "output");
       FileUtil.fullyDelete(outPut);

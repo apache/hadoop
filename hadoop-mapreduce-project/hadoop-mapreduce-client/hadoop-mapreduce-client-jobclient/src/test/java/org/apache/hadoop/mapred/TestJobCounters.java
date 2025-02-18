@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -46,9 +46,9 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormatCounter;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * This is an wordcount application that tests the count of records
@@ -179,7 +179,7 @@ public class TestJobCounters {
     return len;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void initPaths() throws IOException {
     final Configuration conf = new Configuration();
     final Path TEST_ROOT_DIR =
@@ -207,7 +207,7 @@ public class TestJobCounters {
     createWordsFile(inFiles[2], conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws IOException {
     //clean up the input and output files
     final Configuration conf = new Configuration();
@@ -528,7 +528,7 @@ public class TestJobCounters {
                     OutputCollector<WritableComparable, Writable> output,
                     Reporter reporter)
     throws IOException {
-      assertNotNull("Mapper not configured!", loader);
+      assertNotNull(loader, "Mapper not configured!");
       
       // load the memory
       loader.load();
@@ -557,7 +557,7 @@ public class TestJobCounters {
                        OutputCollector<WritableComparable, Writable> output,
                        Reporter reporter)
     throws IOException {
-      assertNotNull("Reducer not configured!", loader);
+      assertNotNull(loader, "Reducer not configured!");
       
       // load the memory
       loader.load();
@@ -581,11 +581,11 @@ public class TestJobCounters {
     } else if (TaskType.REDUCE.equals(type)) {
       reports = client.getReduceTaskReports(id);
     }
-    
-    assertNotNull("No reports found for task type '" + type.name() 
-                  + "' in job " + id, reports);
+
+    assertNotNull(reports, "No reports found for task type '" + type.name()
+         + "' in job " + id);
     // make sure that the total number of reports match the expected
-    assertEquals("Mismatch in task id", numReports, reports.length);
+    assertEquals(numReports, reports.length, "Mismatch in task id");
     
     Counters counters = reports[taskId].getCounters();
     
@@ -632,7 +632,7 @@ public class TestJobCounters {
     RunningJob job = client.submitJob(jobConf);
     job.waitForCompletion();
     JobID jobID = job.getID();
-    assertTrue("Job " + jobID + " failed!", job.isSuccessful());
+    assertTrue(job.isSuccessful(), "Job " + jobID + " failed!");
     
     return job;
   }
@@ -708,11 +708,11 @@ public class TestJobCounters {
       System.out.println("Job2 (high memory job) reduce task heap usage: " 
                          + highMemJobReduceHeapUsage);
 
-      assertTrue("Incorrect map heap usage reported by the map task", 
-                 lowMemJobMapHeapUsage < highMemJobMapHeapUsage);
+      assertTrue(lowMemJobMapHeapUsage < highMemJobMapHeapUsage,
+          "Incorrect map heap usage reported by the map task");
 
-      assertTrue("Incorrect reduce heap usage reported by the reduce task", 
-                 lowMemJobReduceHeapUsage < highMemJobReduceHeapUsage);
+      assertTrue(lowMemJobReduceHeapUsage < highMemJobReduceHeapUsage,
+          "Incorrect reduce heap usage reported by the reduce task");
     } finally {
       // shutdown the mr cluster
       mrCluster.shutdown();

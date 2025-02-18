@@ -16,29 +16,35 @@
  * limitations under the License.
  */
 
-import BaseUsageDonutChart from 'yarn-ui/components/base-usage-donut-chart';
+import DonutChart from 'yarn-ui/components/donut-chart';
 import ColorUtils from 'yarn-ui/utils/color-utils';
 import HrefAddressUtils from 'yarn-ui/utils/href-address-utils';
 
-export default BaseUsageDonutChart.extend({
+export default DonutChart.extend({
   colors: d3.scale.category20().range(),
 
   draw: function() {
     var usageByQueues = [];
     var avail = 100;
 
+    let partitionFilter = this.partition;
+
     this.get("data").forEach(function (queue) {
-      var v = queue.get("absUsedCapacity");
-
       if (queue.get("isLeafQueue")) {
-        if (v > 1e-2) {
-          usageByQueues.push({
-            label: queue.get("id"),
-            link: HrefAddressUtils.getQueueLink(queue.get("id")),
-            value: v.toFixed(2)
-          });
+        let partitionMap = queue.get("partitionMap");
+        let absUsedForPartition = 0;
+        if(partitionMap[partitionFilter]){
+          let v = partitionMap[partitionFilter].absoluteUsedCapacity;
 
-          avail = avail - v;
+          if (v > 1e-2) {
+            usageByQueues.push({
+              label: queue.get("id"),
+              link: HrefAddressUtils.getQueueLink(queue.get("id")),
+              value: v.toFixed(2)
+            });
+
+            avail = avail - v;
+          }
         }
       }
     });
@@ -47,21 +53,14 @@ export default BaseUsageDonutChart.extend({
       return b.value - a.value;
     });
 
-    usageByQueues = this.mergeLongTails(usageByQueues, 8);
-
     usageByQueues.push({
       label: "Available",
       value: avail.toFixed(2)
     });
 
-    this.colors = ColorUtils.getColors(usageByQueues.length, ["others", "good"], true);
+    this.colors = ColorUtils.getColors(usageByQueues.length, [ "good"], true);
 
     this.renderDonutChart(usageByQueues, this.get("title"), this.get("showLabels"),
       this.get("middleLabel"), "100%", "%");
-  },
-
-  didInsertElement: function() {
-    this.initChart();
-    this.draw();
   },
 });

@@ -55,18 +55,18 @@ import org.apache.hadoop.mapreduce.lib.input.CombineFileInputFormat.OneBlockInfo
 import org.apache.hadoop.mapreduce.lib.input.CombineFileInputFormat.OneFileInfo;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultiset;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.reset;
@@ -106,7 +106,7 @@ public class TestCombineFileInputFormat {
   @Mock
   private List<String> mockList;
 
-  @Before
+  @BeforeEach
   public void initMocks() {
     MockitoAnnotations.initMocks(this);
   }
@@ -261,12 +261,12 @@ public class TestCombineFileInputFormat {
     CombineFileSplit split = new CombineFileSplit(files, lengths);
 
     RecordReader rr = inputFormat.createRecordReader(split, context1);
-    assertTrue("Unexpected RR type!", rr instanceof CombineFileRecordReader);
+    assertTrue(rr instanceof CombineFileRecordReader, "Unexpected RR type!");
 
     // Verify that the initial configuration is the one being used.
     // Right after construction the dummy key should have value "STATE1"
-    assertEquals("Invalid initial dummy key value", "STATE1",
-      rr.getCurrentKey().toString());
+    assertEquals("STATE1", rr.getCurrentKey().toString(),
+        "Invalid initial dummy key value");
 
     // Switch the active context for the RecordReader...
     Configuration conf2 = new Configuration();
@@ -275,8 +275,8 @@ public class TestCombineFileInputFormat {
     rr.initialize(split, context2);
 
     // And verify that the new context is updated into the child record reader.
-    assertEquals("Invalid secondary dummy key value", "STATE2",
-      rr.getCurrentKey().toString());
+    assertEquals("STATE2", rr.getCurrentKey().toString(),
+        "Invalid secondary dummy key value");
   }
 
   @Test
@@ -297,7 +297,7 @@ public class TestCombineFileInputFormat {
 
     CombineFileSplit split = new CombineFileSplit(files, lengths);
     RecordReader rr = inputFormat.createRecordReader(split, context);
-    assertTrue("Unexpected RR type!", rr instanceof CombineFileRecordReader);
+    assertTrue(rr instanceof CombineFileRecordReader, "Unexpected RR type!");
 
     // first initialize() call comes from MapTask. We'll do it here.
     rr.initialize(split, context);
@@ -1485,8 +1485,8 @@ public class TestCombineFileInputFormat {
        * {@link CombineFileInputFormat#createSplits},
        * create only one split on rack1. Otherwise create two splits.
        */
-      assertTrue("Split size should be 1 or 2.",
-          splits.size() == 1 || splits.size() == 2);
+      assertTrue(splits.size() == 1 || splits.size() == 2,
+          "Split size should be 1 or 2.");
       actual.clear();
       reset(mockList);
       for (InputSplit split : splits) {
