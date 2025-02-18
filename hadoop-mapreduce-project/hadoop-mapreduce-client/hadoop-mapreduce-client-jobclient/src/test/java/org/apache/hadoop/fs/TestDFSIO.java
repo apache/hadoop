@@ -489,9 +489,10 @@ public class TestDFSIO implements Tool {
     public Closeable getIOStream(String name) throws IOException {
       // create file
       Path filePath = new Path(getDataDir(getConf()), name);
-      OutputStream out = fs.create(filePath, true, bufferSize);
+      FileSystem ioFS = filePath.getFileSystem(getConf());
+      OutputStream out = ioFS.create(filePath, true, bufferSize);
       if (blockStoragePolicy != null) {
-        fs.setStoragePolicy(filePath, blockStoragePolicy);
+        ioFS.setStoragePolicy(filePath, blockStoragePolicy);
       }
       if(compressionCodec != null)
         out = compressionCodec.createOutputStream(out);
@@ -562,9 +563,10 @@ public class TestDFSIO implements Tool {
 
     @Override // IOMapperBase
     public Closeable getIOStream(String name) throws IOException {
+      Path path = new Path(getDataDir(getConf()), name);
+      FileSystem ioFS = path.getFileSystem(getConf());
       // open file for append
-      OutputStream out =
-          fs.append(new Path(getDataDir(getConf()), name), bufferSize);
+      OutputStream out = ioFS.append(path, bufferSize);
       if(compressionCodec != null)
         out = compressionCodec.createOutputStream(out);
       LOG.info("out = " + out.getClass().getName());
@@ -609,8 +611,10 @@ public class TestDFSIO implements Tool {
 
     @Override // IOMapperBase
     public Closeable getIOStream(String name) throws IOException {
+      Path filePath = new Path(getDataDir(getConf()), name);
+      FileSystem ioFS = filePath.getFileSystem(getConf());
       // open file
-      InputStream in = fs.open(new Path(getDataDir(getConf()), name));
+      InputStream in = ioFS.open(filePath);
       if(compressionCodec != null)
         in = compressionCodec.createInputStream(in);
       LOG.info("in = " + in.getClass().getName());
@@ -674,8 +678,9 @@ public class TestDFSIO implements Tool {
     @Override // IOMapperBase
     public Closeable getIOStream(String name) throws IOException {
       Path filePath = new Path(getDataDir(getConf()), name);
-      this.fileSize = fs.getFileStatus(filePath).getLen();
-      InputStream in = fs.open(filePath);
+      FileSystem ioFS = filePath.getFileSystem(getConf());
+      this.fileSize = ioFS.getFileStatus(filePath).getLen();
+      InputStream in = ioFS.open(filePath);
       if(compressionCodec != null)
         in = new FSDataInputStream(compressionCodec.createInputStream(in));
       LOG.info("in = " + in.getClass().getName());
@@ -742,7 +747,8 @@ public class TestDFSIO implements Tool {
     @Override // IOMapperBase
     public Closeable getIOStream(String name) throws IOException {
       filePath = new Path(getDataDir(getConf()), name);
-      fileSize = fs.getFileStatus(filePath).getLen();
+      FileSystem ioFS = filePath.getFileSystem(getConf());
+      fileSize = ioFS.getFileStatus(filePath).getLen();
       return null;
     }
 
@@ -751,14 +757,15 @@ public class TestDFSIO implements Tool {
                        String name, 
                        long newLength // in bytes
                      ) throws IOException {
-      boolean isClosed = fs.truncate(filePath, newLength);
+      FileSystem ioFS = filePath.getFileSystem(getConf());
+      boolean isClosed = ioFS.truncate(filePath, newLength);
       reporter.setStatus("truncating " + name + " to newLength " + 
           newLength  + " ::host = " + hostName);
       for(int i = 0; !isClosed; i++) {
         try {
           Thread.sleep(DELAY);
         } catch (InterruptedException ignored) {}
-        FileStatus status = fs.getFileStatus(filePath);
+        FileStatus status = ioFS.getFileStatus(filePath);
         assert status != null : "status is null";
         isClosed = (status.getLen() == newLength);
         reporter.setStatus("truncate recover for " + name + " to newLength " + 
@@ -838,6 +845,7 @@ public class TestDFSIO implements Tool {
     String storagePolicy = null;
     boolean isSequential = false;
     String version = TestDFSIO.class.getSimpleName() + ".1.8";
+    String baseDir = getBaseDir(config);
 
     LOG.info(version);
     if (args.length == 0) {
@@ -904,7 +912,7 @@ public class TestDFSIO implements Tool {
     if (skipSize > 0) {
       LOG.info("skipSize = " + skipSize);
     }
-    LOG.info("baseDir = " + getBaseDir(config));
+    LOG.info("baseDir = " + baseDir);
     
     if (compressionClass != null) {
       config.set("test.io.compression.class", compressionClass);
@@ -913,7 +921,7 @@ public class TestDFSIO implements Tool {
 
     config.setInt("test.io.file.buffer.size", bufferSize);
     config.setLong("test.io.skip.size", skipSize);
-    FileSystem fs = FileSystem.get(config);
+    FileSystem fs = new Path(baseDir).getFileSystem(config);
 
     if (erasureCodePolicyName != null) {
       if (!checkErasureCodePolicy(erasureCodePolicyName, fs, testType)) {
