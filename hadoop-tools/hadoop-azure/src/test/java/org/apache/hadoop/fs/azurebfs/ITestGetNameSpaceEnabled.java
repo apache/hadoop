@@ -263,7 +263,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystemStore store = Mockito.spy(getFileSystem().getAbfsStore());
     AbfsClient mockClient = mock(AbfsClient.class);
     store.setNamespaceEnabled(Trilean.UNKNOWN);
-    doReturn(mockClient).when(store).getClient();
+    doReturn(mockClient).when(store).getClient(AbfsServiceType.DFS);
     AbfsRestOperationException ex = new AbfsRestOperationException(
         statusCode, null, Integer.toString(statusCode), null);
     doThrow(ex).when(mockClient).getAclStatus(anyString(), any(TracingContext.class));
