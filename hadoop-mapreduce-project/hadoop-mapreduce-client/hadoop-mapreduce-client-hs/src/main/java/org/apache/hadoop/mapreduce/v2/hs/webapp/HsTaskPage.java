@@ -313,12 +313,12 @@ public class HsTaskPage extends HsView {
       .append("\n, {'sType':'natural', 'aTargets': [ 0 ]")
       .append(", 'mRender': parseHadoopID }")
 
-      .append("\n, {'sType':'numeric', 'aTargets': [ 5, 6")
+      .append("\n, {'sType':'num', 'aTargets': [ 5, 6")
       //Column numbers are different for maps and reduces
       .append(type == TaskType.REDUCE ? ", 7, 8" : "")
       .append(" ], 'mRender': renderHadoopDate }")
 
-      .append("\n, {'sType':'numeric', 'aTargets': [")
+      .append("\n, {'sType':'num', 'aTargets': [")
       .append(type == TaskType.REDUCE ? "9, 10, 11, 12" : "7")
       .append(" ], 'mRender': renderHadoopElapsedTime }]")
 

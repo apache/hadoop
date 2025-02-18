@@ -79,11 +79,11 @@ public class HsTasksPage extends HsView {
     .append("{'sType':'natural', 'aTargets': [ 0 ]")
     .append(", 'mRender': parseHadoopID }")
 
-    .append(", {'sType':'numeric', 'aTargets': [ 4")
+    .append(", {'sType':'num', 'aTargets': [ 4")
     .append(type == TaskType.REDUCE ? ", 9, 10, 11, 12" : ", 7")
     .append(" ], 'mRender': renderHadoopElapsedTime }")
 
-    .append("\n, {'sType':'numeric', 'aTargets': [ 2, 3, 5")
+    .append("\n, {'sType':'num', 'aTargets': [ 2, 3, 5")
     .append(type == TaskType.REDUCE ? ", 6, 7, 8" : ", 6")
     .append(" ], 'mRender': renderHadoopDate }]")
 

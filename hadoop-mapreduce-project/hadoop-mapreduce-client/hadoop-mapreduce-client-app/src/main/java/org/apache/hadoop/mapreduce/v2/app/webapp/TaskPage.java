@@ -225,10 +225,10 @@ public class TaskPage extends AppView {
     .append("\n, {'sType':'natural', 'aTargets': [ 0 ]")
     .append(", 'mRender': parseHadoopID }")
 
-    .append("\n, {'sType':'numeric', 'aTargets': [ 6, 7")
+    .append("\n, {'sType':'num', 'aTargets': [ 6, 7")
     .append(" ], 'mRender': renderHadoopDate }")
 
-    .append("\n, {'sType':'numeric', 'aTargets': [ 8")
+    .append("\n, {'sType':'num', 'aTargets': [ 8")
     .append(" ], 'mRender': renderHadoopElapsedTime }]")
 
     // Sort by id upon page load
