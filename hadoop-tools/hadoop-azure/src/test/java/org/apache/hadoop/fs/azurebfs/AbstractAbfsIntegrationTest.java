@@ -777,7 +777,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    */
   protected void mockAddClientTransactionIdToHeader(AbfsDfsClient abfsDfsClient,
       String[] clientTransactionId) {
-    Mockito.doAnswer( addClientTransactionId -> {
+    Mockito.doAnswer(addClientTransactionId -> {
       clientTransactionId[0] = UUID.randomUUID().toString();
       List<AbfsHttpHeader> headers = addClientTransactionId.getArgument(0);
       headers.add(
