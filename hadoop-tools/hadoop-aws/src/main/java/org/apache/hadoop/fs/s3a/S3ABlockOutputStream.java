@@ -719,21 +719,13 @@ class S3ABlockOutputStream extends OutputStream implements
             builder.putOptions);
     clearActiveBlock();
 
-    PutObjectRequest.Builder maybeModifiedPutIfAbsentRequest = putObjectRequest.toBuilder();
-    Map<String, String> optionHeaders = builder.putOptions.getHeaders();
-    if (builder.isConditionalPutEnabled) {
-        maybeModifiedPutIfAbsentRequest.overrideConfiguration(
-            override -> override.putHeader(IF_NONE_MATCH, optionHeaders.get(IF_NONE_MATCH)));
-    }
-    final PutObjectRequest finalizedRequest = maybeModifiedPutIfAbsentRequest.build();
-
     BlockUploadProgress progressCallback =
         new BlockUploadProgress(block, progressListener, now());
     statistics.blockUploadQueued(size);
     try {
       progressCallback.progressChanged(PUT_STARTED_EVENT);
       // the putObject call automatically closes the upload data
-      writeOperationHelper.putObject(finalizedRequest,
+      writeOperationHelper.putObject(putObjectRequest,
           builder.putOptions,
           uploadData,
           statistics);

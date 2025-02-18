@@ -18,11 +18,15 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
@@ -31,19 +35,22 @@ import org.junit.Assume;
 import org.junit.Test;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
+import java.io.FileNotFoundException;
+import java.nio.charset.StandardCharsets;
+
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_ARRAY;
 import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE;
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_MULTIPART;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_OVERWRITE_SUPPORTED;
-import static org.apache.hadoop.fs.s3a.Constants.IF_NONE_MATCH_STAR;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_NONE_MATCH;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_412_PRECONDITION_FAILED;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.scale.S3AScaleTestBase._1KB;
@@ -93,83 +100,89 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
         return FAST_UPLOAD_BUFFER_ARRAY;
     }
 
-    /**
-     * Create a file using the If-None-Match feature from S3
-     * @param fs filesystem
-     * @param path       path to write
-     * @param data source dataset. Can be null
-     * @throws Exception on any problem
-     */
-    private static void createFileWithIfNoneMatchFlag(
+    private static void createFileWithFlags(
             FileSystem fs,
             Path path,
             byte[] data,
+            boolean ifNoneMatchFlag,
+            String etag,
             boolean forceMultipart) throws Exception {
-        FSDataOutputStream stream = getStreamWithIfNoneMatchFlag(fs, path, forceMultipart);
+        FSDataOutputStream stream = getStreamWithFlags(fs, path, ifNoneMatchFlag, etag, forceMultipart);
         if (data != null && data.length > 0) {
             stream.write(data);
         }
         stream.close();
     }
 
-    private static void createFileWithIfNoneMatchFlag(
+    private static void createFileWithFlags(
             FileSystem fs,
             Path path,
-            byte[] data) throws Exception {
-        createFileWithIfNoneMatchFlag(fs, path, data, false);
+            byte[] data,
+            boolean ifNoneMatchFlag,
+            String etag) throws Exception {
+        createFileWithFlags(fs, path, data, ifNoneMatchFlag, etag, false);
     }
 
-    /**
-     * Creates an {@link FSDataOutputStream} for writing a file with an If-None-Match
-     * @param fs filesystem
-     * @param path       path to write
-     */
-     private static FSDataOutputStream getStreamWithIfNoneMatchFlag(
+     private static FSDataOutputStream getStreamWithFlags(
             FileSystem fs,
             Path path,
+            boolean ifNoneMatchFlag,
+            String etag,
             boolean forceMultipart) throws Exception {
         FSDataOutputStreamBuilder builder = fs.createFile(path);
-        builder.must(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE, "true");
-        builder.opt(FS_S3A_CREATE_HEADER + "." + IF_NONE_MATCH, IF_NONE_MATCH_STAR);
+        if (ifNoneMatchFlag) {
+            builder.must(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE, "true");
+        }
+        if (etag != null) {
+            builder.must(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG, etag);
+        }
         if (forceMultipart) {
             builder.opt(FS_S3A_CREATE_MULTIPART, "true");
         }
         return builder.create().build();
     }
 
-    private static FSDataOutputStream getStreamWithIfNoneMatchFlag(
+    private static FSDataOutputStream getStreamWithFlags(
             FileSystem fs,
-            Path path) throws Exception {
-        return getStreamWithIfNoneMatchFlag(fs, path, false);
+            Path path,
+            boolean ifNoneMatchFlag,
+            String etag) throws Exception {
+        return getStreamWithFlags(fs, path, ifNoneMatchFlag, etag, false);
+    }
+
+    private static String readFileContent(FileSystem fs, Path path) throws Throwable {
+        try (FSDataInputStream inputStream = fs.open(path)) {
+            return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+        }
     }
 
     @Test
-    public void testPutIfAbsentConflict() throws Throwable {
+    public void testIfNoneMatchConflictOnOverwrite() throws Throwable {
         describe("generate conflict on overwrites");
         FileSystem fs = getFileSystem();
         Path testFile = methodPath();
         fs.mkdirs(testFile.getParent());
 
         // create a file over an empty path: all good
-        createFileWithIfNoneMatchFlag(fs, testFile, SMALL_FILE_BYTES);
+        createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null);
 
         // attempted overwrite fails
         RemoteFileChangedException firstException = intercept(RemoteFileChangedException.class,
-                () -> createFileWithIfNoneMatchFlag(fs, testFile, SMALL_FILE_BYTES));
+                () -> createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null));
         assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, firstException);
 
         // second attempt also fails
         RemoteFileChangedException secondException = intercept(RemoteFileChangedException.class,
-                () -> createFileWithIfNoneMatchFlag(fs, testFile, SMALL_FILE_BYTES));
+                () -> createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null));
         assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, secondException);
 
         // Delete file and verify an overwrite works again
         fs.delete(testFile, false);
-        createFileWithIfNoneMatchFlag(fs, testFile, SMALL_FILE_BYTES);
+        createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null);
     }
 
     @Test
-    public void testPutIfAbsentLargeFileConflict() throws Throwable {
+    public void testIfNoneMatchConflictOnMultipartUpload() throws Throwable {
         FileSystem fs = getFileSystem();
         Path testFile = methodPath();
 
@@ -177,19 +190,19 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
         Assume.assumeTrue("Skipping as multipart upload not supported",
                 fs.hasPathCapability(testFile, STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED));
 
-        createFileWithIfNoneMatchFlag(fs, testFile, MULTIPART_FILE_BYTES, true);
+        createFileWithFlags(fs, testFile, MULTIPART_FILE_BYTES, true, null, true);
 
         RemoteFileChangedException firstException = intercept(RemoteFileChangedException.class,
-                () -> createFileWithIfNoneMatchFlag(fs, testFile, MULTIPART_FILE_BYTES, true));
+                () -> createFileWithFlags(fs, testFile, MULTIPART_FILE_BYTES, true, null, true));
         assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, firstException);
 
         RemoteFileChangedException secondException = intercept(RemoteFileChangedException.class,
-                () -> createFileWithIfNoneMatchFlag(fs, testFile, MULTIPART_FILE_BYTES, true));
+                () -> createFileWithFlags(fs, testFile, MULTIPART_FILE_BYTES, true, null, true));
         assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, secondException);
     }
 
     @Test
-    public void testMultipartFileWithRaceCondition() throws Throwable {
+    public void testIfNoneMatchMultipartUploadWithRaceCondition() throws Throwable {
         FileSystem fs = getFileSystem();
         Path testFile = methodPath();
 
@@ -198,11 +211,11 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
                 fs.hasPathCapability(testFile, STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED));
 
         // Create a file with multipart upload but do not close the stream
-        FSDataOutputStream stream = getStreamWithIfNoneMatchFlag(fs, testFile, true);
+        FSDataOutputStream stream = getStreamWithFlags(fs, testFile, true, null, true);
         stream.write(MULTIPART_FILE_BYTES);
 
         // create and close another small file in parallel
-        createFileWithIfNoneMatchFlag(fs, testFile, SMALL_FILE_BYTES);
+        createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null);
 
         // Closing the first stream should throw RemoteFileChangedException
         RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream::close);
@@ -210,7 +223,7 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
     }
 
     @Test
-    public void testTwoMultipartFileWithRaceCondition() throws Throwable {
+    public void testIfNoneMatchTwoConcurrentMultipartUploads() throws Throwable {
         FileSystem fs = getFileSystem();
         Path testFile = methodPath();
 
@@ -219,11 +232,11 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
                 fs.hasPathCapability(testFile, STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED));
 
         // Create a file with multipart upload but do not close the stream
-        FSDataOutputStream stream = getStreamWithIfNoneMatchFlag(fs, testFile, true);
+        FSDataOutputStream stream = getStreamWithFlags(fs, testFile, true, null, true);
         stream.write(MULTIPART_FILE_BYTES);
 
         // create and close another multipart file in parallel
-        createFileWithIfNoneMatchFlag(fs, testFile, MULTIPART_FILE_BYTES, true);
+        createFileWithFlags(fs, testFile, MULTIPART_FILE_BYTES, true, null, true);
 
         // Closing the first stream should throw RemoteFileChangedException
         RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream::close);
@@ -231,16 +244,16 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
     }
 
     @Test
-    public void testOverwriteWithEmptyFile() throws Throwable {
+    public void testIfNoneMatchOverwriteWithEmptyFile() throws Throwable {
         FileSystem fs = getFileSystem();
         Path testFile = methodPath();
         fs.mkdirs(testFile.getParent());
 
         // create a non-empty file
-        createFileWithIfNoneMatchFlag(fs, testFile, SMALL_FILE_BYTES);
+        createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null);
 
         // overwrite with zero-byte file (no write)
-        FSDataOutputStream stream = getStreamWithIfNoneMatchFlag(fs, testFile);
+        FSDataOutputStream stream = getStreamWithFlags(fs, testFile, true, null);
 
         // close the stream, should throw RemoteFileChangedException
         RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream::close);
@@ -248,34 +261,213 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
     }
 
     @Test
-    public void testOverwriteEmptyFileWithFile() throws Throwable {
+    public void testIfNoneMatchOverwriteEmptyFileWithFile() throws Throwable {
         FileSystem fs = getFileSystem();
         Path testFile = methodPath();
         fs.mkdirs(testFile.getParent());
 
         // create an empty file (no write)
-        FSDataOutputStream stream = getStreamWithIfNoneMatchFlag(fs, testFile);
+        FSDataOutputStream stream = getStreamWithFlags(fs, testFile, true, null);
         stream.close();
 
         // overwrite with non-empty file, should throw RemoteFileChangedException
         RemoteFileChangedException exception = intercept(RemoteFileChangedException.class,
-                () -> createFileWithIfNoneMatchFlag(fs, testFile, SMALL_FILE_BYTES));
+                () -> createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null));
         assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
     }
 
     @Test
-    public void testOverwriteEmptyWithEmptyFile() throws Throwable {
+    public void testIfNoneMatchOverwriteEmptyWithEmptyFile() throws Throwable {
         FileSystem fs = getFileSystem();
         Path testFile = methodPath();
         fs.mkdirs(testFile.getParent());
 
         // create an empty file (no write)
-        FSDataOutputStream stream1 = getStreamWithIfNoneMatchFlag(fs, testFile);
+        FSDataOutputStream stream1 = getStreamWithFlags(fs, testFile, true, null);
         stream1.close();
 
         // overwrite with another empty file, should throw RemoteFileChangedException
-        FSDataOutputStream stream2 = getStreamWithIfNoneMatchFlag(fs, testFile);
+        FSDataOutputStream stream2 = getStreamWithFlags(fs, testFile, true, null);
         RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream2::close);
         assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
+    }
+
+    @Test
+    public void testIfMatchOverwriteWithCorrectEtag() throws Throwable {
+        FileSystem fs = getFileSystem();
+        Path path = methodPath();
+        fs.mkdirs(path.getParent());
+
+        // Create a file
+        createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, null);
+
+        // Retrieve the etag from the created file
+        String etag = ((S3AFileStatus) fs.getFileStatus(path)).getETag();
+        assertNotNull("ETag should not be null after file creation", etag);
+
+        String updatedFileContent = "Updated content";
+        byte[] updatedData = updatedFileContent.getBytes(StandardCharsets.UTF_8);
+
+        // overwrite file with etag
+        createFileWithFlags(fs, path, updatedData, false, etag);
+
+        // read file and verify overwritten content
+        String fileContent = readFileContent(fs, path);
+        assertEquals(
+                "File content should be correctly updated after overwriting with the correct ETag",
+                updatedFileContent,
+                fileContent
+        );
+    }
+
+    @Test
+    public void testIfMatchOverwriteWithOutdatedEtag() throws Throwable {
+        FileSystem fs = getFileSystem();
+        Path path = methodPath();
+        fs.mkdirs(path.getParent());
+
+        // Create a file
+        createFileWithFlags(fs, path, SMALL_FILE_BYTES, true, null);
+
+        // Retrieve the etag from the created file
+        String etag = ((S3AFileStatus) fs.getFileStatus(path)).getETag();
+        assertNotNull("ETag should not be null after file creation", etag);
+
+        // Overwrite the file. Will update the etag, making the previously fetched etag outdated.
+        createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, null);
+
+        // overwrite file with outdated etag. Should throw RemoteFileChangedException
+        RemoteFileChangedException exception = intercept(RemoteFileChangedException.class,
+                () -> createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, etag));
+        assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
+    }
+
+    @Test
+    public void testIfMatchOverwriteDeletedFileWithEtag() throws Throwable {
+        FileSystem fs = getFileSystem();
+        Path path = methodPath();
+        fs.mkdirs(path.getParent());
+
+        // Create a file
+        createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, null);
+
+        // Retrieve the etag from the created file
+        String etag = ((S3AFileStatus) fs.getFileStatus(path)).getETag();
+        assertNotNull("ETag should not be null after file creation", etag);
+
+        // delete the file
+        fs.delete(path);
+
+        // overwrite file with etag. Should throw FileNotFoundException
+        FileNotFoundException exception = intercept(FileNotFoundException.class,
+                () -> createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, etag));
+        assertS3ExceptionStatusCode(SC_404_NOT_FOUND, exception);
+    }
+
+    @Test
+    public void testIfMatchOverwriteFileWithEmptyEtag() throws Throwable {
+        FileSystem fs = getFileSystem();
+        Path path = methodPath();
+        fs.mkdirs(path.getParent());
+
+        // Create a file
+        createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, null);
+
+        // overwrite file with empty etag. Should throw IllegalArgumentException
+        intercept(IllegalArgumentException.class,
+                () -> createFileWithFlags(fs, path, SMALL_FILE_BYTES, false, ""));
+    }
+
+    @Test
+    public void testIfMatchMultipartUploadWithRaceCondition() throws Throwable {
+        FileSystem fs = getFileSystem();
+        Path testFile = methodPath();
+
+        // Skip test if multipart uploads are not supported
+        Assume.assumeTrue("Skipping test as multipart uploads are not supported",
+                fs.hasPathCapability(testFile, STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED));
+
+        // Create a file with multipart upload but do not close the stream
+        FSDataOutputStream stream = getStreamWithFlags(fs, testFile, true, null, true);
+        stream.write(MULTIPART_FILE_BYTES);
+
+        // create and close another small file in parallel
+        createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null);
+
+        // Closing the first stream should throw RemoteFileChangedException
+        RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream::close);
+        assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
+    }
+
+    @Test
+    public void testIfMatchTwoMultipartUploadsRaceConditionOneClosesFirst() throws Throwable {
+        FileSystem fs = getFileSystem();
+        Path testFile = methodPath();
+
+        // Skip test if multipart uploads are not supported
+        Assume.assumeTrue("Skipping test as multipart uploads are not supported",
+                fs.hasPathCapability(testFile, STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED));
+
+        // Create a file and retrieve its etag
+        createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, false, null);
+        String etag = ((S3AFileStatus) fs.getFileStatus(testFile)).getETag();
+        assertNotNull("ETag should not be null after file creation", etag);
+
+        // Start two multipart uploads with the same etag
+        FSDataOutputStream stream1 = getStreamWithFlags(fs, testFile, false, etag, true);
+        FSDataOutputStream stream2 = getStreamWithFlags(fs, testFile, false, etag, true);
+
+        // Write data to both streams
+        stream1.write(MULTIPART_FILE_BYTES);
+        stream2.write(MULTIPART_FILE_BYTES);
+
+        // Close the first stream successfully. Will update the etag
+        stream1.close();
+
+        // Close second stream, should fail due to etag mismatch
+        RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream2::close);
+        assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
+    }
+
+    @Test
+    public void testIfMatchIthCreateFileWithoutOverwrite() throws Throwable {
+        FileSystem fs = getFileSystem();
+        Path testFile = methodPath();
+        fs.mkdirs(testFile.getParent());
+
+        // Create a file and retrieve the etag
+        createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, false, null);
+        String etag = ((S3AFileStatus) fs.getFileStatus(testFile)).getETag();
+        assertNotNull("ETag should not be null after file creation", etag);
+
+        // Attempt to create a file at the same path without overwrite, using If-Match with the etag
+        FileAlreadyExistsException exception = intercept(FileAlreadyExistsException.class, () -> {
+            fs.createFile(testFile)
+                    .overwrite(false)
+                    .opt(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG, etag)
+                    .build();
+        });
+    }
+
+    @Test
+    public void testIfMatchIthCreateFileWithoutOverwriteWithPerformanceFlag() throws Throwable {
+        FileSystem fs = getFileSystem();
+        Path testFile = methodPath();
+        fs.mkdirs(testFile.getParent());
+
+        getConfiguration().set(FS_S3A_PERFORMANCE_FLAGS, "create");
+
+        // Create a file and retrieve the etag
+        createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, false, null);
+        String etag = ((S3AFileStatus) fs.getFileStatus(testFile)).getETag();
+        assertNotNull("ETag should not be null after file creation", etag);
+
+        // Attempt to create a file at the same path without overwrite, using If-Match with the etag
+        FileAlreadyExistsException exception = intercept(FileAlreadyExistsException.class, () -> {
+            fs.createFile(testFile)
+                    .overwrite(false)
+                    .opt(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG, etag)
+                    .build();
+        });
     }
 }
