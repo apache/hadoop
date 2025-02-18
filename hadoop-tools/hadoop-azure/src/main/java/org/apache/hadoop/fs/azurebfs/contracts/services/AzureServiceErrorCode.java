@@ -65,6 +65,8 @@ public enum AzureServiceErrorCode {
   COPY_BLOB_ABORTED("CopyBlobAborted", HttpURLConnection.HTTP_INTERNAL_ERROR, null),
   BLOB_OPERATION_NOT_SUPPORTED("BlobOperationNotSupported", HttpURLConnection.HTTP_CONFLICT, null),
   INVALID_APPEND_OPERATION("InvalidAppendOperation", HttpURLConnection.HTTP_CONFLICT, null),
+  UNAUTHORIZED_BLOB_OVERWRITE("UnauthorizedBlobOverwrite", HttpURLConnection.HTTP_FORBIDDEN,
+          "This request is not authorized to perform blob overwrites."),
   UNKNOWN(null, -1, null);
 
   private final String errorCode;

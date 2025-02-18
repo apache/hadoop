@@ -43,6 +43,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
@@ -134,6 +135,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_RETAIN_UNCOMMITTED_DATA;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.UNAUTHORIZED_BLOB_OVERWRITE;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_FILE_ALREADY_EXISTS;
 
 /**
  * AbfsClient interacting with the DFS Endpoint.
@@ -750,6 +753,14 @@ public class AbfsDfsClient extends AbfsClient {
           // we will throw the original exception.
         }
         throw e;
+      }
+
+      // ref: HADOOP-19393. Write permission checks can occur before validating
+      // rename operation's validity. If there is an existing destination path, it may be rejected
+      // with an authorization error. Catching and throwing FileAlreadyExistsException instead.
+      if (op.getResult().getStorageErrorCode()
+          .equals(UNAUTHORIZED_BLOB_OVERWRITE.getErrorCode())){
+        throw new FileAlreadyExistsException(ERR_FILE_ALREADY_EXISTS);
       }
 
       // ref: HADOOP-18242. Rename failure occurring due to a rare case of
