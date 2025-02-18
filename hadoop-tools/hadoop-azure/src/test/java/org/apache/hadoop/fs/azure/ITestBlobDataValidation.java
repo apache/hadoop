@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 
 import com.microsoft.azure.storage.Constants;
 import com.microsoft.azure.storage.OperationContext;
@@ -65,9 +64,9 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
    * Test that by default we don't store the blob-level MD5.
    */
   @Test
-  public void testBlobMd5StoreOffByDefault(TestInfo testInfo) throws Exception {
+  public void testBlobMd5StoreOffByDefault() throws Exception {
     testAccount = AzureBlobStorageTestAccount.create();
-    testStoreBlobMd5(false, testInfo);
+    testStoreBlobMd5(false);
   }
 
   /**
@@ -75,11 +74,11 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
    * in the configuration.
    */
   @Test
-  public void testStoreBlobMd5(TestInfo testInfo) throws Exception {
+  public void testStoreBlobMd5() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(KEY_STORE_BLOB_MD5, true);
     testAccount = AzureBlobStorageTestAccount.create(conf);
-    testStoreBlobMd5(true, testInfo);
+    testStoreBlobMd5(true);
   }
 
   /**
@@ -91,12 +90,11 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
         toTrim);
   }
 
-  private void testStoreBlobMd5(boolean expectMd5Stored, TestInfo testInfo) throws Exception {
+  private void testStoreBlobMd5(boolean expectMd5Stored) throws Exception {
     assumeNotNull(testAccount);
     // Write a test file.
     NativeAzureFileSystem fs = testAccount.getFileSystem();
-    Path testFilePath = AzureTestUtils.pathForTests(fs,
-        testInfo.getDisplayName());
+    Path testFilePath = AzureTestUtils.pathForTests(fs, methodName.getMethodName());
     String testFileKey = trim(testFilePath.toUri().getPath(), "/");
     OutputStream outStream = fs.create(testFilePath);
     outStream.write(new byte[] { 5, 15 });

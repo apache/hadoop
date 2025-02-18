@@ -177,7 +177,7 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
   }
 
   @Test
-  public void test_010_CreateHugeFile(TestInfo testInfo) throws IOException {
+  public void test_010_CreateHugeFile() throws IOException {
     long filesize = getTestPropertyBytes(getConfiguration(),
         KEY_HUGE_FILESIZE,
         DEFAULT_HUGE_FILESIZE);
