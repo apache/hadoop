@@ -50,7 +50,7 @@
     <!-- Version number for xerces used by JDiff -->
     <xerces.jdiff.version>2.12.2</xerces.jdiff.version>
 
-    <kafka.version>3.4.0</kafka.version>
+    <kafka.version>3.9.0</kafka.version>
 
     <commons-daemon.version>1.0.13</commons-daemon.version>
 
