@@ -311,12 +311,67 @@ public class ITestAzureBlobFileSystemRename extends
    *
    * @throws Exception if an error occurs during test execution
    */
-  @Test(expected = IOException.class)
-  public void testRenameBlobToDstWithColonInPath() throws Exception {
+  @Test
+  public void testRenameBlobToDstWithColonInSourcePath() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     assumeBlobServiceType();
+    fs.create(new Path("/src:/file"));
+    Assertions.assertThat(
+        fs.rename(new Path("/src:"),
+            new Path("/dst"))
+    ).isTrue();
+  }
+
+  /**
+   * Tests renaming a source path to a destination path that contains a colon in the path.
+   * This verifies that the rename operation handles paths with special characters like a colon.
+   *
+   * The test creates a source directory and renames it to a destination path that includes a colon,
+   * ensuring that the operation succeeds without errors.
+   *
+   * @throws Exception if an error occurs during test execution
+   */
+  @Test
+  public void testRenameWithColonInDestinationPath() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
     fs.create(new Path("/src"));
-    fs.rename(new Path("/src"), new Path("/dst:file"));
+    Assertions.assertThat(
+        fs.rename(new Path("/src"),
+            new Path("/dst:"))
+    ).isTrue();
+  }
+
+  @Test
+  public void testRenameWithColonInSourcePath() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    String sourceDirectory = "/src:";
+    String destinationDirectory = "/dst";
+    String fileName = "file";
+    fs.create(new Path(sourceDirectory, fileName));
+    fs.create(new Path(sourceDirectory + "/Test:", fileName));
+    // Rename from source to destination
+    Assertions.assertThat(
+        fs.rename(new Path(sourceDirectory),
+            new Path(destinationDirectory))
+    ).isTrue();
+    Assertions.assertThat(
+            fs.exists(new Path(sourceDirectory, fileName)))
+        .isFalse();
+    Assertions.assertThat(
+        fs.exists(new Path(destinationDirectory, fileName)))
+        .isTrue();
+
+    // Rename from destination to source
+    Assertions.assertThat(
+        fs.rename(new Path(destinationDirectory),
+            new Path(sourceDirectory))
+    ).isTrue();
+    Assertions.assertThat(
+            fs.exists(new Path(sourceDirectory, fileName)))
+        .isTrue();
+    Assertions.assertThat(
+            fs.exists(new Path(destinationDirectory, fileName)))
+        .isFalse();
   }
 
   /**
@@ -1883,64 +1938,64 @@ public class ITestAzureBlobFileSystemRename extends
     }
   }
 
-//  /**
-//   * Tests renaming a file or directory when the destination path contains
-//   * a colon (":"). The test ensures that:
-//   * - The source directory exists before the rename.
-//   * - The file is successfully renamed to the destination path.
-//   * - The old source directory no longer exists after the rename.
-//   * - The new destination directory exists after the rename.
-//   *
-//   * @throws Exception if an error occurs during file system operations
-//   */
-//  @Test
-//  public void testRenameWhenDestinationPathContainsColon() throws Exception {
-//    AzureBlobFileSystem fs = getFileSystem();
-//    fs.setWorkingDirectory(new Path(ROOT_PATH));
-//    String fileName = "file";
-//    Path src = new Path("/test1/");
-//    Path dst = new Path("/test1:/");
-//
-//    // Create the file
-//    fs.create(new Path(src, fileName));
-//
-//    // Perform the rename operation and validate the results
-//    performRenameAndValidate(fs, src, dst, fileName);
-//  }
+  /**
+   * Tests renaming a file or directory when the destination path contains
+   * a colon (":"). The test ensures that:
+   * - The source directory exists before the rename.
+   * - The file is successfully renamed to the destination path.
+   * - The old source directory no longer exists after the rename.
+   * - The new destination directory exists after the rename.
+   *
+   * @throws Exception if an error occurs during file system operations
+   */
+  @Test
+  public void testRenameWhenDestinationPathContainsColon() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    fs.setWorkingDirectory(new Path(ROOT_PATH));
+    String fileName = "file";
+    Path src = new Path("/test1/");
+    Path dst = new Path("/test1:/");
 
-//  /**
-//   * Performs the rename operation and validates the existence of the directories and files.
-//   *
-//   * @param fs the AzureBlobFileSystem instance
-//   * @param src the source path to be renamed
-//   * @param dst the destination path for the rename
-//   * @param fileName the name of the file to be renamed
-//   */
-//  private void performRenameAndValidate(AzureBlobFileSystem fs, Path src, Path dst, String fileName)
-//      throws IOException {
-//    // Assert the source directory exists
-//    Assertions.assertThat(fs.exists(src))
-//        .describedAs("Old directory should exist before rename")
-//        .isTrue();
-//
-//    // Perform rename
-//    fs.rename(src, dst);
-//
-//    // Assert the destination directory and file exist after rename
-//    Assertions.assertThat(fs.exists(new Path(dst, fileName)))
-//        .describedAs("Rename should be successful")
-//        .isTrue();
-//
-//    // Assert the source directory no longer exists
-//    Assertions.assertThat(fs.exists(src))
-//        .describedAs("Old directory should not exist")
-//        .isFalse();
-//
-//    // Assert the new destination directory exists
-//    Assertions.assertThat(fs.exists(dst))
-//        .describedAs("New directory should exist")
-//        .isTrue();
-//  }
+    // Create the file
+    fs.create(new Path(src, fileName));
+
+    // Perform the rename operation and validate the results
+    performRenameAndValidate(fs, src, dst, fileName);
+  }
+
+  /**
+   * Performs the rename operation and validates the existence of the directories and files.
+   *
+   * @param fs the AzureBlobFileSystem instance
+   * @param src the source path to be renamed
+   * @param dst the destination path for the rename
+   * @param fileName the name of the file to be renamed
+   */
+  private void performRenameAndValidate(AzureBlobFileSystem fs, Path src, Path dst, String fileName)
+      throws IOException {
+    // Assert the source directory exists
+    Assertions.assertThat(fs.exists(src))
+        .describedAs("Old directory should exist before rename")
+        .isTrue();
+
+    // Perform rename
+    fs.rename(src, dst);
+
+    // Assert the destination directory and file exist after rename
+    Assertions.assertThat(fs.exists(new Path(dst, fileName)))
+        .describedAs("Rename should be successful")
+        .isTrue();
+
+    // Assert the source directory no longer exists
+    Assertions.assertThat(fs.exists(src))
+        .describedAs("Old directory should not exist")
+        .isFalse();
+
+    // Assert the new destination directory exists
+    Assertions.assertThat(fs.exists(dst))
+        .describedAs("New directory should exist")
+        .isTrue();
+  }
 
   /**
    * Tests the behavior of the atomic rename key for the root folder

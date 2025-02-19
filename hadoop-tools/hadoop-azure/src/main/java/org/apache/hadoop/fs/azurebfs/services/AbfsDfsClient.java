@@ -1161,6 +1161,8 @@ public class AbfsDfsClient extends AbfsClient {
       } else {
         return idempotencyOp;
       }
+    } finally {
+      incrementAbfsDeleteFile();
     }
 
     return op;
