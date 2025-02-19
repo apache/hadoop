@@ -78,13 +78,15 @@ public class StreamFactoryRequirements {
 
   /**
    * Number of shared threads to included in the bounded pool.
+   * @return extra threads to be created in the FS thread pool.
    */
   public int sharedThreads() {
     return sharedThreads;
   }
 
   /**
-   * How many threads per stream, ignoring vector IO requirements?
+   * The maximum number of threads which can be used should by a single input stream,
+   * @return thread pool requirements.
    */
   public int streamThreads() {
     return streamThreads;

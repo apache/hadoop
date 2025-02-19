@@ -77,6 +77,7 @@ public final class VectoredIOContext {
    * is initiated, rather than merging ranges?
    * Set to zero to disable range merging entirely.
    * @param minSeek minimum amount of data to skip.
+   * @return this instance.
    */
   public VectoredIOContext setMinSeekForVectoredReads(int minSeek) {
     checkMutable();
@@ -88,7 +89,7 @@ public final class VectoredIOContext {
   /**
    * What is the threshold at which a seek() to a new location
    * is initiated, rather than merging ranges?
-   * @return a number >= 0
+   * @return a number greater than or equal to zero.
    */
   public int getMinSeekForVectorReads() {
     return minSeekForVectorReads;
@@ -110,7 +111,7 @@ public final class VectoredIOContext {
   /**
    * The largest size that we should group ranges.
    * together during vectored read operation
-   * @return a number >= 0
+   * @return a number greater than or equal to zero.
    */
   public int getMaxReadSizeForVectorReads() {
     return maxReadSizeForVectorReads;

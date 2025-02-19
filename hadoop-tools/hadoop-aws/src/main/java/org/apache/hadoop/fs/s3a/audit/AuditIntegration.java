@@ -69,7 +69,7 @@ public final class AuditIntegration {
       auditManager = new ActiveAuditManagerS3A(
           requireNonNull(iostatistics));
     } else {
-      LOG.debug(" is disabled");
+      LOG.debug("auditing is disabled");
       auditManager = stubAuditManager();
     }
     auditManager.init(conf);

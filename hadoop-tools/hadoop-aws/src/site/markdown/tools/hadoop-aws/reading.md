@@ -84,7 +84,7 @@ Apache Parquet.
 ```xml
 <property>
   <name>fs.s3a.input.stream.type</name>
-  <value>default</value>
+  <value>analytics</value>
 </property>
 ```
 

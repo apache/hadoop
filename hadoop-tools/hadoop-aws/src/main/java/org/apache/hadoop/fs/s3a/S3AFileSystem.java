@@ -801,7 +801,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         flags.add(AuditorFlags.PermitOutOfBandOperations);
       }
       getAuditManager().setAuditFlags(flags);
-      // get the vector IO context from the factory.o
+      // get the vector IO context from the factory.
       vectoredIOContext = factoryRequirements.vectoredIOContext();
 
       // thread pool init requires store to be created and

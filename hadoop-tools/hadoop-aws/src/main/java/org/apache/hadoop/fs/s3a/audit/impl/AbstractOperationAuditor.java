@@ -153,6 +153,7 @@ public abstract class AbstractOperationAuditor extends AbstractService
 
   /**
    * Should out of scope ops be rejected?
+   * @return true if out of span calls should be rejected.
    */
   protected boolean isRejectOutOfSpan() {
     return rejectOutOfSpan.get();
