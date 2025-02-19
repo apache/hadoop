@@ -340,9 +340,7 @@ public class ITestAzureBlobFileSystemAppend extends
   @Test
   public void testCreateAppendBlobOverDfsEndpointAppendOverBlob()
       throws IOException, NoSuchFieldException, IllegalAccessException {
-    Assume.assumeTrue(
-        "FNS does not support append blob creation for DFS endpoint",
-        getIsNamespaceEnabled(getFileSystem()));
+    assumeHnsEnabled("FNS does not support append blob creation for DFS endpoint");
     final AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     Mockito.doReturn(true).when(store).isAppendBlobKey(anyString());
@@ -746,7 +744,7 @@ public class ITestAzureBlobFileSystemAppend extends
     Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
     try (AzureBlobFileSystem fs = Mockito.spy(
         (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration()))) {
-      Assume.assumeTrue(!getIsNamespaceEnabled(fs));
+      assumeHnsDisabled();
       AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
       assumeBlobServiceType();
 
@@ -951,8 +949,7 @@ public class ITestAzureBlobFileSystemAppend extends
     // Create a spy of AzureBlobFileSystem
     try (AzureBlobFileSystem fs = Mockito.spy(
         (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration()))) {
-      Assume.assumeTrue(!getIsNamespaceEnabled(fs));
-
+      assumeHnsDisabled();
       // Create a spy of AzureBlobFileSystemStore
       AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
       assumeBlobServiceType();
@@ -1049,7 +1046,7 @@ public class ITestAzureBlobFileSystemAppend extends
     // Create a spy of AzureBlobFileSystem
     try (AzureBlobFileSystem fs = Mockito.spy(
         (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration()))) {
-      Assume.assumeTrue(!getIsNamespaceEnabled(fs));
+      assumeHnsDisabled();
 
       // Create a spy of AzureBlobFileSystemStore
       AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());

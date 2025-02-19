@@ -26,7 +26,6 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
 import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
@@ -93,7 +92,8 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
    */
   @Test
   public void testBothProviderFixedTokenConfigured() throws Exception {
-    Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.DFS && getIsNamespaceEnabled(getFileSystem()));
+    assumeDfsServiceType();
+    assumeHnsEnabled();
     AbfsConfiguration testAbfsConfig = new AbfsConfiguration(
         getRawConfiguration(), this.getAccountName());
     removeAnyPresetConfiguration(testAbfsConfig);
