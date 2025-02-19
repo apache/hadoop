@@ -243,6 +243,60 @@ public class ITestAzureBlobFileSystemAppend extends
         .isInstanceOf(AbfsDfsClient.class);
   }
 
+  @Test
+  public void testMultipleAppendSwitches() throws Exception {
+    Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path testPath = path(TEST_FILE_PATH);
+    AzureBlobFileSystemStore.Permissions permissions
+        = new AzureBlobFileSystemStore.Permissions(false,
+        FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
+    fs.getAbfsStore().getClientHandler().getDfsClient().
+        createPath(makeQualified(testPath).toUri().getPath(), true, false,
+            permissions, false, null,
+            null, getTestTracingContext(fs, true));
+    fs.getAbfsStore()
+        .getAbfsConfiguration()
+        .set(FS_AZURE_INGRESS_SERVICE_TYPE, AbfsServiceType.BLOB.name());
+    ExecutorService executorService = Executors.newFixedThreadPool(5);
+    List<Future<?>> futures = new ArrayList<>();
+
+    // Create three output streams with different content length
+    final byte[] b1 = new byte[8 * ONE_MB];
+    new Random().nextBytes(b1);
+
+    FSDataOutputStream out1 = fs.append(testPath);
+    FSDataOutputStream out2 = fs.append(testPath);
+    FSDataOutputStream out3 = fs.append(testPath);
+
+    // Submit tasks to write to each output stream
+    futures.add(executorService.submit(() -> {
+      try {
+        out1.write(b1, TEN, 2 * HUNDRED);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }));
+
+    futures.add(executorService.submit(() -> {
+      try {
+        out2.write(b1, TWENTY, 3 * HUNDRED);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }));
+
+    futures.add(executorService.submit(() -> {
+      try {
+        out3.write(b1, THIRTY, 4 * HUNDRED);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }));
+    checkFuturesForExceptions(futures, 0);
+  }
+
+
   /**
    * Creates a file over Blob and attempts to append over DFS.
    * It should fallback to Blob when appending to the file fails.
@@ -381,6 +435,7 @@ public class ITestAzureBlobFileSystemAppend extends
         .as("DFS client was not used after fallback")
         .isInstanceOf(AbfsDfsClient.class);
   }
+
 
 
   /**

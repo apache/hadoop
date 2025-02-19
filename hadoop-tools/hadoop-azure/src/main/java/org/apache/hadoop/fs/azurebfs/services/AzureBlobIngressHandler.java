@@ -297,7 +297,8 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
             activeBlock, reqParams,
             new TracingContext(getAbfsOutputStream().getTracingContext()));
       } catch (InvalidIngressServiceException ex) {
-        LOG.debug("InvalidIngressServiceException caught for path: {}, switching handler and retrying remoteAppendBlobWrite.", getAbfsOutputStream().getPath());
+        LOG.debug("InvalidIngressServiceException caught for path: {}, switching handler and retrying remoteAppendBlobWrite.",
+            getAbfsOutputStream().getPath());
         getAbfsOutputStream().switchHandler();
         op = getAbfsOutputStream().getIngressHandler()
             .remoteAppendBlobWrite(getAbfsOutputStream().getPath(), uploadData,

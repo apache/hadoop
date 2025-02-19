@@ -198,4 +198,10 @@ public class AzureBlobBlockManager extends AzureBlockManager {
   protected String getBlockIdList() {
     return committedBlockEntries.toString();
   }
+
+  @Override
+  public void close(){
+    super.close();
+    committedBlockEntries.setLength(0);
+  }
 }
