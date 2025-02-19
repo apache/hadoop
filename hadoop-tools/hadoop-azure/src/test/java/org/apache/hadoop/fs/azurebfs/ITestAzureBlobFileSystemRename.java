@@ -1732,7 +1732,7 @@ public class ITestAzureBlobFileSystemRename extends
       String consumerMaxLag, String maxThread, Path src, Path dst)
       throws IOException {
     Configuration config = createConfig(producerQueueSize, consumerMaxLag, maxThread);
-    try (final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(), config)) {
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(), config)) {
       fs.rename(src, dst);
       validateRename(fs, src, dst, false, true, false);
     }
@@ -1781,7 +1781,7 @@ public class ITestAzureBlobFileSystemRename extends
    */
   @Test
   public void testRenameDirWithDifferentParallelism() throws Exception {
-    try (final AzureBlobFileSystem currentFs = getFileSystem()) {
+    try (AzureBlobFileSystem currentFs = getFileSystem()) {
       assumeBlobServiceType();
       Path src = new Path("/hbase/A1/A2");
       Path dst = new Path("/hbase/A1/A3");
@@ -1836,7 +1836,7 @@ public class ITestAzureBlobFileSystemRename extends
    */
   @Test
   public void testRenameCopyFailureInBetween() throws Exception {
-    try (final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem(
+    try (AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem(
         createConfig("5", "3", "2")))) {
       assumeBlobServiceType();
       AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
@@ -1890,7 +1890,7 @@ public class ITestAzureBlobFileSystemRename extends
    */
   @Test
   public void testRenameDeleteFailureInBetween() throws Exception {
-    try (final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem(
+    try (AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem(
         createConfig("5", "3", "2")))) {
       assumeBlobServiceType();
       AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
@@ -2506,7 +2506,7 @@ public class ITestAzureBlobFileSystemRename extends
       fs.create(new Path(path, "file1.txt"));
       fs.create(new Path(path, "file2.txt"));
       AtomicInteger numberOfCopyBlobCalls = new AtomicInteger(0);
-      Mockito.doAnswer( copyBlob -> {
+      Mockito.doAnswer(copyBlob -> {
             numberOfCopyBlobCalls.incrementAndGet();
             return copyBlob.callRealMethod();
           })
@@ -2516,7 +2516,7 @@ public class ITestAzureBlobFileSystemRename extends
               Mockito.any(TracingContext.class));
 
       AtomicInteger numberOfRedoRenameAtomicityCalls = new AtomicInteger(0);
-      Mockito.doAnswer( redoRenameAtomicity -> {
+      Mockito.doAnswer(redoRenameAtomicity -> {
             numberOfRedoRenameAtomicityCalls.incrementAndGet();
             return redoRenameAtomicity.callRealMethod();
           })

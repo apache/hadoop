@@ -92,8 +92,6 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_CREATED;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_DELETED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_COPIED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_CREATED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_DELETED;
