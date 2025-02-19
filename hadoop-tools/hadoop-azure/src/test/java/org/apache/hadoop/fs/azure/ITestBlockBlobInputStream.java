@@ -25,9 +25,10 @@ import java.util.EnumSet;
 import java.util.Random;
 import java.util.concurrent.Callable;
 
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,8 +45,6 @@ import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils.NanoTimer;
 
-import static org.junit.Assume.assumeNotNull;
-
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 /**
@@ -53,7 +52,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
  * (KEY_INPUT_STREAM_VERSION=1) and the new
  * <code>BlockBlobInputStream</code> (KEY_INPUT_STREAM_VERSION=2).
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 
 public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -73,6 +72,7 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
   private FileStatus testFileStatus;
   private Path hugefile;
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -172,7 +172,7 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
     ContractTestUtils.assertPathExists(fs, "huge file not created", hugefile);
     FileStatus status = fs.getFileStatus(hugefile);
     ContractTestUtils.assertIsFile(hugefile, status);
-    assertTrue("File " + hugefile + " is empty", status.getLen() > 0);
+    assertTrue(status.getLen() > 0, "File " + hugefile + " is empty");
   }
 
   /**
@@ -299,12 +299,12 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
       byte[] bufferV2) throws IOException {
     int size = bufferV1.length;
     final int numBytesReadV1 = inputStreamV1.read(bufferV1, 0, size);
-    assertEquals("Bytes read from V1 stream", size, numBytesReadV1);
+    assertEquals(size, numBytesReadV1, "Bytes read from V1 stream");
 
     final int numBytesReadV2 = inputStreamV2.read(bufferV2, 0, size);
-    assertEquals("Bytes read from V2 stream", size, numBytesReadV2);
+    assertEquals(size, numBytesReadV2, "Bytes read from V2 stream");
 
-    assertArrayEquals("Mismatch in read data", bufferV1, bufferV2);
+    assertArrayEquals(bufferV1, bufferV2, "Mismatch in read data");
   }
 
   @Test
@@ -348,18 +348,18 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
       throws IOException {
     int size = bufferV1.length;
     int numBytesReadV1 = inputStreamV1.read(pos, bufferV1, 0, size);
-    assertEquals("Bytes read from V1 stream", size, numBytesReadV1);
+    assertEquals(size, numBytesReadV1, "Bytes read from V1 stream");
 
     int numBytesReadV2 = inputStreamV2.read(pos, bufferV2, 0, size);
-    assertEquals("Bytes read from V2 stream", size, numBytesReadV2);
+    assertEquals(size, numBytesReadV2, "Bytes read from V2 stream");
 
     int numBytesReadV2NoBuffer = inputStreamV2NoBuffer.read(pos,
         bufferV2NoBuffer, 0, size);
-    assertEquals("Bytes read from V2 stream (buffered pread disabled)", size,
-        numBytesReadV2NoBuffer);
+    assertEquals(size, numBytesReadV2NoBuffer,
+        "Bytes read from V2 stream (buffered pread disabled)");
 
-    assertArrayEquals("Mismatch in read data", bufferV1, bufferV2);
-    assertArrayEquals("Mismatch in read data", bufferV2, bufferV2NoBuffer);
+    assertArrayEquals(bufferV1, bufferV2, "Mismatch in read data");
+    assertArrayEquals(bufferV2, bufferV2NoBuffer, "Mismatch in read data");
   }
 
   /**
@@ -383,7 +383,7 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
   private void validateMarkSupported(FileSystem fs) throws IOException {
     assumeHugeFileExists();
     try (FSDataInputStream inputStream = fs.open(TEST_FILE_PATH)) {
-      assertTrue("mark is not supported", inputStream.markSupported());
+      assertTrue(inputStream.markSupported(), "mark is not supported");
     }
   }
 
@@ -417,7 +417,7 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
       assertEquals(buffer.length, bytesRead);
 
       inputStream.reset();
-      assertEquals("rest -> pos 0", 0, inputStream.getPos());
+      assertEquals(0, inputStream.getPos(), "rest -> pos 0");
 
       inputStream.mark(8 * KILOBYTE - 1);
 
@@ -510,11 +510,9 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
           }
       );
       long elapsedTimeMs = timer.elapsedTimeMs();
-      assertTrue(
-          String.format(
-              "There should not be any network I/O (elapsedTimeMs=%1$d).",
-              elapsedTimeMs),
-          elapsedTimeMs < 20);
+      assertTrue(elapsedTimeMs < 20, String.format(
+          "There should not be any network I/O (elapsedTimeMs=%1$d).",
+          elapsedTimeMs));
     }
   }
 
@@ -559,7 +557,7 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
           }
       );
 
-      assertTrue("Test file length only " + testFileLength, testFileLength > 0);
+      assertTrue(testFileLength > 0, "Test file length only " + testFileLength);
       inputStream.seek(testFileLength);
       assertEquals(testFileLength, inputStream.getPos());
 
@@ -576,10 +574,9 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
 
       long elapsedTimeMs = timer.elapsedTimeMs();
       assertTrue(
-          String.format(
-              "There should not be any network I/O (elapsedTimeMs=%1$d).",
-              elapsedTimeMs),
-          elapsedTimeMs < 20);
+          elapsedTimeMs < 20, String.format(
+          "There should not be any network I/O (elapsedTimeMs=%1$d).",
+          elapsedTimeMs));
     }
   }
 
@@ -770,13 +767,13 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
           (long) v2ElapsedMs,
           ratio));
     }
-    assertTrue(String.format(
+    assertTrue(
+       ratio < maxAcceptableRatio, String.format(
         "Performance of version 2 is not acceptable: v1ElapsedMs=%1$d,"
             + " v2ElapsedMs=%2$d, ratio=%3$.2f",
         (long) v1ElapsedMs,
         (long) v2ElapsedMs,
-        ratio),
-        ratio < maxAcceptableRatio);
+        ratio));
   }
 
   /**
@@ -804,14 +801,14 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
           (long) afterSeekElapsedMs,
           ratio));
     }
-    assertTrue(String.format(
+    assertTrue(
+       ratio < maxAcceptableRatio, String.format(
         "Performance of version 2 after reverse seek is not acceptable:"
             + " beforeSeekElapsedMs=%1$d, afterSeekElapsedMs=%2$d,"
             + " ratio=%3$.2f",
         (long) beforeSeekElapsedMs,
         (long) afterSeekElapsedMs,
-        ratio),
-        ratio < maxAcceptableRatio);
+        ratio));
   }
 
   private long sequentialRead(int version,
@@ -871,13 +868,13 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
           (long) v2ElapsedMs,
           ratio));
     }
-    assertTrue(String.format(
+    assertTrue(
+       ratio < maxAcceptableRatio, String.format(
         "Performance of version 2 is not acceptable: v1ElapsedMs=%1$d,"
             + " v2ElapsedMs=%2$d, ratio=%3$.2f",
         (long) v1ElapsedMs,
         (long) v2ElapsedMs,
-        ratio),
-        ratio < maxAcceptableRatio);
+        ratio));
   }
 
   private long randomRead(int version, FileSystem fs) throws IOException {

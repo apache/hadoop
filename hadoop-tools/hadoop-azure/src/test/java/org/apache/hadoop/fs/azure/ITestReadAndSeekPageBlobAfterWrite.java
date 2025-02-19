@@ -30,7 +30,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.integration.AbstractAzureScaleTest;
 import org.apache.hadoop.util.Time;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +64,7 @@ public class ITestReadAndSeekPageBlobAfterWrite extends AbstractAzureScaleTest {
   // path of page blob file to read and write
   private Path blobPath;
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -92,7 +94,7 @@ public class ITestReadAndSeekPageBlobAfterWrite extends AbstractAzureScaleTest {
     AzureNativeFileSystemStore store = ((NativeAzureFileSystem) fs).getStore();
     String[] a = blobPath.toUri().getPath().split("/");
     String key2 = a[1] + "/";
-    assertTrue("Not a page blob: " + blobPath, store.isPageBlobKey(key2));
+    assertTrue(store.isPageBlobKey(key2), "Not a page blob: " + blobPath);
   }
 
   /**
@@ -274,10 +276,9 @@ public class ITestReadAndSeekPageBlobAfterWrite extends AbstractAzureScaleTest {
       long end = Time.monotonicNow();
       LOG.debug("close duration = " + (end - start) + " msec.");
       if (writesSinceHFlush > 0) {
-        assertTrue(String.format(
+        assertTrue(end - start >= MINIMUM_EXPECTED_TIME, String.format(
             "close duration with >= 1 pending write is %d, less than minimum expected of %d",
-            end - start, MINIMUM_EXPECTED_TIME),
-            end - start >= MINIMUM_EXPECTED_TIME);
+            end - start, MINIMUM_EXPECTED_TIME));
         }
     }
 
@@ -332,8 +333,8 @@ public class ITestReadAndSeekPageBlobAfterWrite extends AbstractAzureScaleTest {
 
     // Verify we can list the new size. That will prove we expanded the file.
     FileStatus[] status = fs.listStatus(blobPath);
-    assertEquals("File size hasn't changed " + status,
-        numWrites * writeSize, status[0].getLen());
+    assertEquals(numWrites * writeSize, status[0].getLen(),
+        "File size hasn't changed " + status);
     LOG.debug("Total bytes written to " + blobPath + " = " + status[0].getLen());
     fs.delete(blobPath, false);
   }

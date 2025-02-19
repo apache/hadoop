@@ -30,9 +30,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests that we put the correct metadata on blobs created through WASB.
@@ -42,14 +42,14 @@ public class TestBlobMetadata extends AbstractWasbTestWithTimeout {
   private FileSystem fs;
   private InMemoryBlockBlobStore backingStore;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     testAccount = AzureBlobStorageTestAccount.createMock();
     fs = testAccount.getFileSystem();
     backingStore = testAccount.getMockStorage().getBackingStore();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     testAccount.cleanup();
     fs = null;
@@ -203,7 +203,7 @@ public class TestBlobMetadata extends AbstractWasbTestWithTimeout {
     fs.create(selfishFile, justMe, true, 4096, fs.getDefaultReplication(),
         fs.getDefaultBlockSize(), null).close();
     String mockUri = AzureBlobStorageTestAccount.toMockUri(selfishFile);
-    assertNotNull("converted URI", mockUri);
+    assertNotNull(mockUri, "converted URI");
     HashMap<String, String> metadata = backingStore
         .getMetadata(mockUri);
     assertNotNull(metadata);

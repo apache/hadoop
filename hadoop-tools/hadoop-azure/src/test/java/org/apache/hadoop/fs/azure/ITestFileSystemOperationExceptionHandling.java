@@ -28,8 +28,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.FSExceptionMessages.STREAM_IS_CLOSED;
 import static org.apache.hadoop.fs.azure.ExceptionHandlingTestHelper.*;
@@ -46,6 +47,7 @@ public class ITestFileSystemOperationExceptionHandling
   private Path testPath;
   private Path testFolderPath;
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -81,113 +83,127 @@ public class ITestFileSystemOperationExceptionHandling
   /**
    * Tests a basic single threaded read scenario for Page blobs.
    */
-  @Test(expected=FileNotFoundException.class)
+  @Test
   public void testSingleThreadedPageBlobReadScenario() throws Throwable {
-    AzureBlobStorageTestAccount testAccount = getPageBlobTestStorageAccount();
-    setupInputStreamToTest(testAccount);
-    byte[] readBuffer = new byte[512];
-    inputStream.read(readBuffer);
+    assertThrows(FileNotFoundException.class, () -> {
+      AzureBlobStorageTestAccount testAccount = getPageBlobTestStorageAccount();
+      setupInputStreamToTest(testAccount);
+      byte[] readBuffer = new byte[512];
+      inputStream.read(readBuffer);
+    });
   }
 
   /**
    * Tests a basic single threaded seek scenario for Page blobs.
    */
-  @Test(expected=FileNotFoundException.class)
+  @Test
   public void testSingleThreadedPageBlobSeekScenario() throws Throwable {
-    AzureBlobStorageTestAccount testAccount = getPageBlobTestStorageAccount();
-    setupInputStreamToTest(testAccount);
-    inputStream.seek(5);
+    assertThrows(FileNotFoundException.class, () -> {
+      AzureBlobStorageTestAccount testAccount = getPageBlobTestStorageAccount();
+      setupInputStreamToTest(testAccount);
+      inputStream.seek(5);
+    });
   }
 
   /**
    * Test a basic single thread seek scenario for Block blobs.
    */
-  @Test(expected=FileNotFoundException.class)
+  @Test
   public void testSingleThreadBlockBlobSeekScenario() throws Throwable {
-
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    setupInputStreamToTest(testAccount);
-    inputStream.seek(5);
-    inputStream.read();
+    assertThrows(FileNotFoundException.class, () -> {
+      AzureBlobStorageTestAccount testAccount = createTestAccount();
+      setupInputStreamToTest(testAccount);
+      inputStream.seek(5);
+      inputStream.read();
+    });
   }
 
   /**
    * Tests a basic single threaded read scenario for Block blobs.
    */
-  @Test(expected=FileNotFoundException.class)
-  public void testSingledThreadBlockBlobReadScenario() throws Throwable{
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    setupInputStreamToTest(testAccount);
-    byte[] readBuffer = new byte[512];
-    inputStream.read(readBuffer);
+  @Test
+  public void testSingledThreadBlockBlobReadScenario() throws Throwable {
+    assertThrows(FileNotFoundException.class, () -> {
+      AzureBlobStorageTestAccount testAccount = createTestAccount();
+      setupInputStreamToTest(testAccount);
+      byte[] readBuffer = new byte[512];
+      inputStream.read(readBuffer);
+    });
   }
 
   /**
    * Tests basic single threaded setPermission scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testSingleThreadedBlockBlobSetPermissionScenario() throws Throwable {
-
-    createEmptyFile(createTestAccount(), testPath);
-    fs.delete(testPath, true);
-    fs.setPermission(testPath,
-        new FsPermission(FsAction.EXECUTE, FsAction.READ, FsAction.READ));
+    assertThrows(FileNotFoundException.class, () -> {
+      createEmptyFile(createTestAccount(), testPath);
+      fs.delete(testPath, true);
+      fs.setPermission(testPath,
+         new FsPermission(FsAction.EXECUTE, FsAction.READ, FsAction.READ));
+    });
   }
 
   /**
    * Tests basic single threaded setPermission scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testSingleThreadedPageBlobSetPermissionScenario()
       throws Throwable {
-    createEmptyFile(getPageBlobTestStorageAccount(), testPath);
-    fs.delete(testPath, true);
-    fs.setOwner(testPath, "testowner", "testgroup");
+    assertThrows(FileNotFoundException.class, () -> {
+      createEmptyFile(getPageBlobTestStorageAccount(), testPath);
+      fs.delete(testPath, true);
+      fs.setOwner(testPath, "testowner", "testgroup");
+    });
   }
 
   /**
    * Tests basic single threaded setPermission scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testSingleThreadedBlockBlobSetOwnerScenario() throws Throwable {
-
-    createEmptyFile(createTestAccount(), testPath);
-    fs.delete(testPath, true);
-    fs.setOwner(testPath, "testowner", "testgroup");
+    assertThrows(FileNotFoundException.class, () -> {
+      createEmptyFile(createTestAccount(), testPath);
+      fs.delete(testPath, true);
+      fs.setOwner(testPath, "testowner", "testgroup");
+    });
   }
 
   /**
    * Tests basic single threaded setPermission scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testSingleThreadedPageBlobSetOwnerScenario() throws Throwable {
-    createEmptyFile(getPageBlobTestStorageAccount(),
-        testPath);
-    fs.delete(testPath, true);
-    fs.setPermission(testPath,
-        new FsPermission(FsAction.EXECUTE, FsAction.READ, FsAction.READ));
+    assertThrows(FileNotFoundException.class, ()->{
+      createEmptyFile(getPageBlobTestStorageAccount(), testPath);
+      fs.delete(testPath, true);
+      fs.setPermission(testPath,
+          new FsPermission(FsAction.EXECUTE, FsAction.READ, FsAction.READ));
+    });
   }
 
   /**
    * Test basic single threaded listStatus scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testSingleThreadedBlockBlobListStatusScenario() throws Throwable {
-    createTestFolder(createTestAccount(),
-        testFolderPath);
-    fs.delete(testFolderPath, true);
-    fs.listStatus(testFolderPath);
+    assertThrows(FileNotFoundException.class, () -> {
+      createTestFolder(createTestAccount(), testFolderPath);
+      fs.delete(testFolderPath, true);
+      fs.listStatus(testFolderPath);
+    });
   }
 
   /**
    * Test basic single threaded listStatus scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testSingleThreadedPageBlobListStatusScenario() throws Throwable {
-    createTestFolder(getPageBlobTestStorageAccount(),
-        testFolderPath);
-    fs.delete(testFolderPath, true);
-    fs.listStatus(testFolderPath);
+    assertThrows(FileNotFoundException.class, () -> {
+      createTestFolder(getPageBlobTestStorageAccount(), testFolderPath);
+      fs.delete(testFolderPath, true);
+      fs.listStatus(testFolderPath);
+    });
   }
 
   /**
@@ -247,25 +263,25 @@ public class ITestFileSystemOperationExceptionHandling
   /**
    * Test basic single threaded listStatus scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testSingleThreadedBlockBlobOpenScenario() throws Throwable {
-
-    createEmptyFile(createTestAccount(),
-        testPath);
-    fs.delete(testPath, true);
-    inputStream = fs.open(testPath);
+    assertThrows(FileNotFoundException.class, () -> {
+      createEmptyFile(createTestAccount(), testPath);
+      fs.delete(testPath, true);
+      inputStream = fs.open(testPath);
+    });
   }
 
   /**
    * Test delete then open a file.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testSingleThreadedPageBlobOpenScenario() throws Throwable {
-
-    createEmptyFile(getPageBlobTestStorageAccount(),
-        testPath);
-    fs.delete(testPath, true);
-    inputStream = fs.open(testPath);
+    assertThrows(FileNotFoundException.class, ()->{
+      createEmptyFile(getPageBlobTestStorageAccount(), testPath);
+      fs.delete(testPath, true);
+      inputStream = fs.open(testPath);
+    });
   }
 
   /**
@@ -285,7 +301,7 @@ public class ITestFileSystemOperationExceptionHandling
     out.close();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (inputStream != null) {
       inputStream.close();

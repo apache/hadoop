@@ -23,11 +23,11 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Iterator;
 
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +43,7 @@ import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 
 /**
@@ -60,7 +61,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
  * ordering.</b>
  */
 
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -80,6 +81,7 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
 
   private Path testPath;
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -151,8 +153,8 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
     assertPathExists(getFileSystem(), "huge file not created", hugefile);
     try {
       FileStatus status = getFileSystem().getFileStatus(hugefile);
-      Assume.assumeTrue("Not a file: " + status, status.isFile());
-      Assume.assumeTrue("File " + hugefile + " is empty", status.getLen() > 0);
+      assumeTrue(status.isFile(), "Not a file: " + status);
+      assumeTrue(status.getLen() > 0, "File " + hugefile + " is empty");
       return status;
     } catch (FileNotFoundException e) {
       skip("huge file not created: " + hugefile);
@@ -201,9 +203,9 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
         timeout, uploadTime, KEY_TEST_TIMEOUT, uploadTime * 2),
         uploadTime < timeout);
 */
-    assertEquals("File size set in " + KEY_HUGE_FILESIZE + " = " + filesize
-            + " is not a multiple of " + UPLOAD_BLOCKSIZE,
-        0, filesize % UPLOAD_BLOCKSIZE);
+    assertEquals(0, filesize % UPLOAD_BLOCKSIZE,
+        "File size set in " + KEY_HUGE_FILESIZE + " = " + filesize
+        + " is not a multiple of " + UPLOAD_BLOCKSIZE);
 
     byte[] data = SOURCE_DATA;
 
@@ -254,7 +256,7 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
     ContractTestUtils.assertPathExists(fs, "Huge file", hugefile);
     FileStatus status = fs.getFileStatus(hugefile);
     ContractTestUtils.assertIsFile(hugefile, status);
-    assertEquals("File size in " + status, filesize, status.getLen());
+    assertEquals(filesize, status.getLen(), "File size in " + status);
   }
 
   @Test
@@ -345,8 +347,7 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
   public void test_060_openAndReadWholeFileBlocks() throws Throwable {
     FileStatus status = assumeHugeFileExists();
     int blockSize = S_1M;
-    describe("Open the test file and read it in blocks of size %d",
-        blockSize);
+    describe("Open the test file and read it in blocks of size %d", blockSize);
     long len =  status.getLen();
     FSDataInputStream in = openDataFile();
     NanoTimer timer2 = null;
@@ -398,8 +399,8 @@ public class ITestAzureHugeFiles extends AbstractAzureScaleTest {
         if (bandwidthInBytes(blockTimer, blockSize) < minimumBandwidth) {
           LOG.warn("Bandwidth {} too low on block {}: resetting connection",
               bw, blockId);
-          Assert.assertTrue("Bandwidth of " + bw + " too low after "
-              + resetCount + " attempts", resetCount <= maxResetCount);
+          assertTrue(resetCount <= maxResetCount, "Bandwidth of " + bw + " too low after "
+              + resetCount + " attempts");
           resetCount++;
           // reset the connection
         }
