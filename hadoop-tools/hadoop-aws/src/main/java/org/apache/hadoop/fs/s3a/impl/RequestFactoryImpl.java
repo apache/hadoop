@@ -336,7 +336,6 @@ public class RequestFactoryImpl implements RequestFactory {
    * @param options options for the request, including headers
    * @param length length of object to be uploaded
    * @param isDirectoryMarker true if object to be uploaded is a directory marker
-   * @param putOptions
    * @return the request builder
    */
   @Override

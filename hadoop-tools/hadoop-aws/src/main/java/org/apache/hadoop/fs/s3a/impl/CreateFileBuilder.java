@@ -270,6 +270,8 @@ public class CreateFileBuilder extends
 
     /**
      * @param flags creation flags
+     * @param writeObjectFlags Create File switches.
+     * @param etag ETag, used only if enabled by switches
      * @param headers nullable header map.
      */
     public CreateFileOptions(
