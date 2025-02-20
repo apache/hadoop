@@ -1059,7 +1059,8 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
    */
   @Override
   public boolean isMultiDestDirectory(String src) throws IOException {
-    try {
+    asyncComplete(false);
+    asyncTry(() -> {
       if (rpcServer.isPathAll(src)) {
         List<RemoteLocation> locations;
         locations = rpcServer.getLocationsForPath(src, false, false);
@@ -1067,23 +1068,21 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
             new Class<?>[] {String.class}, new RemoteParam());
         rpcClient.invokeSequential(locations,
             method, HdfsFileStatus.class, null);
-        CompletableFuture<Object> completableFuture = getCompletableFuture();
-        completableFuture = completableFuture.thenApply(o -> {
-          HdfsFileStatus fileStatus = (HdfsFileStatus) o;
+        asyncApply((ApplyFunction<HdfsFileStatus, Boolean>) fileStatus -> {
           if (fileStatus != null) {
             return fileStatus.isDirectory();
           } else {
             LOG.debug("The destination {} doesn't exist.", src);
+            return false;
           }
-          return false;
         });
-        asyncCompleteWith(completableFuture);
-        return asyncReturn(Boolean.class);
       }
-    } catch (UnresolvedPathException e) {
+    });
+    asyncCatch((CatchFunction<Object, UnresolvedPathException>) (o, e) -> {
       LOG.debug("The destination {} is a symlink.", src);
-    }
-    asyncCompleteWith(CompletableFuture.completedFuture(false));
-    return asyncReturn(Boolean.class);
+      return false;
+    }, UnresolvedPathException.class);
+
+    return asyncReturn(boolean.class);
   }
 }
