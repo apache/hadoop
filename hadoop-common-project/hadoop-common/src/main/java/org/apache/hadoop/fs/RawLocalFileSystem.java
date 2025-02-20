@@ -49,6 +49,7 @@ import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -68,6 +69,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.VectoredReadUtils.LOG_BYTE_BUFFER_RELEASED;
 import static org.apache.hadoop.fs.VectoredReadUtils.sortRangeList;
 import static org.apache.hadoop.fs.VectoredReadUtils.validateRangeRequest;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
@@ -319,74 +321,125 @@ public class RawLocalFileSystem extends FileSystem {
     @Override
     public void readVectored(List<? extends FileRange> ranges,
                              IntFunction<ByteBuffer> allocate) throws IOException {
+      readVectored(ranges, allocate, LOG_BYTE_BUFFER_RELEASED);
+    }
+
+    @Override
+    public void readVectored(final List<? extends FileRange> ranges,
+        final IntFunction<ByteBuffer> allocate,
+        final Consumer<ByteBuffer> release) throws IOException {
 
       // Validate, but do not pass in a file length as it may change.
       List<? extends FileRange> sortedRanges = sortRangeList(ranges);
-      // Set up all of the futures, so that we can use them if things fail
-      for(FileRange range: sortedRanges) {
+      // Set up all of the futures, so that the caller can await on
+      // their competion.
+      for (FileRange range: sortedRanges) {
         validateRangeRequest(range);
         range.setData(new CompletableFuture<>());
       }
-      try {
-        AsynchronousFileChannel channel = getAsyncChannel();
-        ByteBuffer[] buffers = new ByteBuffer[sortedRanges.size()];
-        AsyncHandler asyncHandler = new AsyncHandler(channel, sortedRanges, buffers);
-        for(int i = 0; i < sortedRanges.size(); ++i) {
-          FileRange range = sortedRanges.get(i);
-          buffers[i] = allocate.apply(range.getLength());
-          channel.read(buffers[i], range.getOffset(), i, asyncHandler);
-        }
-      } catch (IOException ioe) {
-        LOG.debug("Exception occurred during vectored read ", ioe);
-        for(FileRange range: sortedRanges) {
-          range.getData().completeExceptionally(ioe);
-        }
-      }
+      // Initiate the asynchronous reads.
+      new AsyncHandler(getAsyncChannel(),
+          sortedRanges,
+          allocate,
+          release)
+          .initiateRead();
     }
   }
 
   /**
    * A CompletionHandler that implements readFully and translates back
    * into the form of CompletionHandler that our users expect.
+   * <p>
+   * All reads are started in {@link #initiateRead()};
+   * the handler then receives callbacks on success
+   * {@link #completed(Integer, Integer)}, and on failure
+   * by {@link #failed(Throwable, Integer)}.
+   * These are mapped to the specific range in the read, and its
+   * outcome updated.
    */
-  static class AsyncHandler implements CompletionHandler<Integer, Integer> {
+  private static class AsyncHandler implements CompletionHandler<Integer, Integer> {
+    /** File channel to read from. */
     private final AsynchronousFileChannel channel;
+
+    /** Ranges to fetch. */
     private final List<? extends FileRange> ranges;
+
+    /** Allocate operation. */
+    private final IntFunction<ByteBuffer> allocate;
+
+    /** Release operation. */
+    private final Consumer<ByteBuffer> release;
+
+    /** Buffers being read. */
     private final ByteBuffer[] buffers;
 
-    AsyncHandler(AsynchronousFileChannel channel,
-                 List<? extends FileRange> ranges,
-                 ByteBuffer[] buffers) {
+    AsyncHandler(
+        final AsynchronousFileChannel channel,
+        final List<? extends FileRange> ranges,
+        final IntFunction<ByteBuffer> allocate,
+        final Consumer<ByteBuffer> release) {
       this.channel = channel;
       this.ranges = ranges;
-      this.buffers = buffers;
+      this.allocate = allocate;
+      this.release = release;
+      this.buffers = new ByteBuffer[ranges.size()];
     }
 
+    /**
+     * Initiate the read operation.
+     * Allocate all buffers, queue the read into the channel,
+     * providing this object as the handler.
+     */
+    private void initiateRead() {
+      for(int i = 0; i < ranges.size(); ++i) {
+        FileRange range = ranges.get(i);
+        buffers[i] = allocate.apply(range.getLength());
+        channel.read(buffers[i], range.getOffset(), i, this);
+      }
+    }
+
+    /**
+     * Successful read, though for an EOF the number of bytes may be -1.
+     * That is mapped to a {@link #failed(Throwable, Integer)} outcome.
+     * @param result The bytes read or -1
+     * @param rangeIndex range index within the range list.
+     */
+
     @Override
-    public void completed(Integer result, Integer r) {
-      FileRange range = ranges.get(r);
-      ByteBuffer buffer = buffers[r];
+    public void completed(Integer result, Integer rangeIndex) {
+      FileRange range = ranges.get(rangeIndex);
+      ByteBuffer buffer = buffers[rangeIndex];
       if (result == -1) {
-        failed(new EOFException("Read past End of File"), r);
+        // no data was read back.
+        failed(new EOFException("Read past End of File"), rangeIndex);
       } else {
         if (buffer.remaining() > 0) {
           // issue a read for the rest of the buffer
-          // QQ: What if this fails? It has the same handler.
-          channel.read(buffer, range.getOffset() + buffer.position(), r, this);
+          channel.read(buffer, range.getOffset() + buffer.position(), rangeIndex, this);
         } else {
-          // QQ: Why  is this required? I think because we don't want the
-          // user to read data beyond limit.
+          // Flip the buffer and declare success.
           buffer.flip();
           range.getData().complete(buffer);
         }
       }
     }
 
+    /**
+     * The read of the range failed.
+     * <p>
+     * Release the buffer supplied for this range.
+     * @param exc exception.
+     * @param rangeIndex range index within the range list.
+     */
     @Override
-    public void failed(Throwable exc, Integer r) {
-      LOG.debug("Failed while reading range {} ", r, exc);
-      ranges.get(r).getData().completeExceptionally(exc);
+    public void failed(Throwable exc, Integer rangeIndex) {
+      LOG.debug("Failed while reading range {} ", rangeIndex, exc);
+      // release the buffer
+      release.accept(buffers[rangeIndex]);
+      // report the failure.
+      ranges.get(rangeIndex).getData().completeExceptionally(exc);
     }
+
   }
 
   @Override
