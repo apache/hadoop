@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -27,7 +26,6 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.List;
 
-import com.jcraft.jsch.IO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -268,12 +266,6 @@ public class AbfsRestOperation {
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
-  }
-
-  public InputStream executeAndGetContentInputStream(TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    execute(tracingContext);
-    return result.getListResultStream();
   }
 
   /**

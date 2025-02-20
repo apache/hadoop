@@ -481,19 +481,6 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   protected abstract InputStream getErrorStream() throws IOException;
 
-  /**
-   * Parse the list file response
-   *
-   * @param stream InputStream contains the list results.
-   * @throws IOException if the response cannot be deserialized.
-   */
-//  private void parseListFilesResponse(final InputStream stream) throws IOException {
-//    if (stream == null || listResultSchema != null) {
-//      return;
-//    }
-//    listResultSchema = client.parseListPathResults(stream);
-//  }
-
   private void parseBlockListResponse(final InputStream stream) throws IOException {
     if (stream == null || blockIdList != null) {
       return;

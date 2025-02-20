@@ -75,6 +75,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultEntrySchem
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListXmlParser;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResponseData;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
@@ -348,6 +349,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
    */
+  @Override
   public ListResponseData listPath(final String relativePath, final boolean recursive,
       final int listMaxResults, final String continuation, TracingContext tracingContext,
       IdentityTransformerInterface identityTransformer, URI uri) throws IOException {
@@ -378,6 +380,7 @@ public class AbfsBlobClient extends AbfsClient {
         HTTP_METHOD_GET,
         url,
         requestHeaders);
+
     op.execute(tracingContext);
     ListResponseData listResponseData = parseListPathResults(op.getResult(), identityTransformer, uri);
     listResponseData.setOp(op);
@@ -390,18 +393,28 @@ public class AbfsBlobClient extends AbfsClient {
       // If it is a file, we need to return the file in the list.
       // If it is a non-existing path, we need to throw a FileNotFoundException.
       if (relativePath.equals(ROOT_PATH)) {
-        // Root Always exists as directory. It can be a empty listing.
-        listResponseData.setOp(op);
+        // Root Always exists as directory. It can be an empty listing.
         return listResponseData;
       }
       AbfsRestOperation pathStatus = this.getPathStatus(relativePath, tracingContext, null, false);
       BlobListResultSchema listResultSchema = getListResultSchemaFromPathStatus(relativePath, pathStatus);
+      List<FileStatus> fileStatusList = new ArrayList<>();
+      Map<Path, Integer> renamePendingJsonPaths = new HashMap<>();
+      for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
+        fileStatusList.add(getFileStatusFromEntry(entry, identityTransformer, uri));
+        if (isRenamePendingJsonPathEntry(entry)) {
+          renamePendingJsonPaths.put(entry.path(), entry.contentLength().intValue());
+        }
+      }
       AbfsRestOperation listOp = getAbfsRestOperation(
           AbfsRestOperationType.ListBlobs,
           HTTP_METHOD_GET,
           url,
           requestHeaders);
       listOp.hardSetGetListStatusResult(HTTP_OK, listResultSchema);
+      listResponseData.setFileStatusList(fileStatusList);
+      listResponseData.setContinuationToken(null);
+      listResponseData.setRenamePendingJsonPaths(renamePendingJsonPaths);
       listResponseData.setOp(listOp);
       return listResponseData;
     }
@@ -1917,9 +1930,7 @@ public class AbfsBlobClient extends AbfsClient {
         nameToEntryMap.put(entry.name(), entry);
         fileStatuses.add(getFileStatusFromEntry(entry, identityTransformer, uri));
 
-        if (entry.path() != null && !entry.path().isRoot()
-            && isAtomicRenameKey(entry.path().toUri().getPath())
-            && entry.path().toUri().getPath().endsWith(RenameAtomicity.SUFFIX)) {
+        if (isRenamePendingJsonPathEntry(entry)) {
           renamePendingJsonPaths.put(entry.path(), entry.contentLength().intValue());
         }
       } else {
@@ -1937,6 +1948,12 @@ public class AbfsBlobClient extends AbfsClient {
     listResponseData.setRenamePendingJsonPaths(renamePendingJsonPaths);
     listResponseData.setContinuationToken(listResultSchema.getNextMarker());
     return listResponseData;
+  }
+
+  private boolean isRenamePendingJsonPathEntry(BlobListResultEntrySchema entry) {
+    return entry.path() != null && !entry.path().isRoot()
+        && isAtomicRenameKey(entry.path().toUri().getPath())
+        && entry.path().toUri().getPath().endsWith(RenameAtomicity.SUFFIX);
   }
 
   /**
@@ -1990,6 +2007,8 @@ public class AbfsBlobClient extends AbfsClient {
   @VisibleForTesting
   public boolean isNonEmptyDirectory(String path,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
+    // This method is only called internally to determine state of a path
+    // and hence don't need identity transformation to happen.
     ListResponseData listResponseData = listPath(path, false, 1, null, tracingContext,
         null, null, false);
     return !isEmptyListResults(listResponseData.getOp().getResult());

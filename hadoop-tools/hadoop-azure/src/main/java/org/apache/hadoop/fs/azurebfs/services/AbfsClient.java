@@ -1691,7 +1691,7 @@ public abstract class AbfsClient implements Closeable {
 
   /**
    * Parses response of Listing API from server based on Endpoint used.
-   * @param result InputStream of the response
+   * @param result AbfsHttpOperation of list Operation
    * @return ListResultSchema
    * @throws IOException if parsing fails
    */
@@ -1741,7 +1741,7 @@ public abstract class AbfsClient implements Closeable {
    */
   public abstract String decodeAttribute(byte[] value) throws UnsupportedEncodingException;
 
-  private String getPrimaryUserGroup() throws IOException {
+  private String getPrimaryUserGroup() throws AzureBlobFileSystemException {
     String primaryUserGroup;
     if (!getAbfsConfiguration().getSkipUserGroupMetadataDuringInitialization()) {
       try {
@@ -1758,23 +1758,31 @@ public abstract class AbfsClient implements Closeable {
     return primaryUserGroup;
   }
 
-  private String getPrimaryUser() throws IOException {
-    return UserGroupInformation.getCurrentUser().getShortUserName();
+  private String getPrimaryUser() throws AzureBlobFileSystemException {
+    try {
+      return UserGroupInformation.getCurrentUser().getUserName();
+    } catch (IOException ex) {
+      throw new AbfsDriverException(ex);
+    }
   }
 
   protected VersionedFileStatus getFileStatusFromEntry(
       ListResultEntrySchema entry,
       IdentityTransformerInterface identityTransformer,
-      URI uri) throws IOException {
+      URI uri) throws AzureBlobFileSystemException {
     final String owner, group;
-    if (identityTransformer != null) {
-      owner = identityTransformer.transformIdentityForGetRequest(
-          entry.owner(), true, getPrimaryUser());
-      group = identityTransformer.transformIdentityForGetRequest(
-          entry.group(), false, getPrimaryUserGroup());
-    } else {
-      owner = null;
-      group = null;
+    try{
+      if (identityTransformer != null) {
+        owner = identityTransformer.transformIdentityForGetRequest(
+            entry.owner(), true, getPrimaryUser());
+        group = identityTransformer.transformIdentityForGetRequest(
+            entry.group(), false, getPrimaryUserGroup());
+      } else {
+        owner = null;
+        group = null;
+      }
+    } catch (IOException ex) {
+      throw new AbfsDriverException(ex);
     }
     final String encryptionContext = entry.getXMsEncryptionContext();
     final FsPermission fsPermission = entry.permissions() == null
