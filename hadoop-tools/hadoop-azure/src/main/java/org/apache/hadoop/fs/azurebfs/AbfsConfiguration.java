@@ -415,7 +415,7 @@ public class AbfsConfiguration{
   private int producerQueueMaxSize;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_CONSUMER_MAX_LAG, DefaultValue = DEFAULT_FS_AZURE_CONSUMER_MAX_LAG)
+          FS_AZURE_CONSUMER_MAX_LAG, DefaultValue = DEFAULT_FS_AZURE_CONSUMER_MAX_LAG)
   private int listingMaxConsumptionLag;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
