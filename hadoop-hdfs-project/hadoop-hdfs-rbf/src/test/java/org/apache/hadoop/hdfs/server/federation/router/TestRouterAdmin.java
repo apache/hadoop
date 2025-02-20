@@ -76,13 +76,13 @@ import org.mockito.Mockito;
  */
 public class TestRouterAdmin {
 
-  private static StateStoreDFSCluster cluster;
-  private static RouterContext routerContext;
+  protected static StateStoreDFSCluster cluster;
+  protected static RouterContext routerContext;
   public static final String RPC_BEAN =
       "Hadoop:service=Router,name=FederationRPC";
-  private static List<MountTable> mockMountTable;
-  private static StateStoreService stateStore;
-  private static RouterRpcClient mockRpcClient;
+  protected static List<MountTable> mockMountTable;
+  protected static StateStoreService stateStore;
+  protected static RouterRpcClient mockRpcClient;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
