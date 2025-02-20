@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsAdmin.TRASH_PERMISSION;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -107,10 +109,15 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -2777,6 +2784,56 @@ public class TestDistributedFileSystem {
           () ->
           DFSTestUtil.createFile(fs, new Path("/testFile"),
               1024L, (short) 3, 1024L));
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testECAddExpectedReplicasToPending() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setInt(DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY, 0);
+    conf.setInt(DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 10);
+    conf.setInt(DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 3);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path dir = new Path("/dir");
+      dfs.mkdirs(dir);
+      dfs.enableErasureCodingPolicy("XOR-2-1-1024k");
+      dfs.setErasureCodingPolicy(dir, "XOR-2-1-1024k");
+
+      try (FSDataOutputStream str = dfs.create(new Path("/dir/file"));) {
+        DataNodeTestUtils.pauseIBR(cluster.getDataNodes().get(0));
+        DataNodeTestUtils.pauseIBR(cluster.getDataNodes().get(1));
+        Thread.sleep(1000);
+        for (int i = 0; i < 1024 * 1024; i++) {
+          str.write(i);
+        }
+        str.flush();
+        // Wait for dn2 IBR.
+        Thread.sleep(2000);
+      }
+
+      LocatedBlocks locatedBlocks = dfs.getClient().getBlockLocations("/dir/file", 1024 * 1024);
+      BlockManager blockManager = cluster.getNamesystem().getBlockManager();
+      BlockInfoStriped blockInfo = (BlockInfoStriped) blockManager.getStoredBlock(
+          locatedBlocks.getLocatedBlocks().get(0).getBlock().getLocalBlock());
+      assertEquals(1, blockInfo.numNodes());
+      int pendingNum =
+          BlockManagerTestUtil.getNumReplicasInPendingReconstruction(blockManager, blockInfo);
+      assertEquals(2, pendingNum);
+
+      DataNodeTestUtils.resumeIBR(cluster.getDataNodes().get(0));
+      DataNodeTestUtils.resumeIBR(cluster.getDataNodes().get(1));
+      // Wait for dn0 dn1 IBR.
+      Thread.sleep(2000);
+      pendingNum =
+          BlockManagerTestUtil.getNumReplicasInPendingReconstruction(blockManager, blockInfo);
+      assertEquals(0, pendingNum);
+
+      blockInfo = (BlockInfoStriped) blockManager.getStoredBlock(
+          locatedBlocks.getLocatedBlocks().get(0).getBlock().getLocalBlock());
+      assertEquals(2, blockInfo.numNodes());
+      assertEquals(BlockUCState.COMPLETE, blockInfo.getBlockUCState());
     }
   }
 

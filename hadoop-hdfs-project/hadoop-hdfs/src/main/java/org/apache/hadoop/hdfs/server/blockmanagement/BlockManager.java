@@ -1252,30 +1252,21 @@ public class BlockManager implements BlockStatsMXBean {
   /**
    * If IBR is not sent from expected locations yet, add the datanodes to
    * pendingReconstruction in order to keep RedundancyMonitor from scheduling
-   * the block. In case of erasure coding blocks, adds only in case there
-   * isn't any missing node.
+   * the block.
    */
   public void addExpectedReplicasToPending(BlockInfo blk) {
-    boolean addForStriped = false;
     DatanodeStorageInfo[] expectedStorages =
         blk.getUnderConstructionFeature().getExpectedStorageLocations();
-    if (blk.isStriped()) {
-      BlockInfoStriped blkStriped = (BlockInfoStriped) blk;
-      addForStriped =
-          blkStriped.getRealTotalBlockNum() == expectedStorages.length;
-    }
-    if (!blk.isStriped() || addForStriped) {
-      if (expectedStorages.length - blk.numNodes() > 0) {
-        ArrayList<DatanodeStorageInfo> pendingNodes = new ArrayList<>();
-        for (DatanodeStorageInfo storage : expectedStorages) {
-          DatanodeDescriptor dnd = storage.getDatanodeDescriptor();
-          if (blk.findStorageInfo(dnd) == null) {
-            pendingNodes.add(storage);
-          }
+    if (expectedStorages.length - blk.numNodes() > 0) {
+      ArrayList<DatanodeStorageInfo> pendingNodes = new ArrayList<>();
+      for (DatanodeStorageInfo storage : expectedStorages) {
+        DatanodeDescriptor dnd = storage.getDatanodeDescriptor();
+        if (blk.findStorageInfo(dnd) == null) {
+          pendingNodes.add(storage);
         }
-        pendingReconstruction.increment(blk,
-            pendingNodes.toArray(new DatanodeStorageInfo[pendingNodes.size()]));
       }
+      pendingReconstruction.increment(blk,
+          pendingNodes.toArray(new DatanodeStorageInfo[pendingNodes.size()]));
     }
   }
 
@@ -3868,6 +3859,10 @@ public class BlockManager implements BlockStatsMXBean {
       processExtraRedundancyBlock(storedBlock, fileRedundancy, node,
           delNodeHint);
     }
+    if (storedBlock.isStriped() && storedBlock.isComplete() && hasEnoughEffectiveReplicas(
+        storedBlock, num, 0)) {
+      pendingReconstruction.remove(storedBlock);
+    }
     // If the file redundancy has reached desired value
     // we can remove any corrupt replicas the block may have
     int corruptReplicasCount = corruptReplicas.numCorruptReplicas(storedBlock);
@@ -5048,6 +5043,9 @@ public class BlockManager implements BlockStatsMXBean {
             n.readOnlyReplicas(), n.outOfServiceReplicas(), expected);
       } else if (shouldProcessExtraRedundancy(n, expected)) {
         processExtraRedundancyBlock(block, expected, null, null);
+      }
+      if (block.isStriped() && hasEnoughEffectiveReplicas(block, n, 0)) {
+        pendingReconstruction.remove(block);
       }
     }
   }

@@ -172,6 +172,11 @@ public class BlockManagerTestUtil {
     blockManager.pendingReconstruction.getTimerThread().interrupt();
   }
 
+  public static int getNumReplicasInPendingReconstruction(final BlockManager blockManager,
+      BlockInfo blockInfo) {
+    return blockManager.pendingReconstruction.getNumReplicas(blockInfo);
+  }
+
   public static HeartbeatManager getHeartbeatManager(
       final BlockManager blockManager) {
     return blockManager.getDatanodeManager().getHeartbeatManager();
