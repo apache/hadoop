@@ -23,15 +23,15 @@ import java.io.IOException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.azurebfs.contracts.services.DfsListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests the JSON parsing for the listfilestatus response to ListResultSchema
  */
-public class ListResultSchemaTest {
+public class TestDfsListJsonParser {
 
   /**
    * Test parsing a JSON which matches the properties in the ListResultSchema
@@ -62,8 +62,8 @@ public class ListResultSchemaTest {
             + "\"rw-r--r--\" } ] } ";
 
     final ObjectMapper objectMapper = new ObjectMapper();
-    final ListResultSchema listResultSchema = objectMapper
-        .readValue(matchingJson, ListResultSchema.class);
+    final DfsListResultSchema listResultSchema = objectMapper
+        .readValue(matchingJson, DfsListResultSchema.class);
 
     assertThat(listResultSchema.paths().size())
         .describedAs("Only one path is expected as present in the input JSON")
@@ -123,8 +123,8 @@ public class ListResultSchemaTest {
         + "\"rw-r--r--\" } ] } ";
 
     final ObjectMapper objectMapper = new ObjectMapper();
-    final ListResultSchema listResultSchema = objectMapper
-        .readValue(matchingJson, ListResultSchema.class);
+    final DfsListResultSchema listResultSchema = objectMapper
+        .readValue(matchingJson, DfsListResultSchema.class);
 
     assertThat(listResultSchema.paths().size())
         .describedAs("Only one path is expected as present in the input JSON")

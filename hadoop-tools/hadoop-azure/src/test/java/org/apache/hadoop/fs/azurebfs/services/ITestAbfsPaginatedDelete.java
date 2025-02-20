@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers;
@@ -168,7 +167,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testNonRecursiveDeleteWithPagination() throws Exception {
-    Assume.assumeTrue(getAbfsServiceType() == AbfsServiceType.DFS);
+    assumeDfsServiceType();
     testNonRecursiveDeleteWithPaginationInternal(true);
     testNonRecursiveDeleteWithPaginationInternal(false);
   }
@@ -206,7 +205,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     Mockito.doReturn(isPaginatedDeleteEnabled).when(spiedClient).getIsPaginatedDeleteEnabled();
 
     AbfsRestOperation op = spiedClient.deletePath(
-        testPath.toString(), true, null, testTC, isHnsEnabled);
+        testPath.toString(), true, null, testTC);
 
     // Getting the xMsVersion that was used to make the request
     String xMsVersionUsed = getHeaderValue(op.getRequestHeaders(), X_MS_VERSION);
@@ -253,7 +252,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     Mockito.doReturn(isPaginatedDeleteEnabled).when(spiedClient).getIsPaginatedDeleteEnabled();
 
     AbfsRestOperation op = spiedClient.deletePath(
-        testPath.toString(), false, null, testTC, isHnsEnabled);
+        testPath.toString(), false, null, testTC);
 
     // Getting the url that was used to make the request
     String urlUsed = op.getUrl().toString();
@@ -280,7 +279,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     Mockito.doReturn(isPaginatedEnabled).when(spiedClient).getIsPaginatedDeleteEnabled();
 
     AbfsRestOperationException e = intercept(AbfsRestOperationException.class, () ->
-        spiedClient.deletePath(testPath.toString(), true, randomCT, testTC, isHnsEnabled));
+        spiedClient.deletePath(testPath.toString(), true, randomCT, testTC));
     assertStatusCode(e, HTTP_BAD_REQUEST);
   }
 
