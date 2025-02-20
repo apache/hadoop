@@ -74,6 +74,7 @@ import org.mockito.Mockito;
  * The administrator interface of the {@link Router} implemented by
  * {@link RouterAdminServer}.
  */
+@SuppressWarnings("checkstyle:visibilitymodifier")
 public class TestRouterAdmin {
 
   protected static StateStoreDFSCluster cluster;
