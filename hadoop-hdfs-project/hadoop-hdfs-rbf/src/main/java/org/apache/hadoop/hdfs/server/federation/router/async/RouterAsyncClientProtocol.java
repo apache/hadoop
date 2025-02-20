@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router.async;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.ContentSummary;
@@ -85,7 +86,6 @@ import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncU
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncForEach;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncReturn;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncTry;
-import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.getCompletableFuture;
 
 /**
  * Module that implements all the async RPC calls in {@link ClientProtocol} in the
@@ -1057,6 +1057,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
    *         subclusters else false in all other scenarios.
    * @throws IOException if unable to get the file status.
    */
+  @VisibleForTesting
   @Override
   public boolean isMultiDestDirectory(String src) throws IOException {
     asyncComplete(false);
