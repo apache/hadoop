@@ -76,6 +76,7 @@ import static org.apache.hadoop.fs.s3a.Invoker.LOG_EVENT;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.FILESYSTEM_TEMP_PATH;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.S3A_DYNAMIC_CAPABILITIES;
+import static org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration.DEFAULT_STREAM_TYPE;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.SELECT_UNSUPPORTED;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
@@ -469,12 +470,17 @@ public abstract class S3GuardTool extends Configured implements Tool,
       String encryption =
           printOption(out, "\tEncryption", Constants.S3_ENCRYPTION_ALGORITHM,
               "none");
-      printOption(out, "\tInput seek policy", INPUT_FADVISE,
+
+      // stream input
+      printOption(out, "\tInput stream type", INPUT_STREAM_TYPE,
+          DEFAULT_STREAM_TYPE.getName());
+      printOption(out, "\tInput seek policy", INPUT_STREAM_TYPE,
           Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT);
       printOption(out, "\tChange Detection Source", CHANGE_DETECT_SOURCE,
           CHANGE_DETECT_SOURCE_DEFAULT);
       printOption(out, "\tChange Detection Mode", CHANGE_DETECT_MODE,
           CHANGE_DETECT_MODE_DEFAULT);
+
       // committers
       println(out, "%nS3A Committers");
       boolean magic = fs.hasPathCapability(

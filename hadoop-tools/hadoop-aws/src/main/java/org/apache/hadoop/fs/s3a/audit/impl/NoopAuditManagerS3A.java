@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.audit.impl;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,6 +35,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.audit.AuditManagerS3A;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
+import org.apache.hadoop.fs.s3a.audit.AuditorFlags;
 import org.apache.hadoop.fs.s3a.audit.OperationAuditor;
 import org.apache.hadoop.fs.s3a.audit.OperationAuditorOptions;
 import org.apache.hadoop.service.CompositeService;
@@ -77,7 +79,7 @@ public class NoopAuditManagerS3A extends CompositeService
   @Override
   protected void serviceInit(final Configuration conf) throws Exception {
     super.serviceInit(conf);
-    NoopAuditor audit = new NoopAuditor(this);
+    NoopAuditor audit = new NoopAuditor("NoopAuditor", this);
     final OperationAuditorOptions options =
         OperationAuditorOptions.builder()
             .withConfiguration(conf)
@@ -168,5 +170,10 @@ public class NoopAuditManagerS3A extends CompositeService
       final String path1,
       final String path2) {
     return NoopSpan.INSTANCE;
+  }
+
+  @Override
+  public void setAuditFlags(final EnumSet<AuditorFlags> flags) {
+    /* no-op */
   }
 }
