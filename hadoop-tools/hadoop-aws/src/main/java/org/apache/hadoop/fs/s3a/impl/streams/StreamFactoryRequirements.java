@@ -85,7 +85,7 @@ public class StreamFactoryRequirements {
   }
 
   /**
-   * The maximum number of threads which can be used should by a single input stream,
+   * The maximum number of threads which can be used should by a single input stream.
    * @return thread pool requirements.
    */
   public int streamThreads() {
