@@ -23,33 +23,19 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddMountTableEntriesRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddMountTableEntriesResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddMountTableEntryRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddMountTableEntryResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.DisableNameserviceRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.DisableNameserviceResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.EnableNameserviceRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.EnableNameserviceResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.EnterSafeModeRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.EnterSafeModeResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetDisabledNameservicesRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetDisabledNameservicesResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetDestinationRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetDestinationResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetMountTableEntriesRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetMountTableEntriesResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetSafeModeRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetSafeModeResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.LeaveSafeModeRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.LeaveSafeModeResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshMountTableEntriesRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshMountTableEntriesResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshSuperUserGroupsConfigurationRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RefreshSuperUserGroupsConfigurationResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RemoveMountTableEntryRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RemoveMountTableEntryResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.UpdateMountTableEntryRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.UpdateMountTableEntryResponseProto;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RouterGenericManager;
 import org.apache.hadoop.hdfs.server.federation.router.NameserviceManager;
@@ -108,9 +94,7 @@ import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
-
-import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.getRemoteException;
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 
 /**
  * This class forwards RouterAdminProtocol calls as RPC calls to the RouterAdmin server
@@ -152,14 +136,9 @@ public class RouterAdminProtocolTranslatorPB
     AddMountTableEntryRequestPBImpl requestPB =
         (AddMountTableEntryRequestPBImpl)request;
     AddMountTableEntryRequestProto proto = requestPB.getProto();
-    try {
-      AddMountTableEntryResponseProto response =
-          rpcProxy.addMountTableEntry(null, proto);
-      return new AddMountTableEntryResponsePBImpl(response);
-    } catch (ServiceException e) {
 
-      throw new IOException(getRemoteException(e).getMessage());
-    }
+    return new AddMountTableEntryResponsePBImpl(
+        ipc(() -> rpcProxy.addMountTableEntry(null, proto)));
   }
 
   @Override
@@ -167,12 +146,10 @@ public class RouterAdminProtocolTranslatorPB
       throws IOException {
     AddMountTableEntriesRequestPBImpl requestPB = (AddMountTableEntriesRequestPBImpl) request;
     AddMountTableEntriesRequestProto proto = requestPB.getProto();
-    try {
-      AddMountTableEntriesResponseProto response = rpcProxy.addMountTableEntries(null, proto);
-      return new AddMountTableEntriesResponsePBImpl(response);
-    } catch (ServiceException e) {
-      throw new IOException(getRemoteException(e).getMessage());
-    }
+
+    return new AddMountTableEntriesResponsePBImpl(
+        ipc(() -> rpcProxy.addMountTableEntries(null, proto))
+    );
   }
 
   @Override
@@ -181,14 +158,10 @@ public class RouterAdminProtocolTranslatorPB
     UpdateMountTableEntryRequestPBImpl requestPB =
         (UpdateMountTableEntryRequestPBImpl)request;
     UpdateMountTableEntryRequestProto proto = requestPB.getProto();
-    try {
-      UpdateMountTableEntryResponseProto response =
-          rpcProxy.updateMountTableEntry(null, proto);
-      return new UpdateMountTableEntryResponsePBImpl(response);
-    } catch (ServiceException e) {
 
-      throw new IOException(getRemoteException(e).getMessage());
-    }
+    return new UpdateMountTableEntryResponsePBImpl(
+        ipc(() -> rpcProxy.updateMountTableEntry(null, proto))
+    );
   }
 
   @Override
@@ -197,14 +170,10 @@ public class RouterAdminProtocolTranslatorPB
     RemoveMountTableEntryRequestPBImpl requestPB =
         (RemoveMountTableEntryRequestPBImpl)request;
     RemoveMountTableEntryRequestProto proto = requestPB.getProto();
-    try {
-      RemoveMountTableEntryResponseProto responseProto =
-          rpcProxy.removeMountTableEntry(null, proto);
-      return new RemoveMountTableEntryResponsePBImpl(responseProto);
-    } catch (ServiceException e) {
 
-      throw new IOException(getRemoteException(e).getMessage());
-    }
+    return new RemoveMountTableEntryResponsePBImpl(
+        ipc(() -> rpcProxy.removeMountTableEntry(null, proto))
+    );
   }
 
   @Override
@@ -213,14 +182,10 @@ public class RouterAdminProtocolTranslatorPB
     GetMountTableEntriesRequestPBImpl requestPB =
         (GetMountTableEntriesRequestPBImpl)request;
     GetMountTableEntriesRequestProto proto = requestPB.getProto();
-    try {
-      GetMountTableEntriesResponseProto response =
-          rpcProxy.getMountTableEntries(null, proto);
-      return new GetMountTableEntriesResponsePBImpl(response);
-    } catch (ServiceException e) {
 
-      throw new IOException(getRemoteException(e).getMessage());
-    }
+    return new GetMountTableEntriesResponsePBImpl(
+        ipc(() -> rpcProxy.getMountTableEntries(null, proto))
+    );
   }
 
   @Override
@@ -228,14 +193,10 @@ public class RouterAdminProtocolTranslatorPB
       throws IOException {
     EnterSafeModeRequestProto proto =
         EnterSafeModeRequestProto.newBuilder().build();
-    try {
-      EnterSafeModeResponseProto response =
-          rpcProxy.enterSafeMode(null, proto);
-      return new EnterSafeModeResponsePBImpl(response);
-    } catch (ServiceException e) {
 
-      throw new IOException(getRemoteException(e).getMessage());
-    }
+    return new EnterSafeModeResponsePBImpl(
+        ipc(() -> rpcProxy.enterSafeMode(null, proto))
+    );
   }
 
   @Override
@@ -243,14 +204,10 @@ public class RouterAdminProtocolTranslatorPB
       throws IOException {
     LeaveSafeModeRequestProto proto =
         LeaveSafeModeRequestProto.newBuilder().build();
-    try {
-      LeaveSafeModeResponseProto response =
-          rpcProxy.leaveSafeMode(null, proto);
-      return new LeaveSafeModeResponsePBImpl(response);
-    } catch (ServiceException e) {
 
-      throw new IOException(getRemoteException(e).getMessage());
-    }
+    return new LeaveSafeModeResponsePBImpl(
+        ipc(() -> rpcProxy.leaveSafeMode(null, proto))
+    );
   }
 
   @Override
@@ -258,14 +215,10 @@ public class RouterAdminProtocolTranslatorPB
       throws IOException {
     GetSafeModeRequestProto proto =
         GetSafeModeRequestProto.newBuilder().build();
-    try {
-      GetSafeModeResponseProto response =
-          rpcProxy.getSafeMode(null, proto);
-      return new GetSafeModeResponsePBImpl(response);
-    } catch (ServiceException e) {
 
-      throw new IOException(getRemoteException(e).getMessage());
-    }
+    return new GetSafeModeResponsePBImpl(
+        ipc(() -> rpcProxy.getSafeMode(null, proto))
+    );
   }
 
   @Override
@@ -274,14 +227,10 @@ public class RouterAdminProtocolTranslatorPB
     DisableNameserviceRequestPBImpl requestPB =
         (DisableNameserviceRequestPBImpl)request;
     DisableNameserviceRequestProto proto = requestPB.getProto();
-    try {
-      DisableNameserviceResponseProto response =
-          rpcProxy.disableNameservice(null, proto);
-      return new DisableNameserviceResponsePBImpl(response);
-    } catch (ServiceException e) {
 
-      throw new IOException(getRemoteException(e).getMessage());
-    }
+    return new DisableNameserviceResponsePBImpl(
+        ipc(() -> rpcProxy.disableNameservice(null, proto))
+    );
   }
 
   @Override
@@ -290,14 +239,10 @@ public class RouterAdminProtocolTranslatorPB
     EnableNameserviceRequestPBImpl requestPB =
         (EnableNameserviceRequestPBImpl)request;
     EnableNameserviceRequestProto proto = requestPB.getProto();
-    try {
-      EnableNameserviceResponseProto response =
-          rpcProxy.enableNameservice(null, proto);
-      return new EnableNameserviceResponsePBImpl(response);
-    } catch (ServiceException e) {
 
-      throw new IOException(getRemoteException(e).getMessage());
-    }
+    return new EnableNameserviceResponsePBImpl(
+        ipc(() -> rpcProxy.enableNameservice(null, proto))
+    );
   }
 
   @Override
@@ -305,14 +250,10 @@ public class RouterAdminProtocolTranslatorPB
       GetDisabledNameservicesRequest request) throws IOException {
     GetDisabledNameservicesRequestProto proto =
         GetDisabledNameservicesRequestProto.newBuilder().build();
-    try {
-      GetDisabledNameservicesResponseProto response =
-          rpcProxy.getDisabledNameservices(null, proto);
-      return new GetDisabledNameservicesResponsePBImpl(response);
-    } catch (ServiceException e) {
 
-      throw new IOException(getRemoteException(e).getMessage());
-    }
+    return new GetDisabledNameservicesResponsePBImpl(
+        ipc(() -> rpcProxy.getDisabledNameservices(null, proto))
+    );
   }
 
   @Override
@@ -321,14 +262,10 @@ public class RouterAdminProtocolTranslatorPB
     RefreshMountTableEntriesRequestPBImpl requestPB =
         (RefreshMountTableEntriesRequestPBImpl) request;
     RefreshMountTableEntriesRequestProto proto = requestPB.getProto();
-    try {
-      RefreshMountTableEntriesResponseProto response =
-          rpcProxy.refreshMountTableEntries(null, proto);
-      return new RefreshMountTableEntriesResponsePBImpl(response);
-    } catch (ServiceException e) {
 
-      throw new IOException(getRemoteException(e).getMessage());
-    }
+    return new RefreshMountTableEntriesResponsePBImpl(
+        ipc(() -> rpcProxy.refreshMountTableEntries(null, proto))
+    );
   }
 
   @Override
@@ -337,28 +274,19 @@ public class RouterAdminProtocolTranslatorPB
     GetDestinationRequestPBImpl requestPB =
         (GetDestinationRequestPBImpl) request;
     GetDestinationRequestProto proto = requestPB.getProto();
-    try {
-      GetDestinationResponseProto response =
-          rpcProxy.getDestination(null, proto);
-      return new GetDestinationResponsePBImpl(response);
-    } catch (ServiceException e) {
 
-      throw new IOException(getRemoteException(e).getMessage());
-    }
+    return new GetDestinationResponsePBImpl(
+        ipc(() -> rpcProxy.getDestination(null, proto))
+    );
   }
 
   @Override
   public boolean refreshSuperUserGroupsConfiguration() throws IOException {
     RefreshSuperUserGroupsConfigurationRequestProto proto =
         RefreshSuperUserGroupsConfigurationRequestProto.newBuilder().build();
-    try {
-      RefreshSuperUserGroupsConfigurationResponseProto response =
-          rpcProxy.refreshSuperUserGroupsConfiguration(null, proto);
-      return new RefreshSuperUserGroupsConfigurationResponsePBImpl(response)
-          .getStatus();
-    } catch (ServiceException e) {
 
-      throw new IOException(getRemoteException(e).getMessage());
-    }
+    return new RefreshSuperUserGroupsConfigurationResponsePBImpl(
+        ipc(() -> rpcProxy.refreshSuperUserGroupsConfiguration(null, proto)))
+        .getStatus();
   }
 }
