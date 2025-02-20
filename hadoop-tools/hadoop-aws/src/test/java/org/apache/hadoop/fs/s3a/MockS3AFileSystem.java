@@ -45,7 +45,6 @@ import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.impl.StubContextAccessor;
-import org.apache.hadoop.fs.s3a.impl.store.StoreConfigurationService;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.test.MinimalWriteOperationHelperCallbacks;
@@ -125,8 +124,8 @@ public class MockS3AFileSystem extends S3AFileSystem {
 
   @Override
   protected S3AStore createS3AStore(final ClientManager clientManager,
-      final int rateLimitCapacity, final StoreConfigurationService storeConfiguration) {
-    return super.createS3AStore(clientManager, rateLimitCapacity, storeConfiguration);
+      final int rateLimitCapacity) {
+    return super.createS3AStore(clientManager, rateLimitCapacity);
   }
 
   @Override

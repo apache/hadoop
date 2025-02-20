@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
@@ -44,13 +45,13 @@ import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_ARRAY;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_MULTIPART;
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CONDITIONAL_CREATE_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeConditionalCreateEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_412_PRECONDITION_FAILED;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
@@ -73,9 +74,12 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
         S3ATestUtils.disableFilesystemCaching(conf);
         removeBaseAndBucketOverrides(
                 conf,
+                FS_S3A_CREATE_PERFORMANCE,
+                FS_S3A_PERFORMANCE_FLAGS,
                 MULTIPART_SIZE,
-                UPLOAD_PART_COUNT_LIMIT,
-                MIN_MULTIPART_THRESHOLD);
+                MIN_MULTIPART_THRESHOLD,
+                UPLOAD_PART_COUNT_LIMIT
+            );
         conf.setLong(UPLOAD_PART_COUNT_LIMIT, 2);
         conf.setLong(MIN_MULTIPART_THRESHOLD, UPDATED_MULTIPART_THRESHOLD);
         conf.setInt(MULTIPART_SIZE, UPDATED_MULTIPART_THRESHOLD);
@@ -86,8 +90,7 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
     public void setup() throws Exception {
         super.setup();
         Configuration conf = getConfiguration();
-        skipIfNotEnabled(conf, FS_S3A_CONDITIONAL_CREATE_ENABLED,
-                "Skipping IfNoneMatch tests");
+      assumeConditionalCreateEnabled(conf);
     }
 
     private static void assertS3ExceptionStatusCode(int code, Exception ex) {
@@ -102,7 +105,7 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
         return FAST_UPLOAD_BUFFER_ARRAY;
     }
 
-    private static void createFileWithFlags(
+    private static FileStatus createFileWithFlags(
             FileSystem fs,
             Path path,
             byte[] data,
@@ -115,15 +118,16 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
           stream.write(data);
         }
       }
+      return fs.getFileStatus(path);
     }
 
-    private static void createFileWithFlags(
+    private static FileStatus createFileWithFlags(
             FileSystem fs,
             Path path,
             byte[] data,
             boolean ifNoneMatchFlag,
             String etag) throws Exception {
-        createFileWithFlags(fs, path, data, ifNoneMatchFlag, etag, false);
+        return createFileWithFlags(fs, path, data, ifNoneMatchFlag, etag, false);
     }
 
      private static FSDataOutputStream getStreamWithFlags(
@@ -448,11 +452,11 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
         assertNotNull("ETag should not be null after file creation", etag);
 
         // Attempt to create a file at the same path without overwrite, using If-Match with the etag
-        FileAlreadyExistsException exception = intercept(FileAlreadyExistsException.class, () -> {
-            fs.createFile(testFile)
-                    .overwrite(false)
-                    .opt(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG, etag)
-                    .build();
+        intercept(FileAlreadyExistsException.class, () -> {
+           FSDataOutputStreamBuilder cf = fs.createFile(testFile);
+            cf.overwrite(false)
+                .opt(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG, etag);
+            cf.build().close();
         });
     }
 
@@ -545,14 +549,17 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
         assertEquals("First write using If-None-Match: conditional_create should be 1", 1L, conditionalCreate);
         assertEquals("First write using If-None-Match: conditional_create_failed should be 0", 0L, conditionalCreateFailed);
 
-        try {
+      intercept(RemoteFileChangedException.class,
+          () -> {
             // try again with If-None-Match. should fail
-            stream = getStreamWithFlags(fs, testFile, true, null, false);
-            updateStatistics(stream);
-            stream.write(SMALL_FILE_BYTES);
-            stream.close();
-            fail("Second write using If-None-Match should have failed due to existing file.");
-        } catch (RemoteFileChangedException e) {}
+            FSDataOutputStream s = getStreamWithFlags(fs, testFile, true, null, false);
+            updateStatistics(s);
+            s.write(SMALL_FILE_BYTES);
+            s.close();
+            return "Second write using If-None-Match should have failed due to existing file." + s;
+          }
+      );
+
 
         conditionalCreate = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE.getSymbol());
         conditionalCreateFailed = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE_FAILED.getSymbol());

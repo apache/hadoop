@@ -1523,7 +1523,6 @@ public final class Constants {
   public static final String FS_S3A_PERFORMANCE_FLAGS =
       "fs.s3a.performance.flags";
 
-
   /**
    * Is the create overwrite feature enabled or not?
    * A configuration option and a path status probe.
@@ -1532,12 +1531,10 @@ public final class Constants {
   public static final String FS_S3A_CONDITIONAL_CREATE_ENABLED = "fs.s3a.conditional.create.enabled";
 
   /**
-   * If conditional create is available, should it be used in
-   * createFile() operations to check for file existence?
-   * If set, this disables probes for directories.
+   * Default value for {@link #FS_S3A_CONDITIONAL_CREATE_ENABLED}.
    * Value {@value}.
    */
-  public static final String FS_S3A_CONDITIONAL_CREATE_FILES = "fs.s3a.conditional.create.files";
+  public static final boolean DEFAULT_FS_S3A_CONDITIONAL_CREATE_ENABLED = true;
 
   /**
    * createFile() boolean option toreate a multipart file, always: {@value}.

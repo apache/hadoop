@@ -147,8 +147,6 @@ import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.impl.StoreContextFactory;
 import org.apache.hadoop.fs.s3a.impl.UploadContentProviders;
 import org.apache.hadoop.fs.s3a.impl.CSEUtils;
-import org.apache.hadoop.fs.s3a.impl.store.StoreConfiguration;
-import org.apache.hadoop.fs.s3a.impl.store.StoreConfigurationService;
 import org.apache.hadoop.fs.s3a.impl.streams.InputStreamType;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
@@ -264,9 +262,6 @@ import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.isS3ExpressStore;
-import static org.apache.hadoop.fs.s3a.impl.store.StoreConfigurationFlags.ConditionalCreateAvailable;
-import static org.apache.hadoop.fs.s3a.impl.store.StoreConfigurationFlags.ConditionalCreateForFiles;
-import static org.apache.hadoop.fs.s3a.impl.store.StoreConfigurationFlags.DowngradeSyncableExceptions;
 import static org.apache.hadoop.fs.s3a.impl.streams.StreamFactoryRequirements.Requirements.ExpectUnauditedGetRequests;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.checkNoS3Guard;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
@@ -520,6 +515,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private boolean s3AccessGrantsEnabled;
 
+  /**
+   * Are the conditional create operations enabled?
+   */
+  private boolean conditionalCreateEnabled;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -620,9 +620,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       setUri(name, delegationTokensEnabled);
       super.initialize(uri, conf);
       setConf(conf);
-      // init store configuration service.
-      StoreConfigurationService storeConfiguration = new StoreConfigurationService();
-      storeConfiguration.init(conf);
 
       // initialize statistics, after which statistics
       // can be collected.
@@ -705,6 +702,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             " access points. Upgrading to V2");
         useListV1 = false;
       }
+      conditionalCreateEnabled = conf.getBoolean(FS_S3A_CONDITIONAL_CREATE_ENABLED,
+                DEFAULT_FS_S3A_CONDITIONAL_CREATE_ENABLED);
+
 
       signerManager = new SignerManager(bucket, this, conf, owner);
       signerManager.initCustomSigners();
@@ -806,9 +806,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       int rateLimitCapacity = intOption(conf, S3A_IO_RATE_LIMIT, DEFAULT_S3A_IO_RATE_LIMIT, 0);
 
       // now create and initialize the store
-      store = createS3AStore(clientManager,
-          rateLimitCapacity,
-          storeConfiguration);
+      store = createS3AStore(clientManager, rateLimitCapacity);
       // the s3 client is created through the store, rather than
       // directly through the client manager.
       // this is to aid mocking.
@@ -878,14 +876,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * This is protected so that tests can override it.
    * @param clientManager client manager
    * @param rateLimitCapacity rate limit
-   * @param storeConfiguration the store configuration.
    * @return a new store instance
    */
   @VisibleForTesting
   protected S3AStore createS3AStore(final ClientManager clientManager,
-      final int rateLimitCapacity,
-      final StoreConfigurationService storeConfiguration) {
-
+      final int rateLimitCapacity) {
     final S3AStore st = new S3AStoreBuilder()
         .withAuditSpanSource(getAuditManager())
         .withClientManager(clientManager)
@@ -893,13 +888,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withFsStatistics(getFsStatistics())
         .withInstrumentation(getInstrumentation())
         .withStatisticsContext(statisticsContext)
-        .withStoreConfigurationService(storeConfiguration)
         .withStoreContextFactory(this)
         .withStorageStatistics(getStorageStatistics())
         .withReadRateLimiter(unlimitedRate())
         .withWriteRateLimiter(RateLimitingFactory.create(rateLimitCapacity))
         .build();
-    st.init(storeConfiguration.getConfig());
+    st.init(getConf());
     st.start();
     return st;
   }
@@ -2113,30 +2107,34 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     boolean magic = isUnderMagicCommitPath(path);
 
     // store options
-    final StoreConfiguration storeConf = getStore().getStoreConfiguration();
-
     // is CC available.
-    boolean ccAvailable = storeConf.isFlagSet(ConditionalCreateAvailable);
-    // use it for files? this never evaluates to true if !ccAvailable
-    boolean ccForFiles = storeConf.isFlagSet(ConditionalCreateForFiles);
+    boolean ccAvailable = conditionalCreateEnabled;
 
     if (!ccAvailable && (cCreate || cEtag)) {
       // fail fast if conditional creation is requested on an FS without it.
-      throw new PathIOException(path.toString(),
-          "Conditonal File Creation is not available");
+      throw new PathIOException(path.toString(), "Conditional Writes Unavailable");
     }
 
     // probes to evaluate.
     Set<StatusProbeEnum> probes = EnumSet.of(
         StatusProbeEnum.List, StatusProbeEnum.Head);
 
+
+    // the PUT is conditional if requested, or if one of the
+    // this is a performance creation, overwrite has not been requested,
+    // this is not and etag write *and* conditional creation is available.
+    // write is NOT conditional etag write.
+    boolean conditionalPut = cCreate
+        || !(overwrite || cEtag) && ccAvailable && createPerf;
+
     // skip the HEAD check for many reasons
     // old: the path is magic, it's an overwrite or the "create" performance is set.
-    // new: any explicit create flag is set, or the FS is configured to
-    // use conditional creation as its overwrite check.
+    // new: also skip if any conditional create operation is in progress
+
     boolean skipHead =
         createPerf || magic || overwrite    // classic reasons to skip HEAD
-        || cCreate || cEtag || ccForFiles;  // conditional creation
+        || cCreate || cEtag;                // conditional creation
+
     if (skipHead) {
       probes.remove(StatusProbeEnum.Head);
     }
@@ -2146,12 +2144,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     if (skipList) {
       probes.remove(StatusProbeEnum.List);
     }
-
-    // the PUT is conditional if requested, or if one of the
-    // performance optimization options enables it and the
-    // write is NOT conditional etag write.
-    boolean conditionalPut = cCreate
-            || (ccAvailable && !cEtag && (createPerf || ccForFiles));
 
     // if probes are required -request them and evaluate the result.
     if (!probes.isEmpty()) {
@@ -2173,6 +2165,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       } catch (FileNotFoundException e) {
         // this means there is nothing at the path; all good.
       }
+    } else {
+      LOG.debug("Skipping all probes with flags:"
+              + " createPerf={}, magic={}, ccAvailable={}, cCreate={}, cEtag={}",
+          createPerf, magic, ccAvailable, cCreate, cEtag);
     }
     instrumentation.fileCreated();
     final BlockOutputStreamStatistics outputStreamStatistics
@@ -2207,7 +2203,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                     true,
                     outputStreamStatistics))
             .withDowngradeSyncableExceptions(
-                storeConf.isFlagSet(DowngradeSyncableExceptions))
+            getConf().getBoolean(
+                DOWNGRADE_SYNCABLE_EXCEPTIONS,
+                DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT))
             .withCSEEnabled(isCSEEnabled)
             .withPutOptions(putOptions)
             .withIOStatisticsAggregator(
@@ -5438,10 +5436,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case FS_S3A_CREATE_HEADER:
       return true;
 
+    // conditional create requires it to be enabled in the FS.
+    case FS_S3A_CONDITIONAL_CREATE_ENABLED:
     case FS_OPTION_CREATE_CONDITIONAL_OVERWRITE:
     case FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG:
-      // conditional create requires it to be enabled in the FS.
-      return store.getStoreConfiguration().isFlagSet(ConditionalCreateAvailable);
+      return conditionalCreateEnabled;
 
     // is the FS configured for create file performance
     case FS_S3A_CREATE_PERFORMANCE_ENABLED:
