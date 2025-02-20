@@ -22,6 +22,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -35,6 +36,7 @@ import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.transfer.s3.progress.TransferListener;
 
 import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.fs.s3a.audit.AuditorFlags;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -390,6 +392,11 @@ public final class ActiveAuditManagerS3A
         Statistic.AUDIT_SPAN_CREATION.getSymbol());
     return setActiveThreadSpan(auditor.createSpan(
         operation, path1, path2));
+  }
+
+  @Override
+  public void setAuditFlags(final EnumSet<AuditorFlags> flags) {
+    auditor.setAuditFlags(flags);
   }
 
   /**

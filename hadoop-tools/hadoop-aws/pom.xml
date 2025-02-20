@@ -48,9 +48,8 @@
     <!-- Set a longer timeout for integration test (in milliseconds) -->
     <test.integration.timeout>200000</test.integration.timeout>
 
-
-    <!-- Is prefetch enabled? -->
-    <fs.s3a.prefetch.enabled>unset</fs.s3a.prefetch.enabled>
+    <!-- stream type to use in tests; passed down in fs.s3a.input.stream.type  -->
+    <stream>classic</stream>
     <!-- Job ID; allows for parallel jobs on same bucket -->
     <!-- job.id is used to build the path for tests; default is 00.-->
     <job.id>00</job.id>
@@ -122,8 +121,8 @@
                 <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                 <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                 <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                <!-- Prefetch -->
-                <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
+                <!-- Stream Type -->
+                <fs.s3a.input.stream.type>${stream}</fs.s3a.input.stream.type>
               </systemPropertyVariables>
             </configuration>
           </plugin>
@@ -161,8 +160,8 @@
                     <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
                     <test.default.timeout>${test.integration.timeout}</test.default.timeout>
-                    <!-- Prefetch -->
-                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
+                    <!-- Stream Type -->
+                    <fs.s3a.input.stream.type>${stream}</fs.s3a.input.stream.type>
                     <!-- are root tests enabled. Set to false when running parallel jobs on same bucket -->
                     <fs.s3a.root.tests.enabled>${root.tests.enabled}</fs.s3a.root.tests.enabled>
 
@@ -212,8 +211,8 @@
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                    <!-- Prefetch -->
-                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
+                    <!-- Stream Type -->
+                    <fs.s3a.input.stream.type>${stream}</fs.s3a.input.stream.type>
                     <!-- are root tests enabled. Set to false when running parallel jobs on same bucket -->
                     <fs.s3a.root.tests.enabled>${root.tests.enabled}</fs.s3a.root.tests.enabled>
                     <test.unique.fork.id>job-${job.id}</test.unique.fork.id>
@@ -273,8 +272,8 @@
                     <fs.s3a.scale.test.enabled>${fs.s3a.scale.test.enabled}</fs.s3a.scale.test.enabled>
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                    <!-- Prefetch -->
-                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
+                    <!-- Stream Type -->
+                    <fs.s3a.input.stream.type>${stream}</fs.s3a.input.stream.type>
                     <test.unique.fork.id>job-${job.id}</test.unique.fork.id>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
@@ -308,7 +307,20 @@
         </property>
       </activation>
       <properties>
-        <fs.s3a.prefetch.enabled>true</fs.s3a.prefetch.enabled>
+        <stream>prefetch</stream>
+      </properties>
+    </profile>
+
+    <!-- Switch to the analytics input stream-->
+    <profile>
+      <id>analytics</id>
+      <activation>
+        <property>
+          <name>analytics</name>
+        </property>
+      </activation>
+      <properties>
+        <stream>analytics</stream>
       </properties>
     </profile>
 

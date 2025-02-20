@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.impl.SDKStreamDrainer;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 
 
@@ -60,7 +61,7 @@ public class S3ARemoteObject {
   /**
    * Callbacks used for interacting with the underlying S3 client.
    */
-  private final S3AInputStream.InputStreamCallbacks client;
+  private final ObjectInputStreamCallbacks client;
 
   /**
    * Used for reporting input stream access statistics.
@@ -100,7 +101,7 @@ public class S3ARemoteObject {
   public S3ARemoteObject(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
-      S3AInputStream.InputStreamCallbacks client,
+      ObjectInputStreamCallbacks client,
       S3AInputStreamStatistics streamStatistics,
       ChangeTracker changeTracker) {
 
