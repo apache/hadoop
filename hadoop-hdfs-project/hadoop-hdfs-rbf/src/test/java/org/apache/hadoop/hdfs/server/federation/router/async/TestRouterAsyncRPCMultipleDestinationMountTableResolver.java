@@ -61,7 +61,7 @@ public class TestRouterAsyncRPCMultipleDestinationMountTableResolver extends
     Configuration routerConf =
         new RouterConfigBuilder().stateStore().admin().quota().rpc().build();
     routerConf.setBoolean(DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, true);
-    
+
     Configuration hdfsConf = new Configuration(false);
     hdfsConf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
 

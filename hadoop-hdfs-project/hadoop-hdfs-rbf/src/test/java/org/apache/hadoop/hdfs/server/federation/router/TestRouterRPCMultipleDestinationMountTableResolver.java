@@ -75,6 +75,7 @@ import org.junit.Test;
 /**
  * Tests router rpc with multiple destination mount table resolver.
  */
+@SuppressWarnings("checkstyle:visibilitymodifier")
 public class TestRouterRPCMultipleDestinationMountTableResolver {
   protected static final List<String> NS_IDS = Arrays.asList("ns0", "ns1", "ns2");
 
