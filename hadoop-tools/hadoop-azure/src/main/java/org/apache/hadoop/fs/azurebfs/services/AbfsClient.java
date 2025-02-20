@@ -1691,11 +1691,11 @@ public abstract class AbfsClient implements Closeable {
 
   /**
    * Parses response of Listing API from server based on Endpoint used.
-   * @param stream InputStream of the response
+   * @param result InputStream of the response
    * @return ListResultSchema
    * @throws IOException if parsing fails
    */
-  public abstract ListResponseData parseListPathResults(InputStream stream,
+  public abstract ListResponseData parseListPathResults(AbfsHttpOperation result,
       IdentityTransformerInterface identityTransformer, URI uri) throws IOException;
 
   /**
@@ -1713,13 +1713,6 @@ public abstract class AbfsClient implements Closeable {
    * @throws IOException if parsing fails
    */
   public abstract StorageErrorResponseSchema processStorageErrorResponse(InputStream stream) throws IOException;
-
-  /**
-   * Returns continuation token from server response based on Endpoint used.
-   * @param result response from server
-   * @return continuation token
-   */
-  public abstract String getContinuationFromResponse(AbfsHttpOperation result);
 
   /**
    * Returns user-defined metadata from server response based on Endpoint used.
@@ -1799,7 +1792,7 @@ public abstract class AbfsClient implements Closeable {
 
     Path entryPath = new Path(File.separator + entry.name());
     if (uri != null) {
-      entryPath = new Path(uri.getPath(), entryPath);
+      entryPath = entryPath.makeQualified(uri, entryPath);
     }
     return new VersionedFileStatus(
         owner,

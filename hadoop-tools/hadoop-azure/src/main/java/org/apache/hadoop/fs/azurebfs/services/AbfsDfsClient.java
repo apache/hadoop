@@ -342,8 +342,8 @@ public class AbfsDfsClient extends AbfsClient {
     final AbfsRestOperation op = getAbfsRestOperation(
         AbfsRestOperationType.ListPaths,
         HTTP_METHOD_GET, url, requestHeaders);
-    InputStream listResultInputStream = op.executeAndGetContentInputStream(tracingContext);
-    ListResponseData listResponseData = parseListPathResults(listResultInputStream, identityTransformer, uri);
+    op.execute(tracingContext);
+    ListResponseData listResponseData = parseListPathResults(op.getResult(), identityTransformer, uri);
     listResponseData.setContinuationToken(getContinuationFromResponse(op.getResult()));
     listResponseData.setOp(op);
     return listResponseData;
@@ -1394,7 +1394,6 @@ public class AbfsDfsClient extends AbfsClient {
    * @param result The response from the server.
    * @return The continuation token.
    */
-  @Override
   public String getContinuationFromResponse(AbfsHttpOperation result) {
     return result.getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
   }
@@ -1414,16 +1413,18 @@ public class AbfsDfsClient extends AbfsClient {
 
   /**
    * Parse the list file response from DFS ListPath API in Json format
-   * @param stream InputStream contains the list results.
+   * @param result InputStream contains the list results.
    * @throws IOException if parsing fails.
    */
   @Override
-  public ListResponseData parseListPathResults(final InputStream stream,
+  public ListResponseData parseListPathResults(AbfsHttpOperation result,
       IdentityTransformerInterface identityTransformer, URI uri) throws IOException {
+    InputStream listResultInputStream = result.getListResultStream();
     DfsListResultSchema listResultSchema;
     try {
       final ObjectMapper objectMapper = new ObjectMapper();
-      listResultSchema = objectMapper.readValue(stream, DfsListResultSchema.class);
+      listResultSchema = objectMapper.readValue(listResultInputStream, DfsListResultSchema.class);
+      result.setListResultSchema(listResultSchema);
     } catch (IOException ex) {
       LOG.error("Unable to deserialize list results", ex);
       throw ex;

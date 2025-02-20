@@ -384,7 +384,8 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
       // consume the input stream to release resources
       int totalBytesRead = 0;
 
-      try (InputStream stream = getContentInputStream()) {
+      try {
+        InputStream stream = getContentInputStream();
         if (isNullInputStream(stream)) {
           return;
         }
@@ -396,7 +397,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
           if (url.toString().contains(QUERY_PARAM_COMP + EQUAL + BLOCKLIST)) {
             parseBlockListResponse(stream);
           } else {
-            listResultStream = stream;
+            listResultStream = getContentInputStream();
           }
         } else {
           if (buffer != null) {
@@ -671,6 +672,10 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   protected boolean isConnectionDisconnectedOnError() {
     return connectionDisconnectedOnError;
+  }
+
+  protected void setListResultSchema(final ListResultSchema listResultSchema) {
+    this.listResultSchema = listResultSchema;
   }
 
   public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {

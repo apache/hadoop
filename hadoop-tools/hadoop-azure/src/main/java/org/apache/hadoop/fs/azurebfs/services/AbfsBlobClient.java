@@ -378,10 +378,9 @@ public class AbfsBlobClient extends AbfsClient {
         HTTP_METHOD_GET,
         url,
         requestHeaders);
-
-    InputStream listResultInputStream = op.executeAndGetContentInputStream(tracingContext);
-    ListResponseData listResponseData = parseListPathResults(listResultInputStream, identityTransformer, uri);
-    listResponseData.setContinuationToken(getContinuationFromResponse(op.getResult()));
+    op.execute(tracingContext);
+    ListResponseData listResponseData = parseListPathResults(op.getResult(), identityTransformer, uri);
+    listResponseData.setOp(op);
 
     // Filter the paths for which no rename redo operation is performed.
     retryRenameOnAtomicEntriesInListResults(op, tracingContext, listResponseData.getRenamePendingJsonPaths());
@@ -1552,18 +1551,6 @@ public class AbfsBlobClient extends AbfsClient {
   }
 
   /**
-   * Get the continuation token from the response from BLOB Endpoint Listing.
-   * Continuation Token will be present in XML List response body.
-   * @param result The response from the server.
-   * @return The continuation token.
-   */
-  @Override
-  public String getContinuationFromResponse(AbfsHttpOperation result) {
-    BlobListResultSchema listResultSchema = (BlobListResultSchema) result.getListResultSchema();
-    return listResultSchema.getNextMarker();
-  }
-
-  /**
    * Get the User-defined metadata on a path from response headers of
    * GetBlobProperties API on Blob Endpoint.
    * Blob Endpoint returns each metadata as a separate header.
@@ -1593,13 +1580,14 @@ public class AbfsBlobClient extends AbfsClient {
 
   /**
    * Parse the XML response body returned by ListBlob API on Blob Endpoint.
-   * @param stream InputStream contains the response from server.
+   * @param result InputStream contains the response from server.
    * @return BlobListResultSchema containing the list of entries.
    */
   @Override
-  public ListResponseData parseListPathResults(final InputStream stream,
+  public ListResponseData parseListPathResults(AbfsHttpOperation result,
       IdentityTransformerInterface identityTransformer, URI uri)
       throws AzureBlobFileSystemException {
+    InputStream stream = result.getListResultStream();
     if (stream == null) {
       return null;
     }
@@ -1610,6 +1598,7 @@ public class AbfsBlobClient extends AbfsClient {
       listResultSchema = new BlobListResultSchema();
       saxParser.parse(stream,
           new BlobListXmlParser(listResultSchema, getBaseUrl().toString()));
+      result.setListResultSchema(listResultSchema);
     } catch (SAXException | IOException e) {
       throw new RuntimeException(e);
     }
@@ -1946,6 +1935,7 @@ public class AbfsBlobClient extends AbfsClient {
     ListResponseData listResponseData = new ListResponseData();
     listResponseData.setFileStatusList(fileStatuses);
     listResponseData.setRenamePendingJsonPaths(renamePendingJsonPaths);
+    listResponseData.setContinuationToken(listResultSchema.getNextMarker());
     return listResponseData;
   }
 
@@ -2019,8 +2009,6 @@ public class AbfsBlobClient extends AbfsClient {
     if (isEmptyList) {
       LOG.debug("List call returned empty results without any continuation token.");
       return true;
-    } else if (result != null && !(result.getListResultSchema() instanceof BlobListResultSchema)) {
-      throw new RuntimeException("List call returned unexpected results over Blob Endpoint.");
     }
     return false;
   }
