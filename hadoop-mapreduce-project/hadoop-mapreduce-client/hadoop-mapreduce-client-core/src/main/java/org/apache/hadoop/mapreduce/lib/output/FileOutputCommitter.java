@@ -508,7 +508,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
               }
             }
 
-            // The delete call succeeded. Try and rename the file again. 
+            // The delete call succeeded. Try and rename the file again.
             if (!fs.rename(from.getPath(), to)) {
               throw new IOException("Failed retry of rename " + from + " to " + to);
             }
@@ -524,11 +524,11 @@ public class FileOutputCommitter extends PathOutputCommitter {
 
           if (!fs.rename(from.getPath(), to)) {
             throw new IOException("Failed to rename " + from + " to " + to);
-          } 
+          }
         }
       } else if (from.isDirectory()) {
         FileStatus toStat = getFileStatus(fs, to);
-        
+
         if (toStat != null) {
           if (!toStat.isDirectory()) {
             if (!fs.delete(to, true)) {
