@@ -490,7 +490,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
 
       if (from.isFile()) {
         if (useOptimisticFileMerge) {
-          // This first assumes that there is no object in the destination.
+          // This assumes that there is no object in the destination.
           // If the rename succeeds this saves a getFileStatus call.
           // If the rename fails then it attempts to delete the object and tries
           // again.
