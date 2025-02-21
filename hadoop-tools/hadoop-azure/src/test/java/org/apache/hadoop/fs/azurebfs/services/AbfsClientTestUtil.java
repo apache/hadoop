@@ -34,10 +34,12 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
 import org.assertj.core.api.Assertions;
 import org.mockito.AdditionalMatchers;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
@@ -89,11 +91,15 @@ public final class AbfsClientTestUtil {
         new ArrayList<>(),
         spiedClient.getAbfsConfiguration()
     ));
+    ListResponseData listResponseData = Mockito.spy(new ListResponseData());
+    listResponseData.setRenamePendingJsonPaths(null);
+    listResponseData.setOp(abfsRestOperation);
+    listResponseData.setFileStatusList(new ArrayList<>());
 
     Mockito.doReturn(abfsRestOperation).when(spiedClient).getAbfsRestOperation(
         eq(AbfsRestOperationType.ListPaths), any(), any(), any());
 
-    addGeneralMockBehaviourToAbfsClient(spiedClient, exponentialRetryPolicy, staticRetryPolicy, intercept);
+    addGeneralMockBehaviourToAbfsClient(spiedClient, exponentialRetryPolicy, staticRetryPolicy, intercept, listResponseData);
     addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
     functionRaisingIOE.apply(httpOperation);
@@ -202,7 +208,8 @@ public final class AbfsClientTestUtil {
   public static void addGeneralMockBehaviourToAbfsClient(final AbfsClient abfsClient,
                                                          final ExponentialRetryPolicy exponentialRetryPolicy,
                                                          final StaticRetryPolicy staticRetryPolicy,
-                                                         final AbfsThrottlingIntercept intercept) throws IOException, URISyntaxException {
+                                                         final AbfsThrottlingIntercept intercept,
+      final ListResponseData listResponseData) throws IOException, URISyntaxException {
     Mockito.doReturn(OAuth).when(abfsClient).getAuthType();
     Mockito.doReturn("").when(abfsClient).getAccessToken();
     AbfsConfiguration abfsConfiguration = Mockito.mock(AbfsConfiguration.class);
@@ -215,6 +222,7 @@ public final class AbfsClientTestUtil {
         .when(intercept)
         .sendingRequest(any(), nullable(AbfsCounters.class));
     Mockito.doNothing().when(intercept).updateMetrics(any(), any());
+    Mockito.doReturn(listResponseData).when(abfsClient).parseListPathResults(any(), any(), any());
 
     // Returning correct retry policy based on failure reason
     Mockito.doReturn(exponentialRetryPolicy).when(abfsClient).getExponentialRetryPolicy();

@@ -98,6 +98,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
         assertTrue(errorInStatus + "not a file", fileStatus.isFile());
       }
     }
+    assertPathDns(fileStatus.getPath());
 
     return fileStatus;
   }

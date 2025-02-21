@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsTestWithTimeout;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultSchema;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResponseData;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformerInterface;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -65,9 +66,11 @@ public class TestListActionTaker extends AbstractAbfsTestWithTimeout {
     Mockito.doReturn(DEFAULT_FS_AZURE_PRODUCER_QUEUE_MAX_SIZE)
         .when(abfsConfiguration)
         .getProducerQueueMaxSize();
+    ListResponseData listResponseData = Mockito.mock(ListResponseData.class);
     AbfsRestOperation op = Mockito.mock(AbfsRestOperation.class);
     AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
     Mockito.doReturn(httpOperation).when(op).getResult();
+    Mockito.doReturn(op).when(listResponseData).getOp();
     BlobListResultSchema listResultSchema = Mockito.mock(
         BlobListResultSchema.class);
     Mockito.doReturn(listResultSchema)
@@ -134,7 +137,7 @@ public class TestListActionTaker extends AbstractAbfsTestWithTimeout {
           occurrences[0]++;
           Assertions.assertThat((int) answer.getArgument(2))
               .isEqualTo(DEFAULT_AZURE_LIST_MAX_RESULTS);
-          return op;
+          return listResponseData;
         }).when(client)
         .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
             Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(

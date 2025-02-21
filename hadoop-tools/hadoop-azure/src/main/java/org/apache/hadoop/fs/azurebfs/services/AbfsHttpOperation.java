@@ -221,6 +221,10 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return listResultSchema;
   }
 
+  public final InputStream getListResultStream() {
+    return listResultStream;
+  }
+
   /**
    * Get response header value for the given headerKey.
    *
@@ -568,11 +572,6 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   public final long getRecvLatency() {
     return recvResponseTimeMs;
   }
-
-  public final InputStream getListResultStream() {
-    return listResultStream;
-  }
-
   /**
    * Set response status code for the server call.
    *
