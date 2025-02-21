@@ -515,7 +515,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
           }
         } else {
           FileStatus toStat = getFileStatus(fs, to);
-          
+
           if (toStat != null) {
             if (!fs.delete(to, true)) {
               throw new IOException("Failed to delete " + to);

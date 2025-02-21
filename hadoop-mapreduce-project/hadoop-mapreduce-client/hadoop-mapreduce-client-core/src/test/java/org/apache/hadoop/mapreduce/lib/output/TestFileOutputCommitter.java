@@ -97,12 +97,12 @@ public class TestFileOutputCommitter {
 
     // Default configs
     testCases.add(Arguments.of(job.getConfiguration()));
-    
+
     // Optimistic file commits
     Configuration configOptimisticFileCommits = job.getConfiguration();
     configOptimisticFileCommits.set(FileOutputCommitter.FILEOUTPUTCOMMITTER_OPTIMISTIC_FILE_COMMIT_ENABLED, "true");
     testCases.add(Arguments.of(configOptimisticFileCommits));
-    
+
     return testCases;
   }
 
