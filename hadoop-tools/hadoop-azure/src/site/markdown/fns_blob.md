@@ -53,7 +53,7 @@ In both the cases the URL used must be the blob endpoint url of the account.
     ```xml
     <property>
       <name>fs.defaultFS</name>
-      <value>https://ACCOUNT_NAME.blob.core.windows.net</value>
+      <value>abfss://CONTAINER_NAME@ACCOUNT_NAME.blob.core.windows.net</value>
     </property>
     ```
 3. Service Type for FNS Accounts: This will allow an override to choose service
