@@ -137,7 +137,8 @@ public class TestRouterAsyncRPCMultipleDestinationMountTableResolver extends
     assertFalse(syncReturn(boolean.class));
     routerFs.createSymlink(new Path("/mount/dir/file"),
         new Path("/mount/dir/link"), true);
-    assertFalse(client.isMultiDestDirectory("/mount/dir/link"));
+    client.isMultiDestDirectory("/mount/dir/link");
+    assertFalse(syncReturn(boolean.class));
     routerFs.createSymlink(new Path("/mount/dir/dir"),
         new Path("/mount/dir/linkDir"), true);
     client.isMultiDestDirectory("/mount/dir/linkDir");
