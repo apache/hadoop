@@ -307,13 +307,13 @@ public class TestWriteReadStripedFile {
     Path srcPath = new Path("/ec/testReadBackoff");
     DFSTestUtil.writeFile(fs, srcPath, new String(expected));
 
-    Set<DatanodeInfoWithStorage> busyDns = new TreeSet<>();
+    Set<DatanodeInfoWithStorage> badDns = new TreeSet<>();
     DFSClientFaultInjector.set(new DFSClientFaultInjector() {
       @Override
       public void onCreateBlockReader(LocatedBlock block, int chunkIndex,
           long offset, long length) throws IOException {
-        if (busyDns.contains(block.getLocations()[0])) {
-          throw new IOException("ERROR_BUSY");
+        if (badDns.contains(block.getLocations()[0])) {
+          throw new IOException("FAILED TO CONNECT FOR TEST");
         }
       }
     });
@@ -337,7 +337,7 @@ public class TestWriteReadStripedFile {
       Assert.assertEquals(0, decodingTimeNanos);
     }
 
-    busyDns.add(chunkToDn[0]);
+    badDns.add(chunkToDn[0]);
     try (FSDataInputStream in = fs.open(srcPath)) {
       StripedFileTestUtil
           .verifyPread(in, fileLength, expected, largeBuf, ecPolicy);
@@ -355,7 +355,7 @@ public class TestWriteReadStripedFile {
       Assert.assertTrue("Decoding should have happened", decodingTimeNanos > 0);
     }
 
-    busyDns.add(chunkToDn[1]);
+    badDns.add(chunkToDn[1]);
     try (FSDataInputStream in = fs.open(srcPath)) {
       StripedFileTestUtil
           .verifyPread(in, fileLength, expected, largeBuf, ecPolicy);
@@ -373,7 +373,7 @@ public class TestWriteReadStripedFile {
       Assert.assertTrue("Decoding should have happened", decodingTimeNanos > 0);
     }
 
-    busyDns.add(chunkToDn[2]);
+    badDns.add(chunkToDn[2]);
     try (FSDataInputStream in = fs.open(srcPath)) {
       long start = Time.monotonicNow();
       Assert.assertThrows(IOException.class, () -> {
@@ -394,7 +394,7 @@ public class TestWriteReadStripedFile {
           LOG.error("Interrupted while waiting to mark the DqlBusyChecker as " +
               "not busy", ex);
         }
-        busyDns.remove(chunkToDn[0]);
+        badDns.remove(chunkToDn[0]);
       });
       long start = Time.monotonicNow();
       StripedFileTestUtil
@@ -408,7 +408,7 @@ public class TestWriteReadStripedFile {
       Assert.assertTrue("Decoding should have happened", decodingTimeNanos > 0);
     }
 
-    busyDns.add(chunkToDn[0]);
+    badDns.add(chunkToDn[0]);
     try (FSDataInputStream in = fs.open(srcPath)) {
       ExecutorService service = Executors.newSingleThreadExecutor();
       // set the DataNode busy status back to false after 10 seconds.
@@ -419,7 +419,7 @@ public class TestWriteReadStripedFile {
           LOG.error("Interrupted while waiting to mark the DqlBusyChecker as " +
               "not busy", ex);
         }
-        busyDns.remove(chunkToDn[0]);
+        badDns.remove(chunkToDn[0]);
       });
       long start = Time.monotonicNow();
       StripedFileTestUtil
