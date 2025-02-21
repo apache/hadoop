@@ -74,7 +74,7 @@ and [Flush](./blobEndpoint.html#put-block-list). All other operations will still
 configured service type.
     ```xml
    <property>
-        <name>fs.azure.fns.account.service.type</name>
+        <name>fs.azure.ingress.service.type</name>
         <value>BLOB</value>
     </property>
     ```
