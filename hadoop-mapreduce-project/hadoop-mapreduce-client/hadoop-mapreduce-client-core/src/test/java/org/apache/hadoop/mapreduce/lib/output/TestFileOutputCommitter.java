@@ -100,7 +100,8 @@ public class TestFileOutputCommitter {
 
     // Optimistic file commits
     Configuration configOptimisticFileCommits = job.getConfiguration();
-    configOptimisticFileCommits.set(FileOutputCommitter.FILEOUTPUTCOMMITTER_OPTIMISTIC_FILE_COMMIT_ENABLED, "true");
+    configOptimisticFileCommits.set(
+        FileOutputCommitter.FILEOUTPUTCOMMITTER_OPTIMISTIC_FILE_COMMIT_ENABLED, "true");
     testCases.add(Arguments.of(configOptimisticFileCommits));
 
     return testCases;
@@ -161,7 +162,8 @@ public class TestFileOutputCommitter {
     }
   }
   
-  private void testRecoveryInternal(int commitVersion, int recoveryVersion, Configuration additionalConfigs)
+  private void testRecoveryInternal(int commitVersion, int recoveryVersion,
+      Configuration additionalConfigs)
       throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
@@ -287,7 +289,8 @@ public class TestFileOutputCommitter {
     assert(dataFileFound && indexFileFound);
   }
 
-  private void testCommitterInternal(int version, boolean taskCleanup, Configuration additionalConfigs)
+  private void testCommitterInternal(int version, boolean taskCleanup,
+      Configuration additionalConfigs)
       throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
@@ -363,17 +366,20 @@ public class TestFileOutputCommitter {
 
   @ParameterizedTest
   @MethodSource("configurationProvider")
-  public void testCommitterWithDuplicatedCommitV1(Configuration additionalConfigs) throws Exception {
+  public void testCommitterWithDuplicatedCommitV1(
+      Configuration additionalConfigs) throws Exception {
     testCommitterWithDuplicatedCommitInternal(1, additionalConfigs);
   }
 
   @ParameterizedTest
   @MethodSource("configurationProvider")
-  public void testCommitterWithDuplicatedCommitV2(Configuration additionalConfigs) throws Exception {
+  public void testCommitterWithDuplicatedCommitV2(
+      Configuration additionalConfigs) throws Exception {
     testCommitterWithDuplicatedCommitInternal(2, additionalConfigs);
   }
 
-  private void testCommitterWithDuplicatedCommitInternal(int version, Configuration additionalConfigs) throws
+  private void testCommitterWithDuplicatedCommitInternal(int version,
+      Configuration additionalConfigs) throws
       Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
@@ -430,7 +436,8 @@ public class TestFileOutputCommitter {
     testCommitterWithFailureInternal(2, 2, additionalConfigs);
   }
 
-  private void testCommitterWithFailureInternal(int version, int maxAttempts, Configuration additionalConfigs)
+  private void testCommitterWithFailureInternal(int version, int maxAttempts,
+      Configuration additionalConfigs)
       throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
@@ -683,13 +690,15 @@ public class TestFileOutputCommitter {
 
   @ParameterizedTest
   @MethodSource("configurationProvider")
-  public void testAbortV1(Configuration additionalConfigs) throws IOException, InterruptedException {
+  public void testAbortV1(
+      Configuration additionalConfigs) throws IOException, InterruptedException {
     testAbortInternal(1, additionalConfigs);
   }
 
   @ParameterizedTest
   @MethodSource("configurationProvider")
-  public void testAbortV2(Configuration additionalConfigs) throws IOException, InterruptedException {
+  public void testAbortV2(
+      Configuration additionalConfigs) throws IOException, InterruptedException {
     testAbortInternal(2, additionalConfigs);
   }
 
@@ -799,7 +808,8 @@ public class TestFileOutputCommitter {
     }
   }
 
-  private void testConcurrentCommitTaskWithSubDir(int version, Configuration additionalConfigs)
+  private void testConcurrentCommitTaskWithSubDir(int version,
+      Configuration additionalConfigs)
       throws Exception {
     final Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
@@ -881,13 +891,15 @@ public class TestFileOutputCommitter {
 
   @ParameterizedTest
   @MethodSource("configurationProvider")
-  public void testConcurrentCommitTaskWithSubDirV1(Configuration additionalConfigs) throws Exception {
+  public void testConcurrentCommitTaskWithSubDirV1(
+      Configuration additionalConfigs) throws Exception {
     testConcurrentCommitTaskWithSubDir(1, additionalConfigs);
   }
 
   @ParameterizedTest
   @MethodSource("configurationProvider")
-  public void testConcurrentCommitTaskWithSubDirV2(Configuration additionalConfigs) throws Exception {
+  public void testConcurrentCommitTaskWithSubDirV2(
+      Configuration additionalConfigs) throws Exception {
     testConcurrentCommitTaskWithSubDir(2, additionalConfigs);
   }
 
