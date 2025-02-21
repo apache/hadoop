@@ -556,6 +556,10 @@ public class AbfsConfiguration{
     } else if (isHNSEnabled && fsConfiguredServiceType == AbfsServiceType.BLOB) {
       throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY,
           "Blob Endpoint Url Cannot be used to initialize filesystem for HNS Account");
+    } else if (getFsConfiguredServiceType() == AbfsServiceType.BLOB
+        && getIngressServiceType() == AbfsServiceType.DFS) {
+      throw new InvalidConfigurationValueException(
+          FS_AZURE_INGRESS_SERVICE_TYPE, "Ingress Type Cannot be DFS for Blob endpoint configured filesystem");
     }
   }
 
