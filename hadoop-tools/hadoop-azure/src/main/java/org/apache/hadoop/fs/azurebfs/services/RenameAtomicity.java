@@ -221,8 +221,7 @@ public class RenameAtomicity {
     abfsClient.append(path.toUri().getPath(), bytes,
         appendRequestParameters, null, null, tracingContext);
 
-        //List<String> blockIdList = new ArrayList<>(Collections.singleton(blockId));
-        String blockList = generateBlockListXml(blockId);
+    String blockList = generateBlockListXml(blockId);
     // PutBlockList on the path.
     abfsClient.flush(blockList.getBytes(StandardCharsets.UTF_8),
         path.toUri().getPath(), true, null, null, eTag, null, tracingContext);

@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.store.DataBlocks;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COMMA;
+
 /**
  * Manages Azure Blob blocks for append operations.
  */
@@ -61,7 +63,7 @@ public class AzureBlobBlockManager extends AzureBlockManager {
     if (abfsOutputStream.getPosition() > 0 && !abfsOutputStream.isAppendBlob()) {
       List<String> committedBlocks = getBlockList(abfsOutputStream.getTracingContext());
       if (!committedBlocks.isEmpty()) {
-        committedBlockEntries.append(String.join(",", committedBlocks)).append(",");
+        committedBlockEntries.append(String.join(COMMA, committedBlocks));
       }
     }
     LOG.debug("Created a new Blob Block Manager for AbfsOutputStream instance {} for path {}",
@@ -182,7 +184,7 @@ public class AzureBlobBlockManager extends AzureBlockManager {
       }
       // Append the current block's ID to the committedBlockBuilder
       if (committedBlockEntries.length() > 0) {
-        committedBlockEntries.append(",");
+        committedBlockEntries.append(COMMA);
       }
       committedBlockEntries.append(current.getBlockId());
       LOG.debug("Block {} added to committed entries.", current.getBlockId());

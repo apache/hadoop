@@ -198,7 +198,7 @@ public abstract class AzureIngressHandler {
    *
    * @return the block manager
    */
-  public abstract AzureBlockManager getBlockManager();
+  protected abstract AzureBlockManager getBlockManager();
 
   /**
    * Gets the client associated with this handler.
