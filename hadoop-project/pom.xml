@@ -144,7 +144,7 @@
     <jna.version>5.2.0</jna.version>
     <gson.version>2.9.0</gson.version>
     <metrics.version>3.2.4</metrics.version>
-    <netty4.version>4.1.116.Final</netty4.version>
+    <netty4.version>4.1.118.Final</netty4.version>
     <snappy-java.version>1.1.10.4</snappy-java.version>
     <lz4-java.version>1.7.1</lz4-java.version>
 
