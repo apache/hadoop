@@ -100,11 +100,17 @@ public class FileOutputCommitter extends PathOutputCommitter {
   public static final boolean
       FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED_DEFAULT = false;
 
+  public static final String FILEOUTPUTCOMMITTER_OPTIMISTIC_FILE_COMMIT_ENABLED =
+      "mapreduce.fileoutputcommitter.optimistic.file.commit.enabled";
+  public static final boolean
+      FILEOUTPUTCOMMITTER_OPTIMISTIC_FILE_COMMIT_ENABLED_DEFAULT = false;
+
   private Path outputPath = null;
   private Path workPath = null;
   private final int algorithmVersion;
   private final boolean skipCleanup;
   private final boolean ignoreCleanupFailures;
+  private final boolean useOptimisticFileMerge;
 
   /**
    * Create a file output committer
@@ -162,6 +168,10 @@ public class FileOutputCommitter extends PathOutputCommitter {
       FileSystem fs = outputPath.getFileSystem(context.getConfiguration());
       this.outputPath = fs.makeQualified(outputPath);
     }
+
+    useOptimisticFileMerge = conf.getBoolean(
+        FILEOUTPUTCOMMITTER_OPTIMISTIC_FILE_COMMIT_ENABLED,
+        FILEOUTPUTCOMMITTER_OPTIMISTIC_FILE_COMMIT_ENABLED_DEFAULT);
   }
   
   /**
@@ -446,6 +456,24 @@ public class FileOutputCommitter extends PathOutputCommitter {
   }
 
   /**
+   * Gets the file status for the path
+   * @param fs The file system to use
+   * @param p The path to get the status of
+   * @return The file status, or null if the path does not exist
+   * @throws IOException
+   */
+  private static FileStatus getFileStatus(FileSystem fs, Path p) throws IOException {
+    FileStatus stat;
+    try {
+      stat = fs.getFileStatus(p);
+    } catch (FileNotFoundException fnfe) {
+      stat = null;
+    }
+
+    return stat;
+  }
+
+  /**
    * Merge two paths together.  Anything in from will be moved into to, if there
    * are any name conflicts while merging the files or directories in from win.
    * @param fs the File System to use
@@ -459,24 +487,48 @@ public class FileOutputCommitter extends PathOutputCommitter {
         false,
         "Merging data from %s to %s", from, to)) {
       reportProgress(context);
-      FileStatus toStat;
-      try {
-        toStat = fs.getFileStatus(to);
-      } catch (FileNotFoundException fnfe) {
-        toStat = null;
-      }
 
       if (from.isFile()) {
-        if (toStat != null) {
-          if (!fs.delete(to, true)) {
-            throw new IOException("Failed to delete " + to);
-          }
-        }
+        if (useOptimisticFileMerge) {
+          // This first assumes that there is no object in the destination.
+          // If the rename succeeds this saves a getFileStatus call.
+          // If the rename fails then it attempts to delete the object and tries
+          // again.
+          if (!fs.rename(from.getPath(), to)) {
+            // There may be an object in the destination. Try and delete it.
+            if (!fs.delete(to, true)) {
+              // If the delete call did not succeed it means the rename
+              // did not fail from the case of a file/dir in the destination location with ACLs that allows
+              // for this client to delete it. Check the file status to give a failure that aligns with the
+              // non-optimistic file commit path.
+              if (getFileStatus(fs, to) != null) {
+                throw new IOException("Failed to delete " + to);
+              } else {
+                throw new IOException("Failed to rename " + from + " to " + to);
+              }
+            }
 
-        if (!fs.rename(from.getPath(), to)) {
-          throw new IOException("Failed to rename " + from + " to " + to);
+            // The delete call succeeded. Try and rename the file again. 
+            if (!fs.rename(from.getPath(), to)) {
+              throw new IOException("Failed retry of rename " + from + " to " + to);
+            }
+          }
+        } else {
+          FileStatus toStat = getFileStatus(fs, to);
+          
+          if (toStat != null) {
+            if (!fs.delete(to, true)) {
+              throw new IOException("Failed to delete " + to);
+            }
+          }
+
+          if (!fs.rename(from.getPath(), to)) {
+            throw new IOException("Failed to rename " + from + " to " + to);
+          } 
         }
       } else if (from.isDirectory()) {
+        FileStatus toStat = getFileStatus(fs, to);
+        
         if (toStat != null) {
           if (!toStat.isDirectory()) {
             if (!fs.delete(to, true)) {
