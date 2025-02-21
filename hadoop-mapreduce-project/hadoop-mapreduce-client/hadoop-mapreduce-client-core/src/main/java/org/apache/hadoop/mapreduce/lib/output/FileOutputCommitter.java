@@ -456,7 +456,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
   }
 
   /**
-   * Gets the file status for the path
+   * Gets the file status for the path.
    * @param fs The file system to use
    * @param p The path to get the status of
    * @return The file status, or null if the path does not exist
@@ -498,9 +498,9 @@ public class FileOutputCommitter extends PathOutputCommitter {
             // There may be an object in the destination. Try and delete it.
             if (!fs.delete(to, true)) {
               // If the delete call did not succeed it means the rename
-              // did not fail from the case of a file/dir in the destination location with ACLs that allows
-              // for this client to delete it. Check the file status to give a failure that aligns with the
-              // non-optimistic file commit path.
+              // did not fail from the case of a file/dir in the destination location with ACLs
+              // that allows for this client to delete it. Check the file status to give a
+              // failure that aligns with the non-optimistic file commit path.
               if (getFileStatus(fs, to) != null) {
                 throw new IOException("Failed to delete " + to);
               } else {
