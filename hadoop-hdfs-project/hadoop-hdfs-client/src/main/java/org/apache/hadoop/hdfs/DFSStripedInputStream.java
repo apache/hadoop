@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
+import org.apache.hadoop.util.Time;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -51,10 +52,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdfs.util.IOUtilsClient.updateReadStatistics;
 
@@ -76,6 +80,8 @@ public class DFSStripedInputStream extends DFSInputStream {
   protected ByteBuffer parityBuf;
   private final ErasureCodingPolicy ecPolicy;
   private RawErasureDecoder decoder;
+  private final ConcurrentHashMap<DatanodeInfo, RetryTimeoutPair> sleepingNodes =
+      new ConcurrentHashMap<>();
 
   /**
    * Indicate the start/end offset of the current buffered stripe in the
@@ -232,6 +238,102 @@ public class DFSStripedInputStream extends DFSInputStream {
     return pos - currentLocatedBlock.getStartOffset();
   }
 
+  private static class RetryTimeoutPair {
+    private int attempts = 0;
+    private long sleepTimestamp = 0;
+  }
+
+  /**
+   * Gets the list of nodes that are waiting to be retried.
+   * @return The list of sleeping nodes
+   */
+  protected Collection<DatanodeInfo> checkSleepingNodes() {
+    return sleepingNodes.entrySet().stream().filter(entry ->
+        entry.getValue().sleepTimestamp > Time.monotonicNow())
+            .map(Map.Entry::getKey)
+            .collect(Collectors.toSet());
+  }
+
+  private long getSleepingTimestamp(int attempts) {
+    // Introducing a random factor to the wait time before another retry.
+    // The wait time is dependent on # of failures and a random factor.
+    // At the first time of getting a BlockMissingException, the wait time
+    // is a random number between 0..3000 ms. If the first retry
+    // still fails, we will wait 3000 ms grace period before the 2nd retry.
+    // Also at the second retry, the waiting window is expanded to 6000 ms
+    // alleviating the request rate from the server. Similarly the 3rd retry
+    // will wait 6000ms grace period before retry and the waiting window is
+    // expanded to 9000ms.
+    // grace period for the last round of attempt
+    double waitTime = dfsClient.getConf().getTimeWindow() * attempts +
+        // expanding time window for each failure
+        dfsClient.getConf().getTimeWindow() * attempts *
+            ThreadLocalRandom.current().nextDouble();
+    return Time.monotonicNow() + (long)waitTime;
+  }
+
+  /**
+   * Checks whether the {@param block} is on a sleeping node.
+   * @param block the block to check
+   * @return True if the {@param block} is on a sleeping node, otherwise false.
+   */
+  protected boolean isBlockOnSleepingNode(LocatedBlock block) {
+    Collection<DatanodeInfo> sleepingNodes = checkSleepingNodes();
+    DNAddrPair dnInfo = getBestNodeDNAddrPair(block, null);
+    return dnInfo != null && sleepingNodes.contains(dnInfo.info);
+  }
+
+  /**
+   * Sleeps the thread until the next retry can be attempted.
+   */
+  protected void sleepUntilRetry() {
+    long sleepTimestamp = 0;
+    int countSleepingNodes = 0;
+    for (RetryTimeoutPair rt : sleepingNodes.values()) {
+      if (rt.sleepTimestamp > Time.monotonicNow()) {
+        countSleepingNodes++;
+        if (sleepTimestamp == 0) {
+          sleepTimestamp = rt.sleepTimestamp;
+        } else {
+          sleepTimestamp = Math.min(sleepTimestamp, rt.sleepTimestamp);
+        }
+      }
+    }
+    long duration = sleepTimestamp - Time.monotonicNow();
+    try {
+      DFSClient.LOG.warn("Failed to acquire {}/{} blocks, will wait " +
+                             "for {} msec and try again", countSleepingNodes,
+          dataBlkNum + parityBlkNum, duration);
+      Thread.sleep(duration);
+    } catch (InterruptedException e) {
+      DFSClient.LOG.warn("Error read retry backoff interrupted");
+    }
+  }
+
+  /**
+   * Update the {@param dnInfo} node with a new sleepTimestamp if it has any
+   * retries left, otherwise put it into the deadNodes list.
+   * @param dnInfo Update the sleeping information for this node.
+   * @return True if the node {@param dnInfo} will be retried, otherwise false.
+   */
+  protected boolean updateSleepingNodes(DatanodeInfo dnInfo) {
+    // Ignore nodes that are already in the deadNodes list.
+    if (!getLocalDeadNodes().containsKey(dnInfo)) {
+      RetryTimeoutPair rt = sleepingNodes.computeIfAbsent(dnInfo,
+          k -> new RetryTimeoutPair());
+      rt.attempts++;
+      if (rt.attempts > dfsClient.getConf().getMaxBlockAcquireFailures()) {
+        // If we are out of retries, then put the node into the deadNodes list
+        sleepingNodes.remove(dnInfo);
+        addToLocalDeadNodes(dnInfo);
+      } else {
+        rt.sleepTimestamp = getSleepingTimestamp(rt.attempts);
+        return true;
+      }
+    }
+    return false;
+  }
+
   boolean createBlockReader(LocatedBlock block, long offsetInBlock,
       LocatedBlock[] targetBlocks, BlockReaderInfo[] readerInfos,
       int chunkIndex, long readTo) throws IOException {
@@ -248,18 +350,18 @@ public class DFSStripedInputStream extends DFSInputStream {
         targetBlocks[chunkIndex] = block;
 
         // internal block has one location, just rule out the deadNodes
-        dnInfo = getBestNodeDNAddrPair(block, null);
+        dnInfo = getBestNodeDNAddrPair(block, checkSleepingNodes());
         if (dnInfo == null) {
           break;
         }
         if (readTo < 0 || readTo > block.getBlockSize()) {
           readTo = block.getBlockSize();
         }
+        DFSClientFaultInjector.get().onCreateBlockReader(block, chunkIndex, offsetInBlock,
+            readTo - offsetInBlock);
         reader = getBlockReader(block, offsetInBlock,
             readTo - offsetInBlock,
             dnInfo.addr, dnInfo.storageType, dnInfo.info);
-        DFSClientFaultInjector.get().onCreateBlockReader(block, chunkIndex, offsetInBlock,
-            readTo - offsetInBlock);
       } catch (IOException e) {
         if (e instanceof InvalidEncryptionKeyException &&
             retry.shouldRefetchEncryptionKey()) {
@@ -273,12 +375,11 @@ public class DFSStripedInputStream extends DFSInputStream {
           fetchBlockAt(block.getStartOffset());
           retry.refetchToken();
         } else {
-          //TODO: handles connection issues
           DFSClient.LOG.warn("Failed to connect to " + dnInfo.addr + " for " +
               "block" + block.getBlock(), e);
           // re-fetch the block in case the block has been moved
           fetchBlockAt(block.getStartOffset());
-          addToLocalDeadNodes(dnInfo.info);
+          updateSleepingNodes(dnInfo.info);
         }
       }
       if (reader != null) {

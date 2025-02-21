@@ -56,14 +56,14 @@ class PositionStripeReader extends StripeReader {
   @Override
   boolean prepareParityChunk(int index) {
     Preconditions.checkState(index >= dataBlkNum &&
-        alignedStripe.chunks[index] == null);
+        alignedStripe.isNull(index));
 
     int bufLen = (int) alignedStripe.getSpanInBlock();
     decodeInputs[index] = new ECChunk(codingBuffer.duplicate(), index * bufLen,
         bufLen);
 
-    alignedStripe.chunks[index] =
-        new StripingChunk(decodeInputs[index].getBuffer());
+    alignedStripe.setChunk(index,
+        new StripingChunk(decodeInputs[index].getBuffer()));
 
     return true;
   }
@@ -86,9 +86,9 @@ class PositionStripeReader extends StripeReader {
     }
 
     for (int i = 0; i < dataBlkNum; i++) {
-      if (alignedStripe.chunks[i] == null) {
-        alignedStripe.chunks[i] =
-            new StripingChunk(decodeInputs[i].getBuffer());
+      if (alignedStripe.isNull(i)) {
+        alignedStripe.setChunk(i,
+            new StripingChunk(decodeInputs[i].getBuffer()));
       }
     }
   }

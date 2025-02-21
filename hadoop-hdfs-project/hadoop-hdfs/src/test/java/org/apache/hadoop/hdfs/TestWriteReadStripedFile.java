@@ -17,14 +17,20 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.fs.HdfsBlockLocation;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -32,6 +38,7 @@ import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,6 +50,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY;
 
 public class TestWriteReadStripedFile {
   public static final Logger LOG =
@@ -75,7 +88,10 @@ public class TestWriteReadStripedFile {
   @Before
   public void setup() throws IOException {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
+    cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(numDNs)
+        .storagesPerDatanode(1)
+        .build();
     fs = cluster.getFileSystem();
     fs.enableErasureCodingPolicy(ecPolicy.getName());
     fs.mkdirs(new Path("/ec"));
@@ -277,6 +293,146 @@ public class TestWriteReadStripedFile {
     StripedFileTestUtil
         .verifyStatefulRead(fs, srcPath, fileLength, expected, smallBuf);
     // webhdfs doesn't support bytebuffer read
+  }
+
+  @Test
+  public void testReadBackoffRetry() throws Exception {
+    int fileLength = blockSize * dataBlocks + cellSize + 123;
+
+    fs.getConf().setLong(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 3000);
+    fs.getConf().setLong(DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, 3);
+    fs.initDFSClient(fs.getUri(), fs.getConf());
+
+    final byte[] expected = StripedFileTestUtil.generateBytes(fileLength);
+    Path srcPath = new Path("/ec/testReadBackoff");
+    DFSTestUtil.writeFile(fs, srcPath, new String(expected));
+
+    Set<DatanodeInfoWithStorage> busyDns = new TreeSet<>();
+    DFSClientFaultInjector.set(new DFSClientFaultInjector() {
+      @Override
+      public void onCreateBlockReader(LocatedBlock block, int chunkIndex,
+          long offset, long length) throws IOException {
+        if (busyDns.contains(block.getLocations()[0])) {
+          throw new IOException("ERROR_BUSY");
+        }
+      }
+    });
+    DatanodeInfoWithStorage[] chunkToDn =
+        new DatanodeInfoWithStorage[dataBlocks + parityBlocks];
+    HdfsBlockLocation[] locs =
+        (HdfsBlockLocation[])fs.getFileBlockLocations(srcPath, 0, fileLength);
+    LocatedBlock block = locs[0].getLocatedBlock();
+    for (int i = 0; i < block.getLocations().length; i++) {
+      chunkToDn[i] = block.getLocations()[i];
+    }
+
+    StripedFileTestUtil.verifyLength(fs, srcPath, fileLength);
+    byte[] largeBuf = new byte[fileLength + 100];
+    try (FSDataInputStream in = fs.open(srcPath)) {
+      StripedFileTestUtil
+          .verifyPread(in, fileLength, expected, largeBuf, ecPolicy);
+      long decodingTimeNanos =
+          ((HdfsDataInputStream) in).getReadStatistics().getTotalEcDecodingTimeNanos();
+      // Should read without any decoding
+      Assert.assertEquals(0, decodingTimeNanos);
+    }
+
+    busyDns.add(chunkToDn[0]);
+    try (FSDataInputStream in = fs.open(srcPath)) {
+      StripedFileTestUtil
+          .verifyPread(in, fileLength, expected, largeBuf, ecPolicy);
+      long decodingTimeNanos =
+          ((HdfsDataInputStream) in).getReadStatistics().getTotalEcDecodingTimeNanos();
+      // Should read without any decoding
+      Assert.assertTrue("Decoding should have happened", decodingTimeNanos > 0);
+    }
+    try (FSDataInputStream in = fs.open(srcPath)) {
+      StripedFileTestUtil
+          .verifyStatefulRead(in, fileLength, expected, largeBuf);
+      long decodingTimeNanos =
+          ((HdfsDataInputStream) in).getReadStatistics().getTotalEcDecodingTimeNanos();
+      // Should read without any decoding
+      Assert.assertTrue("Decoding should have happened", decodingTimeNanos > 0);
+    }
+
+    busyDns.add(chunkToDn[1]);
+    try (FSDataInputStream in = fs.open(srcPath)) {
+      StripedFileTestUtil
+          .verifyPread(in, fileLength, expected, largeBuf, ecPolicy);
+      long decodingTimeNanos =
+          ((HdfsDataInputStream) in).getReadStatistics().getTotalEcDecodingTimeNanos();
+      // Should read without any decoding
+      Assert.assertTrue("Decoding should have happened", decodingTimeNanos > 0);
+    }
+    try (FSDataInputStream in = fs.open(srcPath)) {
+      StripedFileTestUtil
+          .verifyStatefulRead(in, fileLength, expected, largeBuf);
+      long decodingTimeNanos =
+          ((HdfsDataInputStream) in).getReadStatistics().getTotalEcDecodingTimeNanos();
+      // Should read without any decoding
+      Assert.assertTrue("Decoding should have happened", decodingTimeNanos > 0);
+    }
+
+    busyDns.add(chunkToDn[2]);
+    try (FSDataInputStream in = fs.open(srcPath)) {
+      long start = Time.monotonicNow();
+      Assert.assertThrows(IOException.class, () -> {
+          StripedFileTestUtil
+              .verifyPread(in, fileLength, expected, largeBuf, ecPolicy);
+      });
+      long timeMs = Time.monotonicNow() - start;
+      Assert.assertTrue("Read should have been slower than 10 seconds but was "
+                            + timeMs + " ms",timeMs > 10000);
+    }
+    try (FSDataInputStream in = fs.open(srcPath)) {
+      ExecutorService service = Executors.newSingleThreadExecutor();
+      // set the DataNode busy status back to false after 10 seconds.
+      service.submit(() -> {
+        try {
+          Thread.sleep(10000);
+        } catch (InterruptedException ex) {
+          LOG.error("Interrupted while waiting to mark the DqlBusyChecker as " +
+              "not busy", ex);
+        }
+        busyDns.remove(chunkToDn[0]);
+      });
+      long start = Time.monotonicNow();
+      StripedFileTestUtil
+          .verifyPread(in, fileLength, expected, largeBuf, ecPolicy);
+      long timeMs = Time.monotonicNow() - start;
+      Assert.assertTrue("Read should have been slower than 10 seconds but was "
+          + timeMs + " ms",timeMs > 10000);
+      long decodingTimeNanos =
+          ((HdfsDataInputStream) in).getReadStatistics().getTotalEcDecodingTimeNanos();
+      // Should read without any decoding
+      Assert.assertTrue("Decoding should have happened", decodingTimeNanos > 0);
+    }
+
+    busyDns.add(chunkToDn[0]);
+    try (FSDataInputStream in = fs.open(srcPath)) {
+      ExecutorService service = Executors.newSingleThreadExecutor();
+      // set the DataNode busy status back to false after 10 seconds.
+      service.submit(() -> {
+        try {
+          Thread.sleep(10000);
+        } catch (InterruptedException ex) {
+          LOG.error("Interrupted while waiting to mark the DqlBusyChecker as " +
+              "not busy", ex);
+        }
+        busyDns.remove(chunkToDn[0]);
+      });
+      long start = Time.monotonicNow();
+      StripedFileTestUtil
+          .verifyStatefulRead(in, fileLength, expected, largeBuf);
+      // Should read with decoding
+      long timeMs = Time.monotonicNow() - start;
+      Assert.assertTrue("Read should have been slower than 10 seconds but was "
+          + timeMs + " ms",timeMs > 10000);
+      long decodingTimeNanos =
+          ((HdfsDataInputStream) in).getReadStatistics().getTotalEcDecodingTimeNanos();
+      // Should read without any decoding
+      Assert.assertTrue("Decoding should have happened", decodingTimeNanos > 0);
+    }
   }
 
   @Test

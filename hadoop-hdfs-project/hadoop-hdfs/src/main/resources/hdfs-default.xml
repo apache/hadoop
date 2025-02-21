@@ -4569,6 +4569,7 @@
   <value>3</value>
   <description>
     Maximum failures allowed when trying to get block information from a specific datanode.
+    This is used for both EC and replication.
   </description>
 </property>
 
@@ -4686,6 +4687,7 @@
     Base time window in ms for DFSClient retries.  For each retry attempt,
     this value is extended linearly (e.g. 3000 ms for first attempt and
     first retry, 6000 ms for second retry, 9000 ms for third retry, etc.).
+    This is used for both EC and replication
   </description>
 </property>
 

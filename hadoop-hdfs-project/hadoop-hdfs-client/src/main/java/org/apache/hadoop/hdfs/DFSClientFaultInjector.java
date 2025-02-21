@@ -68,7 +68,7 @@ public class DFSClientFaultInjector {
 
   public void delayWhenRenewLeaseTimeout() {}
 
-  public void onCreateBlockReader(LocatedBlock block, int chunkIndex, long offset, long length) {}
+  public void onCreateBlockReader(LocatedBlock block, int chunkIndex, long offset, long length) throws IOException {}
 
   public void failCreateBlockReader() throws InvalidBlockTokenException {}
 }

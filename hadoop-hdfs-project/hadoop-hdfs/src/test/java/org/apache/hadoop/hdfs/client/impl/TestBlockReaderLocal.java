@@ -858,7 +858,7 @@ public class TestBlockReaderLocal {
         Assert.assertEquals(BlockType.STRIPED, stats.getBlockType());
         Assert.assertEquals(length, stats.getTotalLocalBytesRead());
         Assert.assertEquals(length, stats.getTotalBytesRead());
-        Assert.assertTrue(stats.getTotalEcDecodingTimeMillis() > 0);
+        Assert.assertTrue(stats.getTotalEcDecodingTimeNanos() > 0);
       }
     }
   }

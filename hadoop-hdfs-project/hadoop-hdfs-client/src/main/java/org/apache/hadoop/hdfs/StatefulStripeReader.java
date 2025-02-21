@@ -63,9 +63,9 @@ class StatefulStripeReader extends StripeReader {
       cur.position(pos);
       cur.limit(pos + bufLen);
       decodeInputs[i] = new ECChunk(cur.slice(), 0, bufLen);
-      if (alignedStripe.chunks[i] == null) {
-        alignedStripe.chunks[i] =
-            new StripingChunk(decodeInputs[i].getBuffer());
+      if (alignedStripe.isNull(i)) {
+        alignedStripe.setChunk(i,
+            new StripingChunk(decodeInputs[i].getBuffer()));
       }
     }
   }
@@ -73,15 +73,15 @@ class StatefulStripeReader extends StripeReader {
   @Override
   boolean prepareParityChunk(int index) {
     Preconditions.checkState(index >= dataBlkNum
-        && alignedStripe.chunks[index] == null);
+        && alignedStripe.isNull(index));
     final int parityIndex = index - dataBlkNum;
     ByteBuffer buf = dfsStripedInputStream.getParityBuffer().duplicate();
     buf.position(cellSize * parityIndex);
     buf.limit(cellSize * parityIndex + (int) alignedStripe.range.spanInBlock);
     decodeInputs[index] =
         new ECChunk(buf.slice(), 0, (int) alignedStripe.range.spanInBlock);
-    alignedStripe.chunks[index] =
-        new StripingChunk(decodeInputs[index].getBuffer());
+    alignedStripe.setChunk(index,
+        new StripingChunk(decodeInputs[index].getBuffer()));
     return true;
   }
 

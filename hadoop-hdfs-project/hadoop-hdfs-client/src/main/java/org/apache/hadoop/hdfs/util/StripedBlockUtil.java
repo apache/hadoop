@@ -307,11 +307,11 @@ public class StripedBlockUtil {
     } catch (ExecutionException e) {
       LOG.debug("Exception during striped read task", e);
       return new StripingChunkReadResult(futures.remove(future),
-          StripingChunkReadResult.FAILED);
+          StripingChunkReadResult.FAILED, e);
     } catch (CancellationException e) {
       LOG.debug("Exception during striped read task", e);
       return new StripingChunkReadResult(futures.remove(future),
-          StripingChunkReadResult.CANCELLED);
+          StripingChunkReadResult.CANCELLED, e);
     }
   }
 
@@ -371,11 +371,11 @@ public class StripedBlockUtil {
         long overlapEnd = Math.min(cellEnd, stripeEnd);
         int overLapLen = (int) (overlapEnd - overlapStart + 1);
         if (overLapLen > 0) {
-          Preconditions.checkState(s.chunks[cell.idxInStripe] == null);
+          Preconditions.checkState(s.isNull(cell.idxInStripe));
           final int pos = (int) (bufOffset + overlapStart - cellStart);
           buf.position(pos);
           buf.limit(pos + overLapLen);
-          s.chunks[cell.idxInStripe] = new StripingChunk(buf.slice());
+          s.setChunk(cell.idxInStripe, new StripingChunk(buf.slice()));
         }
       }
       bufOffset += cell.size;
@@ -541,8 +541,8 @@ public class StripedBlockUtil {
     long prev = -1;
     for (long point : stripePoints) {
       if (prev >= 0) {
-        stripes.add(new AlignedStripe(prev, point - prev,
-            dataBlkNum + parityBlkNum));
+        stripes.add(new AlignedStripe(prev, point - prev, dataBlkNum,
+            parityBlkNum));
       }
       prev = point;
     }
@@ -573,7 +573,6 @@ public class StripedBlockUtil {
     for (StripingCell cell : cells) {
       long cellStart = cell.idxInInternalBlk * cellSize + cell.offset;
       long cellEnd = cellStart + cell.size - 1;
-      StripingChunk chunk;
       for (AlignedStripe s : stripes) {
         long stripeEnd = s.getOffsetInBlock() + s.getSpanInBlock() - 1;
         long overlapStart = Math.max(cellStart, s.getOffsetInBlock());
@@ -582,12 +581,10 @@ public class StripedBlockUtil {
         if (overLapLen <= 0) {
           continue;
         }
-        chunk = s.chunks[cell.idxInStripe];
-        if (chunk == null) {
-          chunk = new StripingChunk();
-          s.chunks[cell.idxInStripe] = chunk;
+        if (s.isNull(cell.idxInStripe)) {
+          s.setChunk(cell.idxInStripe, new StripingChunk());
         }
-        chunk.getChunkBuffer().addSlice(buf,
+        s.getChunkBuffer(cell.idxInStripe).addSlice(buf,
             (int) (done + overlapStart - cellStart), overLapLen);
       }
       done += cell.size;
@@ -605,8 +602,8 @@ public class StripedBlockUtil {
         long internalBlkLen = getInternalBlockLength(blockGroup.getBlockSize(),
             cellSize, dataBlkNum, i);
         if (internalBlkLen <= s.getOffsetInBlock()) {
-          Preconditions.checkState(s.chunks[i] == null);
-          s.chunks[i] = new StripingChunk(StripingChunk.ALLZERO);
+          Preconditions.checkState(s.isNull(i));
+          s.setChunk(i, new StripingChunk(StripingChunk.ALLZERO));
         }
       }
     }
@@ -714,16 +711,202 @@ public class StripedBlockUtil {
   public static class AlignedStripe {
     public VerticalRange range;
     /** status of each chunk in the stripe. */
-    public final StripingChunk[] chunks;
-    public int fetchedChunksNum = 0;
-    public int missingChunksNum = 0;
+    private final StripingChunk[] chunks;
+    private final int dataBlkNum;
+    private final int parityBlkNum;
+    private Map<Integer, Integer> dataStateCounts = new HashMap<>();
+    private Map<Integer, Integer> parityStateCounts = new HashMap<>();
 
-    public AlignedStripe(long offsetInBlock, long length, int width) {
+    /**
+     * Get the state of the chunk, or null if the chunk is null
+     * @param chunkIndex The chunk to get the state of
+     * @return The state of the chunk at {@param chunkIndex}, or null if the
+     * chunk at {@param chunkIndex} is null
+     */
+    private Integer getChunkState(int chunkIndex) {
+      if (chunks[chunkIndex] == null) {
+        return null;
+      }
+      return chunks[chunkIndex].state;
+    }
+
+    private void setChunkState(int chunkIndex, int chunkState) {
+      updateStateCount(chunkIndex, getChunkState(chunkIndex), -1);
+      updateStateCount(chunkIndex, chunkState, 1);
+      chunks[chunkIndex].state = chunkState;
+    }
+
+    private int getChunkStateCount(Integer chunkState) {
+      return getParityChunkStateCount(chunkState) +
+                 getDataChunkStateCount(chunkState);
+    }
+
+    private int getDataChunkStateCount(Integer chunkState) {
+      return dataStateCounts.getOrDefault(chunkState, 0);
+    }
+
+    private int getParityChunkStateCount(Integer chunkState) {
+      return parityStateCounts.getOrDefault(chunkState, 0);
+    }
+
+    public void setChunk(int chunkIndex, StripingChunk chunk) {
+      updateStateCount(chunkIndex, getChunkState(chunkIndex), -1);
+      updateStateCount(chunkIndex, chunk.state, 1);
+      chunks[chunkIndex] = chunk;
+    }
+
+
+    private void updateStateCount(int chunkIndex, Integer chunkState,
+        int delta) {
+      if (chunkIndex < dataBlkNum) {
+        dataStateCounts.merge(chunkState, delta, Integer::sum);
+      } else {
+        parityStateCounts.merge(chunkState, delta, Integer::sum);
+      }
+    }
+
+    public boolean useChunkBuffer(int chunkIndex) {
+      return chunks[chunkIndex].useChunkBuffer();
+    }
+
+    public ChunkByteBuffer getChunkBuffer(int chunkIndex) {
+      return chunks[chunkIndex].getChunkBuffer();
+    }
+
+    public boolean useByteBuffer(int chunkIndex) {
+      return chunks[chunkIndex].useByteBuffer();
+    }
+
+    public ByteBuffer getByteBuffer(int chunkIndex) {
+      return chunks[chunkIndex].getByteBuffer();
+    }
+
+    public int getMissingChunksNum() {
+      return getChunkStateCount(StripingChunk.MISSING);
+    }
+
+    /**
+     * Get the number of fetched chunks that have been read into the buffer
+     * and are ready to decode.
+     * @return The number of {@link StripingChunk#FETCHED} and
+     * {@link StripingChunk#ALLZERO} chunks. If we are not attempting to
+     * decode, then we include the null data chunks because they only need to
+     * be fetched if we need to decode.
+     */
+    public int getFetchedChunksNum() {
+      int fetchedChunksNum = fetchedDataChunkNum();
+      fetchedChunksNum += getParityChunkStateCount(StripingChunk.FETCHED);
+      return fetchedChunksNum;
+    }
+
+    public int fetchedDataChunkNum() {
+      int fetchedChunksNum = 0;
+      if (getDataChunkStateCount(StripingChunk.MISSING) == 0 &&
+          getDataChunkStateCount(StripingChunk.SLEEPING) == 0) {
+        // If there are not missing or sleeping data chunks, then we do not
+        // need to fetch the null data chunks for decoding, so they can be
+        // counted as fetched
+        fetchedChunksNum += getDataChunkStateCount(null);
+      }
+      fetchedChunksNum += getDataChunkStateCount(StripingChunk.FETCHED);
+      fetchedChunksNum += getDataChunkStateCount(StripingChunk.ALLZERO);
+      return fetchedChunksNum;
+    }
+
+    public int getSleepingChunksNum() {
+      return getChunkStateCount(StripingChunk.SLEEPING);
+    }
+
+    public int getReadyChunksNum() {
+      return getChunkStateCount(StripingChunk.READY);
+    }
+
+    public int getPendingChunksNum() {
+      return getChunkStateCount(StripingChunk.PENDING);
+    }
+
+    public boolean isNull(int chunkIndex) {
+      return getChunkState(chunkIndex) == null;
+    }
+
+    public boolean isRequested(int chunkIndex) {
+      return chunks[chunkIndex] != null &&
+          chunks[chunkIndex].state == StripingChunk.REQUESTED;
+    }
+
+    public void setRequested(int chunkIndex) {
+      setChunkState(chunkIndex, StripingChunk.REQUESTED);
+    }
+
+    public boolean isFetched(int chunkIndex) {
+      return chunks[chunkIndex] != null &&
+          chunks[chunkIndex].state == StripingChunk.FETCHED;
+    }
+
+    public void setFetched(int chunkIndex) {
+      setChunkState(chunkIndex, StripingChunk.FETCHED);
+    }
+
+    public boolean isSleeping(int chunkIndex) {
+      return chunks[chunkIndex] != null &&
+          chunks[chunkIndex].state == StripingChunk.SLEEPING;
+    }
+
+    public void setSleeping(int chunkIndex) {
+      setChunkState(chunkIndex, StripingChunk.SLEEPING);
+    }
+
+    public boolean isReady(int chunkIndex) {
+      return chunks[chunkIndex] != null &&
+          chunks[chunkIndex].state == StripingChunk.READY;
+    }
+
+    public void setReady(int chunkIndex) {
+      setChunkState(chunkIndex, StripingChunk.READY);
+    }
+
+    public boolean isPending(int chunkIndex) {
+      return chunks[chunkIndex] != null &&
+          chunks[chunkIndex].state == StripingChunk.PENDING;
+    }
+
+    public void setPending(int chunkIndex) {
+      setChunkState(chunkIndex, StripingChunk.PENDING);
+    }
+
+    public boolean isMissing(int chunkIndex) {
+      return chunks[chunkIndex] != null &&
+          chunks[chunkIndex].state == StripingChunk.MISSING;
+    }
+
+    public void setMissing(int chunkIndex) {
+      setChunkState(chunkIndex, StripingChunk.MISSING);
+    }
+
+    public boolean isAllZero(int chunkIndex) {
+      return chunks[chunkIndex] != null &&
+          chunks[chunkIndex].state == StripingChunk.ALLZERO;
+    }
+
+    public boolean isErasedIndex(int chunkIndex) {
+      // Any PENDING, MISSING, SLEEPING, and REQUESTED chunks are considered
+      // erased for decoding purposes
+      return !isNull(chunkIndex) &&
+          !isFetched(chunkIndex) &&
+          !isAllZero(chunkIndex);
+    }
+
+    public AlignedStripe(long offsetInBlock, long length, int dataBlkNum,
+        int parityBlkNum) {
       Preconditions.checkArgument(offsetInBlock >= 0 && length >= 0,
           "OffsetInBlock(%s) and length(%s) must be non-negative",
           offsetInBlock, length);
       this.range = new VerticalRange(offsetInBlock, length);
-      this.chunks = new StripingChunk[width];
+      this.dataBlkNum = dataBlkNum;
+      this.parityBlkNum = parityBlkNum;
+      this.chunks = new StripingChunk[dataBlkNum + parityBlkNum];
+      dataStateCounts.put(null, dataBlkNum);
+      parityStateCounts.put(null, parityBlkNum);
     }
 
     public boolean include(long pos) {
@@ -741,8 +924,8 @@ public class StripedBlockUtil {
     @Override
     public String toString() {
       return "AlignedStripe(Offset=" + range.offsetInBlock + ", length=" +
-          range.spanInBlock + ", fetchedChunksNum=" + fetchedChunksNum +
-          ", missingChunksNum=" + missingChunksNum + ")";
+          range.spanInBlock + ", fetchedChunksNum=" + getFetchedChunksNum() +
+          ", missingChunksNum=" + getMissingChunksNum() + ")";
     }
   }
 
@@ -825,17 +1008,23 @@ public class StripedBlockUtil {
      * all-zero bytes in codec calculations.
      */
     public static final int ALLZERO = 0X0f;
+    /** Chunk fetch was attempted and it is now sleeping until retry **/
+    public static final int SLEEPING = 0xf1;
+    /** Chunk is ready to start reading **/
+    public static final int READY = 0xf2;
 
     /**
-     * If a chunk is completely in requested range, the state transition is:
-     * REQUESTED (when AlignedStripe created) -&gt; PENDING -&gt;
-     * {FETCHED | MISSING}
+     * If a chunk is completely in requested range, the state transition is:<br>
+     * - READY (when AlignedStripe created) -&gt; REQUESTED<br>
+     * - REQUESTED -&gt; {SLEEPING | PENDING}<br>
+     * - SLEEPING -&gt; {REQUESTED | READY}<br>
+     * - PENDING -&gt; {FETCHED | MISSING}<br>
      * If a chunk is completely outside requested range (including parity
      * chunks), state transition is:
-     * null (AlignedStripe created) -&gt;REQUESTED (upon failure) -&gt;
-     * PENDING ...
+     * null (AlignedStripe created) -&gt; READY (upon failure) -&gt; REQUESTED
+     *  -&gt; {SLEEPING | PENDING} ...
      */
-    public int state = REQUESTED;
+    public int state = READY;
 
     private final ChunkByteBuffer chunkBuffer;
     private final ByteBuffer byteBuffer;
@@ -937,6 +1126,7 @@ public class StripedBlockUtil {
 
     public final int index;
     public final int state;
+    public final Exception exception;
     private final BlockReadStats readStats;
 
     public StripingChunkReadResult(int state) {
@@ -945,18 +1135,25 @@ public class StripedBlockUtil {
       this.index = -1;
       this.state = state;
       this.readStats = null;
-    }
-
-    public StripingChunkReadResult(int index, int state) {
-      this(index, state, null);
+      this.exception = null;
     }
 
     public StripingChunkReadResult(int index, int state, BlockReadStats stats) {
+      this(index, state, stats, null);
+    }
+
+    public StripingChunkReadResult(int index, int state, Exception ex) {
+      this(index, state, null, ex);
+    }
+
+    public StripingChunkReadResult(int index, int state, BlockReadStats stats,
+        Exception exception) {
       Preconditions.checkArgument(state != TIMEOUT,
           "Timeout result should return negative index.");
       this.index = index;
       this.state = state;
       this.readStats = stats;
+      this.exception = exception;
     }
 
     public BlockReadStats getReadStats() {

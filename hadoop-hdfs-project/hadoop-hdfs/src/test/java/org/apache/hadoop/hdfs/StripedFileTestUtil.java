@@ -90,29 +90,35 @@ public class StripedFileTestUtil {
       byte[] expected, byte[] buf, ErasureCodingPolicy ecPolicy)
       throws IOException {
     try (FSDataInputStream in = fs.open(srcPath)) {
-      int[] startOffsets = {0, 1, ecPolicy.getCellSize() - 102,
-          ecPolicy.getCellSize(), ecPolicy.getCellSize() + 102,
-          ecPolicy.getCellSize() * (ecPolicy.getNumDataUnits() - 1),
-          ecPolicy.getCellSize() * (ecPolicy.getNumDataUnits() - 1) + 102,
-          ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(),
-          fileLength - 102, fileLength - 1};
-      for (int startOffset : startOffsets) {
-        startOffset = Math.max(0, Math.min(startOffset, fileLength - 1));
-        int remaining = fileLength - startOffset;
-        int offset = startOffset;
-        final byte[] result = new byte[remaining];
-        while (remaining > 0) {
-          int target = Math.min(remaining, buf.length);
-          in.readFully(offset, buf, 0, target);
-          System.arraycopy(buf, 0, result, offset - startOffset, target);
-          remaining -= target;
-          offset += target;
-        }
-        for (int i = 0; i < fileLength - startOffset; i++) {
-          assertEquals("Byte at " + (startOffset + i) + " is different, "
-              + "the startOffset is " + startOffset, expected[startOffset + i],
-              result[i]);
-        }
+      verifyPread(in, fileLength, expected, buf, ecPolicy);
+    }
+  }
+
+  static void verifyPread(FSDataInputStream in, int fileLength,
+      byte[] expected, byte[] buf, ErasureCodingPolicy ecPolicy)
+      throws IOException {
+    int[] startOffsets = {0, 1, ecPolicy.getCellSize() - 102,
+        ecPolicy.getCellSize(), ecPolicy.getCellSize() + 102,
+        ecPolicy.getCellSize() * (ecPolicy.getNumDataUnits() - 1),
+        ecPolicy.getCellSize() * (ecPolicy.getNumDataUnits() - 1) + 102,
+        ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(),
+        fileLength - 102, fileLength - 1};
+    for (int startOffset : startOffsets) {
+      startOffset = Math.max(0, Math.min(startOffset, fileLength - 1));
+      int remaining = fileLength - startOffset;
+      int offset = startOffset;
+      final byte[] result = new byte[remaining];
+      while (remaining > 0) {
+        int target = Math.min(remaining, buf.length);
+        in.readFully(offset, buf, 0, target);
+        System.arraycopy(buf, 0, result, offset - startOffset, target);
+        remaining -= target;
+        offset += target;
+      }
+      for (int i = 0; i < fileLength - startOffset; i++) {
+        assertEquals("Byte at " + (startOffset + i) + " is different, "
+                         + "the startOffset is " + startOffset, expected[startOffset + i],
+            result[i]);
       }
     }
   }
@@ -120,16 +126,21 @@ public class StripedFileTestUtil {
   static void verifyStatefulRead(FileSystem fs, Path srcPath, int fileLength,
       byte[] expected, byte[] buf) throws IOException {
     try (FSDataInputStream in = fs.open(srcPath)) {
-      final byte[] result = new byte[fileLength];
-      int readLen = 0;
-      int ret;
-      while ((ret = in.read(buf, 0, buf.length)) >= 0) {
-        System.arraycopy(buf, 0, result, readLen, ret);
-        readLen += ret;
-      }
-      assertEquals("The length of file should be the same to write size", fileLength, readLen);
-      Assert.assertArrayEquals(expected, result);
+      verifyStatefulRead(in, fileLength, expected, buf);
     }
+  }
+
+  static void verifyStatefulRead(FSDataInputStream in, int fileLength,
+      byte[] expected, byte[] buf) throws IOException {
+    final byte[] result = new byte[fileLength];
+    int readLen = 0;
+    int ret;
+    while ((ret = in.read(buf, 0, buf.length)) >= 0) {
+      System.arraycopy(buf, 0, result, readLen, ret);
+      readLen += ret;
+    }
+    assertEquals("The length of file should be the same to write size", fileLength, readLen);
+    Assert.assertArrayEquals(expected, result);
   }
 
   static void verifyStatefulRead(FileSystem fs, Path srcPath, int fileLength,

@@ -267,13 +267,13 @@ public class TestStripedBlockUtil {
 
           for (AlignedStripe stripe : stripes) {
             for (int i = 0; i < dataBlocks; i++) {
-              StripingChunk chunk = stripe.chunks[i];
-              if (chunk == null || chunk.state != StripingChunk.REQUESTED) {
+              if (stripe.isNull(i) || !stripe.isReady(i)) {
                 continue;
               }
               int done = 0;
               int len;
-              for (ByteBuffer slice : chunk.getChunkBuffer().getSlices()) {
+              for (ByteBuffer slice :
+                  stripe.getChunkBuffer(i).getSlices()) {
                 len = slice.remaining();
                 slice.put(internalBlkBufs[i],
                     (int) stripe.getOffsetInBlock() + done, len);

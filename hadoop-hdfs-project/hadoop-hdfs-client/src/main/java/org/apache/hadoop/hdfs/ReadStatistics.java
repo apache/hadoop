@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.hdfs.protocol.BlockType;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * A utility class that maintains statistics for reading.
  */
@@ -29,7 +31,7 @@ public class ReadStatistics {
   private long totalZeroCopyBytesRead;
 
   private BlockType blockType = BlockType.CONTIGUOUS;
-  private long totalEcDecodingTimeMillis;
+  private long totalEcDecodingTimeNanos;
 
   public ReadStatistics() {
     clear();
@@ -92,7 +94,14 @@ public class ReadStatistics {
    * Return the total time in milliseconds used for erasure coding decoding.
    */
   public synchronized long getTotalEcDecodingTimeMillis() {
-    return totalEcDecodingTimeMillis;
+    return TimeUnit.NANOSECONDS.toMillis(totalEcDecodingTimeNanos);
+  }
+
+  /**
+   * Return the total time in nanoseconds used for erasure coding decoding.
+   */
+  public synchronized long getTotalEcDecodingTimeNanos() {
+    return totalEcDecodingTimeNanos;
   }
 
   public synchronized void addRemoteBytes(long amt) {
@@ -117,8 +126,8 @@ public class ReadStatistics {
     this.totalZeroCopyBytesRead += amt;
   }
 
-  public synchronized void addErasureCodingDecodingTime(long millis) {
-    this.totalEcDecodingTimeMillis += millis;
+  public synchronized void addErasureCodingDecodingTime(long nanos) {
+    this.totalEcDecodingTimeNanos += nanos;
   }
 
   synchronized void setBlockType(BlockType blockType) {
@@ -130,6 +139,6 @@ public class ReadStatistics {
     this.totalLocalBytesRead = 0;
     this.totalShortCircuitBytesRead = 0;
     this.totalZeroCopyBytesRead = 0;
-    this.totalEcDecodingTimeMillis = 0;
+    this.totalEcDecodingTimeNanos = 0;
   }
 }
