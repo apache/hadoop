@@ -24,13 +24,17 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -86,6 +90,21 @@ public class TestFileOutputCommitter {
 
   private static final String attempt1 = "attempt_200707121733_0001_m_000001_0";
   private static final TaskAttemptID taskID1 = TaskAttemptID.forName(attempt1);
+
+  static List<Arguments> configurationProvider() throws IOException {
+    List<Arguments> testCases = new ArrayList<>();
+    Job job = Job.getInstance();
+
+    // Default configs
+    testCases.add(Arguments.of(job.getConfiguration()));
+    
+    // Optimistic file commits
+    Configuration configOptimisticFileCommits = job.getConfiguration();
+    configOptimisticFileCommits.set(FileOutputCommitter.FILEOUTPUTCOMMITTER_OPTIMISTIC_FILE_COMMIT_ENABLED, "true");
+    testCases.add(Arguments.of(configOptimisticFileCommits));
+    
+    return testCases;
+  }
 
   private Text key1 = new Text("key1");
   private Text key2 = new Text("key2");
@@ -208,19 +227,22 @@ public class TestFileOutputCommitter {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
-  @Test
-  public void testRecoveryV1() throws Exception {
-    testRecoveryInternal(1, 1);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testRecoveryV1(Configuration additionalConfigs) throws Exception {
+    testRecoveryInternal(1, 1, additionalConfigs);
   }
 
-  @Test
-  public void testRecoveryV2() throws Exception {
-    testRecoveryInternal(2, 2);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testRecoveryV2(Configuration additionalConfigs) throws Exception {
+    testRecoveryInternal(2, 2, additionalConfigs);
   }
 
-  @Test
-  public void testRecoveryUpgradeV1V2() throws Exception {
-    testRecoveryInternal(1, 2);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testRecoveryUpgradeV1V2(Configuration additionalConfigs) throws Exception {
+    testRecoveryInternal(1, 2, additionalConfigs);
   }
 
   private void validateContent(Path dir) throws IOException {
@@ -321,29 +343,34 @@ public class TestFileOutputCommitter {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
-  @Test
-  public void testCommitterV1() throws Exception {
-    testCommitterInternal(1, false);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testCommitterV1(Configuration additionalConfigs) throws Exception {
+    testCommitterInternal(1, false, additionalConfigs);
   }
 
-  @Test
-  public void testCommitterV2() throws Exception {
-    testCommitterInternal(2, false);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testCommitterV2(Configuration additionalConfigs) throws Exception {
+    testCommitterInternal(2, false, additionalConfigs);
   }
 
-  @Test
-  public void testCommitterV2TaskCleanupEnabled() throws Exception {
-    testCommitterInternal(2, true);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testCommitterV2TaskCleanupEnabled(Configuration additionalConfigs) throws Exception {
+    testCommitterInternal(2, true, additionalConfigs);
   }
 
-  @Test
-  public void testCommitterWithDuplicatedCommitV1() throws Exception {
-    testCommitterWithDuplicatedCommitInternal(1);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testCommitterWithDuplicatedCommitV1(Configuration additionalConfigs) throws Exception {
+    testCommitterWithDuplicatedCommitInternal(1, additionalConfigs);
   }
 
-  @Test
-  public void testCommitterWithDuplicatedCommitV2() throws Exception {
-    testCommitterWithDuplicatedCommitInternal(2);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testCommitterWithDuplicatedCommitV2(Configuration additionalConfigs) throws Exception {
+    testCommitterWithDuplicatedCommitInternal(2, additionalConfigs);
   }
 
   private void testCommitterWithDuplicatedCommitInternal(int version, Configuration additionalConfigs) throws
@@ -389,16 +416,18 @@ public class TestFileOutputCommitter {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
-  @Test
-  public void testCommitterWithFailureV1() throws Exception {
-    testCommitterWithFailureInternal(1, 1);
-    testCommitterWithFailureInternal(1, 2);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testCommitterWithFailureV1(Configuration additionalConfigs) throws Exception {
+    testCommitterWithFailureInternal(1, 1, additionalConfigs);
+    testCommitterWithFailureInternal(1, 2, additionalConfigs);
   }
 
-  @Test
-  public void testCommitterWithFailureV2() throws Exception {
-    testCommitterWithFailureInternal(2, 1);
-    testCommitterWithFailureInternal(2, 2);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testCommitterWithFailureV2(Configuration additionalConfigs) throws Exception {
+    testCommitterWithFailureInternal(2, 1, additionalConfigs);
+    testCommitterWithFailureInternal(2, 2, additionalConfigs);
   }
 
   private void testCommitterWithFailureInternal(int version, int maxAttempts, Configuration additionalConfigs)
@@ -446,7 +475,8 @@ public class TestFileOutputCommitter {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
   public void testProgressDuringMerge(Configuration additionalConfigs) throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
@@ -476,14 +506,16 @@ public class TestFileOutputCommitter {
     verify(tContext, atLeast(2)).progress();
   }
 
-  @Test
-  public void testCommitterRepeatableV1() throws Exception {
-    testCommitterRetryInternal(1);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testCommitterRepeatableV1(Configuration additionalConfigs) throws Exception {
+    testCommitterRetryInternal(1, additionalConfigs);
   }
 
-  @Test
-  public void testCommitterRepeatableV2() throws Exception {
-    testCommitterRetryInternal(2);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testCommitterRepeatableV2(Configuration additionalConfigs) throws Exception {
+    testCommitterRetryInternal(2, additionalConfigs);
   }
 
   // retry committer for 2 times.
@@ -582,17 +614,20 @@ public class TestFileOutputCommitter {
     }
   }
 
-  @Test
-  public void testMapFileOutputCommitterV1() throws Exception {
-    testMapFileOutputCommitterInternal(1);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testMapFileOutputCommitterV1(Configuration additionalConfigs) throws Exception {
+    testMapFileOutputCommitterInternal(1, additionalConfigs);
   }
 
-  @Test
-  public void testMapFileOutputCommitterV2() throws Exception {
-    testMapFileOutputCommitterInternal(2);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testMapFileOutputCommitterV2(Configuration additionalConfigs) throws Exception {
+    testMapFileOutputCommitterInternal(2, additionalConfigs);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
   public void testInvalidVersionNumber(Configuration additionalConfigs) throws IOException {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
@@ -646,14 +681,16 @@ public class TestFileOutputCommitter {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
-  @Test
-  public void testAbortV1() throws IOException, InterruptedException {
-    testAbortInternal(1);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testAbortV1(Configuration additionalConfigs) throws IOException, InterruptedException {
+    testAbortInternal(1, additionalConfigs);
   }
 
-  @Test
-  public void testAbortV2() throws IOException, InterruptedException {
-    testAbortInternal(2);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testAbortV2(Configuration additionalConfigs) throws IOException, InterruptedException {
+    testAbortInternal(2, additionalConfigs);
   }
 
   public static class FakeFileSystem extends RawLocalFileSystem {
@@ -728,14 +765,16 @@ public class TestFileOutputCommitter {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
-  @Test
-  public void testFailAbortV1() throws Exception {
-    testFailAbortInternal(1);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testFailAbortV1(Configuration additionalConfigs) throws Exception {
+    testFailAbortInternal(1, additionalConfigs);
   }
 
-  @Test
-  public void testFailAbortV2() throws Exception {
-    testFailAbortInternal(2);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testFailAbortV2(Configuration additionalConfigs) throws Exception {
+    testFailAbortInternal(2, additionalConfigs);
   }
 
   static class RLFS extends RawLocalFileSystem {
@@ -840,14 +879,16 @@ public class TestFileOutputCommitter {
     }
   }
 
-  @Test
-  public void testConcurrentCommitTaskWithSubDirV1() throws Exception {
-    testConcurrentCommitTaskWithSubDir(1);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testConcurrentCommitTaskWithSubDirV1(Configuration additionalConfigs) throws Exception {
+    testConcurrentCommitTaskWithSubDir(1, additionalConfigs);
   }
 
-  @Test
-  public void testConcurrentCommitTaskWithSubDirV2() throws Exception {
-    testConcurrentCommitTaskWithSubDir(2);
+  @ParameterizedTest
+  @MethodSource("configurationProvider")
+  public void testConcurrentCommitTaskWithSubDirV2(Configuration additionalConfigs) throws Exception {
+    testConcurrentCommitTaskWithSubDir(2, additionalConfigs);
   }
 
   public static String slurp(File f) throws IOException {
