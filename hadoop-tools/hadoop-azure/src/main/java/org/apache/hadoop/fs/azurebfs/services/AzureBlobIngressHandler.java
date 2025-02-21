@@ -168,13 +168,13 @@ public class AzureBlobIngressHandler extends AzureIngressHandler {
     if (getAbfsOutputStream().isAppendBlob()) {
       return null;
     }
-    if (!blobBlockManager.hasListToCommit()) {
+    if (!blobBlockManager.hasBlocksToCommit()) {
       return null;
     }
     try {
       // Generate the xml with the list of blockId's to generate putBlockList call.
       String blockListXml = generateBlockListXml(
-          blobBlockManager.getBlockIdList());
+          blobBlockManager.getBlockIdToCommit());
       TracingContext tracingContextFlush = new TracingContext(tracingContext);
       tracingContextFlush.setIngressHandler(BLOB_FLUSH);
       tracingContextFlush.setPosition(String.valueOf(offset));

@@ -148,7 +148,7 @@ public class AzureBlobBlockManager extends AzureBlockManager {
    * @return whether we have some data to commit or not.
    * @throws IOException if an I/O error occurs
    */
-  protected synchronized boolean hasListToCommit() throws IOException {
+  protected synchronized boolean hasBlocksToCommit() throws IOException {
     // Adds all the committed blocks if available to the list of blocks to be added in putBlockList.
     if (blockEntryList.isEmpty()) {
       return false; // No entries to commit
@@ -195,7 +195,7 @@ public class AzureBlobBlockManager extends AzureBlockManager {
    *
    * @return the block ID list
    */
-  protected String getBlockIdList() {
+  protected String getBlockIdToCommit() {
     return committedBlockEntries.toString();
   }
 
