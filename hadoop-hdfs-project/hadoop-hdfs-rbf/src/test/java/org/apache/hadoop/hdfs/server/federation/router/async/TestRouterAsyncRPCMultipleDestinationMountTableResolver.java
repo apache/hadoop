@@ -46,9 +46,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-/**
- * Tests router async rpc with multiple destination mount table resolver.
- */
 public class TestRouterAsyncRPCMultipleDestinationMountTableResolver extends
     TestRouterRPCMultipleDestinationMountTableResolver {
 
