@@ -142,11 +142,12 @@ public class TestFileOutputCommitter {
     }
   }
   
-  private void testRecoveryInternal(int commitVersion, int recoveryVersion)
+  private void testRecoveryInternal(int commitVersion, int recoveryVersion, Configuration additionalConfigs)
       throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.addResource(additionalConfigs);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 1);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
@@ -179,6 +180,7 @@ public class TestFileOutputCommitter {
     //now while running the second app attempt, 
     //recover the task output from first attempt
     Configuration conf2 = job.getConfiguration();
+    conf2.addResource(additionalConfigs);
     conf2.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf2.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 2);
     conf2.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
@@ -263,11 +265,12 @@ public class TestFileOutputCommitter {
     assert(dataFileFound && indexFileFound);
   }
 
-  private void testCommitterInternal(int version, boolean taskCleanup)
+  private void testCommitterInternal(int version, boolean taskCleanup, Configuration additionalConfigs)
       throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.addResource(additionalConfigs);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(
         FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
@@ -343,11 +346,12 @@ public class TestFileOutputCommitter {
     testCommitterWithDuplicatedCommitInternal(2);
   }
 
-  private void testCommitterWithDuplicatedCommitInternal(int version) throws
+  private void testCommitterWithDuplicatedCommitInternal(int version, Configuration additionalConfigs) throws
       Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.addResource(additionalConfigs);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -397,11 +401,12 @@ public class TestFileOutputCommitter {
     testCommitterWithFailureInternal(2, 2);
   }
 
-  private void testCommitterWithFailureInternal(int version, int maxAttempts)
+  private void testCommitterWithFailureInternal(int version, int maxAttempts, Configuration additionalConfigs)
       throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.addResource(additionalConfigs);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -442,10 +447,11 @@ public class TestFileOutputCommitter {
   }
 
   @Test
-  public void testProgressDuringMerge() throws Exception {
+  public void testProgressDuringMerge(Configuration additionalConfigs) throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.addResource(additionalConfigs);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         2);
@@ -481,11 +487,12 @@ public class TestFileOutputCommitter {
   }
 
   // retry committer for 2 times.
-  private void testCommitterRetryInternal(int version)
+  private void testCommitterRetryInternal(int version, Configuration additionalConfigs)
       throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.addResource(additionalConfigs);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -536,11 +543,12 @@ public class TestFileOutputCommitter {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
-  private void testMapFileOutputCommitterInternal(int version)
+  private void testMapFileOutputCommitterInternal(int version, Configuration additionalConfigs)
       throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.addResource(additionalConfigs);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -585,10 +593,11 @@ public class TestFileOutputCommitter {
   }
 
   @Test
-  public void testInvalidVersionNumber() throws IOException {
+  public void testInvalidVersionNumber(Configuration additionalConfigs) throws IOException {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.addResource(additionalConfigs);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION, 3);
     TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
@@ -600,11 +609,12 @@ public class TestFileOutputCommitter {
     }
   }
 
-  private void testAbortInternal(int version)
+  private void testAbortInternal(int version, Configuration additionalConfigs)
       throws IOException, InterruptedException {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.addResource(additionalConfigs);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -662,10 +672,11 @@ public class TestFileOutputCommitter {
   }
 
 
-  private void testFailAbortInternal(int version)
+  private void testFailAbortInternal(int version, Configuration additionalConfigs)
       throws IOException, InterruptedException {
     Job job = Job.getInstance();
     Configuration conf = job.getConfiguration();
+    conf.addResource(additionalConfigs);
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "faildel:///");
     conf.setClass("fs.faildel.impl", FakeFileSystem.class, FileSystem.class);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
@@ -749,11 +760,12 @@ public class TestFileOutputCommitter {
     }
   }
 
-  private void testConcurrentCommitTaskWithSubDir(int version)
+  private void testConcurrentCommitTaskWithSubDir(int version, Configuration additionalConfigs)
       throws Exception {
     final Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     final Configuration conf = job.getConfiguration();
+    conf.addResource(additionalConfigs);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
