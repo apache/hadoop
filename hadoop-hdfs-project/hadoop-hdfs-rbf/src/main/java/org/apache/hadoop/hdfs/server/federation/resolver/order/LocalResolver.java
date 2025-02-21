@@ -150,7 +150,7 @@ public class LocalResolver extends RouterResolver<String, String> {
                   result = syncReturn(Map.class);
                 } else {
                   result = rpcServer.getDatanodeStorageReportMap(
-                      DatanodeReportType.ALL); 
+                      DatanodeReportType.ALL);
                 }
                 return result;
               } catch (Exception e) {
