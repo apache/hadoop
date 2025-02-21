@@ -31,11 +31,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.impl.prefetch.ExceptionAsserts;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
-import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,13 +53,14 @@ public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
   private final ExecutorServiceFuturePool futurePool =
       new ExecutorServiceFuturePool(threadPool);
 
-  private final S3AInputStream.InputStreamCallbacks client =
+  private final ObjectInputStreamCallbacks client =
       MockS3ARemoteObject.createClient("bucket");
 
   @Test
   public void testArgChecks() throws Exception {
     S3AReadOpContext readContext =
-        S3APrefetchFakes.createReadContext(futurePool, "key", 10, 10, 1);
+        S3APrefetchFakes.createReadContext(futurePool, "key", 10);
+    PrefetchOptions prefetchOptions = new PrefetchOptions(10, 1);
     S3ObjectAttributes attrs =
         S3APrefetchFakes.createObjectAttributes("bucket", "key", 10);
     S3AInputStreamStatistics stats =
@@ -67,23 +68,25 @@ public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
 
     Configuration conf = S3ATestUtils.prepareTestConfiguration(new Configuration());
     // Should not throw.
-    new S3ACachingInputStream(readContext, attrs, client, stats, conf, null);
+    new S3ACachingInputStream(readContext, prefetchOptions, attrs, client, stats, conf, null);
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3ACachingInputStream(null, attrs, client, stats, conf, null));
+        () -> new S3ACachingInputStream(null, null, attrs, client, stats, conf, null));
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3ACachingInputStream(readContext, null, client, stats, conf, null));
+        () -> new S3ACachingInputStream(readContext, null, null, client, stats, conf, null));
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3ACachingInputStream(readContext, attrs, null, stats, conf, null));
+        () -> new S3ACachingInputStream(readContext, prefetchOptions, attrs, null, stats, conf,
+            null));
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3ACachingInputStream(readContext, attrs, client, null, conf, null));
+        () -> new S3ACachingInputStream(readContext, prefetchOptions, attrs, client, null, conf,
+            null));
   }
 
   @Test

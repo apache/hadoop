@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azure.integration;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,17 +34,18 @@ import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.*;
  * tests if not.
  *
  */
+@Timeout(AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS)
 public abstract class AbstractAzureScaleTest
     extends AbstractWasbTestBase implements Sizes {
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(AbstractAzureScaleTest.class);
 
-  @Override
   protected int getTestTimeoutMillis() {
     return AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS;
   }
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();

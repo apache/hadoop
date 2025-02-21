@@ -30,7 +30,7 @@
   </Match>
   <!-- we are using completable futures, so ignore the Future which submit() returns -->
   <Match>
-    <Class name="org.apache.hadoop.fs.s3a.S3AFileSystem$InputStreamCallbacksImpl" />
+    <Class name="org.apache.hadoop.fs.s3a.impl.InputStreamCallbacksImpl" />
     <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
   </Match>
 

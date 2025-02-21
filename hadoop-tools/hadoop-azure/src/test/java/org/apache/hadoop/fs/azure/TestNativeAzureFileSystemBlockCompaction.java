@@ -24,9 +24,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
@@ -47,7 +46,7 @@ public class TestNativeAzureFileSystemBlockCompaction extends AbstractWasbTestBa
 
   private AzureBlobStorageTestAccount testAccount = null;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     testAccount = createTestAccount();
@@ -88,8 +87,8 @@ public class TestNativeAzureFileSystemBlockCompaction extends AbstractWasbTestBa
       dataOutputStream = (SyncableDataOutputStream) appendStream.getWrappedStream();
     }
 
-    Assert.assertNotNull("Did not recognize " + dataOutputStream,
-        dataOutputStream);
+    assertNotNull(
+       dataOutputStream, "Did not recognize " + dataOutputStream);
 
     return (BlockBlobAppendStream) dataOutputStream.getOutStream();
   }
@@ -97,11 +96,11 @@ public class TestNativeAzureFileSystemBlockCompaction extends AbstractWasbTestBa
   private void verifyBlockList(BlockBlobAppendStream blockBlobStream,
                                int[] testData) throws Throwable {
     List<BlockEntry> blockList = blockBlobStream.getBlockList();
-    Assert.assertEquals("Block list length", testData.length, blockList.size());
+    assertEquals(testData.length, blockList.size(), "Block list length");
 
     int i = 0;
     for (BlockEntry block: blockList) {
-      Assert.assertTrue(block.getSize() == testData[i++]);
+      assertTrue(block.getSize() == testData[i++]);
     }
   }
 
@@ -135,13 +134,13 @@ public class TestNativeAzureFileSystemBlockCompaction extends AbstractWasbTestBa
       } else if (wrappedStream instanceof SyncableDataOutputStream) {
         dataOutputStream = (SyncableDataOutputStream) wrappedStream;
       } else {
-        Assert.fail("Unable to determine type of " + wrappedStream
+        fail("Unable to determine type of " + wrappedStream
             + " class of " + wrappedStream.getClass());
       }
 
-      Assert.assertFalse("Data output stream is a BlockBlobAppendStream: "
-          + dataOutputStream,
-          dataOutputStream.getOutStream() instanceof BlockBlobAppendStream);
+      assertFalse(dataOutputStream.getOutStream() instanceof BlockBlobAppendStream,
+          "Data output stream is a BlockBlobAppendStream: "
+          + dataOutputStream);
 
     }
   }

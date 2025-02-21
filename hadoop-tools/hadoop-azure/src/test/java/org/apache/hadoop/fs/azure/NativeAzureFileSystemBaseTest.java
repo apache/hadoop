@@ -41,7 +41,8 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem.FolderRenamePending;
 
 import com.microsoft.azure.storage.AccessCondition;
@@ -76,6 +77,7 @@ public abstract class NativeAzureFileSystemBaseTest
   public static final Logger LOG = LoggerFactory.getLogger(NativeAzureFileSystemBaseTest.class);
   protected NativeAzureFileSystem fs;
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -495,7 +497,7 @@ public abstract class NativeAzureFileSystemBaseTest
     assertTrue(fs.mkdirs(dir));
     try {
       fs.open(dir).close();
-      assertTrue("Should've thrown", false);
+      assertTrue(false, "Should've thrown");
     } catch (FileNotFoundException ex) {
       assertExceptionContains("a directory not a file.", ex);
     }
@@ -507,7 +509,7 @@ public abstract class NativeAzureFileSystemBaseTest
     assertTrue(fs.mkdirs(dir));
     try {
       fs.create(dir).close();
-      assertTrue("Should've thrown", false);
+      assertTrue(false, "Should've thrown");
     } catch (IOException ex) {
       assertExceptionContains("Cannot create file", ex);
       assertExceptionContains("already exists as a directory", ex);
@@ -527,7 +529,8 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testInputStreamReadWithBufferReturnsMinusOneOnEof() throws Exception {
+  public void testInputStreamReadWithBufferReturnsMinusOneOnEof()
+      throws Exception {
     Path newFile = methodPath();
     OutputStream output = fs.create(newFile);
     output.write(10);
@@ -549,7 +552,8 @@ public abstract class NativeAzureFileSystemBaseTest
   }
 
   @Test
-  public void testInputStreamReadWithBufferReturnsMinusOneOnEofForLargeBuffer() throws Exception {
+  public void testInputStreamReadWithBufferReturnsMinusOneOnEofForLargeBuffer()
+      throws Exception {
     Path newFile = methodPath();
     OutputStream output = fs.create(newFile);
     byte[] outputBuff = new byte[97331];
@@ -1051,7 +1055,7 @@ public abstract class NativeAzureFileSystemBaseTest
 
     // Make sure rename pending file is gone.
     FileStatus[] listed = fs.listStatus(new Path("/"));
-    assertEquals("Pending directory still found", 1, listed.length);
+    assertEquals(1, listed.length, "Pending directory still found");
     assertTrue(listed[0].isDirectory());
   }
 
@@ -1348,7 +1352,7 @@ public abstract class NativeAzureFileSystemBaseTest
           assertTrue(fs.createNewFile(makePath(prefix, name)));
         }
       } else {
-        assertTrue("The object must be a (leaf) file or a folder.", false);
+        assertTrue(false, "The object must be a (leaf) file or a folder.");
       }
     }
 
@@ -1506,7 +1510,7 @@ public abstract class NativeAzureFileSystemBaseTest
     Path testFile = new Path(testFolder, "testFile");
     try {
       fs.createNonRecursive(testFile, true, 1024, (short)1, 1024, null);
-      assertTrue("Should've thrown", false);
+      assertTrue(false, "Should've thrown");
     } catch (FileNotFoundException e) {
     }
     fs.mkdirs(testFolder);
@@ -1530,11 +1534,11 @@ public abstract class NativeAzureFileSystemBaseTest
     long currentUtcTime = utc.getTime().getTime();
     FileStatus fileStatus = fs.getFileStatus(testPath);
     final long errorMargin = 60 * 1000; // Give it +/-60 seconds
-    assertTrue("Modification time " +
-        new Date(fileStatus.getModificationTime()) + " is not close to now: " +
-        utc.getTime(),
+    assertTrue(
         fileStatus.getModificationTime() > (currentUtcTime - errorMargin) &&
-        fileStatus.getModificationTime() < (currentUtcTime + errorMargin));
+        fileStatus.getModificationTime() < (currentUtcTime + errorMargin),
+        "Modification time " + new Date(fileStatus.getModificationTime())
+        + " is not close to now: " + utc.getTime());
   }
 
   private void createEmptyFile(Path testFile, FsPermission permission)
@@ -1675,7 +1679,7 @@ public abstract class NativeAzureFileSystemBaseTest
           lease = nfs.getStore().acquireLease(key);
           LOG.info(name + " acquired lease " + lease.getLeaseID());
         } catch (AzureException e) {
-          assertTrue("Unanticipated exception", false);
+          assertTrue(false, "Unanticipated exception");
         }
         assertTrue(lease != null);
         try {
@@ -1706,14 +1710,14 @@ public abstract class NativeAzureFileSystemBaseTest
           secondStartTime = System.currentTimeMillis();
           LOG.info(name + " acquired lease " + lease.getLeaseID());
         } catch (AzureException e) {
-          assertTrue("Unanticipated exception", false);
+          assertTrue(false, "Unanticipated exception");
         }
         assertTrue(lease != null);
         try {
           lease.free();
           LOG.info(name + " freed lease " + lease.getLeaseID());
         } catch (StorageException e) {
-          assertTrue("Unanticipated exception", false);
+          assertTrue(false, "Unanticipated exception");
         }
       } else {
         fail("Unknown thread name");

@@ -20,7 +20,8 @@ package org.apache.hadoop.fs.azure;
 
 import java.io.FileNotFoundException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -44,6 +45,7 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
   private Path testPath;
   private Path testFolderPath;
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -83,211 +85,222 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
    * Test to validate correct exception is thrown for Multithreaded read
    * scenario for block blobs.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testMultiThreadedBlockBlobReadScenario() throws Throwable {
+    assertThrows(FileNotFoundException.class, () -> {
+      AzureBlobStorageTestAccount testAccount = createTestAccount();
+      NativeAzureFileSystem fs = testAccount.getFileSystem();
+      Path base = methodPath();
+      Path testFilePath1 = new Path(base, "test1.dat");
+      Path renamePath = new Path(base, "test2.dat");
+      getInputStreamToTest(fs, testFilePath1);
+      Thread renameThread = new Thread(
+          new RenameThread(fs, testFilePath1, renamePath));
+      renameThread.start();
 
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    NativeAzureFileSystem fs = testAccount.getFileSystem();
-    Path base = methodPath();
-    Path testFilePath1 = new Path(base, "test1.dat");
-    Path renamePath = new Path(base, "test2.dat");
-    getInputStreamToTest(fs, testFilePath1);
-    Thread renameThread = new Thread(
-        new RenameThread(fs, testFilePath1, renamePath));
-    renameThread.start();
+      renameThread.join();
 
-    renameThread.join();
-
-    byte[] readBuffer = new byte[512];
-    inputStream.read(readBuffer);
+      byte[] readBuffer = new byte[512];
+      inputStream.read(readBuffer);
+    });
   }
 
   /**
    * Test to validate correct exception is thrown for Multithreaded seek
    * scenario for block blobs.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testMultiThreadBlockBlobSeekScenario() throws Throwable {
+    assertThrows(FileNotFoundException.class, () -> {
+      /*
+       * AzureBlobStorageTestAccount testAccount = createTestAccount();
+       * fs = testAccount.getFileSystem();
+       */
+      Path base = methodPath();
+      Path testFilePath1 = new Path(base, "test1.dat");
+      Path renamePath = new Path(base, "test2.dat");
 
-/*
-    AzureBlobStorageTestAccount testAccount = createTestAccount();
-    fs = testAccount.getFileSystem();
-*/
-    Path base = methodPath();
-    Path testFilePath1 = new Path(base, "test1.dat");
-    Path renamePath = new Path(base, "test2.dat");
+      getInputStreamToTest(fs, testFilePath1);
+      Thread renameThread = new Thread(
+              new RenameThread(fs, testFilePath1, renamePath));
+      renameThread.start();
 
-    getInputStreamToTest(fs, testFilePath1);
-    Thread renameThread = new Thread(
-        new RenameThread(fs, testFilePath1, renamePath));
-    renameThread.start();
+      renameThread.join();
 
-    renameThread.join();
-
-    inputStream.seek(5);
-    inputStream.read();
+      inputStream.seek(5);
+      inputStream.read();
+    });
   }
 
   /**
    * Tests basic multi threaded setPermission scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testMultiThreadedPageBlobSetPermissionScenario()
       throws Throwable {
-    createEmptyFile(
-        getPageBlobTestStorageAccount(),
-        testPath);
-    Thread t = new Thread(new DeleteThread(fs, testPath));
-    t.start();
-    while (t.isAlive()) {
+    assertThrows(FileNotFoundException.class, () -> {
+      createEmptyFile(
+          getPageBlobTestStorageAccount(),
+          testPath);
+      Thread t = new Thread(new DeleteThread(fs, testPath));
+      t.start();
+      while (t.isAlive()) {
+        fs.setPermission(testPath,
+            new FsPermission(FsAction.EXECUTE, FsAction.READ, FsAction.READ));
+      }
       fs.setPermission(testPath,
           new FsPermission(FsAction.EXECUTE, FsAction.READ, FsAction.READ));
-    }
-    fs.setPermission(testPath,
-        new FsPermission(FsAction.EXECUTE, FsAction.READ, FsAction.READ));
+    });
   }
 
   /**
    * Tests basic multi threaded setPermission scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testMultiThreadedBlockBlobSetPermissionScenario()
       throws Throwable {
-    createEmptyFile(createTestAccount(),
-        testPath);
-    Thread t = new Thread(new DeleteThread(fs, testPath));
-    t.start();
-    while (t.isAlive()) {
+    assertThrows(FileNotFoundException.class, () -> {
+      createEmptyFile(createTestAccount(), testPath);
+      Thread t = new Thread(new DeleteThread(fs, testPath));
+      t.start();
+      while (t.isAlive()) {
+        fs.setPermission(testPath,
+            new FsPermission(FsAction.EXECUTE, FsAction.READ, FsAction.READ));
+      }
       fs.setPermission(testPath,
           new FsPermission(FsAction.EXECUTE, FsAction.READ, FsAction.READ));
-    }
-    fs.setPermission(testPath,
-        new FsPermission(FsAction.EXECUTE, FsAction.READ, FsAction.READ));
+    });
   }
 
   /**
    * Tests basic multi threaded setPermission scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testMultiThreadedPageBlobOpenScenario() throws Throwable {
+    assertThrows(FileNotFoundException.class, () -> {
+      createEmptyFile(createTestAccount(), testPath);
+      Thread t = new Thread(new DeleteThread(fs, testPath));
+      t.start();
+      while (t.isAlive()) {
+        inputStream = fs.open(testPath);
+        inputStream.close();
+      }
 
-    createEmptyFile(createTestAccount(),
-        testPath);
-    Thread t = new Thread(new DeleteThread(fs, testPath));
-    t.start();
-    while (t.isAlive()) {
       inputStream = fs.open(testPath);
       inputStream.close();
-    }
-
-    inputStream = fs.open(testPath);
-    inputStream.close();
+    });
   }
 
   /**
    * Tests basic multi threaded setPermission scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testMultiThreadedBlockBlobOpenScenario() throws Throwable {
+    assertThrows(FileNotFoundException.class, () -> {
+      createEmptyFile(
+          getPageBlobTestStorageAccount(),
+          testPath);
+      Thread t = new Thread(new DeleteThread(fs, testPath));
+      t.start();
 
-    createEmptyFile(
-        getPageBlobTestStorageAccount(),
-        testPath);
-    Thread t = new Thread(new DeleteThread(fs, testPath));
-    t.start();
-
-    while (t.isAlive()) {
+      while (t.isAlive()) {
+        inputStream = fs.open(testPath);
+        inputStream.close();
+      }
       inputStream = fs.open(testPath);
       inputStream.close();
-    }
-    inputStream = fs.open(testPath);
-    inputStream.close();
+    });
   }
 
   /**
    * Tests basic multi threaded setOwner scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testMultiThreadedBlockBlobSetOwnerScenario() throws Throwable {
-
-    createEmptyFile(createTestAccount(), testPath);
-    Thread t = new Thread(new DeleteThread(fs, testPath));
-    t.start();
-    while (t.isAlive()) {
+    assertThrows(FileNotFoundException.class, () -> {
+      createEmptyFile(createTestAccount(), testPath);
+      Thread t = new Thread(new DeleteThread(fs, testPath));
+      t.start();
+      while (t.isAlive()) {
+        fs.setOwner(testPath, "testowner", "testgroup");
+      }
       fs.setOwner(testPath, "testowner", "testgroup");
-    }
-    fs.setOwner(testPath, "testowner", "testgroup");
+    });
   }
 
   /**
    * Tests basic multi threaded setOwner scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testMultiThreadedPageBlobSetOwnerScenario() throws Throwable {
-    createEmptyFile(
-        getPageBlobTestStorageAccount(),
-        testPath);
-    Thread t = new Thread(new DeleteThread(fs, testPath));
-    t.start();
-    while (t.isAlive()) {
+    assertThrows(FileNotFoundException.class, () -> {
+      createEmptyFile(
+          getPageBlobTestStorageAccount(),
+          testPath);
+      Thread t = new Thread(new DeleteThread(fs, testPath));
+      t.start();
+      while (t.isAlive()) {
+        fs.setOwner(testPath, "testowner", "testgroup");
+      }
       fs.setOwner(testPath, "testowner", "testgroup");
-    }
-    fs.setOwner(testPath, "testowner", "testgroup");
+    });
   }
 
   /**
    * Tests basic multi threaded listStatus scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testMultiThreadedBlockBlobListStatusScenario() throws Throwable {
-
-    createTestFolder(createTestAccount(),
-        testFolderPath);
-    Thread t = new Thread(new DeleteThread(fs, testFolderPath));
-    t.start();
-    while (t.isAlive()) {
+    assertThrows(FileNotFoundException.class, () -> {
+      createTestFolder(createTestAccount(), testFolderPath);
+      Thread t = new Thread(new DeleteThread(fs, testFolderPath));
+      t.start();
+      while (t.isAlive()) {
+        fs.listStatus(testFolderPath);
+      }
       fs.listStatus(testFolderPath);
-    }
-    fs.listStatus(testFolderPath);
+    });
   }
 
   /**
    * Tests basic multi threaded listStatus scenario.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testMultiThreadedPageBlobListStatusScenario() throws Throwable {
-
-    createTestFolder(
-        getPageBlobTestStorageAccount(),
-        testFolderPath);
-    Thread t = new Thread(new DeleteThread(fs, testFolderPath));
-    t.start();
-    while (t.isAlive()) {
+    assertThrows(FileNotFoundException.class, () -> {
+      createTestFolder(
+          getPageBlobTestStorageAccount(),
+          testFolderPath);
+      Thread t = new Thread(new DeleteThread(fs, testFolderPath));
+      t.start();
+      while (t.isAlive()) {
+        fs.listStatus(testFolderPath);
+      }
       fs.listStatus(testFolderPath);
-    }
-    fs.listStatus(testFolderPath);
+    });
   }
 
   /**
    * Test to validate correct exception is thrown for Multithreaded read
    * scenario for page blobs.
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testMultiThreadedPageBlobReadScenario() throws Throwable {
+    assertThrows(FileNotFoundException.class, () -> {
+      bindToTestAccount(getPageBlobTestStorageAccount());
+      Path base = methodPath();
+      Path testFilePath1 = new Path(base, "test1.dat");
+      Path renamePath = new Path(base, "test2.dat");
 
-    bindToTestAccount(getPageBlobTestStorageAccount());
-    Path base = methodPath();
-    Path testFilePath1 = new Path(base, "test1.dat");
-    Path renamePath = new Path(base, "test2.dat");
+      getInputStreamToTest(fs, testFilePath1);
+      Thread renameThread = new Thread(
+              new RenameThread(fs, testFilePath1, renamePath));
+      renameThread.start();
 
-    getInputStreamToTest(fs, testFilePath1);
-    Thread renameThread = new Thread(
-        new RenameThread(fs, testFilePath1, renamePath));
-    renameThread.start();
-
-    renameThread.join();
-    byte[] readBuffer = new byte[512];
-    inputStream.read(readBuffer);
+      renameThread.join();
+      byte[] readBuffer = new byte[512];
+      inputStream.read(readBuffer);
+    });
   }
 
   /**
@@ -295,22 +308,23 @@ public class ITestFileSystemOperationsExceptionHandlingMultiThreaded
    * scenario for page blobs.
    */
 
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testMultiThreadedPageBlobSeekScenario() throws Throwable {
+    assertThrows(FileNotFoundException.class, () -> {
+      bindToTestAccount(getPageBlobTestStorageAccount());
 
-    bindToTestAccount(getPageBlobTestStorageAccount());
+      Path base = methodPath();
+      Path testFilePath1 = new Path(base, "test1.dat");
+      Path renamePath = new Path(base, "test2.dat");
 
-    Path base = methodPath();
-    Path testFilePath1 = new Path(base, "test1.dat");
-    Path renamePath = new Path(base, "test2.dat");
+      getInputStreamToTest(fs, testFilePath1);
+      Thread renameThread = new Thread(
+              new RenameThread(fs, testFilePath1, renamePath));
+      renameThread.start();
 
-    getInputStreamToTest(fs, testFilePath1);
-    Thread renameThread = new Thread(
-        new RenameThread(fs, testFilePath1, renamePath));
-    renameThread.start();
-
-    renameThread.join();
-    inputStream.seek(5);
+      renameThread.join();
+      inputStream.seek(5);
+    });
   }
 
 

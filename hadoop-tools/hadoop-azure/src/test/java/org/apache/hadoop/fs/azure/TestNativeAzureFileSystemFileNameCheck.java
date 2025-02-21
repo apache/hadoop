@@ -23,7 +23,8 @@ import java.util.HashMap;
 
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the scenario where a colon is included in the file/directory name.
@@ -35,6 +36,7 @@ import org.junit.Test;
 public class TestNativeAzureFileSystemFileNameCheck extends AbstractWasbTestBase {
   private String root = null;
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();

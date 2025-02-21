@@ -33,12 +33,11 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.fs.StreamCapabilities;
-import org.hamcrest.core.IsEqual;
-import org.hamcrest.core.IsNot;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasStreamCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksStreamCapabilities;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test semantics of functions flush, hflush, hsync, and close for block blobs,
@@ -58,8 +57,8 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
     return buffer;
   }
 
-  private Path getBlobPathWithTestName(String parentDir) {
-    return new Path(parentDir + "/" + methodName.getMethodName());
+  private Path getBlobPathWithTestName(String parentDir, String name) {
+    return new Path(parentDir + "/" + name);
   }
 
   private void validate(Path path, byte[] writeBuffer, boolean isEqual)
@@ -71,17 +70,11 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
       int numBytesRead = inputStream.read(readBuffer, 0, readBuffer.length);
 
       if (isEqual) {
-        assertArrayEquals(
-            String.format("Bytes read do not match bytes written to %1$s",
-                blobPath),
-            writeBuffer,
-            readBuffer);
+        assertArrayEquals(writeBuffer, readBuffer,
+            String.format("Bytes read do not match bytes written to %1$s", blobPath));
       } else {
-        assertThat(
-            String.format("Bytes read unexpectedly match bytes written to %1$s",
-                blobPath),
-            readBuffer,
-            IsNot.not(IsEqual.equalTo(writeBuffer)));
+        assertThat(readBuffer).isNotEqualTo(writeBuffer).as(
+            String.format("Bytes read unexpectedly match bytes written to %1$s", blobPath));
       }
     }
   }
@@ -123,7 +116,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // Verify flush writes data to storage for Page Blobs
   @Test
   public void testPageBlobFlush() throws IOException {
-    Path path = getBlobPathWithTestName(PAGE_BLOB_DIR);
+    Path path = getBlobPathWithTestName(PAGE_BLOB_DIR, methodName.getMethodName());
 
     try (FSDataOutputStream stream = fs.create(path)) {
       byte[] buffer = getRandomBytes();
@@ -146,7 +139,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // Verify hflush writes data to storage for Page Blobs
   @Test
   public void testPageBlobHFlush() throws IOException {
-    Path path = getBlobPathWithTestName(PAGE_BLOB_DIR);
+    Path path = getBlobPathWithTestName(PAGE_BLOB_DIR, methodName.getMethodName());
 
     try (FSDataOutputStream stream = fs.create(path)) {
       assertTrue(isPageBlobStreamWrapper(stream));
@@ -160,7 +153,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // HSync must write data to storage for Page Blobs
   @Test
   public void testPageBlobHSync() throws IOException {
-    Path path = getBlobPathWithTestName(PAGE_BLOB_DIR);
+    Path path = getBlobPathWithTestName(PAGE_BLOB_DIR, methodName.getMethodName());
 
     try (FSDataOutputStream stream = fs.create(path)) {
       assertTrue(isPageBlobStreamWrapper(stream));
@@ -174,7 +167,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // Close must write data to storage for Page Blobs
   @Test
   public void testPageBlobClose() throws IOException {
-    Path path = getBlobPathWithTestName(PAGE_BLOB_DIR);
+    Path path = getBlobPathWithTestName(PAGE_BLOB_DIR, methodName.getMethodName());
 
     try (FSDataOutputStream stream = fs.create(path)) {
       assertTrue(isPageBlobStreamWrapper(stream));
@@ -188,7 +181,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // Page Blobs have StreamCapabilities.HFLUSH and StreamCapabilities.HSYNC.
   @Test
   public void testPageBlobCapabilities() throws IOException {
-    Path path = getBlobPathWithTestName(PAGE_BLOB_DIR);
+    Path path = getBlobPathWithTestName(PAGE_BLOB_DIR, methodName.getMethodName());
     try (FSDataOutputStream stream = fs.create(path)) {
       assertHasStreamCapabilities(stream,
           StreamCapabilities.HFLUSH,
@@ -204,7 +197,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // Verify flush does not write data to storage for Block Blobs
   @Test
   public void testBlockBlobFlush() throws Exception {
-    Path path = getBlobPathWithTestName(BLOCK_BLOB_DIR);
+    Path path = getBlobPathWithTestName(BLOCK_BLOB_DIR, methodName.getMethodName());
     byte[] buffer = getRandomBytes();
 
     try (FSDataOutputStream stream = fs.create(path)) {
@@ -226,7 +219,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // Verify hflush does not write data to storage for Block Blobs
   @Test
   public void testBlockBlobHFlush() throws Exception {
-    Path path = getBlobPathWithTestName(BLOCK_BLOB_DIR);
+    Path path = getBlobPathWithTestName(BLOCK_BLOB_DIR, methodName.getMethodName());
     byte[] buffer = getRandomBytes();
 
     try (FSDataOutputStream stream = fs.create(path)) {
@@ -248,7 +241,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // Verify hsync does not write data to storage for Block Blobs
   @Test
   public void testBlockBlobHSync() throws Exception {
-    Path path = getBlobPathWithTestName(BLOCK_BLOB_DIR);
+    Path path = getBlobPathWithTestName(BLOCK_BLOB_DIR, methodName.getMethodName());
     byte[] buffer = getRandomBytes();
 
     try (FSDataOutputStream stream = fs.create(path)) {
@@ -270,7 +263,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // Close must write data to storage for Block Blobs
   @Test
   public void testBlockBlobClose() throws IOException {
-    Path path = getBlobPathWithTestName(BLOCK_BLOB_DIR);
+    Path path = getBlobPathWithTestName(BLOCK_BLOB_DIR, methodName.getMethodName());
 
     try (FSDataOutputStream stream = fs.create(path)) {
       byte[] buffer = getRandomBytes();
@@ -283,7 +276,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // Block Blobs do not have any StreamCapabilities.
   @Test
   public void testBlockBlobCapabilities() throws IOException {
-    Path path = getBlobPathWithTestName(BLOCK_BLOB_DIR);
+    Path path = getBlobPathWithTestName(BLOCK_BLOB_DIR, methodName.getMethodName());
     try (FSDataOutputStream stream = fs.create(path)) {
       assertLacksStreamCapabilities(stream,
           StreamCapabilities.HFLUSH,
@@ -298,7 +291,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // Verify flush writes data to storage for Block Blobs with compaction
   @Test
   public void testBlockBlobCompactionFlush() throws Exception {
-    Path path = getBlobPathWithTestName(BLOCK_BLOB_COMPACTION_DIR);
+    Path path = getBlobPathWithTestName(BLOCK_BLOB_COMPACTION_DIR, methodName.getMethodName());
     byte[] buffer = getRandomBytes();
 
     try (FSDataOutputStream stream = fs.create(path)) {
@@ -321,7 +314,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // Verify hflush writes data to storage for Block Blobs with Compaction
   @Test
   public void testBlockBlobCompactionHFlush() throws Exception {
-    Path path = getBlobPathWithTestName(BLOCK_BLOB_COMPACTION_DIR);
+    Path path = getBlobPathWithTestName(BLOCK_BLOB_COMPACTION_DIR, methodName.getMethodName());
     byte[] buffer = getRandomBytes();
 
     try (FSDataOutputStream stream = fs.create(path)) {
@@ -344,7 +337,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // Verify hsync writes data to storage for Block Blobs with compaction
   @Test
   public void testBlockBlobCompactionHSync() throws Exception {
-    Path path = getBlobPathWithTestName(BLOCK_BLOB_COMPACTION_DIR);
+    Path path = getBlobPathWithTestName(BLOCK_BLOB_COMPACTION_DIR, methodName.getMethodName());
     byte[] buffer = getRandomBytes();
 
     try (FSDataOutputStream stream = fs.create(path)) {
@@ -367,7 +360,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // Close must write data to storage for Block Blobs with compaction
   @Test
   public void testBlockBlobCompactionClose() throws IOException {
-    Path path = getBlobPathWithTestName(BLOCK_BLOB_COMPACTION_DIR);
+    Path path = getBlobPathWithTestName(BLOCK_BLOB_COMPACTION_DIR, methodName.getMethodName());
     try (FSDataOutputStream stream = fs.create(path)) {
       assertTrue(isBlockBlobAppendStreamWrapper(stream));
       byte[] buffer = getRandomBytes();
@@ -380,7 +373,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // Block Blobs with Compaction have StreamCapabilities.HFLUSH and HSYNC.
   @Test
   public void testBlockBlobCompactionCapabilities() throws IOException {
-    Path path = getBlobPathWithTestName(BLOCK_BLOB_COMPACTION_DIR);
+    Path path = getBlobPathWithTestName(BLOCK_BLOB_COMPACTION_DIR, methodName.getMethodName());
     try (FSDataOutputStream stream = fs.create(path)) {
       assertHasStreamCapabilities(stream,
           StreamCapabilities.HFLUSH,
@@ -396,7 +389,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // A small write does not write data to storage for Page Blobs
   @Test
   public void testPageBlobSmallWrite() throws IOException {
-    Path path = getBlobPathWithTestName(PAGE_BLOB_DIR);
+    Path path = getBlobPathWithTestName(PAGE_BLOB_DIR, methodName.getMethodName());
     try (FSDataOutputStream stream = fs.create(path)) {
       assertTrue(isPageBlobStreamWrapper(stream));
       byte[] buffer = getRandomBytes();
@@ -408,7 +401,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // A small write does not write data to storage for Block Blobs
   @Test
   public void testBlockBlobSmallWrite() throws IOException {
-    Path path = getBlobPathWithTestName(BLOCK_BLOB_DIR);
+    Path path = getBlobPathWithTestName(BLOCK_BLOB_DIR, methodName.getMethodName());
     try (FSDataOutputStream stream = fs.create(path)) {
       byte[] buffer = getRandomBytes();
       stream.write(buffer);
@@ -420,7 +413,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   // with Compaction
   @Test
   public void testBlockBlobCompactionSmallWrite() throws IOException {
-    Path path = getBlobPathWithTestName(BLOCK_BLOB_COMPACTION_DIR);
+    Path path = getBlobPathWithTestName(BLOCK_BLOB_COMPACTION_DIR, methodName.getMethodName());
     try (FSDataOutputStream stream = fs.create(path)) {
       assertTrue(isBlockBlobAppendStreamWrapper(stream));
       byte[] buffer = getRandomBytes();

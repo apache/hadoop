@@ -29,8 +29,8 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import org.apache.hadoop.fs.impl.prefetch.Validate;
-import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 /**
@@ -54,7 +54,7 @@ class MockS3ARemoteObject extends S3ARemoteObject {
 
   MockS3ARemoteObject(int size, boolean throwExceptionOnOpen) {
     super(
-        S3APrefetchFakes.createReadContext(null, KEY, size, 1, 1),
+        S3APrefetchFakes.createReadContext(null, KEY, size),
         S3APrefetchFakes.createObjectAttributes(BUCKET, KEY, size),
         S3APrefetchFakes.createInputStreamCallbacks(BUCKET),
         EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS,
@@ -95,8 +95,8 @@ class MockS3ARemoteObject extends S3ARemoteObject {
     return (byte) (offset % 128);
   }
 
-  public static S3AInputStream.InputStreamCallbacks createClient(String bucketName) {
-    return new S3AInputStream.InputStreamCallbacks() {
+  public static ObjectInputStreamCallbacks createClient(String bucketName) {
+    return new ObjectInputStreamCallbacks() {
       @Override
       public ResponseInputStream<GetObjectResponse> getObject(
           GetObjectRequest request) {

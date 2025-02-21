@@ -18,6 +18,16 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNCRPC_RESPONDER_COUNT_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_QUEUE_SIZE_DEFAULT;
@@ -28,9 +38,14 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_QUEUE_SIZE_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DN_REPORT_CACHE_EXPIRE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DN_REPORT_CACHE_EXPIRE_MS_DEFAULT;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RouterFederationRename.RouterRenameOption;
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncApply;
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncCatch;
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncComplete;
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncForEach;
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncReturn;
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncTry;
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.SCHEDULER_JOURNAL_URI;
 
 import java.io.FileNotFoundException;
@@ -43,22 +58,40 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
+import org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil;
+import org.apache.hadoop.hdfs.protocolPB.RouterClientNamenodeProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.RouterGetUserMappingsProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.RouterNamenodeProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.RouterRefreshUserMappingsProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.federation.router.async.AsyncQuota;
+import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncClientProtocol;
+import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncNamenodeProtocol;
+import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncRpcClient;
+import org.apache.hadoop.hdfs.server.federation.router.async.RouterAsyncUserProtocol;
+import org.apache.hadoop.hdfs.server.federation.router.async.utils.ApplyFunction;
+import org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncCatchFunction;
+import org.apache.hadoop.hdfs.server.federation.router.async.utils.CatchFunction;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -180,6 +213,7 @@ import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -200,6 +234,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterRpcServer.class);
 
+  /** Name service keyword to identify fan-out calls. */
+  public static final String CONCURRENT_NS = "concurrent";
 
   /** Configuration for the RPC server. */
   private Configuration conf;
@@ -256,6 +292,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   private RouterRenameOption routerRenameOption;
   /** Schedule the router federation rename jobs. */
   private BalanceProcedureScheduler fedRenameScheduler;
+  private boolean enableAsync;
+  private Map<String, Integer> nsAsyncHandlerCount = new ConcurrentHashMap<>();
+  private Map<String, ExecutorService> asyncRouterHandlerExecutors = new ConcurrentHashMap<>();
+  private ExecutorService routerAsyncResponderExecutor;
+  private ExecutorService routerDefaultAsyncHandlerExecutor;
+
   /**
    * Construct a router RPC server.
    *
@@ -265,6 +307,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @param fileResolver File resolver to resolve file paths to subclusters.
    * @throws IOException If the RPC server could not be created.
    */
+  @SuppressWarnings("checkstyle:MethodLength")
   public RouterRpcServer(Configuration conf, Router router,
       ActiveNamenodeResolver nnResolver, FileSubclusterResolver fileResolver)
           throws IOException {
@@ -285,6 +328,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     int handlerQueueSize = this.conf.getInt(DFS_ROUTER_HANDLER_QUEUE_SIZE_KEY,
         DFS_ROUTER_HANDLER_QUEUE_SIZE_DEFAULT);
 
+    this.enableAsync = conf.getBoolean(DFS_ROUTER_ASYNC_RPC_ENABLE_KEY,
+        DFS_ROUTER_ASYNC_RPC_ENABLE_DEFAULT);
+    LOG.info("Router enable async rpc: {}", this.enableAsync);
+    if (this.enableAsync) {
+      initAsyncThreadPools(conf);
+    }
     // Override Hadoop Common IPC setting
     int readerQueueSize = this.conf.getInt(DFS_ROUTER_READER_QUEUE_SIZE_KEY,
         DFS_ROUTER_READER_QUEUE_SIZE_DEFAULT);
@@ -294,26 +343,39 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     RPC.setProtocolEngine(this.conf, ClientNamenodeProtocolPB.class,
         ProtobufRpcEngine2.class);
-
     ClientNamenodeProtocolServerSideTranslatorPB
-        clientProtocolServerTranslator =
-            new ClientNamenodeProtocolServerSideTranslatorPB(this);
+        clientProtocolServerTranslator = null;
+    NamenodeProtocolServerSideTranslatorPB namenodeProtocolXlator = null;
+    RefreshUserMappingsProtocolServerSideTranslatorPB refreshUserMappingXlator = null;
+    GetUserMappingsProtocolServerSideTranslatorPB getUserMappingXlator = null;
+    if (isAsync()) {
+      clientProtocolServerTranslator =
+          new RouterClientNamenodeProtocolServerSideTranslatorPB(this);
+      namenodeProtocolXlator =
+          new RouterNamenodeProtocolServerSideTranslatorPB(this);
+      refreshUserMappingXlator =
+          new RouterRefreshUserMappingsProtocolServerSideTranslatorPB(this);
+      getUserMappingXlator =
+          new RouterGetUserMappingsProtocolServerSideTranslatorPB(this);
+    } else {
+      clientProtocolServerTranslator = new ClientNamenodeProtocolServerSideTranslatorPB(this);
+      namenodeProtocolXlator =
+          new NamenodeProtocolServerSideTranslatorPB(this);
+      refreshUserMappingXlator =
+          new RefreshUserMappingsProtocolServerSideTranslatorPB(this);
+      getUserMappingXlator =
+          new GetUserMappingsProtocolServerSideTranslatorPB(this);
+    }
     BlockingService clientNNPbService = ClientNamenodeProtocol
         .newReflectiveBlockingService(clientProtocolServerTranslator);
 
-    NamenodeProtocolServerSideTranslatorPB namenodeProtocolXlator =
-        new NamenodeProtocolServerSideTranslatorPB(this);
     BlockingService nnPbService = NamenodeProtocolService
         .newReflectiveBlockingService(namenodeProtocolXlator);
 
-    RefreshUserMappingsProtocolServerSideTranslatorPB refreshUserMappingXlator =
-        new RefreshUserMappingsProtocolServerSideTranslatorPB(this);
     BlockingService refreshUserMappingService =
         RefreshUserMappingsProtocolProtos.RefreshUserMappingsProtocolService.
         newReflectiveBlockingService(refreshUserMappingXlator);
 
-    GetUserMappingsProtocolServerSideTranslatorPB getUserMappingXlator =
-        new GetUserMappingsProtocolServerSideTranslatorPB(this);
     BlockingService getUserMappingService =
         GetUserMappingsProtocolProtos.GetUserMappingsProtocolService.
         newReflectiveBlockingService(getUserMappingXlator);
@@ -369,8 +431,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         NotReplicatedYetException.class,
         IOException.class,
         ConnectException.class,
-        RetriableException.class,
-        PathIsNotEmptyDirectoryException.class);
+        RetriableException.class);
 
     this.rpcServer.addSuppressedLoggingExceptions(
         StandbyException.class, UnresolvedPathException.class);
@@ -393,14 +454,21 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     }
 
     // Create the client
-    this.rpcClient = new RouterRpcClient(this.conf, this.router,
-        this.namenodeResolver, this.rpcMonitor, routerStateIdContext);
-
-    // Initialize modules
-    this.quotaCall = new Quota(this.router, this);
-    this.nnProto = new RouterNamenodeProtocol(this);
-    this.clientProto = new RouterClientProtocol(conf, this);
-    this.routerProto = new RouterUserProtocol(this);
+    if (this.enableAsync) {
+      this.rpcClient = new RouterAsyncRpcClient(this.conf, this.router,
+          this.namenodeResolver, this.rpcMonitor, routerStateIdContext);
+      this.clientProto = new RouterAsyncClientProtocol(conf, this);
+      this.nnProto = new RouterAsyncNamenodeProtocol(this);
+      this.routerProto = new RouterAsyncUserProtocol(this);
+      this.quotaCall = new AsyncQuota(this.router, this);
+    } else {
+      this.rpcClient = new RouterRpcClient(this.conf, this.router,
+          this.namenodeResolver, this.rpcMonitor, routerStateIdContext);
+      this.clientProto = new RouterClientProtocol(conf, this);
+      this.nnProto = new RouterNamenodeProtocol(this);
+      this.routerProto = new RouterUserProtocol(this);
+      this.quotaCall = new Quota(this.router, this);
+    }
 
     long dnCacheExpire = conf.getTimeDuration(
         DN_REPORT_CACHE_EXPIRE,
@@ -428,6 +496,81 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
             TimeUnit.MILLISECONDS);
 
     initRouterFedRename();
+  }
+
+  /**
+   * Init router async handlers and router async responders.
+   * @param configuration the configuration.
+   */
+  public void initAsyncThreadPools(Configuration configuration) {
+    LOG.info("Begin initialize asynchronous handler and responder thread pool.");
+    initNsAsyncHandlerCount();
+    Set<String> allConfiguredNS = FederationUtil.getAllConfiguredNS(configuration);
+    Set<String> unassignedNS = new HashSet<>();
+    allConfiguredNS.add(CONCURRENT_NS);
+
+    for (String nsId : allConfiguredNS) {
+      int dedicatedHandlers = nsAsyncHandlerCount.getOrDefault(nsId, 0);
+      LOG.info("Dedicated handlers {} for ns {} ", dedicatedHandlers, nsId);
+      if (dedicatedHandlers > 0) {
+        initAsyncHandlerThreadPools4Ns(nsId, dedicatedHandlers);
+        LOG.info("Assigned {} async handlers to nsId {} ", dedicatedHandlers, nsId);
+      } else {
+        unassignedNS.add(nsId);
+      }
+    }
+
+    int asyncHandlerCountDefault = configuration.getInt(DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY,
+        DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_DEFAULT);
+
+    if (!unassignedNS.isEmpty()) {
+      LOG.warn("Async handler unassigned ns: {}", unassignedNS);
+      LOG.info("Use default async handler count {} for unassigned ns.", asyncHandlerCountDefault);
+      for (String nsId : unassignedNS) {
+        initAsyncHandlerThreadPools4Ns(nsId, asyncHandlerCountDefault);
+      }
+    }
+
+    int asyncResponderCount = configuration.getInt(DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY,
+        DFS_ROUTER_ASYNCRPC_RESPONDER_COUNT_DEFAULT);
+    if (routerAsyncResponderExecutor == null) {
+      LOG.info("Initialize router async responder count: {}", asyncResponderCount);
+      routerAsyncResponderExecutor = Executors.newFixedThreadPool(
+          asyncResponderCount, new AsyncThreadFactory("Router Async Responder #"));
+    }
+    AsyncRpcProtocolPBUtil.setAsyncResponderExecutor(routerAsyncResponderExecutor);
+
+    if (routerDefaultAsyncHandlerExecutor == null) {
+      LOG.info("init router async default executor handler count: {}", asyncHandlerCountDefault);
+      routerDefaultAsyncHandlerExecutor = Executors.newFixedThreadPool(
+          asyncHandlerCountDefault, new AsyncThreadFactory("Router Async Default Handler #"));
+    }
+  }
+
+  private void initNsAsyncHandlerCount() {
+    String configNsHandler = conf.get(DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_KEY,
+        DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_DEFAULT);
+    if (StringUtils.isEmpty(configNsHandler)) {
+      LOG.error(
+          "The value of config key: {} is empty. Will use default conf.",
+          DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_KEY);
+    }
+    String[] nsHandlers = configNsHandler.split(",");
+    for (String nsHandlerInfo : nsHandlers) {
+      String[] nsHandlerItems = nsHandlerInfo.split(":");
+      if (nsHandlerItems.length != 2 || StringUtils.isBlank(nsHandlerItems[0]) ||
+          !StringUtils.isNumeric(nsHandlerItems[1])) {
+        LOG.error("The config key: {} is incorrect! The value is {}.",
+            DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_KEY, nsHandlerInfo);
+        continue;
+      }
+      nsAsyncHandlerCount.put(nsHandlerItems[0], Integer.parseInt(nsHandlerItems[1]));
+    }
+  }
+
+  private void initAsyncHandlerThreadPools4Ns(String nsId, int dedicatedHandlers) {
+    asyncRouterHandlerExecutors.computeIfAbsent(nsId, id -> Executors.newFixedThreadPool(
+        dedicatedHandlers, new AsyncThreadFactory("Router Async Handler for " + id + " #")));
   }
 
   /**
@@ -555,7 +698,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return routerStateIdContext
    */
   @VisibleForTesting
-  protected RouterStateIdContext getRouterStateIdContext() {
+  public RouterStateIdContext getRouterStateIdContext() {
     return routerStateIdContext;
   }
 
@@ -636,7 +779,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    *                           client requests.
    * @throws UnsupportedOperationException If the operation is not supported.
    */
-  void checkOperation(OperationCategory op, boolean supported)
+  public void checkOperation(OperationCategory op, boolean supported)
       throws StandbyException, UnsupportedOperationException {
     checkOperation(op);
 
@@ -658,7 +801,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @throws StandbyException If the Router is in safe mode and cannot serve
    *                           client requests.
    */
-  void checkOperation(OperationCategory op)
+  public void checkOperation(OperationCategory op)
       throws StandbyException {
     // Log the function we are currently calling.
     if (rpcMonitor != null) {
@@ -724,8 +867,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * If the namespace is unavailable, retry with other namespaces.
    * @param <T> expected return type.
    * @param method the remote method.
+   * @param clazz the type of return value.
    * @return the response received after invoking method.
-   * @throws IOException
+   * @throws IOException if there is no namespace available or other ioExceptions.
    */
   <T> T invokeAtAvailableNs(RemoteMethod method, Class<T> clazz)
       throws IOException {
@@ -752,6 +896,47 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   /**
+   * Invokes the method at default namespace, if default namespace is not
+   * available then at the other available namespaces.
+   * If the namespace is unavailable, retry with other namespaces.
+   * Asynchronous version of invokeAtAvailableNs method.
+   * @param <T> expected return type.
+   * @param method the remote method.
+   * @param clazz the type of return value.
+   * @return the response received after invoking method.
+   * @throws IOException if there is no namespace available or other ioExceptions.
+   */
+  public <T> T invokeAtAvailableNsAsync(RemoteMethod method, Class<T> clazz)
+      throws IOException {
+    String nsId = subclusterResolver.getDefaultNamespace();
+    // If default Ns is not present return result from first namespace.
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    // If no namespace is available, throw IOException.
+    IOException io = new IOException("No namespace available.");
+
+    asyncComplete(null);
+    if (!nsId.isEmpty()) {
+      asyncTry(() -> {
+        getRPCClient().invokeSingle(nsId, method, clazz);
+      });
+
+      asyncCatch((AsyncCatchFunction<T, IOException>)(res, ioe) -> {
+        if (!clientProto.isUnavailableSubclusterException(ioe)) {
+          LOG.debug("{} exception cannot be retried",
+              ioe.getClass().getSimpleName());
+          throw ioe;
+        }
+        nss.removeIf(n -> n.getNameserviceId().equals(nsId));
+        invokeOnNsAsync(method, clazz, io, nss);
+      }, IOException.class);
+    } else {
+      // If not have default NS.
+      invokeOnNsAsync(method, clazz, io, nss);
+    }
+    return asyncReturn(clazz);
+  }
+
+  /**
    * Invoke the method sequentially on available namespaces,
    * throw no namespace available exception, if no namespaces are available.
    * @param method the remote method.
@@ -759,7 +944,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @param ioe    IOException .
    * @param nss    List of name spaces in the federation
    * @return the response received after invoking method.
-   * @throws IOException
+   * @throws IOException if there is no namespace available or other ioExceptions.
    */
   <T> T invokeOnNs(RemoteMethod method, Class<T> clazz, IOException ioe,
       Set<FederationNamespaceInfo> nss) throws IOException {
@@ -782,6 +967,61 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     }
     // Couldn't get a response from any of the namespace, throw ioe.
     throw ioe;
+  }
+
+  /**
+   * Invoke the method sequentially on available namespaces,
+   * throw no namespace available exception, if no namespaces are available.
+   * Asynchronous version of invokeOnNs method.
+   * @param method the remote method.
+   * @param clazz  Class for the return type.
+   * @param ioe    IOException .
+   * @param nss    List of name spaces in the federation
+   * @return the response received after invoking method.
+   * @throws IOException if there is no namespace available or other ioExceptions.
+   */
+  <T> T invokeOnNsAsync(RemoteMethod method, Class<T> clazz, IOException ioe,
+      Set<FederationNamespaceInfo> nss) throws IOException {
+    if (nss.isEmpty()) {
+      throw ioe;
+    }
+
+    asyncComplete(null);
+    Iterator<FederationNamespaceInfo> nsIterator = nss.iterator();
+    asyncForEach(nsIterator, (foreach, fnInfo) -> {
+      String nsId = fnInfo.getNameserviceId();
+      LOG.debug("Invoking {} on namespace {}", method, nsId);
+      asyncTry(() -> {
+        getRPCClient().invokeSingle(nsId, method, clazz);
+        asyncApply(result -> {
+          if (result != null) {
+            foreach.breakNow();
+            return result;
+          }
+          return null;
+        });
+      });
+
+      asyncCatch((CatchFunction<T, IOException>)(ret, ex) -> {
+        LOG.debug("Failed to invoke {} on namespace {}", method, nsId, ex);
+        // Ignore the exception and try on other namespace, if the tried
+        // namespace is unavailable, else throw the received exception.
+        if (!clientProto.isUnavailableSubclusterException(ex)) {
+          throw ex;
+        }
+        return null;
+      }, IOException.class);
+    });
+
+    asyncApply(obj -> {
+      if (obj == null) {
+        // Couldn't get a response from any of the namespace, throw ioe.
+        throw ioe;
+      }
+      return obj;
+    });
+
+    return asyncReturn(clazz);
   }
 
   @Override // ClientProtocol
@@ -835,6 +1075,10 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    */
   RemoteLocation getCreateLocation(final String src) throws IOException {
     final List<RemoteLocation> locations = getLocationsForPath(src, true);
+    if (isAsync()) {
+      getCreateLocationAsync(src, locations);
+      return asyncReturn(RemoteLocation.class);
+    }
     return getCreateLocation(src, locations);
   }
 
@@ -872,6 +1116,44 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   /**
+   * Get the location to create a file. It checks if the file already existed
+   * in one of the locations.
+   * Asynchronous version of getCreateLocation method.
+   *
+   * @param src Path of the file to check.
+   * @param locations Prefetched locations for the file.
+   * @return The remote location for this file.
+   * @throws IOException If the file has no creation location.
+   */
+  public RemoteLocation getCreateLocationAsync(
+      final String src, final List<RemoteLocation> locations)
+      throws IOException {
+
+    if (locations == null || locations.isEmpty()) {
+      throw new IOException("Cannot get locations to create " + src);
+    }
+
+    RemoteLocation createLocation = locations.get(0);
+    if (locations.size() > 1) {
+      asyncTry(() -> {
+        getExistingLocationAsync(src, locations);
+        asyncApply((ApplyFunction<RemoteLocation, RemoteLocation>) existingLocation -> {
+          if (existingLocation != null) {
+            LOG.debug("{} already exists in {}.", src, existingLocation);
+            return existingLocation;
+          }
+          return createLocation;
+        });
+      });
+      asyncCatch((o, e) -> createLocation, FileNotFoundException.class);
+    } else {
+      asyncComplete(createLocation);
+    }
+
+    return asyncReturn(RemoteLocation.class);
+  }
+
+  /**
    * Gets the remote location where the file exists.
    * @param src the name of file.
    * @param locations all the remote locations.
@@ -890,6 +1172,31 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       }
     }
     return null;
+  }
+
+  /**
+   * Gets the remote location where the file exists.
+   * Asynchronous version of getExistingLocation method.
+   * @param src the name of file.
+   * @param locations all the remote locations.
+   * @return the remote location of the file if it exists, else null.
+   * @throws IOException in case of any exception.
+   */
+  private RemoteLocation getExistingLocationAsync(String src,
+      List<RemoteLocation> locations) throws IOException {
+    RemoteMethod method = new RemoteMethod("getFileInfo",
+        new Class<?>[] {String.class}, new RemoteParam());
+    getRPCClient().invokeConcurrent(
+        locations, method, true, false, HdfsFileStatus.class);
+    asyncApply((ApplyFunction<Map<RemoteLocation, HdfsFileStatus>, Object>) results -> {
+      for (RemoteLocation loc : locations) {
+        if (results.get(loc) != null) {
+          return loc;
+        }
+      }
+      return null;
+    });
+    return asyncReturn(RemoteLocation.class);
   }
 
   @Override // ClientProtocol
@@ -1111,8 +1418,13 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     try {
       DatanodeInfo[] dns = clientProto.getDatanodeReport(type);
+      if (router.getRpcServer().isAsync()) {
+        dns = syncReturn(DatanodeInfo[].class);
+      }
       LOG.debug("Refresh cached DN report with {} datanodes", dns.length);
       return dns;
+    } catch (Exception e) {
+      throw new IOException(e);
     } finally {
       // Reset ugi to remote user for remaining operations.
       RouterRpcServer.resetCurrentUser();
@@ -1146,6 +1458,38 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     return toArray(datanodes, DatanodeInfo.class);
   }
 
+  /**
+   * Get the datanode report with a timeout.
+   * Asynchronous version of the getDatanodeReport method.
+   * @param type Type of the datanode.
+   * @param requireResponse If we require all the namespaces to report.
+   * @param timeOutMs Time out for the reply in milliseconds.
+   * @return List of datanodes.
+   * @throws IOException If it cannot get the report.
+   */
+  public DatanodeInfo[] getDatanodeReportAsync(
+      DatanodeReportType type, boolean requireResponse, long timeOutMs)
+      throws IOException {
+    checkOperation(OperationCategory.UNCHECKED);
+
+    Map<String, DatanodeInfo> datanodesMap = new LinkedHashMap<>();
+    RemoteMethod method = new RemoteMethod("getDatanodeReport",
+        new Class<?>[] {DatanodeReportType.class}, type);
+
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    getRPCClient().invokeConcurrent(nss, method, requireResponse, false,
+            timeOutMs, DatanodeInfo[].class);
+
+    asyncApply((ApplyFunction<Map<FederationNamespaceInfo, DatanodeInfo[]>,
+        DatanodeInfo[]>) results -> {
+        updateDnMap(results, datanodesMap);
+        // Map -> Array
+        Collection<DatanodeInfo> datanodes = datanodesMap.values();
+        return toArray(datanodes, DatanodeInfo.class);
+      });
+    return asyncReturn(DatanodeInfo[].class);
+  }
+
   @Override // ClientProtocol
   public DatanodeStorageReport[] getDatanodeStorageReport(
       DatanodeReportType type) throws IOException {
@@ -1162,6 +1506,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   public Map<String, DatanodeStorageReport[]> getDatanodeStorageReportMap(
       DatanodeReportType type) throws IOException {
     return getDatanodeStorageReportMap(type, true, -1);
+  }
+
+  public Map<String, DatanodeStorageReport[]> getDatanodeStorageReportMapAsync(
+      DatanodeReportType type) throws IOException {
+    return getDatanodeStorageReportMapAsync(type, true, -1);
   }
 
   /**
@@ -1194,6 +1543,42 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       ret.put(nsId, result);
     }
     return ret;
+  }
+
+  /**
+   * Get the list of datanodes per subcluster.
+   * Asynchronous version of getDatanodeStorageReportMap method.
+   * @param type Type of the datanodes to get.
+   * @param requireResponse If true an exception will be thrown if all calls do
+   *          not complete. If false exceptions are ignored and all data results
+   *          successfully received are returned.
+   * @param timeOutMs Time out for the reply in milliseconds.
+   * @return nsId to datanode list.
+   * @throws IOException If the method cannot be invoked remotely.
+   */
+  public Map<String, DatanodeStorageReport[]> getDatanodeStorageReportMapAsync(
+      DatanodeReportType type, boolean requireResponse, long timeOutMs)
+      throws IOException {
+
+    Map<String, DatanodeStorageReport[]> ret = new LinkedHashMap<>();
+    RemoteMethod method = new RemoteMethod("getDatanodeStorageReport",
+        new Class<?>[] {DatanodeReportType.class}, type);
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    getRPCClient().invokeConcurrent(
+            nss, method, requireResponse, false, timeOutMs, DatanodeStorageReport[].class);
+
+    asyncApply((ApplyFunction<Map<FederationNamespaceInfo, DatanodeStorageReport[]>,
+        Map<String, DatanodeStorageReport[]>>) results -> {
+        for (Entry<FederationNamespaceInfo, DatanodeStorageReport[]> entry :
+            results.entrySet()) {
+          FederationNamespaceInfo ns = entry.getKey();
+          String nsId = ns.getNameserviceId();
+          DatanodeStorageReport[] result = entry.getValue();
+          ret.put(nsId, result);
+        }
+        return ret;
+      });
+    return asyncReturn(ret.getClass());
   }
 
   @Override // ClientProtocol
@@ -1708,7 +2093,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return Prioritized list of locations in the federated cluster.
    * @throws IOException If the location for this path cannot be determined.
    */
-  protected List<RemoteLocation> getLocationsForPath(String path,
+  public List<RemoteLocation> getLocationsForPath(String path,
       boolean failIfLocked) throws IOException {
     return getLocationsForPath(path, failIfLocked, true);
   }
@@ -1723,7 +2108,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return Prioritized list of locations in the federated cluster.
    * @throws IOException If the location for this path cannot be determined.
    */
-  protected List<RemoteLocation> getLocationsForPath(String path,
+  public List<RemoteLocation> getLocationsForPath(String path,
       boolean failIfLocked, boolean needQuotaVerify) throws IOException {
     try {
       if (failIfLocked) {
@@ -1844,7 +2229,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @param clazz Class of the values.
    * @return Array with the outputs.
    */
-  static <T> T[] merge(
+  public static <T> T[] merge(
       Map<FederationNamespaceInfo, T[]> map, Class<T> clazz) {
 
     // Put all results into a set to avoid repeats
@@ -1905,7 +2290,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @param path Path to check.
    * @return If a path should be in all subclusters.
    */
-  boolean isPathAll(final String path) {
+  public boolean isPathAll(final String path) {
     MountTable entry = getMountTable(path);
     return entry != null && entry.isAll();
   }
@@ -1940,9 +2325,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * mount entry.
    * @param path The path on which the operation need to be invoked.
    * @return true if the call is supposed to invoked on all locations.
-   * @throws IOException
+   * @throws IOException If an I/O error occurs.
    */
-  boolean isInvokeConcurrent(final String path) throws IOException {
+  public boolean isInvokeConcurrent(final String path) throws IOException {
     if (subclusterResolver instanceof MountTableResolver) {
       MountTableResolver mountTableResolver =
           (MountTableResolver) subclusterResolver;
@@ -2011,6 +2396,37 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     return toArray(datanodes, DatanodeInfo.class);
   }
 
+  /**
+   * Get the slow running datanodes report with a timeout.
+   * Asynchronous version of the getSlowDatanodeReport method.
+   *
+   * @param requireResponse If we require all the namespaces to report.
+   * @param timeOutMs Time out for the reply in milliseconds.
+   * @return List of datanodes.
+   * @throws IOException If it cannot get the report.
+   */
+  public DatanodeInfo[] getSlowDatanodeReportAsync(boolean requireResponse, long timeOutMs)
+      throws IOException {
+    checkOperation(OperationCategory.UNCHECKED);
+
+    Map<String, DatanodeInfo> datanodesMap = new LinkedHashMap<>();
+    RemoteMethod method = new RemoteMethod("getSlowDatanodeReport");
+
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    getRPCClient().invokeConcurrent(nss, method, requireResponse, false,
+            timeOutMs, DatanodeInfo[].class);
+
+    asyncApply((ApplyFunction<Map<FederationNamespaceInfo, DatanodeInfo[]>,
+        DatanodeInfo[]>) results -> {
+        updateDnMap(results, datanodesMap);
+        // Map -> Array
+        Collection<DatanodeInfo> datanodes = datanodesMap.values();
+        return toArray(datanodes, DatanodeInfo.class);
+      });
+
+    return asyncReturn(DatanodeInfo[].class);
+  }
+
   private void updateDnMap(Map<FederationNamespaceInfo, DatanodeInfo[]> results,
       Map<String, DatanodeInfo> datanodesMap) {
     for (Entry<FederationNamespaceInfo, DatanodeInfo[]> entry :
@@ -2066,6 +2482,34 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         final DatanodeReportType type, DatanodeInfo[] oldValue)
         throws Exception {
       return executorService.submit(() -> load(type));
+    }
+  }
+
+  public boolean isAsync() {
+    return this.enableAsync;
+  }
+
+  public Map<String, ExecutorService> getAsyncRouterHandlerExecutors() {
+    return asyncRouterHandlerExecutors;
+  }
+
+  public ExecutorService getRouterAsyncHandlerDefaultExecutor() {
+    return routerDefaultAsyncHandlerExecutor;
+  }
+
+  private static class AsyncThreadFactory implements ThreadFactory {
+    private final String namePrefix;
+    private final AtomicInteger threadNumber = new AtomicInteger(1);
+
+    AsyncThreadFactory(String namePrefix) {
+      this.namePrefix = namePrefix;
+    }
+
+    @Override
+    public Thread newThread(@NonNull Runnable r) {
+      Thread thread = new Thread(r, namePrefix + threadNumber.getAndIncrement());
+      thread.setDaemon(true);
+      return thread;
     }
   }
 }

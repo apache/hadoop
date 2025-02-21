@@ -28,6 +28,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class AbfsErrors {
+  public static final String ERR_FILE_ALREADY_EXISTS = "File already exists.";
   public static final String ERR_WRITE_WITHOUT_LEASE = "Attempted to write to file without lease";
   public static final String ERR_LEASE_EXPIRED = "A lease ID was specified, but the lease for the resource has expired.";
   public static final String ERR_LEASE_EXPIRED_BLOB = "A lease ID was specified, but the lease for the blob has expired.";

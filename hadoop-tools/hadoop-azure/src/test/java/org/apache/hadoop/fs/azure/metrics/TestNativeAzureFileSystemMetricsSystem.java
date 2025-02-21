@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.fs.azure.metrics;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
-import org.junit.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests that the WASB-specific metrics system is working correctly.
@@ -73,8 +74,8 @@ public class TestNativeAzureFileSystemMetricsSystem {
    */
   private void assertFilesCreated(AzureBlobStorageTestAccount account,
       String name, int expected) {
-    assertEquals("Files created in account " + name,
-        expected, getFilesCreated(account));
+    assertEquals(expected, getFilesCreated(account),
+        "Files created in account " + name);
   }
 
   @Test
