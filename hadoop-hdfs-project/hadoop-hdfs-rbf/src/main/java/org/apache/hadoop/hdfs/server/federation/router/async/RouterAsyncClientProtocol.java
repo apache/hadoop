@@ -1059,8 +1059,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
    */
   @VisibleForTesting
   @Override
-  public boolean isMultiDestDirectory(String src) throws IOException {
-    asyncComplete(false);
+  public boolean isMultiDestDirectory(String src) {
     asyncTry(() -> {
       if (rpcServer.isPathAll(src)) {
         List<RemoteLocation> locations;
@@ -1077,6 +1076,8 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
             return false;
           }
         });
+      } else {
+        asyncComplete(false);
       }
     });
     asyncCatch((CatchFunction<Object, UnresolvedPathException>) (o, e) -> {
