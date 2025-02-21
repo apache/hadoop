@@ -1055,7 +1055,6 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
    * @param src the source path
    * @return true if the path is directory and is supposed to be present in all
    *         subclusters else false in all other scenarios.
-   * @throws IOException if unable to get the file status.
    */
   @VisibleForTesting
   @Override
