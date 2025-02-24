@@ -61,7 +61,8 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
   }
 
   @Override
-  public void setup() {
+  public void setup() throws Exception {
+    super.setup();
   }
 
   @Override
@@ -128,6 +129,7 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
    */
   @Test
   public void testFileSystemInitializationFailsForInvalidIngress() throws Exception {
+    assumeHnsDisabled();
     Configuration configuration = new Configuration(getRawConfiguration());
     String defaultUri = configuration.get(FS_DEFAULT_NAME_KEY);
     String accountKey = configuration.get(

@@ -372,6 +372,7 @@ public class ITestAzureBlobFileSystemAppend extends
   @Test
   public void testCreateOverBlobAppendOverDfs() throws IOException {
     Assume.assumeFalse("Not valid for APPEND BLOB", isAppendBlobEnabled());
+    assumeDfsServiceType();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK, true);
     conf.set(FS_AZURE_INGRESS_SERVICE_TYPE,
@@ -412,6 +413,7 @@ public class ITestAzureBlobFileSystemAppend extends
   @Test
   public void testCreateAppendBlobOverBlobEndpointAppendOverDfs()
       throws IOException, NoSuchFieldException, IllegalAccessException {
+    assumeDfsServiceType();
     Configuration conf = getRawConfiguration();
     conf.setBoolean(FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK, true);
     conf.set(FS_AZURE_INGRESS_SERVICE_TYPE,
