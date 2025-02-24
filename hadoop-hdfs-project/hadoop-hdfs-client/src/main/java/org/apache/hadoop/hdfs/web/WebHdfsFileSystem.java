@@ -132,7 +132,6 @@ import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.dynamic.DynConstructors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -845,38 +844,7 @@ public class WebHdfsFileSystem extends FileSystem
           if (node == null) {
             node = url.getAuthority();
           }
-          try {
-            final Throwable cause = ioe.getCause();
-            IOException newIoe = null;
-            if (cause != null) {
-              try {
-                DynConstructors.Ctor<? extends IOException> ctor =
-                    new DynConstructors.Builder()
-                        .impl(ioe.getClass(), String.class, Throwable.class)
-                        .buildChecked();
-                newIoe = ctor.newInstance(node + ": " + ioe.getMessage(), cause);
-              } catch (NoSuchMethodException e) {
-                // no matching constructor - try next approach below
-              }
-            }
-            if (newIoe == null) {
-              DynConstructors.Ctor<? extends IOException> ctor =
-                  new DynConstructors.Builder()
-                      .impl(ioe.getClass(), String.class)
-                      .buildChecked();
-              newIoe = ctor.newInstance(node + ": " + ioe.getMessage());
-              if (cause != null) {
-                try {
-                  newIoe.initCause(cause);
-                } catch (Exception e) {
-                  // Unable to initCause. Ignore the exception.
-                }
-              }
-            }
-            newIoe.setStackTrace(ioe.getStackTrace());
-            ioe = newIoe;
-          } catch (Exception e) {
-          }
+          ioe = NetUtils.addNodeNameToIOException(ioe, node);
           shouldRetry(ioe, retry);
         }
       }

@@ -46,10 +46,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.net.SocketFactory;
 
-import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
-import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
-
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -58,9 +54,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.dynamic.DynConstructors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1114,7 +1114,7 @@ public class NetUtils {
 
   /**
    * Return an @{@link InetAddress} to bind to. If bindWildCardAddress is true
-   * than returns null.
+   * then returns null.
    *
    * @param localAddr local addr.
    * @param bindWildCardAddress bind wildcard address.
@@ -1126,5 +1126,50 @@ public class NetUtils {
       return localAddr;
     }
     return null;
+  }
+
+  /**
+   * Return an @{@link IOException} of the same type as the input exception but with
+   * a modified exception message that includes the node name.
+   *
+   * @param ioe existing exception.
+   * @param nodeName name of the node.
+   * @return IOException
+   */
+  public static IOException addNodeNameToIOException(final IOException ioe, final String nodeName) {
+    try {
+      final Throwable cause = ioe.getCause();
+      IOException newIoe = null;
+      if (cause != null) {
+        try {
+          DynConstructors.Ctor<? extends IOException> ctor =
+              new DynConstructors.Builder()
+                  .impl(ioe.getClass(), String.class, Throwable.class)
+                  .buildChecked();
+          newIoe = ctor.newInstance(nodeName + ": " + ioe.getMessage(), cause);
+        } catch (NoSuchMethodException e) {
+          // no matching constructor - try next approach below
+        }
+      }
+      if (newIoe == null) {
+        DynConstructors.Ctor<? extends IOException> ctor =
+            new DynConstructors.Builder()
+                .impl(ioe.getClass(), String.class)
+                .buildChecked();
+        newIoe = ctor.newInstance(nodeName + ": " + ioe.getMessage());
+        if (cause != null) {
+          try {
+            newIoe.initCause(cause);
+          } catch (Exception e) {
+            // Unable to initCause. Ignore the exception.
+          }
+        }
+      }
+      newIoe.setStackTrace(ioe.getStackTrace());
+      return newIoe;
+    } catch (Exception e) {
+      // Unable to create new exception. Return the original exception.
+      return ioe;
+    }
   }
 }
