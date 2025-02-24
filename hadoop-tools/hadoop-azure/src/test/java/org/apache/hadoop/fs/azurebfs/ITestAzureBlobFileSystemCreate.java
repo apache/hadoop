@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperationDetectedException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
@@ -74,6 +75,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.ReflectionUtils;
 
+import static java.net.HttpURLConnection.HTTP_CLIENT_TIMEOUT;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
@@ -2091,29 +2093,7 @@ public class ITestAzureBlobFileSystemCreate extends
       final Path nonOverwriteFile = new Path(
           "/NonOverwriteTest_FileName_" + UUID.randomUUID());
       final List<AbfsHttpHeader> headers = new ArrayList<>();
-      TestAbfsClient.mockAbfsOperationCreation(abfsClient,
-          new MockIntercept<AbfsRestOperation>() {
-            private int count = 0;
-
-            @Override
-            public void answer(final AbfsRestOperation mockedObj,
-                final InvocationOnMock answer)
-                throws AbfsRestOperationException {
-              if (count == 0) {
-                count = 1;
-                AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
-                Mockito.doReturn(HTTP_METHOD_PUT).when(op).getMethod();
-                Mockito.doReturn(EMPTY_STRING).when(op).getStorageErrorMessage();
-                Mockito.doReturn(true).when(mockedObj).hasResult();
-                Mockito.doReturn(op).when(mockedObj).getResult();
-                Mockito.doReturn(HTTP_CONFLICT).when(op).getStatusCode();
-                headers.addAll(mockedObj.getRequestHeaders());
-                throw new AbfsRestOperationException(HTTP_CONFLICT,
-                    AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(), EMPTY_STRING,
-                    null, op);
-              }
-            }
-          });
+      mockRetriedRequest(abfsClient, headers);
       AbfsRestOperation getPathRestOp = Mockito.mock(AbfsRestOperation.class);
       AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
       Mockito.doAnswer(answer -> {
@@ -2197,7 +2177,7 @@ public class ITestAzureBlobFileSystemCreate extends
       AzureBlobFileSystemStore.Permissions permissions
           = new AzureBlobFileSystemStore.Permissions(false,
           FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
-      fs.create(testPath, false); //5ff449d1-b5d2-478c-9722-8e26ebb5501e
+      fs.create(testPath, false);
       fs.create(testPath, true);
       final AbfsHttpOperation getPathStatusOp =
           abfsDfsClient.getPathStatus(testPath.toUri().getPath(), false,
@@ -2210,6 +2190,49 @@ public class ITestAzureBlobFileSystemCreate extends
               getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))
           .describedAs("Client transaction ID should be equal to the one set in the header")
           .isEqualTo(clientTransactionId[0]);
+    }
+  }
+
+  /**
+   * Test to verify that the client transaction ID is included in the response header
+   * during the creation of a new file in Azure Blob Storage.
+   * <p>
+   * This test ensures that when a new file is created, the Azure Blob FileSystem client
+   * correctly includes the client transaction ID in the response header for the created file.
+   * The test uses a configuration where client transaction ID is enabled and verifies
+   * its presence after the file creation operation.
+   * </p>
+   *
+   * @throws Exception if any error occurs during test execution
+   */
+  @Test
+  public void failureInGetPathStatusDuringCreateRecovery() throws Exception {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
+      assumeRecoveryThroughClientTransactionID(true);
+      final String[] clientTransactionId = new String[1];
+      AbfsDfsClient abfsDfsClient = mockIngressClientHandler(fs);
+      mockAddClientTransactionIdToHeader(abfsDfsClient, clientTransactionId);
+      mockRetriedRequest(abfsDfsClient, new ArrayList<>());
+      boolean[] flag = new boolean[1];
+      Mockito.doAnswer(getPathStatus -> {
+        if (!flag[0]) {
+          flag[0] = true;
+          throw new AbfsRestOperationException(HTTP_CLIENT_TIMEOUT, "", "", new Exception());
+        }
+        return getPathStatus.callRealMethod();
+      }).when(abfsDfsClient).getPathStatus(
+          Mockito.nullable(String.class), Mockito.nullable(Boolean.class),
+          Mockito.nullable(TracingContext.class),
+          Mockito.nullable(ContextEncryptionAdapter.class));
+
+      final Path nonOverwriteFile = new Path(
+          "/NonOverwriteTest_FileName_" + UUID.randomUUID());
+      String errorMessage = intercept(AbfsDriverException.class,
+          () -> fs.create(nonOverwriteFile, false)).getErrorMessage();
+
+      Assertions.assertThat(errorMessage)
+          .describedAs("getPathStatus should fail while recovering")
+          .contains("Error in getPathStatus while recovering from create failure.");
     }
   }
 
@@ -2229,5 +2252,32 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.getAbfsStore().setClientHandler(clientHandler);
     Mockito.doReturn(abfsDfsClient).when(clientHandler).getIngressClient();
     return abfsDfsClient;
+  }
+
+  private void mockRetriedRequest(AbfsDfsClient abfsDfsClient,
+      final List<AbfsHttpHeader> headers) throws Exception {
+    TestAbfsClient.mockAbfsOperationCreation(abfsDfsClient,
+        new MockIntercept<AbfsRestOperation>() {
+          private int count = 0;
+
+          @Override
+          public void answer(final AbfsRestOperation mockedObj,
+              final InvocationOnMock answer)
+              throws AbfsRestOperationException {
+            if (count == 0) {
+              count = 1;
+              AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
+              Mockito.doReturn(HTTP_METHOD_PUT).when(op).getMethod();
+              Mockito.doReturn(EMPTY_STRING).when(op).getStorageErrorMessage();
+              Mockito.doReturn(true).when(mockedObj).hasResult();
+              Mockito.doReturn(op).when(mockedObj).getResult();
+              Mockito.doReturn(HTTP_CONFLICT).when(op).getStatusCode();
+              headers.addAll(mockedObj.getRequestHeaders());
+              throw new AbfsRestOperationException(HTTP_CONFLICT,
+                  AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(), EMPTY_STRING,
+                  null, op);
+            }
+          }
+        });
   }
 }

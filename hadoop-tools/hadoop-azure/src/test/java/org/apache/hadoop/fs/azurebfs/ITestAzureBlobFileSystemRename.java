@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
@@ -66,6 +67,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
+import static java.net.HttpURLConnection.HTTP_CLIENT_TIMEOUT;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
@@ -1675,30 +1677,7 @@ public class ITestAzureBlobFileSystemRename extends
       touch(sourceFilePath);
       Path destFilePath = new Path(sourceDir, "file2");
       final List<AbfsHttpHeader> headers = new ArrayList<>();
-      TestAbfsClient.mockAbfsOperationCreation(abfsClient,
-          new MockIntercept<AbfsRestOperation>() {
-            private int count = 0;
 
-            @Override
-            public void answer(final AbfsRestOperation mockedObj,
-                final InvocationOnMock answer)
-                throws AbfsRestOperationException {
-              if (count == 0) {
-                count = 1;
-                AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
-                Mockito.doReturn(HTTP_METHOD_PUT).when(op).getMethod();
-                Mockito.doReturn(EMPTY_STRING).when(op).getStorageErrorMessage();
-                Mockito.doReturn(SOURCE_PATH_NOT_FOUND.getErrorCode()).when(op)
-                    .getStorageErrorCode();
-                Mockito.doReturn(true).when(mockedObj).hasResult();
-                Mockito.doReturn(op).when(mockedObj).getResult();
-                Mockito.doReturn(HTTP_NOT_FOUND).when(op).getStatusCode();
-                headers.addAll(mockedObj.getRequestHeaders());
-                throw new AbfsRestOperationException(HTTP_NOT_FOUND,
-                    SOURCE_PATH_NOT_FOUND.getErrorCode(), EMPTY_STRING, null, op);
-              }
-            }
-          });
       AbfsRestOperation getPathRestOp = Mockito.mock(AbfsRestOperation.class);
       AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
       Mockito.doAnswer(answer -> {
@@ -1766,4 +1745,69 @@ public class ITestAzureBlobFileSystemRename extends
           .isEqualTo(clientTransactionId[0]);
     }
   }
+
+  @Test
+  public void failureInGetPathStatusDuringRenameRecovery() throws Exception {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
+      assumeRecoveryThroughClientTransactionID(false);
+      AbfsDfsClient abfsDfsClient = (AbfsDfsClient) Mockito.spy(fs.getAbfsClient());
+      fs.getAbfsStore().setClient(abfsDfsClient);
+      final String[] clientTransactionId = new String[1];
+      mockAddClientTransactionIdToHeader(abfsDfsClient, clientTransactionId);
+      mockRetriedRequest(abfsDfsClient, new ArrayList<>());
+      boolean[] flag = new boolean[1];
+      Mockito.doAnswer(getPathStatus -> {
+        if (!flag[0]) {
+          flag[0] = true;
+          throw new AbfsRestOperationException(HTTP_CLIENT_TIMEOUT, "", "", new Exception());
+        }
+        return getPathStatus.callRealMethod();
+      }).when(abfsDfsClient).getPathStatus(
+          Mockito.nullable(String.class), Mockito.nullable(Boolean.class),
+          Mockito.nullable(TracingContext.class),
+          Mockito.nullable(ContextEncryptionAdapter.class));
+
+      Path sourceDir = path("/testSrc");
+      assertMkdirs(fs, sourceDir);
+      String filename = "file1";
+      Path sourceFilePath = new Path(sourceDir, filename);
+      touch(sourceFilePath);
+      Path destFilePath = new Path(sourceDir, "file2");
+
+      String errorMessage = intercept(AbfsDriverException.class,
+          () -> fs.rename(sourceFilePath, destFilePath)).getErrorMessage();
+
+      Assertions.assertThat(errorMessage)
+          .describedAs("getPathStatus should fail while recovering")
+          .contains("Error in getPathStatus while recovering from rename failure.");
+    }
+  }
+
+   private void mockRetriedRequest(AbfsDfsClient abfsDfsClient,
+       final List<AbfsHttpHeader> headers) throws Exception {
+     TestAbfsClient.mockAbfsOperationCreation(abfsDfsClient,
+         new MockIntercept<AbfsRestOperation>() {
+           private int count = 0;
+
+           @Override
+           public void answer(final AbfsRestOperation mockedObj,
+               final InvocationOnMock answer)
+               throws AbfsRestOperationException {
+             if (count == 0) {
+               count = 1;
+               AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
+               Mockito.doReturn(HTTP_METHOD_PUT).when(op).getMethod();
+               Mockito.doReturn(EMPTY_STRING).when(op).getStorageErrorMessage();
+               Mockito.doReturn(SOURCE_PATH_NOT_FOUND.getErrorCode()).when(op)
+                   .getStorageErrorCode();
+               Mockito.doReturn(true).when(mockedObj).hasResult();
+               Mockito.doReturn(op).when(mockedObj).getResult();
+               Mockito.doReturn(HTTP_NOT_FOUND).when(op).getStatusCode();
+               headers.addAll(mockedObj.getRequestHeaders());
+               throw new AbfsRestOperationException(HTTP_NOT_FOUND,
+                   SOURCE_PATH_NOT_FOUND.getErrorCode(), EMPTY_STRING, null, op);
+             }
+           }
+         });
+   }
 }

@@ -152,23 +152,28 @@ public class TestAbfsClient {
    */
   public static void mockAbfsOperationCreation(final AbfsClient abfsClient,
       final MockIntercept mockIntercept) throws Exception {
+    boolean[] flag = new boolean[1];
     Mockito.doAnswer(answer -> {
-          AbfsRestOperation op = Mockito.spy(
-              new AbfsRestOperation(
-                  answer.getArgument(0),
-                  abfsClient,
-                  answer.getArgument(1),
-                  answer.getArgument(2),
-                  answer.getArgument(3),
-                  abfsClient.getAbfsConfiguration()
-              ));
-          Mockito.doAnswer((answer1) -> {
-                mockIntercept.answer(op, answer1);
-                return null;
-              }).when(op)
-              .execute(any());
-          Mockito.doReturn(true).when(op).isARetriedRequest();
-          return op;
+          if (!flag[0]) {
+            flag[0] = true;
+            AbfsRestOperation op = Mockito.spy(
+                new AbfsRestOperation(
+                    answer.getArgument(0),
+                    abfsClient,
+                    answer.getArgument(1),
+                    answer.getArgument(2),
+                    answer.getArgument(3),
+                    abfsClient.getAbfsConfiguration()
+                ));
+            Mockito.doAnswer((answer1) -> {
+                  mockIntercept.answer(op, answer1);
+                  return null;
+                }).when(op)
+                .execute(any());
+            Mockito.doReturn(true).when(op).isARetriedRequest();
+            return op;
+          }
+          return answer.callRealMethod();
         }).when(abfsClient)
         .getAbfsRestOperation(any(), any(), any(), any());
   }

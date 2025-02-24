@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ApiVersion;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
@@ -415,7 +416,9 @@ public class AbfsDfsClient extends AbfsClient {
           String existingResource =
               op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
           if (existingResource != null && existingResource.equals(DIRECTORY)) {
-            return op; //don't throw ex on mkdirs for existing directory
+            //don't throw ex on mkdirs for existing directory
+            return getSuccessOp(AbfsRestOperationType.CreatePath,
+                HTTP_METHOD_PUT, url, requestHeaders);
           }
         }
       } else {
@@ -430,11 +433,13 @@ public class AbfsDfsClient extends AbfsClient {
             if (clientTransactionId.equals(
                 getPathStatusOp.getResponseHeader(
                     X_MS_CLIENT_TRANSACTION_ID))) {
-              return op;
+              return getSuccessOp(AbfsRestOperationType.CreatePath,
+                  HTTP_METHOD_PUT, url, requestHeaders);
             }
-          } catch (AzureBlobFileSystemException ignored) {
-            // In case of get path status failure,
-            // we will throw the original exception.
+          } catch (AzureBlobFileSystemException exception) {
+            throw new AbfsDriverException(
+                "Error in getPathStatus while recovering from create failure.",
+                exception);
           }
         }
       }
@@ -665,35 +670,7 @@ public class AbfsDfsClient extends AbfsClient {
       String sourceEtag,
       boolean isMetadataIncompleteState) throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-
-    final boolean hasEtag = !isEmpty(sourceEtag);
-
     boolean shouldAttemptRecovery = isRenameResilience() && getIsNamespaceEnabled();
-    if (!hasEtag && shouldAttemptRecovery) {
-      // in case eTag is already not supplied to the API
-      // and rename resilience is expected and it is an HNS enabled account
-      // fetch the source etag to be used later in recovery
-      try {
-        final AbfsRestOperation srcStatusOp = getPathStatus(source,
-            false, tracingContext, null);
-        if (srcStatusOp.hasResult()) {
-          final AbfsHttpOperation result = srcStatusOp.getResult();
-          sourceEtag = extractEtagHeader(result);
-          // and update the directory status.
-          boolean isDir = checkIsDir(result);
-          shouldAttemptRecovery = !isDir;
-          LOG.debug(
-              "Retrieved etag of source for rename recovery: {}; isDir={}",
-              sourceEtag, isDir);
-        }
-      } catch (AbfsRestOperationException e) {
-        throw new AbfsRestOperationException(e.getStatusCode(),
-            SOURCE_PATH_NOT_FOUND.getErrorCode(),
-            e.getMessage(), e);
-      }
-
-    }
-
     String encodedRenameSource = urlEncode(
         FORWARD_SLASH + this.getFileSystem() + source);
     if (getAuthType() == AuthType.SAS) {
@@ -745,12 +722,15 @@ public class AbfsDfsClient extends AbfsClient {
           if (clientTransactionId.equals(
               abfsHttpOperation.getResponseHeader(
                   X_MS_CLIENT_TRANSACTION_ID))) {
-            return new AbfsClientRenameResult(op, true,
+            return new AbfsClientRenameResult(
+                getSuccessOp(AbfsRestOperationType.RenamePath,
+                HTTP_METHOD_PUT, url, requestHeaders), true,
                 isMetadataIncompleteState);
           }
-        } catch (AbfsRestOperationException ignored) {
-          // In case of get path status failure,
-          // we will throw the original exception.
+        } catch (AzureBlobFileSystemException exception) {
+          throw new AbfsDriverException(
+              "Error in getPathStatus while recovering from rename failure.",
+              exception);
         }
         throw e;
       }
@@ -1657,5 +1637,23 @@ public class AbfsDfsClient extends AbfsClient {
           new AbfsHttpHeader(X_MS_CLIENT_TRANSACTION_ID, clientTransactionId));
     }
     return clientTransactionId;
+  }
+
+  /**
+   * Get the dummy success operation.
+   * @param operationType type of the operation
+   * @param httpMethod http method
+   * @param url url to be used
+   * @param requestHeaders list of headers to be sent with the request
+   * @return success operation
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
+  private AbfsRestOperation getSuccessOp(final AbfsRestOperationType operationType,
+      final String httpMethod, final URL url,
+      final List<AbfsHttpHeader> requestHeaders) throws AzureBlobFileSystemException {
+    final AbfsRestOperation successOp = getAbfsRestOperation(
+        operationType, httpMethod, url, requestHeaders);
+    successOp.hardSetResult(HttpURLConnection.HTTP_OK);
+    return successOp;
   }
 }
