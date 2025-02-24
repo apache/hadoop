@@ -53,7 +53,7 @@ In both the cases the URL used must be the blob endpoint url of the account.
     ```xml
     <property>
       <name>fs.defaultFS</name>
-      <value>https://ACCOUNT_NAME.blob.core.windows.net</value>
+      <value>abfss://CONTAINER_NAME@ACCOUNT_NAME.blob.core.windows.net</value>
     </property>
     ```
 3. Service Type for FNS Accounts: This will allow an override to choose service
@@ -74,7 +74,7 @@ and [Flush](./blobEndpoint.html#put-block-list). All other operations will still
 configured service type.
     ```xml
    <property>
-        <name>fs.azure.fns.account.service.type</name>
+        <name>fs.azure.ingress.service.type</name>
         <value>BLOB</value>
     </property>
     ```
@@ -153,4 +153,4 @@ providing an additional layer of security and control over their data.
 ## Ask all about ABFS Driver
 
 For any queries related to onboard to FNS Blob or anything related to ABFS
-Driver in general, kindly reach out to us at **askabfs@microsoft.com**. 
+Driver in general, kindly reach out to us at **askabfs@microsoft.com**.
