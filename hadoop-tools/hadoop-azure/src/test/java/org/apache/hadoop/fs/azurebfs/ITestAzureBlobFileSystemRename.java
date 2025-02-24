@@ -1747,7 +1747,13 @@ public class ITestAzureBlobFileSystemRename extends
     }
   }
 
-
+  /**
+   * Tests the recovery process during a file rename operation in Azure Blob File System when
+   * the `getPathStatus` method encounters a timeout exception. The test ensures that the proper
+   * error message is returned when the operation fails during recovery.
+   *
+   * @throws Exception If an error occurs during the test setup or execution.
+   */
   @Test
   public void failureInGetPathStatusDuringRenameRecovery() throws Exception {
     try (AzureBlobFileSystem fs = getFileSystem()) {
