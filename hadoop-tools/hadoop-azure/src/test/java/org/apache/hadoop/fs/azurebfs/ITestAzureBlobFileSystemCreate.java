@@ -2120,12 +2120,11 @@ public class ITestAzureBlobFileSystemCreate extends
   /**
    * Test to verify that the client transaction ID is included in the response header
    * during the creation of a new file in Azure Blob Storage.
-   * <p>
+   *
    * This test ensures that when a new file is created, the Azure Blob FileSystem client
    * correctly includes the client transaction ID in the response header for the created file.
    * The test uses a configuration where client transaction ID is enabled and verifies
    * its presence after the file creation operation.
-   * </p>
    *
    * @throws Exception if any error occurs during test execution
    */
@@ -2157,12 +2156,11 @@ public class ITestAzureBlobFileSystemCreate extends
   /**
    * Test to verify that the client transaction ID is included in the response header
    * after two consecutive create operations on the same file in Azure Blob Storage.
-   * <p>
+   *
    * This test ensures that even after performing two create operations (with overwrite)
    * on the same file, the Azure Blob FileSystem client includes the client transaction ID
    * in the response header for the created file. The test checks for the presence of
    * the client transaction ID in the response after the second create call.
-   * </p>
    *
    * @throws Exception if any error occurs during test execution
    */
@@ -2194,16 +2192,16 @@ public class ITestAzureBlobFileSystemCreate extends
   }
 
   /**
-   * Test to verify that the client transaction ID is included in the response header
-   * during the creation of a new file in Azure Blob Storage.
-   * <p>
-   * This test ensures that when a new file is created, the Azure Blob FileSystem client
-   * correctly includes the client transaction ID in the response header for the created file.
-   * The test uses a configuration where client transaction ID is enabled and verifies
-   * its presence after the file creation operation.
-   * </p>
+   * Test case to simulate a failure scenario during the recovery process while
+   * creating a file in Azure Blob File System. This test verifies that when the
+   * `getPathStatus` method encounters a timeout exception during recovery, it
+   * triggers an appropriate failure response.
    *
-   * @throws Exception if any error occurs during test execution
+   * The test mocks the `AbfsDfsClient` to simulate the failure behavior, including
+   * a retry logic. It also verifies that an exception is correctly thrown and the
+   * error message contains the expected details for recovery failure.
+   *
+   * @throws Exception If an error occurs during the test setup or execution.
    */
   @Test
   public void failureInGetPathStatusDuringCreateRecovery() throws Exception {
@@ -2254,6 +2252,17 @@ public class ITestAzureBlobFileSystemCreate extends
     return abfsDfsClient;
   }
 
+  /**
+   * Mocks the retry behavior for an AbfsDfsClient request. The method intercepts
+   * the Abfs operation and simulates an HTTP conflict (HTTP 409) error on the
+   * first invocation. It creates a mock HTTP operation with a PUT method and
+   * specific status codes and error messages.
+   *
+   * @param abfsDfsClient The AbfsDfsClient to mock operations for.
+   * @param headers The list of HTTP headers to which request headers will be added.
+   *
+   * @throws Exception If an error occurs during mock creation or operation execution.
+   */
   private void mockRetriedRequest(AbfsDfsClient abfsDfsClient,
       final List<AbfsHttpHeader> headers) throws Exception {
     TestAbfsClient.mockAbfsOperationCreation(abfsDfsClient,

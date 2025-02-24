@@ -1668,7 +1668,7 @@ public class ITestAzureBlobFileSystemRename extends
     configuration.set(FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID, "true");
     try (AzureBlobFileSystem fs = getFileSystem()) {
       assumeRecoveryThroughClientTransactionID(false);
-      AbfsClient abfsClient = Mockito.spy(fs.getAbfsClient());
+      AbfsDfsClient abfsClient = (AbfsDfsClient) Mockito.spy(fs.getAbfsClient());
       fs.getAbfsStore().setClient(abfsClient);
       Path sourceDir = path("/testSrc");
       assertMkdirs(fs, sourceDir);
@@ -1676,7 +1676,9 @@ public class ITestAzureBlobFileSystemRename extends
       Path sourceFilePath = new Path(sourceDir, filename);
       touch(sourceFilePath);
       Path destFilePath = new Path(sourceDir, "file2");
+
       final List<AbfsHttpHeader> headers = new ArrayList<>();
+      mockRetriedRequest(abfsClient, headers);
 
       AbfsRestOperation getPathRestOp = Mockito.mock(AbfsRestOperation.class);
       AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
@@ -1707,12 +1709,11 @@ public class ITestAzureBlobFileSystemRename extends
   /**
    * Test to verify that the client transaction ID is included in the response header
    * after renaming a file in Azure Blob Storage.
-   * <p>
+   *
    * This test ensures that when a file is renamed, the Azure Blob FileSystem client
    * properly includes the client transaction ID in the response header for the renamed file.
    * The test uses a configuration where client transaction ID is enabled and verifies
    * its presence after performing a rename operation.
-   * </p>
    *
    * @throws Exception if any error occurs during test execution
    */
@@ -1745,6 +1746,7 @@ public class ITestAzureBlobFileSystemRename extends
           .isEqualTo(clientTransactionId[0]);
     }
   }
+
 
   @Test
   public void failureInGetPathStatusDuringRenameRecovery() throws Exception {
@@ -1783,6 +1785,17 @@ public class ITestAzureBlobFileSystemRename extends
     }
   }
 
+  /**
+   * Mocks the retry behavior for an AbfsDfsClient request. The method intercepts
+   * the Abfs operation and simulates an HTTP conflict (HTTP 404) error on the
+   * first invocation. It creates a mock HTTP operation with a PUT method and
+   * specific status codes and error messages.
+   *
+   * @param abfsDfsClient The AbfsDfsClient to mock operations for.
+   * @param headers The list of HTTP headers to which request headers will be added.
+   *
+   * @throws Exception If an error occurs during mock creation or operation execution.
+   */
    private void mockRetriedRequest(AbfsDfsClient abfsDfsClient,
        final List<AbfsHttpHeader> headers) throws Exception {
      TestAbfsClient.mockAbfsOperationCreation(abfsDfsClient,
