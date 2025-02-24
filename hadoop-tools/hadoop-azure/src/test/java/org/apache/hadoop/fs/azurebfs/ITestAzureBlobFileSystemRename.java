@@ -84,6 +84,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.COPY_BLOB_ABORTED;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.COPY_BLOB_FAILED;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.mockAddClientTransactionIdToHeader;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
@@ -1664,7 +1665,7 @@ public class ITestAzureBlobFileSystemRename extends
     Configuration configuration = new Configuration(getRawConfiguration());
     configuration.set(FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID, "true");
     try (AzureBlobFileSystem fs = getFileSystem()) {
-      assumeRecoveryThroughClientTransactionID(fs, false);
+      assumeRecoveryThroughClientTransactionID(false);
       AbfsClient abfsClient = Mockito.spy(fs.getAbfsClient());
       fs.getAbfsStore().setClient(abfsClient);
       Path sourceDir = path("/testSrc");
@@ -1739,7 +1740,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void getClientTransactionIdAfterRename() throws Exception {
     try (AzureBlobFileSystem fs = getFileSystem()) {
-      assumeRecoveryThroughClientTransactionID(fs, false);
+      assumeRecoveryThroughClientTransactionID(false);
       AbfsDfsClient abfsDfsClient = (AbfsDfsClient) Mockito.spy(fs.getAbfsClient());
       fs.getAbfsStore().setClient(abfsDfsClient);
       final String[] clientTransactionId = new String[1];

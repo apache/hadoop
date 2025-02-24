@@ -18,42 +18,22 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
-import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
-import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
-import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
-import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
-import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.fs.permission.FsPermission;
 
-import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -186,164 +166,5 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     fs.create(new Path("/testFilePath"));
     intercept(FileAlreadyExistsException.class, () -> fs.mkdirs(new Path("/testFilePath")));
     intercept(FileAlreadyExistsException.class, () -> fs.mkdirs(new Path("/testFilePath/newDir")));
-  }
-
-  /**
-   * Tests the idempotency of creating a path with retries by simulating
-   * a conflict response (HTTP 409) from the Azure Blob File System client.
-   * The method ensures that the path creation operation retries correctly
-   * with the proper transaction ID headers, verifying idempotency during
-   * failure recovery.
-   *
-   * @throws Exception if any error occurs during the operation.
-   */
-  @Test
-  public void createPathRetryIdempotency() throws Exception {
-    Configuration configuration = new Configuration(getRawConfiguration());
-    configuration.set(FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID, "true");
-    try (AzureBlobFileSystem fs = getFileSystem(configuration)) {
-      assumeRecoveryThroughClientTransactionID(fs, true);
-      AbfsDfsClient abfsClient = mockIngressClientHandler(fs);
-      final Path nonOverwriteFile = new Path(
-          "/NonOverwriteTest_FileName_" + UUID.randomUUID());
-      final List<AbfsHttpHeader> headers = new ArrayList<>();
-      TestAbfsClient.mockAbfsOperationCreation(abfsClient,
-          new MockIntercept<AbfsRestOperation>() {
-            private int count = 0;
-
-            @Override
-            public void answer(final AbfsRestOperation mockedObj,
-                final InvocationOnMock answer)
-                throws AbfsRestOperationException {
-              if (count == 0) {
-                count = 1;
-                AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
-                Mockito.doReturn(HTTP_METHOD_PUT).when(op).getMethod();
-                Mockito.doReturn(EMPTY_STRING).when(op).getStorageErrorMessage();
-                Mockito.doReturn(true).when(mockedObj).hasResult();
-                Mockito.doReturn(op).when(mockedObj).getResult();
-                Mockito.doReturn(HTTP_CONFLICT).when(op).getStatusCode();
-                headers.addAll(mockedObj.getRequestHeaders());
-                throw new AbfsRestOperationException(HTTP_CONFLICT,
-                    AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(), EMPTY_STRING,
-                    null, op);
-              }
-            }
-          });
-      AbfsRestOperation getPathRestOp = Mockito.mock(AbfsRestOperation.class);
-      AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
-      Mockito.doAnswer(answer -> {
-        String requiredHeader = null;
-        for (AbfsHttpHeader httpHeader : headers) {
-          if (X_MS_CLIENT_TRANSACTION_ID.equalsIgnoreCase(
-              httpHeader.getName())) {
-            requiredHeader = httpHeader.getValue();
-            break;
-          }
-        }
-        return requiredHeader;
-      }).when(op).getResponseHeader(X_MS_CLIENT_TRANSACTION_ID);
-      Mockito.doReturn(true).when(getPathRestOp).hasResult();
-      Mockito.doReturn(op).when(getPathRestOp).getResult();
-      Mockito.doReturn(getPathRestOp).when(abfsClient).getPathStatus(
-          Mockito.nullable(String.class), Mockito.nullable(Boolean.class),
-          Mockito.nullable(TracingContext.class),
-          Mockito.nullable(ContextEncryptionAdapter.class));
-      fs.create(nonOverwriteFile, false);
-    }
-  }
-
-  /**
-   * Test to verify that the client transaction ID is included in the response header
-   * during the creation of a new file in Azure Blob Storage.
-   * <p>
-   * This test ensures that when a new file is created, the Azure Blob FileSystem client
-   * correctly includes the client transaction ID in the response header for the created file.
-   * The test uses a configuration where client transaction ID is enabled and verifies
-   * its presence after the file creation operation.
-   * </p>
-   *
-   * @throws Exception if any error occurs during test execution
-   */
-  @Test
-  public void getClientTransactionIdAfterCreate() throws Exception {
-    try (AzureBlobFileSystem fs = getFileSystem()) {
-      assumeRecoveryThroughClientTransactionID(fs, true);
-      final String[] clientTransactionId = new String[1];
-      AbfsDfsClient abfsDfsClient = mockIngressClientHandler(fs);
-      mockAddClientTransactionIdToHeader(abfsDfsClient, clientTransactionId);
-      final Path nonOverwriteFile = new Path(
-          "/NonOverwriteTest_FileName_" + UUID.randomUUID());
-      fs.create(nonOverwriteFile, false);
-
-      final AbfsHttpOperation getPathStatusOp =
-          abfsDfsClient.getPathStatus(nonOverwriteFile.toUri().getPath(), false,
-              getTestTracingContext(fs, true), null).getResult();
-      Assertions.assertThat(
-          getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))
-          .describedAs("Client transaction ID should be set during create")
-          .isNotNull();
-      Assertions.assertThat(
-              getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))
-          .describedAs("Client transaction ID should be equal to the one set in the header")
-          .isEqualTo(clientTransactionId[0]);
-    }
-  }
-
-  /**
-   * Test to verify that the client transaction ID is included in the response header
-   * after two consecutive create operations on the same file in Azure Blob Storage.
-   * <p>
-   * This test ensures that even after performing two create operations (with overwrite)
-   * on the same file, the Azure Blob FileSystem client includes the client transaction ID
-   * in the response header for the created file. The test checks for the presence of
-   * the client transaction ID in the response after the second create call.
-   * </p>
-   *
-   * @throws Exception if any error occurs during test execution
-   */
-  @Test
-  public void testClientTransactionIdAfterTwoCreateCalls() throws Exception {
-    try (AzureBlobFileSystem fs = getFileSystem()) {
-      assumeRecoveryThroughClientTransactionID(fs, true);
-      final String[] clientTransactionId = new String[1];
-      AbfsDfsClient abfsDfsClient = mockIngressClientHandler(fs);
-      mockAddClientTransactionIdToHeader(abfsDfsClient, clientTransactionId);
-      Path testPath = path("testfile");
-      AzureBlobFileSystemStore.Permissions permissions
-          = new AzureBlobFileSystemStore.Permissions(false,
-          FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
-      fs.create(testPath, false); //5ff449d1-b5d2-478c-9722-8e26ebb5501e
-      fs.create(testPath, true);
-      final AbfsHttpOperation getPathStatusOp =
-          abfsDfsClient.getPathStatus(testPath.toUri().getPath(), false,
-              getTestTracingContext(fs, true), null).getResult();
-      Assertions.assertThat(
-              getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))
-          .describedAs("Client transaction ID should be set during create")
-          .isNotNull();
-      Assertions.assertThat(
-              getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))
-          .describedAs("Client transaction ID should be equal to the one set in the header")
-          .isEqualTo(clientTransactionId[0]);
-    }
-  }
-
-  /**
-   * Mocks and returns an instance of {@link AbfsDfsClient} for the given AzureBlobFileSystem.
-   * This method sets up the necessary mock behavior for the client handler and ingress client.
-   *
-   * @param fs The {@link AzureBlobFileSystem} instance for which the client handler will be mocked.
-   * @return A mocked {@link AbfsDfsClient} instance associated with the provided file system.
-   */
-  private AbfsDfsClient mockIngressClientHandler(AzureBlobFileSystem fs) {
-    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
-    AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
-    AbfsDfsClient abfsDfsClient = (AbfsDfsClient) Mockito.spy(
-        clientHandler.getClient());
-    fs.getAbfsStore().setClient(abfsDfsClient);
-    fs.getAbfsStore().setClientHandler(clientHandler);
-    Mockito.doReturn(abfsDfsClient).when(clientHandler).getIngressClient();
-    return abfsDfsClient;
   }
 }
