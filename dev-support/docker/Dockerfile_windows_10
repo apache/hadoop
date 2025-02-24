@@ -51,6 +51,14 @@ RUN powershell git clone https://github.com/microsoft/vcpkg.git \
     && cd vcpkg \
     && git checkout 7ffa425e1db8b0c3edf9c50f2f3a0f25a324541d \
     && .\bootstrap-vcpkg.bat
+
+# Fix wrong download link for 7-zip in .\vcpkg\scripts\vcpkgTools.xml:
+# - https://www.nuget.org/api/v2/package/7-Zip.CommandLine/18.1.0 (not working anymore) is replaced with
+# - https://globalcdn.nuget.org/packages/7-zip.commandline.18.1.0.nupkg?packageVersion=18.1.0 (working)
+# Replacing is done using the Linux tool "sed".
+RUN choco install sed -y
+RUN sed -i "s,https://www.nuget.org/api/v2/package/7-Zip.CommandLine/18.1.0,https://globalcdn.nuget.org/packages/7-zip.commandline.18.1.0.nupkg?packageVersion=18.1.0,g" .\vcpkg\scripts\vcpkgTools.xml
+
 RUN powershell .\vcpkg\vcpkg.exe install boost:x64-windows
 RUN powershell .\vcpkg\vcpkg.exe install protobuf:x64-windows
 RUN powershell .\vcpkg\vcpkg.exe install openssl:x64-windows
@@ -74,10 +82,10 @@ RUN powershell Expand-Archive -Path $Env:TEMP\zstd-v1.5.4-win64.zip -Destination
 RUN setx PATH "%PATH%;C:\ZStd"
 
 # Install libopenssl 3.1.0 needed for rsync 3.2.7.
-RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libopenssl-3.1.0-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libopenssl-3.1.0-1-x86_64.pkg.tar.zst
-RUN powershell zstd -d $Env:TEMP\libopenssl-3.1.0-1-x86_64.pkg.tar.zst -o $Env:TEMP\libopenssl-3.1.0-1-x86_64.pkg.tar
+RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libopenssl-3.1.0-2-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libopenssl-3.1.0-2-x86_64.pkg.tar.zst
+RUN powershell zstd -d $Env:TEMP\libopenssl-3.1.0-2-x86_64.pkg.tar.zst -o $Env:TEMP\libopenssl-3.1.0-2-x86_64.pkg.tar
 RUN powershell mkdir "C:\LibOpenSSL"
-RUN powershell tar -xvf $Env:TEMP\libopenssl-3.1.0-1-x86_64.pkg.tar -C "C:\LibOpenSSL"
+RUN powershell tar -xvf $Env:TEMP\libopenssl-3.1.0-2-x86_64.pkg.tar -C "C:\LibOpenSSL"
 
 # Install libxxhash 0.8.1 needed for rsync 3.2.7.
 RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libxxhash-0.8.1-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libxxhash-0.8.1-1-x86_64.pkg.tar.zst
@@ -86,10 +94,10 @@ RUN powershell mkdir "C:\LibXXHash"
 RUN powershell tar -xvf $Env:TEMP\libxxhash-0.8.1-1-x86_64.pkg.tar -C "C:\LibXXHash"
 
 # Install libzstd 1.5.4 needed for rsync 3.2.7.
-RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libzstd-1.5.4-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libzstd-1.5.4-1-x86_64.pkg.tar.zst
-RUN powershell zstd -d $Env:TEMP\libzstd-1.5.4-1-x86_64.pkg.tar.zst -o $Env:TEMP\libzstd-1.5.4-1-x86_64.pkg.tar
+RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libzstd-1.5.5-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libzstd-1.5.5-1-x86_64.pkg.tar.zst
+RUN powershell zstd -d $Env:TEMP\libzstd-1.5.5-1-x86_64.pkg.tar.zst -o $Env:TEMP\libzstd-1.5.5-1-x86_64.pkg.tar
 RUN powershell mkdir "C:\LibZStd"
-RUN powershell tar -xvf $Env:TEMP\libzstd-1.5.4-1-x86_64.pkg.tar -C "C:\LibZStd"
+RUN powershell tar -xvf $Env:TEMP\libzstd-1.5.5-1-x86_64.pkg.tar -C "C:\LibZStd"
 
 # Install rsync 3.2.7.
 RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/rsync-3.2.7-2-x86_64.pkg.tar.zst -OutFile $Env:TEMP\rsync-3.2.7-2-x86_64.pkg.tar.zst
