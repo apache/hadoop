@@ -875,7 +875,7 @@ public class WebHdfsFileSystem extends FileSystem
             }
             newIoe.setStackTrace(ioe.getStackTrace());
             ioe = newIoe;
-          } catch (NoSuchMethodException | SecurityException | IllegalArgumentException e) {
+          } catch (Exception e) {
           }
           shouldRetry(ioe, retry);
         }
