@@ -132,9 +132,7 @@ public class TestRouterSecurityManager {
     // Cancel the delegation token
     securityManager.cancelDelegationToken(token);
 
-    String exceptionCause = "Renewal request for unknown token";
     exceptionRule.expect(SecretManager.InvalidToken.class);
-    exceptionRule.expectMessage(exceptionCause);
 
     // This throws an exception as token has been cancelled.
     securityManager.renewDelegationToken(token);

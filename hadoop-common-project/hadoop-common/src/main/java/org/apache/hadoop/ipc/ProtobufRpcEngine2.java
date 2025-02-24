@@ -223,7 +223,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
         throws ServiceException {
       long startTime = 0;
       if (LOG.isDebugEnabled()) {
-        startTime = Time.now();
+        startTime = Time.monotonicNow();
       }
 
       if (args.length != 2) { // RpcController + Message
@@ -278,7 +278,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
       }
 
       if (LOG.isDebugEnabled()) {
-        long callTime = Time.now() - startTime;
+        long callTime = Time.monotonicNow() - startTime;
         LOG.debug("Call: " + method.getName() + " took " + callTime + "ms");
       }
 

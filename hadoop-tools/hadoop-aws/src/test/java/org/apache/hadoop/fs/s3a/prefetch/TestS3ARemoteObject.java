@@ -26,11 +26,11 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.impl.prefetch.ExceptionAsserts;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
-import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 public class TestS3ARemoteObject extends AbstractHadoopTestBase {
@@ -40,13 +40,13 @@ public class TestS3ARemoteObject extends AbstractHadoopTestBase {
   private final ExecutorServiceFuturePool futurePool =
       new ExecutorServiceFuturePool(threadPool);
 
-  private final S3AInputStream.InputStreamCallbacks client =
+  private final ObjectInputStreamCallbacks client =
       MockS3ARemoteObject.createClient("bucket");
 
   @Test
   public void testArgChecks() throws Exception {
     S3AReadOpContext readContext =
-        S3APrefetchFakes.createReadContext(futurePool, "key", 10, 10, 1);
+        S3APrefetchFakes.createReadContext(futurePool, "key", 10);
     S3ObjectAttributes attrs =
         S3APrefetchFakes.createObjectAttributes("bucket", "key", 10);
     S3AInputStreamStatistics stats =

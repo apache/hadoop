@@ -211,4 +211,19 @@ public final class Constants {
   public static final String LIST_VERSION = "fs.oss.list.version";
 
   public static final int DEFAULT_LIST_VERSION = 2;
+
+  /**
+   * OSS signature version.
+   */
+  public static final String SIGNATURE_VERSION_KEY = "fs.oss.signatureversion";
+
+  /**
+   * OSS signature version DEFAULT {@value}.
+   */
+  public static final String SIGNATURE_VERSION_DEFAULT = "V1";
+
+  /**
+   * OSS region {@value}.
+   */
+  public static final String REGION_KEY = "fs.oss.region";
 }

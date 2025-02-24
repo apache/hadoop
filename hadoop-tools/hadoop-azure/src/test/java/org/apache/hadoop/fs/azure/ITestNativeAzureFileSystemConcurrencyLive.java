@@ -23,8 +23,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +40,7 @@ public class ITestNativeAzureFileSystemConcurrencyLive
     extends AbstractWasbTestBase {
 
   private static final int THREAD_COUNT = 102;
-  private static final int TEST_EXECUTION_TIMEOUT = 30000;
+  private static final int TEST_EXECUTION_TIMEOUT = 30;
 
   @Override
   protected AzureBlobStorageTestAccount createTestAccount() throws Exception {
@@ -53,7 +53,8 @@ public class ITestNativeAzureFileSystemConcurrencyLive
    * overwritten, even if the original destination exists but is deleted by an
    * external agent during the create operation.
    */
-  @Test(timeout = TEST_EXECUTION_TIMEOUT)
+  @Test
+  @Timeout(TEST_EXECUTION_TIMEOUT)
   public void testConcurrentCreateDeleteFile() throws Exception {
     Path testFile = methodPath();
 
@@ -71,12 +72,12 @@ public class ITestNativeAzureFileSystemConcurrencyLive
       List<Future<Void>> futures = es.invokeAll(tasks);
 
       for (Future<Void> future : futures) {
-        Assert.assertTrue(future.isDone());
+        assertTrue(future.isDone());
 
         // we are using Callable<V>, so if an exception
         // occurred during the operation, it will be thrown
         // when we call get
-        Assert.assertEquals(null, future.get());
+        assertEquals(null, future.get());
       }
     } finally {
       if (es != null) {
@@ -90,7 +91,8 @@ public class ITestNativeAzureFileSystemConcurrencyLive
    * One of the threads should successfully delete the file and return true;
    * all other threads should return false.
    */
-  @Test(timeout = TEST_EXECUTION_TIMEOUT)
+  @Test
+  @Timeout(TEST_EXECUTION_TIMEOUT)
   public void testConcurrentDeleteFile() throws Exception {
     Path testFile = new Path("test.dat");
     fs.create(testFile).close();
@@ -109,7 +111,7 @@ public class ITestNativeAzureFileSystemConcurrencyLive
 
       int successCount = 0;
       for (Future<Boolean> future : futures) {
-        Assert.assertTrue(future.isDone());
+        assertTrue(future.isDone());
 
         // we are using Callable<V>, so if an exception
         // occurred during the operation, it will be thrown
@@ -120,10 +122,8 @@ public class ITestNativeAzureFileSystemConcurrencyLive
         }
       }
 
-      Assert.assertEquals(
-          "Exactly one delete operation should return true.",
-          1,
-          successCount);
+      assertEquals(1, successCount,
+          "Exactly one delete operation should return true.");
     } finally {
       if (es != null) {
         es.shutdownNow();
@@ -139,7 +139,8 @@ public class ITestNativeAzureFileSystemConcurrencyLive
    *
    * @see <a href="https://github.com/Azure/azure-storage-java/pull/546">https://github.com/Azure/azure-storage-java/pull/546</a>
    */
-  @Test(timeout = TEST_EXECUTION_TIMEOUT)
+  @Test
+  @Timeout(TEST_EXECUTION_TIMEOUT)
   public void testConcurrentList() throws Exception {
     final Path testDir = new Path("/tmp/data-loss/11230174258112/_temporary/0/_temporary/attempt_20200624190514_0006_m_0");
     final Path testFile = new Path(testDir, "part-00004-15ea87b1-312c-4fdf-1820-95afb3dfc1c3-a010.snappy.parquet");
@@ -157,13 +158,13 @@ public class ITestNativeAzureFileSystemConcurrencyLive
       List<Future<Integer>> futures = es.invokeAll(tasks);
 
       for (Future<Integer> future : futures) {
-        Assert.assertTrue(future.isDone());
+        assertTrue(future.isDone());
 
         // we are using Callable<V>, so if an exception
         // occurred during the operation, it will be thrown
         // when we call get
         long fileCount = future.get();
-        assertEquals("The list should always contain 1 file.", 1, fileCount);
+        assertEquals(1, fileCount, "The list should always contain 1 file.");
       }
     } finally {
       if (es != null) {

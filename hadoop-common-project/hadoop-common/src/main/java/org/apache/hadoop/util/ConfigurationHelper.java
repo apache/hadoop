@@ -22,6 +22,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -123,4 +124,39 @@ public final class ConfigurationHelper {
     return mapping;
   }
 
+  /**
+   * Look up an enum from the configuration option and map it to
+   * a value in the supplied enum class.
+   * If no value is supplied or there is no match for the supplied value,
+   * the fallback function is invoked, passing in the trimmed and possibly
+   * empty string of the value.
+   * Extends {link {@link Configuration#getEnum(String, Enum)}}
+   * by adding case independence and a lambda expression for fallback,
+   * rather than a default value.
+   * @param conf configuration
+   * @param name property name
+   * @param enumClass classname to resolve
+   * @param fallback fallback supplier
+   * @param <E> enumeration type.
+   * @return an enum value
+   * @throws IllegalArgumentException If mapping is illegal for the type provided
+   */
+  public static <E extends Enum<E>> E resolveEnum(
+      Configuration conf,
+      String name,
+      Class<E> enumClass,
+      Function<String, E> fallback) {
+
+    final String val = conf.getTrimmed(name, "");
+
+    // build a map of lower case string to enum values.
+    final Map<String, E> mapping = mapEnumNamesToValues("", enumClass);
+    final E mapped = mapping.get(val.toLowerCase(Locale.ROOT));
+    if (mapped != null) {
+      return mapped;
+    } else {
+      // fallback handles it
+      return fallback.apply(val);
+    }
+  }
 }
