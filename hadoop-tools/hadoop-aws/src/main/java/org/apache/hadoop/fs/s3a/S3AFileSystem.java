@@ -2127,7 +2127,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             options.writeObjectFlags(),
             options.etag());
 
-
     validateOutputStreamConfiguration(path, getConf());
 
     final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
@@ -2155,7 +2154,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withIOStatisticsAggregator(
             IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator())
         .withMultipartEnabled(isMultipartUploadEnabled)
-        .withConditionalPutEnabled(conditionalCreate);
+        .withConditionalPutEnabled(conditionalCreate)
+        .withEtag(options.etag());
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);

@@ -1431,6 +1431,11 @@ class S3ABlockOutputStream extends OutputStream implements
      */
     private boolean isConditionalPutEnabled;
 
+    /**
+     * etag used for write
+     */
+    private String etag;
+
     private BlockOutputStreamBuilder() {
     }
 
@@ -1594,8 +1599,14 @@ class S3ABlockOutputStream extends OutputStream implements
     }
 
     public BlockOutputStreamBuilder withConditionalPutEnabled(
-            final boolean value){
+            final boolean value) {
       isConditionalPutEnabled = value;
+      return this;
+    }
+
+    public BlockOutputStreamBuilder withEtag(
+            final String value) {
+      etag = value;
       return this;
     }
   }
