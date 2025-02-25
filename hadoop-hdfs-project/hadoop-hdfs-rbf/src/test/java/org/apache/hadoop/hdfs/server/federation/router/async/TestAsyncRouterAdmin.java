@@ -46,7 +46,7 @@ public class TestAsyncRouterAdmin extends TestRouterAdmin {
   @BeforeClass
   public static void globalSetUp() throws Exception {
     cluster = new StateStoreDFSCluster(false, 1);
-    // Build and start a router with State Store + admin + RPC
+    // Build and start a router with State Store + admin + RPC.
     Configuration conf = new RouterConfigBuilder()
         .stateStore()
         .admin()
@@ -62,7 +62,7 @@ public class TestAsyncRouterAdmin extends TestRouterAdmin {
     Router router = routerContext.getRouter();
     stateStore = router.getStateStore();
 
-    // Add two name services for testing disabling
+    // Add two name services for testing disabling.
     ActiveNamenodeResolver membership = router.getNamenodeResolver();
     membership.registerNamenode(
         createNamenodeReport("ns0", "nn1", HAServiceProtocol.HAServiceState.ACTIVE));
@@ -77,12 +77,12 @@ public class TestAsyncRouterAdmin extends TestRouterAdmin {
       throws IOException, NoSuchFieldException, IllegalAccessException {
     RouterRpcServer spyRpcServer =
         Mockito.spy(routerContext.getRouter().createRpcServer());
-    //Used reflection to set the 'rpcServer field'
+    // Used reflection to set the 'rpcServer field'.
     setField(routerContext.getRouter(), "rpcServer", spyRpcServer);
     Mockito.doReturn(null).when(spyRpcServer).getFileInfo(Mockito.anyString());
 
-    // mock rpc client for destination check when editing mount tables.
-    //spy RPC client and used reflection to set the 'rpcClient' field
+    // Mock rpc client for destination check when editing mount tables.
+    // Spy RPC client and used reflection to set the 'rpcClient' field.
     mockRpcClient = Mockito.spy(spyRpcServer.getRPCClient());
     setField(spyRpcServer, "rpcClient", mockRpcClient);
     RemoteLocation remoteLocation0 =
