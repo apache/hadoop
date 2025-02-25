@@ -55,7 +55,7 @@ public class TestRouterAsyncRPCMultipleDestinationMountTableResolver extends
   @BeforeClass
   public static void setUp() throws Exception {
 
-    // Build and start a federated cluster
+    // Build and start a federated cluster.
     cluster = new StateStoreDFSCluster(false, 3,
         MultipleDestinationMountTableResolver.class);
     Configuration routerConf =
