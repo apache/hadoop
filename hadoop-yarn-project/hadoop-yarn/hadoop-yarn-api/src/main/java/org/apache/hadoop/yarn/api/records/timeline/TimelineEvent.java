@@ -42,7 +42,7 @@ import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
 @Evolving
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonIgnoreProperties(ignoreUnknown = true, value = {"eventInfoJAXB"})
 public class TimelineEvent implements Comparable<TimelineEvent> {
 
   private long timestamp;

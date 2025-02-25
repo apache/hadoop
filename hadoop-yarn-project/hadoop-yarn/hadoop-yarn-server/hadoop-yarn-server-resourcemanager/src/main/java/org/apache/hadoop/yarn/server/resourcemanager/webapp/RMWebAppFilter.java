@@ -250,6 +250,7 @@ public class RMWebAppFilter implements Filter {
 
   private boolean shouldRedirect(RMWebApp rmWebApp, String uri) {
     return !uri.equals("/" + rmWebApp.wsName() + "/v1/cluster/info")
+        && !uri.equals("/ws/v1/cluster/info")
         && !uri.equals("/" + rmWebApp.name() + "/cluster")
         && !uri.startsWith(ProxyUriUtils.PROXY_BASE)
         && !NON_REDIRECTED_URIS.contains(uri);

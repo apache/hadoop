@@ -196,7 +196,7 @@ public class BaseAMRMClientTest {
 
   @After
   public void teardown() throws YarnException, IOException {
-    if (yarnClient != null) {
+    if (yarnClient != null && attemptId != null) {
       yarnClient.killApplication(attemptId.getApplicationId());
     }
     attemptId = null;

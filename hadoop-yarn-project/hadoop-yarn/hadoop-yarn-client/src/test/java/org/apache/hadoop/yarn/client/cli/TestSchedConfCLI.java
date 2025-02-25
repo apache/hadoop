@@ -23,6 +23,7 @@ import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.JerseyTest;
 import org.glassfish.jersey.test.TestProperties;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -154,7 +155,8 @@ public class TestSchedConfCLI extends JerseyTest {
     config.setMaximumCapacity(a, 100f);
   }
 
-  private void cleanUp() throws Exception {
+  @After
+  public void cleanUp() throws Exception {
     if (rm != null) {
       rm.stop();
     }
@@ -176,44 +178,38 @@ public class TestSchedConfCLI extends JerseyTest {
     ByteArrayOutputStream sysOutStream = new ByteArrayOutputStream();
     PrintStream sysOut = new PrintStream(sysOutStream);
     System.setOut(sysOut);
-    try {
-      int exitCode = cli.getSchedulerConf("", target());
-      assertEquals("SchedConfCLI failed to run", 0, exitCode);
-      assertTrue("Failed to get scheduler configuration",
-          sysOutStream.toString().contains("testqueue"));
-    } finally {
-      cleanUp();
-    }
+
+    int exitCode = cli.getSchedulerConf("", target());
+    assertEquals("SchedConfCLI failed to run", 0, exitCode);
+    assertTrue("Failed to get scheduler configuration",
+        sysOutStream.toString().contains("testqueue"));
   }
 
   @Test(timeout = 10000)
   public void testFormatSchedulerConf() throws Exception {
-    try {
-      ResourceScheduler scheduler = rm.getResourceScheduler();
-      MutableConfigurationProvider provider =
-          ((MutableConfScheduler) scheduler).getMutableConfProvider();
 
-      SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
-      HashMap<String, String> globalUpdates = new HashMap<>();
-      globalUpdates.put("schedKey1", "schedVal1");
-      schedUpdateInfo.setGlobalParams(globalUpdates);
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    MutableConfigurationProvider provider =
+        ((MutableConfScheduler) scheduler).getMutableConfProvider();
 
-      LogMutation log = provider.logAndApplyMutation(
-          UserGroupInformation.getCurrentUser(), schedUpdateInfo);
-      rm.getRMContext().getRMAdminService().refreshQueues();
-      provider.confirmPendingMutation(log, true);
+    SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
+    HashMap<String, String> globalUpdates = new HashMap<>();
+    globalUpdates.put("schedKey1", "schedVal1");
+    schedUpdateInfo.setGlobalParams(globalUpdates);
 
-      Configuration schedulerConf = provider.getConfiguration();
-      assertEquals("schedVal1", schedulerConf.get("schedKey1"));
+    LogMutation log = provider.logAndApplyMutation(
+        UserGroupInformation.getCurrentUser(), schedUpdateInfo);
+    rm.getRMContext().getRMAdminService().refreshQueues();
+    provider.confirmPendingMutation(log, true);
 
-      int exitCode = cli.formatSchedulerConf("", target());
-      assertEquals(0, exitCode);
+    Configuration schedulerConf = provider.getConfiguration();
+    assertEquals("schedVal1", schedulerConf.get("schedKey1"));
 
-      schedulerConf = provider.getConfiguration();
-      assertNull(schedulerConf.get("schedKey1"));
-    } finally {
-      cleanUp();
-    }
+    int exitCode = cli.formatSchedulerConf("", target());
+    assertEquals(0, exitCode);
+
+    schedulerConf = provider.getConfiguration();
+    assertNull(schedulerConf.get("schedKey1"));
   }
 
   @Test(timeout = 10000)

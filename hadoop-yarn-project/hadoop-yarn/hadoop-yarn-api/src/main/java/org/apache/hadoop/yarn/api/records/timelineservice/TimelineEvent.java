@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.api.records.timelineservice;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
@@ -38,6 +39,7 @@ import java.util.Map;
 @XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
+@JsonIgnoreProperties(ignoreUnknown = true, value = {"infoJAXB"})
 public class TimelineEvent implements Comparable<TimelineEvent> {
   public static final long INVALID_TIMESTAMP = 0L;
 
@@ -61,7 +63,6 @@ public class TimelineEvent implements Comparable<TimelineEvent> {
   // required by JAXB
   @InterfaceAudience.Private
   @XmlElement(name = "info")
-  @JsonIgnore
   public HashMap<String, Object> getInfoJAXB() {
     return info;
   }

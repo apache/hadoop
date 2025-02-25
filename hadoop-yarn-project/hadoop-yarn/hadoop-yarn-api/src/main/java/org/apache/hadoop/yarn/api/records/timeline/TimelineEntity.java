@@ -55,7 +55,8 @@ import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
 @Evolving
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonIgnoreProperties(ignoreUnknown = true,
+    value = {"relatedEntitiesJAXB", "primaryFiltersJAXB", "otherInfoJAXB"})
 public class TimelineEntity implements Comparable<TimelineEntity> {
 
   private String entityType;

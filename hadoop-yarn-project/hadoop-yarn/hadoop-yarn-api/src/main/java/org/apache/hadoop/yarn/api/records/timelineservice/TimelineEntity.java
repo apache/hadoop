@@ -55,7 +55,8 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 @XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonIgnoreProperties(ignoreUnknown = true,
+    value = {"infoJAXB", "configsJAXB", "isRelatedToEntitiesJAXB", "relatesToEntitiesJAXB"})
 public class TimelineEntity implements Comparable<TimelineEntity> {
   protected final static String SYSTEM_INFO_KEY_PREFIX = "SYSTEM_INFO_";
   public final static long DEFAULT_ENTITY_PREFIX = 0L;

@@ -39,7 +39,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 @XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonIgnoreProperties(ignoreUnknown = true, value = {"valuesJAXB"})
 public class TimelineMetric {
 
   /**

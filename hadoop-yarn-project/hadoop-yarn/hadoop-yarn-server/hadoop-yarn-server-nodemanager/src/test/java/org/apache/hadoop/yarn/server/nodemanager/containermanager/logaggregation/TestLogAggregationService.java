@@ -252,7 +252,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
       String containerIdStr = container11.toString();
       File containerLogDir = new File(app1LogDir, containerIdStr);
-      for (String fileType : new String[]{"stdout", "stderr", "syslog"}) {
+      for (String fileType : new String[]{"stdout", "stderr", "syslog", "zero"}) {
         File f = new File(containerLogDir, fileType);
         GenericTestUtils.waitFor(() -> !f.exists(), 1000, 1000 * 50);
         Assert.assertFalse("File [" + f + "] was not deleted", f.exists());
