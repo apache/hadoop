@@ -91,6 +91,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.mockAddClientTransactionIdToHeader;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_CREATE_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -2084,7 +2085,7 @@ public class ITestAzureBlobFileSystemCreate extends
    * @throws Exception if any error occurs during the operation.
    */
   @Test
-  public void createPathRetryIdempotency() throws Exception {
+  public void testCreatePathRetryIdempotency() throws Exception {
     Configuration configuration = new Configuration(getRawConfiguration());
     configuration.set(FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID, "true");
     try (AzureBlobFileSystem fs = getFileSystem(configuration)) {
@@ -2129,7 +2130,7 @@ public class ITestAzureBlobFileSystemCreate extends
    * @throws Exception if any error occurs during test execution
    */
   @Test
-  public void getClientTransactionIdAfterCreate() throws Exception {
+  public void testGetClientTransactionIdAfterCreate() throws Exception {
     try (AzureBlobFileSystem fs = getFileSystem()) {
       assumeRecoveryThroughClientTransactionID(true);
       final String[] clientTransactionId = new String[1];
@@ -2204,7 +2205,7 @@ public class ITestAzureBlobFileSystemCreate extends
    * @throws Exception If an error occurs during the test setup or execution.
    */
   @Test
-  public void failureInGetPathStatusDuringCreateRecovery() throws Exception {
+  public void testFailureInGetPathStatusDuringCreateRecovery() throws Exception {
     try (AzureBlobFileSystem fs = getFileSystem()) {
       assumeRecoveryThroughClientTransactionID(true);
       final String[] clientTransactionId = new String[1];
@@ -2230,7 +2231,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
       Assertions.assertThat(errorMessage)
           .describedAs("getPathStatus should fail while recovering")
-          .contains("Error in getPathStatus while recovering from create failure.");
+          .contains(ERR_CREATE_RECOVERY);
     }
   }
 

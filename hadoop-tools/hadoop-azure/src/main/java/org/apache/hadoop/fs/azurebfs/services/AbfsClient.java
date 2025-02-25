@@ -1738,4 +1738,22 @@ public abstract class AbfsClient implements Closeable {
    * @throws UnsupportedEncodingException if decoding fails
    */
   public abstract String decodeAttribute(byte[] value) throws UnsupportedEncodingException;
+
+  /**
+   * Get the dummy success operation.
+   * @param operationType type of the operation
+   * @param httpMethod http method
+   * @param url url to be used
+   * @param requestHeaders list of headers to be sent with the request
+   * @return success operation
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
+  protected AbfsRestOperation getSuccessOp(final AbfsRestOperationType operationType,
+      final String httpMethod, final URL url,
+      final List<AbfsHttpHeader> requestHeaders) throws AzureBlobFileSystemException {
+    final AbfsRestOperation successOp = getAbfsRestOperation(
+        operationType, httpMethod, url, requestHeaders);
+    successOp.hardSetResult(HttpURLConnection.HTTP_OK);
+    return successOp;
+  }
 }

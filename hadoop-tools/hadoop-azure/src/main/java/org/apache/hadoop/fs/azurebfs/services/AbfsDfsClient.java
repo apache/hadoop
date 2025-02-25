@@ -137,7 +137,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.UNAUTHORIZED_BLOB_OVERWRITE;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_CREATE_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_FILE_ALREADY_EXISTS;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_RENAME_RECOVERY;
 
 /**
  * AbfsClient interacting with the DFS Endpoint.
@@ -437,9 +439,7 @@ public class AbfsDfsClient extends AbfsClient {
                   HTTP_METHOD_PUT, url, requestHeaders);
             }
           } catch (AzureBlobFileSystemException exception) {
-            throw new AbfsDriverException(
-                "Error in getPathStatus while recovering from create failure.",
-                exception);
+            throw new AbfsDriverException(ERR_CREATE_RECOVERY, exception);
           }
         }
       }
@@ -670,7 +670,35 @@ public class AbfsDfsClient extends AbfsClient {
       String sourceEtag,
       boolean isMetadataIncompleteState) throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+
+    final boolean hasEtag = !isEmpty(sourceEtag);
+
     boolean shouldAttemptRecovery = isRenameResilience() && getIsNamespaceEnabled();
+    if (!hasEtag && shouldAttemptRecovery) {
+      // in case eTag is already not supplied to the API
+      // and rename resilience is expected and it is an HNS enabled account
+      // fetch the source etag to be used later in recovery
+      try {
+        final AbfsRestOperation srcStatusOp = getPathStatus(source,
+            false, tracingContext, null);
+        if (srcStatusOp.hasResult()) {
+          final AbfsHttpOperation result = srcStatusOp.getResult();
+          sourceEtag = extractEtagHeader(result);
+          // and update the directory status.
+          boolean isDir = checkIsDir(result);
+          shouldAttemptRecovery = !isDir;
+          LOG.debug(
+              "Retrieved etag of source for rename recovery: {}; isDir={}",
+              sourceEtag, isDir);
+        }
+      } catch (AbfsRestOperationException e) {
+        throw new AbfsRestOperationException(e.getStatusCode(),
+            SOURCE_PATH_NOT_FOUND.getErrorCode(),
+            e.getMessage(), e);
+      }
+
+    }
+
     String encodedRenameSource = urlEncode(
         FORWARD_SLASH + this.getFileSystem() + source);
     if (getAuthType() == AuthType.SAS) {
@@ -714,7 +742,7 @@ public class AbfsDfsClient extends AbfsClient {
       // recovery using client transaction id only if it is a retried request.
       if (op.isARetriedRequest() && clientTransactionId != null
           && SOURCE_PATH_NOT_FOUND.getErrorCode().equalsIgnoreCase(
-              op.getResult().getStorageErrorCode())) {
+          op.getResult().getStorageErrorCode())) {
         try {
           final AbfsHttpOperation abfsHttpOperation =
               getPathStatus(destination, false,
@@ -724,13 +752,11 @@ public class AbfsDfsClient extends AbfsClient {
                   X_MS_CLIENT_TRANSACTION_ID))) {
             return new AbfsClientRenameResult(
                 getSuccessOp(AbfsRestOperationType.RenamePath,
-                HTTP_METHOD_PUT, url, requestHeaders), true,
+                    HTTP_METHOD_PUT, url, requestHeaders), true,
                 isMetadataIncompleteState);
           }
         } catch (AzureBlobFileSystemException exception) {
-          throw new AbfsDriverException(
-              "Error in getPathStatus while recovering from rename failure.",
-              exception);
+          throw new AbfsDriverException(ERR_RENAME_RECOVERY, exception);
         }
         throw e;
       }
@@ -739,7 +765,7 @@ public class AbfsDfsClient extends AbfsClient {
       // rename operation's validity. If there is an existing destination path, it may be rejected
       // with an authorization error. Catching and throwing FileAlreadyExistsException instead.
       if (op.getResult().getStorageErrorCode()
-          .equals(UNAUTHORIZED_BLOB_OVERWRITE.getErrorCode())){
+          .equals(UNAUTHORIZED_BLOB_OVERWRITE.getErrorCode())) {
         throw new FileAlreadyExistsException(ERR_FILE_ALREADY_EXISTS);
       }
 
@@ -1637,23 +1663,5 @@ public class AbfsDfsClient extends AbfsClient {
           new AbfsHttpHeader(X_MS_CLIENT_TRANSACTION_ID, clientTransactionId));
     }
     return clientTransactionId;
-  }
-
-  /**
-   * Get the dummy success operation.
-   * @param operationType type of the operation
-   * @param httpMethod http method
-   * @param url url to be used
-   * @param requestHeaders list of headers to be sent with the request
-   * @return success operation
-   * @throws AzureBlobFileSystemException if rest operation fails.
-   */
-  private AbfsRestOperation getSuccessOp(final AbfsRestOperationType operationType,
-      final String httpMethod, final URL url,
-      final List<AbfsHttpHeader> requestHeaders) throws AzureBlobFileSystemException {
-    final AbfsRestOperation successOp = getAbfsRestOperation(
-        operationType, httpMethod, url, requestHeaders);
-    successOp.hardSetResult(HttpURLConnection.HTTP_OK);
-    return successOp;
   }
 }

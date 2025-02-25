@@ -87,6 +87,7 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.COPY_BLOB_FAILED;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.mockAddClientTransactionIdToHeader;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_RENAME_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
@@ -1663,7 +1664,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws Exception if an error occurs during the file system operations or mocking
    */
   @Test
-  public void renamePathRetryIdempotency() throws Exception {
+  public void testRenamePathRetryIdempotency() throws Exception {
     Configuration configuration = new Configuration(getRawConfiguration());
     configuration.set(FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID, "true");
     try (AzureBlobFileSystem fs = getFileSystem()) {
@@ -1718,7 +1719,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws Exception if any error occurs during test execution
    */
   @Test
-  public void getClientTransactionIdAfterRename() throws Exception {
+  public void testGetClientTransactionIdAfterRename() throws Exception {
     try (AzureBlobFileSystem fs = getFileSystem()) {
       assumeRecoveryThroughClientTransactionID(false);
       AbfsDfsClient abfsDfsClient = (AbfsDfsClient) Mockito.spy(fs.getAbfsClient());
@@ -1755,7 +1756,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws Exception If an error occurs during the test setup or execution.
    */
   @Test
-  public void failureInGetPathStatusDuringRenameRecovery() throws Exception {
+  public void testFailureInGetPathStatusDuringRenameRecovery() throws Exception {
     try (AzureBlobFileSystem fs = getFileSystem()) {
       assumeRecoveryThroughClientTransactionID(false);
       AbfsDfsClient abfsDfsClient = (AbfsDfsClient) Mockito.spy(fs.getAbfsClient());
@@ -1787,7 +1788,7 @@ public class ITestAzureBlobFileSystemRename extends
 
       Assertions.assertThat(errorMessage)
           .describedAs("getPathStatus should fail while recovering")
-          .contains("Error in getPathStatus while recovering from rename failure.");
+          .contains(ERR_RENAME_RECOVERY);
     }
   }
 

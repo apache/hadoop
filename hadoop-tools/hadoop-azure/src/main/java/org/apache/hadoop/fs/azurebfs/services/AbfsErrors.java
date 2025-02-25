@@ -69,5 +69,9 @@ public final class AbfsErrors {
       "FNS-Blob delete was not successful for path: ";
   public static final String ATOMIC_DIR_RENAME_RECOVERY_ON_GET_PATH_EXCEPTION =
       "Path had to be recovered from atomic rename operation.";
+  public static final String ERR_CREATE_RECOVERY =
+      "Error while recovering from create failure.";
+  public static final String ERR_RENAME_RECOVERY =
+      "Error while recovering from rename failure.";
   private AbfsErrors() {}
 }
