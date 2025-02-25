@@ -1207,8 +1207,11 @@ public class AbfsBlobClient extends AbfsClient {
       if (op.getResult().getStatusCode() == HTTP_NOT_FOUND
           && isImplicitCheckRequired && isNonEmptyDirectory(path, tracingContext)) {
         // Implicit path found.
-        return getSuccessOp(AbfsRestOperationType.GetPathStatus,
-            HTTP_METHOD_HEAD, url, requestHeaders);
+        AbfsRestOperation successOp = getSuccessOp(
+            AbfsRestOperationType.GetPathStatus, HTTP_METHOD_HEAD,
+            url, requestHeaders);
+        successOp.hardSetGetFileStatusResult(HTTP_OK);
+        return successOp;
       }
       if (op.getResult().getStatusCode() == HTTP_NOT_FOUND) {
         /*
