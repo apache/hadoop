@@ -1411,7 +1411,75 @@ public class TestFileCreation {
       }
     }
   }
-  
+
+  /**
+   *  The old blocks should be added into MarkedDeleteQueue after creating with overwrite
+   */
+  @Test(timeout = 120000)
+  public void testFileCreationWithOverwriteAddToMarkedDeleteQueue() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt("dfs.blocksize", blockSize);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).
+        numDataNodes(3).build();
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    try {
+      dfs.mkdirs(new Path("/foo/dir"));
+      String file = "/foo/dir/file";
+      Path filePath = new Path(file);
+      // Case 1: Create file with overwrite, check the blocks of old file
+      // are cleaned after creating with overwrite
+      NameNode nn = cluster.getNameNode();
+      FSNamesystem fsn = NameNodeAdapter.getNamesystem(nn);
+      BlockManager bm = fsn.getBlockManager();
+
+      FSDataOutputStream out = dfs.create(filePath);
+      byte[] oldData = AppendTestUtil.randomBytes(seed, fileSize);
+      try {
+        out.write(oldData);
+      } finally {
+        out.close();
+      }
+
+      LocatedBlocks oldBlocks = NameNodeAdapter.getBlockLocations(
+          nn, file, 0, fileSize);
+      assertBlocks(bm, oldBlocks, true);
+
+      BlockManager blockManager = cluster.getNamesystem(0).getBlockManager();
+      BlockManagerTestUtil.interruptAndJoinMarkedDeleteBlockScrubberThread(blockManager);
+
+      out = dfs.create(filePath, true);
+      byte[] newData = AppendTestUtil.randomBytes(seed, fileSize);
+      try {
+        out.write(newData);
+      } finally {
+        out.close();
+      }
+      dfs.deleteOnExit(filePath);
+
+      assertEquals(3, blockManager.getMarkedDeleteQueue().poll().size());
+
+      LocatedBlocks newBlocks = NameNodeAdapter.getBlockLocations(
+          nn, file, 0, fileSize);
+      assertBlocks(bm, newBlocks, true);
+      assertBlocks(bm, oldBlocks, true);
+      FSDataInputStream in = dfs.open(filePath);
+      byte[] result = null;
+      try {
+        result = readAll(in);
+      } finally {
+        in.close();
+      }
+      Assert.assertArrayEquals(newData, result);
+    } finally {
+      if (dfs != null) {
+        dfs.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   private void assertBlocks(BlockManager bm, LocatedBlocks lbs, 
       boolean exist) {
     for (LocatedBlock locatedBlock : lbs.getLocatedBlocks()) {

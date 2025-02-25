@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.Assert;
 
+import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Preconditions;
 
 public class BlockManagerTestUtil {
@@ -196,6 +197,16 @@ public class BlockManagerTestUtil {
       }
       Thread.sleep(SLEEP_TIME);
     }
+  }
+
+  /**
+   * MarkedDeleteBlockScrubberThread interrupt and join.
+   */
+  public static void interruptAndJoinMarkedDeleteBlockScrubberThread(BlockManager blockManager)
+      throws InterruptedException {
+    Daemon daemon = blockManager.getMarkedDeleteBlockScrubberThread();
+    daemon.interrupt();
+    daemon.join();
   }
 
   /**

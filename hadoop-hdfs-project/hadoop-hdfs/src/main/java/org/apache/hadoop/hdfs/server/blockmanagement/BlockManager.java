@@ -795,6 +795,12 @@ public class BlockManager implements BlockStatsMXBean {
     checkNSRunning = false;
   }
 
+  /** get the markedDeleteBlockScrubberThread */
+  @VisibleForTesting
+  Daemon getMarkedDeleteBlockScrubberThread() {
+    return markedDeleteBlockScrubberThread;
+  }
+
   protected boolean isBlockTokenEnabled() {
     return blockTokenSecretManager != null;
   }

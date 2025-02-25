@@ -2864,10 +2864,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // They need to be sync'ed even when an exception was thrown.
       if (!skipSync) {
         getEditLog().logSync();
-        if (toRemoveBlocks != null) {
-          blockManager.addBLocksToMarkedDeleteQueue(
-              toRemoveBlocks.getToDeleteList());
-        }
+      }
+      if (toRemoveBlocks != null) {
+        blockManager.addBLocksToMarkedDeleteQueue(
+            toRemoveBlocks.getToDeleteList());
       }
     }
 
