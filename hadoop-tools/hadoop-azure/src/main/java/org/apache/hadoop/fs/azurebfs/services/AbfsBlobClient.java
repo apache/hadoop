@@ -2021,9 +2021,11 @@ public class AbfsBlobClient extends AbfsClient {
     stringBuilder.append(String.format(BLOCK_LIST_START_TAG));
 
     // Split the block ID string by commas and generate XML for each block ID
-    String[] blockIds = blockIdString.split(",");
-    for (String blockId : blockIds) {
-      stringBuilder.append(String.format(LATEST_BLOCK_FORMAT, blockId));
+    if (!blockIdString.isEmpty()) {
+      String[] blockIds = blockIdString.split(",");
+      for (String blockId : blockIds) {
+        stringBuilder.append(String.format(LATEST_BLOCK_FORMAT, blockId));
+      }
     }
 
     stringBuilder.append(String.format(BLOCK_LIST_END_TAG));
