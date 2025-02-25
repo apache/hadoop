@@ -27,16 +27,19 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
+import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.junit.Assume;
 import org.junit.Test;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.FileNotFoundException;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
@@ -63,6 +66,8 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
 
     private static final byte[] SMALL_FILE_BYTES = dataset(TEST_FILE_LEN, 0, 255);
     private static final byte[] MULTIPART_FILE_BYTES = dataset(UPDATED_MULTIPART_THRESHOLD * 5, 'a', 'z' - 'a');
+
+    private BlockOutputStreamStatistics statistics;
 
     @Override
     public Configuration createConfiguration() {
@@ -154,6 +159,10 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
         try (FSDataInputStream inputStream = fs.open(path)) {
             return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
         }
+    }
+
+    private void updateStatistics(FSDataOutputStream stream) {
+        statistics = S3ATestUtils.getOutputStreamStatistics(stream);
     }
 
     @Test
@@ -469,5 +478,36 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
                     .opt(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG, etag)
                     .build();
         });
+    }
+
+    @Test
+    public void testConditionalWriteStatistics() throws Throwable {
+        FileSystem fs = getFileSystem();
+        Path testFile = methodPath();
+
+        FSDataOutputStream stream = getStreamWithFlags(fs, testFile, true, null, true);
+        updateStatistics(stream);
+        stream.write(SMALL_FILE_BYTES);
+        stream.close();
+
+        long conditionalCreate = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE.getSymbol());
+        long conditionalCreateFailed = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE_FAILED.getSymbol());
+
+        assertEquals(1L, conditionalCreate);
+        assertEquals(0L, conditionalCreateFailed);
+
+        try {
+            // try again. should fail
+            stream = getStreamWithFlags(fs, testFile, true, null, true);
+            updateStatistics(stream);
+            stream.write(SMALL_FILE_BYTES);
+            stream.close();
+        } catch (Exception e) {}
+
+        conditionalCreate = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE.getSymbol());
+        conditionalCreateFailed = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE_FAILED.getSymbol());
+
+        assertEquals(1L, conditionalCreate);
+        assertEquals(1L, conditionalCreateFailed);
     }
 }

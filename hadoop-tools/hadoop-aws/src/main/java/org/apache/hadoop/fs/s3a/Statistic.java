@@ -137,6 +137,12 @@ public enum Statistic {
       TYPE_COUNTER),
   IGNORED_ERRORS("ignored_errors", "Errors caught and ignored",
       TYPE_COUNTER),
+  CONDITIONAL_CREATE(StoreStatisticNames.CONDITIONAL_CREATE,
+      "Count of successful conditional create operations.",
+      TYPE_COUNTER),
+  CONDITIONAL_CREATE_FAILED(StoreStatisticNames.CONDITIONAL_CREATE_FAILED,
+      "Count of failed conditional create operations.",
+      TYPE_COUNTER),
 
   INVOCATION_ABORT(
       StoreStatisticNames.OP_ABORT,
