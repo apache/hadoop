@@ -505,7 +505,6 @@ javax.cache:cache-api:1.1.1
 javax.servlet:javax.servlet-api:3.1.0
 javax.servlet.jsp:jsp-api:2.1
 javax.websocket:javax.websocket-api:1.0
-javax.ws.rs:jsr311-api:1.1.1
 javax.xml.bind:jaxb-api:2.3.1
 
 Eclipse Distribution License (EDL) 1.0
