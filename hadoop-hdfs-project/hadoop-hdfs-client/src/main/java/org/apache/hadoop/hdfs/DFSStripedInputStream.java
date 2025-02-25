@@ -52,7 +52,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
@@ -278,9 +277,8 @@ public class DFSStripedInputStream extends DFSInputStream {
    * @return True if the {@param block} is on a sleeping node, otherwise false.
    */
   protected boolean isBlockOnSleepingNode(LocatedBlock block) {
-    Collection<DatanodeInfo> sleepingNodes = checkSleepingNodes();
     DNAddrPair dnInfo = getBestNodeDNAddrPair(block, null);
-    return dnInfo != null && sleepingNodes.contains(dnInfo.info);
+    return dnInfo != null && checkSleepingNodes().contains(dnInfo.info);
   }
 
   /**

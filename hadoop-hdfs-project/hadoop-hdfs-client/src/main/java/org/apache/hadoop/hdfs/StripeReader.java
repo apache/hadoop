@@ -316,7 +316,7 @@ abstract class StripeReader {
   }
 
   /**
-   * Decide which chunks to transition from READY to REQUESTED
+   * Decide which chunks to transition from READY to REQUESTED.
    */
   private void requestChunks() throws IOException {
     if (alignedStripe.getReadyChunksNum() > 0 &&
@@ -408,8 +408,8 @@ abstract class StripeReader {
             alignedStripe.setFetched(r.index);
             updateState4SuccessRead(r);
           } else {
-            if (r.exception instanceof ExecutionException &&
-                !(r.exception.getCause() instanceof ChecksumException)) {
+            if (r.getException() instanceof ExecutionException &&
+                !(r.getException().getCause() instanceof ChecksumException)) {
               if (dfsStripedInputStream.updateSleepingNodes(
                   readerInfos[r.index].datanode)) {
                 alignedStripe.setSleeping(r.index);

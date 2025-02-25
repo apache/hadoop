@@ -377,12 +377,12 @@ public class TestWriteReadStripedFile {
     try (FSDataInputStream in = fs.open(srcPath)) {
       long start = Time.monotonicNow();
       Assert.assertThrows(IOException.class, () -> {
-          StripedFileTestUtil
-              .verifyPread(in, fileLength, expected, largeBuf, ecPolicy);
+        StripedFileTestUtil
+            .verifyPread(in, fileLength, expected, largeBuf, ecPolicy);
       });
       long timeMs = Time.monotonicNow() - start;
       Assert.assertTrue("Read should have been slower than 10 seconds but was "
-                            + timeMs + " ms",timeMs > 10000);
+                            + timeMs + " ms", timeMs > 10000);
     }
     try (FSDataInputStream in = fs.open(srcPath)) {
       ExecutorService service = Executors.newSingleThreadExecutor();
@@ -401,7 +401,7 @@ public class TestWriteReadStripedFile {
           .verifyPread(in, fileLength, expected, largeBuf, ecPolicy);
       long timeMs = Time.monotonicNow() - start;
       Assert.assertTrue("Read should have been slower than 10 seconds but was "
-          + timeMs + " ms",timeMs > 10000);
+          + timeMs + " ms", timeMs > 10000);
       long decodingTimeNanos =
           ((HdfsDataInputStream) in).getReadStatistics().getTotalEcDecodingTimeNanos();
       // Should read without any decoding
@@ -427,7 +427,7 @@ public class TestWriteReadStripedFile {
       // Should read with decoding
       long timeMs = Time.monotonicNow() - start;
       Assert.assertTrue("Read should have been slower than 10 seconds but was "
-          + timeMs + " ms",timeMs > 10000);
+          + timeMs + " ms", timeMs > 10000);
       long decodingTimeNanos =
           ((HdfsDataInputStream) in).getReadStatistics().getTotalEcDecodingTimeNanos();
       // Should read without any decoding

@@ -718,7 +718,7 @@ public class StripedBlockUtil {
     private Map<Integer, Integer> parityStateCounts = new HashMap<>();
 
     /**
-     * Get the state of the chunk, or null if the chunk is null
+     * Get the state of the chunk, or null if the chunk is null.
      * @param chunkIndex The chunk to get the state of
      * @return The state of the chunk at {@param chunkIndex}, or null if the
      * chunk at {@param chunkIndex} is null
@@ -1008,9 +1008,9 @@ public class StripedBlockUtil {
      * all-zero bytes in codec calculations.
      */
     public static final int ALLZERO = 0X0f;
-    /** Chunk fetch was attempted and it is now sleeping until retry **/
+    /** Chunk fetch was attempted and it is now sleeping until retry. **/
     public static final int SLEEPING = 0xf1;
-    /** Chunk is ready to start reading **/
+    /** Chunk is ready to start reading. **/
     public static final int READY = 0xf2;
 
     /**
@@ -1024,7 +1024,15 @@ public class StripedBlockUtil {
      * null (AlignedStripe created) -&gt; READY (upon failure) -&gt; REQUESTED
      *  -&gt; {SLEEPING | PENDING} ...
      */
-    public int state = READY;
+    private int state = READY;
+
+    public int getState() {
+      return state;
+    }
+
+    public void setState(int state) {
+      this.state = state;
+    }
 
     private final ChunkByteBuffer chunkBuffer;
     private final ByteBuffer byteBuffer;
@@ -1126,8 +1134,12 @@ public class StripedBlockUtil {
 
     public final int index;
     public final int state;
-    public final Exception exception;
+    private final Exception exception;
     private final BlockReadStats readStats;
+
+    public Exception getException() {
+      return exception;
+    }
 
     public StripingChunkReadResult(int state) {
       Preconditions.checkArgument(state == TIMEOUT,
