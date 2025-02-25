@@ -745,16 +745,19 @@ public abstract class AbstractAbfsIntegrationTest extends
   protected void assumeRecoveryThroughClientTransactionID(boolean isCreate)
       throws IOException {
     // Assumes that recovery through client transaction ID is enabled.
-    Assume.assumeTrue(getConfiguration().getIsClientTransactionIdEnabled());
+    Assume.assumeTrue("Recovery through client transaction ID is not enabled",
+        getConfiguration().getIsClientTransactionIdEnabled());
     // Assumes that service type is DFS.
     assumeDfsServiceType();
     // Assumes that namespace is enabled for the given AzureBlobFileSystem.
     assumeHnsEnabled();
     if (isCreate) {
       // Assume that create client is DFS client.
-      Assume.assumeTrue(AbfsServiceType.DFS.equals(getIngressServiceType()));
+      Assume.assumeTrue("Ingress service type is not DFS",
+          AbfsServiceType.DFS.equals(getIngressServiceType()));
       // Assume that append blob is not enabled in DFS client.
-      Assume.assumeFalse(isAppendBlobEnabled());
+      Assume.assumeFalse("Append blob is enabled in DFS client",
+          isAppendBlobEnabled());
     }
   }
 }

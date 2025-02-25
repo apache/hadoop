@@ -943,14 +943,12 @@ public abstract class AbfsClient implements Closeable {
         && DEFAULT_DELETE_CONSIDERED_IDEMPOTENT) {
       // Server has returned HTTP 404, which means path no longer
       // exists. Assuming delete result to be idempotent, return success.
-      final AbfsRestOperation successOp = getAbfsRestOperation(
+      LOG.debug("Returning success response from delete idempotency logic");
+      return getSuccessOp(
           AbfsRestOperationType.DeletePath,
           HTTP_METHOD_DELETE,
           op.getUrl(),
           op.getRequestHeaders());
-      successOp.hardSetResult(HttpURLConnection.HTTP_OK);
-      LOG.debug("Returning success response from delete idempotency logic");
-      return successOp;
     }
 
     return op;
@@ -1746,11 +1744,10 @@ public abstract class AbfsClient implements Closeable {
    * @param url url to be used
    * @param requestHeaders list of headers to be sent with the request
    * @return success operation
-   * @throws AzureBlobFileSystemException if rest operation fails.
    */
   protected AbfsRestOperation getSuccessOp(final AbfsRestOperationType operationType,
       final String httpMethod, final URL url,
-      final List<AbfsHttpHeader> requestHeaders) throws AzureBlobFileSystemException {
+      final List<AbfsHttpHeader> requestHeaders) {
     final AbfsRestOperation successOp = getAbfsRestOperation(
         operationType, httpMethod, url, requestHeaders);
     successOp.hardSetResult(HttpURLConnection.HTTP_OK);
