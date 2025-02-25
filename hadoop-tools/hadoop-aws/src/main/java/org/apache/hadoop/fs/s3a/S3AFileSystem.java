@@ -2585,7 +2585,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           listing.createFileStatusListingIterator(path,
               createListObjectsRequest(key, null),
               ACCEPT_ALL,
-              Listing.ACCEPT_ALL_OBJECTS,
+              Listing.ACCEPT_ALL_BUT_S3N,
               auditSpan));
     }
 
@@ -3613,7 +3613,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         return listing.createProvidedFileStatusIterator(
                 stats,
                 ACCEPT_ALL,
-                Listing.ACCEPT_ALL_OBJECTS);
+                Listing.ACCEPT_ALL_BUT_S3N);
       }
     }
     // Here we have a directory which may or may not be empty.
@@ -3797,7 +3797,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public RemoteIterator<S3ALocatedFileStatus> listFilesIterator(final Path path,
         final boolean recursive) throws IOException {
-      return S3AFileSystem.this.innerListFiles(path, recursive, Listing.ACCEPT_ALL_OBJECTS, null);
+      return S3AFileSystem.this.innerListFiles(path, recursive, Listing.ACCEPT_ALL_BUT_S3N, null);
     }
   }
 
@@ -5026,7 +5026,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     final Path path = qualify(f);
     return trackDurationAndSpan(INVOCATION_LIST_FILES, path, () ->
         innerListFiles(path, recursive,
-            Listing.ACCEPT_ALL_OBJECTS,
+            Listing.ACCEPT_ALL_BUT_S3N,
             null));
   }
 
