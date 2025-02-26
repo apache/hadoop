@@ -22,7 +22,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -49,6 +48,7 @@ import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
+import static java.util.Arrays.asList;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_VECTOR;
@@ -58,7 +58,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.range;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+  import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
@@ -105,7 +105,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
   @Parameterized.Parameters(name = "Buffer type : {0}")
   public static List<String> params() {
-    return Arrays.asList("direct", "array");
+    return asList("direct", "array");
   }
 
   protected AbstractContractVectoredReadTest(String bufferType) {
@@ -454,6 +454,17 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   }
 
   @Test
+  public void testNullReleaseOperation()  throws Exception {
+
+    final List<FileRange> range = range(0, 10);
+
+    try (FSDataInputStream in = openVectorFile()) {
+      intercept(NullPointerException.class, () ->
+          in.readVectored(range, allocate, null));
+    }
+  }
+
+  @Test
   public void testNormalReadAfterVectoredRead() throws Exception {
     List<FileRange> fileRanges = createSampleNonOverlappingRanges();
     try (FSDataInputStream in = openVectorFile()) {
@@ -491,7 +502,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     List<FileRange> fileRanges2 = createSampleNonOverlappingRanges();
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges1, allocate);
-      in.readVectored(fileRanges2, allocate);
+      in.readVectored(fileRanges2, allocate, this::release);
       validateVectoredReadResult(fileRanges2, DATASET, 0);
       validateVectoredReadResult(fileRanges1, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges1, pool);

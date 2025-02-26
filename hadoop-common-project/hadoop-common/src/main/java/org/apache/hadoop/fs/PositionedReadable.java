@@ -27,6 +27,7 @@ import java.util.function.IntFunction;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.io.Sizes.S_16K;
 import static org.apache.hadoop.io.Sizes.S_1M;
 
@@ -139,27 +140,28 @@ public interface PositionedReadable {
   }
 
   /**
-   * Variant of {@link #readVectored(List, IntFunction)} where a release() function
-   * may be invoked if problems surface during reads -this method is called to
-   * try to return any allocated buffer which has not been read yet.
-   * Buffers which have successfully been read and returned to the caller do not
-   * get released: this is for failures only.
+   * Extension of {@link #readVectored(List, IntFunction)} where a {@code release(buffer)}
+   * operation may be invoked if problems surface during reads.
    * <p>
-   * The default implementation calls readVectored/2 so as to ensure that
-   * if an existing stream implementation does not implement this method
-   * all is good.
+   * The {@code release} operation is invoked after an IOException
+   * to return the actively buffer to a pool before reporting a failure
+   * in the future.
+   * <p>
+   * The default implementation calls {@link #readVectored(List, IntFunction)}.p
    * <p>
    * Implementations SHOULD override this method if they can release buffers as
    * part of their error handling.
    * @param ranges the byte ranges to read
-   * @param allocate the function to allocate ByteBuffer
-   * @param release the function to release a ByteBuffer.
+   * @param allocate function to allocate ByteBuffer
+   * @param release callable to release a ByteBuffer.
    * @throws IOException any IOE.
-   * @throws IllegalArgumentException if the any of ranges are invalid, or they overlap.
+   * @throws IllegalArgumentException if any of ranges are invalid, or they overlap.
+   * @throws NullPointerException null arguments.
    */
   default void readVectored(List<? extends FileRange> ranges,
       IntFunction<ByteBuffer> allocate,
       Consumer<ByteBuffer> release) throws IOException {
+    requireNonNull(release);
     readVectored(ranges, allocate);
   }
 

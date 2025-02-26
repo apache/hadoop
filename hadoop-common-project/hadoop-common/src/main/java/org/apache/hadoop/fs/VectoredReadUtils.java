@@ -59,7 +59,7 @@ public final class VectoredReadUtils {
    */
   public static final Consumer<ByteBuffer> LOG_BYTE_BUFFER_RELEASED =
       (buffer) -> {
-        LOG.debug("release buffer {}", buffer.toString());
+        LOG.debug("Release buffer of length {}: {}", buffer.limit(), buffer);
       };
 
   /**
@@ -114,6 +114,7 @@ public final class VectoredReadUtils {
   /**
    * Variant of {@link #readVectored(PositionedReadable, List, IntFunction)}
    * where a release() function is invoked if problems surface during reads.
+   * @param stream the stream to read the data from
    * @param ranges the byte ranges to read
    * @param allocate the function to allocate ByteBuffer
    * @param release the function to release a ByteBuffer.

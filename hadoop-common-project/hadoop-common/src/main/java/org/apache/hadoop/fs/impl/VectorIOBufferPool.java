@@ -44,8 +44,8 @@ public final class VectorIOBufferPool implements ByteBufferPool {
   private final Consumer<ByteBuffer> release;
 
   /**
-   * @param allocate the function to allocate ByteBuffer
-   * @param release the function to release a ByteBuffer.
+   * @param allocate function to allocate ByteBuffer
+   * @param release callable to release a ByteBuffer.
    */
   public VectorIOBufferPool(
       IntFunction<ByteBuffer> allocate,

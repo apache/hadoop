@@ -56,6 +56,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.impl.StoreImplementationUtils;
+import org.apache.hadoop.fs.impl.VectorIOBufferPool;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
@@ -63,6 +64,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.BufferedIOStatisticsOutputStream;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Progressable;
@@ -332,16 +334,16 @@ public class RawLocalFileSystem extends FileSystem {
       // Validate, but do not pass in a file length as it may change.
       List<? extends FileRange> sortedRanges = sortRangeList(ranges);
       // Set up all of the futures, so that the caller can await on
-      // their competion.
+      // their completion.
       for (FileRange range: sortedRanges) {
         validateRangeRequest(range);
         range.setData(new CompletableFuture<>());
       }
+      final ByteBufferPool pool = new VectorIOBufferPool(allocate, release);
       // Initiate the asynchronous reads.
       new AsyncHandler(getAsyncChannel(),
           sortedRanges,
-          allocate,
-          release)
+          pool)
           .initiateRead();
     }
   }
@@ -364,47 +366,52 @@ public class RawLocalFileSystem extends FileSystem {
     /** Ranges to fetch. */
     private final List<? extends FileRange> ranges;
 
-    /** Allocate operation. */
-    private final IntFunction<ByteBuffer> allocate;
-
-    /** Release operation. */
-    private final Consumer<ByteBuffer> release;
+    /**
+     * Pool providing allocate/release operations.
+     */
+    private final ByteBufferPool allocateRelease;
 
     /** Buffers being read. */
     private final ByteBuffer[] buffers;
 
+    /**
+     * Instantiate.
+     * @param channel open channel.
+     * @param ranges ranges to read.
+     * @param allocateRelease pool for allocating buffers, and releasing on failure
+     */
     AsyncHandler(
         final AsynchronousFileChannel channel,
         final List<? extends FileRange> ranges,
-        final IntFunction<ByteBuffer> allocate,
-        final Consumer<ByteBuffer> release) {
+        final ByteBufferPool allocateRelease) {
       this.channel = channel;
       this.ranges = ranges;
-      this.allocate = allocate;
-      this.release = release;
       this.buffers = new ByteBuffer[ranges.size()];
+      this.allocateRelease = allocateRelease;
     }
 
     /**
      * Initiate the read operation.
+     * <p>
      * Allocate all buffers, queue the read into the channel,
      * providing this object as the handler.
      */
     private void initiateRead() {
       for(int i = 0; i < ranges.size(); ++i) {
         FileRange range = ranges.get(i);
-        buffers[i] = allocate.apply(range.getLength());
+        buffers[i] = allocateRelease.getBuffer(false, range.getLength());
         channel.read(buffers[i], range.getOffset(), i, this);
       }
     }
 
     /**
-     * Successful read, though for an EOF the number of bytes may be -1.
+     * Callback for a completed full/partial read.
+     * <p>
+     * For an EOF the number of bytes may be -1.
      * That is mapped to a {@link #failed(Throwable, Integer)} outcome.
-     * @param result The bytes read or -1
+     * @param result The bytes read.
      * @param rangeIndex range index within the range list.
      */
-
     @Override
     public void completed(Integer result, Integer rangeIndex) {
       FileRange range = ranges.get(rangeIndex);
@@ -427,7 +434,8 @@ public class RawLocalFileSystem extends FileSystem {
     /**
      * The read of the range failed.
      * <p>
-     * Release the buffer supplied for this range.
+     * Release the buffer supplied for this range, then
+     * report to the future as {{completeExceptionally(exc)}}
      * @param exc exception.
      * @param rangeIndex range index within the range list.
      */
@@ -435,7 +443,7 @@ public class RawLocalFileSystem extends FileSystem {
     public void failed(Throwable exc, Integer rangeIndex) {
       LOG.debug("Failed while reading range {} ", rangeIndex, exc);
       // release the buffer
-      release.accept(buffers[rangeIndex]);
+      allocateRelease.putBuffer(buffers[rangeIndex]);
       // report the failure.
       ranges.get(rangeIndex).getData().completeExceptionally(exc);
     }

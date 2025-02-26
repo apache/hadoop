@@ -30,6 +30,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
 import software.amazon.awssdk.core.ResponseInputStream;
@@ -61,6 +62,8 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.io.IOUtils;
 
 
+import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.VectoredReadUtils.LOG_BYTE_BUFFER_RELEASED;
 import static org.apache.hadoop.fs.VectoredReadUtils.isOrderedDisjoint;
 import static org.apache.hadoop.fs.VectoredReadUtils.mergeSortedRanges;
 import static org.apache.hadoop.fs.VectoredReadUtils.validateAndSortRanges;
@@ -825,7 +828,8 @@ public class S3AInputStream extends ObjectInputStream implements CanSetReadahead
 
   /**
    * {@inheritDoc}
-   * Vectored read implementation for S3AInputStream.
+   * Pass to {@link #readVectored(List, IntFunction, Consumer)}
+   * with the {@link VectoredReadUtils#LOG_BYTE_BUFFER_RELEASED} releaser.
    * @param ranges the byte ranges to read.
    * @param allocate the function to allocate ByteBuffer.
    * @throws IOException IOE if any.
@@ -833,11 +837,29 @@ public class S3AInputStream extends ObjectInputStream implements CanSetReadahead
   @Override
   public synchronized void readVectored(List<? extends FileRange> ranges,
                            IntFunction<ByteBuffer> allocate) throws IOException {
+    readVectored(ranges, allocate, LOG_BYTE_BUFFER_RELEASED);
+  }
+
+  /**
+   * {@inheritDoc}
+   * Vectored read implementation for S3AInputStream.
+   * @param ranges the byte ranges to read.
+   * @param allocate the function to allocate ByteBuffer.
+   * @param release the function to release a ByteBuffer.
+   * @throws IOException IOE if any.
+   */
+  @Override
+  public void readVectored(final List<? extends FileRange> ranges,
+      final IntFunction<ByteBuffer> allocate,
+      final Consumer<ByteBuffer> release) throws IOException {
     LOG.debug("Starting vectored read on path {} for ranges {} ", getPathStr(), ranges);
     checkNotClosed();
     if (stopVectoredIOOperations.getAndSet(false)) {
       LOG.debug("Reinstating vectored read operation for path {} ", getPathStr());
     }
+    requireNonNull(allocate, "ranges");
+    requireNonNull(allocate, "allocate");
+    requireNonNull(release, "release");
 
     // prepare to read
     List<? extends FileRange> sortedRanges = validateAndSortRanges(ranges,

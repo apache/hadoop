@@ -654,3 +654,28 @@ Stream.hasCapability("in:readvectored")
 Given the HADOOP-18296 problem with `ChecksumFileSystem` and direct buffers, across all releases,
 it is best to avoid using this API in production with direct buffers.
 
+
+## `void readVectored(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate, Consumer<ByteBuffer> release)`
+
+This is the extension of `readVectored/2` with an additional `release` consumer operation to release buffers.
+
+The specification and rules of this method are exactly those of the other operation, with
+the addition of:
+
+Preconditions
+```
+if release = null raise NullPointerException
+```
+
+* If a read operation fails due to an `IOException` or similar, the implementation of `readVectored()`,
+  SHOULD call `release(buffer)` with the buffer created by invoking the `allocate()` function into which
+  the data was being read.
+* Implementations MUST NOT call `release(buffer)` with any non-null buffer _not_ obtained through `allocate()`.
+* Implementations MUST only call `release(buffer)` when a failure has occurred and the future is about to have `Future.completedExceptionally()` invoked.
+
+It is an extension to the original Vector Read API -not all versions of Hadoop with the original `readVectored()` call define it.
+If used directly in application code, that application is restricting itself to later versions
+of the API.
+
+If used via reflection, if this method is not found, fall back to the original method.
+
