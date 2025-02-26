@@ -117,7 +117,6 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
   @Override
   public void setup() throws Exception {
     super.setup();
-
     // now create a new FS with minimal http capacity and recovery
     // a separate one is used to avoid test teardown suffering
     // from the lack of http connections and short timeouts.
