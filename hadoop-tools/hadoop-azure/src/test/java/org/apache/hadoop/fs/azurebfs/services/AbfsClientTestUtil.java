@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -51,6 +52,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.C
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.IF_MATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_BLOB_CONTENT_MD5;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_CLOSE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_COMP;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.PutBlockList;
@@ -336,5 +338,25 @@ public final class AbfsClientTestUtil {
             .getBlobRenameHandler(Mockito.anyString(), Mockito.anyString(),
                     Mockito.nullable(String.class), Mockito.anyBoolean(),
                     Mockito.any(TracingContext.class));
+  }
+
+  /**
+   * Mocks the behavior of adding a client transaction ID to the request headers
+   * for the given AzureBlobFileSystem. This method generates a random transaction ID
+   * and adds it to the headers of the {@link AbfsDfsClient}.
+   *
+   * @param abfsDfsClient The {@link AbfsDfsClient} mocked AbfsDfsClient.
+   * @param clientTransactionId An array to hold the generated transaction ID.
+   */
+  public static void mockAddClientTransactionIdToHeader(AbfsDfsClient abfsDfsClient,
+      String[] clientTransactionId) {
+    Mockito.doAnswer(addClientTransactionId -> {
+      clientTransactionId[0] = UUID.randomUUID().toString();
+      List<AbfsHttpHeader> headers = addClientTransactionId.getArgument(0);
+      headers.add(
+          new AbfsHttpHeader(X_MS_CLIENT_TRANSACTION_ID,
+              clientTransactionId[0]));
+      return clientTransactionId[0];
+    }).when(abfsDfsClient).addClientTransactionIdToHeader(Mockito.anyList());
   }
 }

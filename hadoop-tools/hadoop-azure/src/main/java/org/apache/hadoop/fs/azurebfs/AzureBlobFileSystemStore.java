@@ -54,6 +54,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -147,7 +148,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_PLU
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_STAR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DIRECTORY;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
@@ -1876,7 +1876,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     long contentLength;
     String contentLengthHeader = op.getResponseHeader(
         HttpHeaderConfigurations.CONTENT_LENGTH);
-    if (!contentLengthHeader.equals(EMPTY_STRING)) {
+    if (!StringUtils.isEmpty(contentLengthHeader)) {
       contentLength = Long.parseLong(contentLengthHeader);
     } else {
       contentLength = 0;
@@ -2159,6 +2159,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   @VisibleForTesting
   void setClient(AbfsClient client) {
     this.client = client;
+  }
+
+  @VisibleForTesting
+  void setClientHandler(AbfsClientHandler clientHandler) {
+    this.clientHandler = clientHandler;
   }
 
   @VisibleForTesting

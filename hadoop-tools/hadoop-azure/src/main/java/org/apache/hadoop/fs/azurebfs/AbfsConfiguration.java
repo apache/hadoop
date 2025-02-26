@@ -440,6 +440,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME)
   private long maxApacheHttpClientConnectionIdleTime;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID)
+  private boolean enableClientTransactionId;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -1068,6 +1072,10 @@ public class AbfsConfiguration{
    */
   public long getMaxApacheHttpClientConnectionIdleTime() {
     return maxApacheHttpClientConnectionIdleTime;
+  }
+
+  public boolean getIsClientTransactionIdEnabled() {
+    return enableClientTransactionId;
   }
 
   /**
