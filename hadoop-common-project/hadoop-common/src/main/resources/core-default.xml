@@ -1926,7 +1926,7 @@
 
 <property>
   <name>fs.s3a.committer.name</name>
-  <value>directory</value>
+  <value>magic</value>
   <description>
     Committer to create for output to S3A, one of:
     "file", "directory", "partitioned", "magic".
