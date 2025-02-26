@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedList;
-import java.util.TimeZone;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -73,7 +72,6 @@ class Stat extends FsCommand {
   protected final SimpleDateFormat timeFmt;
   {
     timeFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    timeFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
   }
 
   // default format string

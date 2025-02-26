@@ -33,6 +33,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.Collections;
+
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -307,6 +309,58 @@ public class TestPriorityUtilizationQueueOrderingPolicy {
     policy.setQueues(list);
     // java.lang.IllegalArgumentException: Comparison method violates its general contract!
     assertDoesNotThrow(() -> policy.getAssignmentIterator(partition));
+  }
+
+  @Test
+  public void testComparatorClassDoesNotViolateTimSortContract() {
+    String partition = "testPartition";
+
+    List<PriorityUtilizationQueueOrderingPolicy.
+            PriorityQueueResourcesForSorting> queues = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) { // 1000 queues to have enough queues so the exception occur
+      queues.add(createMockPriorityQueueResourcesForSorting(partition));
+    }
+
+    Collections.shuffle(queues);
+    // java.lang.IllegalArgumentException: Comparison method violates its general contract!
+    assertDoesNotThrow(() -> queues.sort(new PriorityUtilizationQueueOrderingPolicy(true)
+            .new PriorityQueueComparator(partition)));
+
+  }
+
+  private PriorityUtilizationQueueOrderingPolicy.
+          PriorityQueueResourcesForSorting createMockPriorityQueueResourcesForSorting(
+          String partition) {
+    QueueResourceQuotas resourceQuotas = randomResourceQuotas(partition);
+
+    boolean isZeroResource = ThreadLocalRandom.current().nextBoolean();
+    if (isZeroResource) {
+      resourceQuotas.setConfiguredMinResource(partition,  Resource.newInstance(0, 0));
+    }
+
+    QueueCapacities mockQueueCapacities = mock(QueueCapacities.class);
+    when(mockQueueCapacities.getAbsoluteUsedCapacity(partition))
+            .thenReturn(4.2f); // could be any specific number, so that there are equal values
+    when(mockQueueCapacities.getUsedCapacity(partition))
+            .thenReturn(1.0f); // could be any specific number, so that there are equal values
+    when(mockQueueCapacities.getAbsoluteCapacity(partition))
+            .thenReturn(6.2f); // could be any specific number, so that there are equal values
+
+    CSQueue mockQueue = mock(CSQueue.class);
+    when(mockQueue.getQueueCapacities())
+            .thenReturn(mockQueueCapacities);
+    when(mockQueue.getPriority())
+            .thenReturn(Priority.newInstance(7)); // could be any specific number,
+    // so that there are equal values
+    when(mockQueue.getAccessibleNodeLabels())
+            .thenReturn(Collections.singleton(partition));
+    when(mockQueue.getQueueResourceQuotas())
+            .thenReturn(resourceQuotas);
+
+    return new PriorityUtilizationQueueOrderingPolicy.PriorityQueueResourcesForSorting(
+            mockQueue, partition
+    );
+
   }
 
   private QueueCapacities randomQueueCapacities(String partition) {

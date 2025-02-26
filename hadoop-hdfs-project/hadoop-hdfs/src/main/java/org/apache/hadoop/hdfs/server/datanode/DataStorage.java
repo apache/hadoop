@@ -335,7 +335,7 @@ public class DataStorage extends Storage {
     VolumeBuilder builder =
         new VolumeBuilder(this, sd);
     for (NamespaceInfo nsInfo : nsInfos) {
-      location.makeBlockPoolDir(nsInfo.getBlockPoolID(), null);
+      location.makeBlockPoolDir(nsInfo.getBlockPoolID(), datanode.getConf());
 
       final BlockPoolSliceStorage bpStorage = getBlockPoolSliceStorage(nsInfo);
       final List<StorageDirectory> dirs = bpStorage.loadBpStorageDirectories(
@@ -457,7 +457,7 @@ public class DataStorage extends Storage {
     final List<StorageDirectory> success = Lists.newArrayList();
     final List<UpgradeTask> tasks = Lists.newArrayList();
     for (StorageLocation dataDir : dataDirs) {
-      dataDir.makeBlockPoolDir(bpid, null);
+      dataDir.makeBlockPoolDir(bpid, datanode.getConf());
       try {
         final List<Callable<StorageDirectory>> sdCallables =
             Lists.newArrayList();

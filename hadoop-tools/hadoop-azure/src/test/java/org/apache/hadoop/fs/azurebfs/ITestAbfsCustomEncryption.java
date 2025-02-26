@@ -28,13 +28,6 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
 import org.junit.Test;
@@ -44,16 +37,25 @@ import org.junit.runners.Parameterized;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
+import org.apache.hadoop.fs.azurebfs.contracts.services.BlobAppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.MockEncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
+import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -72,6 +74,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.ENCRYPTION_KEY_LEN;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.APPEND_MODE;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient.generateBlockListXml;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.fs.azurebfs.utils.EncryptionType.ENCRYPTION_CONTEXT;
 import static org.apache.hadoop.fs.azurebfs.utils.EncryptionType.GLOBAL_KEY;
@@ -87,6 +90,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
 
   private final byte[] cpk = new byte[ENCRYPTION_KEY_LEN];
   private final String cpkSHAEncoded;
+  private static final String BLOCK_ID = "MF8tNDE1MjkzOTE4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
   private List<AzureBlobFileSystem> fileSystemsOpenedInTest = new ArrayList<>();
 
@@ -244,7 +248,9 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       Path testPath, EncryptionContextProvider ecp)
       throws Exception {
     AbfsClient client = fs.getAbfsClient();
+    AbfsClient ingressClient = fs.getAbfsStore().getClientHandler().getIngressClient();
     AbfsClientUtils.setEncryptionContextProvider(client, ecp);
+    AbfsClientUtils.setEncryptionContextProvider(ingressClient, ecp);
     if (isExceptionCase) {
       LambdaTestUtils.intercept(IOException.class, () -> {
         switch (operation) {
@@ -310,12 +316,26 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
           }
         }
       case WRITE:
-        return client.flush(path, 3, false, false, null,
-          null, encryptionAdapter, getTestTracingContext(fs, false));
+        if (ingressClient instanceof AbfsDfsClient) {
+          return ingressClient.flush(path, 3, false, false, null,
+              null, encryptionAdapter, getTestTracingContext(fs, false));
+        } else {
+          byte[] buffer = generateBlockListXml(new ArrayList<>()).getBytes(StandardCharsets.UTF_8);
+          return ingressClient.flush(buffer, path, false, null,
+              null, null, encryptionAdapter, getTestTracingContext(fs, false));
+        }
       case APPEND:
-        return client.append(path, "val".getBytes(),
-            new AppendRequestParameters(3, 0, 3, APPEND_MODE, false, null, true),
-            null, encryptionAdapter, getTestTracingContext(fs, false));
+        if (ingressClient instanceof AbfsDfsClient) {
+          return ingressClient.append(path, "val".getBytes(),
+              new AppendRequestParameters(3, 0, 3, APPEND_MODE, false, null,
+                  true),
+              null, encryptionAdapter, getTestTracingContext(fs, false));
+        } else {
+          return ingressClient.append(path, "val".getBytes(),
+              new AppendRequestParameters(3, 0, 3, APPEND_MODE, false, null,
+                  true, new BlobAppendRequestParameters(BLOCK_ID, null)),
+              null, encryptionAdapter, getTestTracingContext(fs, false));
+        }
       case SET_ACL:
         return client.setAcl(path, AclEntry.aclSpecToString(
           Lists.newArrayList(aclEntry(ACCESS, USER, ALL))),
@@ -326,11 +346,11 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       case RENAME:
         TracingContext tc = getTestTracingContext(fs, true);
         return client.renamePath(path, new Path(path + "_2").toString(),
-          null, tc, null, false, fs.getIsNamespaceEnabled(tc)).getOp();
+          null, tc, null, false).getOp();
       case DELETE:
         TracingContext testTC = getTestTracingContext(fs, false);
         return client.deletePath(path, false, null,
-            testTC, fs.getIsNamespaceEnabled(testTC));
+            testTC);
       case GET_ATTR:
         return client.getPathStatus(path, true,
             getTestTracingContext(fs, false),
@@ -400,9 +420,11 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
           conf);
       fileSystemsOpenedInTest.add(fs);
+      // Default for this config should be true here as FNS Accounts would have failed initialization.
+      // This is needed to make sure test runs even if test config is missing.
       Assertions.assertThat(
           getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
-              false))
+              true))
           .describedAs("Encryption tests should run only on namespace enabled account")
           .isTrue();
       return fs;

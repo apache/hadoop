@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics;
 import org.apache.hadoop.hdfs.server.namenode.visitor.INodeCountVisitor;
 import org.apache.hadoop.hdfs.server.namenode.visitor.INodeCountVisitor.Counts;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -273,14 +274,14 @@ public class FsImageValidation {
 
       final FSImageFormat.LoaderDelegator loader
           = FSImageFormat.newLoader(conf, namesystem);
-      namesystem.writeLock();
+      namesystem.writeLock(RwLockMode.GLOBAL);
       namesystem.getFSDirectory().writeLock();
       try {
         loader.load(fsImageFile, false);
         fsImage.setLastAppliedTxId(loader);
       } finally {
         namesystem.getFSDirectory().writeUnlock();
-        namesystem.writeUnlock("loadImage");
+        namesystem.writeUnlock(RwLockMode.GLOBAL, "loadImage");
       }
     }
     t.cancel();

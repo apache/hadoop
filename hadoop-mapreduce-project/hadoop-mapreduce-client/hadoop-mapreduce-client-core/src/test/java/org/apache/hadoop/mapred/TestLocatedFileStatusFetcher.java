@@ -22,10 +22,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -36,6 +35,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  *  Test that the executor service has been shut down
@@ -49,14 +50,14 @@ public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
   private File dir = GenericTestUtils.getTestDir("test-lfs-fetcher");
   private static final CountDownLatch LATCH = new CountDownLatch(1);
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new Configuration(false);
     conf.set("fs.file.impl", MockFileSystem.class.getName());
     fileSys = FileSystem.getLocal(conf);
   }
 
-  @After
+  @AfterEach
   public void after() {
     if (mkdirs) {
       FileUtil.fullyDelete(dir);
@@ -83,7 +84,7 @@ public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
           fetcher.getFileStatuses();
         } catch (Exception e) {
           // This should interrupt condition.await()
-          Assert.assertTrue(e instanceof InterruptedException);
+          assertTrue(e instanceof InterruptedException);
         }
       }
     };
@@ -94,8 +95,8 @@ public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
     t.interrupt();
     t.join();
     // Check the status for executor service
-    Assert.assertTrue("The executor service should have been shut down",
-        fetcher.getListeningExecutorService().isShutdown());
+    assertTrue(fetcher.getListeningExecutorService().isShutdown(),
+        "The executor service should have been shut down");
   }
 
   static class MockFileSystem extends LocalFileSystem {

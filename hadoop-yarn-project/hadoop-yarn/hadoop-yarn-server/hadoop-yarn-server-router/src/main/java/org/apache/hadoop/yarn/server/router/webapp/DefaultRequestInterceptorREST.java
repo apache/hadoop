@@ -25,9 +25,9 @@ import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.client.Client;
 import javax.ws.rs.core.Response;
 
-import com.sun.jersey.api.client.Client;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.exceptions.YarnException;

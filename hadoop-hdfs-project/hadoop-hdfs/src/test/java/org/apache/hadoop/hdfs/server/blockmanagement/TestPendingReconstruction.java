@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
@@ -288,13 +289,13 @@ public class TestPendingReconstruction {
 
       // A received IBR processing calls addBlock(). If the gen stamp in the
       // report is not the same, it should stay in pending.
-      fsn.writeLock();
+      fsn.writeLock(RwLockMode.BM);
       try {
         // Use a wrong gen stamp.
         blkManager.addBlock(desc[0].getStorageInfos()[0],
             new Block(1, 1, 0), null);
       } finally {
-        fsn.writeUnlock();
+        fsn.writeUnlock(RwLockMode.BM, "testProcessPendingReconstructions");
       }
 
       // The block should still be pending
@@ -303,12 +304,12 @@ public class TestPendingReconstruction {
 
       // A block report with the correct gen stamp should remove the record
       // from the pending queue.
-      fsn.writeLock();
+      fsn.writeLock(RwLockMode.BM);
       try {
         blkManager.addBlock(desc[0].getStorageInfos()[0],
             new Block(1, 1, 1), null);
       } finally {
-        fsn.writeUnlock();
+        fsn.writeUnlock(RwLockMode.BM, "testProcessPendingReconstructions");
       }
 
       GenericTestUtils.waitFor(() -> pendingReconstruction.size() == 0, 500,
@@ -459,7 +460,7 @@ public class TestPendingReconstruction {
       // 3. mark a couple of blocks as corrupt
       LocatedBlock block = NameNodeAdapter.getBlockLocations(
           cluster.getNameNode(), filePath.toString(), 0, 1).get(0);
-      cluster.getNamesystem().writeLock();
+      cluster.getNamesystem().writeLock(RwLockMode.BM);
       try {
         bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
             "STORAGE_ID", "TEST");
@@ -471,7 +472,7 @@ public class TestPendingReconstruction {
         BlockInfo storedBlock = bm.getStoredBlock(block.getBlock().getLocalBlock());
         assertEquals(bm.pendingReconstruction.getNumReplicas(storedBlock), 2);
       } finally {
-        cluster.getNamesystem().writeUnlock();
+        cluster.getNamesystem().writeUnlock(RwLockMode.BM, "testPendingAndInvalidate");
       }
 
       // 4. delete the file
@@ -507,7 +508,7 @@ public class TestPendingReconstruction {
         DATANODE_COUNT).build();
     tmpCluster.waitActive();
     FSNamesystem fsn = tmpCluster.getNamesystem(0);
-    fsn.writeLock();
+    fsn.writeLock(RwLockMode.BM);
 
     try {
       BlockManager bm = fsn.getBlockManager();
@@ -563,7 +564,7 @@ public class TestPendingReconstruction {
       }, 100, 60000);
     } finally {
       tmpCluster.shutdown();
-      fsn.writeUnlock();
+      fsn.writeUnlock(RwLockMode.BM, "testReplicationCounter");
     }
   }
 

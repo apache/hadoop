@@ -50,6 +50,12 @@
 
     14. READER_RBAC_USER_CLIENT_ID -> readerRBACUser Service principal's client ID
     15. READER_RBAC_USER_CLIENT_SECRET -> readerRBACUser Service principal's client secret
+
+  ## METRIC SETTINGS ##
+    16. METRIC_ACCOUNT_NAME -> to metric account name without domain
+    17. METRIC_ACCOUNT_KEY -> Metric account access key
+    18. METRIC_CONTAINER -> name of an metric container
+    19. METRIC_FORMAT -> format of the metric (INTERNAL_BACKOFF_METRIC_FORMAT, INTERNAL_FOOTER_METRIC_FORMAT, INTERNAL_METRIC_FORMAT)
 -->
 
 <configuration>
@@ -186,5 +192,23 @@
   <property>
     <name>fs.azure.account.oauth2.reader.client.secret</name>
     <value>READER_RBAC_USER_CLIENT_ID</value>
+  </property>
+
+  <!-- METRIC SETTINGS -->
+  <property>
+    <name>fs.azure.metric.account.name</name>
+    <value>METRIC_ACCOUNT_NAME.dfs.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.azure.metric.account.key</name>
+    <value>METRIC_ACCOUNT_KEY</value>
+  </property>
+  <property>
+    <name>fs.azure.metric.uri</name>
+    <value>https://METRIC_ACCOUNT_NAME.dfs.core.windows.net/METRIC_CONTAINER</value>
+  </property>
+  <property>
+    <name>fs.azure.metric.format</name>
+    <value>METRIC_FORMAT</value>
   </property>
 </configuration>

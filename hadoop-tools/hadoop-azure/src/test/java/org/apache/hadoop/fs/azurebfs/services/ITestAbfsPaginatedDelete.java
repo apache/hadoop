@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -41,6 +42,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.test.ReflectionUtils;
 import org.apache.hadoop.util.Lists;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
@@ -141,6 +143,8 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testRecursiveDeleteWithPagination() throws Exception {
+    Assume.assumeTrue(
+        getFileSystem().getAbfsStore().getClient() instanceof AbfsDfsClient);
     testRecursiveDeleteWithPaginationInternal(false, true,
         AbfsHttpConstants.ApiVersion.DEC_12_2019);
     testRecursiveDeleteWithPaginationInternal(false, true,
@@ -163,6 +167,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testNonRecursiveDeleteWithPagination() throws Exception {
+    assumeDfsServiceType();
     testNonRecursiveDeleteWithPaginationInternal(true);
     testNonRecursiveDeleteWithPaginationInternal(false);
   }
@@ -173,6 +178,8 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
    */
   @Test
   public void testRecursiveDeleteWithInvalidCT() throws Exception {
+    Assume.assumeTrue(
+        getFileSystem().getAbfsStore().getClient() instanceof AbfsDfsClient);
     testRecursiveDeleteWithInvalidCTInternal(true);
     testRecursiveDeleteWithInvalidCTInternal(false);
   }
@@ -194,11 +201,11 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
 
     // Set the paginated enabled value and xMsVersion at spiedClient level.
     AbfsClient spiedClient = Mockito.spy(fs.getAbfsStore().getClient());
-    ITestAbfsClient.setAbfsClientField(spiedClient, "xMsVersion", xMsVersion);
+    ReflectionUtils.setFinalField(AbfsClient.class, spiedClient, "xMsVersion", xMsVersion);
     Mockito.doReturn(isPaginatedDeleteEnabled).when(spiedClient).getIsPaginatedDeleteEnabled();
 
     AbfsRestOperation op = spiedClient.deletePath(
-        testPath.toString(), true, null, testTC, isHnsEnabled);
+        testPath.toString(), true, null, testTC);
 
     // Getting the xMsVersion that was used to make the request
     String xMsVersionUsed = getHeaderValue(op.getRequestHeaders(), X_MS_VERSION);
@@ -245,7 +252,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     Mockito.doReturn(isPaginatedDeleteEnabled).when(spiedClient).getIsPaginatedDeleteEnabled();
 
     AbfsRestOperation op = spiedClient.deletePath(
-        testPath.toString(), false, null, testTC, isHnsEnabled);
+        testPath.toString(), false, null, testTC);
 
     // Getting the url that was used to make the request
     String urlUsed = op.getUrl().toString();
@@ -272,7 +279,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     Mockito.doReturn(isPaginatedEnabled).when(spiedClient).getIsPaginatedDeleteEnabled();
 
     AbfsRestOperationException e = intercept(AbfsRestOperationException.class, () ->
-        spiedClient.deletePath(testPath.toString(), true, randomCT, testTC, isHnsEnabled));
+        spiedClient.deletePath(testPath.toString(), true, randomCT, testTC));
     assertStatusCode(e, HTTP_BAD_REQUEST);
   }
 

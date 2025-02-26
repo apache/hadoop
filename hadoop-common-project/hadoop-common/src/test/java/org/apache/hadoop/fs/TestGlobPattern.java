@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.fs;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.re2j.PatternSyntaxException;
 /**
@@ -31,8 +32,7 @@ public class TestGlobPattern {
 
     for (String s : input) {
       boolean result = pattern.matches(s);
-      assertTrue(glob +" should"+ (yes ? "" : " not") +" match "+ s,
-                 yes ? result : !result);
+      assertTrue(yes ? result : !result, glob +" should"+ (yes ? "" : " not") +" match "+ s);
     }
   }
 
@@ -45,7 +45,7 @@ public class TestGlobPattern {
         e.printStackTrace();
         continue;
       }
-      assertTrue("glob "+ glob +" should throw", false);
+      assertTrue(false, "glob "+ glob +" should throw");
     }
   }
 
@@ -72,7 +72,8 @@ public class TestGlobPattern {
     shouldThrow("[", "[[]]", "{", "\\");
   }
 
-  @Test(timeout=10000) public void testPathologicalPatterns() {
+  @Test @Timeout(value = 10)
+  public void testPathologicalPatterns() {
     String badFilename = "job_1429571161900_4222-1430338332599-tda%2D%2D+******************************+++...%270%27%28Stage-1430338580443-39-2000-SUCCEEDED-production%2Dhigh-1430338340360.jhist";
     assertMatch(true, badFilename, badFilename);
   }

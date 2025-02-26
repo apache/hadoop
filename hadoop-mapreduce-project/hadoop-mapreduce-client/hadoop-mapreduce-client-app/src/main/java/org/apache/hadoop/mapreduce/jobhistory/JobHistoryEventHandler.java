@@ -80,7 +80,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.sun.jersey.api.client.ClientHandlerException;
+import javax.ws.rs.ProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1141,9 +1141,9 @@ public class JobHistoryEventHandler extends AbstractService
                   + error.getErrorCode());
         }
       }
-    } catch (YarnException | IOException | ClientHandlerException ex) {
-      LOG.error("Error putting entity " + tEntity.getEntityId() + " to Timeline"
-          + "Server", ex);
+    } catch (YarnException | IOException | ProcessingException ex) {
+      LOG.error("Error putting entity {} to Timeline Server",
+          tEntity.getEntityId(), ex);
     }
   }
 

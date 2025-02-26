@@ -17,10 +17,14 @@
 */
 package org.apache.hadoop.yarn.server.globalpolicygenerator.webapp;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 
 /**
  * The GPG webapp.
@@ -34,14 +38,29 @@ public class GPGWebApp extends WebApp {
 
   @Override
   public void setup() {
-    bind(GPGWebServices.class);
-    bind(JAXBContextResolver.class);
     bind(GPGWebApp.class).toInstance(this);
-    bind(GenericExceptionHandler.class);
     if (gpg != null) {
       bind(GlobalPolicyGenerator.class).toInstance(gpg);
     }
     route("/", GPGController.class, "overview");
     route("/policies", GPGController.class, "policies");
+  }
+
+  public ResourceConfig resourceConfig() {
+    ResourceConfig config = new ResourceConfig();
+    config.packages("org.apache.hadoop.yarn.server.globalpolicygenerator.webapp");
+    config.register(new JerseyBinder());
+    config.register(GPGWebServices.class);
+    config.register(GenericExceptionHandler.class);
+    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    return config;
+  }
+
+  private class JerseyBinder extends AbstractBinder {
+    @Override
+    protected void configure() {
+      bind(gpg).to(GlobalPolicyGenerator.class).named("gpg");
+      bind(gpg.getConfig()).to(Configuration.class).named("conf");
+    }
   }
 }

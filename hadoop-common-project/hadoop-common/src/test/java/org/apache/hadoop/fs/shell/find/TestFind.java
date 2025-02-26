@@ -17,8 +17,19 @@
  */
 package org.apache.hadoop.fs.shell.find;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -26,7 +37,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -39,24 +49,21 @@ import org.apache.hadoop.fs.shell.find.Expression;
 import org.apache.hadoop.fs.shell.find.Find;
 import org.apache.hadoop.fs.shell.find.FindOptions;
 import org.apache.hadoop.fs.shell.find.Result;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.Timeout;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+@Timeout(10)
 public class TestFind {
-
-  @Rule
-  public Timeout timeout = new Timeout(10000, TimeUnit.MILLISECONDS);
 
   private static FileSystem mockFs;
   private static Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     mockFs = MockFileSystem.setup();
     conf = mockFs.getConf();

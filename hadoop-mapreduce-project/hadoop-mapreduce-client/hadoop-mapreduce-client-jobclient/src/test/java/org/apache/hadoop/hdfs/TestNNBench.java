@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,8 +31,9 @@ import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestNNBench extends HadoopTestCase {
   private static final String BASE_DIR =
@@ -45,39 +46,39 @@ public class TestNNBench extends HadoopTestCase {
     super(LOCAL_MR, LOCAL_FS, 1, 1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     getFileSystem().delete(new Path(BASE_DIR), true);
     getFileSystem().delete(new Path(NNBench.DEFAULT_RES_FILE_NAME), true);
     super.tearDown();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testNNBenchCreateReadAndDelete() throws Exception {
     runNNBench(createJobConf(), "create_write");
     Path path = new Path(BASE_DIR + "/data/file_0_0");
-    assertTrue("create_write should create the file",
-        getFileSystem().exists(path));
+    assertTrue(getFileSystem().exists(path), "create_write should create the file");
     runNNBench(createJobConf(), "open_read");
     runNNBench(createJobConf(), "delete");
-    assertFalse("Delete operation should delete the file",
-        getFileSystem().exists(path));
+    assertFalse(getFileSystem().exists(path),
+        "Delete operation should delete the file");
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testNNBenchCreateAndRename() throws Exception {
     runNNBench(createJobConf(), "create_write");
     Path path = new Path(BASE_DIR + "/data/file_0_0");
-    assertTrue("create_write should create the file",
-        getFileSystem().exists(path));
+    assertTrue(getFileSystem().exists(path), "create_write should create the file");
     runNNBench(createJobConf(), "rename");
     Path renamedPath = new Path(BASE_DIR + "/data/file_0_r_0");
-    assertFalse("Rename should rename the file", getFileSystem().exists(path));
-    assertTrue("Rename should rename the file",
-        getFileSystem().exists(renamedPath));
+    assertFalse(getFileSystem().exists(path), "Rename should rename the file");
+    assertTrue(getFileSystem().exists(renamedPath), "Rename should rename the file");
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testNNBenchCreateControlFilesWithPool() throws Exception {
     runNNBench(createJobConf(), "create_write", BASE_DIR, "5");
     Path path = new Path(BASE_DIR, CONTROL_DIR_NAME);
@@ -86,7 +87,8 @@ public class TestNNBench extends HadoopTestCase {
     assertEquals(5, fileStatuses.length);
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testNNBenchCrossCluster() throws Exception {
     MiniDFSCluster dfsCluster = new MiniDFSCluster.Builder(new JobConf())
             .numDataNodes(1).build();
@@ -96,8 +98,8 @@ public class TestNNBench extends HadoopTestCase {
     runNNBench(createJobConf(), "create_write", baseDir);
 
     Path path = new Path(BASE_DIR + "/data/file_0_0");
-    assertTrue("create_write should create the file",
-            dfsCluster.getFileSystem().exists(path));
+    assertTrue(dfsCluster.getFileSystem().exists(path),
+        "create_write should create the file");
     dfsCluster.shutdown();
   }
 

@@ -32,8 +32,6 @@ You should be able to obtain the Hadoop tarball from the release. Also, you can 
     $ mvn clean install -DskipTests
     $ mvn package -Pdist -Dtar -DskipTests -Dmaven.javadoc.skip
 
-**NOTE:** You will need [protoc 2.5.0](http://code.google.com/p/protobuf/) installed.
-
 The tarball should be available in `hadoop-dist/target/` directory.
 
 Running the MiniCluster
@@ -41,9 +39,9 @@ Running the MiniCluster
 
 From inside the root directory of the extracted tarball, you can start the CLI MiniCluster using the following command:
 
-    $ bin/mapred minicluster -rmport RM_PORT -jhsport JHS_PORT
+    $ bin/mapred minicluster -format
 
-In the example command above, `RM_PORT` and `JHS_PORT` should be replaced by the user's choice of these port numbers. If not specified, random free ports will be used.
+The format option is required when running the minicluster for the first time, from next time -format option isn't required.
 
 There are a number of command line arguments that the users can use to control which services to start, and to pass other configuration properties. The available command line arguments:
 

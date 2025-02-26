@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
@@ -262,37 +263,31 @@ public class FSDirectory implements Closeable {
    * remain as placeholders only
    */
   void readLock() {
-    assert namesystem.hasReadLock() : "Should hold namesystem read lock";
+    assert namesystem.hasReadLock(RwLockMode.FS) :
+        "Should hold read lock of namesystem FSLock";
   }
 
   void readUnlock() {
-    assert namesystem.hasReadLock() : "Should hold namesystem read lock";
+    assert namesystem.hasReadLock(RwLockMode.FS) :
+        "Should hold read lock of namesystem FSLock";
   }
 
   void writeLock() {
-    assert namesystem.hasWriteLock() : "Should hold namesystem write lock";
+    assert namesystem.hasWriteLock(RwLockMode.FS) :
+        "Should hold write lock of namesystem FSLock";
   }
 
   void writeUnlock() {
-    assert namesystem.hasWriteLock() : "Should hold namesystem write lock";
+    assert namesystem.hasWriteLock(RwLockMode.FS) :
+        "Should hold write lock of namesystem FSLock";
   }
 
   boolean hasWriteLock() {
-    return namesystem.hasWriteLock();
+    return namesystem.hasWriteLock(RwLockMode.FS);
   }
 
   boolean hasReadLock() {
-    return namesystem.hasReadLock();
-  }
-
-  @Deprecated // dirLock is obsolete, use namesystem.fsLock instead
-  public int getReadHoldCount() {
-    return namesystem.getReadHoldCount();
-  }
-
-  @Deprecated // dirLock is obsolete, use namesystem.fsLock instead
-  public int getWriteHoldCount() {
-    return namesystem.getWriteHoldCount();
+    return namesystem.hasReadLock(RwLockMode.FS);
   }
 
   public int getListLimit() {
@@ -695,7 +690,7 @@ public class FSDirectory implements Closeable {
    * accessible path that also passed additional sanity checks based on how
    * the path will be used as specified by the DirOp.
    *   READ:   Expands reserved paths and performs permission checks
-   *           during traversal.  Raw paths are only accessible by a superuser.
+   *           during traversal.
    *   WRITE:  In addition to READ checks, ensures the path is not a
    *           snapshot path.
    *   CREATE: In addition to WRITE checks, ensures path does not contain
@@ -1111,7 +1106,7 @@ public class FSDirectory implements Closeable {
    */
   public void updateSpaceForCompleteBlock(BlockInfo completeBlk,
       INodesInPath inodes) throws IOException {
-    assert namesystem.hasWriteLock();
+    assert namesystem.hasWriteLock(RwLockMode.GLOBAL);
     INodesInPath iip = inodes != null ? inodes :
         INodesInPath.fromINode(namesystem.getBlockCollection(completeBlk));
     INodeFile fileINode = iip.getLastINode().asFile();

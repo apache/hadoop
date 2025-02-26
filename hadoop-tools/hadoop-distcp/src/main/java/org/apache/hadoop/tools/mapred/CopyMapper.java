@@ -205,7 +205,8 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
       }
 
       if (sourceCurrStatus.isDirectory()) {
-        createTargetDirsWithRetry(description, target, context, sourceStatus);
+        createTargetDirsWithRetry(description, target, context, sourceStatus,
+            sourceFS);
         return;
       }
 
@@ -295,10 +296,10 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
   }
 
   private void createTargetDirsWithRetry(String description, Path target,
-      Context context, FileStatus sourceStatus) throws IOException {
+      Context context, FileStatus sourceStatus, FileSystem sourceFS) throws IOException {
     try {
-      new RetriableDirectoryCreateCommand(description).execute(target,
-          context, sourceStatus);
+      new RetriableDirectoryCreateCommand(description).execute(target, context,
+          sourceStatus, sourceFS);
     } catch (Exception e) {
       throw new IOException("mkdir failed for " + target, e);
     }

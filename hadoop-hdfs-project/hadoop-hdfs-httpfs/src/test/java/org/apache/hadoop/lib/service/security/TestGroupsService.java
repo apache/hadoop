@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.lib.service.security;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Arrays;
 import java.util.List;
@@ -31,7 +32,7 @@ import org.apache.hadoop.test.HTestCase;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestGroupsService extends HTestCase {
 
@@ -50,15 +51,18 @@ public class TestGroupsService extends HTestCase {
     server.destroy();
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   @TestDir
   public void invalidGroupsMapping() throws Exception {
-    String dir = TestDirHelper.getTestDir().getAbsolutePath();
-    Configuration conf = new Configuration(false);
-    conf.set("server.services", StringUtils.join(",", Arrays.asList(GroupsService.class.getName())));
-    conf.set("server.groups.hadoop.security.group.mapping", String.class.getName());
-    Server server = new Server("server", dir, dir, dir, dir, conf);
-    server.init();
+    assertThrows(RuntimeException.class, () -> {
+      String dir = TestDirHelper.getTestDir().getAbsolutePath();
+      Configuration conf = new Configuration(false);
+      conf.set("server.services", StringUtils.join(",",
+          Arrays.asList(GroupsService.class.getName())));
+      conf.set("server.groups.hadoop.security.group.mapping", String.class.getName());
+      Server server = new Server("server", dir, dir, dir, dir, conf);
+      server.init();
+    });
   }
 
 }

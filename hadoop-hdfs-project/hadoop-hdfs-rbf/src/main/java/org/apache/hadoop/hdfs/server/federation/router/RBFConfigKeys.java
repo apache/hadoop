@@ -72,6 +72,22 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_RPC_ENABLE =
       FEDERATION_ROUTER_PREFIX + "rpc.enable";
   public static final boolean DFS_ROUTER_RPC_ENABLE_DEFAULT = true;
+  // HDFS Router Asynchronous RPC
+  public static final String DFS_ROUTER_ASYNC_RPC_ENABLE_KEY =
+      FEDERATION_ROUTER_PREFIX + "async.rpc.enable";
+  public static final boolean DFS_ROUTER_ASYNC_RPC_ENABLE_DEFAULT = false;
+  public static final String FEDERATION_ROUTER_ASYNC_RPC_PREFIX =
+          FEDERATION_ROUTER_PREFIX + "async.rpc.";
+  // Example: ns1:count1,ns2:count2,ns3:count3
+  public static final String DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_KEY =
+          FEDERATION_ROUTER_ASYNC_RPC_PREFIX + "ns.handler.count";
+  public static final String DFS_ROUTER_ASYNC_RPC_NS_HANDLER_COUNT_DEFAULT = "";
+  public static final String DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY =
+          FEDERATION_ROUTER_ASYNC_RPC_PREFIX + "handler.count";
+  public static final int DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_DEFAULT = 10;
+  public static final String DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY =
+          FEDERATION_ROUTER_ASYNC_RPC_PREFIX + "responder.count";
+  public static final int DFS_ROUTER_ASYNCRPC_RESPONDER_COUNT_DEFAULT = 10;
 
   public static final String DFS_ROUTER_METRICS_ENABLE =
       FEDERATION_ROUTER_PREFIX + "metrics.enable";
@@ -288,6 +304,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "safemode.checkperiod";
   public static final long DFS_ROUTER_SAFEMODE_CHECKPERIOD_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(5);
+  public static final String DFS_ROUTER_HEARTBEAT_WITH_IP_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "heartbeat.with.ip.enable";
+  public static final boolean DFS_ROUTER_HEARTBEAT_WITH_IP_ENABLE_DEFAULT = false;
 
   // HDFS Router-based federation mount table entries
   /** Maximum number of cache entries to have. */

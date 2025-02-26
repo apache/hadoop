@@ -404,20 +404,17 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       final AtomicBoolean assertionFailedInThread = new AtomicBoolean(false);
       cluster.shutdownNameNodes();
 
-      Thread clientThread = new Thread() {
-        @Override
-        public void run() {
-          try {
-            store.storeApplicationStateInternal(
-                ApplicationId.newInstance(100L, 1),
-                ApplicationStateData.newInstance(111, 111, "user", null,
-                    RMAppState.ACCEPTED, "diagnostics", 222, 333, null));
-          } catch (Exception e) {
-            assertionFailedInThread.set(true);
-            e.printStackTrace();
-          }
+      Thread clientThread = new Thread(() -> {
+        try {
+          store.storeApplicationStateInternal(
+              ApplicationId.newInstance(100L, 1),
+              ApplicationStateData.newInstance(111, 111, "user", null,
+                  RMAppState.ACCEPTED, "diagnostics", 222, 333, null));
+        } catch (Exception e) {
+          assertionFailedInThread.set(true);
+          e.printStackTrace();
         }
-      };
+      });
       Thread.sleep(2000);
       clientThread.start();
       cluster.restartNameNode();

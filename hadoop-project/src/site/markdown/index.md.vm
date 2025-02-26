@@ -23,157 +23,75 @@ Overview of Changes
 Users are encouraged to read the full set of release notes.
 This page provides an overview of the major changes.
 
-S3A: Upgrade AWS SDK to V2
+Bulk Delete API
 ----------------------------------------
 
-[HADOOP-18073](https://issues.apache.org/jira/browse/HADOOP-18073) S3A: Upgrade AWS SDK to V2
+[HADOOP-18679](https://issues.apache.org/jira/browse/HADOOP-18679) Bulk Delete API.
 
-This release upgrade Hadoop's AWS connector S3A from AWS SDK for Java V1 to AWS SDK for Java V2.
-This is a significant change which offers a number of new features including the ability to work with Amazon S3 Express One Zone Storage - the new high performance, single AZ storage class.
+This release provides an API to perform bulk delete of files/objects
+in an object store or filesystem.
 
-HDFS DataNode Split one FsDatasetImpl lock to volume grain locks
-----------------------------------------
+New binary distribution
+-----------------------
 
-[HDFS-15382](https://issues.apache.org/jira/browse/HDFS-15382) Split one FsDatasetImpl lock to volume grain locks.
+[HADOOP-19083](https://issues.apache.org/jira/browse/HADOOP-19083) provide hadoop binary tarball without aws v2 sdk
 
-Throughput is one of the core performance evaluation for DataNode instance.
-However, it does not reach the best performance especially for Federation deploy all the time although there are different improvement,
-because of the global coarse-grain lock.
-These series issues (include [HDFS-16534](https://issues.apache.org/jira/browse/HDFS-16534), [HDFS-16511](https://issues.apache.org/jira/browse/HDFS-16511), [HDFS-15382](https://issues.apache.org/jira/browse/HDFS-15382) and [HDFS-16429](https://issues.apache.org/jira/browse/HDFS-16429).)
-try to split the global coarse-grain lock to fine-grain lock which is double level lock for blockpool and volume,
-to improve the throughput and avoid lock impacts between blockpools and volumes.
+Hadoop has added a new variant of the binary distribution tarball, labeled with "lean" in the file
+name. This tarball excludes the full AWS SDK v2 bundle, resulting in approximately 50% reduction in
+file size.
 
-YARN Federation improvements
-----------------------------------------
-
-[YARN-5597](https://issues.apache.org/jira/browse/YARN-5597) YARN Federation improvements.
-
-We have enhanced the YARN Federation functionality for improved usability. The enhanced features are as follows:
-1. YARN Router now boasts a full implementation of all interfaces including the ApplicationClientProtocol, ResourceManagerAdministrationProtocol, and RMWebServiceProtocol.
-2. YARN Router support for application cleanup and automatic offline mechanisms for subCluster.
-3. Code improvements were undertaken for the Router and AMRMProxy, along with enhancements to previously pending functionalities.
-4. Audit logs and Metrics for Router received upgrades.
-5. A boost in cluster security features was achieved, with the inclusion of Kerberos support.
-6. The page function of the router has been enhanced.
-7. A set of commands has been added to the Router side for operating on SubClusters and Policies.
-
-YARN Capacity Scheduler improvements
-----------------------------------------
-
-[YARN-10496](https://issues.apache.org/jira/browse/YARN-10496) Support Flexible Auto Queue Creation in Capacity Scheduler
-
-Capacity Scheduler resource distribution mode was extended with a new allocation mode called weight mode.
-Defining queue capacities with weights allows the users to use the newly added flexible queue auto creation mode.
-Flexible mode now supports the dynamic creation of both **parent queues** and **leaf queues**, enabling the creation of
-complex queue hierarchies application submission time.
-
-[YARN-10888](https://issues.apache.org/jira/browse/YARN-10888) New capacity modes for Capacity Scheduler
-
-Capacity Scheduler's resource distribution was completely refactored to be more flexible and extensible. There is a new concept
-called Capacity Vectors, which allows the users to mix various resource types in the hierarchy, and also in a single queue. With
-this optionally enabled feature it is now possible to define different resources with different units, like memory with GBs, vcores with
-percentage values, and GPUs/FPGAs with weights, all in the same queue.
-
-[YARN-10889](https://issues.apache.org/jira/browse/YARN-10889) Queue Creation in Capacity Scheduler - Various improvements
-
-In addition to the two new features above, there were a number of commits for improvements and bug fixes in Capacity Scheduler.
-
-HDFS RBF: Code Enhancements, New Features, and Bug Fixes
-----------------------------------------
-
-The HDFS RBF functionality has undergone significant enhancements, encompassing over 200 commits for feature
-improvements, new functionalities, and bug fixes.
-Important features and improvements are as follows:
-
-**Feature**
-
-[HDFS-15294](https://issues.apache.org/jira/browse/HDFS-15294) HDFS Federation balance tool introduces one tool to balance data across different namespace.
-
-[HDFS-13522](https://issues.apache.org/jira/browse/HDFS-13522), [HDFS-16767](https://issues.apache.org/jira/browse/HDFS-16767) Support observer node from Router-Based Federation.
+S3A improvements
+----------------
 
 **Improvement**
 
-[HADOOP-13144](https://issues.apache.org/jira/browse/HADOOP-13144), [HDFS-13274](https://issues.apache.org/jira/browse/HDFS-13274), [HDFS-15757](https://issues.apache.org/jira/browse/HDFS-15757)
+[HADOOP-18886](https://issues.apache.org/jira/browse/HADOOP-18886) S3A: AWS SDK V2 Migration: stabilization and S3Express
 
-These tickets have enhanced IPC throughput between Router and NameNode via multiple connections per user, and optimized connection management.
+This release completes stabilization efforts on the AWS SDK v2 migration and support of Amazon S3
+Express One Zone storage. S3 Select is no longer supported.
 
-[HDFS-14090](https://issues.apache.org/jira/browse/HDFS-14090) RBF: Improved isolation for downstream name nodes. {Static}
+[HADOOP-18993](https://issues.apache.org/jira/browse/HADOOP-18993) S3A: Add option fs.s3a.classloader.isolation (#6301)
 
-Router supports assignment of the dedicated number of RPC handlers to achieve isolation for all downstream nameservices
-it is configured to proxy. Since large or busy clusters may have relatively higher RPC traffic to the namenode compared to other clusters namenodes,
-this feature if enabled allows admins to configure higher number of RPC handlers for busy clusters.
+This introduces configuration property `fs.s3a.classloader.isolation`, which defaults to `true`.
+Set to `false` to disable S3A classloader isolation, which can be useful for installing custom
+credential providers in user-provided jars.
 
-[HDFS-17128](https://issues.apache.org/jira/browse/HDFS-17128) RBF: SQLDelegationTokenSecretManager should use version of tokens updated by other routers.
+[HADOOP-19047](https://issues.apache.org/jira/browse/HADOOP-19047) Support InMemory Tracking Of S3A Magic Commits
 
-The SQLDelegationTokenSecretManager enhances performance by maintaining processed tokens in memory. However, there is
-a potential issue of router cache inconsistency due to token loading and renewal. This issue has been addressed by the
-resolution of HDFS-17128.
+The S3A magic committer now supports configuration property
+`fs.s3a.committer.magic.track.commits.in.memory.enabled`. Set this to `true` to track commits in
+memory instead of on the file system, which reduces the number of remote calls.
 
-[HDFS-17148](https://issues.apache.org/jira/browse/HDFS-17148) RBF: SQLDelegationTokenSecretManager must cleanup expired tokens in SQL.
+[HADOOP-19161](https://issues.apache.org/jira/browse/HADOOP-19161) S3A: option “fs.s3a.performance.flags” to take list of performance flags
 
-SQLDelegationTokenSecretManager, while fetching and temporarily storing tokens from SQL in a memory cache with a short TTL,
-faces an issue where expired tokens are not efficiently cleaned up, leading to a buildup of expired tokens in the SQL database.
-This issue has been addressed by the resolution of HDFS-17148.
+S3A now supports configuration property `fs.s3a.performance.flag` for controlling activation of
+multiple performance optimizations. Refer to the S3A performance documentation for details.
 
-**Others**
-
-Other changes to HDFS RBF include WebUI, command line, and other improvements. Please refer to the release document.
-
-HDFS EC: Code Enhancements and Bug Fixes
-----------------------------------------
-
-HDFS EC has made code improvements and fixed some bugs.
-
-Important improvements and bugs are as follows:
+ABFS improvements
+-----------------
 
 **Improvement**
 
-[HDFS-16613](https://issues.apache.org/jira/browse/HDFS-16613) EC: Improve performance of decommissioning dn with many ec blocks.
+[HADOOP-18516](https://issues.apache.org/jira/browse/HADOOP-18516) [ABFS]: Support fixed SAS token config in addition to Custom SASTokenProvider Implementation
 
-In a hdfs cluster with a lot of EC blocks, decommission a dn is very slow. The reason is unlike replication blocks can be replicated
-from any dn which has the same block replication, the ec block have to be replicated from the decommissioning dn.
-The configurations `dfs.namenode.replication.max-streams` and `dfs.namenode.replication.max-streams-hard-limit` will limit
-the replication speed, but increase these configurations will create risk to the whole cluster's network. So it should add a new
-configuration to limit the decommissioning dn, distinguished from the cluster wide max-streams limit.
+ABFS now supports authentication via a fixed Shared Access Signature token. Refer to ABFS
+documentation of configuration property `fs.azure.sas.fixed.token` for details.
 
-[HDFS-16663](https://issues.apache.org/jira/browse/HDFS-16663) EC: Allow block reconstruction pending timeout refreshable to increase decommission performance.
+[HADOOP-19089](https://issues.apache.org/jira/browse/HADOOP-19089) [ABFS] Reverting Back Support of setXAttr() and getXAttr() on root path
 
-In [HDFS-16613](https://issues.apache.org/jira/browse/HDFS-16613), increase the value of `dfs.namenode.replication.max-streams-hard-limit` would maximize the IO
-performance of the decommissioning DN, which has a lot of EC blocks. Besides this, we also need to decrease the value of
-`dfs.namenode.reconstruction.pending.timeout-sec`, default is 5 minutes, to shorten the interval time for checking
-pendingReconstructions. Or the decommissioning node would be idle to wait for copy tasks in most of this 5 minutes.
-In decommission progress, we may need to reconfigure these 2 parameters several times. In [HDFS-14560](https://issues.apache.org/jira/browse/HDFS-14560), the
-`dfs.namenode.replication.max-streams-hard-limit` can already be reconfigured dynamically without namenode restart. And
-the `dfs.namenode.reconstruction.pending.timeout-sec` parameter also need to be reconfigured dynamically.
+[HADOOP-18869](https://issues.apache.org/jira/browse/HADOOP-18869) previously implemented support for xattrs on the root path in the 3.4.0 release. Support for this has been removed in 3.4.1 to prevent the need for calling container APIs.
+
+[HADOOP-19178](https://issues.apache.org/jira/browse/HADOOP-19178) WASB Driver Deprecation and eventual removal
+
+This release announces deprecation of the WASB file system in favor of ABFS. Refer to ABFS
+documentation for additional guidance.
 
 **Bug**
 
-[HDFS-16456](https://issues.apache.org/jira/browse/HDFS-16456) EC: Decommission a rack with only on dn will fail when the rack number is equal with replication.
+[HADOOP-18542](https://issues.apache.org/jira/browse/HADOOP-18542) Azure Token provider requires tenant and client IDs despite being optional
 
-In below scenario, decommission will fail by `TOO_MANY_NODES_ON_RACK` reason:
-- Enable EC policy, such as RS-6-3-1024k.
-- The rack number in this cluster is equal with or less than the replication number(9)
-- A rack only has one DN, and decommission this DN.
-This issue has been addressed by the resolution of HDFS-16456.
-
-[HDFS-17094](https://issues.apache.org/jira/browse/HDFS-17094) EC: Fix bug in block recovery when there are stale datanodes.
-During block recovery, the `RecoveryTaskStriped` in the datanode expects a one-to-one correspondence between
-`rBlock.getLocations()` and `rBlock.getBlockIndices()`. However, if there are stale locations during a NameNode heartbeat,
-this correspondence may be disrupted. Specifically, although there are no stale locations in `recoveryLocations`, the block indices
-array remains complete. This discrepancy causes `BlockRecoveryWorker.RecoveryTaskStriped#recover` to generate an incorrect
-internal block ID, leading to a failure in the recovery process as the corresponding datanode cannot locate the replica.
-This issue has been addressed by the resolution of HDFS-17094.
-
-[HDFS-17284](https://issues.apache.org/jira/browse/HDFS-17284). EC: Fix int overflow in calculating numEcReplicatedTasks and numReplicationTasks during block recovery.
-Due to an integer overflow in the calculation of numReplicationTasks or numEcReplicatedTasks, the NameNode's configuration
-parameter `dfs.namenode.replication.max-streams-hard-limit` failed to take effect. This led to an excessive number of tasks
-being sent to the DataNodes, consequently occupying too much of their memory.
-
-This issue has been addressed by the resolution of HDFS-17284.
-
-**Others**
-
-Other improvements and fixes for HDFS EC, Please refer to the release document.
+It is no longer necessary to specify a tenant and client ID in configuration for MSI authentication
+when running in an Azure instance.
 
 Transitive CVE fixes
 --------------------

@@ -181,6 +181,13 @@ public class JvmMetrics implements MetricsSource {
     long count = 0;
     long timeMillis = 0;
     for (GarbageCollectorMXBean gcBean : gcBeans) {
+      if (gcBean.getName() != null) {
+        String name = gcBean.getName();
+        // JDK-8265136 Skip concurrent phase
+        if (name.startsWith("ZGC") && name.endsWith("Cycles")) {
+          continue;
+        }
+      }
       long c = gcBean.getCollectionCount();
       long t = gcBean.getCollectionTime();
       MetricsInfo[] gcInfo = getGcInfo(gcBean.getName());

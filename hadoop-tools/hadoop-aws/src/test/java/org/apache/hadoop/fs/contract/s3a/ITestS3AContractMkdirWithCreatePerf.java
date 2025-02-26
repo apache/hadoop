@@ -29,7 +29,9 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_PERFORMANCE_TESTS_ENABLED;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 
 /**
  * Test mkdir operations on S3A with create performance mode.
@@ -50,6 +52,8 @@ public class ITestS3AContractMkdirWithCreatePerf extends AbstractContractMkdirTe
 
   @Test
   public void testMkdirOverParentFile() throws Throwable {
+    skipIfNotEnabled(getContract().getConf(), KEY_PERFORMANCE_TESTS_ENABLED,
+        "Skipping tests running in performance mode");
     describe("try to mkdir where a parent is a file, should pass");
     FileSystem fs = getFileSystem();
     Path path = methodPath();

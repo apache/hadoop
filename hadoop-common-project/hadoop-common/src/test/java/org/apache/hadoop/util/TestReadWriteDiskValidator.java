@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -28,9 +28,8 @@ import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.metrics2.impl.MetricsRecords;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -44,7 +43,7 @@ public class TestReadWriteDiskValidator {
 
   private MetricsSystem ms;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     ms = DefaultMetricsSystem.instance();
   }
@@ -64,14 +63,13 @@ public class TestReadWriteDiskValidator {
 
     ReadWriteDiskValidatorMetrics metric =
         ReadWriteDiskValidatorMetrics.getMetric(testDir.toString());
-    Assert.assertEquals("The count number of estimator in MutableQuantiles"
-        + "metrics of file read is not right",
-        metric.getFileReadQuantiles()[0].getEstimator().getCount(), count);
+    assertEquals(metric.getFileReadQuantiles()[0].getEstimator().getCount(), count,
+        "The count number of estimator in MutableQuantiles"
+        + "metrics of file read is not right");
 
-    Assert.assertEquals("The count number of estimator in MutableQuantiles"
-        + "metrics of file write is not right",
-        metric.getFileWriteQuantiles()[0].getEstimator().getCount(),
-        count);
+    assertEquals(metric.getFileWriteQuantiles()[0].getEstimator().getCount(),
+        count, "The count number of estimator in MutableQuantiles"
+        + "metrics of file write is not right");
 
     MetricsSource source = ms.getSource(
         ReadWriteDiskValidatorMetrics.sourceName(testDir.toString()));
@@ -154,8 +152,8 @@ public class TestReadWriteDiskValidator {
         "FailureCount", 2);
     Long lastFailureTime2 = (Long) MetricsRecords.getMetricValueByName(
         collector.getRecords().get(1), "LastFailureTime");
-    assertTrue("The first failure time should be less than the second one",
-        lastFailureTime1 < lastFailureTime2);
+    assertTrue(lastFailureTime1 < lastFailureTime2,
+        "The first failure time should be less than the second one");
 
     testDir.delete();
   }

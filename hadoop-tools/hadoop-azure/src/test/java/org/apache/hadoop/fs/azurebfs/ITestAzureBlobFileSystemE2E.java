@@ -24,6 +24,8 @@ import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -40,6 +42,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_HT
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_HTTP_READ_TIMEOUT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_TOLERATE_CONCURRENT_APPEND;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -55,6 +58,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
   private static final int TEST_STABLE_DEFAULT_CONNECTION_TIMEOUT_MS = 500;
   private static final int TEST_STABLE_DEFAULT_READ_TIMEOUT_MS = 30000;
   private static final int TEST_UNSTABLE_READ_TIMEOUT_MS = 1;
+  private static final int TEST_WRITE_BYTE_VALUE = 20;
 
   public ITestAzureBlobFileSystemE2E() throws Exception {
     super();
@@ -199,6 +203,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
   public void testWriteWithFileNotFoundException() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = path(methodName.getMethodName());
+    AbfsClient client = fs.getAbfsStore().getClientHandler().getIngressClient();
 
     try (FSDataOutputStream stream = fs.create(testFilePath)) {
       assertPathExists(fs, "Path should exist", testFilePath);
@@ -208,7 +213,11 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
       assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
 
       // trigger append call
-      intercept(FileNotFoundException.class, () -> stream.close());
+      if (client instanceof AbfsDfsClient) {
+        intercept(FileNotFoundException.class, stream::close);
+      } else {
+        intercept(IOException.class, stream::close);
+      }
     }
   }
 
@@ -216,6 +225,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
   public void testFlushWithFileNotFoundException() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = path(methodName.getMethodName());
+    AbfsClient client = fs.getAbfsStore().getClientHandler().getIngressClient();
     if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testFilePath).toString())) {
       return;
     }
@@ -225,8 +235,12 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
       fs.delete(testFilePath, true);
       assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
-
-      intercept(FileNotFoundException.class, () -> stream.close());
+      stream.write(TEST_WRITE_BYTE_VALUE);
+      if (client instanceof AbfsDfsClient) {
+        intercept(FileNotFoundException.class, stream::close);
+      } else {
+        intercept(IOException.class, stream::close);
+      }
     }
   }
 
@@ -259,6 +273,9 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
   public void testHttpTimeouts(int connectionTimeoutMs, int readTimeoutMs)
       throws Exception {
+    // This is to make sure File System creation goes through before network calls start failing.
+    assumeValidTestConfigPresent(this.getRawConfiguration(), FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
+
     Configuration conf = this.getRawConfiguration();
     // set to small values that will cause timeouts
     conf.setInt(AZURE_HTTP_CONNECTION_TIMEOUT, connectionTimeoutMs);

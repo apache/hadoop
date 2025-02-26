@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapterMockitoUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -241,7 +242,7 @@ public class TestHAStateTransitions {
       .build();
     try {
       cluster.waitActive();
-      ReentrantReadWriteLock spyLock = NameNodeAdapter.spyOnFsLock(
+      ReentrantReadWriteLock spyLock = NameNodeAdapterMockitoUtil.spyOnFsLock(
           cluster.getNameNode(0).getNamesystem());
       Mockito.doAnswer(new GenericTestUtils.SleepAnswer(50))
         .when(spyLock).writeLock();

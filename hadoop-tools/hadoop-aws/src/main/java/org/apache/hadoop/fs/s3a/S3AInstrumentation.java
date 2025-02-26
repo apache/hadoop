@@ -862,6 +862,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       this.filesystemStatistics = filesystemStatistics;
       IOStatisticsStore st = iostatisticsStore()
           .withCounters(
+              StreamStatisticNames.STREAM_LEAKS,
               StreamStatisticNames.STREAM_READ_ABORTED,
               StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_ABORT,
               StreamStatisticNames.STREAM_READ_CLOSED,
@@ -1123,6 +1124,15 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void close() {
       increment(StreamStatisticNames.STREAM_READ_CLOSE_OPERATIONS);
+      merge(true);
+    }
+
+    /**
+     * Stream was leaked.
+     */
+    public void streamLeaked() {
+      increment(StreamStatisticNames.STREAM_LEAKS);
+      // merge as if closed.
       merge(true);
     }
 
@@ -1505,6 +1515,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               INVOCATION_HFLUSH.getSymbol(),
               INVOCATION_HSYNC.getSymbol())
           .withGauges(
+              STREAM_WRITE_BLOCK_UPLOADS_ACTIVE.getSymbol(),
               STREAM_WRITE_BLOCK_UPLOADS_PENDING.getSymbol(),
               STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol())
           .withDurationTracking(

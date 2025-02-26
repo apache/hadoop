@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 
 import static org.apache.hadoop.fs.azurebfs.utils.UriUtils.changeUrlFromBlobToDfs;
+import static org.apache.hadoop.fs.azurebfs.utils.UriUtils.changeUrlFromDfsToBlob;
 
 /**
  * AbfsClientHandler is a class that provides a way to get the AbfsClient
@@ -40,7 +41,9 @@ public class AbfsClientHandler {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClientHandler.class);
 
   private AbfsServiceType defaultServiceType;
+  private AbfsServiceType ingressServiceType;
   private final AbfsDfsClient dfsAbfsClient;
+  private final AbfsBlobClient blobAbfsClient;
 
   public AbfsClientHandler(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
@@ -49,6 +52,9 @@ public class AbfsClientHandler {
       final EncryptionContextProvider encryptionContextProvider,
       final AbfsClientContext abfsClientContext) throws IOException {
     this.dfsAbfsClient = createDfsClient(baseUrl, sharedKeyCredentials,
+        abfsConfiguration, tokenProvider, null, encryptionContextProvider,
+        abfsClientContext);
+    this.blobAbfsClient = createBlobClient(baseUrl, sharedKeyCredentials,
         abfsConfiguration, tokenProvider, null, encryptionContextProvider,
         abfsClientContext);
     initServiceType(abfsConfiguration);
@@ -63,6 +69,9 @@ public class AbfsClientHandler {
     this.dfsAbfsClient = createDfsClient(baseUrl, sharedKeyCredentials,
         abfsConfiguration, null, sasTokenProvider, encryptionContextProvider,
         abfsClientContext);
+    this.blobAbfsClient = createBlobClient(baseUrl, sharedKeyCredentials,
+        abfsConfiguration, null, sasTokenProvider, encryptionContextProvider,
+        abfsClientContext);
     initServiceType(abfsConfiguration);
   }
 
@@ -72,6 +81,7 @@ public class AbfsClientHandler {
    */
   private void initServiceType(final AbfsConfiguration abfsConfiguration) {
     this.defaultServiceType = abfsConfiguration.getFsConfiguredServiceType();
+    this.ingressServiceType = abfsConfiguration.getIngressServiceType();
   }
 
   /**
@@ -83,25 +93,52 @@ public class AbfsClientHandler {
   }
 
   /**
+   * Get the AbfsClient based on the ingress service type.
+   *
+   * @return AbfsClient for the ingress service type.
+   */
+  public AbfsClient getIngressClient() {
+    return getClient(ingressServiceType);
+  }
+
+  /**
    * Get the AbfsClient based on the service type.
-   * @param serviceType AbfsServiceType
+   * @param serviceType AbfsServiceType.
    * @return AbfsClient
    */
   public AbfsClient getClient(AbfsServiceType serviceType) {
-    return serviceType == AbfsServiceType.DFS ? dfsAbfsClient : null;
+    return serviceType == AbfsServiceType.DFS ? dfsAbfsClient : blobAbfsClient;
+  }
+
+  /**
+   * Gets the AbfsDfsClient instance.
+   *
+   * @return the AbfsDfsClient instance.
+   */
+  public AbfsDfsClient getDfsClient() {
+    return dfsAbfsClient;
+  }
+
+  /**
+   * Gets the AbfsBlobClient instance.
+   *
+   * @return the AbfsBlobClient instance.
+   */
+  public AbfsBlobClient getBlobClient() {
+    return blobAbfsClient;
   }
 
   /**
    * Create the AbfsDfsClient using the url used to configure file system.
    * If URL is for Blob endpoint, it will be converted to DFS endpoint.
-   * @param baseUrl URL
-   * @param creds SharedKeyCredentials
-   * @param abfsConfiguration AbfsConfiguration
-   * @param tokenProvider AccessTokenProvider
-   * @param sasTokenProvider SASTokenProvider
-   * @param encryptionContextProvider EncryptionContextProvider
-   * @param abfsClientContext AbfsClientContext
-   * @return AbfsDfsClient with DFS endpoint URL
+   * @param baseUrl URL.
+   * @param creds SharedKeyCredentials.
+   * @param abfsConfiguration AbfsConfiguration.
+   * @param tokenProvider AccessTokenProvider.
+   * @param sasTokenProvider SASTokenProvider.
+   * @param encryptionContextProvider EncryptionContextProvider.
+   * @param abfsClientContext AbfsClientContext.
+   * @return AbfsDfsClient with DFS endpoint URL.
    * @throws IOException if URL conversion fails.
    */
   private AbfsDfsClient createDfsClient(final URL baseUrl,
@@ -120,6 +157,40 @@ public class AbfsClientHandler {
     } else {
       LOG.debug("Creating AbfsDfsClient with SAS token provider using the URL: {}", dfsUrl);
       return new AbfsDfsClient(dfsUrl, creds, abfsConfiguration,
+          sasTokenProvider, encryptionContextProvider,
+          abfsClientContext);
+    }
+  }
+
+  /**
+   * Create the AbfsBlobClient using the url used to configure file system.
+   * If URL is for DFS endpoint, it will be converted to Blob endpoint.
+   * @param baseUrl URL.
+   * @param creds SharedKeyCredentials.
+   * @param abfsConfiguration AbfsConfiguration.
+   * @param tokenProvider AccessTokenProvider.
+   * @param sasTokenProvider SASTokenProvider.
+   * @param encryptionContextProvider EncryptionContextProvider.
+   * @param abfsClientContext AbfsClientContext.
+   * @return AbfsBlobClient with Blob endpoint URL.
+   * @throws IOException if URL conversion fails.
+   */
+  private AbfsBlobClient createBlobClient(final URL baseUrl,
+      final SharedKeyCredentials creds,
+      final AbfsConfiguration abfsConfiguration,
+      final AccessTokenProvider tokenProvider,
+      final SASTokenProvider sasTokenProvider,
+      final EncryptionContextProvider encryptionContextProvider,
+      final AbfsClientContext abfsClientContext) throws IOException {
+    URL blobUrl = changeUrlFromDfsToBlob(baseUrl);
+    if (tokenProvider != null) {
+      LOG.debug("Creating AbfsBlobClient with access token provider using the URL: {}", blobUrl);
+      return new AbfsBlobClient(blobUrl, creds, abfsConfiguration,
+          tokenProvider, encryptionContextProvider,
+          abfsClientContext);
+    } else {
+      LOG.debug("Creating AbfsBlobClient with SAS token provider using the URL: {}", blobUrl);
+      return new AbfsBlobClient(blobUrl, creds, abfsConfiguration,
           sasTokenProvider, encryptionContextProvider,
           abfsClientContext);
     }

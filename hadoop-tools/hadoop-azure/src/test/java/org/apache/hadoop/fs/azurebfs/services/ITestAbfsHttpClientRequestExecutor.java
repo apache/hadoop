@@ -25,15 +25,19 @@ import java.io.OutputStream;
 import java.net.URL;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.http.HttpClientConnection;
 import org.apache.http.HttpEntityEnclosingRequest;
@@ -42,6 +46,7 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.protocol.HttpClientContext;
 
+import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_NETWORKING_LIBRARY;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.APACHE_HTTP_CLIENT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -61,6 +66,10 @@ public class ITestAbfsHttpClientRequestExecutor extends
   public void testExpect100ContinueHandling() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     Path path = new Path("/testExpect100ContinueHandling");
+    if (isAppendBlobEnabled()) {
+      Assume.assumeFalse("Not valid for AppendBlob with blob endpoint",
+          getIngressServiceType() == AbfsServiceType.BLOB);
+    }
 
     Configuration conf = new Configuration(fs.getConf());
     conf.set(FS_AZURE_NETWORKING_LIBRARY, APACHE_HTTP_CLIENT.toString());
@@ -187,24 +196,38 @@ public class ITestAbfsHttpClientRequestExecutor extends
 
     final OutputStream os = fs2.create(path);
     fs.delete(path, true);
-    intercept(FileNotFoundException.class, () -> {
-      /*
-       * This would lead to two server calls.
-       * First call would be with expect headers, and expect 100 continue
-       *  assertion has to happen which would fail with 404.
-       * Second call would be a retry from AbfsOutputStream, and would not be using expect headers.
-       */
-      os.write(1);
-      os.close();
-    });
-
-    final OutputStream os2 = fs2.create(path);
-    /*
-     * This would lead to third server call. This would be with expect headers,
-     * and the expect 100 continue assertion would pass.
-     */
-    os2.write(1);
-    os2.close();
+    AbfsOutputStream innerOs
+        = (AbfsOutputStream) ((FSDataOutputStream) os).getWrappedStream();
+    if (innerOs.getClientHandler()
+        .getIngressClient() instanceof AbfsDfsClient) {
+      intercept(FileNotFoundException.class, () -> {
+        /*
+         * This would lead to two server calls.
+         * First call would be with expect headers, and expect 100 continue
+         *  assertion has to happen which would fail with 404.
+         * Second call would be a retry from AbfsOutputStream, and would not be using expect headers.
+         */
+        os.write(1);
+        os.close();
+      });
+    } else {
+      AbfsRestOperationException ex = intercept(
+          AbfsRestOperationException.class, () -> {
+            /*
+             * This would lead to two server calls.
+             * First call would be with expect headers, and expect 100 continue
+             *  assertion has to happen which would fail with 404.
+             * Second call would be a retry from AbfsOutputStream, and would not be using expect headers.
+             */
+            try {
+              os.write(1);
+              os.close();
+            } catch (IOException e) {
+              throw (IOException) e.getCause().getCause();
+            }
+          });
+      Assertions.assertThat(ex.getStatusCode()).isEqualTo(HTTP_PRECON_FAILED);
+    }
   }
 
   /**

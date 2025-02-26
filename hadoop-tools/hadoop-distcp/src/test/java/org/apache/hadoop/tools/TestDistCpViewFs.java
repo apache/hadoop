@@ -27,14 +27,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
 import org.apache.hadoop.fs.FsConstants;
 
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDistCpViewFs {
   private static final Logger LOG = LoggerFactory.getLogger(TestDistCpViewFs.class);
@@ -52,7 +54,7 @@ public class TestDistCpViewFs {
     return conf;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws URISyntaxException{
     try {
       Path fswd = FileSystem.get(getConf()).getWorkingDirectory();
@@ -427,13 +429,13 @@ public class TestDistCpViewFs {
   }
 
   private void checkResult(Path target, int count, String... relPaths) throws IOException {
-    Assert.assertEquals(count, fs.listStatus(target).length);
+    assertEquals(count, fs.listStatus(target).length);
     if (relPaths == null || relPaths.length == 0) {
-      Assert.assertTrue(target.toString(), fs.exists(target));
+      assertTrue(fs.exists(target), target.toString());
       return;
     }
     for (String relPath : relPaths) {
-      Assert.assertTrue(new Path(target, relPath).toString(), fs.exists(new Path(target, relPath)));
+      assertTrue(fs.exists(new Path(target, relPath)), new Path(target, relPath).toString());
     }
   }
 

@@ -24,6 +24,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
+
+import org.apache.hadoop.constants.ConfigConstants;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Bytes;
 import org.junit.Test;
 
@@ -344,6 +346,8 @@ public class TestText {
 
   @Test
   public void testAvroReflect() throws Exception {
+    // Avro expects explicitely stated, trusted packages used for (de-)serialization
+    System.setProperty(ConfigConstants.CONFIG_AVRO_SERIALIZABLE_PACKAGES, "org.apache.hadoop.io");
     AvroTestUtil.testReflect
             (new Text("foo"),
                     "{\"type\":\"string\",\"java-class\":\"org.apache.hadoop.io.Text\"}");

@@ -34,7 +34,7 @@ import org.apache.hadoop.util.Preconditions;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Read-specific operation context struct.
+ * Read-specific operation context structure.
  */
 public class S3AReadOpContext extends S3AOpContext {
 
@@ -75,14 +75,10 @@ public class S3AReadOpContext extends S3AOpContext {
   /** Thread-level IOStatistics aggregator. **/
   private final IOStatisticsAggregator ioStatisticsAggregator;
 
-  // S3 reads are prefetched asynchronously using this future pool.
+  /**
+   * Pool for any future IO.
+   */
   private ExecutorServiceFuturePool futurePool;
-
-  // Size in bytes of a single prefetch block.
-  private final int prefetchBlockSize;
-
-  // Size of prefetch queue (in number of blocks).
-  private final int prefetchBlockCount;
 
   /**
    * Instantiate.
@@ -93,9 +89,7 @@ public class S3AReadOpContext extends S3AOpContext {
    * @param dstFileStatus target file status
    * @param vectoredIOContext context for vectored read operation.
    * @param ioStatisticsAggregator IOStatistics aggregator for each thread.
-   * @param futurePool the ExecutorServiceFuturePool instance used by async prefetches.
-   * @param prefetchBlockSize the size (in number of bytes) of each prefetched block.
-   * @param prefetchBlockCount maximum number of prefetched blocks.
+   * @param futurePool Pool for any future IO
    */
   public S3AReadOpContext(
       final Path path,
@@ -105,9 +99,7 @@ public class S3AReadOpContext extends S3AOpContext {
       FileStatus dstFileStatus,
       VectoredIOContext vectoredIOContext,
       IOStatisticsAggregator ioStatisticsAggregator,
-      ExecutorServiceFuturePool futurePool,
-      int prefetchBlockSize,
-      int prefetchBlockCount) {
+      ExecutorServiceFuturePool futurePool) {
 
     super(invoker, stats, instrumentation,
         dstFileStatus);
@@ -115,12 +107,7 @@ public class S3AReadOpContext extends S3AOpContext {
     this.vectoredIOContext = requireNonNull(vectoredIOContext, "vectoredIOContext");
     this.ioStatisticsAggregator = ioStatisticsAggregator;
     this.futurePool = futurePool;
-    Preconditions.checkArgument(
-        prefetchBlockSize > 0, "invalid prefetchBlockSize %d", prefetchBlockSize);
-    this.prefetchBlockSize = prefetchBlockSize;
-    Preconditions.checkArgument(
-        prefetchBlockCount > 0, "invalid prefetchBlockCount %d", prefetchBlockCount);
-    this.prefetchBlockCount = prefetchBlockCount;
+
   }
 
   /**
@@ -265,23 +252,6 @@ public class S3AReadOpContext extends S3AOpContext {
     return this.futurePool;
   }
 
-  /**
-   * Gets the size in bytes of a single prefetch block.
-   *
-   * @return the size in bytes of a single prefetch block.
-   */
-  public int getPrefetchBlockSize() {
-    return this.prefetchBlockSize;
-  }
-
-  /**
-   * Gets the size of prefetch queue (in number of blocks).
-   *
-   * @return the size of prefetch queue (in number of blocks).
-   */
-  public int getPrefetchBlockCount() {
-    return this.prefetchBlockCount;
-  }
 
   @Override
   public String toString() {

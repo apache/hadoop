@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.http;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
 
@@ -27,12 +27,12 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    * @param server server
    */
   private void assertAlive(HttpServer2 server) {
-    assertTrue("Server is not alive", server.isAlive());
+    assertTrue(server.isAlive(), "Server is not alive");
     assertToStringContains(server, HttpServer2.STATE_DESCRIPTION_ALIVE);
   }
 
   private void assertNotLive(HttpServer2 server) {
-    assertTrue("Server should not be live", !server.isAlive());
+    assertTrue(!server.isAlive(), "Server should not be live");
     assertToStringContains(server, HttpServer2.STATE_DESCRIPTION_NOT_LIVE);
   }
 
@@ -73,8 +73,8 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    */
   private void assertToStringContains(HttpServer2 server, String text) {
     String description = server.toString();
-    assertTrue("Did not find \"" + text + "\" in \"" + description + "\"",
-               description.contains(text));
+    assertTrue(description.contains(text),
+        "Did not find \"" + text + "\" in \"" + description + "\"");
   }
 
   /**
@@ -121,6 +121,6 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
     assertAlive(server);
     assertEquals(value, server.getAttribute(key));
     stop(server);
-    assertNull("Server context should have cleared", server.getAttribute(key));
+    assertNull(server.getAttribute(key), "Server context should have cleared");
   }
 }

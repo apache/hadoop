@@ -30,4 +30,6 @@ public interface Listener {
   void updatePrimaryRequestID(String primaryRequestID);
   Listener getClone();
   void setOperation(FSOperationType operation);
+  void updateIngressHandler(String ingressHandler);
+  void updatePosition(String position);
 }

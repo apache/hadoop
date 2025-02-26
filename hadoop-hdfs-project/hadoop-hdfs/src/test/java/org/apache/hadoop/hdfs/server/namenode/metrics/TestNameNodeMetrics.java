@@ -87,6 +87,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -460,6 +461,9 @@ public class TestNameNodeMetrics {
     assertEquals("Missing blocks with replication factor one not matching!",
         namesystem.getMissingReplOneBlocksCount(),
         namesystem.getMissingReplicationOneBlocks());
+    assertEquals("Blocks with badly distributed are not matching!",
+        namesystem.getBadlyDistributedBlocksCount(),
+        namesystem.getBadlyDistributedBlocks());
     assertEquals("Bytes in future blocks metrics not matching!",
         namesystem.getBytesInFuture(),
         namesystem.getBytesInFutureReplicatedBlocks() +
@@ -491,12 +495,12 @@ public class TestNameNodeMetrics {
     // Corrupt first replica of the block
     LocatedBlock block = NameNodeAdapter.getBlockLocations(
         cluster.getNameNode(), file.toString(), 0, 1).get(0);
-    cluster.getNamesystem().writeLock();
+    cluster.getNamesystem().writeLock(RwLockMode.BM);
     try {
       bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
           "STORAGE_ID", "TEST");
     } finally {
-      cluster.getNamesystem().writeUnlock();
+      cluster.getNamesystem().writeUnlock(RwLockMode.BM, "testCorruptBlock");
     }
 
     BlockManagerTestUtil.updateState(bm);
@@ -510,6 +514,7 @@ public class TestNameNodeMetrics {
     assertGauge("LowRedundancyReplicatedBlocks", 1L, rb);
     assertGauge("CorruptReplicatedBlocks", 1L, rb);
     assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 1L, rb);
+    assertGauge("BadlyDistributedBlocks", 0L, rb);
     // Verify striped blocks metrics
     assertGauge("LowRedundancyECBlockGroups", 0L, rb);
     assertGauge("CorruptECBlockGroups", 0L, rb);
@@ -537,6 +542,7 @@ public class TestNameNodeMetrics {
     assertGauge("LowRedundancyReplicatedBlocks", 0L, rb);
     assertGauge("CorruptReplicatedBlocks", 0L, rb);
     assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
+    assertGauge("BadlyDistributedBlocks", 0L, rb);
     // Verify striped blocks metrics
     assertGauge("LowRedundancyECBlockGroups", 0L, rb);
     assertGauge("CorruptECBlockGroups", 0L, rb);
@@ -583,12 +589,12 @@ public class TestNameNodeMetrics {
     assert lbs.get(0) instanceof LocatedStripedBlock;
     LocatedStripedBlock bg = (LocatedStripedBlock) (lbs.get(0));
 
-    cluster.getNamesystem().writeLock();
+    cluster.getNamesystem().writeLock(RwLockMode.BM);
     try {
       bm.findAndMarkBlockAsCorrupt(bg.getBlock(), bg.getLocations()[0],
           "STORAGE_ID", "TEST");
     } finally {
-      cluster.getNamesystem().writeUnlock();
+      cluster.getNamesystem().writeUnlock(RwLockMode.BM, "testStripedFileCorruptBlocks");
     }
 
     BlockManagerTestUtil.updateState(bm);
@@ -602,6 +608,7 @@ public class TestNameNodeMetrics {
     assertGauge("LowRedundancyReplicatedBlocks", 0L, rb);
     assertGauge("CorruptReplicatedBlocks", 0L, rb);
     assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
+    assertGauge("BadlyDistributedBlocks", 0L, rb);
     // Verify striped block groups metrics
     assertGauge("LowRedundancyECBlockGroups", 1L, rb);
     assertGauge("CorruptECBlockGroups", 1L, rb);
@@ -681,12 +688,12 @@ public class TestNameNodeMetrics {
     // Corrupt the only replica of the block to result in a missing block
     LocatedBlock block = NameNodeAdapter.getBlockLocations(
         cluster.getNameNode(), file.toString(), 0, 1).get(0);
-    cluster.getNamesystem().writeLock();
+    cluster.getNamesystem().writeLock(RwLockMode.BM);
     try {
       bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
           "STORAGE_ID", "TEST");
     } finally {
-      cluster.getNamesystem().writeUnlock();
+      cluster.getNamesystem().writeUnlock(RwLockMode.BM, "testMissingBlock");
     }
     Thread.sleep(1000); // Wait for block to be marked corrupt
     MetricsRecordBuilder rb = getMetrics(NS_METRICS);
@@ -695,6 +702,7 @@ public class TestNameNodeMetrics {
     assertGauge("MissingReplOneBlocks", 1L, rb);
     assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
     assertGauge("HighestPriorityLowRedundancyECBlocks", 0L, rb);
+    assertGauge("BadlyDistributedBlocks", 0L, rb);
     fs.delete(file, true);
     waitForDnMetricValue(NS_METRICS, "UnderReplicatedBlocks", 0L);
   }

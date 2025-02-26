@@ -41,6 +41,7 @@ import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
@@ -58,6 +59,8 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_DEFAULT_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
@@ -158,11 +161,17 @@ public class DefaultS3ClientFactory extends Configured
         .thresholdInBytes(parameters.getMultiPartThreshold())
         .build();
 
-    return configureClientBuilder(S3AsyncClient.builder(), parameters, conf, bucket)
-        .httpClientBuilder(httpClientBuilder)
-        .multipartConfiguration(multipartConfiguration)
-        .multipartEnabled(parameters.isMultipartCopy())
-        .build();
+    S3AsyncClientBuilder s3AsyncClientBuilder =
+            configureClientBuilder(S3AsyncClient.builder(), parameters, conf, bucket)
+                .httpClientBuilder(httpClientBuilder);
+
+    // multipart upload pending with HADOOP-19326.
+    if (!parameters.isClientSideEncryptionEnabled()) {
+      s3AsyncClientBuilder.multipartConfiguration(multipartConfiguration)
+              .multipartEnabled(parameters.isMultipartCopy());
+    }
+
+    return s3AsyncClientBuilder.build();
   }
 
   @Override
@@ -269,8 +278,10 @@ public class DefaultS3ClientFactory extends Configured
    * <li>If endpoint is configured via via fs.s3a.endpoint, set it.
    *     If no region is configured, try to parse region from endpoint. </li>
    * <li> If no region is configured, and it could not be parsed from the endpoint,
-   *     set the default region as US_EAST_2 and enable cross region access. </li>
+   *     set the default region as US_EAST_2</li>
    * <li> If configured region is empty, fallback to SDK resolution chain. </li>
+   * <li> S3 cross region is enabled by default irrespective of region or endpoint
+   *      is set or not.</li>
    * </ol>
    *
    * @param builder S3 client builder.
@@ -330,7 +341,6 @@ public class DefaultS3ClientFactory extends Configured
         builder.endpointOverride(endpoint);
         LOG.debug("Setting endpoint to {}", endpoint);
       } else {
-        builder.crossRegionAccessEnabled(true);
         origin = "central endpoint with cross region access";
         LOG.debug("Enabling cross region access for endpoint {}",
             endpointStr);
@@ -343,7 +353,6 @@ public class DefaultS3ClientFactory extends Configured
       // no region is configured, and none could be determined from the endpoint.
       // Use US_EAST_2 as default.
       region = Region.of(AWS_S3_DEFAULT_REGION);
-      builder.crossRegionAccessEnabled(true);
       builder.region(region);
       origin = "cross region access fallback";
     } else if (configuredRegion.isEmpty()) {
@@ -354,8 +363,14 @@ public class DefaultS3ClientFactory extends Configured
       LOG.debug(SDK_REGION_CHAIN_IN_USE);
       origin = "SDK region chain";
     }
-
-    LOG.debug("Setting region to {} from {}", region, origin);
+    boolean isCrossRegionAccessEnabled = conf.getBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED,
+        AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT);
+    // s3 cross region access
+    if (isCrossRegionAccessEnabled) {
+      builder.crossRegionAccessEnabled(true);
+    }
+    LOG.debug("Setting region to {} from {} with cross region access {}",
+        region, origin, isCrossRegionAccessEnabled);
   }
 
   /**
@@ -365,7 +380,7 @@ public class DefaultS3ClientFactory extends Configured
    * @param conf config to build the URI from.
    * @return an endpoint uri
    */
-  private static URI getS3Endpoint(String endpoint, final Configuration conf) {
+  protected static URI getS3Endpoint(String endpoint, final Configuration conf) {
 
     boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS);
 

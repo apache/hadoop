@@ -19,12 +19,12 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +34,7 @@ import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 import org.apache.hadoop.fs.s3a.S3ClientFactory;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.LazyAutoCloseableReference;
 
@@ -48,11 +49,13 @@ import static org.apache.hadoop.util.functional.FutureIO.awaitAllFutures;
 
 /**
  * Client manager for on-demand creation of S3 clients,
- * with parallelized close of them in {@link #close()}.
+ * with parallelized close of them in {@link #serviceStop()}.
  * Updates {@link org.apache.hadoop.fs.s3a.Statistic#STORE_CLIENT_CREATION}
  * to track count and duration of client creation.
  */
-public class ClientManagerImpl implements ClientManager {
+public class ClientManagerImpl
+    extends AbstractService
+    implements ClientManager {
 
   public static final Logger LOG = LoggerFactory.getLogger(ClientManagerImpl.class);
 
@@ -62,9 +65,9 @@ public class ClientManagerImpl implements ClientManager {
   private final S3ClientFactory clientFactory;
 
   /**
-   * Closed flag.
+   * Client factory to invoke for unencrypted client.
    */
-  private final AtomicBoolean closed = new AtomicBoolean(false);
+  private final S3ClientFactory unencryptedClientFactory;
 
   /**
    * Parameters to create sync/async clients.
@@ -84,26 +87,43 @@ public class ClientManagerImpl implements ClientManager {
   /** Async client is used for transfer manager. */
   private final LazyAutoCloseableReference<S3AsyncClient> s3AsyncClient;
 
+  /**
+   * Unencrypted S3 client.
+   * This is used for unencrypted operations when CSE is enabled with V1 compatibility.
+   */
+  private final LazyAutoCloseableReference<S3Client> unencryptedS3Client;
+
   /** Transfer manager. */
   private final LazyAutoCloseableReference<S3TransferManager> transferManager;
 
   /**
    * Constructor.
+   * <p>
    * This does not create any clients.
+   * <p>
+   * It does disable noisy logging from the S3 Transfer Manager.
    * @param clientFactory client factory to invoke
+   * @param unencryptedClientFactory client factory to invoke
    * @param clientCreationParameters creation parameters.
    * @param durationTrackerFactory duration tracker.
    */
   public ClientManagerImpl(
       final S3ClientFactory clientFactory,
+      final S3ClientFactory unencryptedClientFactory,
       final S3ClientFactory.S3ClientCreationParameters clientCreationParameters,
       final DurationTrackerFactory durationTrackerFactory) {
+    super("ClientManager");
     this.clientFactory = requireNonNull(clientFactory);
+    this.unencryptedClientFactory = unencryptedClientFactory;
     this.clientCreationParameters = requireNonNull(clientCreationParameters);
     this.durationTrackerFactory = requireNonNull(durationTrackerFactory);
     this.s3Client = new LazyAutoCloseableReference<>(createS3Client());
-    this.s3AsyncClient = new LazyAutoCloseableReference<>(createAyncClient());
+    this.s3AsyncClient = new LazyAutoCloseableReference<>(createAsyncClient());
+    this.unencryptedS3Client = new LazyAutoCloseableReference<>(createUnencryptedS3Client());
     this.transferManager = new LazyAutoCloseableReference<>(createTransferManager());
+
+    // fix up SDK logging.
+    AwsSdkWorkarounds.prepareLogging();
   }
 
   /**
@@ -121,11 +141,22 @@ public class ClientManagerImpl implements ClientManager {
    * Create the function to create the S3 Async client.
    * @return a callable which will create the client.
    */
-  private CallableRaisingIOE<S3AsyncClient> createAyncClient() {
+  private CallableRaisingIOE<S3AsyncClient> createAsyncClient() {
     return trackDurationOfOperation(
         durationTrackerFactory,
         STORE_CLIENT_CREATION.getSymbol(),
         () -> clientFactory.createS3AsyncClient(getUri(), clientCreationParameters));
+  }
+
+  /**
+   * Create the function to create the unencrypted S3 client.
+   * @return a callable which will create the client.
+   */
+  private CallableRaisingIOE<S3Client> createUnencryptedS3Client() {
+    return trackDurationOfOperation(
+        durationTrackerFactory,
+        STORE_CLIENT_CREATION.getSymbol(),
+        () -> unencryptedClientFactory.createS3Client(getUri(), clientCreationParameters));
   }
 
   /**
@@ -147,10 +178,44 @@ public class ClientManagerImpl implements ClientManager {
     return s3Client.eval();
   }
 
+  /**
+   * Get the S3Client, raising a failure to create as an UncheckedIOException.
+   * @return the S3 client
+   * @throws UncheckedIOException failure to create the client.
+   */
+  @Override
+  public synchronized S3Client getOrCreateS3ClientUnchecked() throws UncheckedIOException {
+    checkNotClosed();
+    return s3Client.get();
+  }
+
   @Override
   public synchronized S3AsyncClient getOrCreateAsyncClient() throws IOException {
     checkNotClosed();
     return s3AsyncClient.eval();
+  }
+
+  /**
+   * Get the AsyncS3Client, raising a failure to create as an UncheckedIOException.
+   * @return the S3 client
+   * @throws UncheckedIOException failure to create the client.
+   */
+  @Override
+  public synchronized S3Client getOrCreateAsyncS3ClientUnchecked() throws UncheckedIOException {
+    checkNotClosed();
+    return s3Client.get();
+  }
+
+  /**
+   * Get or create an unencrypted S3 client.
+   * This is used for unencrypted operations when CSE is enabled with V1 compatibility.
+   * @return unencrypted S3 client
+   * @throws IOException on any failure
+   */
+  @Override
+  public synchronized S3Client getOrCreateUnencryptedS3Client() throws IOException {
+    checkNotClosed();
+    return unencryptedS3Client.eval();
   }
 
   @Override
@@ -159,40 +224,27 @@ public class ClientManagerImpl implements ClientManager {
     return transferManager.eval();
   }
 
-  /**
-   * Check that the client manager is not closed.
-   * @throws IllegalStateException if it is closed.
-   */
-  private void checkNotClosed() {
-    checkState(!closed.get(), "Client manager is closed");
-  }
-
-  /**
-   * Close() is synchronized to avoid race conditions between
-   * slow client creation and this close operation.
-   * <p>
-   * The objects are all deleted in parallel
-   */
   @Override
-  public synchronized void close() {
-    if (closed.getAndSet(true)) {
-      // re-entrant close.
-      return;
-    }
+  protected void serviceStop() throws Exception {
     // queue the closures.
     List<Future<Object>> l = new ArrayList<>();
     l.add(closeAsync(transferManager));
     l.add(closeAsync(s3AsyncClient));
     l.add(closeAsync(s3Client));
+    l.add(closeAsync(unencryptedS3Client));
 
-    // once all are queued, await their completion
-    // and swallow any exception.
-    try {
-      awaitAllFutures(l);
-    } catch (Exception e) {
-      // should never happen.
-      LOG.warn("Exception in close", e);
-    }
+    // once all are queued, await their completion;
+    // exceptions will be swallowed.
+    awaitAllFutures(l);
+    super.serviceStop();
+  }
+
+  /**
+   * Check that the client manager is not closed.
+   * @throws IllegalStateException if it is closed.
+   */
+  private void checkNotClosed() {
+    checkState(!isInState(STATE.STOPPED), "Client manager is closed");
   }
 
   /**
@@ -229,9 +281,10 @@ public class ClientManagerImpl implements ClientManager {
   @Override
   public String toString() {
     return "ClientManagerImpl{" +
-        "closed=" + closed.get() +
+        "state=" + getServiceState() +
         ", s3Client=" + s3Client +
         ", s3AsyncClient=" + s3AsyncClient +
+        ", unencryptedS3Client=" + unencryptedS3Client +
         ", transferManager=" + transferManager +
         '}';
   }

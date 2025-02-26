@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.TestProvidedImpl;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.util.RwLock;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.junit.Before;
 import org.junit.Test;
 import java.io.IOException;
@@ -87,7 +88,7 @@ public class TestProvidedStorageMap {
     DatanodeStorage dn1DiskStorage = new DatanodeStorage(
         "sid-1", DatanodeStorage.State.NORMAL, StorageType.DISK);
 
-    when(nameSystemLock.hasWriteLock()).thenReturn(true);
+    when(nameSystemLock.hasWriteLock(RwLockMode.GLOBAL)).thenReturn(true);
     DatanodeStorageInfo dns1Provided =
         providedMap.getStorage(dn1, dn1ProvidedStorage);
     DatanodeStorageInfo dns1Disk = providedMap.getStorage(dn1, dn1DiskStorage);

@@ -29,7 +29,7 @@ public class CapacitySchedulerQueueInfoList {
   protected ArrayList<CapacitySchedulerQueueInfo> queue;
   
   public CapacitySchedulerQueueInfoList() {
-    queue = new ArrayList<CapacitySchedulerQueueInfo>();
+    queue = new ArrayList<>();
   }
 
   public ArrayList<CapacitySchedulerQueueInfo> getQueueInfoList() {

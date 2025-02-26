@@ -244,50 +244,50 @@ com.microsoft.azure:azure-storage:7.0.0
 com.nimbusds:nimbus-jose-jwt:9.37.2
 com.zaxxer:HikariCP:4.0.3
 commons-beanutils:commons-beanutils:1.9.4
-commons-cli:commons-cli:1.5.0
+commons-cli:commons-cli:1.9.0
 commons-codec:commons-codec:1.15
-commons-collections:commons-collections:3.2.2
+org.apache.commons:commons-collections4:4.4
 commons-daemon:commons-daemon:1.0.13
 commons-io:commons-io:2.16.1
 commons-net:commons-net:3.9.0
 de.ruedigermoeller:fst:2.50
-io.grpc:grpc-api:1.53.0
-io.grpc:grpc-context:1.53.0
-io.grpc:grpc-core:1.53.0
-io.grpc:grpc-netty:1.53.0
-io.grpc:grpc-protobuf:1.53.0
-io.grpc:grpc-protobuf-lite:1.53.0
-io.grpc:grpc-stub:1.53.0
-io.netty:netty-all:4.1.100.Final
-io.netty:netty-buffer:4.1.100.Final
-io.netty:netty-codec:4.1.100.Final
-io.netty:netty-codec-dns:4.1.100.Final
-io.netty:netty-codec-haproxy:4.1.100.Final
-io.netty:netty-codec-http:4.1.100.Final
-io.netty:netty-codec-http2:4.1.100.Final
-io.netty:netty-codec-memcache:4.1.100.Final
-io.netty:netty-codec-mqtt:4.1.100.Final
-io.netty:netty-codec-redis:4.1.100.Final
-io.netty:netty-codec-smtp:4.1.100.Final
-io.netty:netty-codec-socks:4.1.100.Final
-io.netty:netty-codec-stomp:4.1.100.Final
-io.netty:netty-codec-xml:4.1.100.Final
-io.netty:netty-common:4.1.100.Final
-io.netty:netty-handler:4.1.100.Final
-io.netty:netty-handler-proxy:4.1.100.Final
-io.netty:netty-resolver:4.1.100.Final
-io.netty:netty-resolver-dns:4.1.100.Final
-io.netty:netty-transport:4.1.100.Final
-io.netty:netty-transport-rxtx:4.1.100.Final
-io.netty:netty-transport-sctp:4.1.100.Final
-io.netty:netty-transport-udt:4.1.100.Final
-io.netty:netty-transport-classes-epoll:4.1.100.Final
-io.netty:netty-transport-native-unix-common:4.1.100.Final
-io.netty:netty-transport-classes-kqueue:4.1.100.Final
-io.netty:netty-resolver-dns-classes-macos:4.1.100.Final
-io.netty:netty-transport-native-epoll:4.1.100.Final
-io.netty:netty-transport-native-kqueue:4.1.100.Final
-io.netty:netty-resolver-dns-native-macos:4.1.100.Final
+io.grpc:grpc-api:1.69.0
+io.grpc:grpc-context:1.69.0
+io.grpc:grpc-core:1.69.0
+io.grpc:grpc-netty:1.69.0
+io.grpc:grpc-protobuf:1.69.0
+io.grpc:grpc-protobuf-lite:1.69.0
+io.grpc:grpc-stub:1.69.0
+io.netty:netty-all:4.1.118.Final
+io.netty:netty-buffer:4.1.118.Final
+io.netty:netty-codec:4.1.118.Final
+io.netty:netty-codec-dns:4.1.118.Final
+io.netty:netty-codec-haproxy:4.1.118.Final
+io.netty:netty-codec-http:4.1.118.Final
+io.netty:netty-codec-http2:4.1.118.Final
+io.netty:netty-codec-memcache:4.1.118.Final
+io.netty:netty-codec-mqtt:4.1.118.Final
+io.netty:netty-codec-redis:4.1.118.Final
+io.netty:netty-codec-smtp:4.1.118.Final
+io.netty:netty-codec-socks:4.1.118.Final
+io.netty:netty-codec-stomp:4.1.118.Final
+io.netty:netty-codec-xml:4.1.118.Final
+io.netty:netty-common:4.1.118.Final
+io.netty:netty-handler:4.1.118.Final
+io.netty:netty-handler-proxy:4.1.118.Final
+io.netty:netty-resolver:4.1.118.Final
+io.netty:netty-resolver-dns:4.1.118.Final
+io.netty:netty-transport:4.1.118.Final
+io.netty:netty-transport-rxtx:4.1.118.Final
+io.netty:netty-transport-sctp:4.1.118.Final
+io.netty:netty-transport-udt:4.1.118.Final
+io.netty:netty-transport-classes-epoll:4.1.118.Final
+io.netty:netty-transport-native-unix-common:4.1.118.Final
+io.netty:netty-transport-classes-kqueue:4.1.118.Final
+io.netty:netty-resolver-dns-classes-macos:4.1.118.Final
+io.netty:netty-transport-native-epoll:4.1.118.Final
+io.netty:netty-transport-native-kqueue:4.1.118.Final
+io.netty:netty-resolver-dns-native-macos:4.1.118.Final
 io.opencensus:opencensus-api:0.12.3
 io.opencensus:opencensus-contrib-grpc-metrics:0.12.3
 io.reactivex:rxjava:1.3.8
@@ -297,9 +297,8 @@ io.swagger:swagger-annotations:1.5.4
 javax.inject:javax.inject:1
 net.java.dev.jna:jna:5.2.0
 net.minidev:accessors-smart:1.2
-org.apache.avro:avro:1.9.2
+org.apache.avro:avro:1.11.4
 org.apache.avro:avro:1.11.3
-org.apache.commons:commons-collections4:4.2
 org.apache.commons:commons-compress:1.26.1
 org.apache.commons:commons-configuration2:2.10.1
 org.apache.commons:commons-csv:1.9.0
@@ -319,7 +318,7 @@ org.apache.htrace:htrace-core:3.1.0-incubating
 org.apache.htrace:htrace-core4:4.1.0-incubating
 org.apache.httpcomponents:httpclient:4.5.13
 org.apache.httpcomponents:httpcore:4.4.13
-org.apache.kafka:kafka-clients:3.4.0
+org.apache.kafka:kafka-clients:3.9.0
 org.apache.kerby:kerb-admin:2.0.3
 org.apache.kerby:kerb-client:2.0.3
 org.apache.kerby:kerb-common:2.0.3
@@ -342,20 +341,20 @@ org.apache.solr:solr-solrj:8.11.2
 org.apache.yetus:audience-annotations:0.5.0
 org.apache.zookeeper:zookeeper:3.8.4
 org.codehaus.jettison:jettison:1.5.4
-org.eclipse.jetty:jetty-annotations:9.4.53.v20231009
-org.eclipse.jetty:jetty-http:9.4.53.v20231009
-org.eclipse.jetty:jetty-io:9.4.53.v20231009
-org.eclipse.jetty:jetty-jndi:9.4.53.v20231009
-org.eclipse.jetty:jetty-plus:9.4.53.v20231009
-org.eclipse.jetty:jetty-security:9.4.53.v20231009
-org.eclipse.jetty:jetty-server:9.4.53.v20231009
-org.eclipse.jetty:jetty-servlet:9.4.53.v20231009
-org.eclipse.jetty:jetty-util:9.4.53.v20231009
-org.eclipse.jetty:jetty-util-ajax:9.4.53.v20231009
-org.eclipse.jetty:jetty-webapp:9.4.53.v20231009
-org.eclipse.jetty:jetty-xml:9.4.53.v20231009
-org.eclipse.jetty.websocket:javax-websocket-client-impl:9.4.53.v20231009
-org.eclipse.jetty.websocket:javax-websocket-server-impl:9.4.53.v20231009
+org.eclipse.jetty:jetty-annotations:9.4.57.v20241219
+org.eclipse.jetty:jetty-http:9.4.57.v20241219
+org.eclipse.jetty:jetty-io:9.4.57.v20241219
+org.eclipse.jetty:jetty-jndi:9.4.57.v20241219
+org.eclipse.jetty:jetty-plus:9.4.57.v20241219
+org.eclipse.jetty:jetty-security:9.4.57.v20241219
+org.eclipse.jetty:jetty-server:9.4.57.v20241219
+org.eclipse.jetty:jetty-servlet:9.4.57.v20241219
+org.eclipse.jetty:jetty-util:9.4.57.v20241219
+org.eclipse.jetty:jetty-util-ajax:9.4.57.v20241219
+org.eclipse.jetty:jetty-webapp:9.4.57.v20241219
+org.eclipse.jetty:jetty-xml:9.4.57.v20241219
+org.eclipse.jetty.websocket:javax-websocket-client-impl:9.4.57.v20241219
+org.eclipse.jetty.websocket:javax-websocket-server-impl:9.4.57.v20241219
 org.ehcache:ehcache:3.8.2
 org.ini4j:ini4j:0.5.4
 org.lz4:lz4-java:1.7.1
@@ -364,7 +363,7 @@ org.xerial.snappy:snappy-java:1.1.10.4
 org.yaml:snakeyaml:2.0
 org.wildfly.openssl:wildfly-openssl:2.1.4.Final
 software.amazon.awssdk:bundle:2.25.53
-
+net.jodah:failsafe:2.4.4
 
 --------------------------------------------------------------------------------
 This product bundles various third-party components under other open source
@@ -379,7 +378,7 @@ hadoop-common-project/hadoop-common/src/main/native/src/org/apache/hadoop/io/com
 hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/fuse-dfs/util/tree.h
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/compat/{fstatat|openat|unlinkat}.h
 
-com.github.luben:zstd-jni:1.5.2-1
+com.github.luben:zstd-jni:1.5.6-4
 dnsjava:dnsjava:3.6.1
 org.codehaus.woodstox:stax2-api:4.2.1
 
@@ -396,7 +395,7 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/d3-3.5.17.min.js
 leveldb v1.13
 
 com.google.protobuf:protobuf-java:2.5.0
-com.google.protobuf:protobuf-java:3.25.3
+com.google.protobuf:protobuf-java:3.25.5
 com.google.re2j:re2j:1.1
 com.jcraft:jsch:0.1.55
 com.thoughtworks.paranamer:paranamer:2.3
@@ -487,7 +486,7 @@ org.bouncycastle:bcpkix-jdk18on:1.78.1
 org.bouncycastle:bcprov-jdk18on:1.78.1
 org.bouncycastle:bcutil-jdk18on:1.78.1
 org.checkerframework:checker-qual:3.8.0
-org.codehaus.mojo:animal-sniffer-annotations:1.21
+org.codehaus.mojo:animal-sniffer-annotations:1.24
 org.jruby.jcodings:jcodings:1.0.13
 org.jruby.joni:joni:2.1.2
 org.ojalgo:ojalgo:43.0
@@ -499,12 +498,6 @@ org.slf4j:slf4j-reload4j:1.7.36
 CDDL 1.1 + GPLv2 with classpath exception
 -----------------------------------------
 
-com.github.pjfanning:jersey-json:1.22.0
-com.sun.jersey:jersey-client:1.19.4
-com.sun.jersey:jersey-core:1.19.4
-com.sun.jersey:jersey-guice:1.19.4
-com.sun.jersey:jersey-server:1.19.4
-com.sun.jersey:jersey-servlet:1.19.4
 com.sun.xml.bind:jaxb-impl:2.2.3-1
 javax.annotation:javax.annotation-api:1.3.2
 javax.cache:cache-api:1.1.1
@@ -514,6 +507,10 @@ javax.websocket:javax.websocket-api:1.0
 javax.ws.rs:jsr311-api:1.1.1
 javax.xml.bind:jaxb-api:2.2.11
 
+Eclipse Distribution License (EDL) 1.0
+--------------------------
+
+jakarta.xml.bind:jakarta.xml.bind-api:2.3.3
 
 Eclipse Public License 1.0
 --------------------------
@@ -521,6 +518,30 @@ Eclipse Public License 1.0
 junit:junit:4.13.2
 org.jacoco:org.jacoco.agent:0.8.5
 
+Eclipse Public License (EPL) 2.0
+--------------------------
+
+jakarta.ws.rs-api:jakarta.ws.rs-api:2.1.6
+jakarta.servlet.jsp:jakarta.servlet.jsp-api:2.3.6
+jakarta.servlet:jakarta.servlet-api:4.0.4
+
+Eclipse Public License (EPL) 2.0 with some parts being
+GNU General Public License (GPL), Version 2, With Classpath Exception,
+Apache License, 2.0 or Public Domain
+--------------------------
+
+See also https://github.com/eclipse-ee4j/jersey/blob/master/NOTICE.md
+
+org.glassfish.jersey.core:jersey-common:2.46
+org.glassfish.jersey.core:jersey-server:2.46
+org.glassfish.jersey.inject:jersey-hk2:2.46
+org.glassfish.jersey.core:jersey-client:2.46
+org.glassfish.jersey.test-framework:jersey-test-framework-core:2.46
+org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-grizzly2:2.46
+org.glassfish.jersey.containers:jersey-container-servlet:2.46
+org.glassfish.jersey.containers:jersey-container-servlet-core:2.46
+org.glassfish.jersey.media:jersey-media-json-jettison:2.46
+org.glassfish.jersey.media:jersey-media-jaxb:2.46
 
 
 HSQL License

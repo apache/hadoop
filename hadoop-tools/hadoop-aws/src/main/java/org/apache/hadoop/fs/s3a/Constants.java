@@ -21,10 +21,14 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+
+import static org.apache.hadoop.io.Sizes.S_128K;
+import static org.apache.hadoop.io.Sizes.S_2M;
 
 /**
  * Constants used with the {@link S3AFileSystem}.
@@ -399,6 +403,21 @@ public final class Constants {
       Duration.ofSeconds(60);
 
   /**
+   * Timeout for uploading all of a small object or a single part
+   * of a larger one.
+   * {@value}.
+   * Default unit is milliseconds for consistency with other options.
+   */
+  public static final String PART_UPLOAD_TIMEOUT =
+      "fs.s3a.connection.part.upload.timeout";
+
+  /**
+   * Default part upload timeout: 15 minutes.
+   */
+  public static final Duration DEFAULT_PART_UPLOAD_TIMEOUT =
+      Duration.ofMinutes(15);
+
+  /**
    * Should TCP Keepalive be enabled on the socket?
    * This adds some network IO, but finds failures faster.
    * {@value}.
@@ -428,6 +447,20 @@ public final class Constants {
    */
   public static final Duration DEFAULT_CONNECTION_IDLE_TIME_DURATION =
       Duration.ofSeconds(60);
+
+  /**
+   * Should PUT requests await a 100 CONTINUE responses before uploading
+   * data?
+   * <p>
+   * Value: {@value}.
+   */
+  public static final String CONNECTION_EXPECT_CONTINUE =
+      "fs.s3a.connection.expect.continue";
+
+  /**
+   * Default value for {@link #CONNECTION_EXPECT_CONTINUE}.
+   */
+  public static final boolean CONNECTION_EXPECT_CONTINUE_DEFAULT = true;
 
   // socket send buffer to be used in Amazon client
   public static final String SOCKET_SEND_BUFFER = "fs.s3a.socket.send.buffer";
@@ -752,6 +785,35 @@ public final class Constants {
       "fs.s3a.encryption.context";
 
   /**
+   * Client side encryption (CSE-CUSTOM) with custom cryptographic material manager class name.
+   * Custom keyring class name for CSE-KMS.
+   * value:{@value}
+   */
+  public static final String S3_ENCRYPTION_CSE_CUSTOM_KEYRING_CLASS_NAME =
+          "fs.s3a.encryption.cse.custom.keyring.class.name";
+
+  /**
+   * Config to provide backward compatibility with V1 encryption client.
+   * Enabling this configuration will invoke the followings
+   * 1. Unencrypted s3 objects will be read using unencrypted/base s3 client when CSE is enabled.
+   * 2. Size of encrypted object will be fetched from object header if present or
+   * calculated using ranged S3 GET calls.
+   * value:{@value}
+   */
+  public static final String S3_ENCRYPTION_CSE_V1_COMPATIBILITY_ENABLED =
+          "fs.s3a.encryption.cse.v1.compatibility.enabled";
+
+  /**
+   * Default value : {@value}.
+   */
+  public static final boolean S3_ENCRYPTION_CSE_V1_COMPATIBILITY_ENABLED_DEFAULT = false;
+
+  /**
+   * S3 CSE-KMS KMS region config.
+   */
+  public static final String S3_ENCRYPTION_CSE_KMS_REGION = "fs.s3a.encryption.cse.kms.region";
+
+  /**
    * List of custom Signers. The signer class will be loaded, and the signer
    * name will be associated with this signer class in the S3 SDK.
    * Examples
@@ -790,6 +852,7 @@ public final class Constants {
       "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
           + ".signing-algorithm";
 
+  @Deprecated
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
   public static final String FS_S3A = "s3a";
@@ -810,10 +873,13 @@ public final class Constants {
   /**
    * Paths considered "authoritative".
    * When S3guard was supported, this skipped checks to s3 on directory listings.
-   * It is also use to optionally disable marker retentation purely on these
-   * paths -a feature which is still retained/available.
+   * It was also possilbe to use to optionally disable marker retentation purely on these
+   * paths -a feature which is no longer available.
+   * As no feature uses this any more, it is declared as deprecated.
    * */
+  @Deprecated
   public static final String AUTHORITATIVE_PATH = "fs.s3a.authoritative.path";
+  @Deprecated
   public static final String[] DEFAULT_AUTHORITATIVE_PATH = {};
 
   /**
@@ -1129,6 +1195,22 @@ public final class Constants {
    */
   public static final String RETRY_THROTTLE_INTERVAL_DEFAULT = "500ms";
 
+
+  /**
+   * Should S3A connector retry on all 5xx errors which don't have
+   * explicit support: {@value}?
+   * <p>
+   * This is in addition to any retries the AWS SDK itself does, which
+   * is known to retry on many of these (e.g. 500).
+   */
+  public static final String RETRY_HTTP_5XX_ERRORS =
+      "fs.s3a.retry.http.5xx.errors";
+
+  /**
+   * Default value for {@link #RETRY_HTTP_5XX_ERRORS}: {@value}.
+   */
+  public static final boolean DEFAULT_RETRY_HTTP_5XX_ERRORS = true;
+
   /**
    * Should etags be exposed as checksums?
    */
@@ -1265,37 +1347,44 @@ public final class Constants {
 
   /**
    * Policy for directory markers.
-   * This is a new feature of HADOOP-13230 which addresses
-   * some scale, performance and permissions issues -but
-   * at the risk of backwards compatibility.
+   * No longer supported as "keep" is the sole policy.
    */
+  @Deprecated
   public static final String DIRECTORY_MARKER_POLICY =
       "fs.s3a.directory.marker.retention";
 
   /**
-   * Delete directory markers. This is the backwards compatible option.
+   * Delete directory markers.
+   * No longer supported as "keep" is the sole policy.
    * Value: {@value}.
    */
+  @Deprecated
   public static final String DIRECTORY_MARKER_POLICY_DELETE =
       "delete";
 
   /**
    * Retain directory markers.
+   * No longer needed, so marked as deprecated to flag usages.
    * Value: {@value}.
    */
+  @Deprecated
   public static final String DIRECTORY_MARKER_POLICY_KEEP =
       "keep";
 
   /**
    * Retain directory markers in authoritative directory trees only.
+   * No longer required as "keep" is the sole policy.
    * Value: {@value}.
    */
+  @Deprecated
   public static final String DIRECTORY_MARKER_POLICY_AUTHORITATIVE =
       "authoritative";
 
   /**
    * Default retention policy: {@value}.
+   * No longer required as "keep" is the sole policy.
    */
+  @Deprecated
   public static final String DEFAULT_DIRECTORY_MARKER_POLICY =
       DIRECTORY_MARKER_POLICY_KEEP;
 
@@ -1303,7 +1392,7 @@ public final class Constants {
   /**
    * {@code PathCapabilities} probe to verify that an S3A Filesystem
    * has the changes needed to safely work with buckets where
-   * directoy markers have not been deleted.
+   * directory markers have not been deleted.
    * Value: {@value}.
    */
   public static final String STORE_CAPABILITY_DIRECTORY_MARKER_AWARE
@@ -1320,16 +1409,20 @@ public final class Constants {
   /**
    * {@code PathCapabilities} probe to indicate that the filesystem
    * deletes directory markers.
+   * Always false.
    * Value: {@value}.
    */
+  @Deprecated
   public static final String STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE
       = "fs.s3a.capability.directory.marker.policy.delete";
 
   /**
    * {@code PathCapabilities} probe to indicate that the filesystem
    * keeps directory markers in authoritative paths only.
+   * This probe always returns false.
    * Value: {@value}.
    */
+  @Deprecated
   public static final String
       STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_AUTHORITATIVE =
       "fs.s3a.capability.directory.marker.policy.authoritative";
@@ -1337,6 +1430,7 @@ public final class Constants {
   /**
    * {@code PathCapabilities} probe to indicate that a path
    * keeps directory markers.
+   * This probe always returns true.
    * Value: {@value}.
    */
   public static final String STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP
@@ -1345,6 +1439,7 @@ public final class Constants {
   /**
    * {@code PathCapabilities} probe to indicate that a path
    * deletes directory markers.
+   * This probe always returns false.
    * Value: {@value}.
    */
   public static final String STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE
@@ -1355,6 +1450,19 @@ public final class Constants {
    * through the getXAttr APIs have the prefix: {@value}.
    */
   public static final String XA_HEADER_PREFIX = "header.";
+
+  /**
+   * S3 cross region access enabled ?
+   * Value: {@value}.
+   */
+
+  public static final String AWS_S3_CROSS_REGION_ACCESS_ENABLED =
+      "fs.s3a.cross.region.access.enabled";
+  /**
+   * Default value for S3 cross region access enabled: {@value}.
+   */
+  public static final boolean AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT = true;
+
 
   /**
    * AWS S3 region for the bucket. When set bypasses the construction of
@@ -1441,14 +1549,14 @@ public final class Constants {
           "fs.s3a.vectored.read.max.merged.size";
 
   /**
-   * Default minimum seek in bytes during vectored reads : {@value}.
+   * Default minimum seek in bytes during vectored reads: {@value}.
    */
-  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = 4096; // 4K
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE =  S_128K;
 
   /**
    * Default maximum read size in bytes during vectored reads : {@value}.
    */
-  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1048576; //1M
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = S_2M;
 
   /**
    * Maximum number of range reads a single input stream can have
@@ -1474,13 +1582,59 @@ public final class Constants {
   public static final String AWS_AUTH_CLASS_PREFIX = "com.amazonaws.auth";
 
   /**
+   * Input stream type: {@value}.
+   */
+  public static final String INPUT_STREAM_TYPE = "fs.s3a.input.stream.type";
+
+  /**
+   * The classic input stream: {@value}.
+   */
+  public static final String INPUT_STREAM_TYPE_CLASSIC =
+      StreamIntegration.CLASSIC;
+
+  /**
+   * The prefetching input stream: {@value}.
+   */
+  public static final String INPUT_STREAM_TYPE_PREFETCH = StreamIntegration.PREFETCH;
+
+  /**
+   * The analytics input stream: {@value}.
+   */
+  public static final String INPUT_STREAM_TYPE_ANALYTICS =
+      StreamIntegration.ANALYTICS;
+
+  /**
+   * Request the default input stream,
+   * whatever it is for this release: {@value}.
+   */
+  public static final String INPUT_STREAM_TYPE_DEFAULT = StreamIntegration.DEFAULT;
+
+  /**
+   * The custom input stream type: {@value}".
+   * If set, the classname is loaded from
+   * {@link #INPUT_STREAM_CUSTOM_FACTORY}.
+   * <p>
+   * This option is primarily for testing as it can
+   * be used to generated failures.
+   */
+  public static final String INPUT_STREAM_TYPE_CUSTOM =
+      StreamIntegration.CUSTOM;
+
+  /**
+   * Classname of the factory to instantiate for custom streams: {@value}.
+   */
+  public static final String INPUT_STREAM_CUSTOM_FACTORY = "fs.s3a.input.stream.custom.factory";
+
+  /**
    * Controls whether the prefetching input stream is enabled.
    */
+  @Deprecated
   public static final String PREFETCH_ENABLED_KEY = "fs.s3a.prefetch.enabled";
 
   /**
    * Default option as to whether the prefetching input stream is enabled.
    */
+  @Deprecated
   public static final boolean  PREFETCH_ENABLED_DEFAULT = false;
 
   // If the default values are used, each file opened for reading will consume

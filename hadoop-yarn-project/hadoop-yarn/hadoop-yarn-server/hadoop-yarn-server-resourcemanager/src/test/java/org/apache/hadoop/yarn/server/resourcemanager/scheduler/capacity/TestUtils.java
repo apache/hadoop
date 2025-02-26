@@ -195,6 +195,20 @@ public class TestUtils {
     request.setNodeLabelExpression(labelExpression);
     return request;
   }
+
+  public static ResourceRequest createResourceRequest(int memory, int vcores, int numContainers,
+      Priority priority, long allocationId, ExecutionTypeRequest type, String resourceName) {
+    ResourceRequest request =
+        recordFactory.newRecordInstance(ResourceRequest.class);
+    Resource capability = Resources.createResource(memory, vcores);
+    request.setNumContainers(numContainers);
+    request.setCapability(capability);
+    request.setPriority(priority);
+    request.setAllocationRequestId(allocationId);
+    request.setExecutionTypeRequest(type);
+    request.setResourceName(resourceName);
+    return request;
+  }
   
   public static ResourceRequest createResourceRequest(
       String resourceName, int memory, int numContainers, boolean relaxLocality,

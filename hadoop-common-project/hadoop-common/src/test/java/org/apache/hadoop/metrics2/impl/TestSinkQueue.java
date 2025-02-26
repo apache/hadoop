@@ -21,12 +21,17 @@ package org.apache.hadoop.metrics2.impl;
 import java.util.ConcurrentModificationException;
 import java.util.concurrent.CountDownLatch;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import static org.apache.hadoop.metrics2.impl.SinkQueue.*;
 
@@ -44,21 +49,21 @@ public class TestSinkQueue {
   @Test public void testCommon() throws Exception {
     final SinkQueue<Integer> q = new SinkQueue<Integer>(2);
     q.enqueue(1);
-    assertEquals("queue front", 1, (int) q.front());
-    assertEquals("queue back", 1, (int) q.back());
-    assertEquals("element", 1, (int) q.dequeue());
+    assertEquals(1, (int) q.front(), "queue front");
+    assertEquals(1, (int) q.back(), "queue back");
+    assertEquals(1, (int) q.dequeue(), "element");
 
-    assertTrue("should enqueue", q.enqueue(2));
+    assertTrue(q.enqueue(2), "should enqueue");
     q.consume(new Consumer<Integer>() {
       @Override public void consume(Integer e) {
-        assertEquals("element", 2, (int) e);
+        assertEquals(2, (int) e, "element");
       }
     });
-    assertTrue("should enqueue", q.enqueue(3));
-    assertEquals("element", 3, (int) q.dequeue());
-    assertEquals("queue size", 0, q.size());
-    assertEquals("queue front", null, q.front());
-    assertEquals("queue back", null, q.back());
+    assertTrue(q.enqueue(3), "should enqueue");
+    assertEquals(3, (int) q.dequeue(), "element");
+    assertEquals(0, q.size(), "queue size");
+    assertEquals(null, q.front(), "queue front");
+    assertEquals(null, q.back(), "queue back");
   }
 
   /**
@@ -77,10 +82,10 @@ public class TestSinkQueue {
     Thread t = new Thread() {
       @Override public void run() {
         try {
-          assertEquals("element", 1, (int) q.dequeue());
+          assertEquals(1, (int) q.dequeue(), "element");
           q.consume(new Consumer<Integer>() {
             @Override public void consume(Integer e) {
-              assertEquals("element", 2, (int) e);
+              assertEquals(2, (int) e, "element");
               trigger.run();
             }
           });
@@ -109,16 +114,16 @@ public class TestSinkQueue {
     final SinkQueue<Integer> q = new SinkQueue<Integer>(1);
     q.enqueue(1);
 
-    assertTrue("should drop", !q.enqueue(2));
-    assertEquals("element", 1, (int) q.dequeue());
+    assertTrue(!q.enqueue(2), "should drop");
+    assertEquals(1, (int) q.dequeue(), "element");
 
     q.enqueue(3);
     q.consume(new Consumer<Integer>() {
       @Override public void consume(Integer e) {
-        assertEquals("element", 3, (int) e);
+        assertEquals(3, (int) e, "element");
       }
     });
-    assertEquals("queue size", 0, q.size());
+    assertEquals(0, q.size(), "queue size");
   }
 
   /**
@@ -130,15 +135,15 @@ public class TestSinkQueue {
     final SinkQueue<Integer> q = new SinkQueue<Integer>(capacity);
 
     for (int i = 0; i < capacity; ++i) {
-      assertTrue("should enqueue", q.enqueue(i));
+      assertTrue(q.enqueue(i), "should enqueue");
     }
-    assertTrue("should not enqueue", !q.enqueue(capacity));
+    assertTrue(!q.enqueue(capacity), "should not enqueue");
 
     final Runnable trigger = mock(Runnable.class);
     q.consumeAll(new Consumer<Integer>() {
       private int expected = 0;
       @Override public void consume(Integer e) {
-        assertEquals("element", expected++, (int) e);
+        assertEquals(expected++, (int) e, "element");
         trigger.run();
       }
     });
@@ -163,11 +168,11 @@ public class TestSinkQueue {
       });
     }
     catch (Exception expected) {
-      assertSame("consumer exception", ex, expected);
+      assertSame(ex, expected, "consumer exception");
     }
     // The queue should be in consistent state after exception
-    assertEquals("queue size", 1, q.size());
-    assertEquals("element", 1, (int) q.dequeue());
+    assertEquals(1, q.size(), "queue size");
+    assertEquals(1, (int) q.dequeue(), "element");
   }
 
   /**
@@ -178,9 +183,9 @@ public class TestSinkQueue {
     for (int i = 0; i < q.capacity() + 97; ++i) {
       q.enqueue(i);
     }
-    assertEquals("queue size", q.capacity(), q.size());
+    assertEquals(q.capacity(), q.size(), "queue size");
     q.clear();
-    assertEquals("queue size", 0, q.size());
+    assertEquals(0, q.size(), "queue size");
   }
 
   /**
@@ -189,11 +194,11 @@ public class TestSinkQueue {
    */
   @Test public void testHangingConsumer() throws Exception {
     SinkQueue<Integer> q = newSleepingConsumerQueue(2, 1, 2);
-    assertEquals("queue back", 2, (int) q.back());
-    assertTrue("should drop", !q.enqueue(3)); // should not block
-    assertEquals("queue size", 2, q.size());
-    assertEquals("queue head", 1, (int) q.front());
-    assertEquals("queue back", 2, (int) q.back());
+    assertEquals(2, (int) q.back(), "queue back");
+    assertTrue(!q.enqueue(3), "should drop"); // should not block
+    assertEquals(2, q.size(), "queue size");
+    assertEquals(1, (int) q.front(), "queue head");
+    assertEquals(2, (int) q.back(), "queue back");
   }
 
   /**
@@ -202,9 +207,9 @@ public class TestSinkQueue {
    */
   @Test public void testConcurrentConsumers() throws Exception {
     final SinkQueue<Integer> q = newSleepingConsumerQueue(2, 1);
-    assertTrue("should enqueue", q.enqueue(2));
-    assertEquals("queue back", 2, (int) q.back());
-    assertTrue("should drop", !q.enqueue(3)); // should not block
+    assertTrue(q.enqueue(2), "should enqueue");
+    assertEquals(2, (int) q.back(), "queue back");
+    assertTrue(!q.enqueue(3), "should drop"); // should not block
     shouldThrowCME(new Fun() {
       @Override public void run() {
         q.clear();
@@ -226,9 +231,9 @@ public class TestSinkQueue {
       }
     });
     // The queue should still be in consistent state after all the exceptions
-    assertEquals("queue size", 2, q.size());
-    assertEquals("queue front", 1, (int) q.front());
-    assertEquals("queue back", 2, (int) q.back());
+    assertEquals(2, q.size(), "queue size");
+    assertEquals(1, (int) q.front(), "queue front");
+    assertEquals(2, (int) q.back(), "queue back");
   }
 
   private void shouldThrowCME(Fun callback) throws Exception {

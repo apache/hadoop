@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.client;
 import java.util.Optional;
 
 import org.apache.hadoop.fs.CommonPathCapabilities;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -54,6 +55,7 @@ public final class DfsPathCapabilities {
     case CommonPathCapabilities.FS_STORAGEPOLICY:
     case CommonPathCapabilities.FS_XATTRS:
     case CommonPathCapabilities.FS_TRUNCATE:
+    case Options.OpenFileOptions.FS_OPTION_OPENFILE_EC_POLICY:
       return Optional.of(true);
     case CommonPathCapabilities.FS_SYMLINKS:
       return Optional.of(FileSystem.areSymlinksEnabled());

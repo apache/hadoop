@@ -26,9 +26,10 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTes
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.getFirstSubNodeFromJson;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfAllocations;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createRM;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.StringReader;
 import java.util.Arrays;
@@ -38,10 +39,16 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.Sets;
@@ -56,6 +63,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
@@ -63,6 +71,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.Activi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
@@ -80,8 +89,10 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.TestProperties;
 
 @RunWith(Parameterized.class)
 public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
@@ -105,10 +116,9 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private static final String DOT = ".";
   private static final double EPSILON = 1e-1f;
 
-  private static MockRM rm;
-  static private CapacitySchedulerConfiguration csConf;
-  static private YarnConfiguration conf;
-
+  private MockRM rm;
+  private CapacitySchedulerConfiguration csConf;
+  private YarnConfiguration conf;
   private final boolean legacyQueueMode;
 
   @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
@@ -117,6 +127,72 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   }
 
   private MockNM nm1;
+
+  @Override
+  protected Application configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.register(RMWebServices.class);
+    config.register(new JerseyBinder());
+    config.register(GenericExceptionHandler.class);
+    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
+    return config;
+  }
+
+  private class JerseyBinder extends AbstractBinder {
+    @Override
+    protected void configure() {
+
+      try {
+        csConf = new CapacitySchedulerConfiguration();
+        setupQueueConfiguration(csConf);
+        conf = new YarnConfiguration(csConf);
+        rm = createRM(conf);
+
+        Set<NodeLabel> labels = new HashSet<NodeLabel>();
+        labels.add(NodeLabel.newInstance(LABEL_LX));
+        labels.add(NodeLabel.newInstance(LABEL_LY));
+        try {
+          RMNodeLabelsManager nodeLabelManager =
+              rm.getRMContext().getNodeLabelManager();
+          nodeLabelManager.addToCluserNodeLabels(labels);
+        } catch (Exception e) {
+          Assert.fail();
+        }
+
+        rm.start();
+        rm.getRMContext().getNodeLabelManager().addLabelsToNode(ImmutableMap
+            .of(NodeId.newInstance("127.0.0.1", 0), Sets.newHashSet(LABEL_LX)));
+
+        nm1 = new MockNM("127.0.0.1:1234", 2 * 1024,
+        rm.getResourceTrackerService());
+        MockNM nm2 = new MockNM("127.0.0.2:1234", 2 * 1024, rm.getResourceTrackerService());
+        nm1.registerNode();
+        nm2.registerNode();
+
+        rm.getRMContext().getNodeLabelManager().addLabelsToNode(ImmutableMap
+            .of(NodeId.newInstance("127.0.0.2", 0), Sets.newHashSet(LABEL_LY)));
+
+        MockNM nm3 = new MockNM("127.0.0.2:1234", 128 * 1024, rm.getResourceTrackerService());
+        nm3.registerNode();
+
+        // Default partition
+        MockNM nm4 = new MockNM("127.0.0.3:1234", 128 * 1024, rm.getResourceTrackerService());
+        nm4.registerNode();
+
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getScheme()).thenReturn("http");
+        final HttpServletResponse response = mock(HttpServletResponse.class);
+        bind(rm).to(ResourceManager.class).named("rm");
+        bind(conf).to(Configuration.class).named("conf");
+        bind(request).to(HttpServletRequest.class);
+        bind(response).to(HttpServletResponse.class);
+
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
 
   private void setupQueueConfiguration(
       CapacitySchedulerConfiguration config) {
@@ -187,45 +263,6 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-
-    csConf = new CapacitySchedulerConfiguration();
-    setupQueueConfiguration(csConf);
-    conf = new YarnConfiguration(csConf);
-    rm = createRM(conf);
-
-    Set<NodeLabel> labels = new HashSet<NodeLabel>();
-    labels.add(NodeLabel.newInstance(LABEL_LX));
-    labels.add(NodeLabel.newInstance(LABEL_LY));
-    try {
-      RMNodeLabelsManager nodeLabelManager =
-          rm.getRMContext().getNodeLabelManager();
-      nodeLabelManager.addToCluserNodeLabels(labels);
-    } catch (Exception e) {
-      Assert.fail();
-    }
-
-    rm.start();
-    rm.getRMContext().getNodeLabelManager().addLabelsToNode(ImmutableMap
-        .of(NodeId.newInstance("127.0.0.1", 0), Sets.newHashSet(LABEL_LX)));
-
-    nm1 = new MockNM("127.0.0.1:1234", 2 * 1024,
-        rm.getResourceTrackerService());
-    MockNM nm2 = new MockNM("127.0.0.2:1234", 2 * 1024,
-        rm.getResourceTrackerService());
-    nm1.registerNode();
-    nm2.registerNode();
-
-    rm.getRMContext().getNodeLabelManager().addLabelsToNode(ImmutableMap
-        .of(NodeId.newInstance("127.0.0.2", 0), Sets.newHashSet(LABEL_LY)));
-
-    MockNM nm3 = new MockNM("127.0.0.2:1234", 128 * 1024,
-        rm.getResourceTrackerService());
-    nm3.registerNode();
-
-    // Default partition
-    MockNM nm4 = new MockNM("127.0.0.3:1234", 128 * 1024,
-        rm.getResourceTrackerService());
-    nm4.registerNode();
   }
 
   @After
@@ -236,55 +273,54 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   }
 
   public TestRMWebServicesForCSWithPartitions(boolean legacyQueueMode) {
-    super(createWebAppDescriptor());
     this.legacyQueueMode = legacyQueueMode;
   }
 
   @Test
   public void testSchedulerPartitions() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = targetWithJsonObject();
+    Response response =
         r.path("ws").path("v1").path("cluster").path("scheduler")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     verifySchedulerInfoJson(json);
   }
 
   @Test
   public void testSchedulerPartitionsSlash() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = targetWithJsonObject();
+    Response response =
         r.path("ws").path("v1").path("cluster").path("scheduler/")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     verifySchedulerInfoJson(json);
 
   }
 
   @Test
   public void testSchedulerPartitionsDefault() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler").get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+    WebTarget r = targetWithJsonObject();
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler").request().get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     verifySchedulerInfoJson(json);
   }
 
   @Test
   public void testSchedulerPartitionsXML() throws JSONException, Exception {
-    WebResource r = resource();
-    ClientResponse response =
+    WebTarget r = target();
+    Response response =
         r.path("ws").path("v1").path("cluster").path("scheduler")
-            .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
+        .request(MediaType.APPLICATION_XML).get(Response.class);
+    assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
     DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
@@ -310,7 +346,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
             .capability(Resources.createResource(2048)).numContainers(1)
             .build()), null);
 
-    WebResource sr = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+    WebTarget sr = target().path(RMWSConsts.RM_WEB_SERVICE_PATH)
         .path(RMWSConsts.SCHEDULER_ACTIVITIES);
     ActivitiesTestUtils.requestWebResource(sr, null);
 
@@ -604,16 +640,34 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     for (int i = 0; i < queuesArray.length(); i++) {
       JSONObject queueJson = queuesArray.getJSONObject(i);
       String queue = queueJson.getString("queueName");
-      JSONArray resourceUsageByPartition = queueJson.getJSONObject("resources")
-          .getJSONArray(RESOURCE_USAGES_BY_PARTITION);
+      Object resourceUsagesByPartition = queueJson.getJSONObject("resources").
+          get(RESOURCE_USAGES_BY_PARTITION);
+      JSONArray resourceUsageByPartition = new JSONArray();
+      if (resourceUsagesByPartition instanceof JSONArray) {
+        resourceUsageByPartition = JSONArray.class.cast(resourceUsagesByPartition);
+      } else {
+        resourceUsageByPartition.put(JSONObject.class.cast(resourceUsagesByPartition));
+      }
 
       JSONObject resourcesJsonObject = queueJson.getJSONObject("resources");
-      JSONArray partitionsResourcesArray =
-          resourcesJsonObject.getJSONArray(RESOURCE_USAGES_BY_PARTITION);
+      Object resourceUsagesByPartition2 = resourcesJsonObject.
+          get(RESOURCE_USAGES_BY_PARTITION);
+      JSONArray partitionsResourcesArray = new JSONArray();
+      if (resourceUsagesByPartition2 instanceof JSONArray) {
+        partitionsResourcesArray = JSONArray.class.cast(resourceUsagesByPartition2);
+      } else {
+        partitionsResourcesArray.put(resourceUsagesByPartition2);
+      }
 
       capacitiesJsonObject = queueJson.getJSONObject(CAPACITIES);
-      partitionsCapsArray =
-          capacitiesJsonObject.getJSONArray(QUEUE_CAPACITIES_BY_PARTITION);
+      Object queueCapacitiesByPartition = capacitiesJsonObject.
+          get(QUEUE_CAPACITIES_BY_PARTITION);
+      partitionsCapsArray = new JSONArray();
+      if (queueCapacitiesByPartition instanceof JSONArray) {
+        partitionsCapsArray = JSONArray.class.cast(queueCapacitiesByPartition);
+      } else {
+        partitionsCapsArray.put(queueCapacitiesByPartition);
+      }
 
       JSONObject partitionInfo = null;
       String partitionName = null;
@@ -673,7 +727,13 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
 
   private void verifyAccesibleNodeLabels(JSONObject queueJson,
       Set<String> accesibleNodeLabels) throws JSONException {
-    JSONArray nodeLabels = queueJson.getJSONArray("nodeLabels");
+    Object nodeLabelsObj = queueJson.get("nodeLabels");
+    JSONArray nodeLabels = new JSONArray();
+    if(nodeLabelsObj instanceof JSONArray){
+      nodeLabels = queueJson.getJSONArray("nodeLabels");
+    } else {
+      nodeLabels.put(nodeLabelsObj);
+    }
     assertEquals("number of accessible Node Labels not matching",
         accesibleNodeLabels.size(), nodeLabels.length());
     for (int i = 0; i < nodeLabels.length(); i++) {

@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.net;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Objects;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assume.assumeFalse;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class TestDNSDomainNameResolver {
 
@@ -35,8 +34,8 @@ public class TestDNSDomainNameResolver {
   @Test
   public void testGetHostNameByIP() throws UnknownHostException {
     InetAddress localhost = InetAddress.getLocalHost();
-    assumeFalse("IP lookup support required",
-        Objects.equals(localhost.getCanonicalHostName(), localhost.getHostAddress()));
+    assumeFalse(Objects.equals(localhost.getCanonicalHostName(), localhost.getHostAddress()),
+        "IP lookup support required");
 
     // Precondition: host name and canonical host name for unresolved returns an IP address.
     InetAddress unresolved = InetAddress.getByAddress(localhost.getHostAddress(),

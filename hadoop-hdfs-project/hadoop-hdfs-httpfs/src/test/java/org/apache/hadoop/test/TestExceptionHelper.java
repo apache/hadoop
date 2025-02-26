@@ -17,51 +17,48 @@
  */
 package org.apache.hadoop.test;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
+import java.lang.reflect.Method;
 import java.util.regex.Pattern;
 
-import org.junit.Test;
-import org.junit.rules.MethodRule;
-import org.junit.runners.model.FrameworkMethod;
-import org.junit.runners.model.Statement;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.TestExecutionExceptionHandler;
 
-public class TestExceptionHelper implements MethodRule {
+public class TestExceptionHelper implements TestExecutionExceptionHandler {
 
   @Test
   public void dummy() {
   }
 
   @Override
-  public Statement apply(final Statement statement, final FrameworkMethod frameworkMethod, final Object o) {
-    return new Statement() {
-      @Override
-      public void evaluate() throws Throwable {
-        TestException testExceptionAnnotation = frameworkMethod.getAnnotation(TestException.class);
-        try {
-          statement.evaluate();
-          if (testExceptionAnnotation != null) {
-            Class<? extends Throwable> klass = testExceptionAnnotation.exception();
-            fail("Expected Exception: " + klass.getSimpleName());
-          }
-        } catch (Throwable ex) {
-          if (testExceptionAnnotation != null) {
-            Class<? extends Throwable> klass = testExceptionAnnotation.exception();
-            if (klass.isInstance(ex)) {
-              String regExp = testExceptionAnnotation.msgRegExp();
-              Pattern pattern = Pattern.compile(regExp);
-              if (!pattern.matcher(ex.getMessage()).find()) {
-                fail("Expected Exception Message pattern: " + regExp + " got message: " + ex.getMessage());
-              }
-            } else {
-              fail("Expected Exception: " + klass.getSimpleName() + " got: " + ex.getClass().getSimpleName());
-            }
-          } else {
-            throw ex;
-          }
-        }
+  public void handleTestExecutionException(ExtensionContext context,
+      Throwable cause) throws Throwable {
+    Method testMethod = context.getRequiredTestMethod();
+    TestException testExceptionAnnotation = testMethod.getAnnotation(TestException.class);
+    try {
+      if (testExceptionAnnotation != null) {
+        Class<? extends Throwable> klass = testExceptionAnnotation.exception();
+        fail("Expected Exception: " + klass.getSimpleName());
       }
-    };
+    } catch (Throwable ex) {
+      if (testExceptionAnnotation != null) {
+        Class<? extends Throwable> klass = testExceptionAnnotation.exception();
+        if (klass.isInstance(cause)) {
+          String regExp = testExceptionAnnotation.msgRegExp();
+          Pattern pattern = Pattern.compile(regExp);
+          if (!pattern.matcher(cause.getMessage()).find()) {
+            fail("Expected Exception Message pattern: " + regExp +
+                " got message: " + ex.getMessage());
+          }
+        } else {
+          fail("Expected Exception: " + klass.getSimpleName() + " got: " +
+              ex.getClass().getSimpleName());
+        }
+      } else {
+        throw ex;
+      }
+    }
   }
-
 }

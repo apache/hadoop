@@ -61,7 +61,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.E
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_POSITION;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.APACHE_HTTP_CLIENT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.JDK_HTTP_URL_CONNECTION;
@@ -172,8 +171,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     AbfsClient abfsClient = fs.getAbfsStore().getClient();
 
-    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
-        configuration.get(FS_AZURE_ABFS_ACCOUNT_NAME));
+    AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
 
     // Update the configuration with reduced retry count and reduced backoff interval.
     AbfsConfiguration abfsConfig
@@ -262,6 +260,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
       // behaviour based on response code.
 
       Mockito.doReturn(responseCode).when(httpOperation).getStatusCode();
+      Mockito.doReturn(responseCode).when(httpOperation).getConnResponseCode();
       if (responseCode == HTTP_UNAVAILABLE) {
         Mockito.doReturn(EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage())
             .when(httpOperation)

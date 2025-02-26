@@ -21,8 +21,7 @@ package org.apache.hadoop.fs.azure;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azure.NativeAzureFileSystem.RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -48,13 +47,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.CreateOptions;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
@@ -70,17 +66,15 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   protected String accountKey;
   protected static Configuration conf = null;
   private boolean runningInSASMode = false;
-  @Rule
-  public final TemporaryFolder tempDir = new TemporaryFolder();
 
   private AzureBlobStorageTestAccount testAccount;
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     testAccount = AzureTestUtils.cleanupTestAccount(testAccount);
   }
 
-  @Before
+  @BeforeEach
   public void setMode() {
     runningInSASMode = AzureBlobStorageTestAccount.createTestConfiguration().
         getBoolean(AzureNativeFileSystemStore.KEY_USE_SECURE_MODE, false);
@@ -138,7 +132,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   @Test
   public void testConnectUsingSAS() throws Exception {
 
-    Assume.assumeFalse(runningInSASMode);
+    assumeFalse(runningInSASMode);
     // Create the test account with SAS credentials.
     testAccount = AzureBlobStorageTestAccount.create("",
         EnumSet.of(CreateOptions.UseSas, CreateOptions.CreateContainer));
@@ -154,7 +148,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   @Test
   public void testConnectUsingSASReadonly() throws Exception {
 
-    Assume.assumeFalse(runningInSASMode);
+    assumeFalse(runningInSASMode);
     // Create the test account with SAS credentials.
     testAccount = AzureBlobStorageTestAccount.create("", EnumSet.of(
         CreateOptions.UseSas, CreateOptions.CreateContainer,
@@ -303,7 +297,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
     } catch (Exception e) {
       String errMsg = String.format(
           "Expected AzureException but got %s instead.", e);
-      assertTrue(errMsg, false);
+      assertTrue(false, errMsg);
     }
   }
 
@@ -336,11 +330,11 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
       int expectedValue) throws Exception {
     InputStream inputStream = fs.open(testFile);
     int byteRead = inputStream.read();
-    assertTrue("File unexpectedly empty: " + testFile, byteRead >= 0);
-    assertTrue("File has more than a single byte: " + testFile,
-        inputStream.read() < 0);
+    assertTrue(byteRead >= 0, "File unexpectedly empty: " + testFile);
+    assertTrue(
+       inputStream.read() < 0, "File has more than a single byte: " + testFile);
     inputStream.close();
-    assertEquals("Unxpected content in: " + testFile, expectedValue, byteRead);
+    assertEquals(expectedValue, byteRead, "Unxpected content in: " + testFile);
   }
 
   @Test
@@ -381,14 +375,15 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   }
 
   @Test
-  public void testCredsFromCredentialProvider() throws Exception {
+  public void testCredsFromCredentialProvider(@TempDir java.nio.file.Path tempDir)
+      throws Exception {
 
     assumeFalse(runningInSASMode);
     String account = "testacct";
     String key = "testkey";
     // set up conf to have a cred provider
     final Configuration conf = new Configuration();
-    final File file = tempDir.newFile("test.jks");
+    final File file = new File(tempDir.toFile(), "myfile.txt");
     final URI jks = ProviderUtils.nestURIForLocalJavaKeyStoreProvider(
         file.toURI());
     conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
@@ -403,7 +398,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
     String result = AzureNativeFileSystemStore.getAccountKeyFromConfiguration(
         account, conf);
     // result should contain the credential provider key not the config key
-    assertEquals("AccountKey incorrect.", key, result);
+    assertEquals(key, result, "AccountKey incorrect.");
   }
 
   void provisionAccountKey(
@@ -439,7 +434,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
         "org.apache.Nonexistant.Class");
     try {
       AzureNativeFileSystemStore.getAccountKeyFromConfiguration(account, conf);
-      Assert.fail("Nonexistant key provider class should have thrown a "
+      fail("Nonexistant key provider class should have thrown a "
           + "KeyProviderException");
     } catch (KeyProviderException e) {
     }
@@ -453,7 +448,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
     conf.set("fs.azure.account.keyprovider." + account, "java.lang.String");
     try {
       AzureNativeFileSystemStore.getAccountKeyFromConfiguration(account, conf);
-      Assert.fail("Key provider class that doesn't implement KeyProvider "
+      fail("Key provider class that doesn't implement KeyProvider "
           + "should have thrown a KeyProviderException");
     } catch (KeyProviderException e) {
     }
@@ -659,8 +654,8 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
 
       conf.setBoolean(RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME, true);
       FileSystem fs1 = FileSystem.newInstance(defaultUri, conf);
-      Assert.assertEquals("getCanonicalServiceName() should return URI",
-              fs1.getUri().toString(), fs1.getCanonicalServiceName());
+      assertEquals(fs1.getUri().toString(), fs1.getCanonicalServiceName(),
+          "getCanonicalServiceName() should return URI");
     } finally {
       testAccount.cleanup();
       FileSystem.closeAll();

@@ -166,6 +166,7 @@ public class DfsClientConf {
 
   private final boolean deadNodeDetectionEnabled;
   private final long leaseHardLimitPeriod;
+  private final boolean recoverLeaseOnCloseException;
 
   public DfsClientConf(Configuration conf) {
     // The hdfsTimeout is currently the same as the ipc timeout
@@ -314,6 +315,11 @@ public class DfsClientConf {
     maxPipelineRecoveryRetries = conf.getInt(
         HdfsClientConfigKeys.DFS_CLIENT_PIPELINE_RECOVERY_MAX_RETRIES,
         HdfsClientConfigKeys.DFS_CLIENT_PIPELINE_RECOVERY_MAX_RETRIES_DEFAULT
+    );
+
+    recoverLeaseOnCloseException = conf.getBoolean(
+        Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY,
+        Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT
     );
   }
 
@@ -743,6 +749,10 @@ public class DfsClientConf {
    */
   public int getMaxPipelineRecoveryRetries() {
     return maxPipelineRecoveryRetries;
+  }
+
+  public boolean getRecoverLeaseOnCloseException() {
+    return recoverLeaseOnCloseException;
   }
 
   /**

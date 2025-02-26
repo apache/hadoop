@@ -154,6 +154,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
 
     switch (operationType) {
       case Append:
+      case PutBlock:
         contentLength = abfsHttpOperation.getBytesSent();
         if (contentLength == 0) {
           /*
@@ -171,6 +172,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
         }
         break;
       case ReadFile:
+      case GetBlob:
         String range = abfsHttpOperation.getRequestProperty(HttpHeaderConfigurations.RANGE);
         contentLength = getContentLengthIfKnown(range);
         if (contentLength > 0) {

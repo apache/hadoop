@@ -25,6 +25,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.protocol.CachePoolInfo.RELATIVE_EXPIRY_NEVER;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -83,6 +84,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheManipulator;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
@@ -761,7 +763,7 @@ public class TestCacheDirectives {
       @Override
       public Boolean get() {
         int numCachedBlocks = 0, numCachedReplicas = 0;
-        namesystem.readLock();
+        namesystem.readLock(RwLockMode.BM);
         try {
           GSet<CachedBlock, CachedBlock> cachedBlocks =
               cacheManager.getCachedBlocks();
@@ -774,7 +776,7 @@ public class TestCacheDirectives {
             }
           }
         } finally {
-          namesystem.readUnlock();
+          namesystem.readUnlock(RwLockMode.BM, "checkBlocks");
         }
 
         LOG.info(logString + " cached blocks: have " + numCachedBlocks +
@@ -1505,7 +1507,7 @@ public class TestCacheDirectives {
   private void checkPendingCachedEmpty(MiniDFSCluster cluster)
       throws Exception {
     Thread.sleep(1000);
-    cluster.getNamesystem().readLock();
+    cluster.getNamesystem().readLock(RwLockMode.BM);
     try {
       final DatanodeManager datanodeManager =
           cluster.getNamesystem().getBlockManager().getDatanodeManager();
@@ -1518,7 +1520,7 @@ public class TestCacheDirectives {
             descriptor.getPendingCached().isEmpty());
       }
     } finally {
-      cluster.getNamesystem().readUnlock();
+      cluster.getNamesystem().readUnlock(RwLockMode.BM, "checkPendingCachedEmpty");
     }
   }
 
@@ -1575,7 +1577,7 @@ public class TestCacheDirectives {
     CacheManager cm = cluster.getNamesystem().getCacheManager();
     LocatedBlocks locations = Mockito.mock(LocatedBlocks.class);
     cm.setCachedLocations(locations);
-    Mockito.verifyZeroInteractions(locations);
+    verifyZeroInteractions(locations);
   }
 
   @Test(timeout=120000)
@@ -1665,9 +1667,9 @@ public class TestCacheDirectives {
     HATestUtil.waitForStandbyToCatchUp(ann, sbn);
     GenericTestUtils.waitFor(() -> {
       boolean isConsistence = false;
-      ann.getNamesystem().readLock();
+      ann.getNamesystem().readLock(RwLockMode.FS);
       try {
-        sbn.getNamesystem().readLock();
+        sbn.getNamesystem().readLock(RwLockMode.FS);
         try {
           Iterator<CacheDirective> annDirectivesIt = annCachemanager.
               getCacheDirectives().iterator();
@@ -1682,10 +1684,10 @@ public class TestCacheDirectives {
             }
           }
         } finally {
-          sbn.getNamesystem().readUnlock();
+          sbn.getNamesystem().readUnlock(RwLockMode.FS, "expiryTimeConsistency");
         }
       } finally {
-        ann.getNamesystem().readUnlock();
+        ann.getNamesystem().readUnlock(RwLockMode.FS, "expiryTimeConsistency");
       }
       if (!isConsistence) {
         LOG.info("testEexpiryTimeConsistency:"

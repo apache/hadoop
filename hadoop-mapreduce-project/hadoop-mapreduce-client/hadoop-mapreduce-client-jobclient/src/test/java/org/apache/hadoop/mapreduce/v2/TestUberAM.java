@@ -30,19 +30,20 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestUberAM extends TestMRJobs {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestUberAM.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     TestMRJobs.setup();
     if (mrCluster != null) {
@@ -71,11 +72,11 @@ public class TestUberAM extends TestMRJobs {
       IOException {
     Counters counters = job.getCounters();
     super.verifySleepJobCounters(job);
-    Assert.assertEquals(3,
+    assertEquals(3,
         counters.findCounter(JobCounter.NUM_UBER_SUBMAPS).getValue());
-    Assert.assertEquals(numSleepReducers,
+    assertEquals(numSleepReducers,
         counters.findCounter(JobCounter.NUM_UBER_SUBREDUCES).getValue());
-    Assert.assertEquals(3 + numSleepReducers,
+    assertEquals(3 + numSleepReducers,
         counters.findCounter(JobCounter.TOTAL_LAUNCHED_UBERTASKS).getValue());
   }
 
@@ -91,9 +92,9 @@ public class TestUberAM extends TestMRJobs {
       throws InterruptedException, IOException {
     super.verifyRandomWriterCounters(job);
     Counters counters = job.getCounters();
-    Assert.assertEquals(3, counters.findCounter(JobCounter.NUM_UBER_SUBMAPS)
+    assertEquals(3, counters.findCounter(JobCounter.NUM_UBER_SUBMAPS)
         .getValue());
-    Assert.assertEquals(3,
+    assertEquals(3,
         counters.findCounter(JobCounter.TOTAL_LAUNCHED_UBERTASKS).getValue());
   }
 
@@ -132,12 +133,12 @@ public class TestUberAM extends TestMRJobs {
     assertThat(secondTaskAttemptExists).isFalse();
 
     TaskCompletionEvent[] events = job.getTaskCompletionEvents(0, 2);
-    Assert.assertEquals(1, events.length);
+    assertEquals(1, events.length);
     // TIPFAILED if it comes from the AM, FAILED if it comes from the JHS
     TaskCompletionEvent.Status status = events[0].getStatus();
-    Assert.assertTrue(status == TaskCompletionEvent.Status.FAILED ||
+    assertTrue(status == TaskCompletionEvent.Status.FAILED ||
         status == TaskCompletionEvent.Status.TIPFAILED);
-    Assert.assertEquals(JobStatus.State.FAILED, job.getJobState());
+    assertEquals(JobStatus.State.FAILED, job.getJobState());
     
     //Disabling till UberAM honors MRJobConfig.MAP_MAX_ATTEMPTS
     //verifyFailingMapperCounters(job);
@@ -150,11 +151,11 @@ public class TestUberAM extends TestMRJobs {
       throws InterruptedException, IOException {
     Counters counters = job.getCounters();
     super.verifyFailingMapperCounters(job);
-    Assert.assertEquals(2,
+    assertEquals(2,
         counters.findCounter(JobCounter.TOTAL_LAUNCHED_UBERTASKS).getValue());
-    Assert.assertEquals(2, counters.findCounter(JobCounter.NUM_UBER_SUBMAPS)
+    assertEquals(2, counters.findCounter(JobCounter.NUM_UBER_SUBMAPS)
         .getValue());
-    Assert.assertEquals(2, counters
+    assertEquals(2, counters
         .findCounter(JobCounter.NUM_FAILED_UBERTASKS).getValue());
   }
 

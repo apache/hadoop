@@ -79,7 +79,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   public CapacitySchedulerInfo(CSQueue parent, CapacityScheduler cs) {
     this.queueName = parent.getQueueName();
     this.queuePath = parent.getQueuePath();
-    this.usedCapacity = parent.getUsedCapacity() * 100;
+    this.usedCapacity = parent.getUsedCapacity() * 100.0F;
     this.capacity = parent.getCapacity() * 100;
     this.queueCapacityVectorInfo = new QueueCapacityVectorInfo(
             parent.getConfiguredCapacityVector(NO_LABEL));

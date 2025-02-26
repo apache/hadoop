@@ -75,8 +75,8 @@ public class SimpleCopyListing extends CopyListing {
   private long totalDirs = 0;
   private long totalBytesToCopy = 0;
   private int numListstatusThreads = 1;
-  private final int fileStatusLimit;
-  private final boolean randomizeFileListing;
+  private int fileStatusLimit;
+  private boolean randomizeFileListing;
   private final int maxRetries = 3;
   private CopyFilter copyFilter;
   private DistCpSync distCpSync;
@@ -117,6 +117,17 @@ public class SimpleCopyListing extends CopyListing {
     this.numListstatusThreads = numListstatusThreads;
     this.fileStatusLimit = Math.max(1, fileStatusLimit);
     this.randomizeFileListing = randomizeFileListing;
+  }
+
+  @VisibleForTesting
+  protected void initSimpleCopyListing(Configuration pConfiguration,
+      Credentials pCredentials, int pNumListstatusThreads, int pFileStatusLimit,
+      boolean pRandomizeFileListing) {
+    setConf(pConfiguration);
+    setCredentials(pCredentials);
+    this.numListstatusThreads = pNumListstatusThreads;
+    this.fileStatusLimit = Math.max(1, pFileStatusLimit);
+    this.randomizeFileListing = pRandomizeFileListing;
   }
 
   protected SimpleCopyListing(Configuration configuration,

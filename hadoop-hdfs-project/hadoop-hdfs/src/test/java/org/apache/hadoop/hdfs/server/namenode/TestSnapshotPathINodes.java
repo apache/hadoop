@@ -41,6 +41,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
+
 /** Test snapshot related operations. */
 public class TestSnapshotPathINodes {
   private static final long seed = 0;
@@ -447,6 +449,6 @@ public class TestSnapshotPathINodes {
     INodesInPath iip = Mockito.mock(INodesInPath.class);
     List<INodeDirectory> snapDirs = new ArrayList<>();
     FSDirSnapshotOp.checkSnapshot(fsn.getFSDirectory(), iip, snapDirs);
-    Mockito.verifyZeroInteractions(iip);
+    verifyZeroInteractions(iip);
   }
 }

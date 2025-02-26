@@ -385,6 +385,47 @@ public final class StoreStatisticNames {
       = "action_http_patch_request";
 
   /**
+   * HTTP error response: {@value}.
+   */
+  public static final String HTTP_RESPONSE_400
+      = "http_response_400";
+
+  /**
+   * HTTP error response: {@value}.
+   * Returned by some stores for throttling events.
+   */
+  public static final String HTTP_RESPONSE_429
+      = "http_response_429";
+
+  /**
+   * Other 4XX HTTP response: {@value}.
+   * (404 responses are excluded as they are rarely 'errors'
+   * and will be reported differently if they are.
+   */
+  public static final String HTTP_RESPONSE_4XX
+      = "http_response_4XX";
+
+  /**
+   * HTTP error response: {@value}.
+   * Sign of server-side problems, possibly transient
+   */
+  public static final String HTTP_RESPONSE_500
+      = "http_response_500";
+
+  /**
+   * HTTP error response: {@value}.
+   * AWS Throttle.
+   */
+  public static final String HTTP_RESPONSE_503
+      = "http_response_503";
+
+  /**
+   * Other 5XX HTTP response: {@value}.
+   */
+  public static final String HTTP_RESPONSE_5XX
+      = "http_response_5XX";
+
+  /**
    * An HTTP POST request was made: {@value}.
    */
   public static final String ACTION_HTTP_POST_REQUEST

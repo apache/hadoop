@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.util.Lists;
 
 import org.junit.Rule;
@@ -466,6 +467,10 @@ public class TestLeaseManager {
     when(fsn.isRunning()).thenReturn(true);
     when(fsn.hasReadLock()).thenReturn(true);
     when(fsn.hasWriteLock()).thenReturn(true);
+    when(fsn.hasReadLock(RwLockMode.FS)).thenReturn(true);
+    when(fsn.hasWriteLock(RwLockMode.FS)).thenReturn(true);
+    when(fsn.hasReadLock(RwLockMode.GLOBAL)).thenReturn(true);
+    when(fsn.hasWriteLock(RwLockMode.GLOBAL)).thenReturn(true);
     when(fsn.getFSDirectory()).thenReturn(dir);
     when(fsn.getMaxLockHoldToReleaseLeaseMs()).thenReturn(maxLockHoldToReleaseLeaseMs);
     return fsn;

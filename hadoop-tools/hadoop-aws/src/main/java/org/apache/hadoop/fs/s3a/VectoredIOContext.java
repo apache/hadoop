@@ -18,14 +18,12 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.util.List;
-import java.util.function.IntFunction;
+import static org.apache.hadoop.util.Preconditions.checkState;
 
 /**
- * Context related to vectored IO operation.
- * See {@link S3AInputStream#readVectored(List, IntFunction)}.
+ * Configuration information for vectored IO.
  */
-public class VectoredIOContext {
+public final class VectoredIOContext {
 
   /**
    * What is the smallest reasonable seek that we should group
@@ -36,9 +34,20 @@ public class VectoredIOContext {
   /**
    * What is the largest size that we should group ranges
    * together during vectored read operation.
-   * Setting this value 0 will disable merging of ranges.
+   * Setting this value to 0 will disable merging of ranges.
    */
   private int maxReadSizeForVectorReads;
+
+  /**
+   * Maximum number of active range read operation a single
+   * input stream can have.
+   */
+  private int vectoredActiveRangeReads;
+
+  /**
+   * Can this instance be updated?
+   */
+  private boolean immutable = false;
 
   /**
    * Default no arg constructor.
@@ -46,33 +55,98 @@ public class VectoredIOContext {
   public VectoredIOContext() {
   }
 
+  /**
+   * Make immutable.
+   * @return this instance.
+   */
+  public VectoredIOContext build() {
+    immutable = true;
+    return this;
+  }
+
+  /**
+   * Verify this object is still mutable.
+   * @throws IllegalStateException if not.
+   */
+  private void checkMutable() {
+    checkState(!immutable, "Instance is immutable");
+  }
+
+  /**
+   * What is the threshold at which a seek() to a new location
+   * is initiated, rather than merging ranges?
+   * Set to zero to disable range merging entirely.
+   * @param minSeek minimum amount of data to skip.
+   * @return this instance.
+   */
   public VectoredIOContext setMinSeekForVectoredReads(int minSeek) {
+    checkMutable();
+    checkState(minSeek >= 0);
     this.minSeekForVectorReads = minSeek;
     return this;
   }
 
-  public VectoredIOContext setMaxReadSizeForVectoredReads(int maxSize) {
-    this.maxReadSizeForVectorReads = maxSize;
-    return this;
-  }
-
-  public VectoredIOContext build() {
-    return this;
-  }
-
+  /**
+   * What is the threshold at which a seek() to a new location
+   * is initiated, rather than merging ranges?
+   * @return a number greater than or equal to zero.
+   */
   public int getMinSeekForVectorReads() {
     return minSeekForVectorReads;
   }
 
+  /**
+   * What is the largest size that we should group ranges
+   * together during vectored read operation?
+   * @param maxSize maximum size
+   * @return this instance.
+   */
+  public VectoredIOContext setMaxReadSizeForVectoredReads(int maxSize) {
+    checkMutable();
+    checkState(maxSize >= 0);
+    this.maxReadSizeForVectorReads = maxSize;
+    return this;
+  }
+
+  /**
+   * The largest size that we should group ranges.
+   * together during vectored read operation
+   * @return a number greater than or equal to zero.
+   */
   public int getMaxReadSizeForVectorReads() {
     return maxReadSizeForVectorReads;
+  }
+
+  /**
+   * Maximum number of active range read operation a single
+   * input stream can have.
+   * @return number of extra threads for reading, or zero.
+   */
+  public int getVectoredActiveRangeReads() {
+    return vectoredActiveRangeReads;
+  }
+
+  /**
+   * Maximum number of active range read operation a single
+   * input stream can have.
+   * @param activeReads number of extra threads for reading, or zero.
+   * @return this instance.
+   * number of extra threads for reading, or zero.
+   */
+  public VectoredIOContext setVectoredActiveRangeReads(
+      final int activeReads) {
+    checkMutable();
+    checkState(activeReads >= 0);
+    this.vectoredActiveRangeReads = activeReads;
+    return this;
   }
 
   @Override
   public String toString() {
     return "VectoredIOContext{" +
-            "minSeekForVectorReads=" + minSeekForVectorReads +
-            ", maxReadSizeForVectorReads=" + maxReadSizeForVectorReads +
-            '}';
+        "minSeekForVectorReads=" + minSeekForVectorReads +
+        ", maxReadSizeForVectorReads=" + maxReadSizeForVectorReads +
+        ", vectoredActiveRangeReads=" + vectoredActiveRangeReads +
+        '}';
   }
 }

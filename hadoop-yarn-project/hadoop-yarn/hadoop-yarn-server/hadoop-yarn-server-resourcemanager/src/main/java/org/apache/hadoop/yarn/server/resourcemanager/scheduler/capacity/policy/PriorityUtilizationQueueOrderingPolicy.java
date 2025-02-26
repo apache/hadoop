@@ -91,12 +91,12 @@ public class PriorityUtilizationQueueOrderingPolicy
   /**
    * Comparator that both looks at priority and utilization
    */
-  final private class PriorityQueueComparator
+  final public class PriorityQueueComparator
       implements Comparator<PriorityQueueResourcesForSorting> {
 
     final private String partition;
 
-    private PriorityQueueComparator(String partition) {
+    public PriorityQueueComparator(String partition) {
       this.partition = partition;
     }
 
@@ -164,7 +164,7 @@ public class PriorityUtilizationQueueOrderingPolicy
             q1Sort.configuredMinResource;
         Resource minEffRes2 =
             q2Sort.configuredMinResource;
-        if (!minEffRes1.equals(Resources.none()) && !minEffRes2.equals(
+        if (!minEffRes1.equals(Resources.none()) || !minEffRes2.equals(
             Resources.none())) {
           return minEffRes2.compareTo(minEffRes1);
         }

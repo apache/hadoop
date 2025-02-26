@@ -50,7 +50,47 @@ public final class AbfsHttpConstants {
   public static final String DEFAULT_LEASE_BREAK_PERIOD = "0";
   public static final String DEFAULT_TIMEOUT = "90";
   public static final String APPEND_BLOB_TYPE = "appendblob";
-  public static final String TOKEN_VERSION = "2";
+  public static final String LIST = "list";
+  public static final String BLOCK_BLOB_TYPE = "BlockBlob";
+  public static final String APPEND_BLOCK = "appendblock";
+
+  //Abfs Http Client Constants for Blob Endpoint APIs.
+
+  /**
+   * HTTP Header Value to denote resource type as container.
+   * {@value}.
+   */
+  public static final String CONTAINER = "container";
+
+  /**
+   * HTTP Header Value to denote component as metadata.
+   * {@value}.
+   */
+  public static final String METADATA = "metadata";
+
+  /**
+   * HTTP Header Value to denote component as block.
+   * {@value}.
+   */
+  public static final String BLOCK = "block";
+
+  /**
+   * HTTP Header Value to denote component as blocklist.
+   * {@value}.
+   */
+  public static final String BLOCKLIST = "blocklist";
+
+  /**
+   * HTTP Header Value to denote component as lease.
+   * {@value}.
+   */
+  public static final String LEASE = "lease";
+
+  /**
+   * HTTP Header Value to denote bock list type as committed.
+   * {@value}.
+   */
+  public static final String BLOCK_TYPE_COMMITTED = "committed";
 
   public static final String JAVA_VENDOR = "java.vendor";
   public static final String JAVA_VERSION = "java.version";
@@ -60,6 +100,10 @@ public final class AbfsHttpConstants {
 
   public static final String APN_VERSION = "APN/1.0";
   public static final String CLIENT_VERSION = "Azure Blob FS/" + VersionInfo.getVersion();
+  /**
+   * {@value}.
+   */
+  public static final String TOKEN_VERSION = "2";
 
   // Abfs Http Verb
   public static final String HTTP_METHOD_DELETE = "DELETE";
@@ -92,6 +136,7 @@ public final class AbfsHttpConstants {
   public static final String HTTP_HEADER_PREFIX = "x-ms-";
   public static final String HASH = "#";
   public static final String TRUE = "true";
+  public static final String ZERO = "0";
 
   public static final String PLUS_ENCODE = "%20";
   public static final String FORWARD_SLASH_ENCODE = "%2F";
@@ -101,6 +146,7 @@ public final class AbfsHttpConstants {
   public static final String GMT_TIMEZONE = "GMT";
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
+  public static final String APPLICATION_XML = "application/xml";
   public static final String XMS_PROPERTIES_ENCODING_ASCII = "ISO-8859-1";
   public static final String XMS_PROPERTIES_ENCODING_UNICODE = "UTF-8";
 
@@ -138,7 +184,8 @@ public final class AbfsHttpConstants {
 
     DEC_12_2019("2019-12-12"),
     APR_10_2021("2021-04-10"),
-    AUG_03_2023("2023-08-03");
+    AUG_03_2023("2023-08-03"),
+    NOV_04_2024("2024-11-04");
 
     private final String xMsApiVersion;
 
@@ -160,7 +207,41 @@ public final class AbfsHttpConstants {
   public static final String DECEMBER_2019_API_VERSION = ApiVersion.DEC_12_2019.toString();
 
   /**
-   * Value that differentiates categories of the http_status.
+   * List of Constants Used by Blob Endpoint Rest APIs.
+   */
+  public static final String XML_TAG_NAME = "Name";
+  public static final String XML_TAG_BLOB = "Blob";
+  public static final String XML_TAG_NEXT_MARKER = "NextMarker";
+  public static final String XML_TAG_METADATA = "Metadata";
+  public static final String XML_TAG_PROPERTIES = "Properties";
+  public static final String XML_TAG_BLOB_PREFIX = "BlobPrefix";
+  public static final String XML_TAG_CONTENT_LEN = "Content-Length";
+  public static final String XML_TAG_RESOURCE_TYPE = "ResourceType";
+  public static final String XML_TAG_INVALID_XML = "Invalid XML";
+  public static final String XML_TAG_HDI_ISFOLDER = "hdi_isfolder";
+  public static final String XML_TAG_ETAG = "Etag";
+  public static final String XML_TAG_LAST_MODIFIED_TIME = "Last-Modified";
+  public static final String XML_TAG_CREATION_TIME   = "Creation-Time";
+  public static final String XML_TAG_OWNER = "Owner";
+  public static final String XML_TAG_GROUP = "Group";
+  public static final String XML_TAG_PERMISSIONS = "Permissions";
+  public static final String XML_TAG_ACL = "Acl";
+  public static final String XML_TAG_COPY_ID = "CopyId";
+  public static final String XML_TAG_COPY_STATUS = "CopyStatus";
+  public static final String XML_TAG_COPY_SOURCE = "CopySource";
+  public static final String XML_TAG_COPY_PROGRESS = "CopyProgress";
+  public static final String XML_TAG_COPY_COMPLETION_TIME = "CopyCompletionTime";
+  public static final String XML_TAG_COPY_STATUS_DESCRIPTION = "CopyStatusDescription";
+  public static final String XML_TAG_BLOB_ERROR_CODE_START_XML = "<Code>";
+  public static final String XML_TAG_BLOB_ERROR_CODE_END_XML = "</Code>";
+  public static final String XML_TAG_BLOB_ERROR_MESSAGE_START_XML = "<Message>";
+  public static final String XML_TAG_BLOB_ERROR_MESSAGE_END_XML = "</Message>";
+  public static final String XML_TAG_COMMITTED_BLOCKS = "CommittedBlocks";
+  public static final String XML_TAG_BLOCK_NAME = "Block";
+  public static final String PUT_BLOCK_LIST = "PutBlockList";
+
+  /**
+   * Value that differentiates categories of the HTTP status.
    * <pre>
    * 100 - 199 : Informational responses
    * 200 - 299 : Successful responses
@@ -170,6 +251,28 @@ public final class AbfsHttpConstants {
    * </pre>
    */
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
+
+  /**
+   * XML version declaration for the block list.
+   */
+  public static final String XML_VERSION = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>%n";
+
+  /**
+   * Start tag for the block list XML.
+   */
+  public static final String BLOCK_LIST_START_TAG = "<BlockList>%n";
+
+  /**
+   * End tag for the block list XML.
+   */
+  public static final String BLOCK_LIST_END_TAG = "</BlockList>%n";
+
+  /**
+   * Format string for the latest block in the block list XML.
+   * The placeholder will be replaced with the block identifier.
+   */
+  public static final String LATEST_BLOCK_FORMAT = "<Latest>%s</Latest>%n";
+
 
   /**
    * List of configurations that are related to Customer-Provided-Keys.
@@ -211,6 +314,17 @@ public final class AbfsHttpConstants {
   public static final String APACHE_IMPL = "Apache";
   public static final String JDK_FALLBACK = "JDK_fallback";
   public static final String KEEP_ALIVE_CACHE_CLOSED = "KeepAliveCache is closed";
+  public static final String DFS_FLUSH = "D";
+  public static final String DFS_APPEND = "D";
+  public static final String BLOB_FLUSH = "B";
+  public static final String BLOB_APPEND = "B";
+  public static final String FALLBACK_FLUSH = "FB";
+  public static final String FALLBACK_APPEND = "FB";
+
+  public static final String COPY_STATUS_SUCCESS = "success";
+  public static final String COPY_STATUS_PENDING = "pending";
+  public static final String COPY_STATUS_ABORTED = "aborted";
+  public static final String COPY_STATUS_FAILED = "failed";
 
   private AbfsHttpConstants() {}
 }

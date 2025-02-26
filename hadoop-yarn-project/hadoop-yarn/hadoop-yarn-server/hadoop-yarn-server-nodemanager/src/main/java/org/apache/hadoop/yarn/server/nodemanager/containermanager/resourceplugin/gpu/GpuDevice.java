@@ -33,6 +33,9 @@ public class GpuDevice implements Serializable, Comparable {
     this.minorNumber = minorNumber;
   }
 
+  public GpuDevice() {
+  }
+
   public int getIndex() {
     return index;
   }

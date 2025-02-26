@@ -34,15 +34,15 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.TrashPolicyDefault.Emptier;
@@ -60,7 +60,7 @@ public class TestTrash {
 
   private final static Path TEST_DIR = new Path(BASE_PATH.getAbsolutePath());
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     // ensure each test initiates a FileSystem instance,
     // avoid getting an old instance from cache.
@@ -78,7 +78,7 @@ public class TestTrash {
   protected static void checkTrash(FileSystem trashFs, Path trashRoot,
       Path path) throws IOException {
     Path p = Path.mergePaths(trashRoot, path);
-    assertTrue("Could not find file in trash: "+ p , trashFs.exists(p));
+    assertTrue(trashFs.exists(p), "Could not find file in trash: " + p);
   }
   
   // counts how many instances of the file are in the Trash
@@ -169,7 +169,7 @@ public class TestTrash {
       int val = -1;
       val = shell.run(args);
 
-      assertEquals("Expunge should return zero", 0, val);
+      assertEquals(0, val, "Expunge should return zero");
     }
 
     // Verify that we succeed in removing the file we created.
@@ -181,7 +181,7 @@ public class TestTrash {
       int val = -1;
       val = shell.run(args);
 
-      assertEquals("Remove should return zero", 0, val);
+      assertEquals(0, val, "Remove should return zero");
 
       checkTrash(trashRootFs, trashRoot, fs.makeQualified(myFile));
     }
@@ -197,7 +197,7 @@ public class TestTrash {
       int val = -1;
       val = shell.run(args);
 
-      assertEquals("Remove should return zero", 0, val);
+      assertEquals(0, val, "Remove should return zero");
     }
 
     // Verify that we can recreate the file
@@ -212,7 +212,7 @@ public class TestTrash {
       int val = -1;
       val = shell.run(args);
 
-      assertEquals("Recursive Remove should return zero", 0, val);
+      assertEquals(0, val, "Recursive Remove should return zero");
     }
 
     // recreate directory
@@ -226,7 +226,7 @@ public class TestTrash {
       int val = -1;
       val = shell.run(args);
 
-      assertEquals("Recursive Remove should return zero", 0, val);
+      assertEquals(0, val, "Recursive Remove should return zero");
     }
 
     // Check that we can delete a file from the trash
@@ -237,7 +237,7 @@ public class TestTrash {
 
       val = shell.run(new String[] {"-rm", toErase.toString()});
 
-      assertEquals("Recursive Remove should return zero", 0, val);
+      assertEquals(0, val, "Recursive Remove should return zero");
       checkNotInTrash(trashRootFs, trashRoot, toErase.toString());
       checkNotInTrash(trashRootFs, trashRoot, toErase.toString()+".1");
     }
@@ -249,7 +249,7 @@ public class TestTrash {
       int val = -1;
       val = shell.run(args);
 
-      assertEquals("Expunge should return zero", 0, val);
+      assertEquals(0, val, "Expunge should return zero");
     }
 
     // verify that after expunging the Trash, it really goes away
@@ -268,7 +268,7 @@ public class TestTrash {
       int val = -1;
       val = shell.run(args);
 
-      assertEquals("Remove should return zero", 0, val);
+      assertEquals(0, val, "Remove should return zero");
       checkTrash(trashRootFs, trashRoot, myFile);
 
       args = new String[2];
@@ -277,7 +277,7 @@ public class TestTrash {
       val = -1;
       val = shell.run(args);
 
-      assertEquals("Recursive Remove should return zero", 0, val);
+      assertEquals(0, val, "Recursive Remove should return zero");
       checkTrash(trashRootFs, trashRoot, myPath);
     }
 
@@ -289,7 +289,7 @@ public class TestTrash {
       int val = -1;
       val = shell.run(args);
 
-      assertEquals("Recursive Remove should return exit code 1", 1, val);
+      assertEquals(1, val, "Recursive Remove should return exit code 1");
       assertTrue(trashRootFs.exists(trashRoot));
     }
     
@@ -307,17 +307,15 @@ public class TestTrash {
       args[2] = myFile.toString();
       int val = -1;
       // Clear out trash
-      assertEquals("-expunge failed",
-          0, shell.run(new String[] {"-expunge" }));
+      assertEquals(0, shell.run(new String[] {"-expunge" }), "-expunge failed");
 
       val = shell.run(args);
 
-      assertFalse("Expected TrashRoot (" + trashRoot + 
+      assertFalse(trashRootFs.exists(trashRoot), "Expected TrashRoot (" + trashRoot +
           ") to exist in file system:"
-          + trashRootFs.getUri(), 
-          trashRootFs.exists(trashRoot)); // No new Current should be created
+          + trashRootFs.getUri()); // No new Current should be created
       assertFalse(fs.exists(myFile));
-      assertEquals("Remove with skipTrash should return zero", 0, val);
+      assertEquals(0, val, "Remove with skipTrash should return zero");
     }
     
     // recreate directory and file
@@ -340,15 +338,14 @@ public class TestTrash {
       assertFalse(trashRootFs.exists(trashRoot)); // No new Current should be created
       assertFalse(fs.exists(myPath));
       assertFalse(fs.exists(myFile));
-      assertEquals("Remove with skipTrash should return zero", 0, val);
+      assertEquals(0, val, "Remove with skipTrash should return zero");
     }
     
     // deleting same file multiple times
     {     
       int val = -1;
       mkdir(fs, myPath);
-      assertEquals("Expunge should return zero",
-            0, shell.run(new String[] {"-expunge" }));
+      assertEquals(0, shell.run(new String[] {"-expunge" }), "Expunge should return zero");
 
       
       // create a file in that directory.
@@ -363,7 +360,7 @@ public class TestTrash {
         // delete file
         val = shell.run(args);
 
-        assertEquals("Remove should return zero", 0, val);
+        assertEquals(0, val, "Remove should return zero");
       }
       // current trash directory
       Path trashDir = Path.mergePaths(new Path(trashRoot.toUri().getPath()),
@@ -377,7 +374,7 @@ public class TestTrash {
       int count = countSameDeletedFiles(fs, trashDir, myFile);
       System.out.println("counted " + count + " files "
           + myFile.getName() + "* in " + trashDir);
-      assertEquals("Count should have returned 10", num_runs, count);
+      assertEquals(num_runs, count, "Count should have returned 10");
     }
     
     //Verify skipTrash option is suggested when rm fails due to its absence
@@ -397,11 +394,10 @@ public class TestTrash {
       String output = byteStream.toString();
       System.setOut(stdout);
       System.setErr(stderr);
-      assertTrue("skipTrash wasn't suggested as remedy to failed rm command" +
-          " or we deleted / even though we could not get server defaults",
-          output.indexOf("Consider using -skipTrash option") != -1 ||
-          output.indexOf("Failed to determine server "
-              + "trash configuration") != -1);
+      assertTrue(output.indexOf("Consider using -skipTrash option") != -1 ||
+          output.indexOf("Failed to determine server " + "trash configuration") != -1,
+          "skipTrash wasn't suggested as remedy to failed rm command" +
+          " or we deleted / even though we could not get server defaults");
     }
 
     // Verify old checkpoint format is recognized
@@ -423,11 +419,10 @@ public class TestTrash {
       int rc = -1;
       rc = shell.run(new String[] {"-expunge" });
 
-      assertEquals("Expunge should return zero", 0, rc);
-      assertFalse("old checkpoint format not recognized",
-          trashRootFs.exists(dirToDelete));
-      assertTrue("old checkpoint format directory should not be removed",
-          trashRootFs.exists(dirToKeep));
+      assertEquals(0, rc, "Expunge should return zero");
+      assertFalse(trashRootFs.exists(dirToDelete), "old checkpoint format not recognized");
+      assertTrue(trashRootFs.exists(dirToKeep),
+          "old checkpoint format directory should not be removed");
     }
 
     // Verify expunge -immediate removes all checkpoints and current folder
@@ -451,15 +446,12 @@ public class TestTrash {
       int rc = -1;
       rc = shell.run(new String[] {"-expunge", "-immediate"});
 
-      assertEquals("Expunge immediate should return zero", 0, rc);
-      assertFalse("Old checkpoint should be removed",
-          trashRootFs.exists(oldCheckpoint));
-      assertFalse("Recent checkpoint should be removed",
-          trashRootFs.exists(recentCheckpoint));
-      assertFalse("Current folder should be removed",
-          trashRootFs.exists(currentFolder));
-      assertEquals("Ensure trash folder is empty", 0,
-          trashRootFs.listStatus(trashRoot.getParent()).length);
+      assertEquals(0, rc, "Expunge immediate should return zero");
+      assertFalse(trashRootFs.exists(oldCheckpoint), "Old checkpoint should be removed");
+      assertFalse(trashRootFs.exists(recentCheckpoint), "Recent checkpoint should be removed");
+      assertFalse(trashRootFs.exists(currentFolder), "Current folder should be removed");
+      assertEquals(0, trashRootFs.listStatus(trashRoot.getParent()).length,
+          "Ensure trash folder is empty");
     }
   }
 
@@ -510,16 +502,12 @@ public class TestTrash {
           "-fs", "testlfs:/"};
       int val = testlfsshell.run(args);
 
-      assertEquals("Expunge immediate with filesystem should return zero",
-          0, val);
-      assertFalse("Old checkpoint should be removed",
-          testlfs.exists(oldCheckpoint));
-      assertFalse("Recent checkpoint should be removed",
-          testlfs.exists(recentCheckpoint));
-      assertFalse("Current folder should be removed",
-          testlfs.exists(currentFolder));
-      assertEquals("Ensure trash folder is empty", 0,
-          testlfs.listStatus(trashRoot.getParent()).length);
+      assertEquals(0, val, "Expunge immediate with filesystem should return zero");
+      assertFalse(testlfs.exists(oldCheckpoint), "Old checkpoint should be removed");
+      assertFalse(testlfs.exists(recentCheckpoint), "Recent checkpoint should be removed");
+      assertFalse(testlfs.exists(currentFolder), "Current folder should be removed");
+      assertEquals(0,
+          testlfs.listStatus(trashRoot.getParent()).length, "Ensure trash folder is empty");
 
       // Incorrect FileSystem scheme
       String incorrectFS = "incorrectfs:/";
@@ -527,17 +515,15 @@ public class TestTrash {
           "-fs", incorrectFS};
       val = testlfsshell.run(args);
 
-      assertEquals("Expunge immediate should return exit code 1 when "
-              + "incorrect Filesystem is passed",
-          1, val);
+      assertEquals(1, val, "Expunge immediate should return exit code 1 when "
+          + "incorrect Filesystem is passed");
 
       // Empty FileSystem scheme
       args = new String[]{"-expunge", "-immediate",
           "-fs", ""};
       val = testlfsshell.run(args);
 
-      assertNotEquals("Expunge immediate should fail when filesystem is NULL",
-          0, val);
+      assertNotEquals(0, val, "Expunge immediate should fail when filesystem is NULL");
       FileSystem.removeFileSystemForTesting(testlfsURI, config, testlfs);
     }
   }
@@ -836,7 +822,7 @@ public class TestTrash {
     emptierThread.join();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     File trashDir = new File(TEST_DIR.toUri().getPath());
     if (trashDir.exists() && !FileUtil.fullyDelete(trashDir)) {
@@ -969,18 +955,14 @@ public class TestTrash {
       Path trashRoot = trash.getCurrentTrashDir(emptyDir);
       fileSystem.delete(trashRoot, true);
       // Move to trash should be succeed
-      assertTrue("Move an empty directory to trash failed",
-          trash.moveToTrash(emptyDir));
+      assertTrue(trash.moveToTrash(emptyDir), "Move an empty directory to trash failed");
       // Verify the empty dir is removed
-      assertFalse("The empty directory still exists on file system",
-          fileSystem.exists(emptyDir));
+      assertFalse(fileSystem.exists(emptyDir), "The empty directory still exists on file system");
       emptyDir = fileSystem.makeQualified(emptyDir);
       Path dirInTrash = Path.mergePaths(trashRoot, emptyDir);
-      assertTrue("Directory wasn't moved to trash",
-          fileSystem.exists(dirInTrash));
+      assertTrue(fileSystem.exists(dirInTrash), "Directory wasn't moved to trash");
       FileStatus[] flist = fileSystem.listStatus(dirInTrash);
-      assertTrue("Directory is not empty",
-          flist!= null && flist.length == 0);
+      assertTrue(flist!= null && flist.length == 0, "Directory is not empty");
     }
   }
 
@@ -1029,15 +1011,14 @@ public class TestTrash {
         }
         Path fileInTrash = Path.mergePaths(trashDir, file);
         FileStatus fstat = wrapper.getFileStatus(fileInTrash);
-        assertTrue(String.format("File %s is not moved to trash",
-            fileInTrash.toString()),
-            wrapper.exists(fileInTrash));
+        assertTrue(wrapper.exists(fileInTrash), String.format("File %s is not moved to trash",
+            fileInTrash.toString()));
         // Verify permission not change
-        assertTrue(String.format("Expected file: %s is %s, but actual is %s",
+        assertTrue(fstat.getPermission().equals(fsPermission),
+            String.format("Expected file: %s is %s, but actual is %s",
             fileInTrash.toString(),
             fsPermission.toString(),
-            fstat.getPermission().toString()),
-            fstat.getPermission().equals(fsPermission));
+            fstat.getPermission().toString()));
       }
 
       // Verify the trash directory can be removed
@@ -1077,11 +1058,9 @@ public class TestTrash {
       emptierThread.join();
 
       AuditableTrashPolicy at = (AuditableTrashPolicy) trash.getTrashPolicy();
-      assertEquals(
+      assertEquals(expectedNumOfCheckpoints, at.getNumberOfCheckpoints(),
           String.format("Expected num of checkpoints is %s, but actual is %s",
-              expectedNumOfCheckpoints, at.getNumberOfCheckpoints()),
-          expectedNumOfCheckpoints,
-          at.getNumberOfCheckpoints());
+          expectedNumOfCheckpoints, at.getNumberOfCheckpoints()));
     } catch (InterruptedException  e) {
       // Ignore
     } finally {

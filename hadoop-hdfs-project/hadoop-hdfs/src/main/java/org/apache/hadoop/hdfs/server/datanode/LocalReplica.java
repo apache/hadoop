@@ -291,6 +291,12 @@ abstract public class LocalReplica extends ReplicaInfo {
   public LengthInputStream getMetadataInputStream(long offset)
       throws IOException {
     final File meta = getMetaFile();
+    if (NativeIO.isAvailable()) {
+      return new LengthInputStream(
+          getFileIoProvider().getShareDeleteFileInputStream(
+              getVolume(), meta, offset),
+          meta.length());
+    }
     return new LengthInputStream(
         getFileIoProvider().openAndSeek(getVolume(), meta, offset),
         meta.length());

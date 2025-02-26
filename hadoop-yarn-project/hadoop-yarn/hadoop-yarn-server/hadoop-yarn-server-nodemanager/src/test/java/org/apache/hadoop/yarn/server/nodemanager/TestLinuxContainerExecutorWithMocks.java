@@ -336,7 +336,7 @@ public class TestLinuxContainerExecutorWithMocks {
       assertThat(result.get(23)).isEqualTo("8040");
       assertThat(result.get(24)).isEqualTo("nmPrivateCTokensPath");
 
-    } catch (InterruptedException e) {
+    } catch (ConfigurationException | InterruptedException e) {
       LOG.error("Error:"+e.getMessage(),e);
       Assert.fail();
     }
@@ -628,20 +628,81 @@ public class TestLinuxContainerExecutorWithMocks {
     when(context.getEnvironment()).thenReturn(env);
     Path workDir = new Path("/tmp");
 
+    LocalizerStartContext lsc = new LocalizerStartContext.Builder()
+        .setNmPrivateContainerTokens(nmPrivateCTokensPath)
+        .setNmAddr(address)
+        .setUser(appSubmitter)
+        .setAppId(appId.toString())
+        .setLocId("12345")
+        .setDirsHandler(dirService)
+        .build();
+
     try {
-      lce.startLocalizer(new LocalizerStartContext.Builder()
-          .setNmPrivateContainerTokens(nmPrivateCTokensPath)
-          .setNmAddr(address)
-          .setUser(appSubmitter)
-          .setAppId(appId.toString())
-          .setLocId("12345")
-          .setDirsHandler(dirService)
-          .build());
+      lce.startLocalizer(lsc);
       Assert.fail("startLocalizer should have thrown an exception");
     } catch (IOException e) {
       assertTrue("Unexpected exception " + e,
           e.getMessage().contains("exitCode"));
     }
+
+    final int[] exitCodesToThrow = {
+        LinuxContainerExecutor.ExitCode.INVALID_CONTAINER_EXEC_PERMISSIONS.getExitCode(),
+        LinuxContainerExecutor.ExitCode.INVALID_CONFIG_FILE.getExitCode(),
+    };
+
+    for (int exitCode : exitCodesToThrow) {
+      doThrow(new PrivilegedOperationException("invalid config", exitCode, null, null))
+          .when(spyPrivilegedExecutor).executePrivilegedOperation(
+              any(), any(PrivilegedOperation.class),
+              any(), any(), anyBoolean(), anyBoolean());
+
+      try {
+        lce.startLocalizer(lsc);
+        Assert.fail("startLocalizer should have thrown a ConfigurationException");
+      } catch (ConfigurationException e) {
+        assertTrue("Unexpected exception " + e,
+            e.getMessage().contains("exitCode=" + exitCode));
+      }
+    }
+
+    // Assert that we do catch an IOException thrown by the ProcessBuilder.start
+    // method as a misconfiguration
+    String containerExecutorPath = lce.getContainerExecutorExecutablePath(conf);
+    doThrow(new PrivilegedOperationException("IO error",
+        new IOException("Cannot run program \""+ containerExecutorPath + "\"")))
+        .when(spyPrivilegedExecutor).executePrivilegedOperation(
+            any(), any(PrivilegedOperation.class),
+            any(), any(), anyBoolean(), anyBoolean());
+
+    try {
+      lce.startLocalizer(lsc);
+      Assert.fail("startLocalizer should have thrown an ConfigurationException");
+    } catch (ConfigurationException e) {
+      assertTrue("Unexpected exception " + e,
+          e.getMessage().contains("Container executor not found"));
+    }
+
+    // Assert that we do not catch every IOException as a misconfiguration
+    doThrow(new PrivilegedOperationException("IO error",
+        new IOException("No such file or directory")))
+        .when(spyPrivilegedExecutor).executePrivilegedOperation(
+            any(), any(PrivilegedOperation.class),
+            any(), any(), anyBoolean(), anyBoolean());
+
+    try {
+      lce.startLocalizer(lsc);
+      Assert.fail("startLocalizer should have thrown an IOException");
+    } catch (ConfigurationException e) {
+      Assert.fail("startLocalizer should not have thrown a ConfigurationException");
+    } catch (IOException e) {
+      assertTrue("Unexpected exception " + e,
+          e.getMessage().contains("exitCode"));
+    }
+
+    doThrow(new PrivilegedOperationException("interrupted"))
+        .when(spyPrivilegedExecutor).executePrivilegedOperation(
+            any(), any(PrivilegedOperation.class),
+            any(), any(), anyBoolean(), anyBoolean());
 
     lce.activateContainer(cid, new Path(workDir, "pid.txt"));
     lce.launchContainer(new ContainerStartContext.Builder()

@@ -21,25 +21,24 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.lang.reflect.Field;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
-import org.apache.hadoop.fs.azurebfs.services.FixedSASTokenProvider;
-import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
-import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
-import org.apache.hadoop.util.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
+import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.Base64StringConfigurationValidatorAnnotation;
+import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.BooleanConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerWithOutlierConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.LongConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.StringConfigurationValidatorAnnotation;
-import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.Base64StringConfigurationValidatorAnnotation;
-import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.BooleanConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
@@ -65,15 +64,15 @@ import org.apache.hadoop.fs.azurebfs.oauth2.WorkloadIdentityTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
+import org.apache.hadoop.fs.azurebfs.services.FixedSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
-import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ReflectionUtils;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
@@ -399,6 +398,34 @@ public class AbfsConfiguration{
       FS_AZURE_ENABLE_PAGINATED_DELETE, DefaultValue = DEFAULT_ENABLE_PAGINATED_DELETE)
   private boolean isPaginatedDeleteEnabled;
 
+  @LongConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS, DefaultValue = DEFAULT_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS)
+  private long blobCopyProgressPollWaitMillis;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey =
+          FS_AZURE_BLOB_COPY_MAX_WAIT_MILLIS, DefaultValue = DEFAULT_AZURE_BLOB_COPY_MAX_WAIT_MILLIS)
+  private long blobCopyProgressMaxWaitMillis;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_BLOB_ATOMIC_RENAME_LEASE_REFRESH_DURATION, DefaultValue = DEFAULT_AZURE_BLOB_ATOMIC_RENAME_LEASE_REFRESH_DURATION)
+  private long blobAtomicRenameLeaseRefreshDuration;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_PRODUCER_QUEUE_MAX_SIZE, DefaultValue = DEFAULT_FS_AZURE_PRODUCER_QUEUE_MAX_SIZE)
+  private int producerQueueMaxSize;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+          FS_AZURE_CONSUMER_MAX_LAG, DefaultValue = DEFAULT_FS_AZURE_CONSUMER_MAX_LAG)
+  private int listingMaxConsumptionLag;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_BLOB_DIR_RENAME_MAX_THREAD, DefaultValue = DEFAULT_FS_AZURE_BLOB_RENAME_THREAD)
+  private int blobRenameDirConsumptionParallelism;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_BLOB_DIR_DELETE_MAX_THREAD, DefaultValue = DEFAULT_FS_AZURE_BLOB_DELETE_THREAD)
+  private int blobDeleteDirConsumptionParallelism;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
   private int maxApacheHttpClientIoExceptionsRetries;
@@ -413,9 +440,21 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME)
   private long maxApacheHttpClientConnectionIdleTime;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID)
+  private boolean enableClientTransactionId;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
+  /**
+   * Constructor for AbfsConfiguration for specified service type.
+   * @param rawConfig used to initialize the configuration.
+   * @param accountName the name of the azure storage account.
+   * @param fsConfiguredServiceType service type configured for the file system.
+   * @throws IllegalAccessException if the field is not accessible.
+   * @throws IOException if an I/O error occurs.
+   */
   public AbfsConfiguration(final Configuration rawConfig,
       String accountName,
       AbfsServiceType fsConfiguredServiceType)
@@ -445,13 +484,28 @@ public class AbfsConfiguration{
     }
   }
 
+  /**
+   * Constructor for AbfsConfiguration for default service type i.e. DFS.
+   * @param rawConfig used to initialize the configuration.
+   * @param accountName the name of the azure storage account.
+   * @throws IllegalAccessException if the field is not accessible.
+   * @throws IOException if an I/O error occurs.
+   */
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, IOException {
     this(rawConfig, accountName, AbfsServiceType.DFS);
   }
 
+  /**
+   * Returns the account type as per the user configuration. Gets the account
+   * specific value if it exists, then looks for an account agnostic value.
+   * If not configured driver makes additional getAcl call to determine
+   * the account type during file system initialization.
+   * @return TRUE/FALSE value if configured, UNKNOWN if not configured.
+   */
   public Trilean getIsNamespaceEnabledAccount() {
-    return Trilean.getTrilean(isNamespaceEnabledAccount);
+    return Trilean.getTrilean(
+        getString(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, isNamespaceEnabledAccount));
   }
 
   /**
@@ -462,7 +516,7 @@ public class AbfsConfiguration{
    * @return the service type.
    */
   public AbfsServiceType getFsConfiguredServiceType() {
-    return getEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, fsConfiguredServiceType);
+    return getCaseInsensitiveEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, fsConfiguredServiceType);
   }
 
   /**
@@ -471,7 +525,7 @@ public class AbfsConfiguration{
    * @return the service type.
    */
   public AbfsServiceType getConfiguredServiceTypeForFNSAccounts() {
-    return getEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, null);
+    return getCaseInsensitiveEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, null);
   }
 
   /**
@@ -480,7 +534,7 @@ public class AbfsConfiguration{
    * @return the service type.
    */
   public AbfsServiceType getIngressServiceType() {
-    return getEnum(FS_AZURE_INGRESS_SERVICE_TYPE, getFsConfiguredServiceType());
+    return getCaseInsensitiveEnum(FS_AZURE_INGRESS_SERVICE_TYPE, getFsConfiguredServiceType());
   }
 
   /**
@@ -500,14 +554,9 @@ public class AbfsConfiguration{
    */
   public void validateConfiguredServiceType(boolean isHNSEnabled)
       throws InvalidConfigurationValueException {
-    // Todo: [FnsOverBlob] - Remove this check, Failing FS Init with Blob Endpoint Until FNS over Blob is ready.
-    if (getFsConfiguredServiceType() == AbfsServiceType.BLOB) {
-      throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY,
-          "Blob Endpoint Support not yet available");
-    }
     if (isHNSEnabled && getConfiguredServiceTypeForFNSAccounts() == AbfsServiceType.BLOB) {
       throw new InvalidConfigurationValueException(
-          FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, "Cannot be BLOB for HNS Account");
+          FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, "Service Type Cannot be BLOB for HNS Account");
     } else if (isHNSEnabled && fsConfiguredServiceType == AbfsServiceType.BLOB) {
       throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY,
           "Blob Endpoint Url Cannot be used to initialize filesystem for HNS Account");
@@ -702,6 +751,28 @@ public class AbfsConfiguration{
   public <T extends Enum<T>> T getEnum(String name, T defaultValue) {
     return rawConfig.getEnum(accountConf(name),
         rawConfig.getEnum(name, defaultValue));
+  }
+
+  /**
+   * Returns the account-specific enum value if it exists, then
+   * looks for an account-agnostic value in case-insensitive manner.
+   * @param name Account-agnostic configuration key
+   * @param defaultValue Value returned if none is configured
+   * @param <T> Enum type
+   * @return enum value if one exists, else null
+   */
+  public <T extends Enum<T>> T getCaseInsensitiveEnum(String name, T defaultValue) {
+    String configValue = getString(name, null);
+    if (configValue != null) {
+      for (T enumConstant : defaultValue.getDeclaringClass().getEnumConstants()) { // Step 3: Iterate over enum constants
+        if (enumConstant.name().equalsIgnoreCase(configValue)) {
+          return enumConstant;
+        }
+      }
+      // No match found
+      throw new IllegalArgumentException("No enum constant " + defaultValue.getDeclaringClass().getCanonicalName() + "." + configValue);
+    }
+    return defaultValue;
   }
 
   /**
@@ -1008,6 +1079,10 @@ public class AbfsConfiguration{
    */
   public long getMaxApacheHttpClientConnectionIdleTime() {
     return maxApacheHttpClientConnectionIdleTime;
+  }
+
+  public boolean getIsClientTransactionIdEnabled() {
+    return enableClientTransactionId;
   }
 
   /**
@@ -1417,6 +1492,20 @@ public class AbfsConfiguration{
     this.isNamespaceEnabledAccount = isNamespaceEnabledAccount;
   }
 
+  /**
+   * Checks if the FixedSASTokenProvider is configured for the current account.
+   *
+   * @return true if the FixedSASTokenProvider is configured, false otherwise.
+   */
+  public boolean isFixedSASTokenProviderConfigured() {
+    try {
+      return getSASTokenProvider() instanceof FixedSASTokenProvider;
+    } catch (AzureBlobFileSystemException e) {
+      LOG.debug("Failed to get SAS token provider", e);
+      return false;
+    }
+  }
+
   private String getTrimmedPasswordString(String key, String defaultValue) throws IOException {
     String value = getPasswordString(key);
     if (StringUtils.isBlank(value)) {
@@ -1462,5 +1551,33 @@ public class AbfsConfiguration{
   @VisibleForTesting
   public void setIsChecksumValidationEnabled(boolean isChecksumValidationEnabled) {
     this.isChecksumValidationEnabled = isChecksumValidationEnabled;
+  }
+
+  public long getBlobCopyProgressPollWaitMillis() {
+    return blobCopyProgressPollWaitMillis;
+  }
+
+  public long getBlobCopyProgressMaxWaitMillis() {
+    return blobCopyProgressMaxWaitMillis;
+  }
+
+  public long getAtomicRenameLeaseRefreshDuration() {
+    return blobAtomicRenameLeaseRefreshDuration;
+  }
+
+  public int getProducerQueueMaxSize() {
+    return producerQueueMaxSize;
+  }
+
+  public int getListingMaxConsumptionLag() {
+    return listingMaxConsumptionLag;
+  }
+
+  public int getBlobRenameDirConsumptionParallelism() {
+    return blobRenameDirConsumptionParallelism;
+  }
+
+  public int getBlobDeleteDirConsumptionParallelism() {
+    return blobDeleteDirConsumptionParallelism;
   }
 }

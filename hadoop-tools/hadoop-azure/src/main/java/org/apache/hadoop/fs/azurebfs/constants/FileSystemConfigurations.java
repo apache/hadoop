@@ -39,11 +39,11 @@ public final class FileSystemConfigurations {
   private static final int SIXTY_SECONDS = 60_000;
 
   // Retry parameter defaults.
-  public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 3_000;  // 3s
-  public static final int DEFAULT_MAX_BACKOFF_INTERVAL = 30_000;  // 30s
+  public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 500;  // 500ms
+  public static final int DEFAULT_MAX_BACKOFF_INTERVAL = 25_000;  // 25s
   public static final boolean DEFAULT_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED = true;
   public static final int DEFAULT_STATIC_RETRY_INTERVAL = 1_000; // 1s
-  public static final int DEFAULT_BACKOFF_INTERVAL = 3_000;  // 3s
+  public static final int DEFAULT_BACKOFF_INTERVAL = 500;  // 500ms
   public static final int DEFAULT_MAX_RETRY_ATTEMPTS = 30;
   public static final int DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT = 3;
 
@@ -108,7 +108,7 @@ public final class FileSystemConfigurations {
 
   public static final boolean DEFAULT_ENABLE_FLUSH = true;
   public static final boolean DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH = true;
-  public static final boolean DEFAULT_ENABLE_AUTOTHROTTLING = true;
+  public static final boolean DEFAULT_ENABLE_AUTOTHROTTLING = false;
   public static final int DEFAULT_METRIC_IDLE_TIMEOUT_MS = 60_000;
   public static final int DEFAULT_METRIC_ANALYSIS_TIMEOUT_MS = 60_000;
   public static final boolean DEFAULT_FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED = true;
@@ -146,6 +146,11 @@ public final class FileSystemConfigurations {
   public static final int BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT = 20;
 
   /**
+   * Length of the block ID used for appends.
+   */
+  public static final int BLOCK_ID_LENGTH = 60;
+
+  /**
    * Buffer blocks to disk.
    * Capacity is limited to available disk space.
    */
@@ -169,13 +174,31 @@ public final class FileSystemConfigurations {
   public static final long THOUSAND = 1000L;
 
   public static final HttpOperationType DEFAULT_NETWORKING_LIBRARY
-      = HttpOperationType.APACHE_HTTP_CLIENT;
+      = HttpOperationType.JDK_HTTP_URL_CONNECTION;
 
   public static final int DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = 3;
 
   public static final long DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME = 5_000L;
 
   public static final int DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS = 5;
+
+  public static final long DEFAULT_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS = 1_000L;
+
+  public static final long DEFAULT_AZURE_BLOB_COPY_MAX_WAIT_MILLIS = 300_000L;
+
+  public static final long DEFAULT_AZURE_BLOB_ATOMIC_RENAME_LEASE_REFRESH_DURATION = 60_000L;
+
+  public static final int DEFAULT_FS_AZURE_PRODUCER_QUEUE_MAX_SIZE = 2 * DEFAULT_AZURE_LIST_MAX_RESULTS;
+
+  public static final int DEFAULT_FS_AZURE_CONSUMER_MAX_LAG = DEFAULT_AZURE_LIST_MAX_RESULTS;
+
+  public static final int DEFAULT_FS_AZURE_LISTING_ACTION_THREADS = 5;
+
+  public static final int DEFAULT_FS_AZURE_BLOB_RENAME_THREAD = DEFAULT_FS_AZURE_LISTING_ACTION_THREADS;
+
+  public static final int DEFAULT_FS_AZURE_BLOB_DELETE_THREAD = DEFAULT_FS_AZURE_LISTING_ACTION_THREADS;
+
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID = false;
 
   private FileSystemConfigurations() {}
 }

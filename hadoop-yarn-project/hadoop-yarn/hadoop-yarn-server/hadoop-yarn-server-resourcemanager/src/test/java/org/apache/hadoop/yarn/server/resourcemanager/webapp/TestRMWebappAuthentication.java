@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -30,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response.Status;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -43,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 
 import org.junit.AfterClass;
@@ -51,8 +54,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
-import com.sun.jersey.api.client.ClientResponse.Status;
 
 /* Just a simple test class to ensure that the RM handles the static web user
  * correctly for secure and un-secure modes
@@ -65,10 +66,9 @@ public class TestRMWebappAuthentication {
   private static Configuration simpleConf;
   private static Configuration kerberosConf;
 
-  private static final File testRootDir = new File("target",
+  private static File testRootDir = new File("target",
     TestRMWebServicesDelegationTokenAuthentication.class.getName() + "-root");
-  private static File httpSpnegoKeytabFile = new File(
-    KerberosTestUtils.getKeytabFile());
+  private static File httpSpnegoKeytabFile = new File(KerberosTestUtils.getKeytabFile());
 
   private static boolean miniKDCStarted = false;
   private static MiniKdc testMiniKDC;
@@ -202,10 +202,10 @@ public class TestRMWebappAuthentication {
       assertEquals(Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
     }
 
-    requestBody = "{ \"state\": \"KILLED\"}";
-    url =
-        new URL(
-          "http://localhost:8088/ws/v1/cluster/apps/application_123_0/state");
+    AppState appState = new AppState();
+    appState.setState("KILLED");
+    requestBody = toJson(appState, AppState.class);
+    url = new URL("http://localhost:8088/ws/v1/cluster/apps/application_123_0/state");
     conn = (HttpURLConnection) url.openConnection();
     TestRMWebServicesDelegationTokenAuthentication.setupConn(conn, "PUT",
       "application/json", requestBody);

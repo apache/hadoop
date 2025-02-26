@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -265,31 +264,6 @@ public class DirMarkerTracker {
         ", filesFound=" + filesFound +
         ", scanCount=" + scanCount +
         '}';
-  }
-
-  /**
-   * Scan the surplus marker list and remove from it all where the directory
-   * policy says "keep". This is useful when auditing
-   * @param policy policy to use when auditing markers for
-   * inclusion/exclusion.
-   * @return list of markers stripped
-   */
-  public List<Path> removeAllowedMarkers(DirectoryPolicy policy) {
-    List<Path> removed = new ArrayList<>();
-    Iterator<Map.Entry<Path, Marker>> entries =
-        surplusMarkers.entrySet().iterator();
-    while (entries.hasNext()) {
-      Map.Entry<Path, Marker> entry = entries.next();
-      Path path = entry.getKey();
-      if (policy.keepDirectoryMarkers(path)) {
-        // there's a match
-        // remove it from the map.
-        entries.remove();
-        LOG.debug("Removing {}", entry.getValue());
-        removed.add(path);
-      }
-    }
-    return removed;
   }
 
   /**

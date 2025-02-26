@@ -160,7 +160,7 @@ public class UnmanagedAMLauncher {
     appName = cliParser.getOptionValue("appname", "UnmanagedAM");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
     amQueue = cliParser.getOptionValue("queue", "default");
-    classpath = cliParser.getOptionValue("classpath", null);
+    classpath = cliParser.getOptionValue("classpath", () ->null);
 
     amCmd = cliParser.getOptionValue("cmd");
     if (amCmd == null) {
