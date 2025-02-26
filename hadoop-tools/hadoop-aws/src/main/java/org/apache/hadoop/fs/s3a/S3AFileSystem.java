@@ -636,7 +636,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // If encryption method is set to CSE-KMS or CSE-CUSTOM then CSE is enabled.
       isCSEEnabled = CSEUtils.isCSEEnabled(getS3EncryptionAlgorithm().getMethod());
 
-      isAnalyticsAccelaratorEnabled = StreamIntegration.determineInputStreamType(conf).equals(InputStreamType.Analytics);
+      isAnalyticsAccelaratorEnabled = StreamIntegration.determineInputStreamType(conf)
+          .equals(InputStreamType.Analytics);
 
       // Create the appropriate fsHandler instance using a factory method
       fsHandler = createFileSystemHandler();

@@ -82,9 +82,10 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
   @Override
   public void testDistCpUpdateCheckFileSkip() throws Exception {
     // Currently analytics accelerator does not support reading of files that have been overwritten.
-    // This is because the analytics accelerator library caches metadata and data, and when a file is
-    // overwritten, the old data continues to be used, until it is removed from the cache over
-    // time. This will be fixed in https://github.com/awslabs/analytics-accelerator-s3/issues/218.
+    // This is because the analytics accelerator library caches metadata and data, and when a
+    // file is overwritten, the old data continues to be used, until it is removed from the
+    // cache over time. This will be fixed in
+    // https://github.com/awslabs/analytics-accelerator-s3/issues/218.
     // In this test case, the remote file is created, read, then deleted, and then created again
     // with different contents, and read again, which leads to assertions failing.
     skipIfAnalyticsAcceleratorEnabled(getContract().getConf(),

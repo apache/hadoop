@@ -51,10 +51,12 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
 
   public static final Logger LOG = LoggerFactory.getLogger(AnalyticsStream.class);
 
-  public AnalyticsStream(final ObjectReadParameters parameters, final S3SeekableInputStreamFactory s3SeekableInputStreamFactory) throws IOException {
+  public AnalyticsStream(final ObjectReadParameters parameters,
+      final S3SeekableInputStreamFactory s3SeekableInputStreamFactory) throws IOException {
     super(InputStreamType.Analytics, parameters);
     S3ObjectAttributes s3Attributes = parameters.getObjectAttributes();
-    this.inputStream = s3SeekableInputStreamFactory.createStream(S3URI.of(s3Attributes.getBucket(), s3Attributes.getKey()), buildOpenStreamInformation(parameters));
+    this.inputStream = s3SeekableInputStreamFactory.createStream(S3URI.of(s3Attributes.getBucket(),
+        s3Attributes.getKey()), buildOpenStreamInformation(parameters));
     getS3AStreamStatistics().streamOpened(InputStreamType.Analytics);
   }
 
@@ -220,11 +222,11 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
    * @return the AAL read policy
    */
   private InputPolicy mapS3AInputPolicyToAAL(S3AInputPolicy inputPolicy) {
-    switch (inputPolicy) {
-     case Sequential:
-       return InputPolicy.Sequential;
-     default:
-       return InputPolicy.None;
+   switch (inputPolicy) {
+    case Sequential:
+      return InputPolicy.Sequential;
+    default:
+      return InputPolicy.None;
     }
   }
 

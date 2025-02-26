@@ -129,8 +129,8 @@ public class ITestS3AContractMultipartUploader extends
   public void testConcurrentUploads() throws Throwable {
     assumeNotS3ExpressFileSystem(getFileSystem());
     // Currently analytics accelerator does not support reading of files that have been overwritten.
-    // This is because the analytics accelerator library caches metadata and data, and when a file is
-    // overwritten, the old data continues to be used, until it is removed from the cache over
+    // This is because the analytics accelerator library caches metadata and data, and when a file
+    // is overwritten, the old data continues to be used, until it is removed from the cache over
     // time. This will be fixed in https://github.com/awslabs/analytics-accelerator-s3/issues/218.
     skipIfAnalyticsAcceleratorEnabled(getContract().getConf(),
         "Analytics Accelerator currently does not support reading of over written files");

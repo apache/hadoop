@@ -103,7 +103,8 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
       ObjectInputStream objectInputStream = (ObjectInputStream) wrappedStream;
 
       Assertions.assertThat(objectInputStream.streamType()).isEqualTo(InputStreamType.Analytics);
-      Assertions.assertThat(objectInputStream.getInputPolicy()).isEqualTo(S3AInputPolicy.Sequential);
+      Assertions.assertThat(objectInputStream.getInputPolicy())
+          .isEqualTo(S3AInputPolicy.Sequential);
     }
 
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
@@ -113,9 +114,11 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
   public void testMalformedParquetFooter() throws IOException {
     describe("Reading a malformed parquet file should not throw an exception");
 
-    // File with malformed footer take from https://github.com/apache/parquet-testing/blob/master/bad_data/PARQUET-1481.parquet.
-    // This test ensures AAL does not throw exceptions if footer parsing fails. It will only emit a WARN log,
-    // "Unable to parse parquet footer for test/malformedFooter.parquet, parquet prefetch optimisations will be disabled for this key."
+    // File with malformed footer take from
+    // https://github.com/apache/parquet-testing/blob/master/bad_data/PARQUET-1481.parquet.
+    // This test ensures AAL does not throw exceptions if footer parsing fails.
+    // It will only emit a WARN log, "Unable to parse parquet footer for
+    // test/malformedFooter.parquet, parquet prefetch optimisations will be disabled for this key."
     Path dest = path("malformed_footer.parquet");
 
     File file = new File("src/test/resources/malformed_footer.parquet");
@@ -141,37 +144,37 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
    * can contain multiple row groups, this allows for further parallelisation, as each row group
    * can be processed independently.
    */
- @Test
- public void testMultiRowGroupParquet() throws Throwable {
+  @Test
+  public void testMultiRowGroupParquet() throws Throwable {
     describe("A parquet file is read successfully");
 
     Path dest = path("multi_row_group.parquet");
 
-   File file = new File("src/test/resources/multi_row_group.parquet");
-   Path sourcePath = new Path(file.toURI().getPath());
-   getFileSystem().copyFromLocalFile(false, true, sourcePath, dest);
+    File file = new File("src/test/resources/multi_row_group.parquet");
+    Path sourcePath = new Path(file.toURI().getPath());
+    getFileSystem().copyFromLocalFile(false, true, sourcePath, dest);
 
-   FileStatus fileStatus = getFileSystem().getFileStatus(dest);
+    FileStatus fileStatus = getFileSystem().getFileStatus(dest);
 
-   byte[] buffer = new byte[3000];
-   IOStatistics ioStats;
+    byte[] buffer = new byte[3000];
+    IOStatistics ioStats;
 
-   try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
+    try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
      ioStats = inputStream.getIOStatistics();
      inputStream.readFully(buffer, 0, (int) fileStatus.getLen());
-   }
+    }
 
-   verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
+    verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
 
-   try (FSDataInputStream inputStream = getFileSystem().openFile(dest)
+    try (FSDataInputStream inputStream = getFileSystem().openFile(dest)
        .must(FS_OPTION_OPENFILE_READ_POLICY,FS_OPTION_OPENFILE_READ_POLICY_PARQUET)
        .build().get()) {
-     ioStats = inputStream.getIOStatistics();
-     inputStream.readFully(buffer, 0, (int) fileStatus.getLen());
-   }
+      ioStats = inputStream.getIOStatistics();
+      inputStream.readFully(buffer, 0, (int) fileStatus.getLen());
+    }
 
-   verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
- }
+    verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
+  }
 
   @Test
   public void testConnectorFrameworkConfigurable() {
@@ -206,7 +209,7 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
   public void testInvalidConfigurationThrows() throws Exception {
     describe("Verify S3 connector framework throws with invalid configuration");
 
-    Configuration conf = new Configuration(getConfiguration()) ;
+    Configuration conf = new Configuration(getConfiguration());
     removeBaseAndBucketOverrides(conf);
     //Disable Sequential Prefetching
     conf.setInt(ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX +

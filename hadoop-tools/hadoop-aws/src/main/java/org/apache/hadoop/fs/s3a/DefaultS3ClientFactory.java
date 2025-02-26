@@ -166,7 +166,8 @@ public class DefaultS3ClientFactory extends Configured
                 .httpClientBuilder(httpClientBuilder);
 
     // multipart upload pending with HADOOP-19326.
-    if (!parameters.isClientSideEncryptionEnabled() && !parameters.isAnalyticsAcceleratorEnabled()) {
+    if (!parameters.isClientSideEncryptionEnabled() &&
+        !parameters.isAnalyticsAcceleratorEnabled()) {
       s3AsyncClientBuilder.multipartConfiguration(multipartConfiguration)
               .multipartEnabled(parameters.isMultipartCopy());
     }
