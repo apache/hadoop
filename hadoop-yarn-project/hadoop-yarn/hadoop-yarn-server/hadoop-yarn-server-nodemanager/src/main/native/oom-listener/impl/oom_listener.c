@@ -168,4 +168,88 @@ int oom_listener(_oom_listener_descriptors *descriptors, const char *cgroup, int
   return EXIT_SUCCESS;
 }
 
+int oom_listenerV2(_oom_listenerV2_descriptors *descriptors, const char *cgroup, int fd) {
+    const char *pattern =
+            cgroup[MAX(strlen(cgroup), 1) - 1] == '/'
+            ? "%s%s" :"%s/%s";
+
+    if (snprintf(descriptors->oom_pressure_path,
+                 sizeof(descriptors->oom_pressure_path),
+                 pattern,
+                 cgroup,
+                 "memory.pressure") < 0) {
+        print_error(descriptors->command, "path too long %s\n", cgroup);
+        return EXIT_FAILURE;
+    }
+
+    if ((descriptors->event_fd = open(
+            descriptors->oom_pressure_path,
+            O_RDWR | O_NONBLOCK)) == -1) {
+        print_error(descriptors->command, "Could not open %s. errno:%d %s\n",
+                    descriptors->oom_pressure_path,
+                    errno, strerror(errno));
+        return EXIT_FAILURE;
+    }
+
+
+    if ((descriptors->oom_command_len =
+            (size_t) snprintf(descriptors->oom_command,
+        sizeof(descriptors->oom_command),
+        "%s",
+        "some 1000000 3000000")) < 0) {
+        print_error(descriptors->command, "Could print %s\n",
+                    "some 1000000 3000000");
+    }
+
+    if (write(descriptors->event_fd,
+              descriptors->oom_command,
+              descriptors->oom_command_len) == -1) {
+        print_error(descriptors->command, "Could not write to %s errno:%d\n",
+                    descriptors->oom_pressure_path, errno);
+        return EXIT_FAILURE;
+    }
+
+    for (;;) {
+        uint64_t u;
+        ssize_t ret = 0;
+        struct stat stat_buffer = {0};
+        struct pollfd poll_fd = {
+                .fd = descriptors->event_fd,
+                .events = POLLPRI
+        };
+
+        ret = poll(&poll_fd, 1, descriptors->watch_timeout);
+        if (ret < 0) {
+            /* Error calling poll */
+            print_error(descriptors->command,
+                  "Could not poll eventfd %d errno:%d %s\n", ret,
+                  errno, strerror(errno));
+            return EXIT_FAILURE;
+        }
+
+        if (ret > 0) {
+            if (poll_fd.revents & POLLERR) {
+                print_error(descriptors->command, "Got POLLERR, event source is gone\n");
+                return EXIT_FAILURE;
+            }
+
+            if (poll_fd.revents & POLLPRI) {
+                    if ((ret = write(fd, &u, sizeof(u))) != sizeof(u)) {
+                    print_error(descriptors->command,
+                                "Could not write to pipe %d errno:%d %s\n", ret,
+                                errno, strerror(errno));
+                    return EXIT_FAILURE;
+                }
+            }
+        } else if (ret == 0) {
+            /* Timeout has elapsed*/
+            /* Quit, if the cgroup is deleted */
+            if (stat(cgroup, &stat_buffer) != 0) {
+                break;
+            }
+        }
+    }
+    return EXIT_SUCCESS;
+}
+
 #endif

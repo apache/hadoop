@@ -118,6 +118,10 @@ public class ResourceHandlerModule {
     return (cGroupV2Handler != null && cGroupV2Handler.getControllerPath(controller) != null);
   }
 
+  public static boolean isCGroupsV2Enabled() {
+    return cgroupsV2Enabled;
+  }
+
   /**
    * Returns a (possibly null) reference to a cGroupsHandler. This handler is
    * non-null only if one or more of the known cgroups-based resource
@@ -125,7 +129,7 @@ public class ResourceHandlerModule {
    */
 
   public static CGroupsHandler getCGroupsHandler() {
-    return cGroupV1Handler;
+    return cgroupsV2Enabled ? cGroupV2Handler : cGroupV1Handler;
   }
 
   /**

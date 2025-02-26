@@ -56,7 +56,7 @@ public class TestCGroupElasticMemoryController {
   @Test(expected = YarnException.class)
   public void testConstructorOff()
       throws YarnException {
-    new CGroupElasticMemoryController(
+    new CGroupElasticMemoryControllerImpl(
         conf,
         null,
         null,
@@ -77,7 +77,7 @@ public class TestCGroupElasticMemoryController {
         DummyRunnableWithContext.class, Runnable.class);
     CGroupsHandler handler = mock(CGroupsHandler.class);
     when(handler.getPathForCGroup(any(), any())).thenReturn("");
-    new CGroupElasticMemoryController(
+    new CGroupElasticMemoryControllerImpl(
         conf,
         null,
         handler,
@@ -109,8 +109,8 @@ public class TestCGroupElasticMemoryController {
       Runnable handler = mock(Runnable.class);
       doNothing().when(handler).run();
 
-      CGroupElasticMemoryController controller =
-          new CGroupElasticMemoryController(
+      AbstractCGroupElasticMemoryController controller =
+          new CGroupElasticMemoryControllerImpl(
               conf,
               null,
               cgroups,
@@ -150,8 +150,8 @@ public class TestCGroupElasticMemoryController {
       Runnable handler = mock(Runnable.class);
       doNothing().when(handler).run();
 
-      CGroupElasticMemoryController controller =
-          new CGroupElasticMemoryController(
+      AbstractCGroupElasticMemoryController controller =
+          new CGroupElasticMemoryControllerImpl(
               conf,
               null,
               cgroups,
@@ -191,8 +191,8 @@ public class TestCGroupElasticMemoryController {
 
       doNothing().when(handler).run();
 
-      CGroupElasticMemoryController controller =
-          new CGroupElasticMemoryController(
+      AbstractCGroupElasticMemoryController controller =
+          new CGroupElasticMemoryControllerImpl(
               conf,
               null,
               cgroups,
@@ -232,8 +232,8 @@ public class TestCGroupElasticMemoryController {
 
       doThrow(new YarnRuntimeException("Expected")).when(handler).run();
 
-      CGroupElasticMemoryController controller =
-          new CGroupElasticMemoryController(
+      AbstractCGroupElasticMemoryController controller =
+          new CGroupElasticMemoryControllerImpl(
               conf,
               null,
               cgroups,
@@ -272,8 +272,8 @@ public class TestCGroupElasticMemoryController {
       Runnable handler = mock(Runnable.class);
       doNothing().when(handler).run();
 
-      CGroupElasticMemoryController controller =
-          new CGroupElasticMemoryController(
+      AbstractCGroupElasticMemoryController controller =
+          new CGroupElasticMemoryControllerImpl(
               conf,
               null,
               cgroups,
@@ -309,7 +309,7 @@ public class TestCGroupElasticMemoryController {
   public void testDefaultConstructor() throws YarnException{
     CGroupsHandler handler = mock(CGroupsHandler.class);
     when(handler.getPathForCGroup(any(), any())).thenReturn("");
-    new CGroupElasticMemoryController(
+    new CGroupElasticMemoryControllerImpl(
         conf, null, handler, true, false, 10);
   }
 }

@@ -91,6 +91,15 @@ inline void cleanup(_oom_listener_descriptors *descriptors) {
   descriptors->watch_timeout = 1000;
 }
 
+typedef struct _oom_listenerV2_descriptors {
+    const char *command;
+    int event_fd;
+    char oom_pressure_path[PATH_MAX];
+    char oom_command[25];
+    size_t oom_command_len;
+    int watch_timeout;
+} _oom_listenerV2_descriptors;
+
 /*
  * Enable an OOM listener on the memory cgroup cgroup
  * descriptors: Structure that holds state for testing purposes
@@ -98,5 +107,7 @@ inline void cleanup(_oom_listener_descriptors *descriptors) {
  * fd: File to forward events to. Normally this is stdout
  */
 int oom_listener(_oom_listener_descriptors *descriptors, const char *cgroup, int fd);
+
+int oom_listenerV2(_oom_listenerV2_descriptors *descriptors, const char *cgroup, int fd);
 
 #endif

@@ -30,11 +30,14 @@ extern inline void cleanup(_oom_listener_descriptors *descriptors);
 void print_usage(void) {
   fprintf(stderr, "oom-listener");
   fprintf(stderr, "Listen to OOM events in a cgroup");
-  fprintf(stderr, "usage to listen: oom-listener <cgroup directory>\n");
+  fprintf(stderr, "usage to listen: oom-listener <cgroup version> <cgroup directory>\n");
   fprintf(stderr, "usage to test: oom-listener oom [<pgid>]\n");
-  fprintf(stderr, "example listening: oom-listener /sys/fs/cgroup/memory/hadoop-yarn | xxd -c 8\n");
+  fprintf(stderr, "example listening: oom-listener 1 /sys/fs/cgroup/memory/hadoop-yarn | xxd -c 8\n");
+  fprintf(stderr, "                   oom-listener 2 /sys/fs/cgroup/hadoop-yarn | xxd -c 8\n");
   fprintf(stderr, "example oom to test: bash -c 'echo $$ >/sys/fs/cgroup/memory/hadoop-yarn/tasks;oom-listener oom'\n");
+  fprintf(stderr, "                     bash -c 'echo $$ >/sys/fs/cgroup/hadoop-yarn/cgroup.procs;oom-listener oom'\n");
   fprintf(stderr, "example container overload: sudo -u <user> bash -c 'echo $$ && oom-listener oom 0' >/sys/fs/cgroup/memory/hadoop-yarn/<container>/tasks\n");
+  fprintf(stderr, "                            sudo -u <user> bash -c 'echo $$ && oom-listener oom 0' >/sys/fs/cgroup/hadoop-yarn/<container>/cgroup.procs\n");
   exit(EXIT_FAILURE);
 }
 
@@ -71,24 +74,35 @@ int main(int argc, char *argv[]) {
       strcmp(argv[1], "oom") == 0)
     test_oom_infinite(argc < 3 ? NULL : argv[2]);
 
-  if (argc != 2)
+  if (argc != 3)
     print_usage();
 
-  _oom_listener_descriptors descriptors = {
-      .command = argv[0],
-      .event_fd = -1,
-      .event_control_fd = -1,
-      .oom_control_fd = -1,
-      .event_control_path = {0},
-      .oom_control_path = {0},
-      .oom_command = {0},
-      .oom_command_len = 0,
-      .watch_timeout = 1000
-  };
-
-  int ret = oom_listener(&descriptors, argv[1], STDOUT_FILENO);
-
-  cleanup(&descriptors);
+  int ret = 0;
+  if (strcmp(argv[1], "1") == 0) {
+      _oom_listener_descriptors descriptors = {
+              .command = argv[0],
+              .event_fd = -1,
+              .event_control_fd = -1,
+              .oom_control_fd = -1,
+              .event_control_path = {0},
+              .oom_control_path = {0},
+              .oom_command = {0},
+              .oom_command_len = 0,
+              .watch_timeout = 1000
+      };
+      ret = oom_listener(&descriptors, argv[2], STDOUT_FILENO);
+      cleanup(&descriptors);
+  } else if (strcmp(argv[1], "2") == 0) {
+      _oom_listenerV2_descriptors descriptors = {
+              .command = argv[0],
+              .event_fd = -1,
+              .oom_pressure_path = {0},
+              .oom_command = {0},
+              .oom_command_len = 0,
+              .watch_timeout = 1000
+      };
+      ret = oom_listenerV2(&descriptors, argv[2], STDOUT_FILENO);
+  }
 
   return ret;
 }

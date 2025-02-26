@@ -22,7 +22,9 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupElasticMemoryController;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.AbstractCGroupElasticMemoryController;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupElasticMemoryControllerImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupV2ElasticMemoryControllerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.slf4j.Logger;
@@ -76,7 +78,7 @@ public class ContainersMonitorImpl extends AbstractService implements
   private LogMonitorThread logMonitorThread;
   private long logDirSizeLimit;
   private long logTotalSizeLimit;
-  private CGroupElasticMemoryController oomListenerThread;
+  private AbstractCGroupElasticMemoryController oomListenerThread;
   private boolean containerMetricsEnabled;
   private long containerMetricsPeriodMs;
   private long containerMetricsUnregisterDelayMs;
@@ -212,23 +214,15 @@ public class ContainersMonitorImpl extends AbstractService implements
     LOG.info("Strict memory control enabled: {}", strictMemoryEnforcement);
 
     if (elasticMemoryEnforcement) {
-      if (!CGroupElasticMemoryController.isAvailable()) {
+      if (!AbstractCGroupElasticMemoryController.isAvailable()) {
         // Test for availability outside the constructor
         // to be able to write non-Linux unit tests for
-        // CGroupElasticMemoryController
+        // AbstractCGroupElasticMemoryController
         throw new YarnException(
             "CGroup Elastic Memory controller enabled but " +
             "it is not available. Exiting.");
       } else {
-        this.oomListenerThread = new CGroupElasticMemoryController(
-            conf,
-            context,
-            ResourceHandlerModule.getCGroupsHandler(),
-            pmemCheckEnabled,
-            vmemCheckEnabled,
-            pmemCheckEnabled ?
-                maxPmemAllottedForContainers : maxVmemAllottedForContainers
-        );
+        this.oomListenerThread = getCGroupElasticMemoryController();
       }
     }
 
@@ -270,6 +264,24 @@ public class ContainersMonitorImpl extends AbstractService implements
       }
     }
     super.serviceInit(this.conf);
+  }
+
+  private AbstractCGroupElasticMemoryController getCGroupElasticMemoryController()
+      throws YarnException {
+    AbstractCGroupElasticMemoryController controller;
+    if (ResourceHandlerModule
+        .isCGroupsV2Enabled()) {
+      controller = new CGroupV2ElasticMemoryControllerImpl(conf, context,
+          ResourceHandlerModule.getCGroupsHandler(), pmemCheckEnabled,
+          vmemCheckEnabled, pmemCheckEnabled ? maxPmemAllottedForContainers :
+          maxVmemAllottedForContainers);
+    } else {
+      controller = new CGroupElasticMemoryControllerImpl(conf, context,
+          ResourceHandlerModule.getCGroupsHandler(), pmemCheckEnabled,
+          vmemCheckEnabled, pmemCheckEnabled ? maxPmemAllottedForContainers :
+          maxVmemAllottedForContainers);
+    }
+    return controller;
   }
 
   private boolean isContainerMonitorEnabled() {

@@ -36,12 +36,18 @@ extern "C" {
 #define CGROUP_EVENT_CONTROL "cgroup.event_control"
 #define CGROUP_LIMIT (5 * 1024 * 1024)
 
+#define CGROUPV2_ROOT "/sys/fs/cgroup/"
+#define CGROUPV2_MEMORY_PRESSURE "memory.pressure"
+#define CGROUPV2_MEMORY_HIGH "memory.high"
+#define CGROUPV2_PROCS "cgroup.procs"
+
 // We try multiple cgroup directories
 // We try first the official path to test
 // in production
 // If we are running as a user we fall back
 // to mock cgroup
 static const char *cgroup_candidates[] = { CGROUP_ROOT, TEST_ROOT };
+static const char *cgroupv2_candidates[] = {CGROUPV2_ROOT, TEST_ROOT};
 
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
@@ -49,7 +55,7 @@ int main(int argc, char **argv) {
 }
 
 class OOMListenerTest : public ::testing::Test {
-private:
+protected:
   char cgroup[PATH_MAX];
   const char* cgroup_root;
 public:
@@ -280,6 +286,149 @@ TEST_F(OOMListenerTest, test_oom) {
         << "Listener process exited with invalid status";
     }
   }
+}
+
+class OOMListenerTestForCGroupV2 : public OOMListenerTest {
+public:
+    OOMListenerTestForCGroupV2() : OOMListenerTest() {}
+    void SetUp() {
+        struct stat cgroup_memory = {};
+        for (unsigned int i = 0; i < GTEST_ARRAY_SIZE_(cgroupv2_candidates); ++i) {
+            cgroup_root = cgroupv2_candidates[i];
+
+            // Try to create the root.
+            // We might not have permission and
+            // it may already exist
+            mkdir(cgroup_root, 0700);
+
+            if (0 != stat(cgroup_root, &cgroup_memory)) {
+                printf("%s missing. Skipping test\n", cgroup_root);
+                continue;
+            }
+
+            timespec timespec1 = {};
+            if (0 != clock_gettime(CLOCK_MONOTONIC, &timespec1)) {
+                ASSERT_TRUE(false) << " clock_gettime failed\n";
+            }
+
+            if (snprintf(cgroup, sizeof(cgroup), "%s%lx/",
+                         cgroup_root, timespec1.tv_nsec) <= 0) {
+                cgroup[0] = '\0';
+                printf("%s snprintf failed\n", cgroup_root);
+                continue;
+            }
+
+            // Create a cgroup named the current timestamp
+            // to make it quasi unique
+            if (0 != mkdir(cgroup, 0700)) {
+                printf("%s not writable.\n", cgroup);
+                continue;
+            }
+            break;
+        }
+        printf("cgroup: %s \n", cgroup);
+        ASSERT_EQ(0, stat(cgroup, &cgroup_memory))
+                << "Cannot use or simulate cgroup " << cgroup;
+    }
+};
+
+TEST_F(OOMListenerTestForCGroupV2, test_oom2) {
+std::cout << "OOMListenerTestForCGroupV2" << std::endl;
+    //Set a low enough limit for memory.high
+    std::ofstream limit;
+    std::string memory_high_file =
+            std::string(GetCGroup()).append(CGROUPV2_MEMORY_HIGH);
+    limit.open(memory_high_file.c_str(), limit.out);
+    limit << CGROUP_LIMIT << std::endl;
+    limit.close();
+
+    std::string tasks_file =
+            std::string(GetCGroup()).append(CGROUPV2_PROCS);
+
+    pid_t mem_hog_pid = fork();
+    if (!mem_hog_pid) {
+        pid_t cgroupPid;
+        do {
+            std::ifstream tasks;
+            tasks.open(tasks_file.c_str(), tasks.in);
+            tasks >> cgroupPid;
+            tasks.close();
+        } while (cgroupPid != getpid());
+
+        const int bufferSize = 1024 * 1024;
+        std::cout << "Consuming too much memory" << std::endl;
+        for (;;) {
+            auto buffer = (char *) malloc(bufferSize);
+            if (buffer != NULL) {
+                for (int i = 0; i < bufferSize; ++i) {
+                    buffer[i] = (char) std::rand();
+                }
+            }
+        }
+    } else {
+        // Parent test
+        ASSERT_GE(mem_hog_pid, 1) << "Fork failed " << errno;
+
+        // Put child into cgroup
+        std::ofstream tasks;
+        tasks.open(tasks_file.c_str(), tasks.out);
+        tasks << mem_hog_pid << std::endl;
+        tasks.close();
+
+        // Create pipe to get forwarded eventfd
+        int test_pipe[2];
+        ASSERT_EQ(0, pipe(test_pipe));
+
+        // Launch OOM listener
+        // There is no race condition with the process
+        // running out of memory. If oom is 1 at startup
+        // oom_listener will send an initial notification
+        pid_t listener = fork();
+        if (listener == 0) {
+            _oom_listenerV2_descriptors descriptors = {
+            .command = "test",
+            .event_fd = -1,
+            .oom_pressure_path = {0},
+            .oom_command = {0},
+            .oom_command_len = 0,
+            .watch_timeout = 1000
+            };
+            int ret = oom_listenerV2(&descriptors, GetCGroup(), test_pipe[1]);
+            close(test_pipe[0]);
+            close(test_pipe[1]);
+            exit(ret);
+        } else {
+            uint64_t event_id = 1;
+            ASSERT_EQ(sizeof(event_id),
+                    read(test_pipe[0],
+                    &event_id,
+                    sizeof(event_id)))
+                    << "The event has not arrived";
+            close(test_pipe[0]);
+            close(test_pipe[1]);
+
+            // Simulate OOM killer
+            ASSERT_EQ(0, kill(mem_hog_pid, SIGKILL));
+
+            // Verify that process was killed
+            int* mem_hog_status = {};
+            pid_t exited0 = wait(mem_hog_status);
+            ASSERT_EQ(mem_hog_pid, exited0)
+                << "Wrong process exited";
+            ASSERT_EQ(NULL, mem_hog_status)
+                << "Test process killed with invalid status";
+
+            ASSERT_EQ(0, rmdir(GetCGroup()))
+                    << "Could not delete cgroup " << GetCGroup();
+
+            int* oom_listener_status = {};
+            pid_t exited1 = wait(oom_listener_status);
+            ASSERT_EQ(listener, exited1)
+                << "Wrong process exited";
+            ASSERT_EQ(NULL, oom_listener_status)
+                << "Listener process exited with invalid status";
+        }
+    }
 }
 
 #else

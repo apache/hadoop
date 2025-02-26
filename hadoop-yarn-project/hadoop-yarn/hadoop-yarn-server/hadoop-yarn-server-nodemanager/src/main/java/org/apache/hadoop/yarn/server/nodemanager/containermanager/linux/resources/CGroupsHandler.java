@@ -124,7 +124,11 @@ public interface CGroupsHandler {
   String CGROUP_SUBTREE_CONTROL_FILE = "cgroup.subtree_control";
   String CGROUP_CPU_MAX = "max";
   String CGROUP_MEMORY_MAX = "max";
+  String CGROUP_MEMORY_HIGH = "high";
   String CGROUP_MEMORY_LOW = "low";
+  String CGROUP_MEMORY_CURRENT = "current";
+  String CGROUP_SWAP_MEMORY_MAX = "swap.max";
+  String CGROUP_SWAP_MEMORY_CURRENT = "swap.current";
 
   // present in v1 and v2
   String CGROUP_PROCS_FILE = "cgroup.procs";

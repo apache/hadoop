@@ -34,10 +34,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_MEMORY_CURRENT;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_MEMORY_HIGH;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_PROCS_FILE;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_PARAM_MEMORY_MEMSW_USAGE_BYTES;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_PARAM_MEMORY_OOM_CONTROL;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_PARAM_MEMORY_USAGE_BYTES;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_SWAP_MEMORY_CURRENT;
+
+
 
 /**
  * A very basic OOM handler implementation.
@@ -51,6 +56,7 @@ public class DefaultOOMHandler implements Runnable {
   private final Context context;
   private final String memoryStatFile;
   private final CGroupsHandler cgroups;
+  private final boolean cgroupsV2Enabled;
 
   /**
    * Create an OOM handler.
@@ -61,9 +67,16 @@ public class DefaultOOMHandler implements Runnable {
    */
   public DefaultOOMHandler(Context context, boolean enforceVirtualMemory) {
     this.context = context;
-    this.memoryStatFile = enforceVirtualMemory ?
-        CGROUP_PARAM_MEMORY_MEMSW_USAGE_BYTES :
-        CGROUP_PARAM_MEMORY_USAGE_BYTES;
+    this.cgroupsV2Enabled = ResourceHandlerModule.isCGroupsV2Enabled();
+    if (cgroupsV2Enabled) {
+      this.memoryStatFile = enforceVirtualMemory ?
+          CGROUP_SWAP_MEMORY_CURRENT :
+          CGROUP_MEMORY_CURRENT;
+    } else {
+      this.memoryStatFile = enforceVirtualMemory ?
+          CGROUP_PARAM_MEMORY_MEMSW_USAGE_BYTES :
+          CGROUP_PARAM_MEMORY_USAGE_BYTES;
+    }
     this.cgroups = getCGroupsHandler();
   }
 
@@ -185,11 +198,7 @@ public class DefaultOOMHandler implements Runnable {
       // We kill containers until the kernel reports the OOM situation resolved
       // Note: If the kernel has a delay this may kill more than necessary
       while (true) {
-        String status = cgroups.getCGroupParam(
-            CGroupsHandler.CGroupController.MEMORY,
-            "",
-            CGROUP_PARAM_MEMORY_OOM_CONTROL);
-        if (!status.contains(CGroupsHandler.UNDER_OOM)) {
+        if (!isUnderOOM()) {
           break;
         }
 
@@ -254,6 +263,22 @@ public class DefaultOOMHandler implements Runnable {
       }
     }
     return containerKilled;
+  }
+
+  private boolean isUnderOOM() throws ResourceHandlerException {
+    if (cgroupsV2Enabled) {
+      long used =  Long.parseLong(cgroups.getCGroupParam(CGroupsHandler.CGroupController.MEMORY, "",
+          CGROUP_MEMORY_CURRENT));
+      long limit = Long.parseLong(cgroups.getCGroupParam(CGroupsHandler.CGroupController.MEMORY, "",
+          CGROUP_MEMORY_HIGH));
+      return used >= limit;
+    } else {
+      String status = cgroups.getCGroupParam(
+          CGroupsHandler.CGroupController.MEMORY,
+          "",
+          CGROUP_PARAM_MEMORY_OOM_CONTROL);
+      return status.contains(CGroupsHandler.UNDER_OOM);
+    }
   }
 
   /**
