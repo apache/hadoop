@@ -59,14 +59,14 @@ public class ProfileAWSCredentialsProvider extends AbstractAWSCredentialProvider
         if (credentialsFile == null) {
             credentialsFile = SystemUtils.getEnvironmentVariable(CREDENTIALS_FILE_ENV, null);
             if (credentialsFile != null) {
-                LOG.info("Fetched credentials file path from environment variable");
+                LOG.debug("Fetched credentials file path from environment variable");
             }
         }
         else {
-            LOG.info("Fetched credentials file path from conf");
+            LOG.debug("Fetched credentials file path from conf");
         }
         if (credentialsFile == null) {
-            LOG.info("Using default credentials file path");
+            LOG.debug("Using default credentials file path");
             return FileSystems.getDefault().getPath(SystemUtils.getUserHome().getPath(),".aws", "credentials");
         }
         else {
@@ -80,14 +80,14 @@ public class ProfileAWSCredentialsProvider extends AbstractAWSCredentialProvider
             profileName = SystemUtils.getEnvironmentVariable(PROFILE_ENV, null);
             if (profileName == null) {
                 profileName = "default";
-                LOG.info("Using default profile name");
+                LOG.debug("Using default profile name");
             }
             else {
-                LOG.info("Fetched profile name from environment variable");
+                LOG.debug("Fetched profile name from environment variable");
             }
         }
         else {
-            LOG.info("Fetched profile name from conf");
+            LOG.debug("Fetched profile name from conf");
         }
         return profileName;
     }
