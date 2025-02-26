@@ -207,8 +207,8 @@ public class ITestAzureBlobFileSystemDelete extends
     when(op.hasResult()).thenReturn(true);
 
     Assertions.assertThat(testClient.deleteIdempotencyCheckOp(op)
-            .getResult()
-            .getStatusCode())
+        .getResult()
+        .getStatusCode())
         .describedAs(
             "Idempotency check to happen only for HTTP 404 response.")
         .isEqualTo(HTTP_GATEWAY_TIMEOUT);
@@ -442,9 +442,6 @@ public class ITestAzureBlobFileSystemDelete extends
     Assertions.assertThat(!fs.exists(p1))
         .describedAs("FileStatus of the deleted directory should not exist.")
         .isTrue();
-    Assertions.assertThat(!fs.exists(p1))
-        .describedAs("FileStatus of the deleted directory should not exist.")
-        .isTrue();
   }
 
   /**
@@ -459,7 +456,7 @@ public class ITestAzureBlobFileSystemDelete extends
 
     Path p = new Path("/nonExistingPath");
     intercept(FileNotFoundException.class,
-        () -> assertDeleted(fs, p, true));
+        () -> fs.delete(p, true));
   }
 
   /**
@@ -476,7 +473,7 @@ public class ITestAzureBlobFileSystemDelete extends
     fs.delete(testFile, false);
 
     intercept(FileNotFoundException.class,
-        () -> assertDeleted(fs, testFile, true));
+        () -> fs.delete(testFile, true));
   }
 
   /**
