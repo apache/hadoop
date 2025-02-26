@@ -27,7 +27,8 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.URI;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivilegedAction;
+import java.util.concurrent.Callable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1642,9 +1643,9 @@ public class TestAclsEndToEnd {
     UserGroupInformation.setLoginUser(ugi);
 
     // Create a test key
-    return ugi.doAs(new PrivilegedAction<Boolean>() {
+    return ugi.callAsNoException(new Callable<Boolean>() {
       @Override
-      public Boolean run() {
+      public Boolean call() {
         try {
           op.execute();
 

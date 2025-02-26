@@ -19,6 +19,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.authentication.server.HttpConstants;
 import org.apache.hadoop.security.authentication.util.AuthToken;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
+import org.apache.hadoop.util.SubjectUtil;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
@@ -300,8 +301,7 @@ public class KerberosAuthenticator implements Authenticator {
   private void doSpnegoSequence(final AuthenticatedURL.Token token)
       throws IOException, AuthenticationException {
     try {
-      AccessControlContext context = AccessController.getContext();
-      Subject subject = Subject.getSubject(context);
+      Subject subject = SubjectUtil.current();
       if (subject == null
           || (!KerberosUtil.hasKerberosKeyTab(subject)
               && !KerberosUtil.hasKerberosTicket(subject))) {

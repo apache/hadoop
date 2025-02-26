@@ -81,7 +81,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -90,6 +89,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
 
 import org.apache.hadoop.util.Sets;
@@ -1024,9 +1024,9 @@ public class TestCapacityScheduler {
           credentials.getAllTokens());
     currentUser.addToken(amRMToken);
     ApplicationMasterProtocol client =
-        currentUser.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
+        currentUser.callAsNoException(new Callable<ApplicationMasterProtocol>() {
           @Override
-          public ApplicationMasterProtocol run() {
+          public ApplicationMasterProtocol call() {
             return (ApplicationMasterProtocol) rpc.getProxy(
               ApplicationMasterProtocol.class, rmBindAddress, conf);
           }

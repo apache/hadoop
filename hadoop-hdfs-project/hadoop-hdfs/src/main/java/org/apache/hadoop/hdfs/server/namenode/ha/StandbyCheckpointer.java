@@ -22,7 +22,6 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -402,10 +401,10 @@ public class StandbyCheckpointer {
     public void run() {
       // We have to make sure we're logged in as far as JAAS
       // is concerned, in order to use kerberized SSL properly.
-      SecurityUtil.doAsLoginUserOrFatal(
-          new PrivilegedAction<Object>() {
+      SecurityUtil.callAsLoginUserOrFatalNoException(
+          new Callable<Object>() {
           @Override
-          public Object run() {
+          public Object call() {
             doWork();
             return null;
           }

@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -119,9 +120,9 @@ public class BootstrapStandby implements Tool, Configurable {
     SecurityUtil.login(conf, DFS_NAMENODE_KEYTAB_FILE_KEY,
         DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, myAddr.getHostName());
 
-    return SecurityUtil.doAsLoginUserOrFatal(new PrivilegedAction<Integer>() {
+    return SecurityUtil.callAsLoginUserOrFatalNoException(new Callable<Integer>() {
       @Override
-      public Integer run() {
+      public Integer call() {
         try {
           return doRun();
         } catch (IOException e) {

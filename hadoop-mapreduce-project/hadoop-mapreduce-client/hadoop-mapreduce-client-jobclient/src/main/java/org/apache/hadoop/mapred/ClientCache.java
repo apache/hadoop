@@ -19,9 +19,10 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
@@ -89,9 +90,9 @@ public class ClientCache {
     final YarnRPC rpc = YarnRPC.create(conf);
     LOG.debug("Connected to HistoryServer at: " + serviceAddr);
     UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
-    return currentUser.doAs(new PrivilegedAction<MRClientProtocol>() {
+    return currentUser.callAsNoException(new Callable<MRClientProtocol>() {
       @Override
-      public MRClientProtocol run() {
+      public MRClientProtocol call() {
         return (MRClientProtocol) rpc.getProxy(HSClientProtocol.class,
             NetUtils.createSocketAddr(serviceAddr), conf);
       }

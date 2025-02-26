@@ -21,6 +21,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_DNS_NAMESERVER_KEY;
 
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -32,6 +33,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -513,6 +515,7 @@ public final class SecurityUtil {
    * @param <T> generic type T.
    * @return generic type T.
    */
+  @Deprecated
   public static <T> T doAsLoginUserOrFatal(PrivilegedAction<T> action) { 
     if (UserGroupInformation.isSecurityEnabled()) {
       UserGroupInformation ugi = null;
@@ -528,6 +531,62 @@ public final class SecurityUtil {
       return action.run();
     }
   }
+
+  /**
+   * Perform the given action as the daemon's login user. If the login
+   * user cannot be determined, this will log a FATAL error and exit
+   * the whole JVM.
+   *
+   * This is the replacement for doAsLoginUserOrFatal(). As doAsLoginUserOrFatal
+   * doesn't return exceptions, this methods also expects a Callable that 
+   * does not return checked Exceptions
+   *
+   * @param action action.
+   * @param <T> generic type T.
+   * @return generic type T.
+   * @throws Exception 
+   */
+  public static <T> T callAsLoginUserOrFatalNoException(Callable<T> action) { 
+    if (UserGroupInformation.isSecurityEnabled()) {
+      UserGroupInformation ugi = null;
+      try { 
+        ugi = UserGroupInformation.getLoginUser();
+      } catch (IOException e) {
+        LOG.error("Exception while getting login user", e);
+        e.printStackTrace();
+        Runtime.getRuntime().exit(-1);
+      }
+      return ugi.callAsNoException(action);
+    } else {
+      try {
+        return action.call();
+      } catch (Exception e) {
+          if (e instanceof RuntimeException) {
+            throw (RuntimeException) e;
+          } else {
+            throw new UndeclaredThrowableException(e);
+          }
+        }
+    }
+  }
+
+  /**
+   * Perform the given action as the daemon's login user. If an
+   * InterruptedException is thrown, it is converted to an IOException.
+   *
+   * @param action the action to perform
+   * @param <T> Generics Type T.
+   * @return the result of the action
+   * @throws IOException in the event of error
+   */
+  public static <T> T callAsLoginUser(Callable<T> action)
+      throws IOException {
+    try {
+      return UserGroupInformation.getLoginUser().callAs(action);
+    } catch (InterruptedException ie) {
+      throw new IOException(ie);
+    }
+  }
   
   /**
    * Perform the given action as the daemon's login user. If an
@@ -538,6 +597,7 @@ public final class SecurityUtil {
    * @return the result of the action
    * @throws IOException in the event of error
    */
+  @Deprecated
   public static <T> T doAsLoginUser(PrivilegedExceptionAction<T> action)
       throws IOException {
     return doAsUser(UserGroupInformation.getLoginUser(), action);
@@ -552,11 +612,31 @@ public final class SecurityUtil {
    * @return the result of the action
    * @throws IOException in the event of error
    */
+  public static <T> T callAsCurrentUser(Callable<T> action)
+      throws IOException {
+    try {
+      return UserGroupInformation.getCurrentUser().callAs(action);
+    } catch (InterruptedException ie) {
+      throw new IOException(ie);
+    }
+  }
+  
+  /**
+   * Perform the given action as the daemon's current user. If an
+   * InterruptedException is thrown, it is converted to an IOException.
+   *
+   * @param action the action to perform
+   * @param <T> generic type T.
+   * @return the result of the action
+   * @throws IOException in the event of error
+   */
+  @Deprecated
   public static <T> T doAsCurrentUser(PrivilegedExceptionAction<T> action)
       throws IOException {
     return doAsUser(UserGroupInformation.getCurrentUser(), action);
   }
 
+  @Deprecated
   private static <T> T doAsUser(UserGroupInformation ugi,
       PrivilegedExceptionAction<T> action) throws IOException {
     try {

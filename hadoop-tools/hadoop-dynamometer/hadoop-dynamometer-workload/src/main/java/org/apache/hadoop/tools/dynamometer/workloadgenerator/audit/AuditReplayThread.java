@@ -21,10 +21,10 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 import org.apache.hadoop.tools.dynamometer.workloadgenerator.WorkloadDriver;
 import java.io.IOException;
 import java.net.URI;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.TimeUnit;
@@ -202,7 +202,7 @@ public class AuditReplayThread extends Thread {
     if (proxyFs == null) {
       UserGroupInformation ugi = UserGroupInformation
           .createProxyUser(command.getSimpleUgi(), loginUser);
-      proxyFs = ugi.doAs((PrivilegedAction<FileSystem>) () -> {
+      proxyFs = ugi.callAsNoException((Callable<FileSystem>) () -> {
         try {
           FileSystem fs = new DistributedFileSystem();
           fs.initialize(namenodeUri, mapperConf);

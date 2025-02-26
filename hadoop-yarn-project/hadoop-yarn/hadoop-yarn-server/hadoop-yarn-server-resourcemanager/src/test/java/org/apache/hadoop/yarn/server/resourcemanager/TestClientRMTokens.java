@@ -32,8 +32,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -470,9 +469,9 @@ public class TestClientRMTokens {
       final ApplicationClientProtocol clientRMService, final String renewerString)
       throws IOException, InterruptedException {
     org.apache.hadoop.yarn.api.records.Token token = loggedInUser
-        .doAs(new PrivilegedExceptionAction<org.apache.hadoop.yarn.api.records.Token>() {
+        .callAsNoException(new Callable<org.apache.hadoop.yarn.api.records.Token>() {
           @Override
-            public org.apache.hadoop.yarn.api.records.Token run()
+            public org.apache.hadoop.yarn.api.records.Token call()
                 throws YarnException, IOException {
             GetDelegationTokenRequest request = Records
                 .newRecord(GetDelegationTokenRequest.class);
@@ -488,9 +487,9 @@ public class TestClientRMTokens {
       final ApplicationClientProtocol clientRMService,
       final org.apache.hadoop.yarn.api.records.Token dToken)
       throws IOException, InterruptedException {
-    long nextExpTime = loggedInUser.doAs(new PrivilegedExceptionAction<Long>() {
+    long nextExpTime = loggedInUser.callAsNoException(new Callable<Long>() {
       @Override
-      public Long run() throws YarnException, IOException {
+      public Long call() throws YarnException, IOException {
         RenewDelegationTokenRequest request = Records
             .newRecord(RenewDelegationTokenRequest.class);
         request.setDelegationToken(dToken);
@@ -505,9 +504,9 @@ public class TestClientRMTokens {
       final ApplicationClientProtocol clientRMService,
       final org.apache.hadoop.yarn.api.records.Token dToken)
       throws IOException, InterruptedException {
-    loggedInUser.doAs(new PrivilegedExceptionAction<Void>() {
+    loggedInUser.callAsNoException(new Callable<Void>() {
       @Override
-      public Void run() throws YarnException, IOException {
+      public Void call() throws YarnException, IOException {
         CancelDelegationTokenRequest request = Records
             .newRecord(CancelDelegationTokenRequest.class);
         request.setDelegationToken(dToken);
@@ -529,9 +528,9 @@ public class TestClientRMTokens {
 
     final YarnRPC rpc = YarnRPC.create(conf);
     ApplicationClientProtocol clientRMWithDT = ugi
-        .doAs(new PrivilegedAction<ApplicationClientProtocol>() {
+        .callAsNoException(new Callable<ApplicationClientProtocol>() {
           @Override
-          public ApplicationClientProtocol run() {
+          public ApplicationClientProtocol call() {
             return (ApplicationClientProtocol) rpc.getProxy(ApplicationClientProtocol.class,
                 rmAddress, conf);
           }

@@ -28,7 +28,6 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
-import java.security.PrivilegedExceptionAction;
 import java.util.Base64;
 import java.util.Base64.Encoder;
 import java.util.Collection;
@@ -37,6 +36,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
 import javax.servlet.ServletContext;
@@ -208,14 +208,14 @@ public class NamenodeWebHdfsMethods {
     return context;
   }
 
-  private <T> T doAs(final UserGroupInformation ugi,
-      final PrivilegedExceptionAction<T> action)
+  private <T> T callAs(final UserGroupInformation ugi,
+      final Callable<T> action)
           throws IOException, InterruptedException {
-    return useIpcCallq ? doAsExternalCall(ugi, action) : ugi.doAs(action);
+    return useIpcCallq ? callAsExternalCall(ugi, action) : ugi.callAs(action);
   }
 
-  private <T> T doAsExternalCall(final UserGroupInformation ugi,
-      final PrivilegedExceptionAction<T> action)
+  private <T> T callAsExternalCall(final UserGroupInformation ugi,
+      final Callable<T> action)
           throws IOException, InterruptedException {
     // set the remote address, if coming in via a trust proxy server then
     // the address with be that of the proxied client
@@ -731,9 +731,9 @@ public class NamenodeWebHdfsMethods {
         createFlagParam, noredirect, policyName, ecpolicy,
         namespaceQuota, storagespaceQuota, storageType);
 
-    return doAs(ugi, new PrivilegedExceptionAction<Response>() {
+    return callAs(ugi, new Callable<Response>() {
       @Override
-      public Response run() throws IOException, URISyntaxException {
+      public Response call() throws IOException, URISyntaxException {
           return put(ugi, delegation, username, doAsUser,
               path.getAbsolutePath(), op, destination, owner, group,
               permission, unmaskedPermission, overwrite, bufferSize,
@@ -1071,9 +1071,9 @@ public class NamenodeWebHdfsMethods {
     init(ugi, delegation, username, doAsUser, path, op, concatSrcs, bufferSize,
         excludeDatanodes, newLength);
 
-    return doAs(ugi, new PrivilegedExceptionAction<Response>() {
+    return callAs(ugi, new Callable<Response>() {
       @Override
-      public Response run() throws IOException, URISyntaxException {
+      public Response call() throws IOException, URISyntaxException {
           return post(ugi, delegation, username, doAsUser,
               path.getAbsolutePath(), op, concatSrcs, bufferSize,
               excludeDatanodes, newLength, noredirect);
@@ -1321,7 +1321,7 @@ public class NamenodeWebHdfsMethods {
         renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction,
         snapshotName, oldSnapshotName, tokenKind, tokenService, startAfter, allUsers);
 
-    return doAs(ugi, () -> get(ugi, delegation, username, doAsUser, path.getAbsolutePath(),
+    return callAs(ugi, () -> get(ugi, delegation, username, doAsUser, path.getAbsolutePath(),
         op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
         excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
         snapshotDiffStartPath, snapshotDiffIndex,
@@ -1717,9 +1717,9 @@ public class NamenodeWebHdfsMethods {
 
         try {
           // restore remote user's ugi
-          ugi.doAs(new PrivilegedExceptionAction<Void>() {
+          ugi.callAs(new Callable<Void>() {
             @Override
-            public Void run() throws IOException {
+            public Void call() throws IOException {
               long n = 0;
               for (DirectoryListing dirList = firstDirList; ;
                    dirList = getDirectoryListing(cp, p, dirList.getLastName())
@@ -1834,7 +1834,7 @@ public class NamenodeWebHdfsMethods {
     final UriFsPathParam path = new UriFsPathParam(uriInfo.getPath());
     init(ugi, delegation, username, doAsUser, path, op, recursive, snapshotName);
 
-    return doAs(ugi, () -> delete(ugi, delegation, username, doAsUser,
+    return callAs(ugi, () -> delete(ugi, delegation, username, doAsUser,
         path.getAbsolutePath(), op, recursive, snapshotName));
   }
 

@@ -26,7 +26,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -35,6 +34,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -247,10 +247,10 @@ public class ViewFs extends AbstractFileSystem {
           public AbstractFileSystem apply(final URI uri) {
             AbstractFileSystem fs;
             try {
-              fs = ugi.doAs(
-                  new PrivilegedExceptionAction<AbstractFileSystem>() {
+              fs = ugi.callAs(
+                  new Callable<AbstractFileSystem>() {
                     @Override
-                    public AbstractFileSystem run() throws IOException {
+                    public AbstractFileSystem call() throws IOException {
                       return AbstractFileSystem.createFileSystem(uri, config);
                     }
                   });

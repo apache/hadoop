@@ -19,12 +19,12 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -521,9 +521,9 @@ public class TestAMRMClientOnRMRestart {
       SecurityUtil.setTokenService(token, rm2.getApplicationMasterService()
         .getBindAddress());
       testUser.addToken(token);
-      testUser.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
+      testUser.callAsNoException(new Callable<ApplicationMasterProtocol>() {
         @Override
-        public ApplicationMasterProtocol run() {
+        public ApplicationMasterProtocol call() {
           return (ApplicationMasterProtocol) YarnRPC.create(conf).getProxy(
             ApplicationMasterProtocol.class,
             rm2.getApplicationMasterService().getBindAddress(), conf);

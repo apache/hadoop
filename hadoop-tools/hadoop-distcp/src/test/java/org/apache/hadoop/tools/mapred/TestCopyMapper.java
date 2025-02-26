@@ -23,11 +23,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -587,10 +587,10 @@ public class TestCopyMapper {
       final CopyMapper copyMapper = new CopyMapper();
 
       final Mapper<Text, CopyListingFileStatus, Text, Text>.Context context =
-        tmpUser.doAs(
-          new PrivilegedAction<Mapper<Text, CopyListingFileStatus, Text, Text>.Context>() {
+        tmpUser.callAsNoException(
+          new Callable<Mapper<Text, CopyListingFileStatus, Text, Text>.Context>() {
             @Override
-            public Mapper<Text, CopyListingFileStatus, Text, Text>.Context run() {
+            public Mapper<Text, CopyListingFileStatus, Text, Text>.Context call() {
               try {
                 StubContext stubContext = new StubContext(getConfiguration(), null, 0);
                 return stubContext.getContext();
@@ -613,9 +613,9 @@ public class TestCopyMapper {
       mkdirs(TARGET_PATH);
       cluster.getFileSystem().setPermission(new Path(TARGET_PATH), new FsPermission((short)511));
 
-      final FileSystem tmpFS = tmpUser.doAs(new PrivilegedAction<FileSystem>() {
+      final FileSystem tmpFS = tmpUser.callAsNoException(new Callable<FileSystem>() {
         @Override
-        public FileSystem run() {
+        public FileSystem call() {
           try {
             return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
@@ -626,9 +626,9 @@ public class TestCopyMapper {
         }
       });
 
-      tmpUser.doAs(new PrivilegedAction<Integer>() {
+      tmpUser.callAsNoException(new Callable<Integer>() {
         @Override
-        public Integer run() {
+        public Integer call() {
           try {
             copyMapper.setup(context);
             copyMapper.map(new Text("/src/file"),
@@ -662,10 +662,10 @@ public class TestCopyMapper {
       final CopyMapper copyMapper = new CopyMapper();
 
       final Mapper<Text, CopyListingFileStatus, Text, Text>.Context context =
-        tmpUser.doAs(
-          new PrivilegedAction<Mapper<Text, CopyListingFileStatus, Text, Text>.Context>() {
+        tmpUser.callAsNoException(
+          new Callable<Mapper<Text, CopyListingFileStatus, Text, Text>.Context>() {
             @Override
-            public Mapper<Text, CopyListingFileStatus, Text, Text>.Context run() {
+            public Mapper<Text, CopyListingFileStatus, Text, Text>.Context call() {
               try {
                 StubContext stubContext = new StubContext(getConfiguration(), null, 0);
                 return stubContext.getContext();
@@ -683,9 +683,9 @@ public class TestCopyMapper {
       cluster.getFileSystem().setPermission(new Path(TARGET_PATH),
           new FsPermission((short)511));
 
-      final FileSystem tmpFS = tmpUser.doAs(new PrivilegedAction<FileSystem>() {
+      final FileSystem tmpFS = tmpUser.callAsNoException(new Callable<FileSystem>() {
         @Override
-        public FileSystem run() {
+        public FileSystem call() {
           try {
             return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
@@ -696,9 +696,9 @@ public class TestCopyMapper {
         }
       });
 
-      tmpUser.doAs(new PrivilegedAction<Integer>() {
+      tmpUser.callAsNoException(new Callable<Integer>() {
         @Override
-        public Integer run() {
+        public Integer call() {
           try {
             copyMapper.setup(context);
             copyMapper.map(new Text("/src/file"),
@@ -729,9 +729,9 @@ public class TestCopyMapper {
       final CopyMapper copyMapper = new CopyMapper();
 
       final StubContext stubContext =  tmpUser.
-          doAs(new PrivilegedAction<StubContext>() {
+          callAsNoException(new Callable<StubContext>() {
         @Override
-        public StubContext run() {
+        public StubContext call() {
           try {
             return new StubContext(getConfiguration(), null, 0);
           } catch (Exception e) {
@@ -759,9 +759,9 @@ public class TestCopyMapper {
       cluster.getFileSystem().setPermission(new Path(TARGET_PATH + "/src/file"),
           new FsPermission(FsAction.READ, FsAction.READ, FsAction.READ));
 
-      final FileSystem tmpFS = tmpUser.doAs(new PrivilegedAction<FileSystem>() {
+      final FileSystem tmpFS = tmpUser.callAsNoException(new Callable<FileSystem>() {
         @Override
-        public FileSystem run() {
+        public FileSystem call() {
           try {
             return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
@@ -772,9 +772,9 @@ public class TestCopyMapper {
         }
       });
 
-      tmpUser.doAs(new PrivilegedAction<Integer>() {
+      tmpUser.callAsNoException(new Callable<Integer>() {
         @Override
-        public Integer run() {
+        public Integer call() {
           try {
             copyMapper.setup(context);
             copyMapper.map(new Text("/src/file"),
@@ -809,9 +809,9 @@ public class TestCopyMapper {
       final CopyMapper copyMapper = new CopyMapper();
 
       final StubContext stubContext =  tmpUser.
-          doAs(new PrivilegedAction<StubContext>() {
+          callAsNoException(new Callable<StubContext>() {
         @Override
-        public StubContext run() {
+        public StubContext call() {
           try {
             return new StubContext(getConfiguration(), null, 0);
           } catch (Exception e) {
@@ -841,9 +841,9 @@ public class TestCopyMapper {
       cluster.getFileSystem().setPermission(new Path(TARGET_PATH + "/src/file"),
           new FsPermission(FsAction.READ, FsAction.READ, FsAction.READ));
 
-      final FileSystem tmpFS = tmpUser.doAs(new PrivilegedAction<FileSystem>() {
+      final FileSystem tmpFS = tmpUser.callAsNoException(new Callable<FileSystem>() {
         @Override
-        public FileSystem run() {
+        public FileSystem call() {
           try {
             return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
@@ -854,9 +854,9 @@ public class TestCopyMapper {
         }
       });
 
-      tmpUser.doAs(new PrivilegedAction<Integer>() {
+      tmpUser.callAsNoException(new Callable<Integer>() {
         @Override
-        public Integer run() {
+        public Integer call() {
           try {
             copyMapper.setup(context);
             copyMapper.map(new Text("/src/file"),
@@ -972,11 +972,11 @@ public class TestCopyMapper {
       final CopyMapper copyMapper = new CopyMapper();
 
       final Mapper<Text, CopyListingFileStatus, Text, Text>.Context context =
-          tmpUser.doAs(new PrivilegedAction<
+          tmpUser.callAsNoException(new Callable<
               Mapper<Text, CopyListingFileStatus, Text, Text>.Context>() {
             @Override
             public Mapper<Text, CopyListingFileStatus, Text, Text>.Context
-            run() {
+            call() {
               try {
                 StubContext stubContext = new StubContext(
                     getConfiguration(), null, 0);
@@ -998,9 +998,9 @@ public class TestCopyMapper {
       context.getConfiguration().setBoolean(
           DistCpOptionSwitch.IGNORE_FAILURES.getConfigLabel(), ignoreFailures);
 
-      final FileSystem tmpFS = tmpUser.doAs(new PrivilegedAction<FileSystem>() {
+      final FileSystem tmpFS = tmpUser.callAsNoException(new Callable<FileSystem>() {
         @Override
-        public FileSystem run() {
+        public FileSystem call() {
           try {
             return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
@@ -1010,9 +1010,9 @@ public class TestCopyMapper {
         }
       });
 
-      tmpUser.doAs(new PrivilegedAction<Integer>() {
+      tmpUser.callAsNoException(new Callable<Integer>() {
         @Override
-        public Integer run() {
+        public Integer call() {
           try {
             copyMapper.setup(context);
             copyMapper.map(new Text("/src/file"),

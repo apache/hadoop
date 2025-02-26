@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -35,6 +34,7 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nonnull;
@@ -340,9 +340,9 @@ public class FileContext implements PathCapabilities {
       UserGroupInformation user, final URI uri, final Configuration conf)
       throws UnsupportedFileSystemException, IOException {
     try {
-      return user.doAs(new PrivilegedExceptionAction<AbstractFileSystem>() {
+      return user.callAs(new Callable<AbstractFileSystem>() {
         @Override
-        public AbstractFileSystem run() throws UnsupportedFileSystemException {
+        public AbstractFileSystem call() throws UnsupportedFileSystemException {
           return AbstractFileSystem.get(uri, conf);
         }
       });

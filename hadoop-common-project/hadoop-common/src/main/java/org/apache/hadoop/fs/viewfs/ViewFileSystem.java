@@ -28,6 +28,7 @@ import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -35,7 +36,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -328,9 +328,9 @@ public class ViewFileSystem extends FileSystem {
             public FileSystem apply(final URI uri) {
               FileSystem fs;
               try {
-                fs = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+                fs = ugi.callAs(new Callable<FileSystem>() {
                   @Override
-                  public FileSystem run() throws IOException {
+                  public FileSystem call() throws IOException {
                     if (enableInnerCache) {
                       synchronized (cache) {
                         return cache.get(uri, config);

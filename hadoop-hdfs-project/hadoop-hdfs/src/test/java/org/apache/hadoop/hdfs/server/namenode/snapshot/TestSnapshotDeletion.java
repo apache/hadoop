@@ -24,7 +24,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.security.PrivilegedAction;
+import java.util.concurrent.Callable;
 
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -922,9 +922,9 @@ public class TestSnapshotDeletion {
     hdfs.createSnapshot(path, "s1");
     UserGroupInformation anotherUser = UserGroupInformation
         .createRemoteUser("anotheruser");
-    anotherUser.doAs(new PrivilegedAction<Object>() {
+    anotherUser.callAsNoException(new Callable<Object>() {
       @Override
-      public Object run() {
+      public Object call() {
         DistributedFileSystem anotherUserFS = null;
         try {
           anotherUserFS = cluster.getFileSystem();

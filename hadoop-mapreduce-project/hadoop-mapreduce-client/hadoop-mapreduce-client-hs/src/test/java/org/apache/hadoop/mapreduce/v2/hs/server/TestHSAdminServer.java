@@ -25,14 +25,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -329,9 +328,9 @@ public class TestHSAdminServer {
     hsAdminServer.setLoginUGI(loginUGI);
 
     // Run refresh log retention settings with test user
-    ugi.doAs(new PrivilegedAction<Void>() {
+    ugi.callAsNoException(new Callable<Void>() {
       @Override
-      public Void run() {
+      public Void call() {
         String[] args = new String[1];
         args[0] = "-refreshLogRetentionSettings";
         try {
@@ -344,16 +343,16 @@ public class TestHSAdminServer {
     });
     // Verify if AggregatedLogDeletionService#refreshLogRetentionSettings was
     // called with login UGI, instead of the UGI command was run with.
-    verify(loginUGI).doAs(any(PrivilegedExceptionAction.class));
+    verify(loginUGI).callAs(any(Callable.class));
     verify(alds).refreshLogRetentionSettings();
 
     // Reset for refresh job retention settings
     reset(loginUGI);
 
     // Run refresh job retention settings with test user
-    ugi.doAs(new PrivilegedAction<Void>() {
+    ugi.callAsNoException(new Callable<Void>() {
       @Override
-      public Void run() {
+      public Void call() {
         String[] args = new String[1];
         args[0] = "-refreshJobRetentionSettings";
         try {
@@ -366,7 +365,7 @@ public class TestHSAdminServer {
     });
     // Verify if JobHistory#refreshJobRetentionSettings was called with
     // login UGI, instead of the UGI command was run with.
-    verify(loginUGI).doAs(any(PrivilegedExceptionAction.class));
+    verify(loginUGI).callAs(any(Callable.class));
     verify(jobHistoryService).refreshJobRetentionSettings();
   }
 

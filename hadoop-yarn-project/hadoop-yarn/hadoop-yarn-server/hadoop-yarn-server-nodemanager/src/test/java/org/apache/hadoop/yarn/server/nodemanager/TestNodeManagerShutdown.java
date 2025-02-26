@@ -25,13 +25,13 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -232,9 +232,9 @@ public class TestNodeManagerShutdown {
     currentUser.addToken(nmToken);
 
     ContainerManagementProtocol containerManager =
-        currentUser.doAs(new PrivilegedAction<ContainerManagementProtocol>() {
+        currentUser.callAsNoException(new Callable<ContainerManagementProtocol>() {
           @Override
-          public ContainerManagementProtocol run() {
+          public ContainerManagementProtocol call() {
             Configuration conf = new Configuration();
             YarnRPC rpc = YarnRPC.create(conf);
             InetSocketAddress containerManagerBindAddress =

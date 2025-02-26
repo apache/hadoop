@@ -26,9 +26,9 @@ import java.net.NoRouteToHostException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -209,10 +209,10 @@ public class RMProxy<T> {
   public <T> T getProxy(final Configuration conf,
       final Class<T> protocol, final InetSocketAddress rmAddress)
       throws IOException {
-    return user.doAs(
-      new PrivilegedAction<T>() {
+    return user.callAsNoException(
+      new Callable<T>() {
         @Override
-        public T run() {
+        public T call() {
           return (T) YarnRPC.create(conf).getProxy(protocol, rmAddress, conf);
         }
       });

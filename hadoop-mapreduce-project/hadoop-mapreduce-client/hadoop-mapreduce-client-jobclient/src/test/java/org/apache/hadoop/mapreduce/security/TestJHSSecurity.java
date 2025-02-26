@@ -23,8 +23,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -218,9 +217,9 @@ public class TestJHSSecurity {
     // Get the delegation token directly as it is a little difficult to setup
     // the kerberos based rpc.
     Token token = loggedInUser
-        .doAs(new PrivilegedExceptionAction<Token>() {
+        .callAs(new Callable<Token>() {
           @Override
-          public Token run() throws IOException {
+          public Token call() throws IOException {
             GetDelegationTokenRequest request = Records
                 .newRecord(GetDelegationTokenRequest.class);
             request.setRenewer(renewerString);
@@ -234,10 +233,10 @@ public class TestJHSSecurity {
   private long renewDelegationToken(final UserGroupInformation loggedInUser,
       final MRClientProtocol hsService, final Token dToken)
       throws IOException, InterruptedException {
-    long nextExpTime = loggedInUser.doAs(new PrivilegedExceptionAction<Long>() {
+    long nextExpTime = loggedInUser.callAs(new Callable<Long>() {
 
       @Override
-      public Long run() throws IOException {
+      public Long call() throws IOException {
         RenewDelegationTokenRequest request = Records
             .newRecord(RenewDelegationTokenRequest.class);
         request.setDelegationToken(dToken);
@@ -251,9 +250,9 @@ public class TestJHSSecurity {
       final MRClientProtocol hsService, final Token dToken)
       throws IOException, InterruptedException {
 
-    loggedInUser.doAs(new PrivilegedExceptionAction<Void>() {
+    loggedInUser.callAs(new Callable<Void>() {
       @Override
-      public Void run() throws IOException {
+      public Void call() throws IOException {
         CancelDelegationTokenRequest request = Records
             .newRecord(CancelDelegationTokenRequest.class);
         request.setDelegationToken(dToken);
@@ -270,10 +269,10 @@ public class TestJHSSecurity {
 
     final YarnRPC rpc = YarnRPC.create(conf);
     MRClientProtocol hsWithDT = ugi
-        .doAs(new PrivilegedAction<MRClientProtocol>() {
+        .callAsNoException(new Callable<MRClientProtocol>() {
 
           @Override
-          public MRClientProtocol run() {
+          public MRClientProtocol call() {
             return (MRClientProtocol) rpc.getProxy(HSClientProtocol.class,
                 hsAddress, conf);
           }

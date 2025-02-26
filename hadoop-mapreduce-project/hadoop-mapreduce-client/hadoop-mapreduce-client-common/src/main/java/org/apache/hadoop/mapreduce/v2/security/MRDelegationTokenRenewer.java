@@ -19,7 +19,7 @@ package org.apache.hadoop.mapreduce.v2.security;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -110,9 +110,9 @@ public class MRDelegationTokenRenewer extends TokenRenewer {
     }
     final YarnRPC rpc = YarnRPC.create(conf);
     UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
-    return currentUser.doAs(new PrivilegedAction<MRClientProtocol>() {
+    return currentUser.callAsNoException(new Callable<MRClientProtocol>() {
       @Override
-      public MRClientProtocol run() {
+      public MRClientProtocol call() {
         return (MRClientProtocol) rpc.getProxy(HSClientProtocol.class,
             hsAddress, conf);
       }

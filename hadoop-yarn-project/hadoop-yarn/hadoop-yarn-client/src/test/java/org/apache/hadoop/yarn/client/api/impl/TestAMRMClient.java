@@ -34,11 +34,11 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.HashMap;
@@ -1923,9 +1923,9 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       
       AllocateRequest request = Records.newRecord(AllocateRequest.class);
       request.setResponseId(response.getResponseId());
-      testUser1.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
+      testUser1.callAsNoException(new Callable<ApplicationMasterProtocol>() {
         @Override
-        public ApplicationMasterProtocol run() {
+        public ApplicationMasterProtocol call() {
           return (ApplicationMasterProtocol) YarnRPC.create(conf).getProxy(
             ApplicationMasterProtocol.class,
             yarnCluster.getResourceManager().getApplicationMasterService()
@@ -1956,9 +1956,9 @@ public class TestAMRMClient extends BaseAMRMClientTest{
         SecurityUtil.setTokenService(amrmToken_2, yarnCluster
           .getResourceManager().getApplicationMasterService().getBindAddress());
         testUser2.addToken(amrmToken_2);
-        testUser2.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
+        testUser2.callAsNoException(new Callable<ApplicationMasterProtocol>() {
           @Override
-          public ApplicationMasterProtocol run() {
+          public ApplicationMasterProtocol call() {
             return (ApplicationMasterProtocol) YarnRPC.create(conf).getProxy(
               ApplicationMasterProtocol.class,
               yarnCluster.getResourceManager().getApplicationMasterService()

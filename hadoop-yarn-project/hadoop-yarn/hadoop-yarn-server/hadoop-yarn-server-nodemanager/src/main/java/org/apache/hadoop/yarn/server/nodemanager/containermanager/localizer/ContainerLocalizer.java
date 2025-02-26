@@ -27,7 +27,6 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -191,9 +190,9 @@ public class ContainerLocalizer {
       UserGroupInformation.createRemoteUser(user);
     remoteUser.addToken(creds.getToken(LocalizerTokenIdentifier.KIND));
     final LocalizationProtocol nodeManager =
-        remoteUser.doAs(new PrivilegedAction<LocalizationProtocol>() {
+        remoteUser.callAsNoException(new Callable<LocalizationProtocol>() {
           @Override
-          public LocalizationProtocol run() {
+          public LocalizationProtocol call() {
             return getProxy(nmAddr);
           }
         });

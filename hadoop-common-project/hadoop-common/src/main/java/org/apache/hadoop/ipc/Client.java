@@ -65,7 +65,6 @@ import javax.security.sasl.SaslException;
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
-import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.*;
@@ -752,9 +751,9 @@ public class Client implements AutoCloseable {
         final int currRetries, final int maxRetries, final IOException ex,
         final Random rand, final UserGroupInformation ugi) throws IOException,
         InterruptedException {
-      ugi.doAs(new PrivilegedExceptionAction<Object>() {
+      ugi.callAs(new Callable<Object>() {
         @Override
-        public Object run() throws IOException, InterruptedException {
+        public Object call() throws IOException, InterruptedException {
           final short MAX_BACKOFF = 5000;
           closeConnection();
           disposeSasl();
@@ -838,9 +837,9 @@ public class Client implements AutoCloseable {
           if (authProtocol == AuthProtocol.SASL) {
             try {
               authMethod = ticket
-                  .doAs(new PrivilegedExceptionAction<AuthMethod>() {
+                  .callAs(new Callable<AuthMethod>() {
                     @Override
-                    public AuthMethod run()
+                    public AuthMethod call()
                         throws IOException, InterruptedException {
                       return setupSaslConnection(ipcStreams);
                     }

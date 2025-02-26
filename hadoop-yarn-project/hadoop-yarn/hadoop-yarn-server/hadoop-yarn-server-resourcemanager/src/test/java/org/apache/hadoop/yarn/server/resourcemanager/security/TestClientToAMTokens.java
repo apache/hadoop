@@ -78,6 +78,7 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.Callable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -240,10 +241,10 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
     UserGroupInformation appUgi =
         UserGroupInformation.createRemoteUser(appAttempt.toString());
     RegisterApplicationMasterResponse response =
-        appUgi.doAs(new PrivilegedAction<RegisterApplicationMasterResponse>() {
+        appUgi.callAsNoException(new Callable<RegisterApplicationMasterResponse>() {
 
           @Override
-          public RegisterApplicationMasterResponse run() {
+          public RegisterApplicationMasterResponse call() {
             RegisterApplicationMasterResponse response = null;
             try {
               response = mockAM.registerAppAttempt();
@@ -347,9 +348,9 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
     ugi.addToken(maliciousToken);
 
     try {
-      ugi.doAs(new PrivilegedExceptionAction<Void>()  {
+      ugi.callAsNoException(new Callable<Void>()  {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           try {
             CustomProtocol client = RPC.getProxy(CustomProtocol.class, 1L,
                   am.address, conf);
@@ -391,9 +392,9 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
     
     ugi.addToken(newToken);
 
-    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+    ugi.callAs(new Callable<Void>() {
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
         CustomProtocol client =
             RPC.getProxy(CustomProtocol.class, 1L, am.address, conf);
         client.ping(null, TestRpcBase.newEmptyRequest());
@@ -410,9 +411,9 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
     ugi = UserGroupInformation.createRemoteUser("me");
     ugi.addToken(token);
 
-    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+    ugi.callAs(new Callable<Void>() {
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
         CustomProtocol client = RPC.getProxy(CustomProtocol.class,
             1L, am.address, conf);
         client.ping(null, TestRpcBase.newEmptyRequest());
@@ -470,10 +471,10 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
     UserGroupInformation appUgi =
         UserGroupInformation.createRemoteUser(appAttempt.toString());
     RegisterApplicationMasterResponse response =
-        appUgi.doAs(new PrivilegedAction<RegisterApplicationMasterResponse>() {
+        appUgi.callAsNoException(new Callable<RegisterApplicationMasterResponse>() {
 
           @Override
-          public RegisterApplicationMasterResponse run() {
+          public RegisterApplicationMasterResponse call() {
             RegisterApplicationMasterResponse response = null;
             try {
               response = mockAM.registerAppAttempt();

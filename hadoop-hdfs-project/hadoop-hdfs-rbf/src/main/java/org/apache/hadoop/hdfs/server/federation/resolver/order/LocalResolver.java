@@ -20,11 +20,11 @@ package org.apache.hadoop.hdfs.server.federation.resolver.order;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -139,10 +139,10 @@ public class LocalResolver extends RouterResolver<String, String> {
     try {
       // We need to get the DNs as a privileged user
       UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
-      Map<String, DatanodeStorageReport[]> dnMap = loginUser.doAs(
-          new PrivilegedAction<Map<String, DatanodeStorageReport[]>>() {
+      Map<String, DatanodeStorageReport[]> dnMap = loginUser.callAsNoException(
+          new Callable<Map<String, DatanodeStorageReport[]>>() {
             @Override
-            public Map<String, DatanodeStorageReport[]> run() {
+            public Map<String, DatanodeStorageReport[]> call() {
               try {
                 Map<String, DatanodeStorageReport[]> result;
                 if (rpcServer.isAsync()) {

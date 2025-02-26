@@ -24,9 +24,9 @@ import java.net.InetSocketAddress;
 import java.net.NoRouteToHostException;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -96,9 +96,9 @@ public class ServerProxy {
       final Class<T> protocol, final UserGroupInformation user,
       final YarnRPC rpc, final InetSocketAddress serverAddress,
       RetryPolicy retryPolicy) {
-    T proxy = user.doAs(new PrivilegedAction<T>() {
+    T proxy = user.callAsNoException(new Callable<T>() {
       @Override
-      public T run() {
+      public T call() {
         return (T) rpc.getProxy(protocol, serverAddress, conf);
       }
     });

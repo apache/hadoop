@@ -49,7 +49,6 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -63,6 +62,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -990,7 +990,7 @@ public abstract class Server {
 
   /** A generic call queued for handling. */
   public static class Call implements Schedulable,
-  PrivilegedExceptionAction<Void> {
+  Callable<Void> {
     private final ProcessingDetails processingDetails =
         new ProcessingDetails(TimeUnit.NANOSECONDS);
     // the method name to use in metrics
@@ -1091,7 +1091,7 @@ public abstract class Server {
     }
 
     @Override
-    public Void run() throws Exception {
+    public Void call() throws Exception {
       return null;
     }
     // should eventually be abstract but need to avoid breaking tests
@@ -1295,7 +1295,7 @@ public abstract class Server {
     }
 
     @Override
-    public Void run() throws Exception {
+    public Void call() throws Exception {
       if (!connection.channel.isOpen()) {
         Server.LOG.info(Thread.currentThread().getName() + ": skipped " + this);
         return null;
@@ -1307,7 +1307,7 @@ public abstract class Server {
       ResponseParams responseParams = new ResponseParams();
 
       try {
-        value = call(
+        value = Server.this.call(
             rpcKind, connection.protocolName, rpcRequest, getTimestampNanos());
       } catch (Throwable e) {
         populateResponseParamsOnError(e, responseParams);
@@ -3274,9 +3274,9 @@ public abstract class Server {
           UserGroupInformation remoteUser = call.getRemoteUser();
           connDropped = !call.isOpen();
           if (remoteUser != null) {
-            remoteUser.doAs(call);
+            remoteUser.callAs(call);
           } else {
-            call.run();
+            call.call();
           }
         } catch (InterruptedException e) {
           if (running) {                          // unexpected -- log it

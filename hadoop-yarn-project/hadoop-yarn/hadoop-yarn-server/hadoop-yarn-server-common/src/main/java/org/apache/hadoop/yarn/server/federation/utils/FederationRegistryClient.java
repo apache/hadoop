@@ -19,11 +19,11 @@
 package org.apache.hadoop.yarn.server.federation.utils;
 
 import java.io.IOException;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.collections4.MapUtils;
@@ -250,9 +250,9 @@ public class FederationRegistryClient {
       UserGroupInformation ugi, final String key, final boolean throwIfFails)
       throws YarnException {
     // Use the ugi loaded with app credentials to access registry
-    String result = ugi.doAs(new PrivilegedAction<String>() {
+    String result = ugi.callAsNoException(new Callable<String>() {
       @Override
-      public String run() {
+      public String call() {
         try {
           ServiceRecord value = registryImpl.resolve(key);
           if (value != null) {
@@ -276,9 +276,9 @@ public class FederationRegistryClient {
       UserGroupInformation ugi, final String key, final boolean recursive,
       final boolean throwIfFails) throws YarnException {
     // Use the ugi loaded with app credentials to access registry
-    boolean success = ugi.doAs(new PrivilegedAction<Boolean>() {
+    boolean success = ugi.callAsNoException(new Callable<Boolean>() {
       @Override
-      public Boolean run() {
+      public Boolean call() {
         try {
           registryImpl.delete(key, recursive);
           return true;
@@ -305,9 +305,9 @@ public class FederationRegistryClient {
     final ServiceRecord recordValue = new ServiceRecord();
     recordValue.description = value;
     // Use the ugi loaded with app credentials to access registry
-    boolean success = ugi.doAs(new PrivilegedAction<Boolean>() {
+    boolean success = ugi.callAsNoException(new Callable<Boolean>() {
       @Override
-      public Boolean run() {
+      public Boolean call() {
         try {
           registryImpl.bind(key, recordValue, BindFlags.OVERWRITE);
           return true;
@@ -330,7 +330,7 @@ public class FederationRegistryClient {
   private List<String> listDirRegistry(final RegistryOperations registryImpl,
       UserGroupInformation ugi, final String key, final boolean throwIfFails)
       throws YarnException {
-    List<String> result = ugi.doAs((PrivilegedAction<List<String>>) () -> {
+    List<String> result = ugi.callAsNoException((Callable<List<String>>) () -> {
       try {
         return registryImpl.list(key);
       } catch (Throwable e) {

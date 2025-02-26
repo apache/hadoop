@@ -50,6 +50,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -89,6 +91,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.util.Time;
 
 import org.slf4j.Logger;
@@ -585,8 +588,7 @@ public class UserGroupInformation {
   @InterfaceStability.Evolving
   public static UserGroupInformation getCurrentUser() throws IOException {
     ensureInitialized();
-    AccessControlContext context = AccessController.getContext();
-    Subject subject = Subject.getSubject(context);
+    Subject subject = SubjectUtil.current();
     if (subject == null || subject.getPrincipals(User.class).isEmpty()) {
       return getLoginUser();
     } else {
@@ -1929,16 +1931,93 @@ public class UserGroupInformation {
   /**
    * Run the given action as the user.
    * @param <T> the return type of the run method
+   * @param action the Callable to execute
+   * @return the value from the Callable's call method
+   * @throws IOException if the action throws an IOException
+   * @throws Error if the action throws an Error
+   * @throws RuntimeException if the action throws a RuntimeException
+   * @throws InterruptedException if the action throws an InterruptedException
+   * @throws UndeclaredThrowableException if the action throws something else
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public <T> T callAs(Callable<T> action) throws  IOException, InterruptedException {
+    tracePrivilegedAction(action);
+    try {
+      return SubjectUtil.callAs(subject, action);
+    } catch (CompletionException ce) {
+      Throwable cause = ce.getCause();
+      LOG.debug("CompletionException as: {}", this, cause);
+      if (cause == null) {
+        throw new RuntimeException("CompletionException with no " +
+                "underlying cause. UGI [" + this + "]" +": " + ce, ce);
+      } else if (cause instanceof IOException) {
+        throw (IOException) cause;
+      } else if (cause instanceof Error) {
+        throw (Error) cause;
+      } else if (cause instanceof RuntimeException) {
+        throw (RuntimeException) cause;
+      } else if (cause instanceof InterruptedException) {
+        throw (InterruptedException) cause;
+      } else {
+        throw new UndeclaredThrowableException(cause);
+      }
+    }
+  }
+
+  /**
+   * Run the given action as the user.
+   * 
+   * This variant should only be used with Callables that do not throw checked exceptions
+   * 
+   * This methods is meant to simplify migrating from doAs(PrivilegedAction<T> action)
+   * 
+   * @param <T> the return type of the run method
+   * @param action the Callable to execute
+   * @return the value from the Callable's call method
+   * @throws IOException if the action throws an IOException
+   * @throws Error if the action throws an Error
+   * @throws RuntimeException if the action throws a RuntimeException
+   * @throws InterruptedException if the action throws an InterruptedException
+   * @throws UndeclaredThrowableException if the action throws something else
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public <T> T callAsNoException(Callable<T> action) {
+    tracePrivilegedAction(action);
+    try {
+      return SubjectUtil.callAs(subject, action);
+    } catch (CompletionException ce) {
+      Throwable cause = ce.getCause();
+      LOG.debug("CompletionException as: {}", this, cause);
+      if (cause == null) {
+        throw new RuntimeException("CompletionException with no " +
+                "underlying cause. UGI [" + this + "]" +": " + ce, ce);
+      } else if (cause instanceof Error) {
+        throw (Error) cause;
+      } else if (cause instanceof RuntimeException) {
+        throw (RuntimeException) cause;
+      } else {
+        throw new UndeclaredThrowableException(cause);
+      }
+    }
+  }
+
+  /**
+   * Run the given action as the user.
+   * @param <T> the return type of the run method
    * @param action the method to execute
    * @return the value from the run method
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
+  @Deprecated
   public <T> T doAs(PrivilegedAction<T> action) {
     tracePrivilegedAction(action);
     return Subject.doAs(subject, action);
   }
-  
+
+
   /**
    * Run the given action as the user, potentially throwing an exception.
    * @param <T> the return type of the run method
@@ -1952,11 +2031,12 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
+  @Deprecated
   public <T> T doAs(PrivilegedExceptionAction<T> action
                     ) throws IOException, InterruptedException {
     try {
       tracePrivilegedAction(action);
-      return Subject.doAs(subject, action);
+      return SubjectUtil.doAs(subject, action);
     } catch (PrivilegedActionException pae) {
       Throwable cause = pae.getCause();
       LOG.debug("PrivilegedActionException as: {}", this, cause);

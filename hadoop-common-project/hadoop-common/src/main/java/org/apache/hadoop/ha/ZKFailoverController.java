@@ -19,10 +19,9 @@ package org.apache.hadoop.ha;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -179,9 +178,9 @@ public abstract class ZKFailoverController {
     }
     loginAsFCUser();
     try {
-      return SecurityUtil.doAsLoginUserOrFatal(new PrivilegedAction<Integer>() {
+      return SecurityUtil.callAsLoginUserOrFatalNoException(new Callable<Integer>() {
         @Override
-        public Integer run() {
+        public Integer call() {
           try {
             return doRun(args);
           } catch (Exception t) {
@@ -578,9 +577,9 @@ public abstract class ZKFailoverController {
   void cedeActive(final int millisToCede)
       throws AccessControlException, ServiceFailedException, IOException {
     try {
-      UserGroupInformation.getLoginUser().doAs(new PrivilegedExceptionAction<Void>() {
+      UserGroupInformation.getLoginUser().callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           doCedeActive(millisToCede);
           return null;
         }
@@ -632,9 +631,9 @@ public abstract class ZKFailoverController {
    */
   void gracefulFailoverToYou() throws ServiceFailedException, IOException {
     try {
-      UserGroupInformation.getLoginUser().doAs(new PrivilegedExceptionAction<Void>() {
+      UserGroupInformation.getLoginUser().callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           doGracefulFailover();
           return null;
         }

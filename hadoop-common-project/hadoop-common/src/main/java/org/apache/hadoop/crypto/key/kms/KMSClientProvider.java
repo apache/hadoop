@@ -74,6 +74,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
@@ -504,10 +505,10 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     HttpURLConnection conn;
     try {
       final String doAsUser = getDoAsUser();
-      conn = getActualUgi().doAs(new PrivilegedExceptionAction
+      conn = getActualUgi().callAs(new Callable
           <HttpURLConnection>() {
         @Override
-        public HttpURLConnection run() throws Exception {
+        public HttpURLConnection call() throws Exception {
           DelegationTokenAuthenticatedURL authUrl =
               createAuthenticatedURL();
           return authUrl.openConnection(url, authToken, doAsUser);
@@ -1026,9 +1027,9 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     Token<?> token = null;
     try {
       final String doAsUser = getDoAsUser();
-      token = getActualUgi().doAs(new PrivilegedExceptionAction<Token<?>>() {
+      token = getActualUgi().callAs(new Callable<Token<?>>() {
         @Override
-        public Token<?> run() throws Exception {
+        public Token<?> call() throws Exception {
           // Not using the cached token here.. Creating a new token here
           // everytime.
           LOG.debug("Getting new token from {}, renewer:{}", url, renewer);
@@ -1065,10 +1066,10 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
           token, url, doAsUser);
       final DelegationTokenAuthenticatedURL authUrl =
           createAuthenticatedURL();
-      return getActualUgi().doAs(
-          new PrivilegedExceptionAction<Long>() {
+      return getActualUgi().callAs(
+          new Callable<Long>() {
             @Override
-            public Long run() throws Exception {
+            public Long call() throws Exception {
               return authUrl.renewDelegationToken(url, token, doAsUser);
             }
           }
@@ -1088,10 +1089,10 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       final String doAsUser = getDoAsUser();
       final DelegationTokenAuthenticatedURL.Token token =
           generateDelegationToken(dToken);
-      return getActualUgi().doAs(
-          new PrivilegedExceptionAction<Void>() {
+      return getActualUgi().callAs(
+          new Callable<Void>() {
             @Override
-            public Void run() throws Exception {
+            public Void call() throws Exception {
               final URL url = createURL(null, null, null, null);
               LOG.debug("Cancelling delegation token {} with url:{}, as:{}",
                   dToken, url, doAsUser);

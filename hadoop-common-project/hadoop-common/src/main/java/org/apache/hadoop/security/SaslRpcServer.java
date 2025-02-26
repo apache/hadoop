@@ -29,6 +29,7 @@ import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
 import javax.security.auth.callback.Callback;
@@ -153,10 +154,10 @@ public class SaslRpcServer {
     
     final SaslServer saslServer;
     if (ugi != null) {
-      saslServer = ugi.doAs(
-        new PrivilegedExceptionAction<SaslServer>() {
+      saslServer = ugi.callAs(
+        new Callable<SaslServer>() {
           @Override
-          public SaslServer run() throws SaslException  {
+          public SaslServer call() throws SaslException  {
             return saslFactory.createSaslServer(mechanism, protocol, serverId,
                 saslProperties, callback);
           }

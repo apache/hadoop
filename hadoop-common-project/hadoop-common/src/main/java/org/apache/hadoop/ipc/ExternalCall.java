@@ -19,7 +19,7 @@
 package org.apache.hadoop.ipc;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -28,12 +28,12 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.Rpc
 import org.apache.hadoop.security.UserGroupInformation;
 
 public abstract class ExternalCall<T> extends Call {
-  private final PrivilegedExceptionAction<T> action;
+  private final Callable<T> action;
   private final AtomicBoolean done = new AtomicBoolean();
   private T result;
   private Throwable error;
 
-  public ExternalCall(PrivilegedExceptionAction<T> action) {
+  public ExternalCall(Callable<T> action) {
     this.action = action;
   }
 
@@ -73,9 +73,9 @@ public abstract class ExternalCall<T> extends Call {
 
   // invoked by ipc handler
   @Override
-  public final Void run() throws IOException {
+  public final Void call() throws IOException {
     try {
-      result = action.run();
+      result = action.call();
       sendResponse();
     } catch (Throwable t) {
       abortResponse(t);

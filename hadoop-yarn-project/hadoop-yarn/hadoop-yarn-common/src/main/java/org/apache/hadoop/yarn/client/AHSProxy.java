@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
+import java.util.concurrent.Callable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,10 +47,10 @@ public class AHSProxy<T> {
   protected static <T> T getProxy(final Configuration conf,
       final Class<T> protocol, final InetSocketAddress rmAddress)
       throws IOException {
-    return UserGroupInformation.getCurrentUser().doAs(
-      new PrivilegedAction<T>() {
+    return UserGroupInformation.getCurrentUser().callAsNoException(
+      new Callable<T>() {
         @Override
-        public T run() {
+        public T call() {
           return (T) YarnRPC.create(conf).getProxy(protocol, rmAddress, conf);
         }
       });
