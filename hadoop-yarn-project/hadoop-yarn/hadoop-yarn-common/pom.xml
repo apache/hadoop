@@ -205,10 +205,6 @@
       <artifactId>jackson-jaxrs-json-provider</artifactId>
     </dependency>
     <dependency>
-      <groupId>javax.xml.bind</groupId>
-      <artifactId>jaxb-api</artifactId>
-    </dependency>
-    <dependency>
       <groupId>net.jodah</groupId>
       <artifactId>failsafe</artifactId>
     </dependency>
