@@ -21,8 +21,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 
@@ -39,7 +39,7 @@ public abstract class FederationSQLAccuracyTest {
 
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void before() throws IOException, YarnException {
     stateStore = createStateStore();
     conf = new YarnConfiguration();
@@ -50,7 +50,7 @@ public abstract class FederationSQLAccuracyTest {
     stateStore.init(conf);
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     stateStore.close();
   }

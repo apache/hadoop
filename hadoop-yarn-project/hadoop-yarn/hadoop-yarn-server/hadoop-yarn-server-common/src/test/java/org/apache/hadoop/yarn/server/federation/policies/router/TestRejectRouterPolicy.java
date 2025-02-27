@@ -21,8 +21,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Simple test class for the {@link RejectRouterPolicy}. Tests that one of the
@@ -30,7 +32,7 @@ import org.junit.Test;
  */
 public class TestRejectRouterPolicy extends BaseRouterPoliciesTest {
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     setPolicy(new RejectRouterPolicy());
 
@@ -42,37 +44,47 @@ public class TestRejectRouterPolicy extends BaseRouterPoliciesTest {
 
   }
 
-  @Test(expected = FederationPolicyException.class)
+  @Test
   public void testNoClusterIsChosen() throws YarnException {
-    ((FederationRouterPolicy) getPolicy())
-        .getHomeSubcluster(getApplicationSubmissionContext(), null);
+    assertThrows(FederationPolicyException.class, () -> {
+      ((FederationRouterPolicy) getPolicy())
+          .getHomeSubcluster(getApplicationSubmissionContext(), null);
+    });
   }
 
   @Override
-  @Test(expected = FederationPolicyException.class)
+  @Test
   public void testNullQueueRouting() throws YarnException {
-    FederationRouterPolicy localPolicy = (FederationRouterPolicy) getPolicy();
-    ApplicationSubmissionContext applicationSubmissionContext =
-        ApplicationSubmissionContext.newInstance(null, null, null, null, null,
-            false, false, 0, Resources.none(), null, false, null, null);
-    localPolicy.getHomeSubcluster(applicationSubmissionContext, null);
+    assertThrows(FederationPolicyException.class, () -> {
+      FederationRouterPolicy localPolicy = (FederationRouterPolicy) getPolicy();
+      ApplicationSubmissionContext applicationSubmissionContext =
+          ApplicationSubmissionContext.newInstance(null, null, null, null, null,
+          false, false, 0, Resources.none(), null, false, null, null);
+      localPolicy.getHomeSubcluster(applicationSubmissionContext, null);
+    });
   }
 
   @Override
-  @Test(expected = FederationPolicyException.class)
+  @Test
   public void testFollowReservation() throws YarnException {
-    super.testFollowReservation();
+    assertThrows(FederationPolicyException.class, () -> {
+      super.testFollowReservation();
+    });
   }
 
   @Override
-  @Test(expected = FederationPolicyException.class)
+  @Test
   public void testUpdateReservation() throws YarnException {
-    super.testUpdateReservation();
+    assertThrows(FederationPolicyException.class, () -> {
+      super.testUpdateReservation();
+    });
   }
 
   @Override
-  @Test(expected = FederationPolicyException.class)
+  @Test
   public void testDeleteReservation() throws Exception {
-    super.testDeleteReservation();
+    assertThrows(FederationPolicyException.class, () -> {
+      super.testDeleteReservation();
+    });
   }
 }

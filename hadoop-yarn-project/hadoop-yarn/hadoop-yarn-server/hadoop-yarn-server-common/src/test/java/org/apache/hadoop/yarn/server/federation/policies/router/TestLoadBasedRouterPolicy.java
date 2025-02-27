@@ -39,10 +39,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
 /**
@@ -51,7 +51,7 @@ import static org.mockito.Mockito.when;
  */
 public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     setPolicy(new LoadBasedRouterPolicy());
     setPolicyInfo(new WeightedPolicyInfo());
@@ -115,7 +115,7 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
         .getHomeSubcluster(getApplicationSubmissionContext(), null);
 
     // check the "planted" best cluster is chosen
-    Assert.assertEquals("sc05", chosen.getId());
+    assertEquals("sc05", chosen.getId());
   }
 
   @Test
@@ -196,6 +196,6 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
     SubClusterId chosen3 = routerPolicy.getHomeSubcluster(
         applicationSubmissionContext, new ArrayList<>());
 
-    Assert.assertEquals(chosen2, chosen3);
+    assertEquals(chosen2, chosen3);
   }
 }
