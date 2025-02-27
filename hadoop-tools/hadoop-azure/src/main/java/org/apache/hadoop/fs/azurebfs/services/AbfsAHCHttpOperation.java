@@ -194,26 +194,14 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   public void processResponse(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
-    try {
-      if (!isPayloadRequest) {
-        prepareRequest();
-        LOG.debug("Sending request: {}", httpRequestBase);
-        httpResponse = executeRequest();
-        LOG.debug("Request sent: {}; response {}", httpRequestBase,
-            httpResponse);
-      }
-      parseResponseHeaderAndBody(buffer, offset, length);
-    } finally {
-      if (httpResponse != null) {
-        try {
-          EntityUtils.consume(httpResponse.getEntity());
-        } finally {
-          if (httpResponse instanceof CloseableHttpResponse) {
-            ((CloseableHttpResponse) httpResponse).close();
-          }
-        }
-      }
+    if (!isPayloadRequest) {
+      prepareRequest();
+      LOG.debug("Sending request: {}", httpRequestBase);
+      httpResponse = executeRequest();
+      LOG.debug("Request sent: {}; response {}", httpRequestBase,
+          httpResponse);
     }
+    parseResponseHeaderAndBody(buffer, offset, length);
   }
 
   /**
