@@ -1382,8 +1382,8 @@ public final class Constants {
    * fs.s3a.client.sts.custom.headers - Headers to add on all the STS requests.
    *
    * Examples:
-   * CustomHeader -> 'Header1:Value1'
-   * CustomHeaders -> 'Header1=Value1;Value2,Header2=Value1'
+   * CustomHeader {@literal ->} 'Header1:Value1'
+   * CustomHeaders {@literal ->} 'Header1=Value1;Value2,Header2=Value1'
    * </pre>
    */
   public static final String CUSTOM_HEADERS_STS =
