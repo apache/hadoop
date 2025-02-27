@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.io.FileNotFoundException;
+import java.nio.charset.StandardCharsets;
+
+import org.junit.Assume;
+import org.junit.Test;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -26,39 +31,31 @@ import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-
+import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
-import org.junit.Assume;
-import org.junit.Test;
+import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
-import java.io.FileNotFoundException;
-import java.nio.charset.StandardCharsets;
-import java.util.Optional;
-
+import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE;
 import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_ARRAY;
-import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_MULTIPART;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_OVERWRITE_SUPPORTED;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_412_PRECONDITION_FAILED;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.scale.S3AScaleTestBase._1KB;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-
 
 public class ITestS3APutIfMatch extends AbstractS3ACostTest {
 
@@ -439,7 +436,7 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
     }
 
     @Test
-    public void testIfMatchIthCreateFileWithoutOverwrite() throws Throwable {
+    public void testIfMatchCreateFileWithoutOverwrite() throws Throwable {
         FileSystem fs = getFileSystem();
         Path testFile = methodPath();
         fs.mkdirs(testFile.getParent());
@@ -459,7 +456,7 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
     }
 
     @Test
-    public void testIfMatchIthCreateFileWithoutOverwriteWithPerformanceFlag() throws Throwable {
+    public void testIfMatchCreateFileWithoutOverwriteWithPerformanceFlag() throws Throwable {
         FileSystem fs = getFileSystem();
         Path testFile = methodPath();
         fs.mkdirs(testFile.getParent());
@@ -481,11 +478,64 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
     }
 
     @Test
-    public void testConditionalWriteStatistics() throws Throwable {
+    public void testConditionalWriteStatisticsWithoutIfNoneMatch() throws Throwable {
         FileSystem fs = getFileSystem();
         Path testFile = methodPath();
 
-        FSDataOutputStream stream = getStreamWithFlags(fs, testFile, true, null, true);
+        // write without an If-None-Match
+        // conditional_write, conditional_write_statistics should remain 0
+        FSDataOutputStream stream = getStreamWithFlags(fs, testFile, false, null, false);
+        updateStatistics(stream);
+        stream.write(SMALL_FILE_BYTES);
+        stream.close();
+        long conditionalCreate = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE.getSymbol());
+        long conditionalCreateFailed = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE_FAILED.getSymbol());
+        assertEquals("Write without If-None-Match: conditional_create should be 0", 0L, conditionalCreate);
+        assertEquals("Write without If-None-Match: conditional_create_failed should be 0", 0L, conditionalCreateFailed);
+
+        // write with overwrite = true
+        // conditional_write, conditional_write_statistics should remain 0
+        try (FSDataOutputStream outputStream = fs.create(testFile, true)) {
+            outputStream.write(SMALL_FILE_BYTES);
+            updateStatistics(outputStream);
+        }
+        conditionalCreate = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE.getSymbol());
+        conditionalCreateFailed = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE_FAILED.getSymbol());
+        assertEquals("Write with overwrite=true: conditional_create should be 0", 0L, conditionalCreate);
+        assertEquals("Write with overwrite=true: conditional_create_failed should be 0", 0L, conditionalCreateFailed);
+
+        // write in path where file already exists with overwrite = false
+        // conditional_write, conditional_write_statistics should remain 0
+        try (FSDataOutputStream outputStream = fs.create(testFile, false)) {
+            outputStream.write(SMALL_FILE_BYTES);
+            updateStatistics(outputStream);
+        } catch (FileAlreadyExistsException e) {}
+        conditionalCreate = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE.getSymbol());
+        conditionalCreateFailed = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE_FAILED.getSymbol());
+        assertEquals("Write in path where file already exists with overwrite=false: conditional_create should be 0", 0L, conditionalCreate);
+        assertEquals("Write in path where file already exists with overwrite=false: conditional_create_failed should be 0", 0L, conditionalCreateFailed);
+
+        // delete the file
+        fs.delete(testFile, false);
+
+        // write in path where file doesn't exist with overwrite = false
+        // conditional_write, conditional_write_statistics should remain 0
+        try (FSDataOutputStream outputStream = fs.create(testFile, false)) {
+            outputStream.write(SMALL_FILE_BYTES);
+            updateStatistics(outputStream);
+        }
+        conditionalCreate = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE.getSymbol());
+        conditionalCreateFailed = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE_FAILED.getSymbol());
+        assertEquals("Write in path where file does not exist with overwrite=false: conditional_create should be 0", 0L, conditionalCreate);
+        assertEquals("Write in path where file does not exist with overwrite=false: conditional_create_failed should be 0", 0L, conditionalCreateFailed);
+    }
+
+    @Test
+    public void testConditionalWriteStatisticsWithIfNoneMatch() throws Throwable {
+        FileSystem fs = getFileSystem();
+        Path testFile = methodPath();
+
+        FSDataOutputStream stream = getStreamWithFlags(fs, testFile, true, null, false);
         updateStatistics(stream);
         stream.write(SMALL_FILE_BYTES);
         stream.close();
@@ -493,21 +543,22 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
         long conditionalCreate = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE.getSymbol());
         long conditionalCreateFailed = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE_FAILED.getSymbol());
 
-        assertEquals(1L, conditionalCreate);
-        assertEquals(0L, conditionalCreateFailed);
+        assertEquals("First write using If-None-Match: conditional_create should be 1", 1L, conditionalCreate);
+        assertEquals("First write using If-None-Match: conditional_create_failed should be 0", 0L, conditionalCreateFailed);
 
         try {
-            // try again. should fail
-            stream = getStreamWithFlags(fs, testFile, true, null, true);
+            // try again with If-None-Match. should fail
+            stream = getStreamWithFlags(fs, testFile, true, null, false);
             updateStatistics(stream);
             stream.write(SMALL_FILE_BYTES);
             stream.close();
-        } catch (Exception e) {}
+            fail("Second write using If-None-Match should have failed due to existing file.");
+        } catch (RemoteFileChangedException e) {}
 
         conditionalCreate = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE.getSymbol());
         conditionalCreateFailed = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE_FAILED.getSymbol());
 
-        assertEquals(1L, conditionalCreate);
-        assertEquals(1L, conditionalCreateFailed);
+        assertEquals("After failed write using If-None-Match: conditional_create should remain 1", 1L, conditionalCreate);
+        assertEquals("After failed write using If-None-Match: conditional_create_failed should be 1", 1L, conditionalCreateFailed);
     }
 }
