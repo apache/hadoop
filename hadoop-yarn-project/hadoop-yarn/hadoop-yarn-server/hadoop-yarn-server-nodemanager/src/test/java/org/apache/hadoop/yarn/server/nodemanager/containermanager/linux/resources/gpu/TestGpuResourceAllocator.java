@@ -365,7 +365,7 @@ public class TestGpuResourceAllocator {
           assertEquals(1, testSubject.getAvailableGpus());
 
           testSubject.assignGpus(container3);
-      });
+        });
 
     assertThat(exception.getMessage()).contains("Failed to find enough GPUs");
   }

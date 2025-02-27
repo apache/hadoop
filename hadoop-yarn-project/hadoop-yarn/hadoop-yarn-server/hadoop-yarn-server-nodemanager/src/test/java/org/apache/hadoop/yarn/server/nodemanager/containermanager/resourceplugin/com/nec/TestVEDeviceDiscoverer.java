@@ -241,10 +241,10 @@ public class TestVEDeviceDiscoverer {
   public void testNonBlockOrCharFilesAreRejected() throws IOException {
     IllegalArgumentException exception =
           assertThrows(IllegalArgumentException.class, () -> {
-          createVeSlotFile(0);
-          when(mockCommandExecutor.getOutput()).thenReturn("0:0:regular file");
-          discoverer.getDevicesFromPath(testFolder);
-        });
+            createVeSlotFile(0);
+            when(mockCommandExecutor.getOutput()).thenReturn("0:0:regular file");
+            discoverer.getDevicesFromPath(testFolder);
+          });
     assertThat(exception.getMessage()).contains("File is neither a char nor block device");
   }
 

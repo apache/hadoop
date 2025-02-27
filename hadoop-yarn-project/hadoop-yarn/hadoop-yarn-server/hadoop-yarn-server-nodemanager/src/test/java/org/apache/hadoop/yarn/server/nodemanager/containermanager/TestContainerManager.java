@@ -1200,12 +1200,12 @@ public class TestContainerManager extends BaseContainerManagerTest {
   @Test
   public void testContainerLaunchAndExitSuccess() throws IOException,
       InterruptedException, YarnException {
-	containerManager.start();
+    containerManager.start();
     int exitCode = 0;
 
-	// launch context for a command that will return exit code 0
-	// and verify exit code returned
-	testContainerLaunchAndExit(exitCode);
+    // launch context for a command that will return exit code 0
+    // and verify exit code returned
+    testContainerLaunchAndExit(exitCode);
   }
 
   @Test
