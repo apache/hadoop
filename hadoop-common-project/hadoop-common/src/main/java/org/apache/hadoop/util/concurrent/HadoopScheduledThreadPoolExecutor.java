@@ -20,12 +20,18 @@
 
 package org.apache.hadoop.util.concurrent;
 
+import org.apache.hadoop.util.SubjectUtil;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 /** An extension of ScheduledThreadPoolExecutor that provides additional
  * functionality. */
@@ -68,4 +74,53 @@ public class HadoopScheduledThreadPoolExecutor extends
     super.afterExecute(r, t);
     ExecutorHelper.logThrowableFromAfterExecute(r, t);
   }
+
+  /**
+   * @throws RejectedExecutionException {@inheritDoc}
+   * @throws NullPointerException       {@inheritDoc}
+   */
+  @Override
+  public ScheduledFuture<?> schedule(Runnable command,
+                                     long delay,
+                                     TimeUnit unit) {
+      return super.schedule(SubjectUtil.wrap(command), delay, unit);
+  }
+
+  /**
+   * @throws RejectedExecutionException {@inheritDoc}
+   * @throws NullPointerException       {@inheritDoc}
+   */
+  @Override
+  public <V> ScheduledFuture<V> schedule(Callable<V> callable,
+                                         long delay,
+                                         TimeUnit unit) {
+    return super.schedule(SubjectUtil.wrap(callable), delay, unit);
+  }
+
+  /**
+   * @throws RejectedExecutionException {@inheritDoc}
+   * @throws NullPointerException       {@inheritDoc}
+   * @throws IllegalArgumentException   {@inheritDoc}
+   */
+  @Override
+  public ScheduledFuture<?> scheduleAtFixedRate(Runnable command,
+                                                long initialDelay,
+                                                long period,
+                                                TimeUnit unit) {
+    return super.scheduleAtFixedRate(SubjectUtil.wrap(command), initialDelay, period, unit);
+  }
+
+  /**
+   * @throws RejectedExecutionException {@inheritDoc}
+   * @throws NullPointerException       {@inheritDoc}
+   * @throws IllegalArgumentException   {@inheritDoc}
+   */
+  @Override
+  public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command,
+                                                   long initialDelay,
+                                                   long delay,
+                                                   TimeUnit unit) {
+    return super.scheduleWithFixedDelay(SubjectUtil.wrap(command), initialDelay, delay, unit);
+  }
+
 }

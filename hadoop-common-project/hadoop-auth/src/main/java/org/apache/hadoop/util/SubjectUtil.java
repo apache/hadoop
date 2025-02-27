@@ -18,6 +18,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public class SubjectUtil {
 	private static final MethodHandle CALL_AS = lookupCallAs();
 	private static final MethodHandle CURRENT = lookupCurrent();
+	private static boolean HAS_CALL_AS = true;
 
 	private SubjectUtil() {
 	}
@@ -33,6 +34,7 @@ public class SubjectUtil {
 				return lookup.findStatic(Subject.class, "callAs",
 						MethodType.methodType(Object.class, Subject.class, Callable.class));
 			} catch (NoSuchMethodException x) {
+			  HAS_CALL_AS = false;
 				try {
 					// Lookup the old API.
 					MethodType oldSignature = MethodType.methodType(Object.class, Subject.class,
@@ -167,6 +169,25 @@ public class SubjectUtil {
 			throw sneakyThrow(t);
 		}
 	}
+
+  public static Runnable wrap(Runnable r) {
+    if (!HAS_CALL_AS) {
+      return r;
+    }
+    Subject s = current();
+    return () -> callAs(s, () -> {
+      r.run();
+      return null;
+    });
+  }
+
+  public static <T> Callable<T> wrap(Callable<T> c) {
+    if (!HAS_CALL_AS) {
+      return c;
+    }
+    Subject s = current();
+    return () -> callAs(s, () -> c.call());
+  }
 
 	@SuppressWarnings("unused")
 	private static <T> PrivilegedExceptionAction<T> callableToPrivilegedExceptionAction(Callable<T> callable) {

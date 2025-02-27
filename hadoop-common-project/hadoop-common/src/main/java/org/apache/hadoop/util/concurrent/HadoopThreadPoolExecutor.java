@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.util.concurrent;
 
+import org.apache.hadoop.util.SubjectUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,6 +75,11 @@ public final class HadoopThreadPoolExecutor extends ThreadPoolExecutor {
       RejectedExecutionHandler handler) {
     super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue,
         threadFactory, handler);
+  }
+
+  @Override
+  public void execute(Runnable command) {
+    super.execute(SubjectUtil.wrap(command));
   }
 
   @Override
