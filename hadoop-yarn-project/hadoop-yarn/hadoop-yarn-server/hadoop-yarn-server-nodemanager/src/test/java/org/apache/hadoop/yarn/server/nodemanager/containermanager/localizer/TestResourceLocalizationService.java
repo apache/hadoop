@@ -820,7 +820,7 @@ public class TestResourceLocalizationService {
 
   @Test
   @Timeout(value = 10)
-  @SuppressWarnings("unchecked") // mocked generics
+  @SuppressWarnings({"unchecked", "methodlength"}) // mocked generics
   public void testLocalizationHeartbeat() throws Exception {
     List<Path> localDirs = new ArrayList<Path>();
     String[] sDirs = new String[1];

@@ -1585,7 +1585,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
   @Test
   @Timeout(value = 50)
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "methodlength"})
   public void testLogAggregationServiceWithPatterns() throws Exception {
 
     LogAggregationContext logAggregationContextWithIncludePatterns =

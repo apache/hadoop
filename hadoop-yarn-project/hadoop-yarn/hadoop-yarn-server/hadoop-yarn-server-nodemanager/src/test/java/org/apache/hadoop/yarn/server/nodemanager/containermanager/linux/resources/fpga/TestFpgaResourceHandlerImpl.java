@@ -506,10 +506,10 @@ public class TestFpgaResourceHandlerImpl {
   @Test
   public void testSha256CalculationFails() throws ResourceHandlerException {
     ResourceHandlerException exception =
-      assertThrows(ResourceHandlerException.class, () -> {
-        dummyAocx.delete();
-        fpgaResourceHandler.preStart(mockContainer(0, 1, "GEMM"));
-      });
+        assertThrows(ResourceHandlerException.class, () -> {
+          dummyAocx.delete();
+          fpgaResourceHandler.preStart(mockContainer(0, 1, "GEMM"));
+        });
     assertEquals("Could not calculate SHA-256", exception.getMessage());
   }
 

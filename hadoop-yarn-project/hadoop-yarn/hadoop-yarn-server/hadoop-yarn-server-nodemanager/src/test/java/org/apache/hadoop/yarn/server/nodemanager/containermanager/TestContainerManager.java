@@ -1193,19 +1193,19 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerStatus containerStatus = containerManager.
         getContainerStatuses(gcsRequest).getContainerStatuses().get(0);
 
-	 // Verify exit status matches exit state of script
-     assertEquals(exitCode, containerStatus.getExitStatus());
+    // Verify exit status matches exit state of script
+    assertEquals(exitCode, containerStatus.getExitStatus());
   }
   
   @Test
   public void testContainerLaunchAndExitSuccess() throws IOException,
       InterruptedException, YarnException {
-	  containerManager.start();
-	  int exitCode = 0;
+	containerManager.start();
+    int exitCode = 0;
 
-	  // launch context for a command that will return exit code 0 
-	  // and verify exit code returned 
-	  testContainerLaunchAndExit(exitCode);	  
+	// launch context for a command that will return exit code 0
+	// and verify exit code returned
+	testContainerLaunchAndExit(exitCode);
   }
 
   @Test
@@ -2265,8 +2265,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
         .get(containerId).size());
     LocalizationStatus status = statusResponse.getLocalizationStatuses()
         .get(containerId).iterator().next();
-    assertEquals("resource key", "dest_file1",
-        status.getResourceKey());
+    assertEquals("dest_file1",
+        status.getResourceKey(), "resource key");
     assertEquals(LocalizationState.COMPLETED,
         status.getLocalizationState(), "resource status");
 
@@ -2331,8 +2331,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
           .getLocalizationStatuses().get(container1);
       assertEquals(1, statuses.size());
       LocalizationStatus status = statuses.get(0);
-      assertEquals("resource key", "dest_file1",
-          status.getResourceKey());
+      assertEquals("dest_file1",
+          status.getResourceKey(), "resource key");
       assertEquals(LocalizationState.COMPLETED,
           status.getLocalizationState(), "resource status");
     });

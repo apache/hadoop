@@ -182,7 +182,6 @@ public class TestDockerContainerRuntime {
   private final static String ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER =
       formatOciEnvKey(RUNTIME_TYPE, RUN_PRIVILEGED_CONTAINER_SUFFIX);
 
-  // @Parameterized.Parameters(name = "https={0}")
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][] {
         {true}, {false}
@@ -1846,7 +1845,7 @@ public class TestDockerContainerRuntime {
   public void testContainerLivelinessFileExistsNoException(boolean pHttps,
       @TempDir java.nio.file.Path path) throws Exception {
     initHttps(pHttps);
-    File testTempDir = Files.createDirectory(path).toFile();
+    File testTempDir = path.toFile();
     File procPidPath = new File(testTempDir + File.separator + signalPid);
     procPidPath.createNewFile();
     procPidPath.deleteOnExit();
