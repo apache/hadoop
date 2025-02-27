@@ -222,7 +222,7 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
    * @return the AAL read policy
    */
   private InputPolicy mapS3AInputPolicyToAAL(S3AInputPolicy inputPolicy) {
-   switch (inputPolicy) {
+    switch (inputPolicy) {
     case Sequential:
       return InputPolicy.Sequential;
     default:

@@ -45,63 +45,63 @@ public class AnalyticsStreamFactory extends AbstractObjectInputStreamFactory {
   private boolean requireCrt;
 
   public AnalyticsStreamFactory() {
-      super("AnalyticsStreamFactory");
+    super("AnalyticsStreamFactory");
   }
 
   @Override
   protected void serviceInit(final Configuration conf) throws Exception {
-      super.serviceInit(conf);
-      ConnectorConfiguration configuration = new ConnectorConfiguration(conf,
+    super.serviceInit(conf);
+    ConnectorConfiguration configuration = new ConnectorConfiguration(conf,
                 ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX);
-      this.seekableInputStreamConfiguration =
+    this.seekableInputStreamConfiguration =
                 S3SeekableInputStreamConfiguration.fromConfiguration(configuration);
-      this.requireCrt = false;
+    this.requireCrt = false;
   }
 
   @Override
   public void bind(final FactoryBindingParameters factoryBindingParameters) throws IOException {
-      super.bind(factoryBindingParameters);
-      this.s3SeekableInputStreamFactory =
+    super.bind(factoryBindingParameters);
+    this.s3SeekableInputStreamFactory =
           new LazyAutoCloseableReference<>(createS3SeekableInputStreamFactory());
   }
 
   @Override
   public ObjectInputStream readObject(final ObjectReadParameters parameters) throws IOException {
-      return new AnalyticsStream(
+    return new AnalyticsStream(
                 parameters,
                 getOrCreateS3SeekableInputStreamFactory());
   }
 
   @Override
   public InputStreamType streamType() {
-      return InputStreamType.Analytics;
+    return InputStreamType.Analytics;
   }
 
   /**
-   * Calculate Return StreamFactoryRequirements
+   * Calculate Return StreamFactoryRequirements.
    * @return a positive thread count.
    */
   @Override
   public StreamFactoryRequirements factoryRequirements() {
-      // fill in the vector context
-      final VectoredIOContext vectorContext = populateVectoredIOContext(getConfig());
-      // and then disable range merging.
-      // this ensures that no reads are made for data which is then discarded...
-      // so the prefetch and block read code doesn't ever do wasteful fetches.
-      vectorContext.setMinSeekForVectoredReads(0);
+    // fill in the vector context
+    final VectoredIOContext vectorContext = populateVectoredIOContext(getConfig());
+    // and then disable range merging.
+    // this ensures that no reads are made for data which is then discarded...
+    // so the prefetch and block read code doesn't ever do wasteful fetches.
+    vectorContext.setMinSeekForVectoredReads(0);
 
-      return new StreamFactoryRequirements(0,
+    return new StreamFactoryRequirements(0,
             0, vectorContext,
             StreamFactoryRequirements.Requirements.ExpectUnauditedGetRequests);
   }
 
   private S3SeekableInputStreamFactory getOrCreateS3SeekableInputStreamFactory()
         throws IOException {
-      return s3SeekableInputStreamFactory.eval();
+    return s3SeekableInputStreamFactory.eval();
   }
 
   private CallableRaisingIOE<S3SeekableInputStreamFactory> createS3SeekableInputStreamFactory() {
-      return () -> new S3SeekableInputStreamFactory(
+    return () -> new S3SeekableInputStreamFactory(
             new S3SdkObjectClient(callbacks().getOrCreateAsyncClient(requireCrt)),
             seekableInputStreamConfiguration);
   }

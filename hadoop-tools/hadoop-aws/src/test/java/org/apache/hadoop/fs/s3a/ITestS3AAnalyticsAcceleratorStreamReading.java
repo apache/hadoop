@@ -160,15 +160,15 @@ public class ITestS3AAnalyticsAcceleratorStreamReading extends AbstractS3ATestBa
     IOStatistics ioStats;
 
     try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
-     ioStats = inputStream.getIOStatistics();
-     inputStream.readFully(buffer, 0, (int) fileStatus.getLen());
+      ioStats = inputStream.getIOStatistics();
+      inputStream.readFully(buffer, 0, (int) fileStatus.getLen());
     }
 
     verifyStatisticCounterValue(ioStats, STREAM_READ_ANALYTICS_OPENED, 1);
 
     try (FSDataInputStream inputStream = getFileSystem().openFile(dest)
-       .must(FS_OPTION_OPENFILE_READ_POLICY,FS_OPTION_OPENFILE_READ_POLICY_PARQUET)
-       .build().get()) {
+        .must(FS_OPTION_OPENFILE_READ_POLICY, FS_OPTION_OPENFILE_READ_POLICY_PARQUET)
+        .build().get()) {
       ioStats = inputStream.getIOStatistics();
       inputStream.readFully(buffer, 0, (int) fileStatus.getLen());
     }
