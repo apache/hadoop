@@ -24,8 +24,8 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the upload, buffering and flush logic in WASB.
@@ -65,7 +65,8 @@ public class TestNativeAzureFileSystemUploadLogic extends AbstractWasbTestBase {
    * bit of data.
    */
   @Test
-  @Ignore /* flush() no longer does anything. @@TODO: implement a force-flush and reinstate this test */
+  @Disabled
+  /* flush() no longer does anything. @@TODO: implement a force-flush and reinstate this test */
   public void testConsistencyAfterSmallFlushes() throws Exception {
     testConsistencyAfterManyFlushes(FlushFrequencyVariation.BeforeSingleBufferFull);
   }
@@ -75,7 +76,8 @@ public class TestNativeAzureFileSystemUploadLogic extends AbstractWasbTestBase {
    * bit of data.
    */
   @Test
-  @Ignore /* flush() no longer does anything. @@TODO: implement a force-flush and reinstate this test */
+  @Disabled
+  /* flush() no longer does anything. @@TODO: implement a force-flush and reinstate this test */
   public void testConsistencyAfterMediumFlushes() throws Exception {
     testConsistencyAfterManyFlushes(FlushFrequencyVariation.AfterSingleBufferFull);
   }
@@ -85,7 +87,8 @@ public class TestNativeAzureFileSystemUploadLogic extends AbstractWasbTestBase {
    * of data.
    */
   @Test
-  @Ignore /* flush() no longer does anything. @@TODO: implement a force-flush and reinstate this test */
+  @Disabled
+  /* flush() no longer does anything. @@TODO: implement a force-flush and reinstate this test */
   public void testConsistencyAfterLargeFlushes() throws Exception {
     testConsistencyAfterManyFlushes(FlushFrequencyVariation.AfterAllRingBufferFull);
   }

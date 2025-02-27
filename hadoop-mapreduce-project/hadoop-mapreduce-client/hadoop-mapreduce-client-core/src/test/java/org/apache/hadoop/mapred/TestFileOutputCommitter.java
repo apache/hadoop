@@ -24,10 +24,13 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.*;
-import org.junit.Assert;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -118,10 +121,10 @@ public class TestFileOutputCommitter {
     Path jobTempDir1 = committer.getCommittedTaskPath(tContext);
     File jtd1 = new File(jobTempDir1.toUri().getPath());
     if (commitVersion == 1) {
-      assertTrue("Version 1 commits to temporary dir " + jtd1, jtd1.exists());
+      assertTrue(jtd1.exists(), "Version 1 commits to temporary dir " + jtd1);
       validateContent(jobTempDir1);
     } else {
-      assertFalse("Version 2 commits to output dir " + jtd1, jtd1.exists());
+      assertFalse(jtd1.exists(), "Version 2 commits to output dir " + jtd1);
     }
 
     //now while running the second app attempt,
@@ -142,15 +145,15 @@ public class TestFileOutputCommitter {
     Path jobTempDir2 = committer2.getCommittedTaskPath(tContext2);
     File jtd2 = new File(jobTempDir2.toUri().getPath());
     if (recoveryVersion == 1) {
-      assertTrue("Version 1 recovers to " + jtd2, jtd2.exists());
+      assertTrue(jtd2.exists(), "Version 1 recovers to " + jtd2);
       validateContent(jobTempDir2);
     } else {
-        assertFalse("Version 2 commits to output dir " + jtd2, jtd2.exists());
-        if (commitVersion == 1) {
-          assertTrue("Version 2  recovery moves to output dir from "
-              + jtd1 , jtd1.list().length == 0);
-        }
+      assertFalse(jtd2.exists(), "Version 2 commits to output dir " + jtd2);
+      if (commitVersion == 1) {
+        assertEquals(0, jtd1.list().length,
+            "Version 2  recovery moves to output dir from " + jtd1);
       }
+    }
 
     committer2.commitJob(jContext2);
     validateContent(outDir);
@@ -253,12 +256,12 @@ public class TestFileOutputCommitter {
       committer.commitJob(jContext);
       // (1,1), (1,2), (2,1) shouldn't reach to here.
       if (version == 1 || maxAttempts <= 1) {
-        Assert.fail("Commit successful: wrong behavior for version 1.");
+        fail("Commit successful: wrong behavior for version 1.");
       }
     } catch (IOException e) {
       // (2,2) shouldn't reach to here.
       if (version == 2 && maxAttempts > 2) {
-        Assert.fail("Commit failed: wrong behavior for version 2.");
+        fail("Commit failed: wrong behavior for version 2.");
       }
     }
 
@@ -309,12 +312,12 @@ public class TestFileOutputCommitter {
     try {
       committer.commitJob(jContext);
       if (version == 1) {
-        Assert.fail("Duplicate commit successful: wrong behavior " +
+        fail("Duplicate commit successful: wrong behavior " +
             "for version 1.");
       }
     } catch (IOException e) {
       if (version == 2) {
-        Assert.fail("Duplicate commit failed: wrong behavior for version 2.");
+        fail("Duplicate commit failed: wrong behavior for version 2.");
       }
     }
     FileUtil.fullyDelete(new File(outDir.toString()));
@@ -464,12 +467,12 @@ public class TestFileOutputCommitter {
     Path workPath = committer.getWorkPath(tContext, outDir);
     File wp = new File(workPath.toUri().getPath());
     File expectedFile = new File(wp, partFile);
-    assertFalse("task temp dir still exists", expectedFile.exists());
+    assertFalse(expectedFile.exists(), "task temp dir still exists");
 
     committer.abortJob(jContext, JobStatus.State.FAILED);
     expectedFile = new File(out, FileOutputCommitter.TEMP_DIR_NAME);
-    assertFalse("job temp dir still exists", expectedFile.exists());
-    assertEquals("Output directory not empty", 0, out.listFiles().length);
+    assertFalse(expectedFile.exists(), "job temp dir still exists");
+    assertEquals(0, out.listFiles().length, "Output directory not empty");
     FileUtil.fullyDelete(out);
   }
 
@@ -541,7 +544,7 @@ public class TestFileOutputCommitter {
     assertNotNull(th);
     assertTrue(th instanceof IOException);
     assertTrue(th.getMessage().contains("fake delete failed"));
-    assertTrue(expectedFile + " does not exists", expectedFile.exists());
+    assertTrue(expectedFile.exists(), expectedFile + " does not exists");
 
     th = null;
     try {
@@ -552,7 +555,7 @@ public class TestFileOutputCommitter {
     assertNotNull(th);
     assertTrue(th instanceof IOException);
     assertTrue(th.getMessage().contains("fake delete failed"));
-    assertTrue("job temp dir does not exists", jobTmpDir.exists());
+    assertTrue(jobTmpDir.exists(), "job temp dir does not exists");
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 

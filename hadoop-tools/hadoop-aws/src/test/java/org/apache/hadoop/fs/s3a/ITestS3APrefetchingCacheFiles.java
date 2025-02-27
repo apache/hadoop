@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
-import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.enablePrefetching;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
@@ -84,10 +84,9 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
     Configuration configuration = super.createConfiguration();
     if (isUsingDefaultExternalDataFile(configuration)) {
       S3ATestUtils.removeBaseAndBucketOverrides(configuration,
-          PREFETCH_ENABLED_KEY,
           ENDPOINT);
     }
-    configuration.setBoolean(PREFETCH_ENABLED_KEY, true);
+    enablePrefetching(configuration);
     // use a small block size unless explicitly set in the test config.
     configuration.setInt(PREFETCH_BLOCK_SIZE_KEY, BLOCK_SIZE);
     // patch buffer dir with a unique path for test isolation.

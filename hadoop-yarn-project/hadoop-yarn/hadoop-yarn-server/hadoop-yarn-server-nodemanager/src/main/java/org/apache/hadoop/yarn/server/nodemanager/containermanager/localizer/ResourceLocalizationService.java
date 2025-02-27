@@ -343,30 +343,34 @@ public class ResourceLocalizationService extends CompositeService
       LocalResourceTrackerState state) throws URISyntaxException, IOException {
     try (RecoveryIterator<LocalizedResourceProto> it =
              state.getCompletedResourcesIterator()) {
-      while (it.hasNext()) {
-        LocalizedResourceProto proto = it.next();
-        LocalResource rsrc = new LocalResourcePBImpl(proto.getResource());
-        LocalResourceRequest req = new LocalResourceRequest(rsrc);
-        LOG.debug("Recovering localized resource {} at {}",
-            req, proto.getLocalPath());
-        tracker.handle(new ResourceRecoveredEvent(req,
-            new Path(proto.getLocalPath()), proto.getSize()));
+      if (it != null) {
+        while (it.hasNext()) {
+          LocalizedResourceProto proto = it.next();
+          LocalResource rsrc = new LocalResourcePBImpl(proto.getResource());
+          LocalResourceRequest req = new LocalResourceRequest(rsrc);
+          LOG.debug("Recovering localized resource {} at {}",
+              req, proto.getLocalPath());
+          tracker.handle(new ResourceRecoveredEvent(req,
+              new Path(proto.getLocalPath()), proto.getSize()));
+        }
       }
     }
 
     try (RecoveryIterator<Map.Entry<LocalResourceProto, Path>> it =
              state.getStartedResourcesIterator()) {
-      while (it.hasNext()) {
-        Map.Entry<LocalResourceProto, Path> entry = it.next();
-        LocalResource rsrc = new LocalResourcePBImpl(entry.getKey());
-        LocalResourceRequest req = new LocalResourceRequest(rsrc);
-        Path localPath = entry.getValue();
-        tracker.handle(new ResourceRecoveredEvent(req, localPath, 0));
+      if(it != null) {
+        while (it.hasNext()) {
+          Map.Entry<LocalResourceProto, Path> entry = it.next();
+          LocalResource rsrc = new LocalResourcePBImpl(entry.getKey());
+          LocalResourceRequest req = new LocalResourceRequest(rsrc);
+          Path localPath = entry.getValue();
+          tracker.handle(new ResourceRecoveredEvent(req, localPath, 0));
 
-        // delete any in-progress localizations, containers will request again
-        LOG.info("Deleting in-progress localization for " + req + " at "
-            + localPath);
-        tracker.remove(tracker.getLocalizedResource(req), delService);
+          // delete any in-progress localizations, containers will request again
+          LOG.info("Deleting in-progress localization for " + req + " at "
+               + localPath);
+          tracker.remove(tracker.getLocalizedResource(req), delService);
+        }
       }
     }
 

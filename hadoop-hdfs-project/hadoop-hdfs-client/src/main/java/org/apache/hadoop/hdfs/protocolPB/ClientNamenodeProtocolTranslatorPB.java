@@ -274,47 +274,47 @@ public class ClientNamenodeProtocolTranslatorPB implements
     ProtocolMetaInterface, ClientProtocol, Closeable, ProtocolTranslator {
   final private ClientNamenodeProtocolPB rpcProxy;
 
-  static final GetServerDefaultsRequestProto VOID_GET_SERVER_DEFAULT_REQUEST =
+  protected static final GetServerDefaultsRequestProto VOID_GET_SERVER_DEFAULT_REQUEST =
       GetServerDefaultsRequestProto.newBuilder().build();
 
-  private final static GetFsStatusRequestProto VOID_GET_FSSTATUS_REQUEST =
+  protected final static GetFsStatusRequestProto VOID_GET_FSSTATUS_REQUEST =
       GetFsStatusRequestProto.newBuilder().build();
 
-  private final static GetFsReplicatedBlockStatsRequestProto
+  protected final static GetFsReplicatedBlockStatsRequestProto
       VOID_GET_FS_REPLICATED_BLOCK_STATS_REQUEST =
       GetFsReplicatedBlockStatsRequestProto.newBuilder().build();
 
-  private final static GetFsECBlockGroupStatsRequestProto
+  protected final static GetFsECBlockGroupStatsRequestProto
       VOID_GET_FS_ECBLOCKGROUP_STATS_REQUEST =
       GetFsECBlockGroupStatsRequestProto.newBuilder().build();
 
-  private final static RollEditsRequestProto VOID_ROLLEDITS_REQUEST =
+  protected final static RollEditsRequestProto VOID_ROLLEDITS_REQUEST =
       RollEditsRequestProto.getDefaultInstance();
 
-  private final static RefreshNodesRequestProto VOID_REFRESH_NODES_REQUEST =
+  protected final static RefreshNodesRequestProto VOID_REFRESH_NODES_REQUEST =
       RefreshNodesRequestProto.newBuilder().build();
 
-  private final static FinalizeUpgradeRequestProto
+  protected final static FinalizeUpgradeRequestProto
       VOID_FINALIZE_UPGRADE_REQUEST =
       FinalizeUpgradeRequestProto.newBuilder().build();
 
-  private final static UpgradeStatusRequestProto
+  protected final static UpgradeStatusRequestProto
       VOID_UPGRADE_STATUS_REQUEST =
       UpgradeStatusRequestProto.newBuilder().build();
 
-  private final static GetDataEncryptionKeyRequestProto
+  protected final static GetDataEncryptionKeyRequestProto
       VOID_GET_DATA_ENCRYPTIONKEY_REQUEST =
       GetDataEncryptionKeyRequestProto.newBuilder().build();
 
-  private final static GetStoragePoliciesRequestProto
+  protected final static GetStoragePoliciesRequestProto
       VOID_GET_STORAGE_POLICIES_REQUEST =
       GetStoragePoliciesRequestProto.newBuilder().build();
 
-  private final static GetErasureCodingPoliciesRequestProto
+  protected final static GetErasureCodingPoliciesRequestProto
       VOID_GET_EC_POLICIES_REQUEST = GetErasureCodingPoliciesRequestProto
       .newBuilder().build();
 
-  private final static GetErasureCodingCodecsRequestProto
+  protected final static GetErasureCodingCodecsRequestProto
       VOID_GET_EC_CODEC_REQUEST = GetErasureCodingCodecsRequestProto
       .newBuilder().build();
 
@@ -1137,7 +1137,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
             setId(id).build()));
   }
 
-  private static class BatchedCacheEntries
+  protected static class BatchedCacheEntries
       implements BatchedEntries<CacheDirectiveEntry> {
     private final ListCacheDirectivesResponseProto response;
 
@@ -1200,7 +1200,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
             setPoolName(cachePoolName).build()));
   }
 
-  private static class BatchedCachePoolEntries
+  protected static class BatchedCachePoolEntries
       implements BatchedEntries<CachePoolEntry> {
     private final ListCachePoolsResponseProto proto;
 

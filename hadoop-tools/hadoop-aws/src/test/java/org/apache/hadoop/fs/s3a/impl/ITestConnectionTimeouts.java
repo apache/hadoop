@@ -55,10 +55,10 @@ import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
 import static org.apache.hadoop.fs.s3a.Constants.PART_UPLOAD_TIMEOUT;
-import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disablePrefetching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.setDurationAsMillis;
@@ -104,7 +104,7 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
    * @return a configuration to use for the brittle FS.
    */
   private Configuration timingOutConfiguration() {
-    Configuration conf = new Configuration(getConfiguration());
+    Configuration conf = disablePrefetching(new Configuration(getConfiguration()));
     removeBaseAndBucketOverrides(conf,
         CONNECTION_TTL,
         CONNECTION_ACQUISITION_TIMEOUT,
@@ -113,7 +113,6 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
         MAX_ERROR_RETRIES,
         MAXIMUM_CONNECTIONS,
         PART_UPLOAD_TIMEOUT,
-        PREFETCH_ENABLED_KEY,
         REQUEST_TIMEOUT,
         SOCKET_TIMEOUT,
         FS_S3A_CREATE_PERFORMANCE,
@@ -125,7 +124,7 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
     conf.setInt(MAX_ERROR_RETRIES, 0);
     // needed to ensure that streams are kept open.
     // without this the tests is unreliable in batch runs.
-    conf.setBoolean(PREFETCH_ENABLED_KEY, false);
+    disablePrefetching(conf);
     conf.setInt(RETRY_LIMIT, 0);
     conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, true);
     final Duration ms10 = Duration.ofMillis(10);

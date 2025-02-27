@@ -27,9 +27,8 @@ import org.apache.hadoop.yarn.service.component.OnFailureRestartPolicy;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.provider.defaultImpl
     .DefaultProviderService;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -41,6 +40,7 @@ import static org.apache.hadoop.yarn.service.conf.YarnServiceConf
     .DEFAULT_CONTAINER_RETRY_INTERVAL;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf
     .DEFAULT_CONTAINER_RETRY_MAX;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -53,7 +53,7 @@ public class TestAbstractLauncher {
 
   private AbstractLauncher launcher;
 
-  @Before
+  @BeforeEach
   public void setup() {
     launcher = new AbstractLauncher(mock(ServiceContext.class));
   }
@@ -68,7 +68,7 @@ public class TestAbstractLauncher {
     String dockerContainerMounts = launcher.containerLaunchContext
         .getEnvironment().get(AbstractLauncher.ENV_DOCKER_CONTAINER_MOUNTS);
 
-    Assert.assertEquals("s1:t1:ro,s2:t2:ro", dockerContainerMounts);
+    assertEquals("s1:t1:ro,s2:t2:ro", dockerContainerMounts);
   }
 
   @Test

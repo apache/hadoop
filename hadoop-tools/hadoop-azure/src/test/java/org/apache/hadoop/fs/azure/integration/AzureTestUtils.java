@@ -26,7 +26,7 @@ import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.util.List;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.Assume;
 import org.junit.internal.AssumptionViolatedException;
 import org.slf4j.Logger;
@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX;
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN;
@@ -56,7 +56,7 @@ import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
  * Utilities for the Azure tests. Based on {@code S3ATestUtils}, so
  * (initially) has unused method.
  */
-public final class AzureTestUtils extends Assert {
+public final class AzureTestUtils extends Assertions {
   private static final Logger LOG = LoggerFactory.getLogger(
       AzureTestUtils.class);
 
@@ -343,10 +343,10 @@ public final class AzureTestUtils extends Assert {
    * @param expectedClass class
    * @param obj object to check
    */
-  public static void assertInstanceOf(Class<?> expectedClass, Object obj) {
-    Assert.assertTrue(String.format("Expected instance of class %s, but is %s.",
-        expectedClass, obj.getClass()),
-        expectedClass.isAssignableFrom(obj.getClass()));
+  public static void assertInstanceOf2(Class<?> expectedClass, Object obj) {
+    Assertions.assertTrue(
+       expectedClass.isAssignableFrom(obj.getClass()), String.format("Expected instance of class %s, but is %s.",
+        expectedClass, obj.getClass()));
   }
 
   /**
@@ -381,7 +381,7 @@ public final class AzureTestUtils extends Assert {
   public static void assertOptionEquals(Configuration conf,
       String key,
       String expected) {
-    assertEquals("Value of " + key, expected, conf.get(key));
+    assertEquals(expected, conf.get(key), "Value of " + key);
   }
 
   /**
@@ -445,7 +445,6 @@ public final class AzureTestUtils extends Assert {
    * field.
    * @param testAccount test account to clean up
    * @return null
-   * @throws Execption cleanup problems
    */
   public static AzureBlobStorageTestAccount cleanup(
       AzureBlobStorageTestAccount testAccount) throws Exception {
@@ -496,8 +495,8 @@ public final class AzureTestUtils extends Assert {
     if (accountName == null) {
       accountName = conf.get(WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN);
     }
-    assumeTrue("Account for WASB is missing or it is not in correct format",
-            accountName != null && !accountName.endsWith(WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX));
+    assumeTrue(accountName != null && !accountName.endsWith(WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX),
+        "Account for WASB is missing or it is not in correct format");
     return accountName;
   }
 

@@ -159,7 +159,6 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     dirsHandler = new LocalDirsHandlerService();
     nodeHealthChecker = new NodeHealthCheckerService(dirsHandler);
     nodeHealthChecker.init(conf);
-
   }
 
   @Test
@@ -410,8 +409,10 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     NMStateStoreService stateStore = new NMMemoryStateStoreService();
     stateStore.init(conf);
     stateStore.start();
-    Context context = createContext(conf, stateStore);
+    context = createContext(conf, stateStore);
     ContainerManagerImpl cm = createContainerManager(context, delSrvc);
+    ((NMContext) context).setContainerManager(cm);
+    ((NMContext) context).setNodeStatusUpdater(getNodeStatusUpdater());
     cm.init(conf);
     cm.start();
     metrics.addResource(Resource.newInstance(10240, 8));
@@ -423,7 +424,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     Map<String, String> containerEnv = Collections.emptyMap();
     Map<String, ByteBuffer> serviceData = Collections.emptyMap();
     Map<String, LocalResource> localResources = Collections.emptyMap();
-    List<String> commands = Arrays.asList("sleep 60s".split(" "));
+    List<String> commands = Arrays.asList("sleep 60".split(" "));
     ContainerLaunchContext clc = ContainerLaunchContext.newInstance(
         localResources, containerEnv, commands, serviceData,
         null, null);

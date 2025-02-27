@@ -30,13 +30,15 @@ import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * A JUnit test to test Map-Reduce job cleanup.
@@ -57,7 +59,7 @@ public class TestJobCleanup {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestJobCleanup.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws IOException {
     JobConf conf = new JobConf();
     fileSys = FileSystem.get(conf);
@@ -82,7 +84,7 @@ public class TestJobCleanup {
     fileSys.mkdirs(emptyInDir);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (fileSys != null) {
       // fileSys.delete(new Path(TEST_ROOT_DIR), true);
@@ -169,14 +171,15 @@ public class TestJobCleanup {
 
     LOG.info("Job finished : " + job.isComplete());
     Path testFile = new Path(outDir, filename);
-    assertTrue("Done file \"" + testFile + "\" missing for job " + id,
-        fileSys.exists(testFile));
+    assertTrue(fileSys.exists(testFile),
+        "Done file \"" + testFile + "\" missing for job " + id);
 
     // check if the files from the missing set exists
     for (String ex : exclude) {
       Path file = new Path(outDir, ex);
-      assertFalse("File " + file + " should not be present for successful job "
-          + id, fileSys.exists(file));
+      assertFalse(fileSys.exists(file),
+          "File " + file + " should not be present for successful job "
+          + id);
     }
   }
 
@@ -196,19 +199,19 @@ public class TestJobCleanup {
     RunningJob job = jobClient.submitJob(jc);
     JobID id = job.getID();
     job.waitForCompletion();
-    assertEquals("Job did not fail", JobStatus.FAILED, job.getJobState());
+    assertEquals(JobStatus.FAILED, job.getJobState(), "Job did not fail");
 
     if (fileName != null) {
       Path testFile = new Path(outDir, fileName);
-      assertTrue("File " + testFile + " missing for failed job " + id,
-          fileSys.exists(testFile));
+      assertTrue(fileSys.exists(testFile),
+          "File " + testFile + " missing for failed job " + id);
     }
 
     // check if the files from the missing set exists
     for (String ex : exclude) {
       Path file = new Path(outDir, ex);
-      assertFalse("File " + file + " should not be present for failed job "
-          + id, fileSys.exists(file));
+      assertFalse(fileSys.exists(file),
+          "File " + file + " should not be present for failed job " + id);
     }
   }
 
@@ -242,19 +245,19 @@ public class TestJobCleanup {
     job.killJob(); // kill the job
 
     job.waitForCompletion(); // wait for the job to complete
-    assertEquals("Job was not killed", JobStatus.KILLED, job.getJobState());
+    assertEquals(JobStatus.KILLED, job.getJobState(), "Job was not killed");
 
     if (fileName != null) {
       Path testFile = new Path(outDir, fileName);
-      assertTrue("File " + testFile + " missing for job " + id,
-          fileSys.exists(testFile));
+      assertTrue(fileSys.exists(testFile),
+          "File " + testFile + " missing for job " + id);
     }
 
     // check if the files from the missing set exists
     for (String ex : exclude) {
       Path file = new Path(outDir, ex);
-      assertFalse("File " + file + " should not be present for killed job "
-          + id, fileSys.exists(file));
+      assertFalse(fileSys.exists(file),
+          "File " + file + " should not be present for killed job " + id);
     }
   }
 

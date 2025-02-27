@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.spy;
@@ -42,7 +42,7 @@ import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestYarnClientProtocolProvider {
   private static final RecordFactory recordFactory = RecordFactoryProvider.
@@ -62,8 +62,8 @@ public class TestYarnClientProtocolProvider {
     }
     
     try {
-      assertTrue("client is not a LocalJobRunner",
-          cluster.getClient() instanceof LocalJobRunner);
+      assertTrue(cluster.getClient() instanceof LocalJobRunner,
+          "client is not a LocalJobRunner");
     } finally {
       if (cluster != null) {
         cluster.close();
@@ -75,7 +75,7 @@ public class TestYarnClientProtocolProvider {
       conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
       cluster = new Cluster(conf);
       ClientProtocol client = cluster.getClient();
-      assertTrue("client is a YARNRunner", client instanceof YARNRunner);
+      assertTrue(client instanceof YARNRunner, "client is a YARNRunner");
     } catch (IOException e) {
 
     } finally {
@@ -121,8 +121,8 @@ public class TestYarnClientProtocolProvider {
       };
       yrunner.setResourceMgrDelegate(rmgrDelegate);
       Token t = cluster.getDelegationToken(new Text(" "));
-      assertTrue("Token kind is instead " + t.getKind().toString(),
-        "Testclusterkind".equals(t.getKind().toString()));
+      assertTrue("Testclusterkind".equals(t.getKind().toString()),
+          "Token kind is instead " + t.getKind().toString());
     } finally {
       if (cluster != null) {
         cluster.close();

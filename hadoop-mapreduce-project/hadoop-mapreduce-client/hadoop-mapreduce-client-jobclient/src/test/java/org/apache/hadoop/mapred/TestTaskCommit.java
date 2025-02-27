@@ -25,16 +25,16 @@ import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.checkpoint.TaskCheckpointID;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 
 
@@ -86,7 +86,7 @@ public class TestTaskCommit extends HadoopTestCase {
     super(LOCAL_MR, LOCAL_FS, 1, 1);
   }
   
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     super.tearDown();
     FileUtil.fullyDelete(new File(rootDir.toString()));
@@ -250,43 +250,43 @@ public class TestTaskCommit extends HadoopTestCase {
     task.setTaskCleanupTask();
     MyUmbilical umbilical = new MyUmbilical();
     task.run(job, umbilical);
-    assertTrue("Task did not succeed", umbilical.taskDone);
+    assertTrue(umbilical.taskDone, "Task did not succeed");
   }
 
   @Test
   public void testCommitRequiredForMapTask() throws Exception {
     Task testTask = createDummyTask(TaskType.MAP);
-    assertTrue("MapTask should need commit", testTask.isCommitRequired());
+    assertTrue(testTask.isCommitRequired(), "MapTask should need commit");
   }
 
   @Test
   public void testCommitRequiredForReduceTask() throws Exception {
     Task testTask = createDummyTask(TaskType.REDUCE);
-    assertTrue("ReduceTask should need commit", testTask.isCommitRequired());
+    assertTrue(testTask.isCommitRequired(), "ReduceTask should need commit");
   }
 
   @Test
   public void testCommitNotRequiredForJobSetup() throws Exception {
     Task testTask = createDummyTask(TaskType.MAP);
     testTask.setJobSetupTask();
-    assertFalse("Job setup task should not need commit", 
-        testTask.isCommitRequired());
+    assertFalse(testTask.isCommitRequired(),
+        "Job setup task should not need commit");
   }
 
   @Test
   public void testCommitNotRequiredForJobCleanup() throws Exception {
     Task testTask = createDummyTask(TaskType.MAP);
     testTask.setJobCleanupTask();
-    assertFalse("Job cleanup task should not need commit", 
-        testTask.isCommitRequired());
+    assertFalse(testTask.isCommitRequired(),
+        "Job cleanup task should not need commit");
   }
 
   @Test
   public void testCommitNotRequiredForTaskCleanup() throws Exception {
     Task testTask = createDummyTask(TaskType.REDUCE);
     testTask.setTaskCleanupTask();
-    assertFalse("Task cleanup task should not need commit", 
-        testTask.isCommitRequired());
+    assertFalse(testTask.isCommitRequired(),
+        "Task cleanup task should not need commit");
   }
 
   private Task createDummyTask(TaskType type) throws IOException, ClassNotFoundException,

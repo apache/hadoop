@@ -31,6 +31,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.ConfigurationHelper.ERROR_MULTIPLE_ELEMENTS_MATCHING_TO_LOWER_CASE_VALUE;
 import static org.apache.hadoop.util.ConfigurationHelper.mapEnumNamesToValues;
 import static org.apache.hadoop.util.ConfigurationHelper.parseEnumSet;
+import static org.apache.hadoop.util.ConfigurationHelper.resolveEnum;
 
 /**
  * Test for {@link ConfigurationHelper}.
@@ -42,6 +43,12 @@ public class TestConfigurationHelper extends AbstractHadoopTestBase {
    * "i" is included for case tests, as it is special in turkey.
    */
   private enum SimpleEnum { a, b, c, i }
+
+  /**
+   * Upper case version of SimpleEnum.
+   * "i" is included for case tests, as it is special in turkey.
+   */
+  private enum UppercaseEnum { A, B, C, I }
 
 
   /**
@@ -169,6 +176,67 @@ public class TestConfigurationHelper extends AbstractHadoopTestBase {
   public void testDuplicateValues() {
     assertEnumParse("a, a, c, b, c", SimpleEnum.class, true)
         .containsExactly(SimpleEnum.a, SimpleEnum.b, SimpleEnum.c);
+  }
+
+  @Test
+  public void testResolveEnumGood() throws Throwable {
+    assertEnumResolution("c", SimpleEnum.c);
+  }
+
+  @Test
+  public void testResolveEnumTrimmed() throws Throwable {
+    // strings are trimmed at each end
+    assertEnumResolution("\n i \n ", SimpleEnum.i);
+  }
+
+  @Test
+  public void testResolveEnumCaseConversion() throws Throwable {
+    assertEnumResolution("C", SimpleEnum.c);
+  }
+
+  @Test
+  public void testResolveEnumNoMatch() throws Throwable {
+    assertEnumResolution("other", null);
+  }
+
+  @Test
+  public void testResolveEnumEmpty() throws Throwable {
+    assertEnumResolution("", null);
+  }
+
+  @Test
+  public void testResolveEnumUpperCaseConversion() throws Throwable {
+    assertUpperEnumResolution("C", UppercaseEnum.C);
+  }
+
+  @Test
+  public void testResolveLowerToUpperCaseConversion() throws Throwable {
+    assertUpperEnumResolution("i", UppercaseEnum.I);
+  }
+
+  /**
+   * Assert that a string value in a configuration resolves to the expected
+   * value.
+   * @param value value to set
+   * @param expected expected outcome, set to null for no resolution.
+   */
+  private void assertEnumResolution(final String value, final SimpleEnum expected) {
+    Assertions.assertThat(resolveEnum(confWithKey(value),
+            "key", SimpleEnum.class, (v) -> null))
+        .describedAs("Resolution of %s", value)
+        .isEqualTo(expected);
+  }
+
+  /**
+   * Equivalent for Uppercase Enum.
+   * @param value value to set
+   * @param expected expected outcome, set to null for no resolution.
+   */
+  private void assertUpperEnumResolution(final String value, UppercaseEnum expected) {
+    Assertions.assertThat(resolveEnum(confWithKey(value),
+            "key", UppercaseEnum.class, (v) -> null))
+        .describedAs("Resolution of %s", value)
+        .isEqualTo(expected);
   }
 
 }

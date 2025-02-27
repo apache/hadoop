@@ -18,13 +18,13 @@
 package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.mapred.SortedRanges.Range;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestSortedRanges {
   private static final Logger LOG =

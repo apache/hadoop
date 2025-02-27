@@ -37,27 +37,26 @@ import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
 import org.apache.hadoop.util.Shell;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.apache.hadoop.security.authentication.server.AuthenticationFilter.SIGNER_SECRET_PROVIDER_ATTRIBUTE;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test {@link HttpFSServerWebServer}.
  */
+@Timeout(30)
 public class TestHttpFSServerWebServer {
-
-  @Rule
-  public Timeout timeout = new Timeout(30000);
 
   private File secretFile;
   private HttpFSServerWebServer webServer;
 
-  @Before
+  @BeforeEach
   public void init() throws Exception {
     File homeDir = GenericTestUtils.setupTestRootDir(TestHttpFSServerWebServer.class);
     File confDir = new File(homeDir, "etc/hadoop");
@@ -85,7 +84,7 @@ public class TestHttpFSServerWebServer {
         "httpfs-signature-custom.secret");
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     if (webServer != null) {
       webServer.stop();
@@ -187,8 +186,9 @@ public class TestHttpFSServerWebServer {
     SignerSecretProvider secretProvider = (SignerSecretProvider)
         server.getWebAppContext().getServletContext()
             .getAttribute(SIGNER_SECRET_PROVIDER_ATTRIBUTE);
-    Assert.assertNotNull("The secret provider must not be null", secretProvider);
-    Assert.assertEquals("The secret provider must match the following", expected, secretProvider.getClass());
+    assertNotNull(secretProvider, "The secret provider must not be null");
+    assertEquals(expected, secretProvider.getClass(),
+        "The secret provider must match the following");
   }
 
   private void assertServiceRespondsWithOK(URL serviceURL)
@@ -197,7 +197,7 @@ public class TestHttpFSServerWebServer {
     URL url = new URL(serviceURL, MessageFormat.format(
         "/webhdfs/v1/?user.name={0}&op=liststatus", user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     try (BufferedReader reader = new BufferedReader(
         new InputStreamReader(conn.getInputStream()))) {
       reader.readLine();
@@ -247,7 +247,7 @@ public class TestHttpFSServerWebServer {
   }
 
   private void createSecretFile(String content) throws IOException {
-    Assert.assertTrue(secretFile.createNewFile());
+    assertTrue(secretFile.createNewFile());
     FileUtils.writeStringToFile(secretFile, content, StandardCharsets.UTF_8);
   }
 

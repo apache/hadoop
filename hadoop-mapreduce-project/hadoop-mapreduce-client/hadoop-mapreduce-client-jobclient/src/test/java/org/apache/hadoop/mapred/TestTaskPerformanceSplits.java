@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.mapred;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestTaskPerformanceSplits {
   @Test
@@ -40,15 +40,15 @@ public class TestTaskPerformanceSplits {
       System.err.println("segment i = " + results[i]);
     }
 
-    assertEquals("Bad interpolation in cumulative segment 0", 200, results[0]);
-    assertEquals("Bad interpolation in cumulative segment 1", 200, results[1]);
-    assertEquals("Bad interpolation in cumulative segment 2", 200, results[2]);
-    assertEquals("Bad interpolation in cumulative segment 3", 300, results[3]);
-    assertEquals("Bad interpolation in cumulative segment 4", 400, results[4]);
-    assertEquals("Bad interpolation in cumulative segment 5", 2200, results[5]);
+    assertEquals(200, results[0], "Bad interpolation in cumulative segment 0");
+    assertEquals(200, results[1], "Bad interpolation in cumulative segment 1");
+    assertEquals(200, results[2], "Bad interpolation in cumulative segment 2");
+    assertEquals(300, results[3], "Bad interpolation in cumulative segment 3");
+    assertEquals(400, results[4], "Bad interpolation in cumulative segment 4");
+    assertEquals(2200, results[5], "Bad interpolation in cumulative segment 5");
     // these are rounded down
-    assertEquals("Bad interpolation in cumulative segment 6", 2200, results[6]);
-    assertEquals("Bad interpolation in cumulative segment 7", 2201, results[7]);
+    assertEquals(2200, results[6], "Bad interpolation in cumulative segment 6");
+    assertEquals(2201, results[7], "Bad interpolation in cumulative segment 7");
 
     status.extend(0.0D, 0);
     status.extend(1.0D/16.0D, 300); // + 75 for bucket 0
@@ -59,13 +59,13 @@ public class TestTaskPerformanceSplits {
 
     results = status.getValues();
 
-    assertEquals("Bad interpolation in status segment 0", 275, results[0]);
-    assertEquals("Bad interpolation in status segment 1", 750, results[1]);
-    assertEquals("Bad interpolation in status segment 2", 1500, results[2]);
-    assertEquals("Bad interpolation in status segment 3", 2175, results[3]);
-    assertEquals("Bad interpolation in status segment 4", 2100, results[4]);
-    assertEquals("Bad interpolation in status segment 5", 1900, results[5]);
-    assertEquals("Bad interpolation in status segment 6", 1700, results[6]);
-    assertEquals("Bad interpolation in status segment 7", 1500, results[7]);
+    assertEquals(275, results[0], "Bad interpolation in status segment 0");
+    assertEquals(750, results[1], "Bad interpolation in status segment 1");
+    assertEquals(1500, results[2], "Bad interpolation in status segment 2");
+    assertEquals(2175, results[3], "Bad interpolation in status segment 3");
+    assertEquals(2100, results[4], "Bad interpolation in status segment 4");
+    assertEquals(1900, results[5], "Bad interpolation in status segment 5");
+    assertEquals(1700, results[6], "Bad interpolation in status segment 6");
+    assertEquals(1500, results[7], "Bad interpolation in status segment 7");
   }
 }

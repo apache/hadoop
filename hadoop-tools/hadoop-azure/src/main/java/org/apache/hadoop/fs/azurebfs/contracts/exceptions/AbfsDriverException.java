@@ -51,4 +51,12 @@ public class AbfsDriverException extends AbfsRestOperationException {
             : ERROR_MESSAGE + ", rId: " + activityId,
         null);
   }
+
+  public AbfsDriverException(final String errorMessage, final Exception innerException) {
+    super(
+        AzureServiceErrorCode.UNKNOWN.getStatusCode(),
+        AzureServiceErrorCode.UNKNOWN.getErrorCode(),
+        errorMessage,
+        innerException);
+  }
 }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.IOException;
+import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -40,6 +41,12 @@ public interface OperationAuditor extends Service,
    * @param options options to initialize with.
    */
   void init(OperationAuditorOptions options);
+
+  /**
+   * Update audit flags, especially the out of span rejection option.
+   * @param flags audit flags.
+   */
+  void setAuditFlags(EnumSet<AuditorFlags> flags);
 
   /**
    * Get the unbonded span to use after deactivating an active

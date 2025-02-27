@@ -50,7 +50,7 @@
     <!-- Version number for xerces used by JDiff -->
     <xerces.jdiff.version>2.12.2</xerces.jdiff.version>
 
-    <kafka.version>3.4.0</kafka.version>
+    <kafka.version>3.9.0</kafka.version>
 
     <commons-daemon.version>1.0.13</commons-daemon.version>
 
@@ -144,7 +144,7 @@
     <jna.version>5.2.0</jna.version>
     <gson.version>2.9.0</gson.version>
     <metrics.version>3.2.4</metrics.version>
-    <netty4.version>4.1.116.Final</netty4.version>
+    <netty4.version>4.1.118.Final</netty4.version>
     <snappy-java.version>1.1.10.4</snappy-java.version>
     <lz4-java.version>1.7.1</lz4-java.version>
 
@@ -1116,7 +1116,7 @@
       <dependency>
         <groupId>org.apache.mina</groupId>
         <artifactId>mina-core</artifactId>
-        <version>2.0.22</version>
+        <version>2.0.27</version>
       </dependency>
       <dependency>
         <groupId>org.apache.sshd</groupId>
@@ -1296,6 +1296,11 @@
         <groupId>org.mockito</groupId>
         <artifactId>mockito-all</artifactId>
         <version>1.10.19</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-junit-jupiter</artifactId>
+        <version>3.12.4</version>
       </dependency>
       <dependency>
         <groupId>org.objenesis</groupId>
@@ -1584,7 +1589,7 @@
       <dependency>
         <groupId>com.aliyun.oss</groupId>
         <artifactId>aliyun-sdk-oss</artifactId>
-        <version>3.13.2</version>
+        <version>3.18.1</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.httpcomponents</groupId>

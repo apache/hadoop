@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.metrics;
 
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.apache.hadoop.metrics2.impl.MsInfo.ProcessName;
 import static org.apache.hadoop.util.Time.now;
 
@@ -559,7 +560,12 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
       DatanodeInfo[] live = null;
       if (this.enableGetDNUsage) {
         RouterRpcServer rpcServer = this.router.getRpcServer();
-        live = rpcServer.getDatanodeReport(DatanodeReportType.LIVE, false, timeOut);
+        if (rpcServer.isAsync()) {
+          rpcServer.getDatanodeReportAsync(DatanodeReportType.LIVE, false, timeOut);
+          live = syncReturn(DatanodeInfo[].class);
+        } else {
+          live = rpcServer.getDatanodeReport(DatanodeReportType.LIVE, false, timeOut);
+        }
       } else {
         LOG.debug("Getting node usage is disabled.");
       }
@@ -578,7 +584,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
         StandardDeviation deviation = new StandardDeviation();
         dev = deviation.evaluate(usages);
       }
-    } catch (IOException e) {
+    } catch (Exception e) {
       LOG.error("Cannot get the live nodes: {}", e.getMessage());
     }
 

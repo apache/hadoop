@@ -33,12 +33,14 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.compress.*;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestFixedLengthInputFormat {
 
@@ -54,7 +56,7 @@ public class TestFixedLengthInputFormat {
   private static char[] chars;
   private static Random charRand;
 
-  @BeforeClass
+  @BeforeAll
   public static void onlyOnce() {
     try {
       defaultConf = new Configuration();
@@ -77,7 +79,8 @@ public class TestFixedLengthInputFormat {
    * 20 random tests of various record, file, and split sizes.  All tests have
    * uncompressed file as input.
    */
-  @Test (timeout=500000)
+  @Test
+  @Timeout(value = 500)
   public void testFormat() throws IOException {
     runRandomTests(null);
   }
@@ -86,7 +89,8 @@ public class TestFixedLengthInputFormat {
    * 20 random tests of various record, file, and split sizes.  All tests have
    * compressed file as input.
    */
-  @Test (timeout=500000)
+  @Test
+  @Timeout(value = 500)
   public void testFormatCompressedIn() throws IOException {
     runRandomTests(new GzipCodec());
   }
@@ -94,7 +98,8 @@ public class TestFixedLengthInputFormat {
   /**
    * Test with no record length set.
    */
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testNoRecordLength() throws IOException {
     localFs.delete(workDir, true);
     Path file = new Path(workDir, "testFormat.txt");
@@ -115,13 +120,14 @@ public class TestFixedLengthInputFormat {
         LOG.info("Exception message:" + ioe.getMessage());
       }
     }
-    assertTrue("Exception for not setting record length:", exceptionThrown);
+    assertTrue(exceptionThrown, "Exception for not setting record length:");
   }
 
   /**
    * Test with record length set to 0
    */
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testZeroRecordLength() throws IOException {
     localFs.delete(workDir, true);
     Path file = new Path(workDir, "testFormat.txt");
@@ -143,13 +149,14 @@ public class TestFixedLengthInputFormat {
         LOG.info("Exception message:" + ioe.getMessage());
       }
     }
-    assertTrue("Exception for zero record length:", exceptionThrown);
+    assertTrue(exceptionThrown, "Exception for zero record length:");
   }
 
   /**
    * Test with record length set to a negative value
    */
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testNegativeRecordLength() throws IOException {
     localFs.delete(workDir, true);
     Path file = new Path(workDir, "testFormat.txt");
@@ -171,13 +178,14 @@ public class TestFixedLengthInputFormat {
         LOG.info("Exception message:" + ioe.getMessage());
       }
     }
-    assertTrue("Exception for negative record length:", exceptionThrown);
+    assertTrue(exceptionThrown, "Exception for negative record length:");
   }
 
   /**
    * Test with partial record at the end of a compressed input file.
    */
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testPartialRecordCompressedIn() throws IOException {
     CompressionCodec gzip = new GzipCodec();
     runPartialRecordTest(gzip);
@@ -186,7 +194,8 @@ public class TestFixedLengthInputFormat {
   /**
    * Test with partial record at the end of an uncompressed input file.
    */
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testPartialRecordUncompressedIn() throws IOException {
     runPartialRecordTest(null);
   }
@@ -194,7 +203,8 @@ public class TestFixedLengthInputFormat {
   /**
    * Test using the gzip codec with two input files.
    */
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testGzipWithTwoInputs() throws IOException {
     CompressionCodec gzip = new GzipCodec();
     localFs.delete(workDir, true);
@@ -210,19 +220,19 @@ public class TestFixedLengthInputFormat {
     writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
         "ten  nine eightsevensix  five four threetwo  one  ");
     InputSplit[] splits = format.getSplits(job, 100);
-    assertEquals("compressed splits == 2", 2, splits.length);
+    assertEquals(2, splits.length, "compressed splits == 2");
     FileSplit tmp = (FileSplit) splits[0];
     if (tmp.getPath().getName().equals("part2.txt.gz")) {
       splits[0] = splits[1];
       splits[1] = tmp;
     }
     List<String> results = readSplit(format, splits[0], job);
-    assertEquals("splits[0] length", 10, results.size());
-    assertEquals("splits[0][5]", "six  ", results.get(5));
+    assertEquals(10, results.size(), "splits[0] length");
+    assertEquals("six  ", results.get(5), "splits[0][5]");
     results = readSplit(format, splits[1], job);
-    assertEquals("splits[1] length", 10, results.size());
-    assertEquals("splits[1][0]", "ten  ", results.get(0));
-    assertEquals("splits[1][1]", "nine ", results.get(1));
+    assertEquals(10, results.size(), "splits[1] length");
+    assertEquals("ten  ", results.get(0), "splits[1][0]");
+    assertEquals("nine ", results.get(1), "splits[1][1]");
   }
 
   // Create a file containing fixed length records with random data
@@ -329,26 +339,26 @@ public class TestFixedLengthInputFormat {
         RecordReader<LongWritable, BytesWritable> reader = 
             format.getRecordReader(split, job, voidReporter);
         Class<?> clazz = reader.getClass();
-        assertEquals("RecordReader class should be FixedLengthRecordReader:", 
-            FixedLengthRecordReader.class, clazz);
+        assertEquals(FixedLengthRecordReader.class, clazz,
+            "RecordReader class should be FixedLengthRecordReader:");
         // Plow through the records in this split
         while (reader.next(key, value)) {
-          assertEquals("Checking key", (long)(recordNumber*recordLength),
-              key.get());
+          assertEquals((long)(recordNumber*recordLength),
+              key.get(), "Checking key");
           String valueString =
               new String(value.getBytes(), 0, value.getLength());
-          assertEquals("Checking record length:", recordLength,
-              value.getLength());
-          assertTrue("Checking for more records than expected:",
-              recordNumber < totalRecords);
+          assertEquals(recordLength,
+              value.getLength(), "Checking record length:");
+          assertTrue(recordNumber < totalRecords,
+              "Checking for more records than expected:");
           String origRecord = recordList.get(recordNumber);
-          assertEquals("Checking record content:", origRecord, valueString);
+          assertEquals(origRecord, valueString, "Checking record content:");
           recordNumber++;
         }
         reader.close();
       }
-      assertEquals("Total original records should be total read records:",
-          recordList.size(), recordNumber);
+      assertEquals(recordList.size(), recordNumber,
+          "Total original records should be total read records:");
     }
   }
 
@@ -403,7 +413,7 @@ public class TestFixedLengthInputFormat {
             "one  two  threefour five six  seveneightnine ten");
     InputSplit[] splits = format.getSplits(job, 100);
     if (codec != null) {
-      assertEquals("compressed splits == 1", 1, splits.length);
+      assertEquals(1, splits.length, "compressed splits == 1");
     }
     boolean exceptionThrown = false;
     for (InputSplit split : splits) {
@@ -414,7 +424,7 @@ public class TestFixedLengthInputFormat {
         LOG.info("Exception message:" + ioe.getMessage());
       }
     }
-    assertTrue("Exception for partial record:", exceptionThrown);
+    assertTrue(exceptionThrown, "Exception for partial record:");
   }
 
 }

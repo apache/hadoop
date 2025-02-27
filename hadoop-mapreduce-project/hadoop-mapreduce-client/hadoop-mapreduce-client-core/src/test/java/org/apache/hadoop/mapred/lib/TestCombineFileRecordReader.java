@@ -30,12 +30,12 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.fs.FileUtil;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.junit.Assert;
 
 import java.io.IOException;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -77,7 +77,7 @@ public class TestCombineFileRecordReader {
       CombineFileRecordReader cfrr = new CombineFileRecordReader(conf, combineFileSplit,
         reporter,  TextRecordReaderWrapper.class);
       verify(reporter).progress();
-      Assert.assertFalse(cfrr.next(key,value));
+      assertFalse(cfrr.next(key, value));
       verify(reporter, times(3)).progress();
     } finally {
       FileUtil.fullyDelete(new File(outDir.toString()));
