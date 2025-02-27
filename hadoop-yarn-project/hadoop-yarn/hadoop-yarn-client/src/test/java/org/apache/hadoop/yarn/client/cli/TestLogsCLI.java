@@ -385,6 +385,7 @@ public class TestLogsCLI {
 
   @Test
   @Timeout(value = 15)
+  @SuppressWarnings("methodlength")
   public void testFetchFinishedApplictionLogs() throws Exception {
     String remoteLogRootDir = "target/logs/";
     conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);

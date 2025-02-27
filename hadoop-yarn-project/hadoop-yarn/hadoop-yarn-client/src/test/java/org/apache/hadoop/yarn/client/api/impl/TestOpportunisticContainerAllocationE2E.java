@@ -513,6 +513,7 @@ public class TestOpportunisticContainerAllocationE2E {
 
   @Test
   @Timeout(value = 60)
+  @SuppressWarnings("methodlength")
   public void testMixedAllocationAndRelease() throws YarnException,
       IOException {
     // setup container request

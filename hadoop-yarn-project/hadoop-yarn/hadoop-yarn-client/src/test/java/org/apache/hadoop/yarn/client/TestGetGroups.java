@@ -31,13 +31,12 @@ import org.apache.hadoop.tools.GetGroupsTestBase;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestGetGroups extends GetGroupsTestBase {
   
@@ -48,7 +47,7 @@ public class TestGetGroups extends GetGroupsTestBase {
   
   private static Configuration conf;
   
-  @BeforeAll
+  @BeforeClass
   public static void setUpResourceManager() throws InterruptedException {
     conf = new YarnConfiguration();
     resourceManager = new ResourceManager() {
@@ -78,19 +77,19 @@ public class TestGetGroups extends GetGroupsTestBase {
     }.start();
 
     boolean rmStarted = rmStartedSignal.await(60000L, TimeUnit.MILLISECONDS);
-    assertTrue(rmStarted, "ResourceManager failed to start up.");
+    Assert.assertTrue("ResourceManager failed to start up.", rmStarted);
 
     LOG.info("ResourceManager RMAdmin address: {}.",
         conf.get(YarnConfiguration.RM_ADMIN_ADDRESS));
   }
   
   @SuppressWarnings("static-access")
-  @BeforeEach
+  @Before
   public void setUpConf() {
     super.conf = this.conf;
   }
   
-  @AfterAll
+  @AfterClass
   public static void tearDownResourceManager() throws InterruptedException {
     if (resourceManager != null) {
       LOG.info("Stopping ResourceManager...");

@@ -58,7 +58,6 @@ import org.apache.hadoop.yarn.util.Records;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.function.ThrowingRunnable;
 import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;

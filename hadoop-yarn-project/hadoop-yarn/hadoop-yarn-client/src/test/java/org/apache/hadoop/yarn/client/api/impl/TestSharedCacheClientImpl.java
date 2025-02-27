@@ -138,7 +138,7 @@ public class TestSharedCacheClientImpl {
     assertThrows(YarnException.class, ()->{
       String message = "Mock IOExcepiton!";
       when(cProtocol.use(isA(UseSharedCacheResourceRequest.class))).thenThrow(
-         new IOException(message));
+          new IOException(message));
       client.use(mock(ApplicationId.class), "key");
     });
   }

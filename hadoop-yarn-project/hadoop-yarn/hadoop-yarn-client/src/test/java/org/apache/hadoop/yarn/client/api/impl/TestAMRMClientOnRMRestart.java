@@ -122,6 +122,7 @@ public class TestAMRMClientOnRMRestart {
   // Step-6 : RM allocates containers i.e cRequest4,cRequest5 and cRequest6
   @Test
   @Timeout(value = 60)
+  @SuppressWarnings("methodlength")
   public void testAMRMClientResendsRequestsOnRMRestart() throws Exception {
 
     UserGroupInformation.setLoginUser(null);

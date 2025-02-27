@@ -80,6 +80,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -1909,8 +1910,8 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       AMRMTokenIdentifierForTest newVersionTokenIdentifier = 
           new AMRMTokenIdentifierForTest(amrmToken_2.decodeIdentifier(), "message");
       
-      assertEquals("Message is changed after set to newVersionTokenIdentifier",
-          "message", newVersionTokenIdentifier.getMessage());
+      assertEquals("message", newVersionTokenIdentifier.getMessage(),
+          "Message is changed after set to newVersionTokenIdentifier");
       org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> newVersionToken = 
           new org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> (
               newVersionTokenIdentifier.getBytes(), 
