@@ -88,8 +88,8 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
       index++;
     }
 
-    assertEquals("The number of interceptors in chain does not match",
-        Integer.toString(4), Integer.toString(index));
+    assertEquals(Integer.toString(4), Integer.toString(index),
+        "The number of interceptors in chain does not match");
 
   }
 
@@ -131,8 +131,8 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
       Map<ApplicationId, RequestInterceptorChainWrapper> pipelines =
           getAMRMProxyService().getPipelines();
       ApplicationId id = getApplicationId(testAppId);
-      assertNull(
-         pipelines.get(id), "The interceptor pipeline should be removed if initialization fails");
+      assertNull(pipelines.get(id),
+          "The interceptor pipeline should be removed if initialization fails");
     }
   }
 
@@ -397,8 +397,8 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
           return testAppId;
         });
 
-    assertEquals(
-       tempAppIds.size(), responses.size(), "Number of responses received does not match with request");
+    assertEquals(tempAppIds.size(), responses.size(),
+        "Number of responses received does not match with request");
 
     for (Integer testAppId : responses) {
       assertNotNull(testAppId);
@@ -452,11 +452,9 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     allocateRequest.setAskList(askList);
 
     AllocateResponse allocateResponse = allocate(appId, allocateRequest);
-    assertNotNull(
-       allocateResponse, "allocate() returned null response");
-    assertNull(
-    
-       allocateResponse.getAMRMToken(), "new AMRMToken from RM should have been nulled by AMRMProxyService");
+    assertNotNull(allocateResponse, "allocate() returned null response");
+    assertNull(allocateResponse.getAMRMToken(),
+        "new AMRMToken from RM should have been nulled by AMRMProxyService");
 
     containers.addAll(allocateResponse.getAllocatedContainers());
 
@@ -466,11 +464,9 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     while (containers.size() < askList.size() && numHeartbeat++ < 10) {
       allocateResponse =
           allocate(appId, Records.newRecord(AllocateRequest.class));
-      assertNotNull(
-         allocateResponse, "allocate() returned null response");
-      assertNull(
-      
-         allocateResponse.getAMRMToken(), "new AMRMToken from RM should have been nulled by AMRMProxyService");
+      assertNotNull(allocateResponse, "allocate() returned null response");
+      assertNull(allocateResponse.getAMRMToken(),
+          "new AMRMToken from RM should have been nulled by AMRMProxyService");
 
       containers.addAll(allocateResponse.getAllocatedContainers());
 
@@ -482,8 +478,8 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
 
     // We broadcast the request, the number of containers we received will be
     // higher than we ask
-    assertTrue(
-       askList.size() <= containers.size(), "The asklist count is not same as response");
+    assertTrue(askList.size() <= containers.size(),
+        "The asklist count is not same as response");
     return containers;
   }
 
@@ -503,9 +499,8 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
 
     AllocateResponse allocateResponse = allocate(appId, allocateRequest);
     assertNotNull(allocateResponse);
-    assertNull(
-    
-       allocateResponse.getAMRMToken(), "new AMRMToken from RM should have been nulled by AMRMProxyService");
+    assertNull(allocateResponse.getAMRMToken(),
+        "new AMRMToken from RM should have been nulled by AMRMProxyService");
 
     // We need to make sure all the resource managers received the
     // release list. The containers sent by the mock resource managers will be
@@ -524,9 +519,8 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
       allocateResponse =
           allocate(appId, Records.newRecord(AllocateRequest.class));
       assertNotNull(allocateResponse);
-      assertNull(
-      
-         allocateResponse.getAMRMToken(), "new AMRMToken from RM should have been nulled by AMRMProxyService");
+      assertNull(allocateResponse.getAMRMToken(),
+          "new AMRMToken from RM should have been nulled by AMRMProxyService");
 
       newlyFinished = getCompletedContainerIds(
           allocateResponse.getCompletedContainersStatuses());

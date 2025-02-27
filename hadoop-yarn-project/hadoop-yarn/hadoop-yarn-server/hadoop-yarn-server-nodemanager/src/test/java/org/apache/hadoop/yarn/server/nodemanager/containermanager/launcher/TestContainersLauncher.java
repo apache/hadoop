@@ -212,8 +212,7 @@ public class TestContainersLauncher {
       return null;
     }).when(spy).cleanup(any(), any(), anyBoolean());
     spy.handle(event);
-    assertEquals(containerId
-,         cleanedContainers.get(0), "container not cleaned");
+    assertEquals(containerId, cleanedContainers.get(0), "container not cleaned");
   }
 
   @Test

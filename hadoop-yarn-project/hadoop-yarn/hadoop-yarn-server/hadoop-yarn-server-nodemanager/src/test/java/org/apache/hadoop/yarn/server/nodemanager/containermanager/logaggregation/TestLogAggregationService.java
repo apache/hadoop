@@ -150,6 +150,8 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
@@ -184,6 +186,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
   private NodeId nodeId = NodeId.newInstance("0.0.0.0", 5555);
 
+  @BeforeEach
   @Override
   @SuppressWarnings("unchecked")
   public void setup() throws IOException {
@@ -195,6 +198,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     UserGroupInformation.setConfiguration(conf);
   }
 
+  @AfterEach
   @Override
   public void tearDown() throws IOException, InterruptedException {
     super.tearDown();

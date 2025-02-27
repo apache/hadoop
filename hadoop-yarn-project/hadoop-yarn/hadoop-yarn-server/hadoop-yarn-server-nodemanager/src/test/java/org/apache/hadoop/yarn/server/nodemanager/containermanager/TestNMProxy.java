@@ -147,7 +147,7 @@ public class TestNMProxy extends BaseContainerManagerTest {
     assertThrows(IOException.class, ()->{
       conf.setLong(YarnConfiguration.CLIENT_NM_CONNECT_MAX_WAIT_MS, -1);
       StartContainersRequest allRequests =
-         Records.newRecord(StartContainersRequest.class);
+          Records.newRecord(StartContainersRequest.class);
 
       ContainerManagementProtocol proxy = getNMProxy(conf);
 

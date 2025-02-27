@@ -97,7 +97,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceFile;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -531,8 +530,7 @@ public class TestAuxServices {
       // Validate the path on reuse of localized jar
       path = aux.maybeDownloadJars("ServiceB", ServiceB.class.getName(),
           testJar.getAbsolutePath(), AuxServiceFile.TypeEnum.STATIC, conf);
-      assertFalse(
-         path.toString().endsWith("/*"), "Failed to reuse the localized jar");
+      assertFalse(path.toString().endsWith("/*"), "Failed to reuse the localized jar");
     } finally {
       if (testJar != null) {
         testJar.delete();

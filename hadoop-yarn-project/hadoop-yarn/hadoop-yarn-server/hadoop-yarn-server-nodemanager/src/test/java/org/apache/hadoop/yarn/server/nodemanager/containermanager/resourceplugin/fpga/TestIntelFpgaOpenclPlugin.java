@@ -45,7 +45,7 @@ public class TestIntelFpgaOpenclPlugin {
 
     String path = plugin.retrieveIPfilePath("fpga", "workDir", resources);
 
-    assertEquals("Retrieved IP file path", "/test/fpga.aocx", path);
+    assertEquals("/test/fpga.aocx", path, "Retrieved IP file path");
   }
 
   @Test

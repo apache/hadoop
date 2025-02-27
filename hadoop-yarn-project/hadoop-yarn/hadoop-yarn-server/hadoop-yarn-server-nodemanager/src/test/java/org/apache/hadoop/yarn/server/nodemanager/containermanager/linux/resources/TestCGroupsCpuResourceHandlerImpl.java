@@ -327,7 +327,7 @@ public class TestCGroupsCpuResourceHandlerImpl {
     cGroupsCpuResourceHandler.preStart(container);
     verify(mockCGroupsHandler, times(1))
         .updateCGroupParam(CGroupsHandler.CGroupController.CPU, id,
-        CGroupsHandler.CGROUP_CPU_SHARES, "2");
+          CGroupsHandler.CGROUP_CPU_SHARES, "2");
   }
 
 }

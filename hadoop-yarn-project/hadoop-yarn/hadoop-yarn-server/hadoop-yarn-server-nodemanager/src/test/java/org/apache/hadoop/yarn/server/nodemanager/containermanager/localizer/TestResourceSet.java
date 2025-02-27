@@ -100,7 +100,7 @@ public class TestResourceSet {
         .iterator().next();
     assertEquals(LocalizationState.FAILED,
         status.getLocalizationState(), "status");
-    assertEquals("diagnostics", "file does not exist",
-        status.getDiagnostics());
+    assertEquals("file does not exist",
+        status.getDiagnostics(), "diagnostics");
   }
 }

@@ -88,7 +88,7 @@ public class TestJavaSandboxLinuxContainerRuntime {
   private final static String HADOOP_HOME = "hadoop.home.dir";
   private final static String HADOOP_HOME_DIR = System.getProperty(HADOOP_HOME);
   private final Properties baseProps = new Properties(System.getProperties());
-  
+
   private static File grantFile, denyFile, policyFile,
           grantDir, denyDir, containerDir;
   private static java.nio.file.Path policyFilePath;
@@ -275,7 +275,7 @@ public class TestJavaSandboxLinuxContainerRuntime {
   public void testDeny() throws Exception {
     assertThrows(java.security.AccessControlException.class, () -> {
       FilePermission denyPermission =
-         new FilePermission(denyFile.getAbsolutePath(), "read");
+          new FilePermission(denyFile.getAbsolutePath(), "read");
       securityManager.checkPermission(denyPermission);
     });
   }
@@ -290,8 +290,8 @@ public class TestJavaSandboxLinuxContainerRuntime {
     List<String> commands = Arrays.asList(nonJavaCommands);
     assertThrows(ContainerExecutionException.class, () -> {
       JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils
-      .appendSecurityFlags(commands, env, policyFilePath,
-      JavaSandboxLinuxContainerRuntime.SandboxMode.enforcing);
+          .appendSecurityFlags(commands, env, policyFilePath,
+          JavaSandboxLinuxContainerRuntime.SandboxMode.enforcing);
     });
   }
 
@@ -324,9 +324,8 @@ public class TestJavaSandboxLinuxContainerRuntime {
     runtimeContextBuilder.setExecutionAttribute(CONTAINER_RUN_CMDS, commands);
     runtime.prepareContainer(runtimeContextBuilder.build());
 
-    assertTrue(
-       inputCommand[0].equals(commands.get(0)), "Command should not be modified when user is " +
-            "member of whitelisted group");
+    assertTrue(inputCommand[0].equals(commands.get(0)),
+        "Command should not be modified when user is member of whitelisted group");
   }
 
   @Test
@@ -344,10 +343,9 @@ public class TestJavaSandboxLinuxContainerRuntime {
     runtimeContextBuilder.setExecutionAttribute(CONTAINER_RUN_CMDS, commands);
     runtime.prepareContainer(runtimeContextBuilder.build());
 
-    assertTrue(
-       commands.get(0).contains(SECURITY_FLAG)
+    assertTrue(commands.get(0).contains(SECURITY_FLAG)
         && commands.get(0).contains(POLICY_FLAG), "Command should be modified to include " +
-            "policy file in whitelisted Sandbox mode");
+        "policy file in whitelisted Sandbox mode");
   }
 
   @Test
@@ -365,9 +363,9 @@ public class TestJavaSandboxLinuxContainerRuntime {
     runtimeContextBuilder.setExecutionAttribute(CONTAINER_RUN_CMDS, commands);
     runtime.prepareContainer(runtimeContextBuilder.build());
 
-    assertTrue(
-       commands.get(0).contains(SECURITY_FLAG), "Java security manager must be enabled for "
-            + "unauthorized users");
+    assertTrue(commands.get(0).contains(SECURITY_FLAG),
+        "Java security manager must be enabled for "
+        + "unauthorized users");
   }
 
   @Test

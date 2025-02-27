@@ -342,30 +342,30 @@ public class TestGpuResourceAllocator {
   public void testThreeContainersJustTwoOfThemSatisfied()
       throws ResourceHandlerException, IOException {
     ResourceHandlerException exception =
-      assertThrows(ResourceHandlerException.class, () -> {
-      addGpus(new GpuDevice(1, 1), new GpuDevice(1, 2),
-              new GpuDevice(1, 3), new GpuDevice(1, 4),
-              new GpuDevice(1, 5), new GpuDevice(1, 6));
-      Container container = createMockContainer(3, 5L);
-      Container container2 = createMockContainer(2, 6L);
-      Container container3 = createMockContainer(2, 6L);
+        assertThrows(ResourceHandlerException.class, () -> {
+        addGpus(new GpuDevice(1, 1), new GpuDevice(1, 2),
+            new GpuDevice(1, 3), new GpuDevice(1, 4),
+            new GpuDevice(1, 5), new GpuDevice(1, 6));
+        Container container = createMockContainer(3, 5L);
+        Container container2 = createMockContainer(2, 6L);
+        Container container3 = createMockContainer(2, 6L);
 
-      GpuAllocation allocation = testSubject.assignGpus(container);
-      assertAllocatedGpus(3, 3, container, allocation);
-      assertEquals(3, testSubject.getDeviceAllocationMapping().size());
-      assertEquals(3, testSubject.getAssignedGpus().size());
-      assertEquals(6, testSubject.getAllowedGpus().size());
-      assertEquals(3, testSubject.getAvailableGpus());
+        GpuAllocation allocation = testSubject.assignGpus(container);
+        assertAllocatedGpus(3, 3, container, allocation);
+        assertEquals(3, testSubject.getDeviceAllocationMapping().size());
+        assertEquals(3, testSubject.getAssignedGpus().size());
+        assertEquals(6, testSubject.getAllowedGpus().size());
+        assertEquals(3, testSubject.getAvailableGpus());
 
-      GpuAllocation allocation2 = testSubject.assignGpus(container2);
-      assertAllocatedGpus(2, 4, container2, allocation2);
-      assertEquals(5, testSubject.getDeviceAllocationMapping().size());
-      assertEquals(5, testSubject.getAssignedGpus().size());
-      assertEquals(6, testSubject.getAllowedGpus().size());
-      assertEquals(1, testSubject.getAvailableGpus());
+        GpuAllocation allocation2 = testSubject.assignGpus(container2);
+        assertAllocatedGpus(2, 4, container2, allocation2);
+        assertEquals(5, testSubject.getDeviceAllocationMapping().size());
+        assertEquals(5, testSubject.getAssignedGpus().size());
+        assertEquals(6, testSubject.getAllowedGpus().size());
+        assertEquals(1, testSubject.getAvailableGpus());
 
-      testSubject.assignGpus(container3);
-    });
+        testSubject.assignGpus(container3);
+      });
 
     assertThat(exception.getMessage()).contains("Failed to find enough GPUs");
   }

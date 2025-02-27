@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerChain;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -67,6 +68,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerSchedulerTest {
     super();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws IOException {
     conf.setInt(

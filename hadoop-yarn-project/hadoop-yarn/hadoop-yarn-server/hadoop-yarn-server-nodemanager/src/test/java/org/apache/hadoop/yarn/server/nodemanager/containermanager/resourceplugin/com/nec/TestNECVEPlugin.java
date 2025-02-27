@@ -445,8 +445,7 @@ public class TestNECVEPlugin {
   }
 
   private void verifyBinaryPathSet(Path expectedPath) {
-    assertEquals( expectedPath.toString(),
-        plugin.getBinaryPath(), "Binary path");
+    assertEquals(expectedPath.toString(), plugin.getBinaryPath(), "Binary path");
     verifyZeroInteractions(udevUtil);
   }
 }

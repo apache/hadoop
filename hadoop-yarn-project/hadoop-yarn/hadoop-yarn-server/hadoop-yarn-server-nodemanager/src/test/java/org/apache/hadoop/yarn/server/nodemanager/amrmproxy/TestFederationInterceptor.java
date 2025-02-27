@@ -233,8 +233,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       allocateRequest = Records.newRecord(AllocateRequest.class);
       allocateRequest.setResponseId(lastResponseId);
       allocateResponse = interceptor.allocate(allocateRequest);
-      assertNotNull(
-         allocateResponse, "allocate() returned null response");
+      assertNotNull(allocateResponse, "allocate() returned null response");
       checkAMRMToken(allocateResponse.getAMRMToken());
       lastResponseId = allocateResponse.getResponseId();
 

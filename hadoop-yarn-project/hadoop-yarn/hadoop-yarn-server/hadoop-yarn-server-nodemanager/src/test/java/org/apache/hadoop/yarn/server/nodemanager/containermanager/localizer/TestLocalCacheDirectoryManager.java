@@ -147,8 +147,8 @@ public class TestLocalCacheDirectoryManager {
     final String rootPath = "";
     mgr.incrementFileCountForPath(rootPath);
     assertEquals(rootPath, mgr.getRelativePathForLocalization());
-    assertFalse(
-       rootPath.equals(mgr.getRelativePathForLocalization()), "root dir should be full");
+    assertFalse(rootPath.equals(mgr.getRelativePathForLocalization()),
+        "root dir should be full");
     // finish filling the other directory
     mgr.getRelativePathForLocalization();
     // free up space in the root dir

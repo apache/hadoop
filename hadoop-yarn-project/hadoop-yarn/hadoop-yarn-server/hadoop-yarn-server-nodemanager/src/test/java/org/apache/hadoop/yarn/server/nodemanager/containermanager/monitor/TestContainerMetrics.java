@@ -99,7 +99,7 @@ public class TestContainerMetrics {
 
     Thread.sleep(110);
     metrics.getMetrics(collector, true);
-    assertEquals(1, collector.getRecords().size(),ERR);
+    assertEquals(1, collector.getRecords().size(), ERR);
     MetricsRecord record = collector.getRecords().get(0);
 
     MetricsRecords.assertTag(record, ContainerMetrics.PROCESSID_INFO.name(),

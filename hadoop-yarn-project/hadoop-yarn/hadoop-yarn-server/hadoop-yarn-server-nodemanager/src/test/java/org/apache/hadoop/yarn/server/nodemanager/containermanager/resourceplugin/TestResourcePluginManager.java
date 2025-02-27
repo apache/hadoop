@@ -73,6 +73,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
 
   @BeforeEach
   public void setup() throws Exception {
+    super.setUp();
     // setup resource-types.xml
     ResourceUtils.resetResourceTypes();
     String resourceTypesFile = "resource-types-pluggable-devices.xml";

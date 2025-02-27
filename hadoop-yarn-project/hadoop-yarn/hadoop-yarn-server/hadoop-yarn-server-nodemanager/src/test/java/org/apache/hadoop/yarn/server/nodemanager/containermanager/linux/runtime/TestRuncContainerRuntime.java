@@ -170,6 +170,7 @@ public class TestRuncContainerRuntime {
     setup();
   }
 
+  @SuppressWarnings("checkstyle:methodlength")
   public void setup() throws ContainerExecutionException {
     mockExecutor = Mockito
         .mock(PrivilegedOperationExecutor.class);
@@ -611,7 +612,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testSelectRuncContainerType(boolean pHttps) throws ContainerExecutionException {
     initHttps(pHttps);
     Map<String, String> envRuncType = new HashMap<>();
@@ -630,7 +631,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testSelectRuncContainerTypeWithRuncAsDefault(boolean pHttps)
       throws ContainerExecutionException {
     initHttps(pHttps);
@@ -652,7 +653,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testSelectRuncContainerTypeWithDefaultSet(boolean pHttps)
       throws ContainerExecutionException {
     initHttps(pHttps);
@@ -673,7 +674,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testRuncContainerLaunch(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
@@ -689,7 +690,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testRuncContainerLaunchWithDefaultImage(boolean pHttps)
       throws ContainerExecutionException, IOException {
     initHttps(pHttps);
@@ -707,7 +708,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testCGroupParent(boolean pHttps) throws ContainerExecutionException,
       PrivilegedOperationException, IOException {
     initHttps(pHttps);
@@ -787,7 +788,7 @@ public class TestRuncContainerRuntime {
 
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testDefaultROMounts(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
@@ -824,7 +825,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testDefaultROMountsInvalid(boolean pHttps) throws ContainerExecutionException {
     initHttps(pHttps);
     conf.setStrings(NM_RUNC_DEFAULT_RO_MOUNTS,
@@ -842,7 +843,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testDefaultRWMounts(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
@@ -879,7 +880,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testDefaultRWMountsInvalid(boolean pHttps) throws ContainerExecutionException {
     initHttps(pHttps);
     conf.setStrings(NM_RUNC_DEFAULT_RW_MOUNTS,
@@ -897,7 +898,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testUserMounts(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
@@ -939,7 +940,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testUserMountsInvalid(boolean pHttps) throws ContainerExecutionException {
     initHttps(pHttps);
     env.put(ENV_RUNC_CONTAINER_MOUNTS,
@@ -957,7 +958,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testUserMountsModeInvalid(boolean pHttps) throws ContainerExecutionException {
     initHttps(pHttps);
     env.put(ENV_RUNC_CONTAINER_MOUNTS,
@@ -975,7 +976,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testUserMountsModeNullInvalid(boolean pHttps)
       throws ContainerExecutionException {
     initHttps(pHttps);
@@ -994,7 +995,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testRuncHostnamePattern(boolean pHttps) throws Exception {
     initHttps(pHttps);
     String[] validNames = {"ab", "a.b.c.d", "a1-b.cd.ef", "0AB.", "C_D-"};
@@ -1016,7 +1017,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testValidRuncHostnameLength(boolean pHttps) throws Exception {
     initHttps(pHttps);
     String validLength = "example.test.site";
@@ -1024,7 +1025,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testInvalidRuncHostnameLength(boolean pHttps) throws Exception {
     initHttps(pHttps);
     assertThrows(ContainerExecutionException.class, () -> {
@@ -1035,7 +1036,7 @@ public class TestRuncContainerRuntime {
   }
 
   @MethodSource("data")
-  @ParameterizedTest
+  @ParameterizedTest(name = "https={0}")
   public void testGetLocalResources(boolean pHttps) throws Exception {
     initHttps(pHttps);
     RuncContainerRuntime runtime = new MockRuncContainerRuntime(

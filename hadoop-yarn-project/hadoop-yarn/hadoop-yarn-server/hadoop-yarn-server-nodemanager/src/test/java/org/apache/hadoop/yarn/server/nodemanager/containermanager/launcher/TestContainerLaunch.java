@@ -740,8 +740,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       getJarManifestClasspath(userSetEnv.get(Environment.CLASSPATH.name()));
 
     assertTrue(result.size() > 1);
-    assertTrue(
-      result.get(result.size() - 1).endsWith("userjarlink.jar"));
+    assertTrue(result.get(result.size() - 1).endsWith("userjarlink.jar"));
 
     //Then, with user classpath first
     userSetEnv.put(Environment.CLASSPATH_PREPEND_DISTCACHE.name(), "true");
@@ -759,8 +758,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       getJarManifestClasspath(userSetEnv.get(Environment.CLASSPATH.name()));
 
     assertTrue(result.size() > 1);
-    assertTrue(
-      result.get(0).endsWith("userjarlink.jar"));
+    assertTrue(result.get(0).endsWith("userjarlink.jar"));
 
   }
 
@@ -1042,11 +1040,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           assertTrue(exitEvent.getDiagnosticInfo().contains("Error files: "),
               "Should contain the Multi file information");
         }
-        assertTrue(exitEvent.getDiagnosticInfo()
-            .contains("Last "
+        assertTrue(exitEvent.getDiagnosticInfo().contains("Last "
             + YarnConfiguration.DEFAULT_NM_CONTAINER_STDERR_BYTES
-            + " bytes of"),
-            "Should contain the error Log message with tail size info");
+            + " bytes of"), "Should contain the error Log message with tail size info");
         assertTrue(exitEvent.getDiagnosticInfo()
             .contains(INVALID_JAVA_HOME + "/bin/java"),
             "Should contain contents of error Log");
@@ -1074,6 +1070,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
    */
   @Test
   @Timeout(value = 60)
+  @SuppressWarnings("checkstyle:methodlength")
   public void testContainerEnvVariables() throws Exception {
     containerManager.start();
 
@@ -1323,8 +1320,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     assertEquals(expectedExitCode, containerStatus.getExitStatus());
 
     // Assert that the process is not alive anymore
-    assertFalse(
-     DefaultContainerExecutor.containerIsAlive(pid), "Process is still alive!");
+    assertFalse(DefaultContainerExecutor.containerIsAlive(pid), "Process is still alive!");
   }
 
   @Test
@@ -1413,8 +1409,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       Thread.sleep(1000);
       LOG.info("Waiting for process start-file to be created");
     }
-    assertTrue(processStartFile.exists(),
-        "ProcessStartFile doesn't exist!");
+    assertTrue(processStartFile.exists(), "ProcessStartFile doesn't exist!");
 
     NMContainerStatus nmContainerStatus =
         containerManager.getContext().getContainers().get(cId)
@@ -1854,8 +1849,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           new File(localLogDir, ContainerExecutor.DIRECTORY_CONTENTS);
         File scriptCopy = new File(localLogDir, tempFile.getName());
 
-        assertEquals(debugLogsExist,
-            directorInfo.exists(), "Directory info file missing");
+        assertEquals(debugLogsExist, directorInfo.exists(), "Directory info file missing");
         assertEquals(debugLogsExist,
             scriptCopy.exists(), "Copy of launch script missing");
         if (debugLogsExist) {

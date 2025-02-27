@@ -55,8 +55,9 @@ public class TestDockerImagesCommand {
     assertEquals("images", StringUtils.join(",",
         dockerImagesCommand.getDockerCommandWithArguments()
             .get("docker-command")));
-    assertEquals("image name", "foo", StringUtils.join(",",
-        dockerImagesCommand.getDockerCommandWithArguments().get("image")));
+    assertEquals("foo",
+        StringUtils.join(",", dockerImagesCommand.getDockerCommandWithArguments().get("image")),
+        "image name");
     assertEquals(2, dockerImagesCommand.getDockerCommandWithArguments().size());
   }
 }

@@ -1226,7 +1226,7 @@ public class TestDefaultOOMHandler {
           protected CGroupsHandler getCGroupsHandler() {
             return cGroupsHandler;
           }
-       };
+      };
       handler.run();
     });
   }

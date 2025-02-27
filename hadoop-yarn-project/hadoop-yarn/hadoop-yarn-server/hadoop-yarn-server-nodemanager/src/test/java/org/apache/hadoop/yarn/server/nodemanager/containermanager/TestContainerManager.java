@@ -1193,16 +1193,15 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerStatus containerStatus = containerManager.
         getContainerStatuses(gcsRequest).getContainerStatuses().get(0);
 
-	  // Verify exit status matches exit state of script
-	  assertEquals(exitCode,
-			  containerStatus.getExitStatus());	    
+	 // Verify exit status matches exit state of script
+     assertEquals(exitCode, containerStatus.getExitStatus());
   }
   
   @Test
   public void testContainerLaunchAndExitSuccess() throws IOException,
       InterruptedException, YarnException {
 	  containerManager.start();
-	  int exitCode = 0; 
+	  int exitCode = 0;
 
 	  // launch context for a command that will return exit code 0 
 	  // and verify exit code returned 

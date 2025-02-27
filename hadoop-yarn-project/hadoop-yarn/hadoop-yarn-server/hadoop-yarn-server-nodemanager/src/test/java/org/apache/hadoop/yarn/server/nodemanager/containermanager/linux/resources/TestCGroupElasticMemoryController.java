@@ -59,14 +59,14 @@ public class TestCGroupElasticMemoryController {
   public void testConstructorOff()
       throws YarnException {
     assertThrows(YarnException.class, () -> {
-      new CGroupElasticMemoryController(
-              conf,
-              null,
-              null,
-              false,
-              false,
-              10000
-      );
+        new CGroupElasticMemoryController(
+          conf,
+          null,
+          null,
+          false,
+          false,
+          10000
+        );
     });
   }
 
