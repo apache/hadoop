@@ -73,9 +73,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -139,6 +137,7 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
     }
   }
 
+  @BeforeEach
   @Override
   public void setUp() throws IOException {
     super.setUp();
@@ -184,6 +183,7 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
     }
   }
 
+  @AfterEach
   @Override
   public void tearDown() {
     interceptor.cleanupRegistry();

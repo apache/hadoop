@@ -83,6 +83,8 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreServ
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.uam.UnmanagedAMPoolManager;
 import org.apache.hadoop.yarn.util.Records;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -117,6 +119,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
 
   private volatile int lastResponseId;
 
+  @BeforeEach
   @Override
   public void setUp() throws IOException {
     super.setUp();
@@ -148,6 +151,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     lastResponseId = 0;
   }
 
+  @AfterEach
   @Override
   public void tearDown() {
     interceptor.cleanupRegistry();
@@ -660,8 +664,8 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       root = root.getNextInterceptor();
       index++;
     }
-    assertEquals("The number of interceptors in chain does not match",
-        Integer.toString(3), Integer.toString(index));
+    assertEquals(Integer.toString(3), Integer.toString(index),
+        "The number of interceptors in chain does not match");
   }
 
   /**
