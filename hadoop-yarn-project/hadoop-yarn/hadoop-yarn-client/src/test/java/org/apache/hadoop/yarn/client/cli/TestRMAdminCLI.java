@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -77,9 +77,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceReque
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
@@ -100,7 +100,7 @@ public class TestRMAdminCLI {
   private static final String HOST_B = "1.2.3.2";
   private static File dest;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     ResourceUtils.resetResourceTypes();
     Configuration yarnConf = new YarnConfiguration();
@@ -113,7 +113,7 @@ public class TestRMAdminCLI {
     ResourceUtils.getResourceTypes();
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     if (dest.exists()) {
       dest.delete();
@@ -121,7 +121,7 @@ public class TestRMAdminCLI {
   }
 
   @SuppressWarnings("static-access")
-  @Before
+  @BeforeEach
   public void configure() throws IOException, YarnException {
     remoteAdminServiceAccessed = false;
     admin = mock(ResourceManagerAdministrationProtocol.class);
@@ -275,12 +275,10 @@ public class TestRMAdminCLI {
     NodeId nodeId = NodeId.fromString(nodeIdStr);
     Resource expectedResource = Resources.createResource(memSize, cores);
     ResourceOption resource = resourceMap.get(nodeId);
-    assertNotNull("resource for " + nodeIdStr + " shouldn't be null.",
-        resource);
-    assertEquals("resource value for " + nodeIdStr + " is not as expected.",
-        ResourceOption.newInstance(expectedResource,
-            ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT),
-        resource);
+    assertNotNull(resource, "resource for " + nodeIdStr + " shouldn't be null.");
+    assertEquals(ResourceOption.newInstance(expectedResource,
+        ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT),
+        resource, "resource value for " + nodeIdStr + " is not as expected.");
   }
 
   @Test
@@ -301,10 +299,9 @@ public class TestRMAdminCLI {
     NodeId nodeId = NodeId.fromString(nodeIdStr);
     Resource expectedResource = Resources.createResource(memSize, cores);
     ResourceOption resource = resourceMap.get(nodeId);
-    assertNotNull("resource for " + nodeIdStr + " shouldn't be null.",
-        resource);
-    assertEquals("resource value for " + nodeIdStr + " is not as expected.",
-        ResourceOption.newInstance(expectedResource, timeout), resource);
+    assertNotNull(resource, "resource for " + nodeIdStr + " shouldn't be null.");
+    assertEquals(ResourceOption.newInstance(expectedResource, timeout), resource,
+        "resource value for " + nodeIdStr + " is not as expected.");
   }
 
   @Test
@@ -347,11 +344,10 @@ public class TestRMAdminCLI {
         resource.getResource().getResourceInformation("memory-mb").getValue());
     assertEquals("Mi",
         resource.getResource().getResourceInformation("memory-mb").getUnits());
-    assertNotNull("resource for " + nodeIdStr + " shouldn't be null.",
-        resource);
-    assertEquals("resource value for " + nodeIdStr + " is not as expected.",
-        ResourceOption.newInstance(expectedResource,
-            ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT), resource);
+    assertNotNull(resource, "resource for " + nodeIdStr + " shouldn't be null.");
+    assertEquals(ResourceOption.newInstance(expectedResource,
+        ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT), resource,
+        "resource value for " + nodeIdStr + " is not as expected.");
   }
 
   @Test
@@ -378,10 +374,9 @@ public class TestRMAdminCLI {
         ResourceInformation.newInstance("resource2", "m", 2));
 
     ResourceOption resource = resourceMap.get(nodeId);
-    assertNotNull("resource for " + nodeIdStr + " shouldn't be null.",
-        resource);
-    assertEquals("resource value for " + nodeIdStr + " is not as expected.",
-        ResourceOption.newInstance(expectedResource, timeout), resource);
+    assertNotNull(resource, "resource for " + nodeIdStr + " shouldn't be null.");
+    assertEquals(ResourceOption.newInstance(expectedResource, timeout), resource,
+        "resource value for " + nodeIdStr + " is not as expected.");
   }
 
   @Test
@@ -807,9 +802,9 @@ public class TestRMAdminCLI {
               + "[-getServiceState <serviceId>] [-getAllServiceState] "
               + "[-checkHealth <serviceId>] [-help [cmd]]";
       String actualHelpMsg = dataOut.toString();
-      assertTrue(String.format("Help messages: %n " + actualHelpMsg + " %n doesn't include expected " +
-          "messages: %n" + expectedHelpMsg), actualHelpMsg.contains(expectedHelpMsg
-              ));
+      assertTrue(actualHelpMsg.contains(expectedHelpMsg),
+          String.format("Help messages: %n " + actualHelpMsg + " %n doesn't include expected " +
+          "messages: %n" + expectedHelpMsg));
     } finally {
       System.setOut(oldOutPrintStream);
       System.setErr(oldErrPrintStream);
@@ -1039,18 +1034,18 @@ public class TestRMAdminCLI {
 
     args = new String[] { "-replaceLabelsOnNode", "node1= node2=",
         "-directlyAccessNodeLabelStore" };
-    assertTrue("Labels should get replaced even '=' is used ",
-        0 == rmAdminCLI.run(args));
+    assertTrue(0 == rmAdminCLI.run(args),
+        "Labels should get replaced even '=' is used ");
   }
 
   private void testError(String[] args, String template,
       ByteArrayOutputStream data, int resultCode) throws Exception {
     int actualResultCode = rmAdminCLI.run(args);
-    assertEquals("Expected result code: " + resultCode + 
-        ", actual result code is: " + actualResultCode, resultCode, actualResultCode);
-    assertTrue(String.format("Expected error message: %n" + template + 
-        " is not included in messages: %n" + data.toString()), 
-        data.toString().contains(template));
+    assertEquals(resultCode, actualResultCode, "Expected result code: " + resultCode +
+        ", actual result code is: " + actualResultCode);
+    assertTrue(data.toString().contains(template),
+        String.format("Expected error message: %n" + template +
+        " is not included in messages: %n" + data.toString()));
     data.reset();
   }
 
