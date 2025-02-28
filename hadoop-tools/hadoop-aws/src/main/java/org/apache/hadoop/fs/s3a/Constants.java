@@ -1793,4 +1793,13 @@ public final class Constants {
    * Value: {@value}.
    */
   public static final String S3A_IO_RATE_LIMIT = "fs.s3a.io.rate.limit";
+
+
+  /**
+   * Prefix to configure Analytics Accelerator Library.
+   * Value: {@value}.
+   */
+  public static final String ANALYTICS_ACCELERATOR_CONFIGURATION_PREFIX =
+          "fs.s3a.analytics.accelerator";
+
 }

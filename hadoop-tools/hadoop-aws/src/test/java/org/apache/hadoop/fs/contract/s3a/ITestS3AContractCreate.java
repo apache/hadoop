@@ -32,6 +32,9 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_EXPECT_CONTINUE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
+
 
 /**
  * S3A contract tests creating files.
@@ -86,6 +89,17 @@ public class ITestS3AContractCreate extends AbstractContractCreateTest {
     conf.setBoolean(CONNECTION_EXPECT_CONTINUE, expectContinue);
     S3ATestUtils.disableFilesystemCaching(conf);
     return conf;
+  }
+
+  @Override
+  public void testOverwriteExistingFile() throws Throwable {
+    // Currently analytics accelerator does not support reading of files that have been overwritten.
+    // This is because the analytics accelerator library caches metadata, and when a file is
+    // overwritten, the old metadata continues to be used, until it is removed from the cache over
+    // time. This will be fixed in https://github.com/awslabs/analytics-accelerator-s3/issues/218.
+    skipIfAnalyticsAcceleratorEnabled(getContract().getConf(),
+        "Analytics Accelerator currently does not support reading of over written files");
+    super.testOverwriteExistingFile();
   }
 
   @Override

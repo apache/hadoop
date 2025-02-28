@@ -507,7 +507,7 @@ public abstract class AbstractContractMultipartUploaderTest extends
   @Test
   public void testMultipartUploadEmptyPart() throws Exception {
     FileSystem fs = getFileSystem();
-    Path file = path("testMultipartUpload");
+    Path file = path("testMultipartUploadEmptyPart");
     try (MultipartUploader uploader =
         fs.createMultipartUploader(file).build()) {
       UploadHandle uploadHandle = uploader.startUpload(file).get();

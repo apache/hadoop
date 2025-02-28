@@ -57,6 +57,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.assertStreamIsNotChecksummed
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getS3AInputStream;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.streamType;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_BYTES_READ_CLOSE;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_OPENED;
@@ -114,6 +115,10 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
   @Override
   public void setup() throws Exception {
     super.setup();
+    // Analytics accelerator currently does not support IOStatistics, this will be added as
+    // part of https://issues.apache.org/jira/browse/HADOOP-19364
+    skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
+        "Analytics Accelerator currently does not support stream statistics");
     S3AFileSystem fs = getFileSystem();
     testFile = methodPath();
 
@@ -392,7 +397,6 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
 
     describe("PositionedReadable.read() past the end of the file");
     assumeNoPrefetching();
-
     verifyMetrics(() -> {
       try (FSDataInputStream in =
                openFile(longLen, FS_OPTION_OPENFILE_READ_POLICY_RANDOM)) {

@@ -206,6 +206,7 @@
     <aws-java-sdk.version>1.12.720</aws-java-sdk.version>
     <aws-java-sdk-v2.version>2.25.53</aws-java-sdk-v2.version>
     <amazon-s3-encryption-client-java.version>3.1.1</amazon-s3-encryption-client-java.version>
+    <amazon-s3-analyticsaccelerator-s3.version>0.0.4</amazon-s3-analyticsaccelerator-s3.version>
     <aws.eventstream.version>1.0.1</aws.eventstream.version>
     <hsqldb.version>2.7.1</hsqldb.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
@@ -1191,6 +1192,11 @@
             <artifactId>*</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>software.amazon.s3.analyticsaccelerator</groupId>
+        <artifactId>analyticsaccelerator-s3</artifactId>
+        <version>${amazon-s3-analyticsaccelerator-s3.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.mina</groupId>

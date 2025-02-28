@@ -105,6 +105,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.impl.FlagSet.createFlagSet;
+import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Analytics;
 import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Prefetch;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
@@ -575,6 +576,21 @@ public final class S3ATestUtils {
    */
   public static boolean isS3ExpressTestBucket(final Configuration conf) {
     return S3ExpressStorage.isS3ExpressStore(getTestBucketName(conf), "");
+  }
+
+  /**
+   * Skip a test if the Analytics Accelerator Library for Amazon S3 is enabled.
+   * @param configuration configuration to probe
+   */
+  public static void skipIfAnalyticsAcceleratorEnabled(
+          Configuration configuration, String message) {
+    assume(message,
+            !isAnalyticsAcceleratorEnabled(configuration));
+  }
+
+  public static boolean isAnalyticsAcceleratorEnabled(final Configuration conf) {
+    return conf.get(INPUT_STREAM_TYPE,
+        INPUT_STREAM_TYPE_CLASSIC).equals(INPUT_STREAM_TYPE_ANALYTICS);
   }
 
   /**
@@ -1809,6 +1825,18 @@ public final class S3ATestUtils {
         PREFETCH_ENABLED_KEY,
         INPUT_STREAM_TYPE);
     conf.setEnum(INPUT_STREAM_TYPE, Prefetch);
+    return conf;
+  }
+
+  /**
+   * Enable analytics stream for S3A S3AFileSystem in tests.
+   * @param conf Configuration to update
+   * @return patched config
+   */
+  public static Configuration enableAnalyticsAccelerator(Configuration conf) {
+    removeBaseAndBucketOverrides(conf,
+        INPUT_STREAM_TYPE);
+    conf.setEnum(INPUT_STREAM_TYPE, Analytics);
     return conf;
   }
 

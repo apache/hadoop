@@ -54,10 +54,11 @@ public abstract class AbstractS3AMockTest {
 
   protected S3AFileSystem fs;
   protected S3Client s3;
+  protected Configuration conf;
 
   @Before
   public void setup() throws Exception {
-    Configuration conf = createConfiguration();
+    conf = createConfiguration();
     fs = new S3AFileSystem();
     URI uri = URI.create(FS_S3A + "://" + BUCKET);
     // unset S3CSE property from config to avoid pathIOE.

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.statistics;
 
 import org.apache.hadoop.fs.impl.prefetch.PrefetchingStatistics;
+import org.apache.hadoop.fs.s3a.impl.streams.InputStreamType;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 
 /**
@@ -52,6 +53,13 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
    * @return the previous count or zero if this is the first opening.
    */
   long streamOpened();
+
+  /**
+   * A stream of the given type was opened.
+   * @param type type of input stream
+   *  @return the previous count or zero if this is the first opening.
+   */
+  long streamOpened(InputStreamType type);
 
   /**
    * The inner stream was closed.
