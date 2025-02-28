@@ -24,8 +24,8 @@
 }}
 <ul>
   <li class="queues-list">
-    <span class="label-key" title="Used Capacity/Resources: is the total of the resources consumed within the queue for the given partition <memory MB, vCores, %>.
-    The percentage value calculated differently for the DefaultResourceCalculator and for the DominantResourceCalculator."><b>used capacity:</b></span>
+    <span class="label-key" title="Used Capacity/Resources: the total resources consumed within the queue for the given partition <memory MB, vCores, %>.
+    The percentage value is calculated differently for the DefaultResourceCalculator and the DominantResourceCalculator."><b>used capacity:</b></span>
     <span class="label-value"><b>{{data.usedCapacity}}%</b></span>
     <span class="label-value"><ul>{{#each data.used.resourceInformations.resourceInformation as | resource|}}<li>{{resource.name}}: {{resource.value}}</li>{{/each}}</ul></span>
   </li>
@@ -92,7 +92,7 @@
   /scheduler/schedulerInfo/queues/queue[2]/capacities/queueCapacitiesByPartition[2]/absoluteCapacity[text()='85.44922']
   }}
   <li class="yarn-list">
-    <span class="label-key" title="Absolute Configured Capacity: percentage referring to the configured resources from the total available resources for the partition. This value  will be different from the configured capacity only when the parent queue is not the root queue.">absolute configured capacity:</span>
+    <span class="label-key" title="Absolute Configured Capacity: the percentage of configured resources relative to the total available resources for the partition. This value may differ from the configured capacity if the parent queue is not the root queue.">absolute configured capacity:</span>
     <span class="label-value">{{data.absoluteCapacity}}%</span>
   </li>
 
@@ -100,7 +100,7 @@
   /scheduler/schedulerInfo/queues/queue[2]/absoluteMaxCapacity[text()='100.0']
   }}
   <li class="yarn-list">
-    <span class="label-key" title="Absolute Configured Max Capacity: percentage referring to the configured maximum resources from the total available resources for the partition. This value will be different from the configured max capacity only when the parent queue is not the root queue.">absolute configured max capacity:</span>
+    <span class="label-key" title="Absolute Configured Max Capacity: percentage referring to the configured maximum resources from the total available resources for the partition. This value may differ from the configured max capacity when the parent queue is not the root queue.">absolute configured max capacity:</span>
     <span class="label-value">{{data.absoluteMaxCapacity}}%</span>
   </li>
 
@@ -149,7 +149,7 @@
     /scheduler/schedulerInfo/queues/queue[2]/numActiveApplications[text()='1']
     }}
     <li class="yarn-list">
-      <span class="label-key" title="Num Schedulable Applications. Shows the #apps running in the queue regardless of the partition.">num schedulable applications:</span>
+      <span class="label-key" title="Num Schedulable Applications. The number of applications currently running in the queue, regardless of partition.">num schedulable applications:</span>
       <span class="label-value">{{data.numActiveApplications}}</span>
     </li>
 
@@ -157,7 +157,7 @@
     /scheduler/schedulerInfo/queues/queue[2]/numPendingApplications[text()='0']
     }}
     <li class="yarn-list">
-      <span class="label-key" title="Non-Schedulable Applications. Shows the #apps pending in the queue regardless of the partition.">num non-schedulable spplications:</span>
+      <span class="label-key" title="Non-Schedulable Applications. The number of applications pending in the queue, regardless of partition.">num non-schedulable applications:</span>
       <span class="label-value">{{data.numPendingApplications}}</span>
     </li>
 
@@ -237,7 +237,7 @@
     /scheduler/schedulerInfo/queues/queue[3]/queues/queue[1]/defaultNodeLabelExpression[text()='exclusive']
     }}
     <li class="yarn-list">
-      <span class="label-key" title="Default Node Label Expression:">default node label expression:</span>
+      <span class="label-key" title="Default Node Label Expression">default node label expression:</span>
       <span class="label-value">
             {{#if data.defaultNodeLabelExpression}}
               {{data.defaultNodeLabelExpression}}
