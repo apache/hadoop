@@ -34,8 +34,11 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.CSMappingPlacementRule;
@@ -240,6 +243,8 @@ public class CapacityScheduler extends
 
   private CSMaxRunningAppsEnforcer maxRunningEnforcer;
 
+  private RequestsHandler requestsHandler;
+
   public CapacityScheduler() {
     super(CapacityScheduler.class.getName());
     this.maxRunningEnforcer = new CSMaxRunningAppsEnforcer(this);
@@ -328,6 +333,7 @@ public class CapacityScheduler extends
       offswitchPerHeartbeatLimit = this.conf.getOffSwitchPerHeartbeatLimit();
 
       initMultiNodePlacement();
+      initRequestsHandler();
       printSchedulerInitialized();
     } finally {
       writeLock.unlock();
@@ -455,8 +461,15 @@ public class CapacityScheduler extends
         refreshMaximumAllocation(
             ResourceUtils.fetchMaximumAllocationFromConfig(this.conf));
         reinitializeQueues(this.conf);
+        reinitRequestsHandler(this.conf);
       } catch (Throwable t) {
         this.conf = oldConf;
+        try {
+          reinitRequestsHandler(this.conf);
+        } catch (Throwable innerT) {
+          LOG.error("Failed to re-init requests handler : {}",
+              innerT.getMessage(), innerT);
+        }
         reinitializeQueues(this.conf);
         refreshMaximumAllocation(
             ResourceUtils.fetchMaximumAllocationFromConfig(this.conf));
@@ -1335,6 +1348,26 @@ public class CapacityScheduler extends
       LOG.error("Calling allocate on previous or removed " +
           "or non existent application attempt " + applicationAttemptId);
       return EMPTY_ALLOCATION;
+    }
+
+    // Handle requests
+    long requestsHandleStartTime = System.currentTimeMillis();
+    RequestsHandleResponse handleResponse =
+        handleRequests(applicationAttemptId, ask, schedulingRequests);
+    long requestsHandleElapsedMs =
+        System.currentTimeMillis() - requestsHandleStartTime;
+    CapacitySchedulerMetrics.getMetrics().addRequestsHandle(
+        requestsHandleElapsedMs);
+    if (handleResponse != null && handleResponse.isUpdated()) {
+      LOG.info("Updated requests: appId={}, elapsedMs={}; " +
+          "ResourceRequests: origin={}, updated={}; " +
+          "SchedulingRequests: origin={}, updated={}",
+          applicationAttemptId.getApplicationId(),
+          requestsHandleElapsedMs,
+          ask, handleResponse.getResourceRequests(),
+          schedulingRequests, handleResponse.getSchedulingRequests());
+      ask = handleResponse.getResourceRequests();
+      schedulingRequests = handleResponse.getSchedulingRequests();
     }
 
     // Handle all container updates
@@ -3641,5 +3674,35 @@ public class CapacityScheduler extends
         return 0;
       }
     }
+  }
+
+  /**
+   * initialize / reinitialize / handleRequests methods for RequestsHandler.
+   */
+  private void initRequestsHandler() throws IOException, YarnException {
+    Function<ApplicationAttemptId, Pair<FiCaSchedulerApp, RMApp>> appProvider =
+        appAttemptId -> {
+          FiCaSchedulerApp app = getApplicationAttempt(appAttemptId);
+          RMApp rmApp =
+              rmContext.getRMApps().get(appAttemptId.getApplicationId());
+          if (app == null || rmApp == null) {
+            return null;
+          }
+          return ImmutablePair.of(app, rmApp);
+        };
+    requestsHandler = new RequestsHandler(appProvider);
+    reinitRequestsHandler(this.conf);
+  }
+
+  private void reinitRequestsHandler(Configuration newConf)
+      throws IOException, YarnException {
+    requestsHandler.initialize(newConf);
+  }
+
+  protected RequestsHandleResponse handleRequests(
+      ApplicationAttemptId appAttemptId,
+      List<ResourceRequest> resourceRequests,
+      List<SchedulingRequest> schedulingRequests) {
+    return requestsHandler.handle(appAttemptId, resourceRequests, schedulingRequests);
   }
 }

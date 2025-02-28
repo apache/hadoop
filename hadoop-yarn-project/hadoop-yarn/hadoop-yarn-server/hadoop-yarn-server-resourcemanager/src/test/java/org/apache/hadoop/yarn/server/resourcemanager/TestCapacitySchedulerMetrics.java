@@ -84,6 +84,7 @@ public class TestCapacitySchedulerMetrics {
 
     assertEquals(0, csMetrics.getNumOfAllocates());
     assertEquals(0, csMetrics.getNumOfCommitSuccess());
+    assertEquals(0, csMetrics.getRequestsHandle().lastStat().numSamples());
 
     RMApp rmApp = MockRMAppSubmitter.submit(rm,
         MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
@@ -100,6 +101,9 @@ public class TestCapacitySchedulerMetrics {
     MockAM am = MockRM.launchAMWhenAsyncSchedulingEnabled(rmApp, rm);
     am.registerAppAttempt();
     am.allocate("*", 1024, 1, new ArrayList<>());
+
+    assertTrue(
+        csMetrics.getRequestsHandle().lastStat().numSamples() > 0);
 
     nm1.nodeHeartbeat(true);
     nm2.nodeHeartbeat(true);

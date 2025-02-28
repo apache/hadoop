@@ -52,6 +52,8 @@ public class CapacitySchedulerMetrics {
   @Metric("Scheduler node update") MutableRate nodeUpdate;
   @Metric("Scheduler node heartbeat interval") MutableQuantiles
       schedulerNodeHBInterval;
+  @Metric("Requests handle")
+  private MutableRate requestsHandle;
 
   private static volatile CapacitySchedulerMetrics INSTANCE = null;
   private static MetricsRegistry registry;
@@ -127,5 +129,14 @@ public class CapacitySchedulerMetrics {
   @VisibleForTesting
   public long getNumOfSchedulerNodeHBInterval() {
     return this.schedulerNodeHBInterval.getEstimator().getCount();
+  }
+
+  public void addRequestsHandle(long latency) {
+    this.requestsHandle.add(latency);
+  }
+
+  @VisibleForTesting
+  public MutableRate getRequestsHandle() {
+    return requestsHandle;
   }
 }

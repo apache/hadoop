@@ -430,6 +430,17 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String MAPPING_RULE_FORMAT_DEFAULT =
       MAPPING_RULE_FORMAT_LEGACY;
 
+  public static final String REQUEST_HANDLER_PREFIX =
+      PREFIX + "request-handler.";
+
+  public static final String REQUEST_HANDLER_ENABLED =
+      REQUEST_HANDLER_PREFIX + "enabled";
+
+  public static final boolean DEFAULT_REQUEST_HANDLER_ENABLED = false;
+
+  public static final String REQUEST_HANDLER_UPDATES =
+      REQUEST_HANDLER_PREFIX + "updates";
+
   private static final QueueCapacityConfigParser queueCapacityConfigParser
       = new QueueCapacityConfigParser();
   private static final String LEGACY_QUEUE_MODE_ENABLED = PREFIX + "legacy-queue-mode.enabled";
