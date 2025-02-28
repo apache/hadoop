@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.impl.streams;
 
+import java.io.IOException;
+
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.service.AbstractService;
@@ -58,7 +60,7 @@ public abstract class AbstractObjectInputStreamFactory extends AbstractService
    * @param factoryBindingParameters parameters for the factory binding
    */
   @Override
-  public void bind(final FactoryBindingParameters factoryBindingParameters) {
+  public void bind(final FactoryBindingParameters factoryBindingParameters) throws IOException {
     // must be on be invoked during service initialization
     Preconditions.checkState(isInState(STATE.INITED),
         "Input Stream factory %s is in wrong state: %s",

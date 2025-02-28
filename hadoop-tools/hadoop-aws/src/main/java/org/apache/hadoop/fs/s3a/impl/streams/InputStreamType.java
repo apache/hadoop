@@ -45,13 +45,11 @@ public enum InputStreamType {
    */
   Prefetch(StreamIntegration.PREFETCH, 2, c ->
       new PrefetchingInputStreamFactory()),
-
   /**
    * The analytics input stream.
    */
-  Analytics(StreamIntegration.ANALYTICS, 3, c -> {
-    throw new IllegalArgumentException("not yet supported");
-  }),
+  Analytics(StreamIntegration.ANALYTICS, 3, c ->
+      new AnalyticsStreamFactory()),
 
   /**
    * The a custom input stream.
