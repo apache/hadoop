@@ -834,13 +834,15 @@ public class TestNetUtils {
     assertNullCause(new2);
     assertEquals("node789: test789", new2.getMessage());
 
-    WrappedIOException e3 = new WrappedIOException("test987", new IllegalStateException("deliberate"));
+    WrappedIOException e3 = new WrappedIOException("test987",
+        new IllegalStateException("deliberate"));
     IOException new3 = NetUtils.addNodeNameToIOException(e3, "node987");
     assertSame(e3.getCause(), new3.getCause());
     assertEquals("node987: test987", new3.getMessage());
 
     // addNodeNameToIOException will return the original exception if the class is not accessible
-    PrivateIOException e4 = new PrivateIOException("test654", new IllegalStateException("deliberate"));
+    PrivateIOException e4 = new PrivateIOException("test654",
+        new IllegalStateException("deliberate"));
     IOException new4 = NetUtils.addNodeNameToIOException(e4, "node654");
     assertSame(e4, new4);
   }
