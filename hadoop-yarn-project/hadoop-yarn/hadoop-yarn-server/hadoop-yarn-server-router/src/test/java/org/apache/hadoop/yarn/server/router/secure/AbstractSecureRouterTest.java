@@ -112,6 +112,8 @@ public abstract class AbstractSecureRouterTest {
     conf.set(YarnConfiguration.ROUTER_PRINCIPAL, ROUTER_LOCALHOST_REALM);
     conf.set(YarnConfiguration.ROUTER_KEYTAB, routerKeytab.getAbsolutePath());
 
+    conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
+
     DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
