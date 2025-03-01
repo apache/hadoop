@@ -24,6 +24,7 @@ import java.net.ConnectException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.time.Duration;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
@@ -555,9 +556,9 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
         UserGroupInformation.createUserForTesting(alice,
             new String[]{"users", "administrators"});
     conf = new Configuration();
-    fs = fakeUser.doAs(new PrivilegedExceptionAction<S3AFileSystem>() {
+    fs = fakeUser.callAs(new Callable<S3AFileSystem>() {
       @Override
-      public S3AFileSystem run() throws Exception{
+      public S3AFileSystem call() throws Exception{
         return S3ATestUtils.createTestFileSystem(conf);
       }
     });

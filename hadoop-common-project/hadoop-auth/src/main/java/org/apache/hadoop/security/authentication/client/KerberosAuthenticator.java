@@ -36,12 +36,10 @@ import javax.security.auth.login.LoginException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionException;
 
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
@@ -315,10 +313,10 @@ public class KerberosAuthenticator implements Authenticator {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Using subject: " + subject);
       }
-      Subject.doAs(subject, new PrivilegedExceptionAction<Void>() {
+      SubjectUtil.callAs(subject, new Callable<Void>() {
 
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           GSSContext gssContext = null;
           try {
             GSSManager gssManager = GSSManager.getInstance();
@@ -361,11 +359,11 @@ public class KerberosAuthenticator implements Authenticator {
           return null;
         }
       });
-    } catch (PrivilegedActionException ex) {
-      if (ex.getException() instanceof IOException) {
-        throw (IOException) ex.getException();
+    } catch (CompletionException ex) {
+      if (ex.getCause() instanceof IOException) {
+        throw (IOException) ex.getCause();
       } else {
-        throw new AuthenticationException(ex.getException());
+        throw new AuthenticationException(ex.getCause());
       }
     } catch (LoginException ex) {
       throw new AuthenticationException(ex);

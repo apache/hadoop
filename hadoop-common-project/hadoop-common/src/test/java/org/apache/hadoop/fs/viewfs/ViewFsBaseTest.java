@@ -47,6 +47,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
@@ -966,9 +967,9 @@ abstract public class ViewFsBaseTest {
       throws IOException, InterruptedException, URISyntaxException {
     final UserGroupInformation userUgi = UserGroupInformation
         .createUserForTesting("user@HADOOP.COM", new String[]{"hadoop"});
-    userUgi.doAs(new PrivilegedExceptionAction<Object>() {
+    userUgi.callAs(new Callable<Object>() {
       @Override
-      public Object run() throws IOException, URISyntaxException {
+      public Object call() throws IOException, URISyntaxException {
         UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
         String doAsUserName = ugi.getUserName();
         assertEquals(doAsUserName, "user@HADOOP.COM");
@@ -1084,9 +1085,9 @@ abstract public class ViewFsBaseTest {
   public void testListStatusWithNoGroups() throws Exception {
     final UserGroupInformation userUgi = UserGroupInformation
         .createUserForTesting("user@HADOOP.COM", new String[] {});
-    userUgi.doAs(new PrivilegedExceptionAction<Object>() {
+    userUgi.callAs(new Callable<Object>() {
       @Override
-      public Object run() throws Exception {
+      public Object call() throws Exception {
         URI viewFsUri = new URI(
             FsConstants.VIEWFS_SCHEME, MOUNT_TABLE_NAME, "/", null, null);
         FileSystem vfs = FileSystem.get(viewFsUri, conf);

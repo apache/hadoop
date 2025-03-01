@@ -32,6 +32,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.util.Time;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -884,9 +885,9 @@ public class TestUserGroupInformation {
   @Timeout(value = 30)
   public void testUGIUnderNonHadoopContext() throws Exception {
     Subject nonHadoopSubject = new Subject();
-    Subject.doAs(nonHadoopSubject, new PrivilegedExceptionAction<Void>() {
+    SubjectUtil.callAs(nonHadoopSubject, new Callable<Void>() {
         @Override
-        public Void run() throws IOException {
+        public Void call() throws IOException {
           UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
           assertNotNull(ugi);
           return null;

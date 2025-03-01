@@ -18,7 +18,8 @@
 package org.apache.hadoop.fs.contract;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.Callable;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -93,7 +94,7 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
         "when the directory exists");
 
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("foo");
-    Path p = ugi.doAs((PrivilegedExceptionAction<Path>) () -> {
+    Path p = ugi.callAs((Callable<Path>) () -> {
       FileSystem wFs = getContract().getTestFileSystem();
       return wFs.getEnclosingRoot(new Path("/foo/bar"));
     });

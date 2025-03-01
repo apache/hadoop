@@ -415,7 +415,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     }
 
     // this should also fail due to client2 not being a superuser
-    KerberosTestUtils.doAs("client2@EXAMPLE.COM", new Callable<Void>() {
+    KerberosTestUtils.callAs("client2@EXAMPLE.COM", new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         String renewer = "renewer";

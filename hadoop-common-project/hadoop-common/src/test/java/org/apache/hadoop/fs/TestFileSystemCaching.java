@@ -21,9 +21,9 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -199,7 +199,7 @@ public class TestFileSystemCaching extends HadoopTestBase {
    */
   private FileSystem getCachedFS(UserGroupInformation ugi, Configuration conf)
       throws IOException, InterruptedException {
-    return ugi.doAs((PrivilegedExceptionAction<FileSystem>)
+    return ugi.callAs((Callable<FileSystem>)
             () -> FileSystem.get(new URI("cachedfile://a"), conf));
   }
 

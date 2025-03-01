@@ -2014,7 +2014,7 @@ public class UserGroupInformation {
   @Deprecated
   public <T> T doAs(PrivilegedAction<T> action) {
     tracePrivilegedAction(action);
-    return Subject.doAs(subject, action);
+    return SubjectUtil.doAs(subject, action);
   }
 
 

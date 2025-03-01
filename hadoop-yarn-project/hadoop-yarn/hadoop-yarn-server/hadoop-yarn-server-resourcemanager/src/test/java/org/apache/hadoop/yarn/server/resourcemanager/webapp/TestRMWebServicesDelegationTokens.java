@@ -319,7 +319,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     final String contentType = cType;
     final String body = reqBody;
     final String renewer = renUser;
-    KerberosTestUtils.doAsClient(new Callable<Void>() {
+    KerberosTestUtils.callAsClient(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         Principal principal1 = () -> "client@EXAMPLE.COM";
@@ -381,7 +381,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
 
         // test "client" and client2" trying to renew "client" token
         final DelegationToken responseToken =
-            KerberosTestUtils.doAsClient(new Callable<DelegationToken>() {
+            KerberosTestUtils.callAsClient(new Callable<DelegationToken>() {
               @Override
               public DelegationToken call() throws Exception {
                 Principal principal1 = () -> "client@EXAMPLE.COM";
@@ -407,7 +407,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
               }
             });
 
-        KerberosTestUtils.doAs(renewer, new Callable<DelegationToken>() {
+        KerberosTestUtils.callAs(renewer, new Callable<DelegationToken>() {
           @Override
           public DelegationToken call() throws Exception {
             Principal principal1 = () -> "client2@EXAMPLE.COM";
@@ -449,7 +449,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
         });
 
         // test unauthorized user renew attempt
-        KerberosTestUtils.doAs("client3", new Callable<DelegationToken>() {
+        KerberosTestUtils.callAs("client3", new Callable<DelegationToken>() {
           @Override
           public DelegationToken call() throws Exception {
             Principal principal1 = () -> "client3@EXAMPLE.COM";
@@ -469,7 +469,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
 
         // test bad request - incorrect format, empty token string and random
         // token string
-        KerberosTestUtils.doAsClient(new Callable<Void>() {
+        KerberosTestUtils.callAsClient(new Callable<Void>() {
           @Override
           public Void call() throws Exception {
             String token = "TEST_TOKEN_STRING";
@@ -546,7 +546,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
       for (final String contentType : mediaTypes) {
 
         // owner should be able to cancel delegation token
-        KerberosTestUtils.doAsClient(new Callable<Void>() {
+        KerberosTestUtils.callAsClient(new Callable<Void>() {
           @Override
           public Void call() throws Exception {
             Principal principal1 = () -> "client@EXAMPLE.COM";
@@ -572,7 +572,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
 
         // renewer should be able to cancel token
         final DelegationToken tmpToken =
-            KerberosTestUtils.doAsClient(new Callable<DelegationToken>() {
+            KerberosTestUtils.callAsClient(new Callable<DelegationToken>() {
               @Override
               public DelegationToken call() throws Exception {
                 Principal principal1 = () -> "client@EXAMPLE.COM";
@@ -588,7 +588,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
               }
             });
 
-        KerberosTestUtils.doAs(renewer, new Callable<Void>() {
+        KerberosTestUtils.callAs(renewer, new Callable<Void>() {
           @Override
           public Void call() throws Exception {
             Principal principal1 = () -> "client2@EXAMPLE.COM";
@@ -607,7 +607,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
 
         // third user should not be able to cancel token
         final DelegationToken tmpToken2 =
-            KerberosTestUtils.doAsClient(new Callable<DelegationToken>() {
+            KerberosTestUtils.callAsClient(new Callable<DelegationToken>() {
               @Override
               public DelegationToken call() throws Exception {
                 Principal principal1 = () -> "client@EXAMPLE.COM";
@@ -623,7 +623,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
               }
             });
 
-        KerberosTestUtils.doAs("client3", new Callable<Void>() {
+        KerberosTestUtils.callAs("client3", new Callable<Void>() {
           @Override
           public Void call() throws Exception {
             Principal principal1 = () -> "client3@EXAMPLE.COM";
@@ -659,7 +659,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     dtoken.setRenewer(renewer);
 
     // bad request(invalid header value)
-    KerberosTestUtils.doAsClient(new Callable<Void>() {
+    KerberosTestUtils.callAsClient(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         Principal principal1 = () -> "client@EXAMPLE.COM";
@@ -676,7 +676,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     });
 
     // bad request(missing header)
-    KerberosTestUtils.doAsClient(new Callable<Void>() {
+    KerberosTestUtils.callAsClient(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         Principal principal1 = () -> "client@EXAMPLE.COM";
@@ -692,7 +692,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
 
     // bad request(cancelled token)
     final DelegationToken tmpToken =
-        KerberosTestUtils.doAsClient(new Callable<DelegationToken>() {
+        KerberosTestUtils.callAsClient(new Callable<DelegationToken>() {
           @Override
           public DelegationToken call() throws Exception {
             Principal principal1 = () -> "client@EXAMPLE.COM";
@@ -708,7 +708,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
           }
         });
 
-    KerberosTestUtils.doAs(renewer, new Callable<Void>() {
+    KerberosTestUtils.callAs(renewer, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         Principal principal1 = () -> "client2@EXAMPLE.COM";

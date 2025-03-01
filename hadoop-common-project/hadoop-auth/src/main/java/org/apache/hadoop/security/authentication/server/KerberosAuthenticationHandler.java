@@ -19,6 +19,7 @@ import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
+import org.apache.hadoop.util.SubjectUtil;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
@@ -43,6 +44,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionException;
 import java.util.regex.Pattern;
 
 /**
@@ -201,15 +204,20 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
       }
 
       try {
-        gssManager = Subject.doAs(serverSubject,
-            new PrivilegedExceptionAction<GSSManager>() {
+        gssManager = SubjectUtil.callAs(serverSubject,
+            new Callable<GSSManager>() {
               @Override
-              public GSSManager run() throws Exception {
+              public GSSManager call() throws Exception {
                 return GSSManager.getInstance();
               }
             });
-      } catch (PrivilegedActionException ex) {
-        throw ex.getException();
+      } catch (CompletionException ex) {
+        Throwable cause = ex.getCause();
+        if (cause instanceof Exception) {
+          throw (Exception)cause;
+        } else {
+          throw new RuntimeException(ex.getCause());
+        }
       }
     } catch (Exception ex) {
       throw new ServletException(ex);
@@ -334,19 +342,19 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
               "Invalid server principal " + serverPrincipal +
               "decoded from client request");
         }
-        token = Subject.doAs(serverSubject,
-            new PrivilegedExceptionAction<AuthenticationToken>() {
+        token = SubjectUtil.callAs(serverSubject,
+            new Callable<AuthenticationToken>() {
               @Override
-              public AuthenticationToken run() throws Exception {
+              public AuthenticationToken call() throws Exception {
                 return runWithPrincipal(serverPrincipal, clientToken,
                       base64, response);
               }
             });
-      } catch (PrivilegedActionException ex) {
-        if (ex.getException() instanceof IOException) {
-          throw (IOException) ex.getException();
+      } catch (CompletionException ex) {
+        if (ex.getCause() instanceof IOException) {
+          throw (IOException) ex.getCause();
         } else {
-          throw new AuthenticationException(ex.getException());
+          throw new AuthenticationException(ex.getCause());
         }
       } catch (Exception ex) {
         throw new AuthenticationException(ex);

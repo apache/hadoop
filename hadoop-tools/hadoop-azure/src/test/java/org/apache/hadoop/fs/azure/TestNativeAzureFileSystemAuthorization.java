@@ -653,9 +653,9 @@ public class TestNativeAzureFileSystemAuthorization
         UserGroupInformation dummyUser = UserGroupInformation.createUserForTesting(
             "dummyUser", new String[] {"dummygroup"});
 
-        dummyUser.doAs(new PrivilegedExceptionAction<Void>() {
+        dummyUser.callAs(new Callable<Void>() {
           @Override
-          public Void run() throws Exception {
+          public Void call() throws Exception {
             // Add auth rules for dummyuser
             authorizer.addAuthRule(parentSrcDir.toString(),
                 WRITE, getCurrentUserShortName(), true);
@@ -710,9 +710,9 @@ public class TestNativeAzureFileSystemAuthorization
       UserGroupInformation dummyUser = UserGroupInformation.createUserForTesting(
           "dummyUser", new String[] {"dummygroup"});
 
-      dummyUser.doAs(new PrivilegedExceptionAction<Void>() {
+      dummyUser.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           // Add auth rules for dummyuser
           authorizer.addAuthRule(parentSrcDir.toString(),
             WRITE, getCurrentUserShortName(), true);
@@ -1005,9 +1005,9 @@ public class TestNativeAzureFileSystemAuthorization
         UserGroupInformation dummyUser = UserGroupInformation.createUserForTesting(
            "dummyUser", new String[] {"dummygroup"});
 
-        dummyUser.doAs(new PrivilegedExceptionAction<Void>() {
+        dummyUser.callAs(new Callable<Void>() {
           @Override
-          public Void run() throws Exception {
+          public Void call() throws Exception {
             try {
               authorizer.addAuthRule(parentDir.toString(), WRITE,
                   getCurrentUserShortName(), true);
@@ -1095,9 +1095,9 @@ public class TestNativeAzureFileSystemAuthorization
       UserGroupInformation dummyUser = UserGroupInformation.createUserForTesting(
           "dummyUser", new String[] {"dummygroup"});
 
-      dummyUser.doAs(new PrivilegedExceptionAction<Void>() {
+      dummyUser.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           // Add auth rules for dummyuser
           authorizer.addAuthRule("/", WRITE, getCurrentUserShortName(), true);
           authorizer.addAuthRule("/testRecursiveDeleteFailsWithStickybit*",
@@ -1145,9 +1145,9 @@ public class TestNativeAzureFileSystemAuthorization
 
       UserGroupInformation dummyUser = UserGroupInformation.createUserForTesting(
           "dummyuser", new String[] {"dummygroup"});
-      dummyUser.doAs(new PrivilegedExceptionAction<Void>() {
+      dummyUser.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           authorizer.addAuthRule("/", WRITE, getCurrentUserShortName(), true);
           authorizer.addAuthRule("/testDeleteSucceedsForOnlyFilesOwnedByUserWithStickybitSet*",
               WRITE, getCurrentUserShortName(), true);
@@ -1199,9 +1199,9 @@ public class TestNativeAzureFileSystemAuthorization
       // create child with owner as dummyUser
       UserGroupInformation dummyUser = UserGroupInformation.createUserForTesting(
           "user1", new String[] {"dummygroup"});
-      dummyUser.doAs(new PrivilegedExceptionAction<Void>() {
+      dummyUser.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           authorizer.addAuthRule(parentDir.toString(), WRITE, getCurrentUserShortName(), true);
           fs.create(testFilePath);
           ContractTestUtils.assertPathExists(fs, "file was not created", testFilePath);
@@ -1456,9 +1456,9 @@ public class TestNativeAzureFileSystemAuthorization
         UserGroupInformation ugiSuperUser = UserGroupInformation.createUserForTesting(
             "testuser", new String[] {});
 
-        ugiSuperUser.doAs(new PrivilegedExceptionAction<Void>() {
+        ugiSuperUser.callAs(new Callable<Void>() {
           @Override
-          public Void run() throws Exception {
+          public Void call() throws Exception {
             fs.mkdirs(childDir);
             return null;
           }
@@ -1503,9 +1503,9 @@ public class TestNativeAzureFileSystemAuthorization
       ContractTestUtils.assertPathExists(fs, "test path does not exist", testPath);
       owner = fs.getFileStatus(testPath).getOwner();
 
-      unauthorisedUser.doAs(new PrivilegedExceptionAction<Void>() {
+      unauthorisedUser.callAs(new Callable<Void>() {
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
         try {
           fs.setOwner(testPath, "newowner", null);
           fail("Failing test because setOwner call was expected to throw");
@@ -1548,9 +1548,9 @@ public class TestNativeAzureFileSystemAuthorization
           .as("changing owner requires original and new owner to be different")
           .isNotEqualToIgnoringCase(newOwner);
 
-      authorisedUser.doAs(new PrivilegedExceptionAction<Void>() {
+      authorisedUser.callAs(new Callable<Void>() {
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
           fs.setOwner(testPath, newOwner, newGroup);
         assertOwnerEquals(testPath, newOwner);
         assertEquals(newGroup, fs.getFileStatus(testPath).getGroup());
@@ -1592,9 +1592,9 @@ public class TestNativeAzureFileSystemAuthorization
           .as("changing owner requires original and new owner to be different")
           .isNotEqualToIgnoringCase(newOwner);
 
-      user.doAs(new PrivilegedExceptionAction<Void>() {
+      user.callAs(new Callable<Void>() {
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
           fs.setOwner(testPath, newOwner, newGroup);
           assertOwnerEquals(testPath, newOwner);
           assertEquals(newGroup, fs.getFileStatus(testPath).getGroup());
@@ -1630,9 +1630,9 @@ public class TestNativeAzureFileSystemAuthorization
 
       final String owner = fs.getFileStatus(testPath).getOwner();
 
-      user.doAs(new PrivilegedExceptionAction<Void>() {
+      user.callAs(new Callable<Void>() {
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
         try {
           fs.setOwner(testPath, "newowner", null);
           fail("Failing test because setOwner call was expected to throw");
@@ -2028,9 +2028,9 @@ public class TestNativeAzureFileSystemAuthorization
       Path testPath, FsPermission oldPermission, FsPermission newPermission,
       boolean isInvalidSetup)
           throws Throwable {
-    testUser.doAs(new PrivilegedExceptionAction<Void>() {
+    testUser.callAs(new Callable<Void>() {
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
         try {
           //READ access required for getFileStatus
           fs.setPermission(testPath, newPermission);
@@ -2068,9 +2068,9 @@ public class TestNativeAzureFileSystemAuthorization
           throws Throwable {
     //If user is given, then use doAs
     if (testUser != null) {
-      testUser.doAs(new PrivilegedExceptionAction<Void>() {
+      testUser.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           fs.setPermission(testPath, newPermission);
           return null;
         }

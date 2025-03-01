@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.Callable;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -128,7 +128,7 @@ public class ITestHttpSigner extends AbstractS3ATestBase {
       Path finalPath, String identifier)
       throws IOException, InterruptedException {
     Configuration conf = createTestConfig(identifier);
-    return ugi.doAs((PrivilegedExceptionAction<S3AFileSystem>) () -> {
+    return ugi.callAs((Callable<S3AFileSystem>) () -> {
       S3AFileSystem fs = (S3AFileSystem)finalPath.getFileSystem(conf);
 
       fs.mkdirs(finalPath);

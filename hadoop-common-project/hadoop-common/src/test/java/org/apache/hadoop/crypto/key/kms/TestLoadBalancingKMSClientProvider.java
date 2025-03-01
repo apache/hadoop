@@ -37,11 +37,11 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
@@ -935,9 +935,9 @@ public class TestLoadBalancingKMSClientProvider {
     token.setService(new Text(providerUriString));
     // call getActualUgi() with the current user.
     UserGroupInformation actualUgi =
-        ugi.doAs(new PrivilegedExceptionAction<UserGroupInformation>(){
+        ugi.callAs(new Callable<UserGroupInformation>(){
           @Override
-          public UserGroupInformation run() throws Exception {
+          public UserGroupInformation call() throws Exception {
             final KeyProvider kp =
                 new KMSClientProvider.Factory().createProvider(kmsUri, conf);
             final LoadBalancingKMSClientProvider lbkp =

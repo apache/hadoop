@@ -40,7 +40,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import java.io.File;
-import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.Callable;
 
 /**
  * This is a child program designed to be used by the {@link HadoopArchiveLogs}
@@ -120,9 +120,9 @@ public class HadoopArchiveLogsRunner implements Tool {
           "impersonate " + user);
       UserGroupInformation proxyUser =
           UserGroupInformation.createProxyUser(user, loginUser);
-      exitCode = proxyUser.doAs(new PrivilegedExceptionAction<Integer>() {
+      exitCode = proxyUser.callAs(new Callable<Integer>() {
         @Override
-        public Integer run() throws Exception {
+        public Integer call() throws Exception {
           return runInternal();
         }
       });

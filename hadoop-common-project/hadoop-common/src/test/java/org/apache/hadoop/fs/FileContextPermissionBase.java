@@ -18,10 +18,10 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -183,10 +183,10 @@ public abstract class FileContextPermissionBase {
     
     UserGroupInformation otherUser = UserGroupInformation
         .createRemoteUser("otherUser");
-    FileContext newFc = otherUser.doAs(new PrivilegedExceptionAction<FileContext>() {
+    FileContext newFc = otherUser.callAs(new Callable<FileContext>() {
 
       @Override
-      public FileContext run() throws Exception {
+      public FileContext call() throws Exception {
         FileContext newFc = FileContext.getFileContext();
         return newFc;
       }

@@ -137,7 +137,7 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
     final AuthenticatorTestCase auth = new AuthenticatorTestCase();
     AuthenticatorTestCase.setAuthenticationHandlerConfig(
             getAuthenticationHandlerConfiguration());
-    KerberosTestUtils.doAsClient(new Callable<Void>() {
+    KerberosTestUtils.callAsClient(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         auth._testAuthentication(new KerberosAuthenticator(), false);
@@ -152,7 +152,7 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
     final AuthenticatorTestCase auth = new AuthenticatorTestCase();
     AuthenticatorTestCase.setAuthenticationHandlerConfig(
             getAuthenticationHandlerConfiguration());
-    KerberosTestUtils.doAsClient(new Callable<Void>() {
+    KerberosTestUtils.callAsClient(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         auth._testAuthentication(new KerberosAuthenticator(), true);
@@ -167,7 +167,7 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
     final AuthenticatorTestCase auth = new AuthenticatorTestCase();
     AuthenticatorTestCase.setAuthenticationHandlerConfig(
             getAuthenticationHandlerConfiguration());
-    KerberosTestUtils.doAsClient(new Callable<Void>() {
+    KerberosTestUtils.callAsClient(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         auth._testAuthenticationHttpClient(new KerberosAuthenticator(), false);
@@ -182,7 +182,7 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
     final AuthenticatorTestCase auth = new AuthenticatorTestCase();
     AuthenticatorTestCase.setAuthenticationHandlerConfig(
             getAuthenticationHandlerConfiguration());
-    KerberosTestUtils.doAsClient(new Callable<Void>() {
+    KerberosTestUtils.callAsClient(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         auth._testAuthenticationHttpClient(new KerberosAuthenticator(), true);
@@ -217,7 +217,7 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
     final AuthenticatorTestCase auth = new AuthenticatorTestCase();
     AuthenticatorTestCase
         .setAuthenticationHandlerConfig(getMultiAuthHandlerConfiguration());
-    KerberosTestUtils.doAsClient(new Callable<Void>() {
+    KerberosTestUtils.callAsClient(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         auth._testAuthentication(new KerberosAuthenticator(), false);
@@ -233,7 +233,7 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
     final AuthenticatorTestCase auth = new AuthenticatorTestCase();
     AuthenticatorTestCase
         .setAuthenticationHandlerConfig(getMultiAuthHandlerConfiguration());
-    KerberosTestUtils.doAsClient(new Callable<Void>() {
+    KerberosTestUtils.callAsClient(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         auth._testAuthenticationHttpClient(new KerberosAuthenticator(), true);

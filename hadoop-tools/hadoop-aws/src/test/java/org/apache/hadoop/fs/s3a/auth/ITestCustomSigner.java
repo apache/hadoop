@@ -19,12 +19,12 @@
 package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
@@ -165,7 +165,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       Path finalPath, String identifier)
       throws IOException, InterruptedException {
     Configuration conf = createTestConfig(identifier);
-    return ugi.doAs((PrivilegedExceptionAction<S3AFileSystem>) () -> {
+    return ugi.callAs((Callable<S3AFileSystem>) () -> {
       int instantiationCount = CustomSigner.getInstantiationCount();
       int invocationCount = CustomSigner.getInvocationCount();
       S3AFileSystem fs = (S3AFileSystem)finalPath.getFileSystem(conf);

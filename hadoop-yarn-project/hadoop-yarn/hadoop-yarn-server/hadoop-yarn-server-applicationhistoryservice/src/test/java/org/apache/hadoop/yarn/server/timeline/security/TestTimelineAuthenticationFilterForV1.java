@@ -189,7 +189,7 @@ public class TestTimelineAuthenticationFilterForV1 {
   @ParameterizedTest
   void testPutTimelineEntities(boolean isSslEnabled) throws Exception {
     initTestTimelineAuthenticationFilterForV1(isSslEnabled);
-    KerberosTestUtils.doAs(PRINCIPAL, new Callable<Void>() {
+    KerberosTestUtils.callAs(PRINCIPAL, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         TimelineClient client = createTimelineClientForUGI();
@@ -218,7 +218,7 @@ public class TestTimelineAuthenticationFilterForV1 {
   @ParameterizedTest
   void testPutDomains(boolean isSslEnabled) throws Exception {
     initTestTimelineAuthenticationFilterForV1(isSslEnabled);
-    KerberosTestUtils.doAs(PRINCIPAL, new Callable<Void>() {
+    KerberosTestUtils.callAs(PRINCIPAL, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         TimelineClient client = createTimelineClientForUGI();
@@ -243,7 +243,7 @@ public class TestTimelineAuthenticationFilterForV1 {
   void testDelegationTokenOperations(boolean isSslEnabled) throws Exception {
     initTestTimelineAuthenticationFilterForV1(isSslEnabled);
     TimelineClient httpUserClient =
-        KerberosTestUtils.doAs(PRINCIPAL,
+        KerberosTestUtils.callAs(PRINCIPAL,
             new Callable<TimelineClient>() {
               @Override
               public TimelineClient call() throws Exception {
@@ -251,7 +251,7 @@ public class TestTimelineAuthenticationFilterForV1 {
               }
             });
     UserGroupInformation httpUser =
-        KerberosTestUtils.doAs(PRINCIPAL,
+        KerberosTestUtils.callAs(PRINCIPAL,
             new Callable<UserGroupInformation>() {
               @Override
               public UserGroupInformation call() throws Exception {

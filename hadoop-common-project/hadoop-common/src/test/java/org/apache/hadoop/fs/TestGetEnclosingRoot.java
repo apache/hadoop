@@ -18,7 +18,8 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.Callable;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.HadoopTestBase;
@@ -70,7 +71,7 @@ public class TestGetEnclosingRoot extends HadoopTestBase {
     assertEquals(root, fs.getEnclosingRoot(new Path("/foo/bar")));
 
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("foo");
-    Path p = ugi.doAs((PrivilegedExceptionAction<Path>) () -> {
+    Path p = ugi.callAs((Callable<Path>) () -> {
       FileSystem wFs = getFileSystem();
       return wFs.getEnclosingRoot(new Path("/foo/bar"));
     });

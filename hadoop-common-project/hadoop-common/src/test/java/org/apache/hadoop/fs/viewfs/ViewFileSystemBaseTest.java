@@ -22,7 +22,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -30,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -1526,9 +1526,9 @@ abstract public class ViewFileSystemBaseTest {
       throws IOException, InterruptedException {
     final UserGroupInformation userUgi = UserGroupInformation
         .createUserForTesting("user@HADOOP.COM", new String[]{"hadoop"});
-    userUgi.doAs(new PrivilegedExceptionAction<Object>() {
+    userUgi.callAs(new Callable<Object>() {
       @Override
-      public Object run() throws IOException {
+      public Object call() throws IOException {
         UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
         String doAsUserName = ugi.getUserName();
         assertEquals("user@HADOOP.COM", doAsUserName);

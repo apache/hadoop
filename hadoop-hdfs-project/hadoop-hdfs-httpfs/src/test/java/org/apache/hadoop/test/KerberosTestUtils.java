@@ -19,7 +19,10 @@ import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 
+import org.apache.hadoop.security.authentication.KerberosTestUtils;
+import org.apache.hadoop.security.authentication.KerberosTestUtils.KerberosConfiguration;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
+import org.apache.hadoop.util.SubjectUtil;
 
 import java.io.File;
 import java.security.Principal;
@@ -30,6 +33,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionException;
 
 /**
  * Test helper class for Java Kerberos setup.
@@ -99,27 +103,34 @@ public class KerberosTestUtils {
     }
   }
 
-  public static <T> T doAs(String principal, final Callable<T> callable)
-    throws Exception {
+  @Deprecated
+  public static <T> T doAs(String principal, final Callable<T> callable) throws Exception {
+    return callAs(principal, callable);
+  }
+
+  
+  public static <T> T callAs(String principal, final Callable<T> callable) throws Exception {
     LoginContext loginContext = null;
     try {
-      Set<Principal> principals = new HashSet<Principal>();
-      principals.add(
-        new KerberosPrincipal(KerberosTestUtils.getClientPrincipal()));
-      Subject subject = new Subject(false, principals, new HashSet<Object>(),
-                                    new HashSet<Object>());
-      loginContext = new LoginContext("", subject, null,
-                                      new KerberosConfiguration(principal));
+      Set<Principal> principals = new HashSet<>();
+      principals.add(new KerberosPrincipal(KerberosTestUtils.getClientPrincipal()));
+      Subject subject = new Subject(false, principals, new HashSet<>(), new HashSet<>());
+      loginContext = new LoginContext("", subject, null, new KerberosConfiguration(principal));
       loginContext.login();
       subject = loginContext.getSubject();
-      return Subject.doAs(subject, new PrivilegedExceptionAction<T>() {
+      return SubjectUtil.callAs(subject, new Callable<T>() {
         @Override
-        public T run() throws Exception {
+        public T call() throws Exception {
           return callable.call();
         }
       });
-    } catch (PrivilegedActionException ex) {
-      throw ex.getException();
+    } catch (CompletionException ex) {
+      Throwable cause = ex.getCause();
+      if (cause instanceof Exception) {
+        throw (Exception) cause;
+      } else {
+        throw new RuntimeException(cause);
+      }
     } finally {
       if (loginContext != null) {
         loginContext.logout();
@@ -127,10 +138,20 @@ public class KerberosTestUtils {
     }
   }
 
+  public static <T> T callAsClient(Callable<T> callable) throws Exception {
+    return callAs(getClientPrincipal(), callable);
+  }
+  
+  @Deprecated
   public static <T> T doAsClient(Callable<T> callable) throws Exception {
     return doAs(getClientPrincipal(), callable);
   }
 
+  public static <T> T callAsServer(Callable<T> callable) throws Exception {
+    return callAs(getServerPrincipal(), callable);
+  }
+  
+  @Deprecated
   public static <T> T doAsServer(Callable<T> callable) throws Exception {
     return doAs(getServerPrincipal(), callable);
   }

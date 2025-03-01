@@ -33,6 +33,7 @@ import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHand
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.SubjectUtil;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -65,8 +66,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -76,6 +75,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -417,9 +417,9 @@ public class TestWebDelegationToken {
 
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       ugi.addToken(token.getDelegationToken());
-      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      ugi.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           HttpURLConnection conn =
               aUrl.openConnection(nonAuthURL, new DelegationTokenAuthenticatedURL.Token());
           assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
@@ -551,9 +551,9 @@ public class TestWebDelegationToken {
       final URL url = new URL(getJettyURL() + "/foo/bar");
 
       UserGroupInformation ugi = UserGroupInformation.createRemoteUser(FOO_USER);
-      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      ugi.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           DelegationTokenAuthenticatedURL.Token token =
               new DelegationTokenAuthenticatedURL.Token();
           DelegationTokenAuthenticatedURL aUrl =
@@ -621,9 +621,9 @@ public class TestWebDelegationToken {
       final URL url = new URL(getJettyURL() + "/foo/bar");
 
       UserGroupInformation ugi = UserGroupInformation.createRemoteUser(FOO_USER);
-      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      ugi.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           DelegationTokenAuthenticatedURL.Token token =
               new DelegationTokenAuthenticatedURL.Token();
           DelegationTokenAuthenticatedURL aUrl =
@@ -709,7 +709,13 @@ public class TestWebDelegationToken {
     }
   }
 
+  @Deprecated
   public static <T> T doAsKerberosUser(String principal, String keytab,
+      final Callable<T> callable) throws Exception {
+    return callAsKerberosUser(principal, keytab, callable);
+  }
+  
+  public static <T> T callAsKerberosUser(String principal, String keytab,
       final Callable<T> callable) throws Exception {
     LoginContext loginContext = null;
     try {
@@ -721,14 +727,19 @@ public class TestWebDelegationToken {
           new KerberosConfiguration(principal, keytab));
       loginContext.login();
       subject = loginContext.getSubject();
-      return Subject.doAs(subject, new PrivilegedExceptionAction<T>() {
+      return SubjectUtil.callAs(subject, new Callable<T>() {
         @Override
-        public T run() throws Exception {
+        public T call() throws Exception {
           return callable.call();
         }
       });
-    } catch (PrivilegedActionException ex) {
-      throw ex.getException();
+    } catch (CompletionException ex) {
+      Throwable cause = ex.getCause();
+      if (cause instanceof Exception) {
+        throw (Exception) cause;
+      } else {
+        throw new RuntimeException(cause);
+      }
     } finally {
       if (loginContext != null) {
         loginContext.logout();
@@ -866,9 +877,9 @@ public class TestWebDelegationToken {
       assertEquals(OK_USER, ret.get(0));
 
       UserGroupInformation ugi = UserGroupInformation.createRemoteUser(FOO_USER);
-      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      ugi.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           DelegationTokenAuthenticatedURL.Token token =
               new DelegationTokenAuthenticatedURL.Token();
           DelegationTokenAuthenticatedURL aUrl =
@@ -949,9 +960,9 @@ public class TestWebDelegationToken {
       final URL url = new URL(getJettyURL() + "/foo/bar");
 
       UserGroupInformation ugi = UserGroupInformation.createRemoteUser(FOO_USER);
-      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      ugi.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           DelegationTokenAuthenticatedURL.Token token =
               new DelegationTokenAuthenticatedURL.Token();
           DelegationTokenAuthenticatedURL aUrl =
@@ -1011,9 +1022,9 @@ public class TestWebDelegationToken {
       final URL url = new URL(getJettyURL() + "/foo/bar");
 
       UserGroupInformation ugi = UserGroupInformation.createRemoteUser(FOO_USER);
-      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      ugi.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           DelegationTokenAuthenticatedURL.Token token =
                   new DelegationTokenAuthenticatedURL.Token();
           DelegationTokenAuthenticatedURL aUrl =

@@ -295,7 +295,7 @@ public class TestKerberosAuthenticationHandler
 
   @Test
   public void testRequestWithAuthorization() throws Exception {
-    String token = KerberosTestUtils.doAsClient(new Callable<String>() {
+    String token = KerberosTestUtils.callAsClient(new Callable<String>() {
       @Override
       public String call() throws Exception {
         GSSManager gssManager = GSSManager.getInstance();

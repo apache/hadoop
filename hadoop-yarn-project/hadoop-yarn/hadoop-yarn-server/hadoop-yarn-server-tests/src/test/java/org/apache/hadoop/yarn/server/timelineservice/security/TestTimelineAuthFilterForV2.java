@@ -360,7 +360,7 @@ public class TestTimelineAuthFilterForV2 {
         "test_flow_version" + File.separator + "1" + File.separator +
         appId.toString() + File.separator + entityType);
     if (withKerberosLogin) {
-      KerberosTestUtils.doAs(HTTP_USER + "/localhost", new Callable<Void>() {
+      KerberosTestUtils.callAs(HTTP_USER + "/localhost", new Callable<Void>() {
         @Override
         public Void call() throws Exception {
           publishAndVerifyEntity(appId, entityTypeDir, entityType, 1);

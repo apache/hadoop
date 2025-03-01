@@ -20,10 +20,10 @@ package org.apache.hadoop.fs.s3a.auth;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.signer.Signer;
@@ -272,7 +272,7 @@ public class TestSignerManager extends AbstractHadoopTestBase {
   private void attemptSignAndVerify(String identifier, String bucket,
       UserGroupInformation ugi, boolean expectNullStoreInfo)
       throws IOException, InterruptedException {
-    ugi.doAs((PrivilegedExceptionAction<Void>) () -> {
+    ugi.callAs((Callable<Void>) () -> {
       Signer signer = new SignerForInitializerTest();
       SdkHttpFullRequest signableRequest = constructSignableRequest(bucket);
       signer.sign(signableRequest, null);

@@ -44,6 +44,7 @@ import java.net.InetAddress;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 /**
  * Helper class the has constants and helper methods
@@ -128,8 +129,8 @@ public class SecureWasbRemoteCallHelper extends WasbRemoteCallHelper {
     }
     String s = null;
     try {
-      s = connectUgi.doAs(new PrivilegedExceptionAction<String>() {
-        @Override public String run() throws Exception {
+      s = connectUgi.callAs(new Callable<String>() {
+        @Override public String call() throws Exception {
           return retryableRequest(urls, path, queryParams, httpMethod);
         }
       });
