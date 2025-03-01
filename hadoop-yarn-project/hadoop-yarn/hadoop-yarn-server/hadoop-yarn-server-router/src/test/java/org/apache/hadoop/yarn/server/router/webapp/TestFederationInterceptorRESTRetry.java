@@ -360,8 +360,8 @@ public class TestFederationInterceptorRESTRetry
       interceptor.getNode("testGetNodeOneBadSC");
       fail();
     } catch (NotFoundException e) {
-      assertTrue(
-          e.getMessage().contains("nodeId, testGetNodeOneBadSC, is not found"));
+      Throwable cause = e.getCause();
+      assertTrue(cause.getMessage().contains("nodeId, testGetNodeOneBadSC, is not found"));
     }
   }
 
