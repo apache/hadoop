@@ -816,7 +816,7 @@ public class FederationClientInterceptor
       GetClusterMetricsRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrGetClusterMetricsFailedRetrieved();
-      String msg = "Missing getApplications request.";
+      String msg = "Missing getClusterMetrics request.";
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERMETRICS, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
@@ -1386,7 +1386,7 @@ public class FederationClientInterceptor
       GetLabelsToNodesRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
-      String msg = "Missing getNodesToLabels request.";
+      String msg = "Missing getLabelsToNodes request.";
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_LABELSTONODES, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
