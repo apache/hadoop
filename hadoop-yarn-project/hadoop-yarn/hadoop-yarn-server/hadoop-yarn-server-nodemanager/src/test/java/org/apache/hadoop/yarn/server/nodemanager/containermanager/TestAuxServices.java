@@ -142,7 +142,7 @@ public class TestAuxServices {
     rootDir.delete();
   }
 
-  public void initTestAuxServices(Boolean pUseManifest) {
+  private void initTestAuxServices(Boolean pUseManifest) {
     this.useManifest = pUseManifest;
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
   }

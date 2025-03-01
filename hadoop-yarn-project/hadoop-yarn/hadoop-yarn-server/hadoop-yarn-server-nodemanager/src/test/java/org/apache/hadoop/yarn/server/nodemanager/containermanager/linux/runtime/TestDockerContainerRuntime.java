@@ -190,7 +190,7 @@ public class TestDockerContainerRuntime {
 
   public boolean https;
 
-  public void initHttps(boolean pHttps) {
+  private void initHttps(boolean pHttps) {
     this.https = pHttps;
     setup();
   }

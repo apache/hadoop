@@ -165,7 +165,7 @@ public class TestRuncContainerRuntime {
 
   public boolean https;
 
-  public void initHttps(boolean pHttps) throws ContainerExecutionException {
+  private void initHttps(boolean pHttps) throws ContainerExecutionException {
     this.https = pHttps;
     setup();
   }
