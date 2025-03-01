@@ -39,11 +39,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -105,8 +107,8 @@ public class TestRouterWebServiceUtil {
     apps.add(app4);
 
     AppsInfo result = RouterWebServiceUtil.mergeAppsInfo(apps.getApps(), false);
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(4, result.getApps().size());
+    assertNotNull(result);
+    assertEquals(4, result.getApps().size());
 
     List<String> appIds = new ArrayList<String>();
     AppInfo appInfo1 = null, appInfo2 = null, appInfo3 = null, appInfo4 = null;
@@ -126,28 +128,28 @@ public class TestRouterWebServiceUtil {
       }
     }
 
-    Assertions.assertTrue(appIds.contains(APPID1.toString()));
-    Assertions.assertTrue(appIds.contains(APPID2.toString()));
-    Assertions.assertTrue(appIds.contains(APPID3.toString()));
-    Assertions.assertTrue(appIds.contains(APPID4.toString()));
+    assertTrue(appIds.contains(APPID1.toString()));
+    assertTrue(appIds.contains(APPID2.toString()));
+    assertTrue(appIds.contains(APPID3.toString()));
+    assertTrue(appIds.contains(APPID4.toString()));
 
     // Check preservations APP1
-    Assertions.assertEquals(app1.getState(), appInfo1.getState());
-    Assertions.assertEquals(app1.getNumAMContainerPreempted(),
+    assertEquals(app1.getState(), appInfo1.getState());
+    assertEquals(app1.getNumAMContainerPreempted(),
         appInfo1.getNumAMContainerPreempted());
 
     // Check preservations APP2
-    Assertions.assertEquals(app2.getState(), appInfo2.getState());
-    Assertions.assertEquals(app3.getAllocatedVCores(),
+    assertEquals(app2.getState(), appInfo2.getState());
+    assertEquals(app3.getAllocatedVCores(),
         appInfo3.getAllocatedVCores());
 
     // Check preservations APP3
-    Assertions.assertEquals(app3.getState(), appInfo3.getState());
-    Assertions.assertEquals(app3.getReservedMB(), appInfo3.getReservedMB());
+    assertEquals(app3.getState(), appInfo3.getState());
+    assertEquals(app3.getReservedMB(), appInfo3.getReservedMB());
 
     // Check preservations APP3
-    Assertions.assertEquals(app4.getState(), appInfo4.getState());
-    Assertions.assertEquals(app3.getAllocatedMB(), appInfo3.getAllocatedMB());
+    assertEquals(app4.getState(), appInfo4.getState());
+    assertEquals(app3.getAllocatedMB(), appInfo3.getAllocatedMB());
   }
 
   /**
@@ -186,19 +188,19 @@ public class TestRouterWebServiceUtil {
 
     // in this case the result does not change if we enable partial result
     AppsInfo result = RouterWebServiceUtil.mergeAppsInfo(apps.getApps(), false);
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(1, result.getApps().size());
+    assertNotNull(result);
+    assertEquals(1, result.getApps().size());
 
     AppInfo app = result.getApps().get(0);
 
-    Assertions.assertEquals(APPID1.toString(), app.getAppId());
-    Assertions.assertEquals(amHost, app.getAMHostHttpAddress());
-    Assertions.assertEquals(value * 3, app.getPreemptedResourceMB());
-    Assertions.assertEquals(value * 3, app.getPreemptedResourceVCores());
-    Assertions.assertEquals(value * 3, app.getNumNonAMContainerPreempted());
-    Assertions.assertEquals(value * 3, app.getNumAMContainerPreempted());
-    Assertions.assertEquals(value * 3, app.getPreemptedMemorySeconds());
-    Assertions.assertEquals(value * 3, app.getPreemptedVcoreSeconds());
+    assertEquals(APPID1.toString(), app.getAppId());
+    assertEquals(amHost, app.getAMHostHttpAddress());
+    assertEquals(value * 3, app.getPreemptedResourceMB());
+    assertEquals(value * 3, app.getPreemptedResourceVCores());
+    assertEquals(value * 3, app.getNumNonAMContainerPreempted());
+    assertEquals(value * 3, app.getNumAMContainerPreempted());
+    assertEquals(value * 3, app.getPreemptedMemorySeconds());
+    assertEquals(value * 3, app.getPreemptedVcoreSeconds());
   }
 
   private void setAppInfoFinished(AppInfo am, int value) {
@@ -248,21 +250,21 @@ public class TestRouterWebServiceUtil {
 
     // in this case the result does not change if we enable partial result
     AppsInfo result = RouterWebServiceUtil.mergeAppsInfo(apps.getApps(), false);
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(1, result.getApps().size());
+    assertNotNull(result);
+    assertEquals(1, result.getApps().size());
 
     AppInfo app = result.getApps().get(0);
 
-    Assertions.assertEquals(APPID2.toString(), app.getAppId());
-    Assertions.assertEquals(amHost, app.getAMHostHttpAddress());
-    Assertions.assertEquals(value * 3, app.getAllocatedMB());
-    Assertions.assertEquals(value * 3, app.getAllocatedVCores());
-    Assertions.assertEquals(value * 3, app.getReservedMB());
-    Assertions.assertEquals(value * 3, app.getReservedVCores());
-    Assertions.assertEquals(value * 3, app.getRunningContainers());
-    Assertions.assertEquals(value * 3, app.getMemorySeconds());
-    Assertions.assertEquals(value * 3, app.getVcoreSeconds());
-    Assertions.assertEquals(3, app.getResourceRequests().size());
+    assertEquals(APPID2.toString(), app.getAppId());
+    assertEquals(amHost, app.getAMHostHttpAddress());
+    assertEquals(value * 3, app.getAllocatedMB());
+    assertEquals(value * 3, app.getAllocatedVCores());
+    assertEquals(value * 3, app.getReservedMB());
+    assertEquals(value * 3, app.getReservedVCores());
+    assertEquals(value * 3, app.getRunningContainers());
+    assertEquals(value * 3, app.getMemorySeconds());
+    assertEquals(value * 3, app.getVcoreSeconds());
+    assertEquals(3, app.getResourceRequests().size());
   }
 
   private void setAppInfoRunning(AppInfo am, int value) {
@@ -300,15 +302,15 @@ public class TestRouterWebServiceUtil {
     apps.add(app2);
 
     AppsInfo result = RouterWebServiceUtil.mergeAppsInfo(apps.getApps(), false);
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(0, result.getApps().size());
+    assertNotNull(result);
+    assertEquals(0, result.getApps().size());
 
     // By enabling partial result, the expected result would be a partial report
     // of the 2 UAMs
     AppsInfo result2 = RouterWebServiceUtil.mergeAppsInfo(apps.getApps(), true);
-    Assertions.assertNotNull(result2);
-    Assertions.assertEquals(1, result2.getApps().size());
-    Assertions.assertEquals(YarnApplicationState.RUNNING,
+    assertNotNull(result2);
+    assertEquals(1, result2.getApps().size());
+    assertEquals(YarnApplicationState.RUNNING,
         result2.getApps().get(0).getState());
   }
 
@@ -329,8 +331,8 @@ public class TestRouterWebServiceUtil {
 
     // in this case the result does not change if we enable partial result
     AppsInfo result = RouterWebServiceUtil.mergeAppsInfo(apps.getApps(), false);
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(1, result.getApps().size());
+    assertNotNull(result);
+    assertEquals(1, result.getApps().size());
   }
 
   /**
@@ -361,8 +363,8 @@ public class TestRouterWebServiceUtil {
 
     NodesInfo result =
         RouterWebServiceUtil.deleteDuplicateNodesInfo(nodes.getNodes());
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(4, result.getNodes().size());
+    assertNotNull(result);
+    assertEquals(4, result.getNodes().size());
 
     List<String> nodesIds = new ArrayList<String>();
 
@@ -370,10 +372,10 @@ public class TestRouterWebServiceUtil {
       nodesIds.add(node.getNodeId());
     }
 
-    Assertions.assertTrue(nodesIds.contains(NODE1));
-    Assertions.assertTrue(nodesIds.contains(NODE2));
-    Assertions.assertTrue(nodesIds.contains(NODE3));
-    Assertions.assertTrue(nodesIds.contains(NODE4));
+    assertTrue(nodesIds.contains(NODE1));
+    assertTrue(nodesIds.contains(NODE2));
+    assertTrue(nodesIds.contains(NODE3));
+    assertTrue(nodesIds.contains(NODE4));
   }
 
   /**
@@ -404,13 +406,13 @@ public class TestRouterWebServiceUtil {
 
     NodesInfo result =
         RouterWebServiceUtil.deleteDuplicateNodesInfo(nodes.getNodes());
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(1, result.getNodes().size());
+    assertNotNull(result);
+    assertEquals(1, result.getNodes().size());
 
     NodeInfo node = result.getNodes().get(0);
 
-    Assertions.assertEquals(NODE1, node.getNodeId());
-    Assertions.assertEquals(2, node.getLastHealthUpdate());
+    assertEquals(NODE1, node.getNodeId());
+    assertEquals(2, node.getLastHealthUpdate());
   }
 
   /**
@@ -431,98 +433,98 @@ public class TestRouterWebServiceUtil {
     ClusterMetricsInfo metricsClone = createClusterMetricsClone(metrics);
     RouterWebServiceUtil.mergeMetrics(metrics, metricsResponse);
 
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getAppsSubmitted() + metricsClone.getAppsSubmitted(),
         metrics.getAppsSubmitted());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getAppsCompleted() + metricsClone.getAppsCompleted(),
         metrics.getAppsCompleted());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getAppsPending() + metricsClone.getAppsPending(),
         metrics.getAppsPending());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getAppsRunning() + metricsClone.getAppsRunning(),
         metrics.getAppsRunning());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getAppsFailed() + metricsClone.getAppsFailed(),
         metrics.getAppsFailed());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getAppsKilled() + metricsClone.getAppsKilled(),
         metrics.getAppsKilled());
 
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getReservedMB() + metricsClone.getReservedMB(),
         metrics.getReservedMB());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getAvailableMB() + metricsClone.getAvailableMB(),
         metrics.getAvailableMB());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getAllocatedMB() + metricsClone.getAllocatedMB(),
         metrics.getAllocatedMB());
 
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getReservedVirtualCores()
             + metricsClone.getReservedVirtualCores(),
         metrics.getReservedVirtualCores());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getAvailableVirtualCores()
             + metricsClone.getAvailableVirtualCores(),
         metrics.getAvailableVirtualCores());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getAllocatedVirtualCores()
             + metricsClone.getAllocatedVirtualCores(),
         metrics.getAllocatedVirtualCores());
 
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getContainersAllocated()
             + metricsClone.getContainersAllocated(),
         metrics.getContainersAllocated());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getReservedContainers()
             + metricsClone.getReservedContainers(),
         metrics.getReservedContainers());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getPendingContainers()
             + metricsClone.getPendingContainers(),
         metrics.getPendingContainers());
 
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getTotalMB() + metricsClone.getTotalMB(),
         metrics.getTotalMB());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getUtilizedMB() + metricsClone.getUtilizedMB(),
         metrics.getUtilizedMB());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getTotalVirtualCores()
             + metricsClone.getTotalVirtualCores(),
         metrics.getTotalVirtualCores());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getUtilizedVirtualCores() + metricsClone.getUtilizedVirtualCores(),
         metrics.getUtilizedVirtualCores());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getTotalNodes() + metricsClone.getTotalNodes(),
         metrics.getTotalNodes());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getLostNodes() + metricsClone.getLostNodes(),
         metrics.getLostNodes());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getUnhealthyNodes() + metricsClone.getUnhealthyNodes(),
         metrics.getUnhealthyNodes());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getDecommissioningNodes()
             + metricsClone.getDecommissioningNodes(),
         metrics.getDecommissioningNodes());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getDecommissionedNodes()
             + metricsClone.getDecommissionedNodes(),
         metrics.getDecommissionedNodes());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getRebootedNodes() + metricsClone.getRebootedNodes(),
         metrics.getRebootedNodes());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getActiveNodes() + metricsClone.getActiveNodes(),
         metrics.getActiveNodes());
-    Assertions.assertEquals(
+    assertEquals(
         metricsResponse.getShutdownNodes() + metricsClone.getShutdownNodes(),
         metrics.getShutdownNodes());
   }
@@ -629,14 +631,14 @@ public class TestRouterWebServiceUtil {
         RouterWebServiceUtil.mergeApplicationStatisticsInfo(lists);
     ArrayList<StatisticsItemInfo> statItem = mergeInfo.getStatItems();
 
-    Assertions.assertNotNull(statItem);
-    Assertions.assertEquals(1, statItem.size());
+    assertNotNull(statItem);
+    assertEquals(1, statItem.size());
 
     StatisticsItemInfo first = statItem.get(0);
 
-    Assertions.assertEquals(item1.getCount() + item2.getCount(), first.getCount());
-    Assertions.assertEquals(item1.getType(), first.getType());
-    Assertions.assertEquals(item1.getState(), first.getState());
+    assertEquals(item1.getCount() + item2.getCount(), first.getCount());
+    assertEquals(item1.getType(), first.getType());
+    assertEquals(item1.getState(), first.getState());
   }
 
   @Test
@@ -662,7 +664,7 @@ public class TestRouterWebServiceUtil {
     ApplicationStatisticsInfo mergeInfo =
         RouterWebServiceUtil.mergeApplicationStatisticsInfo(lists);
 
-    Assertions.assertEquals(3, mergeInfo.getStatItems().size());
+    assertEquals(3, mergeInfo.getStatItems().size());
     List<StatisticsItemInfo> mergeInfoStatItems = mergeInfo.getStatItems();
 
     StatisticsItemInfo item1Result = null;
@@ -686,12 +688,12 @@ public class TestRouterWebServiceUtil {
       }
     }
 
-    Assertions.assertEquals(YarnApplicationState.ACCEPTED, item1Result.getState());
-    Assertions.assertEquals(item1.getCount(), item1Result.getCount());
-    Assertions.assertEquals(YarnApplicationState.NEW_SAVING, item2Result.getState());
-    Assertions.assertEquals((item2.getCount() + item3.getCount()), item2Result.getCount());
-    Assertions.assertEquals(YarnApplicationState.FINISHED, item3Result.getState());
-    Assertions.assertEquals(item4.getCount(), item3Result.getCount());
+    assertEquals(YarnApplicationState.ACCEPTED, item1Result.getState());
+    assertEquals(item1.getCount(), item1Result.getCount());
+    assertEquals(YarnApplicationState.NEW_SAVING, item2Result.getState());
+    assertEquals((item2.getCount() + item3.getCount()), item2Result.getCount());
+    assertEquals(YarnApplicationState.FINISHED, item3Result.getState());
+    assertEquals(item4.getCount(), item3Result.getCount());
   }
 
   @Test
@@ -702,8 +704,8 @@ public class TestRouterWebServiceUtil {
     Map<String, Object> properties = client01.getConfiguration().getProperties();
     int readTimeOut = (int) properties.get(ClientProperties.READ_TIMEOUT);
     int connectTimeOut = (int) properties.get(ClientProperties.CONNECT_TIMEOUT);
-    Assertions.assertEquals(30000, readTimeOut);
-    Assertions.assertEquals(30000, connectTimeOut);
+    assertEquals(30000, readTimeOut);
+    assertEquals(30000, connectTimeOut);
     client01.close();
 
     // Case2, set a negative timeout, We'll get the default timeout(30s)
@@ -714,8 +716,8 @@ public class TestRouterWebServiceUtil {
     Map<String, Object> properties02 = client02.getConfiguration().getProperties();
     int readTimeOut02 = (int) properties02.get(ClientProperties.READ_TIMEOUT);
     int connectTimeOut02 =  (int) properties02.get(ClientProperties.CONNECT_TIMEOUT);
-    Assertions.assertEquals(30000, readTimeOut02);
-    Assertions.assertEquals(30000, connectTimeOut02);
+    assertEquals(30000, readTimeOut02);
+    assertEquals(30000, connectTimeOut02);
     client02.close();
 
     // Case3, Set the maximum value that exceeds the integer
@@ -730,8 +732,8 @@ public class TestRouterWebServiceUtil {
     Map<String, Object> properties03 = client03.getConfiguration().getProperties();
     int readTimeOut03 = (int) properties03.get(ClientProperties.READ_TIMEOUT);
     int connectTimeOut03 = (int) properties03.get(ClientProperties.CONNECT_TIMEOUT);
-    Assertions.assertEquals(30000, readTimeOut03);
-    Assertions.assertEquals(30000, connectTimeOut03);
+    assertEquals(30000, readTimeOut03);
+    assertEquals(30000, connectTimeOut03);
     client03.close();
   }
 
@@ -748,8 +750,8 @@ public class TestRouterWebServiceUtil {
     int readTimeout = (int) getTimeDuration(conf,
         YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
         YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT);
-    Assertions.assertEquals(-1, connectTimeOut);
-    Assertions.assertEquals(-1, readTimeout);
+    assertEquals(-1, connectTimeOut);
+    assertEquals(-1, readTimeout);
 
     // Case2, Set the maximum value that exceeds the integer.
     // Converted to int, there will be a value out of bounds.
@@ -765,8 +767,8 @@ public class TestRouterWebServiceUtil {
     int readTimeout1 = (int) getTimeDuration(conf1,
         YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
         YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT);
-    Assertions.assertEquals(-2147483648, connectTimeOut1);
-    Assertions.assertEquals(-2147483648, readTimeout1);
+    assertEquals(-2147483648, connectTimeOut1);
+    assertEquals(-2147483648, readTimeout1);
   }
 
   private long getTimeDuration(YarnConfiguration conf, String varName, long defaultValue) {

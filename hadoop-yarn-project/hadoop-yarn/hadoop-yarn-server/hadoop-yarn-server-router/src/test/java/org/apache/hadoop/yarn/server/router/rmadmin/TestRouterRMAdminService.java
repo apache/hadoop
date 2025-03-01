@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.yarn.server.router.rmadmin;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
@@ -37,7 +43,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLa
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.router.rmadmin.RouterRMAdminService.RequestInterceptorChainWrapper;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,21 +74,21 @@ public class TestRouterRMAdminService extends BaseRouterRMAdminTest {
       case 1: // Fall to the next case
       case 2:
         // If index is equal to 0,1 or 2 we fall in this check
-        Assertions.assertEquals(
+        assertEquals(
             PassThroughRMAdminRequestInterceptor.class.getName(),
             root.getClass().getName());
         break;
       case 3:
-        Assertions.assertEquals(MockRMAdminRequestInterceptor.class.getName(),
+        assertEquals(MockRMAdminRequestInterceptor.class.getName(),
             root.getClass().getName());
         break;
       default:
-        Assertions.fail();
+        fail();
       }
       root = root.getNextInterceptor();
       index++;
     }
-    Assertions.assertEquals(4
+    assertEquals(4
 ,         index, "The number of interceptors in chain does not match");
   }
 
@@ -99,82 +104,82 @@ public class TestRouterRMAdminService extends BaseRouterRMAdminTest {
     LOG.info("testRouterRMAdminServiceE2E - Refresh Queues");
 
     RefreshQueuesResponse responseRefreshQueues = refreshQueues(user);
-    Assertions.assertNotNull(responseRefreshQueues);
+    assertNotNull(responseRefreshQueues);
 
     LOG.info("testRouterRMAdminServiceE2E - Refresh Nodes");
 
     RefreshNodesResponse responseRefreshNodes = refreshNodes(user);
-    Assertions.assertNotNull(responseRefreshNodes);
+    assertNotNull(responseRefreshNodes);
 
     LOG.info("testRouterRMAdminServiceE2E - Refresh Super User");
 
     RefreshSuperUserGroupsConfigurationResponse responseRefreshSuperUser =
         refreshSuperUserGroupsConfiguration(user);
-    Assertions.assertNotNull(responseRefreshSuperUser);
+    assertNotNull(responseRefreshSuperUser);
 
     LOG.info("testRouterRMAdminServiceE2E - Refresh User to Group");
 
     RefreshUserToGroupsMappingsResponse responseRefreshUserToGroup =
         refreshUserToGroupsMappings(user);
-    Assertions.assertNotNull(responseRefreshUserToGroup);
+    assertNotNull(responseRefreshUserToGroup);
 
     LOG.info("testRouterRMAdminServiceE2E - Refresh Admin Acls");
 
     RefreshAdminAclsResponse responseRefreshAdminAcls = refreshAdminAcls(user);
-    Assertions.assertNotNull(responseRefreshAdminAcls);
+    assertNotNull(responseRefreshAdminAcls);
 
     LOG.info("testRouterRMAdminServiceE2E - Refresh Service Acls");
 
     RefreshServiceAclsResponse responseRefreshServiceAcls =
         refreshServiceAcls(user);
-    Assertions.assertNotNull(responseRefreshServiceAcls);
+    assertNotNull(responseRefreshServiceAcls);
 
     LOG.info("testRouterRMAdminServiceE2E - Update Node Resource");
 
     UpdateNodeResourceResponse responseUpdateNodeResource =
         updateNodeResource(user);
-    Assertions.assertNotNull(responseUpdateNodeResource);
+    assertNotNull(responseUpdateNodeResource);
 
     LOG.info("testRouterRMAdminServiceE2E - Refresh Nodes Resource");
 
     RefreshNodesResourcesResponse responseRefreshNodesResources =
         refreshNodesResources(user);
-    Assertions.assertNotNull(responseRefreshNodesResources);
+    assertNotNull(responseRefreshNodesResources);
 
     LOG.info("testRouterRMAdminServiceE2E - Add To Cluster NodeLabels");
 
     AddToClusterNodeLabelsResponse responseAddToClusterNodeLabels =
         addToClusterNodeLabels(user);
-    Assertions.assertNotNull(responseAddToClusterNodeLabels);
+    assertNotNull(responseAddToClusterNodeLabels);
 
     LOG.info("testRouterRMAdminServiceE2E - Remove To Cluster NodeLabels");
 
     RemoveFromClusterNodeLabelsResponse responseRemoveFromClusterNodeLabels =
         removeFromClusterNodeLabels(user);
-    Assertions.assertNotNull(responseRemoveFromClusterNodeLabels);
+    assertNotNull(responseRemoveFromClusterNodeLabels);
 
     LOG.info("testRouterRMAdminServiceE2E - Replace Labels On Node");
 
     ReplaceLabelsOnNodeResponse responseReplaceLabelsOnNode =
         replaceLabelsOnNode(user);
-    Assertions.assertNotNull(responseReplaceLabelsOnNode);
+    assertNotNull(responseReplaceLabelsOnNode);
 
     LOG.info("testRouterRMAdminServiceE2E - Check For Decommissioning Nodes");
 
     CheckForDecommissioningNodesResponse responseCheckForDecom =
         checkForDecommissioningNodes(user);
-    Assertions.assertNotNull(responseCheckForDecom);
+    assertNotNull(responseCheckForDecom);
 
     LOG.info("testRouterRMAdminServiceE2E - Refresh Cluster Max Priority");
 
     RefreshClusterMaxPriorityResponse responseRefreshClusterMaxPriority =
         refreshClusterMaxPriority(user);
-    Assertions.assertNotNull(responseRefreshClusterMaxPriority);
+    assertNotNull(responseRefreshClusterMaxPriority);
 
     LOG.info("testRouterRMAdminServiceE2E - Get Groups For User");
 
     String[] responseGetGroupsForUser = getGroupsForUser(user);
-    Assertions.assertNotNull(responseGetGroupsForUser);
+    assertNotNull(responseGetGroupsForUser);
 
   }
 
@@ -199,7 +204,7 @@ public class TestRouterRMAdminService extends BaseRouterRMAdminTest {
     refreshQueues("test8");
 
     pipelines = super.getRouterRMAdminService().getPipelines();
-    Assertions.assertEquals(8, pipelines.size());
+    assertEquals(8, pipelines.size());
 
     refreshQueues("test9");
     refreshQueues("test10");
@@ -208,13 +213,13 @@ public class TestRouterRMAdminService extends BaseRouterRMAdminTest {
 
     // The cache max size is defined in
     // BaseRouterClientRMTest.TEST_MAX_CACHE_SIZE
-    Assertions.assertEquals(10, pipelines.size());
+    assertEquals(10, pipelines.size());
 
     chain = pipelines.get("test1");
-    Assertions.assertNotNull(chain, "test1 should not be evicted");
+    assertNotNull(chain, "test1 should not be evicted");
 
     chain = pipelines.get("test2");
-    Assertions.assertNull(chain, "test2 should have been evicted");
+    assertNull(chain, "test2 should have been evicted");
   }
 
   /**
@@ -249,7 +254,7 @@ public class TestRouterRMAdminService extends BaseRouterRMAdminTest {
                     getRouterRMAdminService().getInterceptorChain();
                 RMAdminRequestInterceptor interceptor =
                     wrapper.getRootInterceptor();
-                Assertions.assertNotNull(interceptor);
+                assertNotNull(interceptor);
                 LOG.info("init rm admin interceptor success for user" + user);
                 return interceptor;
               }
@@ -270,9 +275,9 @@ public class TestRouterRMAdminService extends BaseRouterRMAdminTest {
     client1.join();
     client2.join();
 
-    Assertions.assertNotNull(client1.interceptor);
-    Assertions.assertNotNull(client2.interceptor);
-    Assertions.assertTrue(client1.interceptor == client2.interceptor);
+    assertNotNull(client1.interceptor);
+    assertNotNull(client2.interceptor);
+    assertTrue(client1.interceptor == client2.interceptor);
   }
 
 }

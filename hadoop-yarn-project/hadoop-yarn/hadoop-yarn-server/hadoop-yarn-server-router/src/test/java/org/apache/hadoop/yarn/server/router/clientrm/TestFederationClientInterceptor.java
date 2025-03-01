@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -160,7 +164,8 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -189,6 +194,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   private final static long DEFAULT_DURATION = 10 * 60 * 1000;
 
+  @BeforeEach
   @Override
   public void setUp() throws IOException {
     super.setUpConfig();
@@ -217,12 +223,13 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
       }
     } catch (YarnException e) {
       LOG.error(e.getMessage());
-      Assertions.fail();
+      fail();
     }
 
     DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
+  @AfterEach
   @Override
   public void tearDown() {
     interceptor.shutdown();
@@ -270,9 +277,9 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetNewApplicationRequest request = GetNewApplicationRequest.newInstance();
     GetNewApplicationResponse response = interceptor.getNewApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(response.getApplicationId());
-    Assertions.assertEquals(response.getApplicationId().getClusterTimestamp(),
+    assertNotNull(response);
+    assertNotNull(response.getApplicationId());
+    assertEquals(response.getApplicationId().getClusterTimestamp(),
         ResourceManager.getClusterTimeStamp());
   }
 
@@ -290,10 +297,10 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
     SubClusterId scIdResult = stateStoreUtil.queryApplicationHomeSC(appId);
-    Assertions.assertNotNull(scIdResult);
-    Assertions.assertTrue(subClusters.contains(scIdResult));
+    assertNotNull(scIdResult);
+    assertTrue(subClusters.contains(scIdResult));
   }
 
   private SubmitApplicationRequest mockSubmitApplicationRequest(
@@ -326,17 +333,17 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // First attempt
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
     SubClusterId scIdResult = stateStoreUtil.queryApplicationHomeSC(appId);
-    Assertions.assertNotNull(scIdResult);
+    assertNotNull(scIdResult);
 
     // First retry
     response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
     SubClusterId scIdResult2 = stateStoreUtil.queryApplicationHomeSC(appId);
-    Assertions.assertNotNull(scIdResult2);
-    Assertions.assertEquals(scIdResult, scIdResult);
+    assertNotNull(scIdResult2);
+    assertEquals(scIdResult, scIdResult);
   }
 
   /**
@@ -384,12 +391,12 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // Submit the application we are going to kill later
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     KillApplicationRequest requestKill = KillApplicationRequest.newInstance(appId);
     KillApplicationResponse responseKill = interceptor.forceKillApplication(requestKill);
-    Assertions.assertNotNull(responseKill);
+    assertNotNull(responseKill);
   }
 
   @Test
@@ -413,9 +420,9 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // Submit the application we are going to kill later
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
     SubClusterId subClusterId = stateStoreUtil.queryApplicationHomeSC(appId);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     subClusterSet.remove(subClusterId);
 
@@ -443,12 +450,12 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
       GetApplicationReportRequest requestGet = GetApplicationReportRequest.newInstance(appId);
       GetApplicationReportResponse responseGet =
           clientRMProxyForSubCluster.getApplicationReport(requestGet);
-      Assertions.assertNotNull(responseGet);
+      assertNotNull(responseGet);
       ApplicationReport applicationReport = responseGet.getApplicationReport();
-      Assertions.assertNotNull(applicationReport);
+      assertNotNull(applicationReport);
       YarnApplicationState yarnApplicationState = applicationReport.getYarnApplicationState();
-      Assertions.assertNotNull(yarnApplicationState);
-      Assertions.assertEquals(YarnApplicationState.KILLED, yarnApplicationState);
+      assertNotNull(yarnApplicationState);
+      assertEquals(YarnApplicationState.KILLED, yarnApplicationState);
     }
   }
 
@@ -507,8 +514,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // Submit the application we want the report later
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     GetApplicationReportRequest requestGet =
         GetApplicationReportRequest.newInstance(appId);
@@ -516,7 +523,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetApplicationReportResponse responseGet =
         interceptor.getApplicationReport(requestGet);
 
-    Assertions.assertNotNull(responseGet);
+    assertNotNull(responseGet);
   }
 
   /**
@@ -573,8 +580,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // Submit the application we want the applicationAttempt report later
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     // Call GetApplicationAttempts Get ApplicationAttemptId
     GetApplicationAttemptsRequest attemptsRequest =
@@ -588,7 +595,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
           interceptor.getApplicationAttempts(attemptsRequest);
     }
 
-    Assertions.assertNotNull(attemptsResponse);
+    assertNotNull(attemptsResponse);
 
     GetApplicationAttemptReportRequest requestGet =
          GetApplicationAttemptReportRequest.newInstance(
@@ -597,7 +604,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetApplicationAttemptReportResponse responseGet =
          interceptor.getApplicationAttemptReport(requestGet);
 
-    Assertions.assertNotNull(responseGet);
+    assertNotNull(responseGet);
   }
 
   /**
@@ -664,7 +671,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // normal request.
     GetClusterMetricsResponse response =
         interceptor.getClusterMetrics(GetClusterMetricsRequest.newInstance());
-    Assertions.assertEquals(subClusters.size(),
+    assertEquals(subClusters.size(),
         response.getClusterMetrics().getNumNodeManagers());
 
     // Clear Membership
@@ -677,7 +684,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         new Object[] {GetClusterMetricsRequest.newInstance()});
     Collection<GetClusterMetricsResponse> clusterMetrics = interceptor.invokeConcurrent(
         remoteMethod, GetClusterMetricsResponse.class);
-    Assertions.assertTrue(clusterMetrics.isEmpty());
+    assertTrue(clusterMetrics.isEmpty());
 
     // Restore membership
     stateStore.setMembership(membership);
@@ -696,14 +703,14 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     Set<String> appTypes = Collections.singleton("MockApp");
     GetApplicationsRequest requestGet = GetApplicationsRequest.newInstance(appTypes);
     GetApplicationsResponse responseGet = interceptor.getApplications(requestGet);
 
-    Assertions.assertNotNull(responseGet);
+    assertNotNull(responseGet);
   }
 
   /**
@@ -730,16 +737,16 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     Set<String> appTypes = Collections.singleton("SPARK");
 
     GetApplicationsRequest requestGet = GetApplicationsRequest.newInstance(appTypes);
     GetApplicationsResponse responseGet = interceptor.getApplications(requestGet);
 
-    Assertions.assertNotNull(responseGet);
-    Assertions.assertTrue(responseGet.getApplicationList().isEmpty());
+    assertNotNull(responseGet);
+    assertTrue(responseGet.getApplicationList().isEmpty());
   }
 
   /**
@@ -756,8 +763,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     EnumSet<YarnApplicationState> applicationStates = EnumSet.noneOf(
         YarnApplicationState.class);
@@ -768,8 +775,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     GetApplicationsResponse responseGet = interceptor.getApplications(requestGet);
 
-    Assertions.assertNotNull(responseGet);
-    Assertions.assertTrue(responseGet.getApplicationList().isEmpty());
+    assertNotNull(responseGet);
+    assertTrue(responseGet.getApplicationList().isEmpty());
   }
 
   @Test
@@ -781,7 +788,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // normal request.
     GetClusterNodesResponse response =
         interceptor.getClusterNodes(GetClusterNodesRequest.newInstance());
-    Assertions.assertEquals(subClusters.size(), response.getNodeReports().size());
+    assertEquals(subClusters.size(), response.getNodeReports().size());
   }
 
   @Test
@@ -793,7 +800,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // normal request.
     GetNodesToLabelsResponse response =
         interceptor.getNodeToLabels(GetNodesToLabelsRequest.newInstance());
-    Assertions.assertEquals(0, response.getNodeToLabels().size());
+    assertEquals(0, response.getNodeToLabels().size());
   }
 
   @Test
@@ -805,7 +812,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // normal request.
     GetLabelsToNodesResponse response =
         interceptor.getLabelsToNodes(GetLabelsToNodesRequest.newInstance());
-    Assertions.assertEquals(0, response.getLabelsToNodes().size());
+    assertEquals(0, response.getLabelsToNodes().size());
   }
 
   @Test
@@ -817,7 +824,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // normal request.
     GetClusterNodeLabelsResponse response =
         interceptor.getClusterNodeLabels(GetClusterNodeLabelsRequest.newInstance());
-    Assertions.assertEquals(0, response.getNodeLabelList().size());
+    assertEquals(0, response.getNodeLabelList().size());
   }
 
   @Test
@@ -832,7 +839,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetQueueUserAclsInfoResponse response = interceptor.getQueueUserAcls(
         GetQueueUserAclsInfoRequest.newInstance());
 
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
 
     List<QueueACL> submitAndAdministerAcl = new ArrayList<>();
     submitAndAdministerAcl.add(QueueACL.SUBMIT_APPLICATIONS);
@@ -845,7 +852,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         filter(acl->acl.getQueueName().equals("root")).
         collect(Collectors.toList()).get(0);
 
-    Assertions.assertEquals(exceptRootQueueACLInfo, queueRootQueueACLInfo);
+    assertEquals(exceptRootQueueACLInfo, queueRootQueueACLInfo);
   }
 
   @Test
@@ -860,8 +867,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     ReservationId reservationId = ReservationId.newInstance(1653487680L, 1L);
     ReservationListResponse response = interceptor.listReservations(
         ReservationListRequest.newInstance("root.decided", reservationId.toString()));
-    Assertions.assertNotNull(response);
-    Assertions.assertEquals(0, response.getReservationAllocationState().size());
+    assertNotNull(response);
+    assertEquals(0, response.getReservationAllocationState().size());
   }
 
   @Test
@@ -880,8 +887,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // Submit the application
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     // Call GetApplicationAttempts
     GetApplicationAttemptsRequest attemptsRequest =
@@ -895,7 +902,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
           interceptor.getApplicationAttempts(attemptsRequest);
     }
 
-    Assertions.assertNotNull(attemptsResponse);
+    assertNotNull(attemptsResponse);
 
     // Call GetContainers
     GetContainersRequest containersRequest =
@@ -904,7 +911,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetContainersResponse containersResponse =
         interceptor.getContainers(containersRequest);
 
-    Assertions.assertNotNull(containersResponse);
+    assertNotNull(containersResponse);
   }
 
   @Test
@@ -923,8 +930,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // Submit the application
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     // Call GetApplicationAttempts
     GetApplicationAttemptsRequest attemptsRequest =
@@ -937,7 +944,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
       attemptsResponse =
           interceptor.getApplicationAttempts(attemptsRequest);
     }
-    Assertions.assertNotNull(attemptsResponse);
+    assertNotNull(attemptsResponse);
 
     ApplicationAttemptId attemptId = attemptsResponse.getApplicationAttemptList().
         get(0).getApplicationAttemptId();
@@ -949,7 +956,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetContainerReportResponse containerReportResponse =
          interceptor.getContainerReport(containerReportRequest);
 
-    Assertions.assertEquals(containerReportResponse, null);
+    assertEquals(containerReportResponse, null);
   }
 
   @Test
@@ -968,8 +975,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // Submit the application
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     // Call GetApplicationAttempts
     GetApplicationAttemptsRequest attemptsRequest =
@@ -977,7 +984,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetApplicationAttemptsResponse attemptsResponse =
          interceptor.getApplicationAttempts(attemptsRequest);
 
-    Assertions.assertNotNull(attemptsResponse);
+    assertNotNull(attemptsResponse);
   }
 
   @Test
@@ -989,7 +996,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // normal request.
     GetAllResourceTypeInfoResponse response =
         interceptor.getResourceTypeInfo(GetAllResourceTypeInfoRequest.newInstance());
-    Assertions.assertEquals(2, response.getResourceTypeInfo().size());
+    assertEquals(2, response.getResourceTypeInfo().size());
   }
 
   @Test
@@ -1008,11 +1015,11 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // Submit the application
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     SubClusterId subClusterId = interceptor.getApplicationHomeSubCluster(appId);
-    Assertions.assertNotNull(subClusterId);
+    assertNotNull(subClusterId);
 
     MockRM mockRM = interceptor.getMockRMs().get(subClusterId);
     mockRM.waitForState(appId, RMAppState.ACCEPTED);
@@ -1025,7 +1032,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         GetApplicationAttemptsRequest.newInstance(appId);
     GetApplicationAttemptsResponse attemptsResponse =
         interceptor.getApplicationAttempts(attemptsRequest);
-    Assertions.assertNotNull(attemptsResponse);
+    assertNotNull(attemptsResponse);
 
     ApplicationAttemptId attemptId = attemptsResponse.getApplicationAttemptList().
         get(0).getApplicationAttemptId();
@@ -1035,7 +1042,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     FailApplicationAttemptResponse responseFailAppAttempt =
         interceptor.failApplicationAttempt(requestFailAppAttempt);
 
-    Assertions.assertNotNull(responseFailAppAttempt);
+    assertNotNull(responseFailAppAttempt);
   }
 
   @Test
@@ -1054,11 +1061,11 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // Submit the application
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     SubClusterId subClusterId = interceptor.getApplicationHomeSubCluster(appId);
-    Assertions.assertNotNull(subClusterId);
+    assertNotNull(subClusterId);
 
     MockRM mockRM = interceptor.getMockRMs().get(subClusterId);
     mockRM.waitForState(appId, RMAppState.ACCEPTED);
@@ -1071,7 +1078,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         GetApplicationAttemptsRequest.newInstance(appId);
     GetApplicationAttemptsResponse attemptsResponse =
         interceptor.getApplicationAttempts(attemptsRequest);
-    Assertions.assertNotNull(attemptsResponse);
+    assertNotNull(attemptsResponse);
 
     Priority priority = Priority.newInstance(20);
     UpdateApplicationPriorityRequest requestUpdateAppPriority =
@@ -1079,8 +1086,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     UpdateApplicationPriorityResponse responseAppPriority =
         interceptor.updateApplicationPriority(requestUpdateAppPriority);
 
-    Assertions.assertNotNull(responseAppPriority);
-    Assertions.assertEquals(20,
+    assertNotNull(responseAppPriority);
+    assertEquals(20,
         responseAppPriority.getApplicationPriority().getPriority());
   }
 
@@ -1100,11 +1107,11 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // Submit the application
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     SubClusterId subClusterId = interceptor.getApplicationHomeSubCluster(appId);
-    Assertions.assertNotNull(subClusterId);
+    assertNotNull(subClusterId);
 
     MockRM mockRM = interceptor.getMockRMs().get(subClusterId);
     mockRM.waitForState(appId, RMAppState.ACCEPTED);
@@ -1117,7 +1124,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         GetApplicationAttemptsRequest.newInstance(appId);
     GetApplicationAttemptsResponse attemptsResponse =
         interceptor.getApplicationAttempts(attemptsRequest);
-    Assertions.assertNotNull(attemptsResponse);
+    assertNotNull(attemptsResponse);
 
     String appTimeout =
         Times.formatISO8601(System.currentTimeMillis() + 5 * 1000);
@@ -1131,8 +1138,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     String responseTimeOut =
         timeoutsResponse.getApplicationTimeouts().get(ApplicationTimeoutType.LIFETIME);
-    Assertions.assertNotNull(timeoutsResponse);
-    Assertions.assertEquals(appTimeout, responseTimeOut);
+    assertNotNull(timeoutsResponse);
+    assertEquals(appTimeout, responseTimeOut);
   }
 
   @Test
@@ -1150,11 +1157,11 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // Submit the application
     SubmitApplicationResponse response = interceptor.submitApplication(request);
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     SubClusterId subClusterId = interceptor.getApplicationHomeSubCluster(appId);
-    Assertions.assertNotNull(subClusterId);
+    assertNotNull(subClusterId);
 
     MockRM mockRM = interceptor.getMockRMs().get(subClusterId);
     mockRM.waitForState(appId, RMAppState.ACCEPTED);
@@ -1173,7 +1180,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     SignalContainerResponse signalContainerResponse =
         interceptor.signalToContainer(signalContainerRequest);
 
-    Assertions.assertNotNull(signalContainerResponse);
+    assertNotNull(signalContainerResponse);
   }
 
   @Test
@@ -1191,11 +1198,11 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // Submit the application
     SubmitApplicationResponse response = interceptor.submitApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     SubClusterId subClusterId = interceptor.getApplicationHomeSubCluster(appId);
-    Assertions.assertNotNull(subClusterId);
+    assertNotNull(subClusterId);
 
     MockRM mockRM = interceptor.getMockRMs().get(subClusterId);
     mockRM.waitForState(appId, RMAppState.ACCEPTED);
@@ -1212,7 +1219,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     MoveApplicationAcrossQueuesResponse acrossQueuesResponse =
         interceptor.moveApplicationAcrossQueues(acrossQueuesRequest);
 
-    Assertions.assertNotNull(acrossQueuesResponse);
+    assertNotNull(acrossQueuesResponse);
   }
 
 
@@ -1228,15 +1235,15 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetQueueInfoResponse response = interceptor.getQueueInfo(
         GetQueueInfoRequest.newInstance("root", true, true, true));
 
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
 
     QueueInfo queueInfo = response.getQueueInfo();
-    Assertions.assertNotNull(queueInfo);
-    Assertions.assertEquals("root", queueInfo.getQueueName());
-    Assertions.assertEquals(4.0, queueInfo.getCapacity(), 0);
-    Assertions.assertEquals(0.0, queueInfo.getCurrentCapacity(), 0);
-    Assertions.assertEquals(12, queueInfo.getChildQueues().size(), 0);
-    Assertions.assertEquals(1, queueInfo.getAccessibleNodeLabels().size());
+    assertNotNull(queueInfo);
+    assertEquals("root", queueInfo.getQueueName());
+    assertEquals(4.0, queueInfo.getCapacity(), 0);
+    assertEquals(0.0, queueInfo.getCurrentCapacity(), 0);
+    assertEquals(12, queueInfo.getChildQueues().size(), 0);
+    assertEquals(1, queueInfo.getAccessibleNodeLabels().size());
   }
 
   @Test
@@ -1244,15 +1251,15 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // We have set up a unit test where we access queue information for subcluster1.
     GetQueueInfoResponse response = interceptor.getQueueInfo(
         GetQueueInfoRequest.newInstance("root", true, true, true, "1"));
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
 
     QueueInfo queueInfo = response.getQueueInfo();
-    Assertions.assertNotNull(queueInfo);
-    Assertions.assertEquals("root", queueInfo.getQueueName());
-    Assertions.assertEquals(1.0, queueInfo.getCapacity(), 0);
-    Assertions.assertEquals(0.0, queueInfo.getCurrentCapacity(), 0);
-    Assertions.assertEquals(3, queueInfo.getChildQueues().size(), 0);
-    Assertions.assertEquals(1, queueInfo.getAccessibleNodeLabels().size());
+    assertNotNull(queueInfo);
+    assertEquals("root", queueInfo.getQueueName());
+    assertEquals(1.0, queueInfo.getCapacity(), 0);
+    assertEquals(0.0, queueInfo.getCurrentCapacity(), 0);
+    assertEquals(3, queueInfo.getChildQueues().size(), 0);
+    assertEquals(1, queueInfo.getAccessibleNodeLabels().size());
   }
 
   @Test
@@ -1267,20 +1274,20 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetAllResourceProfilesRequest request = GetAllResourceProfilesRequest.newInstance();
     GetAllResourceProfilesResponse response = interceptor.getResourceProfiles(request);
 
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
     Map<String, Resource> resProfiles = response.getResourceProfiles();
 
     Resource maxResProfiles = resProfiles.get("maximum");
-    Assertions.assertEquals(32768, maxResProfiles.getMemorySize());
-    Assertions.assertEquals(16, maxResProfiles.getVirtualCores());
+    assertEquals(32768, maxResProfiles.getMemorySize());
+    assertEquals(16, maxResProfiles.getVirtualCores());
 
     Resource defaultResProfiles = resProfiles.get("default");
-    Assertions.assertEquals(8192, defaultResProfiles.getMemorySize());
-    Assertions.assertEquals(8, defaultResProfiles.getVirtualCores());
+    assertEquals(8192, defaultResProfiles.getMemorySize());
+    assertEquals(8, defaultResProfiles.getVirtualCores());
 
     Resource minimumResProfiles = resProfiles.get("minimum");
-    Assertions.assertEquals(4096, minimumResProfiles.getMemorySize());
-    Assertions.assertEquals(4, minimumResProfiles.getVirtualCores());
+    assertEquals(4096, minimumResProfiles.getMemorySize());
+    assertEquals(4, minimumResProfiles.getVirtualCores());
   }
 
   @Test
@@ -1296,23 +1303,23 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetResourceProfileRequest request = GetResourceProfileRequest.newInstance("maximum");
     GetResourceProfileResponse response = interceptor.getResourceProfile(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertEquals(32768, response.getResource().getMemorySize());
-    Assertions.assertEquals(16, response.getResource().getVirtualCores());
+    assertNotNull(response);
+    assertEquals(32768, response.getResource().getMemorySize());
+    assertEquals(16, response.getResource().getVirtualCores());
 
     GetResourceProfileRequest request2 = GetResourceProfileRequest.newInstance("default");
     GetResourceProfileResponse response2 = interceptor.getResourceProfile(request2);
 
-    Assertions.assertNotNull(response2);
-    Assertions.assertEquals(8192, response2.getResource().getMemorySize());
-    Assertions.assertEquals(8, response2.getResource().getVirtualCores());
+    assertNotNull(response2);
+    assertEquals(8192, response2.getResource().getMemorySize());
+    assertEquals(8, response2.getResource().getVirtualCores());
 
     GetResourceProfileRequest request3 = GetResourceProfileRequest.newInstance("minimum");
     GetResourceProfileResponse response3 = interceptor.getResourceProfile(request3);
 
-    Assertions.assertNotNull(response3);
-    Assertions.assertEquals(4096, response3.getResource().getMemorySize());
-    Assertions.assertEquals(4, response3.getResource().getVirtualCores());
+    assertNotNull(response3);
+    assertEquals(4096, response3.getResource().getMemorySize());
+    assertEquals(4, response3.getResource().getVirtualCores());
   }
 
   @Test
@@ -1327,17 +1334,17 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetAttributesToNodesResponse response =
         interceptor.getAttributesToNodes(GetAttributesToNodesRequest.newInstance());
 
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
     Map<NodeAttributeKey, List<NodeToAttributeValue>> attrs = response.getAttributesToNodes();
-    Assertions.assertNotNull(attrs);
-    Assertions.assertEquals(4, attrs.size());
+    assertNotNull(attrs);
+    assertEquals(4, attrs.size());
 
     NodeAttribute gpu = NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "GPU",
         NodeAttributeType.STRING, "nvidia");
     NodeToAttributeValue attributeValue1 =
         NodeToAttributeValue.newInstance("0-host1", gpu.getAttributeValue());
     NodeAttributeKey gpuKey = gpu.getAttributeKey();
-    Assertions.assertTrue(attrs.get(gpuKey).contains(attributeValue1));
+    assertTrue(attrs.get(gpuKey).contains(attributeValue1));
   }
 
   @Test
@@ -1352,20 +1359,20 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetClusterNodeAttributesResponse response =
         interceptor.getClusterNodeAttributes(GetClusterNodeAttributesRequest.newInstance());
 
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
     Set<NodeAttributeInfo> nodeAttributeInfos = response.getNodeAttributes();
-    Assertions.assertNotNull(nodeAttributeInfos);
-    Assertions.assertEquals(4, nodeAttributeInfos.size());
+    assertNotNull(nodeAttributeInfos);
+    assertEquals(4, nodeAttributeInfos.size());
 
     NodeAttributeInfo nodeAttributeInfo1 =
         NodeAttributeInfo.newInstance(NodeAttributeKey.newInstance("GPU"),
         NodeAttributeType.STRING);
-    Assertions.assertTrue(nodeAttributeInfos.contains(nodeAttributeInfo1));
+    assertTrue(nodeAttributeInfos.contains(nodeAttributeInfo1));
 
     NodeAttributeInfo nodeAttributeInfo2 =
         NodeAttributeInfo.newInstance(NodeAttributeKey.newInstance("OS"),
         NodeAttributeType.STRING);
-    Assertions.assertTrue(nodeAttributeInfos.contains(nodeAttributeInfo2));
+    assertTrue(nodeAttributeInfos.contains(nodeAttributeInfo2));
   }
 
   @Test
@@ -1381,15 +1388,15 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Set<String> hostNames = Collections.singleton("0-host1");
     GetNodesToAttributesResponse response =
         interceptor.getNodesToAttributes(GetNodesToAttributesRequest.newInstance(hostNames));
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
 
     Map<String, Set<NodeAttribute>> nodeAttributeMap = response.getNodeToAttributes();
-    Assertions.assertNotNull(nodeAttributeMap);
-    Assertions.assertEquals(1, nodeAttributeMap.size());
+    assertNotNull(nodeAttributeMap);
+    assertEquals(1, nodeAttributeMap.size());
 
     NodeAttribute gpu = NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "GPU",
         NodeAttributeType.STRING, "nvida");
-    Assertions.assertTrue(nodeAttributeMap.get("0-host1").contains(gpu));
+    assertTrue(nodeAttributeMap.get("0-host1").contains(gpu));
   }
 
   @Test
@@ -1403,12 +1410,12 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // normal request
     GetNewReservationRequest request = GetNewReservationRequest.newInstance();
     GetNewReservationResponse response = interceptor.getNewReservation(request);
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
 
     ReservationId reservationId = response.getReservationId();
-    Assertions.assertNotNull(reservationId);
-    Assertions.assertTrue(reservationId.toString().contains("reservation"));
-    Assertions.assertEquals(reservationId.getClusterTimestamp(), ResourceManager.getClusterTimeStamp());
+    assertNotNull(reservationId);
+    assertTrue(reservationId.toString().contains("reservation"));
+    assertEquals(reservationId.getClusterTimestamp(), ResourceManager.getClusterTimeStamp());
   }
 
   @Test
@@ -1418,7 +1425,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // get new reservationId
     GetNewReservationRequest request = GetNewReservationRequest.newInstance();
     GetNewReservationResponse response = interceptor.getNewReservation(request);
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
 
     // Submit Reservation
     ReservationId reservationId = response.getReservationId();
@@ -1428,11 +1435,11 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     ReservationSubmissionResponse submissionResponse =
         interceptor.submitReservation(rSubmissionRequest);
-    Assertions.assertNotNull(submissionResponse);
+    assertNotNull(submissionResponse);
 
     SubClusterId subClusterId = stateStoreUtil.queryReservationHomeSC(reservationId);
-    Assertions.assertNotNull(subClusterId);
-    Assertions.assertTrue(subClusters.contains(subClusterId));
+    assertNotNull(subClusterId);
+    assertTrue(subClusters.contains(subClusterId));
   }
 
   @Test
@@ -1487,7 +1494,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // get new reservationId
     GetNewReservationRequest request = GetNewReservationRequest.newInstance();
     GetNewReservationResponse response = interceptor.getNewReservation(request);
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
 
     // First Submit Reservation
     ReservationId reservationId = response.getReservationId();
@@ -1496,21 +1503,21 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         rDefinition, "decided", reservationId);
     ReservationSubmissionResponse submissionResponse =
         interceptor.submitReservation(rSubmissionRequest);
-    Assertions.assertNotNull(submissionResponse);
+    assertNotNull(submissionResponse);
 
     SubClusterId subClusterId1 = stateStoreUtil.queryReservationHomeSC(reservationId);
-    Assertions.assertNotNull(subClusterId1);
-    Assertions.assertTrue(subClusters.contains(subClusterId1));
+    assertNotNull(subClusterId1);
+    assertTrue(subClusters.contains(subClusterId1));
 
     // First Retry, repeat the submission
     ReservationSubmissionResponse submissionResponse1 =
         interceptor.submitReservation(rSubmissionRequest);
-    Assertions.assertNotNull(submissionResponse1);
+    assertNotNull(submissionResponse1);
 
     // Expect reserved clusters to be consistent
     SubClusterId subClusterId2 = stateStoreUtil.queryReservationHomeSC(reservationId);
-    Assertions.assertNotNull(subClusterId2);
-    Assertions.assertEquals(subClusterId1, subClusterId2);
+    assertNotNull(subClusterId2);
+    assertEquals(subClusterId1, subClusterId2);
   }
 
   @Test
@@ -1520,7 +1527,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // get new reservationId
     GetNewReservationRequest request = GetNewReservationRequest.newInstance();
     GetNewReservationResponse response = interceptor.getNewReservation(request);
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
 
     // allow plan follower to synchronize, manually trigger an assignment
     Map<SubClusterId, MockRM> mockRMs = interceptor.getMockRMs();
@@ -1537,7 +1544,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     ReservationSubmissionResponse submissionResponse =
         interceptor.submitReservation(rSubmissionRequest);
-    Assertions.assertNotNull(submissionResponse);
+    assertNotNull(submissionResponse);
 
     // Update Reservation
     ReservationDefinition rDefinition2 = createReservationDefinition(2048, 1);
@@ -1545,10 +1552,10 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         ReservationUpdateRequest.newInstance(rDefinition2, reservationId);
     ReservationUpdateResponse updateResponse =
         interceptor.updateReservation(updateRequest);
-    Assertions.assertNotNull(updateResponse);
+    assertNotNull(updateResponse);
 
     SubClusterId subClusterId = stateStoreUtil.queryReservationHomeSC(reservationId);
-    Assertions.assertNotNull(subClusterId);
+    assertNotNull(subClusterId);
   }
 
   @Test
@@ -1558,7 +1565,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // get new reservationId
     GetNewReservationRequest request = GetNewReservationRequest.newInstance();
     GetNewReservationResponse response = interceptor.getNewReservation(request);
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
 
     // allow plan follower to synchronize, manually trigger an assignment
     Map<SubClusterId, MockRM> mockRMs = interceptor.getMockRMs();
@@ -1575,12 +1582,12 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     ReservationSubmissionResponse submissionResponse =
         interceptor.submitReservation(rSubmissionRequest);
-    Assertions.assertNotNull(submissionResponse);
+    assertNotNull(submissionResponse);
 
     // Delete Reservation
     ReservationDeleteRequest deleteRequest = ReservationDeleteRequest.newInstance(reservationId);
     ReservationDeleteResponse deleteResponse = interceptor.deleteReservation(deleteRequest);
-    Assertions.assertNotNull(deleteResponse);
+    assertNotNull(deleteResponse);
 
     LambdaTestUtils.intercept(YarnException.class,
         "Reservation " + reservationId + " does not exist",
@@ -1628,14 +1635,14 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // If we don't configure YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE,
     // we expect to get 5 threads
     int minThreads = interceptor.getNumMinThreads(this.getConf());
-    Assertions.assertEquals(5, minThreads);
+    assertEquals(5, minThreads);
 
     // If we configure YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE,
     // we expect to get 3 threads
     this.getConf().unset(YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE);
     this.getConf().setInt(YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE, 3);
     int minThreads2 = interceptor.getNumMinThreads(this.getConf());
-    Assertions.assertEquals(3, minThreads2);
+    assertEquals(3, minThreads2);
   }
 
   @Test
@@ -1643,14 +1650,14 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // If we don't configure YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE,
     // we expect to get 5 threads
     int minThreads = interceptor.getNumMaxThreads(this.getConf());
-    Assertions.assertEquals(5, minThreads);
+    assertEquals(5, minThreads);
 
     // If we configure YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE,
     // we expect to get 8 threads
     this.getConf().unset(YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE);
     this.getConf().setInt(YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE, 8);
     int minThreads2 = interceptor.getNumMaxThreads(this.getConf());
-    Assertions.assertEquals(8, minThreads2);
+    assertEquals(8, minThreads2);
   }
 
   @Test
@@ -1674,43 +1681,43 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetDelegationTokenRequest request = mock(GetDelegationTokenRequest.class);
     when(request.getRenewer()).thenReturn("renewer1");
     GetDelegationTokenResponse response = interceptor.getDelegationToken(request);
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
     Token delegationToken = response.getRMDelegationToken();
-    Assertions.assertNotNull(delegationToken);
-    Assertions.assertEquals("RM_DELEGATION_TOKEN", delegationToken.getKind());
+    assertNotNull(delegationToken);
+    assertEquals("RM_DELEGATION_TOKEN", delegationToken.getKind());
 
     // Step2. Serialize the returned Token as RMDelegationTokenIdentifier.
     org.apache.hadoop.security.token.Token<RMDelegationTokenIdentifier> token =
         ConverterUtils.convertFromYarn(delegationToken, (Text) null);
     RMDelegationTokenIdentifier rMDelegationTokenIdentifier = token.decodeIdentifier();
-    Assertions.assertNotNull(rMDelegationTokenIdentifier);
+    assertNotNull(rMDelegationTokenIdentifier);
 
     // Step3. Verify the returned data of the token.
     String renewer = rMDelegationTokenIdentifier.getRenewer().toString();
     long issueDate = rMDelegationTokenIdentifier.getIssueDate();
     long maxDate = rMDelegationTokenIdentifier.getMaxDate();
-    Assertions.assertEquals("renewer1", renewer);
+    assertEquals("renewer1", renewer);
 
     long tokenMaxLifetime = this.getConf().getLong(
         YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY,
         YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
-    Assertions.assertEquals(issueDate + tokenMaxLifetime, maxDate);
+    assertEquals(issueDate + tokenMaxLifetime, maxDate);
 
     RouterRMDTSecretManagerState managerState = stateStore.getRouterRMSecretManagerState();
-    Assertions.assertNotNull(managerState);
+    assertNotNull(managerState);
 
     Map<RMDelegationTokenIdentifier, RouterStoreToken> delegationTokenState =
         managerState.getTokenState();
-    Assertions.assertNotNull(delegationTokenState);
-    Assertions.assertTrue(delegationTokenState.containsKey(rMDelegationTokenIdentifier));
+    assertNotNull(delegationTokenState);
+    assertTrue(delegationTokenState.containsKey(rMDelegationTokenIdentifier));
 
     long tokenRenewInterval = this.getConf().getLong(
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
     RouterStoreToken resultRouterStoreToken = delegationTokenState.get(rMDelegationTokenIdentifier);
-    Assertions.assertNotNull(resultRouterStoreToken);
+    assertNotNull(resultRouterStoreToken);
     long renewDate = resultRouterStoreToken.getRenewDate();
-    Assertions.assertEquals(issueDate + tokenRenewInterval, renewDate);
+    assertEquals(issueDate + tokenRenewInterval, renewDate);
   }
 
   @Test
@@ -1730,7 +1737,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetDelegationTokenRequest request = mock(GetDelegationTokenRequest.class);
     when(request.getRenewer()).thenReturn("renewer2");
     GetDelegationTokenResponse response = interceptor.getDelegationToken(request);
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
     Token delegationToken = response.getRMDelegationToken();
 
     org.apache.hadoop.security.token.Token<RMDelegationTokenIdentifier> token =
@@ -1738,28 +1745,28 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     RMDelegationTokenIdentifier rMDelegationTokenIdentifier = token.decodeIdentifier();
     String renewer = rMDelegationTokenIdentifier.getRenewer().toString();
     long maxDate = rMDelegationTokenIdentifier.getMaxDate();
-    Assertions.assertEquals("renewer2", renewer);
+    assertEquals("renewer2", renewer);
 
     // Step2. Call renewDelegationToken to refresh delegationToken.
     RenewDelegationTokenRequest renewRequest = Records.newRecord(RenewDelegationTokenRequest.class);
     renewRequest.setDelegationToken(delegationToken);
     RenewDelegationTokenResponse renewResponse = interceptor.renewDelegationToken(renewRequest);
-    Assertions.assertNotNull(renewResponse);
+    assertNotNull(renewResponse);
 
     long expDate = renewResponse.getNextExpirationTime();
-    Assertions.assertTrue(expDate <= maxDate);
+    assertTrue(expDate <= maxDate);
 
     // Step3. Compare whether the expirationTime returned to
     // the client is consistent with the renewDate in the stateStore
     RouterRMDTSecretManagerState managerState = stateStore.getRouterRMSecretManagerState();
     Map<RMDelegationTokenIdentifier, RouterStoreToken> delegationTokenState =
         managerState.getTokenState();
-    Assertions.assertNotNull(delegationTokenState);
-    Assertions.assertTrue(delegationTokenState.containsKey(rMDelegationTokenIdentifier));
+    assertNotNull(delegationTokenState);
+    assertTrue(delegationTokenState.containsKey(rMDelegationTokenIdentifier));
     RouterStoreToken resultRouterStoreToken = delegationTokenState.get(rMDelegationTokenIdentifier);
-    Assertions.assertNotNull(resultRouterStoreToken);
+    assertNotNull(resultRouterStoreToken);
     long renewDate = resultRouterStoreToken.getRenewDate();
-    Assertions.assertEquals(expDate, renewDate);
+    assertEquals(expDate, renewDate);
   }
 
   @Test
@@ -1775,7 +1782,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetDelegationTokenRequest request = mock(GetDelegationTokenRequest.class);
     when(request.getRenewer()).thenReturn("renewer3");
     GetDelegationTokenResponse response = interceptor.getDelegationToken(request);
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
     Token delegationToken = response.getRMDelegationToken();
 
     // Step2. Call CancelDelegationToken to cancel delegationToken.
@@ -1783,14 +1790,14 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         CancelDelegationTokenRequest.newInstance(delegationToken);
     CancelDelegationTokenResponse cancelTokenResponse =
         interceptor.cancelDelegationToken(cancelTokenRequest);
-    Assertions.assertNotNull(cancelTokenResponse);
+    assertNotNull(cancelTokenResponse);
 
     // Step3. Query the data in the StateStore and confirm that the Delegation has been deleted.
     // At this point, the size of delegationTokenState should be 0.
     RouterRMDTSecretManagerState managerState = stateStore.getRouterRMSecretManagerState();
     Map<RMDelegationTokenIdentifier, RouterStoreToken> delegationTokenState =
         managerState.getTokenState();
-    Assertions.assertNotNull(delegationTokenState);
-    Assertions.assertEquals(0, delegationTokenState.size());
+    assertNotNull(delegationTokenState);
+    assertEquals(0, delegationTokenState.size());
   }
 }

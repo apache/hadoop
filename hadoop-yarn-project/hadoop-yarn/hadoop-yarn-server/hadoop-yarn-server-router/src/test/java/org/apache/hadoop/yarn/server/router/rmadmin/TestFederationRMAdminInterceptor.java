@@ -81,7 +81,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyCo
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
-import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,6 +102,7 @@ import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Extends the FederationRMAdminInterceptor and overrides methods to provide a
@@ -124,6 +126,7 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
   private FederationStateStoreTestUtil stateStoreUtil;
   private List<SubClusterId> subClusters;
 
+  @BeforeEach
   @Override
   public void setUp() {
 
@@ -151,7 +154,7 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
       }
     } catch (YarnException e) {
       LOG.error(e.getMessage());
-      Assertions.fail();
+      fail();
     }
 
     DefaultMetricsSystem.setMiniClusterMode(true);
@@ -177,6 +180,7 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     return config;
   }
 
+  @AfterEach
   @Override
   public void tearDown() {
     interceptor.shutdown();

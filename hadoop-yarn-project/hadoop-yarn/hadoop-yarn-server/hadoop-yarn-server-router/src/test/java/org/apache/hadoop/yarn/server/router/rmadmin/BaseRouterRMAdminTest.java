@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.router.rmadmin;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
@@ -58,7 +60,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResp
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 
 /**
@@ -82,7 +83,7 @@ public abstract class BaseRouterRMAdminTest {
   public final static int TEST_MAX_CACHE_SIZE = 10;
 
   protected MockRouterRMAdminService getRouterRMAdminService() {
-    Assertions.assertNotNull(this.rmAdminService);
+    assertNotNull(this.rmAdminService);
     return this.rmAdminService;
   }
 

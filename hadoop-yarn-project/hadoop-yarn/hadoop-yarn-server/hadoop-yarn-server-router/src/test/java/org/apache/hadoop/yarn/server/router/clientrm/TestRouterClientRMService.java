@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
@@ -38,7 +44,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService.RequestInterceptorChainWrapper;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,20 +75,20 @@ public class TestRouterClientRMService extends BaseRouterClientRMTest {
       case 1: // Fall to the next case
       case 2:
         // If index is equal to 0,1 or 2 we fall in this check
-        Assertions.assertEquals(PassThroughClientRequestInterceptor.class.getName(),
+        assertEquals(PassThroughClientRequestInterceptor.class.getName(),
             root.getClass().getName());
         break;
       case 3:
-        Assertions.assertEquals(MockClientRequestInterceptor.class.getName(),
+        assertEquals(MockClientRequestInterceptor.class.getName(),
             root.getClass().getName());
         break;
       default:
-        Assertions.fail();
+        fail();
       }
       root = root.getNextInterceptor();
       index++;
     }
-    Assertions.assertEquals(4
+    assertEquals(4
 ,         index, "The number of interceptors in chain does not match");
   }
 
@@ -99,46 +104,46 @@ public class TestRouterClientRMService extends BaseRouterClientRMTest {
     LOG.info("testRouterClientRMServiceE2E - Get New Application");
 
     GetNewApplicationResponse responseGetNewApp = getNewApplication(user);
-    Assertions.assertNotNull(responseGetNewApp);
+    assertNotNull(responseGetNewApp);
 
     LOG.info("testRouterClientRMServiceE2E - Submit Application");
 
     SubmitApplicationResponse responseSubmitApp =
         submitApplication(responseGetNewApp.getApplicationId(), user);
-    Assertions.assertNotNull(responseSubmitApp);
+    assertNotNull(responseSubmitApp);
 
     LOG.info("testRouterClientRMServiceE2E - Get Cluster Metrics");
 
     GetClusterMetricsResponse responseGetClusterMetrics =
         getClusterMetrics(user);
-    Assertions.assertNotNull(responseGetClusterMetrics);
+    assertNotNull(responseGetClusterMetrics);
 
     LOG.info("testRouterClientRMServiceE2E - Get Cluster Nodes");
 
     GetClusterNodesResponse responseGetClusterNodes = getClusterNodes(user);
-    Assertions.assertNotNull(responseGetClusterNodes);
+    assertNotNull(responseGetClusterNodes);
 
     LOG.info("testRouterClientRMServiceE2E - Get Queue Info");
 
     GetQueueInfoResponse responseGetQueueInfo = getQueueInfo(user);
-    Assertions.assertNotNull(responseGetQueueInfo);
+    assertNotNull(responseGetQueueInfo);
 
     LOG.info("testRouterClientRMServiceE2E - Get Queue User");
 
     GetQueueUserAclsInfoResponse responseGetQueueUser = getQueueUserAcls(user);
-    Assertions.assertNotNull(responseGetQueueUser);
+    assertNotNull(responseGetQueueUser);
 
     LOG.info("testRouterClientRMServiceE2E - Get Cluster Node");
 
     GetClusterNodeLabelsResponse responseGetClusterNode =
         getClusterNodeLabels(user);
-    Assertions.assertNotNull(responseGetClusterNode);
+    assertNotNull(responseGetClusterNode);
 
     LOG.info("testRouterClientRMServiceE2E - Move Application Across Queues");
 
     MoveApplicationAcrossQueuesResponse responseMoveApp =
         moveApplicationAcrossQueues(user, responseGetNewApp.getApplicationId());
-    Assertions.assertNotNull(responseMoveApp);
+    assertNotNull(responseMoveApp);
 
     LOG.info("testRouterClientRMServiceE2E - Get New Reservation");
 
@@ -149,25 +154,25 @@ public class TestRouterClientRMService extends BaseRouterClientRMTest {
 
     ReservationSubmissionResponse responseSubmitReser =
         submitReservation(user, getNewReservationResponse.getReservationId());
-    Assertions.assertNotNull(responseSubmitReser);
+    assertNotNull(responseSubmitReser);
 
     LOG.info("testRouterClientRMServiceE2E - Update Reservation");
 
     ReservationUpdateResponse responseUpdateReser =
         updateReservation(user, getNewReservationResponse.getReservationId());
-    Assertions.assertNotNull(responseUpdateReser);
+    assertNotNull(responseUpdateReser);
 
     LOG.info("testRouterClientRMServiceE2E - Delete Reservation");
 
     ReservationDeleteResponse responseDeleteReser =
         deleteReservation(user, getNewReservationResponse.getReservationId());
-    Assertions.assertNotNull(responseDeleteReser);
+    assertNotNull(responseDeleteReser);
 
     LOG.info("testRouterClientRMServiceE2E - Kill Application");
 
     KillApplicationResponse responseKillApp =
         forceKillApplication(responseGetNewApp.getApplicationId(), user);
-    Assertions.assertNotNull(responseKillApp);
+    assertNotNull(responseKillApp);
   }
 
   /**
@@ -191,7 +196,7 @@ public class TestRouterClientRMService extends BaseRouterClientRMTest {
     getNewApplication("test8");
 
     pipelines = super.getRouterClientRMService().getPipelines();
-    Assertions.assertEquals(8, pipelines.size());
+    assertEquals(8, pipelines.size());
 
     getNewApplication("test9");
     getNewApplication("test10");
@@ -200,13 +205,13 @@ public class TestRouterClientRMService extends BaseRouterClientRMTest {
 
     // The cache max size is defined in
     // BaseRouterClientRMTest.TEST_MAX_CACHE_SIZE
-    Assertions.assertEquals(10, pipelines.size());
+    assertEquals(10, pipelines.size());
 
     chain = pipelines.get("test1");
-    Assertions.assertNotNull(chain, "test1 should not be evicted");
+    assertNotNull(chain, "test1 should not be evicted");
 
     chain = pipelines.get("test2");
-    Assertions.assertNull(chain, "test2 should have been evicted");
+    assertNull(chain, "test2 should have been evicted");
   }
 
   /**
@@ -241,7 +246,7 @@ public class TestRouterClientRMService extends BaseRouterClientRMTest {
                     getRouterClientRMService().getInterceptorChain();
                 ClientRequestInterceptor interceptor =
                     wrapper.getRootInterceptor();
-                Assertions.assertNotNull(interceptor);
+                assertNotNull(interceptor);
                 LOG.info("init client interceptor success for user " + user);
                 return interceptor;
               }
@@ -262,9 +267,9 @@ public class TestRouterClientRMService extends BaseRouterClientRMTest {
     client1.join();
     client2.join();
 
-    Assertions.assertNotNull(client1.interceptor);
-    Assertions.assertNotNull(client2.interceptor);
-    Assertions.assertTrue(client1.interceptor == client2.interceptor);
+    assertNotNull(client1.interceptor);
+    assertNotNull(client2.interceptor);
+    assertTrue(client1.interceptor == client2.interceptor);
   }
 
 }

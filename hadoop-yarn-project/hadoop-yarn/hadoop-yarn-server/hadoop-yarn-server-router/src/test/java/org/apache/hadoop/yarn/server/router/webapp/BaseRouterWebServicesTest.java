@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -60,7 +61,6 @@ import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 
@@ -137,7 +137,7 @@ public abstract class BaseRouterWebServicesTest {
   }
 
   protected RouterWebServices getRouterWebServices() {
-    Assertions.assertNotNull(this.routerWebService);
+    assertNotNull(this.routerWebService);
     return this.routerWebService;
   }
 

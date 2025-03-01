@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -63,7 +68,6 @@ import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
 import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -80,14 +84,14 @@ public class TestRouterYarnClientUtils {
     responses.add(getClusterMetricsResponse(2));
     GetClusterMetricsResponse result = RouterYarnClientUtils.merge(responses);
     YarnClusterMetrics resultMetrics = result.getClusterMetrics();
-    Assertions.assertEquals(3, resultMetrics.getNumNodeManagers());
-    Assertions.assertEquals(3, resultMetrics.getNumActiveNodeManagers());
-    Assertions.assertEquals(3, resultMetrics.getNumDecommissioningNodeManagers());
-    Assertions.assertEquals(3, resultMetrics.getNumDecommissionedNodeManagers());
-    Assertions.assertEquals(3, resultMetrics.getNumLostNodeManagers());
-    Assertions.assertEquals(3, resultMetrics.getNumRebootedNodeManagers());
-    Assertions.assertEquals(3, resultMetrics.getNumUnhealthyNodeManagers());
-    Assertions.assertEquals(3, resultMetrics.getNumShutdownNodeManagers());
+    assertEquals(3, resultMetrics.getNumNodeManagers());
+    assertEquals(3, resultMetrics.getNumActiveNodeManagers());
+    assertEquals(3, resultMetrics.getNumDecommissioningNodeManagers());
+    assertEquals(3, resultMetrics.getNumDecommissionedNodeManagers());
+    assertEquals(3, resultMetrics.getNumLostNodeManagers());
+    assertEquals(3, resultMetrics.getNumRebootedNodeManagers());
+    assertEquals(3, resultMetrics.getNumUnhealthyNodeManagers());
+    assertEquals(3, resultMetrics.getNumShutdownNodeManagers());
   }
 
   public GetClusterMetricsResponse getClusterMetricsResponse(int value) {
@@ -114,16 +118,16 @@ public class TestRouterYarnClientUtils {
     responses.add(getApplicationsResponse(2, false));
     GetApplicationsResponse result = RouterYarnClientUtils.
         mergeApplications(responses, false);
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(2, result.getApplicationList().size());
+    assertNotNull(result);
+    assertEquals(2, result.getApplicationList().size());
 
     String appName1 = result.getApplicationList().get(0).getName();
     String appName2 = result.getApplicationList().get(1).getName();
 
     // Check that no Unmanaged applications are added to the result
-    Assertions.assertEquals(false,
+    assertEquals(false,
         appName1.contains(UnmanagedApplicationManager.APP_NAME));
-    Assertions.assertEquals(false,
+    assertEquals(false,
         appName2.contains(UnmanagedApplicationManager.APP_NAME));
   }
 
@@ -139,24 +143,24 @@ public class TestRouterYarnClientUtils {
     // Check response if partial results are enabled
     GetApplicationsResponse result = RouterYarnClientUtils.
         mergeApplications(responses, true);
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(1, result.getApplicationList().size());
+    assertNotNull(result);
+    assertEquals(1, result.getApplicationList().size());
     ApplicationReport appReport = result.getApplicationList().iterator().next();
     String appName = appReport.getName();
-    Assertions.assertTrue(appName.startsWith(PARTIAL_REPORT));
+    assertTrue(appName.startsWith(PARTIAL_REPORT));
 
     // Check ApplicationResourceUsageReport merge
     ApplicationResourceUsageReport resourceUsageReport =
         appReport.getApplicationResourceUsageReport();
 
-    Assertions.assertEquals(2, resourceUsageReport.getNumUsedContainers());
-    Assertions.assertEquals(4, resourceUsageReport.getNumReservedContainers());
+    assertEquals(2, resourceUsageReport.getNumUsedContainers());
+    assertEquals(4, resourceUsageReport.getNumReservedContainers());
 
     // Check response if partial results are disabled
     result = RouterYarnClientUtils.
         mergeApplications(responses, false);
-    Assertions.assertNotNull(result);
-    Assertions.assertTrue(result.getApplicationList().isEmpty());
+    assertNotNull(result);
+    assertTrue(result.getApplicationList().isEmpty());
   }
 
   /**
@@ -192,13 +196,13 @@ public class TestRouterYarnClientUtils {
 
     GetApplicationsResponse result = RouterYarnClientUtils.
         mergeApplications(responses, false);
-    Assertions.assertNotNull(result);
-    Assertions.assertEquals(1, result.getApplicationList().size());
+    assertNotNull(result);
+    assertEquals(1, result.getApplicationList().size());
 
     String appName = result.getApplicationList().get(0).getName();
 
     // Check that no Unmanaged applications are added to the result
-    Assertions.assertFalse(appName.contains(UnmanagedApplicationManager.APP_NAME));
+    assertFalse(appName.contains(UnmanagedApplicationManager.APP_NAME));
   }
 
   /**
@@ -286,7 +290,7 @@ public class TestRouterYarnClientUtils {
 
     GetNodesToLabelsResponse response = RouterYarnClientUtils.
         mergeNodesToLabelsResponse(responses);
-    Assertions.assertEquals(expectedResponse, response.getNodeToLabels());
+    assertEquals(expectedResponse, response.getNodeToLabels());
   }
 
   @Test
@@ -327,7 +331,7 @@ public class TestRouterYarnClientUtils {
 
     GetClusterNodeLabelsResponse response = RouterYarnClientUtils.
         mergeClusterNodeLabelsResponse(responses);
-    Assertions.assertTrue(CollectionUtils.isEqualCollection(expectedResponse,
+    assertTrue(CollectionUtils.isEqualCollection(expectedResponse,
         response.getNodeLabelList()));
   }
 
@@ -388,7 +392,7 @@ public class TestRouterYarnClientUtils {
     GetLabelsToNodesResponse response = RouterYarnClientUtils.
         mergeLabelsToNodes(responses);
 
-    Assertions.assertEquals(expectedResponse, response.getLabelsToNodes());
+    assertEquals(expectedResponse, response.getLabelsToNodes());
   }
 
   @Test
@@ -453,7 +457,7 @@ public class TestRouterYarnClientUtils {
 
     GetQueueUserAclsInfoResponse response =
         RouterYarnClientUtils.mergeQueueUserAcls(responses);
-    Assertions.assertTrue(CollectionUtils.isEqualCollection(expectedOutput,
+    assertTrue(CollectionUtils.isEqualCollection(expectedOutput,
         response.getUserAclsInfoList()));
   }
 
@@ -486,7 +490,7 @@ public class TestRouterYarnClientUtils {
 
     ReservationListResponse response =
         RouterYarnClientUtils.mergeReservationsList(responses);
-    Assertions.assertEquals(expectedResponse, response.getReservationAllocationState());
+    assertEquals(expectedResponse, response.getReservationAllocationState());
   }
 
   private ReservationListResponse createReservationListResponse(long startTime,
@@ -550,7 +554,7 @@ public class TestRouterYarnClientUtils {
     expectedResponse.add(resourceTypeInfo3);
     GetAllResourceTypeInfoResponse response =
         RouterYarnClientUtils.mergeResourceTypes(responses);
-    Assertions.assertTrue(CollectionUtils.isEqualCollection(expectedResponse,
+    assertTrue(CollectionUtils.isEqualCollection(expectedResponse,
         response.getResourceTypeInfo()));
   }
 
@@ -585,8 +589,8 @@ public class TestRouterYarnClientUtils {
     GetAllResourceProfilesResponse response =
         RouterYarnClientUtils.mergeClusterResourceProfilesResponse(responses);
     Resource resource = response.getResourceProfiles().get("maximum");
-    Assertions.assertEquals(3, resource.getVirtualCores());
-    Assertions.assertEquals(3072, resource.getMemorySize());
+    assertEquals(3, resource.getVirtualCores());
+    assertEquals(3072, resource.getMemorySize());
   }
 
   @Test
@@ -619,8 +623,8 @@ public class TestRouterYarnClientUtils {
     GetResourceProfileResponse response =
         RouterYarnClientUtils.mergeClusterResourceProfileResponse(responses);
     Resource resource = response.getResource();
-    Assertions.assertEquals(3, resource.getVirtualCores());
-    Assertions.assertEquals(3072, resource.getMemorySize());
+    assertEquals(3, resource.getVirtualCores());
+    assertEquals(3072, resource.getMemorySize());
   }
 
   @Test
@@ -663,16 +667,16 @@ public class TestRouterYarnClientUtils {
     GetAttributesToNodesResponse response =
         RouterYarnClientUtils.mergeAttributesToNodesResponse(responses);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertEquals(2, response.getAttributesToNodes().size());
+    assertNotNull(response);
+    assertEquals(2, response.getAttributesToNodes().size());
 
     Map<NodeAttributeKey, List<NodeToAttributeValue>> attrs = response.getAttributesToNodes();
 
     NodeAttributeKey gpuKey = gpu.getAttributeKey();
-    Assertions.assertEquals(attributeValue1.toString(), attrs.get(gpuKey).get(0).toString());
+    assertEquals(attributeValue1.toString(), attrs.get(gpuKey).get(0).toString());
 
     NodeAttributeKey dockerKey = docker.getAttributeKey();
-    Assertions.assertEquals(attributeValue2.toString(), attrs.get(dockerKey).get(0).toString());
+    assertEquals(attributeValue2.toString(), attrs.get(dockerKey).get(0).toString());
   }
 
   @Test
@@ -711,12 +715,12 @@ public class TestRouterYarnClientUtils {
     GetClusterNodeAttributesResponse response =
         RouterYarnClientUtils.mergeClusterNodeAttributesResponse(responses);
 
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
 
     Set<NodeAttributeInfo> nodeAttributeInfos = response.getNodeAttributes();
-    Assertions.assertEquals(2, nodeAttributeInfos.size());
-    Assertions.assertTrue(nodeAttributeInfos.contains(nodeAttributeInfo1));
-    Assertions.assertTrue(nodeAttributeInfos.contains(nodeAttributeInfo2));
+    assertEquals(2, nodeAttributeInfos.size());
+    assertTrue(nodeAttributeInfos.contains(nodeAttributeInfo1));
+    assertTrue(nodeAttributeInfos.contains(nodeAttributeInfo2));
   }
 
   @Test
@@ -755,14 +759,14 @@ public class TestRouterYarnClientUtils {
     GetNodesToAttributesResponse response =
         RouterYarnClientUtils.mergeNodesToAttributesResponse(responses);
 
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
 
     Map<String, Set<NodeAttribute>> hostToAttrs = response.getNodeToAttributes();
-    Assertions.assertNotNull(hostToAttrs);
-    Assertions.assertEquals(2, hostToAttrs.size());
-    Assertions.assertTrue(hostToAttrs.get("node1").contains(dist));
-    Assertions.assertTrue(hostToAttrs.get("node1").contains(gpu));
-    Assertions.assertTrue(hostToAttrs.get("node1").contains(os));
-    Assertions.assertTrue(hostToAttrs.get("node2").contains(docker));
+    assertNotNull(hostToAttrs);
+    assertEquals(2, hostToAttrs.size());
+    assertTrue(hostToAttrs.get("node1").contains(dist));
+    assertTrue(hostToAttrs.get("node1").contains(gpu));
+    assertTrue(hostToAttrs.get("node1").contains(os));
+    assertTrue(hostToAttrs.get("node2").contains(docker));
   }
 }

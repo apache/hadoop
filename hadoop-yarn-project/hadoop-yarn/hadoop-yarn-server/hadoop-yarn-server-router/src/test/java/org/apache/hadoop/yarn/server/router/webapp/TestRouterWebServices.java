@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
@@ -49,7 +55,6 @@ import org.apache.hadoop.yarn.server.router.webapp.RouterWebServices.RequestInte
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,140 +77,140 @@ public class TestRouterWebServices extends BaseRouterWebServicesTest {
   public void testRouterWebServicesE2E() throws Exception {
 
     ClusterInfo clusterInfo = get(user);
-    Assertions.assertNotNull(clusterInfo);
+    assertNotNull(clusterInfo);
 
     ClusterInfo clusterInfo2 = getClusterInfo(user);
-    Assertions.assertNotNull(clusterInfo2);
+    assertNotNull(clusterInfo2);
 
     ClusterMetricsInfo clusterMetricsInfo = getClusterMetricsInfo(user);
-    Assertions.assertNotNull(clusterMetricsInfo);
+    assertNotNull(clusterMetricsInfo);
 
     SchedulerTypeInfo schedulerTypeInfo = getSchedulerInfo(user);
-    Assertions.assertNotNull(schedulerTypeInfo);
+    assertNotNull(schedulerTypeInfo);
 
     String dumpResult = dumpSchedulerLogs(user);
-    Assertions.assertNotNull(dumpResult);
+    assertNotNull(dumpResult);
 
     NodesInfo nodesInfo = getNodes(user);
-    Assertions.assertNotNull(nodesInfo);
+    assertNotNull(nodesInfo);
 
     NodeInfo nodeInfo = getNode(user);
-    Assertions.assertNotNull(nodeInfo);
+    assertNotNull(nodeInfo);
 
     AppsInfo appsInfo = getApps(user);
-    Assertions.assertNotNull(appsInfo);
+    assertNotNull(appsInfo);
 
     ActivitiesInfo activitiesInfo = getActivities(user);
-    Assertions.assertNotNull(activitiesInfo);
+    assertNotNull(activitiesInfo);
 
     AppActivitiesInfo appActiviesInfo = getAppActivities(user);
-    Assertions.assertNotNull(appActiviesInfo);
+    assertNotNull(appActiviesInfo);
 
     ApplicationStatisticsInfo applicationStatisticsInfo =
         getAppStatistics(user);
-    Assertions.assertNotNull(applicationStatisticsInfo);
+    assertNotNull(applicationStatisticsInfo);
 
     AppInfo appInfo = getApp(user);
-    Assertions.assertNotNull(appInfo);
+    assertNotNull(appInfo);
 
     AppState appState = getAppState(user);
-    Assertions.assertNotNull(appState);
+    assertNotNull(appState);
 
     Response response = updateAppState(user);
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
 
     NodeToLabelsInfo nodeToLabelsInfo = getNodeToLabels(user);
-    Assertions.assertNotNull(nodeToLabelsInfo);
+    assertNotNull(nodeToLabelsInfo);
 
     LabelsToNodesInfo labelsToNodesInfo = getLabelsToNodes(user);
-    Assertions.assertNotNull(labelsToNodesInfo);
+    assertNotNull(labelsToNodesInfo);
 
     Response response2 = replaceLabelsOnNodes(user);
-    Assertions.assertNotNull(response2);
+    assertNotNull(response2);
 
     Response response3 = replaceLabelsOnNode(user);
-    Assertions.assertNotNull(response3);
+    assertNotNull(response3);
 
     NodeLabelsInfo nodeLabelsInfo = getClusterNodeLabels(user);
-    Assertions.assertNotNull(nodeLabelsInfo);
+    assertNotNull(nodeLabelsInfo);
 
     Response response4 = addToClusterNodeLabels(user);
-    Assertions.assertNotNull(response4);
+    assertNotNull(response4);
 
     Response response5 = removeFromClusterNodeLabels(user);
-    Assertions.assertNotNull(response5);
+    assertNotNull(response5);
 
     NodeLabelsInfo nodeLabelsInfo2 = getLabelsOnNode(user);
-    Assertions.assertNotNull(nodeLabelsInfo2);
+    assertNotNull(nodeLabelsInfo2);
 
     AppPriority appPriority = getAppPriority(user);
-    Assertions.assertNotNull(appPriority);
+    assertNotNull(appPriority);
 
     Response response6 = updateApplicationPriority(user);
-    Assertions.assertNotNull(response6);
+    assertNotNull(response6);
 
     AppQueue appQueue = getAppQueue(user);
-    Assertions.assertNotNull(appQueue);
+    assertNotNull(appQueue);
 
     Response response7 = updateAppQueue(user);
-    Assertions.assertNotNull(response7);
+    assertNotNull(response7);
 
     Response response8 = createNewApplication(user);
-    Assertions.assertNotNull(response8);
+    assertNotNull(response8);
 
     Response response9 = submitApplication(user);
-    Assertions.assertNotNull(response9);
+    assertNotNull(response9);
 
     Response response10 = postDelegationToken(user);
-    Assertions.assertNotNull(response10);
+    assertNotNull(response10);
 
     Response response11 = postDelegationTokenExpiration(user);
-    Assertions.assertNotNull(response11);
+    assertNotNull(response11);
 
     Response response12 = cancelDelegationToken(user);
-    Assertions.assertNotNull(response12);
+    assertNotNull(response12);
 
     Response response13 = createNewReservation(user);
-    Assertions.assertNotNull(response13);
+    assertNotNull(response13);
 
     Response response14 = submitReservation(user);
-    Assertions.assertNotNull(response14);
+    assertNotNull(response14);
 
     Response response15 = updateReservation(user);
-    Assertions.assertNotNull(response15);
+    assertNotNull(response15);
 
     Response response16 = deleteReservation(user);
-    Assertions.assertNotNull(response16);
+    assertNotNull(response16);
 
     Response response17 = listReservation(user);
-    Assertions.assertNotNull(response17);
+    assertNotNull(response17);
 
     AppTimeoutInfo appTimeoutInfo = getAppTimeout(user);
-    Assertions.assertNotNull(appTimeoutInfo);
+    assertNotNull(appTimeoutInfo);
 
     AppTimeoutsInfo appTimeoutsInfo = getAppTimeouts(user);
-    Assertions.assertNotNull(appTimeoutsInfo);
+    assertNotNull(appTimeoutsInfo);
 
     Response response18 = updateApplicationTimeout(user);
-    Assertions.assertNotNull(response18);
+    assertNotNull(response18);
 
     AppAttemptsInfo appAttemptsInfo = getAppAttempts(user);
-    Assertions.assertNotNull(appAttemptsInfo);
+    assertNotNull(appAttemptsInfo);
 
     AppAttemptInfo appAttemptInfo = getAppAttempt(user);
-    Assertions.assertNotNull(appAttemptInfo);
+    assertNotNull(appAttemptInfo);
 
     ContainersInfo containersInfo = getContainers(user);
-    Assertions.assertNotNull(containersInfo);
+    assertNotNull(containersInfo);
 
     ContainerInfo containerInfo = getContainer(user);
-    Assertions.assertNotNull(containerInfo);
+    assertNotNull(containerInfo);
 
     Response response19 = updateSchedulerConfiguration(user);
-    Assertions.assertNotNull(response19);
+    assertNotNull(response19);
 
     Response response20 = getSchedulerConfiguration(user);
-    Assertions.assertNotNull(response20);
+    assertNotNull(response20);
   }
 
   /**
@@ -227,21 +232,20 @@ public class TestRouterWebServices extends BaseRouterWebServicesTest {
       case 1: // Fall to the next case
       case 2:
         // If index is equal to 0,1 or 2 we fall in this check
-        Assertions.assertEquals(PassThroughRESTRequestInterceptor.class.getName(),
+        assertEquals(PassThroughRESTRequestInterceptor.class.getName(),
             root.getClass().getName());
         break;
       case 3:
-        Assertions.assertEquals(MockRESTRequestInterceptor.class.getName(),
+        assertEquals(MockRESTRequestInterceptor.class.getName(),
             root.getClass().getName());
         break;
       default:
-        Assertions.fail();
+        fail();
       }
       root = root.getNextInterceptor();
       index++;
     }
-    Assertions.assertEquals(4
-,         index, "The number of interceptors in chain does not match");
+    assertEquals(4, index, "The number of interceptors in chain does not match");
   }
 
   /**
@@ -262,7 +266,7 @@ public class TestRouterWebServices extends BaseRouterWebServicesTest {
 
     Map<String, RequestInterceptorChainWrapper> pipelines =
         getRouterWebServices().getPipelines();
-    Assertions.assertEquals(8, pipelines.size());
+    assertEquals(8, pipelines.size());
 
     getInterceptorChain("test9");
     getInterceptorChain("test10");
@@ -270,13 +274,13 @@ public class TestRouterWebServices extends BaseRouterWebServicesTest {
     getInterceptorChain("test11");
 
     // The cache max size is defined in TEST_MAX_CACHE_SIZE
-    Assertions.assertEquals(10, pipelines.size());
+    assertEquals(10, pipelines.size());
 
     RequestInterceptorChainWrapper chain = pipelines.get("test1");
-    Assertions.assertNotNull(chain, "test1 should not be evicted");
+    assertNotNull(chain, "test1 should not be evicted");
 
     chain = pipelines.get("test2");
-    Assertions.assertNull(chain, "test2 should have been evicted");
+    assertNull(chain, "test2 should have been evicted");
   }
 
   /**
@@ -311,7 +315,7 @@ public class TestRouterWebServices extends BaseRouterWebServicesTest {
                     getInterceptorChain(user);
                 RESTRequestInterceptor interceptor =
                     wrapper.getRootInterceptor();
-                Assertions.assertNotNull(interceptor);
+                assertNotNull(interceptor);
                 LOG.info("init web interceptor success for user" + user);
                 return interceptor;
               }
@@ -332,9 +336,9 @@ public class TestRouterWebServices extends BaseRouterWebServicesTest {
     client1.join();
     client2.join();
 
-    Assertions.assertNotNull(client1.interceptor);
-    Assertions.assertNotNull(client2.interceptor);
-    Assertions.assertSame(client1.interceptor, client2.interceptor);
+    assertNotNull(client1.interceptor);
+    assertNotNull(client2.interceptor);
+    assertSame(client1.interceptor, client2.interceptor);
   }
 
 }

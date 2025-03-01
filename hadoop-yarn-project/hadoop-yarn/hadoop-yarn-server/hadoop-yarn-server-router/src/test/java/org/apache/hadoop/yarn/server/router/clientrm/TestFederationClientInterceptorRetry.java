@@ -19,7 +19,10 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.FEDERATION_POLICY_MANAGER;
-import static org.hamcrest.CoreMatchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -52,8 +55,6 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.jupiter.api.Assertions;
-import org.junit.Assume;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -151,7 +152,7 @@ public class TestFederationClientInterceptorRetry
       }
     } catch (YarnException e) {
       LOG.error(e.getMessage());
-      Assertions.fail();
+      fail();
     }
   }
 
@@ -221,8 +222,8 @@ public class TestFederationClientInterceptorRetry
     GetNewApplicationRequest request = GetNewApplicationRequest.newInstance();
     GetNewApplicationResponse response = interceptor.getNewApplication(request);
 
-    Assertions.assertNotNull(response);
-    Assertions.assertEquals(ResourceManager.getClusterTimeStamp(),
+    assertNotNull(response);
+    assertEquals(ResourceManager.getClusterTimeStamp(),
         response.getApplicationId().getClusterTimestamp());
   }
 
@@ -289,19 +290,19 @@ public class TestFederationClientInterceptorRetry
 
     final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
     SubmitApplicationResponse response = interceptor.submitApplication(request);
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
 
     GetApplicationHomeSubClusterRequest getAppRequest =
         GetApplicationHomeSubClusterRequest.newInstance(appId);
     GetApplicationHomeSubClusterResponse getAppResponse =
         stateStore.getApplicationHomeSubCluster(getAppRequest);
-    Assertions.assertNotNull(getAppResponse);
+    assertNotNull(getAppResponse);
 
     ApplicationHomeSubCluster responseHomeSubCluster =
         getAppResponse.getApplicationHomeSubCluster();
-    Assertions.assertNotNull(responseHomeSubCluster);
+    assertNotNull(responseHomeSubCluster);
     SubClusterId respSubClusterId = responseHomeSubCluster.getHomeSubCluster();
-    Assertions.assertEquals(good, respSubClusterId);
+    assertEquals(good, respSubClusterId);
   }
 
   @Test
@@ -310,8 +311,8 @@ public class TestFederationClientInterceptorRetry
     LOG.info("Test submitApplication with two bad, one good SC.");
 
     // This test must require the TestSequentialRouterPolicy policy
-    Assume.assumeThat(routerPolicyManagerName,
-        is(TestSequentialBroadcastPolicyManager.class.getName()));
+    assertThat(routerPolicyManagerName).
+        isEqualTo(TestSequentialBroadcastPolicyManager.class.getName());
 
     setupCluster(Arrays.asList(bad1, bad2, good));
     final ApplicationId appId =
@@ -335,7 +336,7 @@ public class TestFederationClientInterceptorRetry
     // 1st time will use bad2, 2nd time will use bad1, 3rd good
     interceptor.setNumSubmitRetries(2);
     SubmitApplicationResponse submitAppResponse = interceptor.submitApplication(request);
-    Assertions.assertNotNull(submitAppResponse);
+    assertNotNull(submitAppResponse);
 
     // We will get good
     checkSubmitSubCluster(appId, good);
@@ -347,13 +348,13 @@ public class TestFederationClientInterceptorRetry
         GetApplicationHomeSubClusterRequest.newInstance(appId);
     GetApplicationHomeSubClusterResponse getAppResponse =
         stateStore.getApplicationHomeSubCluster(getAppRequest);
-    Assertions.assertNotNull(getAppResponse);
-    Assertions.assertNotNull(getAppResponse);
+    assertNotNull(getAppResponse);
+    assertNotNull(getAppResponse);
     ApplicationHomeSubCluster responseHomeSubCluster =
         getAppResponse.getApplicationHomeSubCluster();
-    Assertions.assertNotNull(responseHomeSubCluster);
+    assertNotNull(responseHomeSubCluster);
     SubClusterId respSubClusterId = responseHomeSubCluster.getHomeSubCluster();
-    Assertions.assertEquals(expectSubCluster, respSubClusterId);
+    assertEquals(expectSubCluster, respSubClusterId);
   }
 
   @Test
@@ -419,7 +420,7 @@ public class TestFederationClientInterceptorRetry
     GetClusterMetricsRequest request = GetClusterMetricsRequest.newInstance();
 
     GetClusterMetricsResponse clusterMetrics = interceptor.getClusterMetrics(request);
-    Assertions.assertNotNull(clusterMetrics);
+    assertNotNull(clusterMetrics);
 
     // If partial results are not allowed to be returned, an exception will be thrown.
     interceptor.setAllowPartialResult(false);

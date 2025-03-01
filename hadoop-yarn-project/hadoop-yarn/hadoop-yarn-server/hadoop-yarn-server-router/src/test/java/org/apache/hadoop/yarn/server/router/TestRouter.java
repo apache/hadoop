@@ -34,7 +34,6 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.webapp.WebAppContext;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -107,7 +106,7 @@ public class TestRouter {
     for (Class<?> protocolClass : manager.getProtocolsWithAcls()) {
       AccessControlList accessList = manager.getProtocolsAcls(protocolClass);
       if (protocolClass == protocol) {
-        Assertions.assertEquals(accessList.getAclString(), aclString);
+        assertEquals(accessList.getAclString(), aclString);
       }
     }
   }
@@ -164,9 +163,9 @@ public class TestRouter {
 
     // Why is 5, because when Filter passes,
     // CrossOriginFilter will set 5 values to Map
-    Assertions.assertEquals(5, mockRes.getHeaders().size());
+    assertEquals(5, mockRes.getHeaders().size());
     String allowResult = mockRes.getHeader("Access-Control-Allow-Credentials");
-    Assertions.assertEquals("true", allowResult);
+    assertEquals("true", allowResult);
 
     // 2. Simulate [example.org] for access
     HttpServletRequest mockReq2 = Mockito.mock(HttpServletRequest.class);
@@ -184,7 +183,7 @@ public class TestRouter {
 
     // Why is 0, because when the Filter fails,
     // CrossOriginFilter will not set any value
-    Assertions.assertEquals(0, mockRes2.getHeaders().size());
+    assertEquals(0, mockRes2.getHeaders().size());
 
     router.stop();
   }
