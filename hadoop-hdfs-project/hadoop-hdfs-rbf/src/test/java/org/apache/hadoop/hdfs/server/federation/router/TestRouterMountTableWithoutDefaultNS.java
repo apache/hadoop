@@ -57,12 +57,13 @@ import static org.junit.Assert.fail;
  * Test a router end-to-end including the MountTable without default nameservice.
  */
 public class TestRouterMountTableWithoutDefaultNS {
-  private static StateStoreDFSCluster cluster;
-  private static RouterContext routerContext;
-  private static MountTableResolver mountTable;
-  private static ClientProtocol routerProtocol;
-  private static FileSystem nnFs0;
-  private static FileSystem nnFs1;
+  protected static StateStoreDFSCluster cluster;
+  protected static RouterContext routerContext;
+  protected static MountTableResolver mountTable;
+  protected static ClientProtocol routerProtocol;
+  protected static FileSystem routerFs;
+  protected static FileSystem nnFs0;
+  protected static FileSystem nnFs1;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
@@ -84,6 +85,7 @@ public class TestRouterMountTableWithoutDefaultNS {
     nnFs0 = cluster.getNamenode("ns0", null).getFileSystem();
     nnFs1 = cluster.getNamenode("ns1", null).getFileSystem();
     routerContext = cluster.getRandomRouter();
+    routerFs = routerContext.getFileSystem();
     Router router = routerContext.getRouter();
     routerProtocol = routerContext.getClient().getNamenode();
     mountTable = (MountTableResolver) router.getSubclusterResolver();
@@ -117,7 +119,7 @@ public class TestRouterMountTableWithoutDefaultNS {
    * @return If it was succesfully added.
    * @throws IOException Problems adding entries.
    */
-  private boolean addMountTable(final MountTable entry) throws IOException {
+  protected boolean addMountTable(final MountTable entry) throws IOException {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTableManager = client.getMountTableManager();
     AddMountTableEntryRequest addRequest = AddMountTableEntryRequest.newInstance(entry);
@@ -258,7 +260,7 @@ public class TestRouterMountTableWithoutDefaultNS {
     }
   }
 
-  void writeData(FileSystem fs, Path path, int fileLength) throws IOException {
+  protected void writeData(FileSystem fs, Path path, int fileLength) throws IOException {
     try (FSDataOutputStream outputStream = fs.create(path)) {
       for (int writeSize = 0; writeSize < fileLength; writeSize++) {
         outputStream.write(writeSize);

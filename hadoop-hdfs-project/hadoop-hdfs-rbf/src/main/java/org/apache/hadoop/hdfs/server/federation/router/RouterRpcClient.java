@@ -1994,7 +1994,7 @@ public class RouterRpcClient {
    * @param nsId namespaceID
    */
   @VisibleForTesting
-  boolean isNamespaceStateIdFresh(String nsId) {
+  public boolean isNamespaceStateIdFresh(String nsId) {
     if (activeNNStateIdRefreshPeriodMs < 0) {
       return true;
     }

@@ -276,6 +276,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil.LOG;
 import static org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil.asyncRouterServer;
 
 public class RouterClientNamenodeProtocolServerSideTranslatorPB
@@ -562,6 +563,7 @@ public class RouterClientNamenodeProtocolServerSideTranslatorPB
           PBHelperClient.convert(req.getMasked());
       boolean result = server.mkdirs(req.getSrc(), masked,
           req.getCreateParent());
+      LOG.info("BZL#mkdirs, result is {}", result);
       return result;
     }, result -> MkdirsResponseProto.newBuilder().setResult(result).build());
     return null;

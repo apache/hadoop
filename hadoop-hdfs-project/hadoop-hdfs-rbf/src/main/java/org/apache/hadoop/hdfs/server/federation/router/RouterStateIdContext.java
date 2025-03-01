@@ -64,7 +64,7 @@ public class RouterStateIdContext implements AlignmentContext {
   /** Nameservice specific overrides of the default setting for enabling observer reads. */
   private HashSet<String> observerReadEnabledOverrides = new HashSet<>();
 
-  RouterStateIdContext(Configuration conf) {
+  public RouterStateIdContext(Configuration conf) {
     this.coordinatedMethods = new HashSet<>();
     // For now, only ClientProtocol methods can be coordinated, so only checking
     // against ClientProtocol.

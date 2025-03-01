@@ -70,16 +70,16 @@ import org.junit.Test;
  */
 public class TestRouterMountTable {
 
-  private static StateStoreDFSCluster cluster;
-  private static NamenodeContext nnContext0;
-  private static NamenodeContext nnContext1;
-  private static RouterContext routerContext;
-  private static MountTableResolver mountTable;
-  private static ClientProtocol routerProtocol;
-  private static long startTime;
-  private static FileSystem nnFs0;
-  private static FileSystem nnFs1;
-  private static FileSystem routerFs;
+  protected static StateStoreDFSCluster cluster;
+  protected static NamenodeContext nnContext0;
+  protected static NamenodeContext nnContext1;
+  protected static RouterContext routerContext;
+  protected static MountTableResolver mountTable;
+  protected static ClientProtocol routerProtocol;
+  protected static long startTime;
+  protected static FileSystem nnFs0;
+  protected static FileSystem nnFs1;
+  protected static FileSystem routerFs;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
@@ -179,7 +179,7 @@ public class TestRouterMountTable {
    * @return If it was succesfully added.
    * @throws IOException Problems adding entries.
    */
-  private boolean addMountTable(final MountTable entry) throws IOException {
+  protected boolean addMountTable(final MountTable entry) throws IOException {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTableManager = client.getMountTableManager();
     AddMountTableEntryRequest addRequest =
@@ -378,10 +378,11 @@ public class TestRouterMountTable {
         clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0, false);
     assertTrue(dirStatus3.isEmptyLocalName());
   }
+
   /**
    * GetListing of testPath through router.
    */
-  private void getListing(String testPath)
+  protected void getListing(String testPath)
       throws IOException, URISyntaxException {
     ClientProtocol clientProtocol1 =
         routerContext.getClient().getNamenode();
@@ -789,7 +790,6 @@ public class TestRouterMountTable {
 
   @Test
   public void testGetEnclosingRoot() throws Exception {
-
     // Add a read only entry
     MountTable readOnlyEntry = MountTable.newInstance(
         "/readonly", Collections.singletonMap("ns0", "/testdir"));

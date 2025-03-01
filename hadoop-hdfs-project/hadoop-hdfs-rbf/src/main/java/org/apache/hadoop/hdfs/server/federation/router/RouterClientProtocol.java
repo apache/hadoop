@@ -2225,7 +2225,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @return New HDFS file status representing a mount point.
    */
   @VisibleForTesting
-  protected HdfsFileStatus getMountPointStatus(
+  public HdfsFileStatus getMountPointStatus(
       String name, int childrenNum, long date) {
     return getMountPointStatus(name, childrenNum, date, true);
   }
@@ -2240,7 +2240,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @return New HDFS file status representing a mount point.
    */
   @VisibleForTesting
-  protected HdfsFileStatus getMountPointStatus(
+  public HdfsFileStatus getMountPointStatus(
       String name, int childrenNum, long date, boolean setPath) {
     long modTime = date;
     long accessTime = date;
