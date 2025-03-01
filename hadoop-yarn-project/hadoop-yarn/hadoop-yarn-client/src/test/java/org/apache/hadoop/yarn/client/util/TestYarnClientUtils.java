@@ -247,7 +247,7 @@ public class TestYarnClientUtils {
     YarnConfiguration result = YarnClientUtils.getYarnConfWithRmHaId(conf);
 
     assertSameConf(conf, result);
-    assertEquals( "rm0", result.get(YarnConfiguration.RM_HA_ID),
+    assertEquals("rm0", result.get(YarnConfiguration.RM_HA_ID),
         "RM_HA_ID was changed when it shouldn't have been: "
         + result.get(YarnConfiguration.RM_HA_ID));
 
