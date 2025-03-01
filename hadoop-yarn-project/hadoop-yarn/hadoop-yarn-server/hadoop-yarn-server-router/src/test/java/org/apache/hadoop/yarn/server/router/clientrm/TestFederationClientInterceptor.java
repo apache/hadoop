@@ -1337,7 +1337,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     assertNotNull(response);
     Map<NodeAttributeKey, List<NodeToAttributeValue>> attrs = response.getAttributesToNodes();
     assertNotNull(attrs);
-    assertEquals(4, attrs.size());
+    assertEquals(5, attrs.size());
 
     NodeAttribute gpu = NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "GPU",
         NodeAttributeType.STRING, "nvidia");
@@ -1362,7 +1362,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     assertNotNull(response);
     Set<NodeAttributeInfo> nodeAttributeInfos = response.getNodeAttributes();
     assertNotNull(nodeAttributeInfos);
-    assertEquals(4, nodeAttributeInfos.size());
+    assertEquals(5, nodeAttributeInfos.size());
 
     NodeAttributeInfo nodeAttributeInfo1 =
         NodeAttributeInfo.newInstance(NodeAttributeKey.newInstance("GPU"),

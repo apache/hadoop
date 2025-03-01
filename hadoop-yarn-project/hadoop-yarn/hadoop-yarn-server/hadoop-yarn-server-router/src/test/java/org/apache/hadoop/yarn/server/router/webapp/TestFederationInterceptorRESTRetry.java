@@ -20,10 +20,12 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.io.StringWriter;
+import java.io.PrintWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,7 +34,6 @@ import java.util.List;
 import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -315,7 +316,8 @@ public class TestFederationInterceptorRESTRetry
 
     AppsInfo response = interceptor.getApps(null, null, null, null, null, null,
         null, null, null, null, null, null, null, null, null);
-    assertNull(response);
+    assertNotNull(response);
+    assertTrue(response.getApps().isEmpty());
   }
 
   /**
@@ -329,7 +331,8 @@ public class TestFederationInterceptorRESTRetry
 
     AppsInfo response = interceptor.getApps(null, null, null, null, null, null,
         null, null, null, null, null, null, null, null, null);
-    assertNull(response);
+    assertNotNull(response);
+    assertTrue(response.getApps().isEmpty());
   }
 
   /**
@@ -378,7 +381,8 @@ public class TestFederationInterceptorRESTRetry
       interceptor.getNode("testGetNodeTwoBadSCs");
       fail();
     } catch (NotFoundException e) {
-      assertTrue(e.getMessage()
+      String stackTraceAsString = getStackTraceAsString(e);
+      assertTrue(stackTraceAsString
           .contains("nodeId, testGetNodeTwoBadSCs, is not found"));
     }
   }
@@ -408,8 +412,11 @@ public class TestFederationInterceptorRESTRetry
 
     setupCluster(Arrays.asList(bad2));
 
-    LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
-        () -> interceptor.getNodes(null));
+    YarnRuntimeException exception = assertThrows(YarnRuntimeException.class, () -> {
+      interceptor.getNodes(null);
+    });
+
+    assertTrue(getStackTraceAsString(exception).contains("RM is stopped"));
   }
 
   /**
@@ -421,8 +428,11 @@ public class TestFederationInterceptorRESTRetry
 
     setupCluster(Arrays.asList(bad1, bad2));
 
-    LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
-        () -> interceptor.getNodes(null));
+    YarnRuntimeException exception = assertThrows(YarnRuntimeException.class, () -> {
+      interceptor.getNodes(null);
+    });
+
+    assertTrue(getStackTraceAsString(exception).contains("RM is stopped"));
   }
 
   /**
@@ -433,8 +443,11 @@ public class TestFederationInterceptorRESTRetry
   public void testGetNodesOneBadOneGood() throws Exception {
     setupCluster(Arrays.asList(good, bad2));
 
-    LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
-        () -> interceptor.getNodes(null));
+    YarnRuntimeException exception = assertThrows(YarnRuntimeException.class, () -> {
+      interceptor.getNodes(null);
+    });
+
+    assertTrue(getStackTraceAsString(exception).contains("RM is stopped"));
   }
 
   /**
@@ -586,5 +599,12 @@ public class TestFederationInterceptorRESTRetry
     interceptor.setAllowPartialResult(false);
 
     setupCluster(Arrays.asList(good, bad2));
+  }
+
+  private String getStackTraceAsString(Exception e) {
+    StringWriter sw = new StringWriter();
+    PrintWriter pw = new PrintWriter(sw);
+    e.printStackTrace(pw);
+    return sw.toString();
   }
 }

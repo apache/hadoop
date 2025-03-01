@@ -86,7 +86,6 @@ public class DefaultRMAdminRequestInterceptor
   private static final Logger LOG =
       LoggerFactory.getLogger(DefaultRMAdminRequestInterceptor.class);
   private ResourceManagerAdministrationProtocol rmAdminProxy;
-  private UserGroupInformation user = null;
 
   @Override
   public void init(String userName) {

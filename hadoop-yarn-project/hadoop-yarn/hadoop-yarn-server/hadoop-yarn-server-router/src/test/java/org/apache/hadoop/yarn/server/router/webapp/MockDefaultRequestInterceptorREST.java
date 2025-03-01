@@ -217,7 +217,10 @@ public class MockDefaultRequestInterceptorREST
             applicationCounter.incrementAndGet());
     NewApplication appId =
         new NewApplication(applicationId.toString(), new ResourceInfo());
-    return Response.status(Status.OK).entity(appId).build();
+    Response response = Mockito.mock(Response.class);
+    Mockito.when(response.readEntity(NewApplication.class)).thenReturn(appId);
+    Mockito.when(response.getStatus()).thenReturn(HttpServletResponse.SC_OK);
+    return response;
   }
 
   @Override
@@ -315,7 +318,7 @@ public class MockDefaultRequestInterceptorREST
     NodeInfo node = null;
     SubClusterId subCluster = getSubClusterId();
     String subClusterId = subCluster.getId();
-    if (nodeId.contains(subClusterId) || nodeId.contains("test")) {
+    if (nodeId == null || nodeId.contains(subClusterId) || nodeId.contains("test")) {
       node = new NodeInfo();
       node.setId(nodeId);
       node.setLastHealthUpdate(Integer.parseInt(getSubClusterId().getId()));

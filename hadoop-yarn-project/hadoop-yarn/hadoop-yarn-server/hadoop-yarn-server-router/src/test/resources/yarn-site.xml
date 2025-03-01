@@ -41,7 +41,7 @@
   </property>
   <property>
     <name>yarn.federation.policy-manager-params</name>
-    <value>{"routerPolicyWeights":{"entry":[{"key":{"id":"SC-2"},"value":"0.3"},{"key":{"id":"SC-1"},"value":"0.7"}]},"amrmPolicyWeights":{"entry":[{"key":{"id":"SC-2"},"value":"0.4"},{"key":{"id":"SC-1"},"value":"0.6"}]},"headroomAlpha":"1.0"}</value>
+    <value>{"routerPolicyWeights":{"SC-2":"0.3","SC-1":"0.7"},"amrmPolicyWeights":{"SC-2":"0.4", "SC-1":"0.6"},"headroomAlpha":"1.0"}</value>
   </property>
   <property>
     <name>yarn.resourcemanager.cluster-id</name>
