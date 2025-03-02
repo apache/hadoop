@@ -21,10 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -114,10 +114,10 @@ public class TestRaceWhenRelogin extends KerberosSecurityTestcase {
   private void getServiceTicket(AtomicBoolean running, String serverProtocol) {
     while (running.get()) {
       try {
-        ugi.doAs(new PrivilegedExceptionAction<Void>() {
+        ugi.callAs(new Callable<Void>() {
 
           @Override
-          public Void run() throws Exception {
+          public Void call() throws Exception {
             SaslClient client = Sasl.createSaslClient(
                 new String[] {AuthMethod.KERBEROS.getMechanismName()},
                 clientPrincipal, serverProtocol, host, props, null);

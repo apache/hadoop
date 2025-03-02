@@ -58,7 +58,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.security.Principal;
-import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
@@ -242,9 +241,9 @@ public class TestUserGroupInformation {
     UserGroupInformation userGroupInfo = 
       UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
     UserGroupInformation curUGI = 
-      userGroupInfo.doAs(new PrivilegedExceptionAction<UserGroupInformation>(){
+      userGroupInfo.callAs(new Callable<UserGroupInformation>(){
         @Override
-        public UserGroupInformation run() throws IOException {
+        public UserGroupInformation call() throws IOException {
           return UserGroupInformation.getCurrentUser();
         }});
     // make sure in the scope of the doAs, the right user is current
@@ -307,9 +306,9 @@ public class TestUserGroupInformation {
     
     final UserGroupInformation fakeUser = 
       UserGroupInformation.createRemoteUser("foo.bar");
-    fakeUser.doAs(new PrivilegedExceptionAction<Object>(){
+    fakeUser.callAs(new Callable<Object>(){
       @Override
-      public Object run() throws IOException {
+      public Object call() throws IOException {
         UserGroupInformation current = UserGroupInformation.getCurrentUser();
         assertFalse(current.equals(login));
         assertEquals(current, fakeUser);
@@ -712,9 +711,9 @@ public class TestUserGroupInformation {
     
     // ensure that the tokens are passed through doAs
     Collection<Token<? extends TokenIdentifier>> otherSet = 
-      ugi.doAs(new PrivilegedExceptionAction<Collection<Token<?>>>(){
+      ugi.callAs(new Callable<Collection<Token<?>>>(){
         @Override
-        public Collection<Token<?>> run() throws IOException {
+        public Collection<Token<?>> call() throws IOException {
           return UserGroupInformation.getCurrentUser().getTokens();
         }
       });
@@ -740,9 +739,9 @@ public class TestUserGroupInformation {
 
     // ensure that the token identifiers are passed through doAs
     Collection<TokenIdentifier> otherSet = ugi
-        .doAs(new PrivilegedExceptionAction<Collection<TokenIdentifier>>() {
+        .callAs(new Callable<Collection<TokenIdentifier>>() {
           @Override
-          public Collection<TokenIdentifier> run() throws IOException {
+          public Collection<TokenIdentifier> call() throws IOException {
             return UserGroupInformation.getCurrentUser().getTokenIdentifiers();
           }
         });
@@ -771,9 +770,9 @@ public class TestUserGroupInformation {
     final AuthenticationMethod am = AuthenticationMethod.KERBEROS;
     ugi.setAuthenticationMethod(am);
     assertEquals(am, ugi.getAuthenticationMethod());
-    ugi.doAs(new PrivilegedExceptionAction<Object>() {
+    ugi.callAs(new Callable<Object>() {
       @Override
-      public Object run() throws IOException {
+      public Object call() throws IOException {
         assertEquals(am, UserGroupInformation.getCurrentUser()
             .getAuthenticationMethod());
         return null;
@@ -794,9 +793,9 @@ public class TestUserGroupInformation {
                         proxyUgi.getAuthenticationMethod());
     assertEquals(am, UserGroupInformation
         .getRealAuthenticationMethod(proxyUgi));
-    proxyUgi.doAs(new PrivilegedExceptionAction<Object>() {
+    proxyUgi.callAs(new Callable<Object>() {
       @Override
-      public Object run() throws IOException {
+      public Object call() throws IOException {
         assertEquals(AuthenticationMethod.PROXY, UserGroupInformation
             .getCurrentUser().getAuthenticationMethod());
         assertEquals(am, UserGroupInformation.getCurrentUser()
@@ -993,9 +992,9 @@ public class TestUserGroupInformation {
   public void testTokenRaceCondition() throws Exception {
     UserGroupInformation userGroupInfo =
       UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
-    userGroupInfo.doAs(new PrivilegedExceptionAction<Void>(){
+    userGroupInfo.callAs(new Callable<Void>(){
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
         // make sure it is not the same as the login user because we use the
         // same UGI object for every instantiation of the login user and you
         // won't run into the race condition otherwise
@@ -1099,9 +1098,9 @@ public class TestUserGroupInformation {
     subject.getPrivateCredentials().add(keytab);
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
-    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+    ugi.callAs(new Callable<Void>() {
       @Override
-      public Void run() throws IOException {
+      public Void call() throws IOException {
         UserGroupInformation.loginUserFromSubject(subject);
         // this should not throw.
         UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
@@ -1227,10 +1226,10 @@ public class TestUserGroupInformation {
             new Callable<UserGroupInformation>(){
               @Override
               public UserGroupInformation call() throws Exception {
-                return testUgi1.doAs(
-                    new PrivilegedExceptionAction<UserGroupInformation>() {
+                return testUgi1.callAs(
+                    new Callable<UserGroupInformation>() {
                       @Override
-                      public UserGroupInformation run() throws Exception {
+                      public UserGroupInformation call() throws Exception {
                         return UserGroupInformation.getCurrentUser();
                       }
                     });
@@ -1245,19 +1244,19 @@ public class TestUserGroupInformation {
     principals.add(user);
     // concurrent getCurrentUser on ugi1 should not be blocked.
     UserGroupInformation ugi;
-    ugi = testUgi1.doAs(
-        new PrivilegedExceptionAction<UserGroupInformation>() {
+    ugi = testUgi1.callAs(
+        new Callable<UserGroupInformation>() {
           @Override
-          public UserGroupInformation run() throws Exception {
+          public UserGroupInformation call() throws Exception {
             return UserGroupInformation.getCurrentUser();
           }
         });
     assertSame(testUgi1.getSubject(), ugi.getSubject());
     // concurrent getCurrentUser on ugi2 should not be blocked.
-    ugi = testUgi2.doAs(
-        new PrivilegedExceptionAction<UserGroupInformation>() {
+    ugi = testUgi2.callAs(
+        new Callable<UserGroupInformation>() {
           @Override
-          public UserGroupInformation run() throws Exception {
+          public UserGroupInformation call() throws Exception {
             return UserGroupInformation.getCurrentUser();
           }
         });

@@ -22,12 +22,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -110,9 +110,9 @@ class BlockReaderLocalLegacy implements BlockReader {
         final boolean connectToDnViaHostname) throws IOException {
       if (proxy == null) {
         try {
-          proxy = ugi.doAs(new PrivilegedExceptionAction<ClientDatanodeProtocol>() {
+          proxy = ugi.callAs(new Callable<ClientDatanodeProtocol>() {
             @Override
-            public ClientDatanodeProtocol run() throws Exception {
+            public ClientDatanodeProtocol call() throws Exception {
               return DFSUtilClient.createClientDatanodeProtocolProxy(node, conf,
                   socketTimeout, connectToDnViaHostname);
             }

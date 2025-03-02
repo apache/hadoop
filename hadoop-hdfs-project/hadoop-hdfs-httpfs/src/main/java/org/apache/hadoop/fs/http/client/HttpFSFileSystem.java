@@ -96,10 +96,10 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
@@ -362,10 +362,10 @@ public class HttpFSFileSystem extends FileSystem
     }
     final URL url = HttpFSUtils.createURL(path, params, multiValuedParams);
     try {
-      return UserGroupInformation.getCurrentUser().doAs(
-          new PrivilegedExceptionAction<HttpURLConnection>() {
+      return UserGroupInformation.getCurrentUser().callAs(
+          new Callable<HttpURLConnection>() {
             @Override
-            public HttpURLConnection run() throws Exception {
+            public HttpURLConnection call() throws Exception {
               return getConnection(url, method);
             }
           }
@@ -1291,10 +1291,10 @@ public class HttpFSFileSystem extends FileSystem
   public Token<?> getDelegationToken(final String renewer)
     throws IOException {
     try {
-      return UserGroupInformation.getCurrentUser().doAs(
-          new PrivilegedExceptionAction<Token<?>>() {
+      return UserGroupInformation.getCurrentUser().callAs(
+          new Callable<Token<?>>() {
             @Override
-            public Token<?> run() throws Exception {
+            public Token<?> call() throws Exception {
               return authURL.getDelegationToken(uri.toURL(), authToken,
                   renewer);
             }
@@ -1311,10 +1311,10 @@ public class HttpFSFileSystem extends FileSystem
 
   public long renewDelegationToken(final Token<?> token) throws IOException {
     try {
-      return UserGroupInformation.getCurrentUser().doAs(
-          new PrivilegedExceptionAction<Long>() {
+      return UserGroupInformation.getCurrentUser().callAs(
+          new Callable<Long>() {
             @Override
-            public Long run() throws Exception {
+            public Long call() throws Exception {
               return authURL.renewDelegationToken(uri.toURL(), authToken);
             }
           }

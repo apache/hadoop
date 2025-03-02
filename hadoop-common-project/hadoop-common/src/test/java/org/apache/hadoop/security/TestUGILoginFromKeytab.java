@@ -50,7 +50,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.security.Principal;
-import java.security.PrivilegedExceptionAction;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -355,9 +354,9 @@ public class TestUGILoginFromKeytab {
         principal1.getName(), keytab1.getPath());
     final UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
 
-    loginUser.doAs(new PrivilegedExceptionAction<Void>() {
+    loginUser.callAs(new Callable<Void>() {
       @Override
-      public Void run() throws IOException {
+      public Void call() throws IOException {
         KerberosTicket loginTicket =
             checkTicketAndKeytab(loginUser, principal1, true);
 
@@ -405,9 +404,9 @@ public class TestUGILoginFromKeytab {
         UserGroupInformation.getLoginUser();
     assertNotNull(getUser(originalLoginUser.getSubject()).getLogin());
 
-    originalLoginUser.doAs(new PrivilegedExceptionAction<Void>() {
+    originalLoginUser.callAs(new Callable<Void>() {
       @Override
-      public Void run() throws IOException {
+      public Void call() throws IOException {
         KerberosTicket originalLoginUserTicket =
             checkTicketAndKeytab(originalLoginUser, principal1, true);
 
@@ -560,18 +559,18 @@ public class TestUGILoginFromKeytab {
 
     // concurrent UGI instantiation should not block and again should
     // know it's supposed to be from a keytab.
-    loginUgi.doAs(new PrivilegedExceptionAction<Void>(){
+    loginUgi.callAs(new Callable<Void>(){
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
         UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
         assertEquals(principal.getName(), ugi.getUserName());
         assertTrue(ugi.isFromKeytab());
         return null;
       }
     });
-    clonedUgi.doAs(new PrivilegedExceptionAction<Void>(){
+    clonedUgi.callAs(new Callable<Void>(){
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
         UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
         assertEquals(principal.getName(), ugi.getUserName());
         assertTrue(ugi.isFromKeytab());

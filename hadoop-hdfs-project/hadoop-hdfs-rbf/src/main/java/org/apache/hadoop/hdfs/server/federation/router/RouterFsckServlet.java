@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
-import java.security.PrivilegedExceptionAction;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -56,7 +56,7 @@ public class RouterFsckServlet extends DfsServlet {
     final Configuration conf = RouterHttpServer.getConfFromContext(context);
     final UserGroupInformation ugi = getUGI(request, conf);
     try {
-      ugi.doAs((PrivilegedExceptionAction<Object>) () -> {
+      ugi.callAs((Callable<Object>) () -> {
         Router router = RouterHttpServer.getRouterFromContext(context);
         new RouterFsck(router, pmap, out, remoteAddress).fsck();
         return null;

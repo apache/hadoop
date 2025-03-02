@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
-import java.security.PrivilegedExceptionAction;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -55,7 +55,7 @@ public class FsckServlet extends DfsServlet {
 
     final UserGroupInformation ugi = getUGI(request, conf);
     try {
-      ugi.doAs((PrivilegedExceptionAction<Object>) () -> {
+      ugi.callAs((Callable<Object>) () -> {
         NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
 
         final FSNamesystem namesystem = nn.getNamesystem();

@@ -92,12 +92,12 @@ import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.AccessControlException;
-import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 /**
  * Main class of HttpFSServer server.
@@ -284,9 +284,9 @@ public class HttpFSServer {
             .createProxyUser(user.getShortUserName(),
                 UserGroupInformation.getLoginUser());
         try {
-          is = ugi.doAs(new PrivilegedExceptionAction<InputStream>() {
+          is = ugi.callAs(new Callable<InputStream>() {
             @Override
-            public InputStream run() throws Exception {
+            public InputStream call() throws Exception {
               return command.execute(fs);
             }
           });

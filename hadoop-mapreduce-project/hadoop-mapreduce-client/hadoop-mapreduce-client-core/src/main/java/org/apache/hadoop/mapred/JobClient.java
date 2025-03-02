@@ -21,10 +21,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URL;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -567,9 +567,9 @@ public class JobClient extends CLI implements AutoCloseable {
     try {
       conf.setBooleanIfUnset("mapred.mapper.new-api", false);
       conf.setBooleanIfUnset("mapred.reducer.new-api", false);
-      Job job = clientUgi.doAs(new PrivilegedExceptionAction<Job> () {
+      Job job = clientUgi.callAs(new Callable<Job> () {
         @Override
-        public Job run() throws IOException, ClassNotFoundException, 
+        public Job call() throws IOException, ClassNotFoundException, 
           InterruptedException {
           Job job = Job.getInstance(conf);
           job.submit();
@@ -596,8 +596,8 @@ public class JobClient extends CLI implements AutoCloseable {
 
   private Job getJobUsingCluster(final JobID jobid) throws IOException,
   InterruptedException {
-    return clientUgi.doAs(new PrivilegedExceptionAction<Job>() {
-      public Job run() throws IOException, InterruptedException  {
+    return clientUgi.callAs(new Callable<Job>() {
+      public Job call() throws IOException, InterruptedException  {
        return cluster.getJob(jobid);
       }
     });
@@ -753,8 +753,8 @@ public class JobClient extends CLI implements AutoCloseable {
    */
   public ClusterStatus getClusterStatus() throws IOException {
     try {
-      return clientUgi.doAs(new PrivilegedExceptionAction<ClusterStatus>() {
-        public ClusterStatus run() throws IOException, InterruptedException {
+      return clientUgi.callAs(new Callable<ClusterStatus>() {
+        public ClusterStatus call() throws IOException, InterruptedException {
           ClusterMetrics metrics = cluster.getClusterStatus();
           return new ClusterStatus(metrics.getTaskTrackerCount(), metrics
             .getBlackListedTaskTrackerCount(), cluster
@@ -801,8 +801,8 @@ public class JobClient extends CLI implements AutoCloseable {
    */
   public ClusterStatus getClusterStatus(boolean detailed) throws IOException {
     try {
-      return clientUgi.doAs(new PrivilegedExceptionAction<ClusterStatus>() {
-        public ClusterStatus run() throws IOException, InterruptedException {
+      return clientUgi.callAs(new Callable<ClusterStatus>() {
+        public ClusterStatus call() throws IOException, InterruptedException {
         ClusterMetrics metrics = cluster.getClusterStatus();
         return new ClusterStatus(arrayToStringList(cluster.getActiveTaskTrackers()),
           arrayToBlackListInfo(cluster.getBlackListedTaskTrackers()),
@@ -843,9 +843,9 @@ public class JobClient extends CLI implements AutoCloseable {
   public JobStatus[] getAllJobs() throws IOException {
     try {
       org.apache.hadoop.mapreduce.JobStatus[] jobs = 
-          clientUgi.doAs(new PrivilegedExceptionAction<
+          clientUgi.callAs(new Callable<
               org.apache.hadoop.mapreduce.JobStatus[]> () {
-            public org.apache.hadoop.mapreduce.JobStatus[] run() 
+            public org.apache.hadoop.mapreduce.JobStatus[] call() 
                 throws IOException, InterruptedException {
               return cluster.getAllJobStatuses();
             }
@@ -971,9 +971,9 @@ public class JobClient extends CLI implements AutoCloseable {
    */
   public int getDefaultMaps() throws IOException {
     try {
-      return clientUgi.doAs(new PrivilegedExceptionAction<Integer>() {
+      return clientUgi.callAs(new Callable<Integer>() {
         @Override
-        public Integer run() throws IOException, InterruptedException {
+        public Integer call() throws IOException, InterruptedException {
           return cluster.getClusterStatus().getMapSlotCapacity();
         }
       });
@@ -990,9 +990,9 @@ public class JobClient extends CLI implements AutoCloseable {
    */
   public int getDefaultReduces() throws IOException {
     try {
-      return clientUgi.doAs(new PrivilegedExceptionAction<Integer>() {
+      return clientUgi.callAs(new Callable<Integer>() {
         @Override
-        public Integer run() throws IOException, InterruptedException {
+        public Integer call() throws IOException, InterruptedException {
           return cluster.getClusterStatus().getReduceSlotCapacity();
         }
       });
@@ -1008,9 +1008,9 @@ public class JobClient extends CLI implements AutoCloseable {
    */
   public Path getSystemDir() {
     try {
-      return clientUgi.doAs(new PrivilegedExceptionAction<Path>() {
+      return clientUgi.callAs(new Callable<Path>() {
         @Override
-        public Path run() throws IOException, InterruptedException {
+        public Path call() throws IOException, InterruptedException {
           return cluster.getSystemDir();
         }
       });
@@ -1053,9 +1053,9 @@ public class JobClient extends CLI implements AutoCloseable {
    */
   public Path getStagingAreaDir() throws IOException {
     try {
-      return clientUgi.doAs(new PrivilegedExceptionAction<Path>() {
+      return clientUgi.callAs(new Callable<Path>() {
         @Override
-        public Path run() throws IOException, InterruptedException {
+        public Path call() throws IOException, InterruptedException {
           return cluster.getStagingAreaDir();
         }
       });
@@ -1097,8 +1097,8 @@ public class JobClient extends CLI implements AutoCloseable {
    */
   public JobQueueInfo[] getRootQueues() throws IOException {
     try {
-      return clientUgi.doAs(new PrivilegedExceptionAction<JobQueueInfo[]>() {
-        public JobQueueInfo[] run() throws IOException, InterruptedException {
+      return clientUgi.callAs(new Callable<JobQueueInfo[]>() {
+        public JobQueueInfo[] call() throws IOException, InterruptedException {
           return getJobQueueInfoArray(cluster.getRootQueues());
         }
       });
@@ -1117,8 +1117,8 @@ public class JobClient extends CLI implements AutoCloseable {
    */
   public JobQueueInfo[] getChildQueues(final String queueName) throws IOException {
     try {
-      return clientUgi.doAs(new PrivilegedExceptionAction<JobQueueInfo[]>() {
-        public JobQueueInfo[] run() throws IOException, InterruptedException {
+      return clientUgi.callAs(new Callable<JobQueueInfo[]>() {
+        public JobQueueInfo[] call() throws IOException, InterruptedException {
           return getJobQueueInfoArray(cluster.getChildQueues(queueName));
         }
       });
@@ -1136,8 +1136,8 @@ public class JobClient extends CLI implements AutoCloseable {
    */
   public JobQueueInfo[] getQueues() throws IOException {
     try {
-      return clientUgi.doAs(new PrivilegedExceptionAction<JobQueueInfo[]>() {
-        public JobQueueInfo[] run() throws IOException, InterruptedException {
+      return clientUgi.callAs(new Callable<JobQueueInfo[]>() {
+        public JobQueueInfo[] call() throws IOException, InterruptedException {
           return getJobQueueInfoArray(cluster.getQueues());
         }
       });
@@ -1156,9 +1156,9 @@ public class JobClient extends CLI implements AutoCloseable {
   
   public JobStatus[] getJobsFromQueue(final String queueName) throws IOException {
     try {
-      QueueInfo queue = clientUgi.doAs(new PrivilegedExceptionAction<QueueInfo>() {
+      QueueInfo queue = clientUgi.callAs(new Callable<QueueInfo>() {
         @Override
-        public QueueInfo run() throws IOException, InterruptedException {
+        public QueueInfo call() throws IOException, InterruptedException {
           return cluster.getQueue(queueName);
         }
       });
@@ -1186,9 +1186,9 @@ public class JobClient extends CLI implements AutoCloseable {
    */
   public JobQueueInfo getQueueInfo(final String queueName) throws IOException {
     try {
-      QueueInfo queueInfo = clientUgi.doAs(new 
-          PrivilegedExceptionAction<QueueInfo>() {
-        public QueueInfo run() throws IOException, InterruptedException {
+      QueueInfo queueInfo = clientUgi.callAs(new 
+          Callable<QueueInfo>() {
+        public QueueInfo call() throws IOException, InterruptedException {
           return cluster.getQueue(queueName);
         }
       });
@@ -1209,10 +1209,10 @@ public class JobClient extends CLI implements AutoCloseable {
   public QueueAclsInfo[] getQueueAclsForCurrentUser() throws IOException {
     try {
       org.apache.hadoop.mapreduce.QueueAclsInfo[] acls = 
-        clientUgi.doAs(new 
-            PrivilegedExceptionAction
+        clientUgi.callAs(new 
+            Callable
             <org.apache.hadoop.mapreduce.QueueAclsInfo[]>() {
-              public org.apache.hadoop.mapreduce.QueueAclsInfo[] run() 
+              public org.apache.hadoop.mapreduce.QueueAclsInfo[] call() 
               throws IOException, InterruptedException {
                 return cluster.getQueueAclsForCurrentUser();
               }
@@ -1235,9 +1235,9 @@ public class JobClient extends CLI implements AutoCloseable {
    */
   public Token<DelegationTokenIdentifier> 
     getDelegationToken(final Text renewer) throws IOException, InterruptedException {
-    return clientUgi.doAs(new 
-        PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
-      public Token<DelegationTokenIdentifier> run() throws IOException, 
+    return clientUgi.callAs(new 
+        Callable<Token<DelegationTokenIdentifier>>() {
+      public Token<DelegationTokenIdentifier> call() throws IOException, 
       InterruptedException {
         return cluster.getDelegationToken(renewer);
       }

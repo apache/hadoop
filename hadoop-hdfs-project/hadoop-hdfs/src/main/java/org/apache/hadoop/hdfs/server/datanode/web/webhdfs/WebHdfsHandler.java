@@ -59,8 +59,8 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
+import java.util.concurrent.Callable;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS;
@@ -130,9 +130,9 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     path = params.path();
 
     injectToken();
-    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+    ugi.callAs(new Callable<Void>() {
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
         try {
           handle(ctx, req);
         } finally {

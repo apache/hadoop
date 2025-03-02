@@ -51,12 +51,12 @@ import javax.ws.rs.core.UriBuilder;
 
 import java.io.IOException;
 import java.net.URI;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.crypto.key.kms.server.KMSACLs.INVALIDATE_CACHE_TYPES;
 import static org.apache.hadoop.util.KMSUtil.checkNotEmpty;
@@ -163,10 +163,10 @@ public class KMS {
       options.setDescription(description);
       options.setAttributes(attributes);
 
-      KeyProvider.KeyVersion keyVersion = user.doAs(
-          new PrivilegedExceptionAction<KeyVersion>() {
+      KeyProvider.KeyVersion keyVersion = user.callAs(
+          new Callable<KeyVersion>() {
             @Override
-            public KeyVersion run() throws Exception {
+            public KeyVersion call() throws Exception {
               KeyProvider.KeyVersion keyVersion = (material != null)
                   ? provider.createKey(name, Base64.decodeBase64(material),
                       options)
@@ -205,9 +205,9 @@ public class KMS {
       assertAccess(KMSACLs.Type.DELETE, user, KMSOp.DELETE_KEY, name);
       checkNotEmpty(name, "name");
       LOG.debug("Deleting key with name {}.", name);
-      user.doAs(new PrivilegedExceptionAction<Void>() {
+      user.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           provider.deleteKey(name);
           provider.flush();
           return null;
@@ -243,10 +243,10 @@ public class KMS {
                 KMSOp.ROLL_NEW_VERSION, name);
       }
 
-      KeyProvider.KeyVersion keyVersion = user.doAs(
-              new PrivilegedExceptionAction<KeyVersion>() {
+      KeyProvider.KeyVersion keyVersion = user.callAs(
+              new Callable<KeyVersion>() {
               @Override
-                public KeyVersion run() throws Exception {
+                public KeyVersion call() throws Exception {
                 KeyVersion keyVersion = (material != null)
                         ? provider.rollNewVersion(name,
                         Base64.decodeBase64(material))
@@ -287,9 +287,9 @@ public class KMS {
       assertAccess(INVALIDATE_CACHE_TYPES, user, KMSOp.INVALIDATE_CACHE, name);
       LOG.debug("Invalidating cache with key name {}.", name);
 
-      user.doAs(new PrivilegedExceptionAction<Void>() {
+      user.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           provider.invalidateCache(name);
           provider.flush();
           return null;
@@ -318,10 +318,10 @@ public class KMS {
               new String[keyNamesList.size()]);
       assertAccess(KMSACLs.Type.GET_METADATA, user, KMSOp.GET_KEYS_METADATA);
 
-      KeyProvider.Metadata[] keysMeta = user.doAs(
-              new PrivilegedExceptionAction<KeyProvider.Metadata[]>() {
+      KeyProvider.Metadata[] keysMeta = user.callAs(
+              new Callable<KeyProvider.Metadata[]>() {
               @Override
-                public KeyProvider.Metadata[] run() throws Exception {
+                public KeyProvider.Metadata[] call() throws Exception {
                 return provider.getKeysMetadata(keyNames);
               }
             }
@@ -348,10 +348,10 @@ public class KMS {
       UserGroupInformation user = HttpUserGroupInformation.get();
       assertAccess(KMSACLs.Type.GET_KEYS, user, KMSOp.GET_KEYS);
 
-      List<String> json = user.doAs(
-              new PrivilegedExceptionAction<List<String>>() {
+      List<String> json = user.callAs(
+              new Callable<List<String>>() {
               @Override
-                public List<String> run() throws Exception {
+                public List<String> call() throws Exception {
                 return provider.getKeys();
               }
             }
@@ -396,10 +396,10 @@ public class KMS {
       assertAccess(KMSACLs.Type.GET_METADATA, user, KMSOp.GET_METADATA, name);
       LOG.debug("Getting metadata for key with name {}.", name);
 
-      KeyProvider.Metadata metadata = user.doAs(
-              new PrivilegedExceptionAction<KeyProvider.Metadata>() {
+      KeyProvider.Metadata metadata = user.callAs(
+              new Callable<KeyProvider.Metadata>() {
               @Override
-                public KeyProvider.Metadata run() throws Exception {
+                public KeyProvider.Metadata call() throws Exception {
                 return provider.getMetadata(name);
               }
             }
@@ -430,10 +430,10 @@ public class KMS {
       assertAccess(KMSACLs.Type.GET, user, KMSOp.GET_CURRENT_KEY, name);
       LOG.debug("Getting key version for key with name {}.", name);
 
-      KeyVersion keyVersion = user.doAs(
-              new PrivilegedExceptionAction<KeyVersion>() {
+      KeyVersion keyVersion = user.callAs(
+              new Callable<KeyVersion>() {
               @Override
-                public KeyVersion run() throws Exception {
+                public KeyVersion call() throws Exception {
                 return provider.getCurrentKey(name);
             }
             }
@@ -463,10 +463,10 @@ public class KMS {
       assertAccess(KMSACLs.Type.GET, user, KMSOp.GET_KEY_VERSION);
       LOG.debug("Getting key with version name {}.", versionName);
 
-      KeyVersion keyVersion = user.doAs(
-              new PrivilegedExceptionAction<KeyVersion>() {
+      KeyVersion keyVersion = user.callAs(
+              new Callable<KeyVersion>() {
               @Override
-                public KeyVersion run() throws Exception {
+                public KeyVersion call() throws Exception {
                 return provider.getKeyVersion(versionName);
               }
             }
@@ -513,10 +513,10 @@ public class KMS {
                 new LinkedList<EncryptedKeyVersion>();
         try {
 
-          user.doAs(
-                  new PrivilegedExceptionAction<Void>() {
+          user.callAs(
+                  new Callable<Void>() {
                   @Override
-                    public Void run() throws Exception {
+                    public Void call() throws Exception {
                     LOG.debug("Generated Encrypted key for {} number of " +
                               "keys.", numKeys);
                     for (int i = 0; i < numKeys; i++) {
@@ -591,9 +591,9 @@ public class KMS {
             "All EncryptedKeys must be under the given key name " + name);
       }
 
-      user.doAs(new PrivilegedExceptionAction<Void>() {
+      user.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           provider.reencryptEncryptedKeys(ekvs);
           return null;
         }
@@ -649,10 +649,10 @@ public class KMS {
         assertAccess(KMSACLs.Type.DECRYPT_EEK, user, KMSOp.DECRYPT_EEK,
                 keyName);
 
-        KeyProvider.KeyVersion retKeyVersion = user.doAs(
-                new PrivilegedExceptionAction<KeyVersion>() {
+        KeyProvider.KeyVersion retKeyVersion = user.callAs(
+                new Callable<KeyVersion>() {
                 @Override
-                  public KeyVersion run() throws Exception {
+                  public KeyVersion call() throws Exception {
                   return provider.decryptEncryptedKey(
                             new KMSClientProvider.KMSEncryptedKeyVersion(
                                     keyName, versionName, iv,
@@ -671,9 +671,9 @@ public class KMS {
             keyName);
 
         EncryptedKeyVersion retEncryptedKeyVersion =
-            user.doAs(new PrivilegedExceptionAction<EncryptedKeyVersion>() {
+            user.callAs(new Callable<EncryptedKeyVersion>() {
               @Override
-              public EncryptedKeyVersion run() throws Exception {
+              public EncryptedKeyVersion call() throws Exception {
                 return provider.reencryptEncryptedKey(
                     new KMSClientProvider.KMSEncryptedKeyVersion(keyName,
                         versionName, iv, KeyProviderCryptoExtension.EEK,
@@ -717,10 +717,10 @@ public class KMS {
       assertAccess(KMSACLs.Type.GET, user, KMSOp.GET_KEY_VERSIONS, name);
       LOG.debug("Getting key versions for key {}", name);
 
-      List<KeyVersion> ret = user.doAs(
-              new PrivilegedExceptionAction<List<KeyVersion>>() {
+      List<KeyVersion> ret = user.callAs(
+              new Callable<List<KeyVersion>>() {
               @Override
-                public List<KeyVersion> run() throws Exception {
+                public List<KeyVersion> call() throws Exception {
                 return provider.getKeyVersions(name);
               }
             }

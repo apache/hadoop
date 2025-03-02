@@ -20,7 +20,7 @@ package org.apache.hadoop.mapreduce.v2.hs.server;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -251,9 +251,9 @@ public class HSAdminServer extends AbstractService implements HSAdminProtocol {
     UserGroupInformation user = checkAcls("refreshLogRetentionSettings");
 
     try {
-      loginUGI.doAs(new PrivilegedExceptionAction<Void>() {
+      loginUGI.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws IOException {
+        public Void call() throws IOException {
           aggLogDelService.refreshLogRetentionSettings();
           return null;
         }
@@ -271,9 +271,9 @@ public class HSAdminServer extends AbstractService implements HSAdminProtocol {
     UserGroupInformation user = checkAcls("refreshJobRetentionSettings");
 
     try {
-      loginUGI.doAs(new PrivilegedExceptionAction<Void>() {
+      loginUGI.callAs(new Callable<Void>() {
         @Override
-        public Void run() throws IOException {
+        public Void call() throws IOException {
           jobHistoryService.refreshJobRetentionSettings();
           return null;
         }

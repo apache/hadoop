@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
 import org.apache.hadoop.hdfs.server.common.Util;
@@ -28,7 +29,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.net.HttpURLConnection;
-import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.io.*;
 
@@ -140,9 +140,9 @@ public class ImageServlet extends HttpServlet {
       validateRequest(context, conf, request, response, nnImage,
           parsedParams.getStorageInfoString());
 
-      UserGroupInformation.getCurrentUser().doAs(new PrivilegedExceptionAction<Void>() {
+      UserGroupInformation.getCurrentUser().callAs(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           if (parsedParams.isGetImage()) {
             long txid = parsedParams.getTxId();
             File imageFile = null;
@@ -565,11 +565,11 @@ public class ImageServlet extends HttpServlet {
       validateRequest(context, conf, request, response, nnImage,
           parsedParams.getStorageInfoString());
 
-      UserGroupInformation.getCurrentUser().doAs(
-          new PrivilegedExceptionAction<Void>() {
+      UserGroupInformation.getCurrentUser().callAs(
+          new Callable<Void>() {
 
             @Override
-            public Void run() throws Exception {
+            public Void call() throws Exception {
               // if its not the active NN, then we need to notify the caller it was was the wrong
               // target (regardless of the fact that we got the image)
               HAServiceProtocol.HAServiceState state = NameNodeHttpServer

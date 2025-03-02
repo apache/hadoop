@@ -20,11 +20,11 @@ package org.apache.hadoop.hdfs.nfs.nfs3;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystemException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -237,9 +237,9 @@ class DFSClientCache {
             key.userName, UserGroupInformation.getCurrentUser());
 
         // Guava requires CacheLoader never returns null.
-        return ugi.doAs(new PrivilegedExceptionAction<DFSClient>() {
+        return ugi.callAs(new Callable<DFSClient>() {
           @Override
-          public DFSClient run() throws IOException {
+          public DFSClient call() throws IOException {
             URI namenodeURI = namenodeUriMap.get(key.namenodeId);
             if (namenodeURI == null) {
               throw new IOException("No namenode URI found for user:" +

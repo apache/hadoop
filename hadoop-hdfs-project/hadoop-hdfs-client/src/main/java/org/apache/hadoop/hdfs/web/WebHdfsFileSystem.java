@@ -37,7 +37,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Base64.Decoder;
@@ -49,6 +48,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.core.MediaType;
@@ -682,10 +682,10 @@ public class WebHdfsFileSystem extends FileSystem
       try {
         // the entire lifecycle of the connection must be run inside the
         // doAs to ensure authentication is performed correctly
-        return connectUgi.doAs(
-            new PrivilegedExceptionAction<T>() {
+        return connectUgi.callAs(
+            new Callable<T>() {
               @Override
-              public T run() throws IOException {
+              public T call() throws IOException {
                 return runWithRetry();
               }
             });

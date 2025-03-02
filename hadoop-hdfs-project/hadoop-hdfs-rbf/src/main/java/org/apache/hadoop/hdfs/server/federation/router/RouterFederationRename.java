@@ -37,8 +37,8 @@ import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedureScheduler;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_FORCE_CLOSE_OPEN_FILE;
@@ -114,7 +114,7 @@ public class RouterFederationRename {
 
     try {
       // as router user with saveJournal and task submission privileges
-      return routerUser.doAs((PrivilegedExceptionAction<Boolean>) () -> {
+      return routerUser.callAs((Callable<Boolean>) () -> {
         // Build and submit router federation rename job.
         BalanceJob job = buildRouterRenameJob(srcLoc.getNameserviceId(),
             dstLoc.getNameserviceId(), srcLoc.getDest(), dstLoc.getDest());
@@ -154,7 +154,7 @@ public class RouterFederationRename {
         UserGroupInformation proxyUser = UserGroupInformation
             .createProxyUser(remoteUserName,
                 UserGroupInformation.getLoginUser());
-        proxyUser.doAs((PrivilegedExceptionAction<Object>) () -> {
+        proxyUser.callAs((Callable<Object>) () -> {
           checkRenamePermission(src, dst);
           return null;
         });

@@ -27,7 +27,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -169,10 +169,10 @@ public class DFSck extends Configured implements Tool {
     }
 
     try {
-      return UserGroupInformation.getCurrentUser().doAs(
-          new PrivilegedExceptionAction<Integer>() {
+      return UserGroupInformation.getCurrentUser().callAs(
+          new Callable<Integer>() {
             @Override
-            public Integer run() throws Exception {
+            public Integer call() throws Exception {
               return doWork(args);
             }
           });

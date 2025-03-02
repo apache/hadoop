@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.URI;
-import java.security.PrivilegedExceptionAction;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -369,8 +369,8 @@ public class Gridmix extends Configured implements Tool {
     UserGroupInformation.setConfiguration(conf);
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
 
-    val = ugi.doAs(new PrivilegedExceptionAction<Integer>() {
-      public Integer run() throws Exception {
+    val = ugi.callAs(new Callable<Integer>() {
+      public Integer call() throws Exception {
         return runJob(conf, argv);
       }
     });

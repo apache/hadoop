@@ -21,11 +21,11 @@ import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.OutputStream;
-import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -170,8 +170,8 @@ class GenerateData extends GridmixJob {
   public Job call() throws IOException, InterruptedException,
                            ClassNotFoundException {
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-    ugi.doAs( new PrivilegedExceptionAction <Job>() {
-       public Job run() throws IOException, ClassNotFoundException,
+    ugi.callAs( new Callable <Job>() {
+       public Job call() throws IOException, ClassNotFoundException,
                                InterruptedException {
          // check if compression emulation is enabled
          if (CompressionEmulationUtil

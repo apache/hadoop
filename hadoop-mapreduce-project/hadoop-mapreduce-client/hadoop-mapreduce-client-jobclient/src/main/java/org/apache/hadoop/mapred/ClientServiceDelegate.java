@@ -22,10 +22,10 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
@@ -201,9 +201,9 @@ public class ClientServiceDelegate {
           }
           LOG.debug("Connecting to " + serviceAddr);
           final InetSocketAddress finalServiceAddr = serviceAddr;
-          realProxy = newUgi.doAs(new PrivilegedExceptionAction<MRClientProtocol>() {
+          realProxy = newUgi.callAs(new Callable<MRClientProtocol>() {
             @Override
-            public MRClientProtocol run() throws IOException {
+            public MRClientProtocol call() throws IOException {
               return instantiateAMProxy(finalServiceAddr);
             }
           });

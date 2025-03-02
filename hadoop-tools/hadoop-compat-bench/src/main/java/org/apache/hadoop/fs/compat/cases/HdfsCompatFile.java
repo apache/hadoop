@@ -27,8 +27,8 @@ import org.apache.hadoop.util.DataChecksum;
 import org.junit.Assert;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.Random;
+import java.util.concurrent.Callable;
 
 @HdfsCompatCaseGroup(name = "File")
 public class HdfsCompatFile extends AbstractHdfsCompatCase {
@@ -125,8 +125,8 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
     final String owner = "test_" + RANDOM.nextInt(1024);
     final String group = "test_" + RANDOM.nextInt(1024);
     final String privileged = getPrivilegedUser();
-    UserGroupInformation.createRemoteUser(privileged).doAs(
-        (PrivilegedExceptionAction<Void>) () -> {
+    UserGroupInformation.createRemoteUser(privileged).callAs(
+        (Callable<Void>) () -> {
           FileSystem.newInstance(fs().getUri(), fs().getConf())
               .setOwner(file, owner, group);
           return null;

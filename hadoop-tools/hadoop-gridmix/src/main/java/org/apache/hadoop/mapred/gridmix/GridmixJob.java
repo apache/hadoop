@@ -26,7 +26,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
-import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -108,8 +107,8 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
 
     ((StringBuilder)nameFormat.get().out()).setLength(JOB_NAME_PREFIX.length());
     try {
-      job = this.ugi.doAs(new PrivilegedExceptionAction<Job>() {
-        public Job run() throws IOException {
+      job = this.ugi.callAs(new Callable<Job>() {
+        public Job call() throws IOException {
 
           String jobId = null == jobdesc.getJobID() 
                          ? "<unknown>" 
@@ -341,8 +340,8 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
     ugi = UserGroupInformation.getCurrentUser();
 
     try {
-      job = this.ugi.doAs(new PrivilegedExceptionAction<Job>() {
-        public Job run() throws IOException {
+      job = this.ugi.callAs(new Callable<Job>() {
+        public Job call() throws IOException {
           Job ret = Job.getInstance(conf, name);
           ret.getConfiguration().setInt(GRIDMIX_JOB_SEQ, seq);
           setJobQueue(ret, conf.get(GRIDMIX_DEFAULT_QUEUE));

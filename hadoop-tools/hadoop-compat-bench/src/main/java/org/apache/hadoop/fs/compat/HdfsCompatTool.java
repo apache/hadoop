@@ -25,8 +25,8 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
-import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -83,10 +83,10 @@ public class HdfsCompatTool extends Configured implements Tool {
   @Override
   public int run(final String[] args) throws Exception {
     try {
-      return UserGroupInformation.getCurrentUser().doAs(
-          new PrivilegedExceptionAction<Integer>() {
+      return UserGroupInformation.getCurrentUser().callAs(
+          new Callable<Integer>() {
             @Override
-            public Integer run() {
+            public Integer call() {
               return runImpl(args);
             }
           });

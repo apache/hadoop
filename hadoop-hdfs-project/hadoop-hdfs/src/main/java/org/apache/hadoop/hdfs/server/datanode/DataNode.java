@@ -124,7 +124,6 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.channels.ServerSocketChannel;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -2381,9 +2380,9 @@ public class DataNode extends ReconfigurableBase
     final UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
     try {
       return loginUgi
-          .doAs(new PrivilegedExceptionAction<InterDatanodeProtocol>() {
+          .callAs(new Callable<InterDatanodeProtocol>() {
             @Override
-            public InterDatanodeProtocol run() throws IOException {
+            public InterDatanodeProtocol call() throws IOException {
               return new InterDatanodeProtocolTranslatorPB(addr, loginUgi,
                   conf, NetUtils.getDefaultSocketFactory(conf), socketTimeout);
             }

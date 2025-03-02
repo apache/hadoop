@@ -20,10 +20,10 @@ package org.apache.hadoop.mapred.gridmix;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
@@ -102,9 +102,9 @@ public class SleepJob extends GridmixJob {
   @Override
   public Job call()
     throws IOException, InterruptedException, ClassNotFoundException {
-    ugi.doAs(
-      new PrivilegedExceptionAction<Job>() {
-        public Job run()
+    ugi.callAs(
+      new Callable<Job>() {
+        public Job call()
           throws IOException, ClassNotFoundException, InterruptedException {
           job.setMapperClass(SleepMapper.class);
           job.setReducerClass(SleepReducer.class);

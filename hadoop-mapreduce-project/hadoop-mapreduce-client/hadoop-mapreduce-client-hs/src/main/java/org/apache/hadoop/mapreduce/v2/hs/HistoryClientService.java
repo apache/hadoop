@@ -21,10 +21,10 @@ package org.apache.hadoop.mapreduce.v2.hs;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.AccessControlException;
-import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -231,10 +231,10 @@ public class HistoryClientService extends AbstractService {
       Job job = null;
       try {
         loginUgi = UserGroupInformation.getLoginUser();
-        job = loginUgi.doAs(new PrivilegedExceptionAction<Job>() {
+        job = loginUgi.callAs(new Callable<Job>() {
 
           @Override
-          public Job run() throws Exception {
+          public Job call() throws Exception {
             Job job = history.getJob(jobID);
             return job;
           }

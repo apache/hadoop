@@ -56,7 +56,6 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -621,7 +620,7 @@ public class TestSaslRPC extends TestRpcBase {
     AtomicBoolean fallbackToSimpleAuth2 = new AtomicBoolean();
     try {
       LOG.info("trying ugi:"+ clientUgi +" tokens:"+ clientUgi.getTokens());
-      clientUgi.doAs((PrivilegedExceptionAction<Void>) () -> {
+      clientUgi.callAs((Callable<Void>) () -> {
         TestRpcService proxy1 = null;
         TestRpcService proxy2 = null;
         try {
@@ -862,9 +861,9 @@ public class TestSaslRPC extends TestRpcBase {
       Token<?> token = new Token<>(tokenId, sm);
       SecurityUtil.setTokenService(token, addr);
       clientUgi.addToken(token);
-      clientUgi.doAs(new PrivilegedExceptionAction<Void>() {
+      clientUgi.callAsNoException(new Callable<Void>() {
         @Override
-        public Void run() throws Exception {
+        public Void call() throws Exception {
           final TestRpcService proxy = getClient(addr, conf);
           final ExecutorService executor = Executors.newCachedThreadPool();
           final AtomicInteger count = new AtomicInteger();
@@ -988,9 +987,9 @@ public class TestSaslRPC extends TestRpcBase {
 
   private Server startServer(Configuration serverConf, UserGroupInformation serverUgi,
       SecretManager<?> serverSm) throws IOException, InterruptedException {
-    Server server = serverUgi.doAs(new PrivilegedExceptionAction<Server>() {
+    Server server = serverUgi.callAsNoException(new Callable<Server>() {
       @Override
-      public Server run() throws IOException {
+      public Server call() throws IOException {
         return setupTestServer(serverConf, 5, serverSm);
       }
     });
@@ -1048,9 +1047,9 @@ public class TestSaslRPC extends TestRpcBase {
       Configuration clientConf, UserGroupInformation clientUgi, AtomicBoolean fallbackToSimpleAuth)
       throws IOException, InterruptedException {
     LOG.info("trying ugi:"+ clientUgi +" tokens:"+ clientUgi.getTokens());
-    return clientUgi.doAs(new PrivilegedExceptionAction<String>() {
+    return clientUgi.callAsNoException(new Callable<String>() {
       @Override
-      public String run() throws IOException {
+      public String call() throws IOException {
         TestRpcService proxy = null;
         try {
           proxy = getClient(serverAddress, clientConf, null, fallbackToSimpleAuth);

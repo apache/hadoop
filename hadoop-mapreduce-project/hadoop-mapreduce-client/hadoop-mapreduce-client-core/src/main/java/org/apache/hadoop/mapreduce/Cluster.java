@@ -21,11 +21,11 @@ package org.apache.hadoop.mapreduce;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -190,8 +190,8 @@ public class Cluster {
       throws IOException, InterruptedException {
     if (this.fs == null) {
       try {
-        this.fs = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
-          public FileSystem run() throws IOException, InterruptedException {
+        this.fs = ugi.callAs(new Callable<FileSystem>() {
+          public FileSystem call() throws IOException, InterruptedException {
             final Path sysDir = new Path(client.getSystemDir());
             return sysDir.getFileSystem(getConf());
           }

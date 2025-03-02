@@ -38,9 +38,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.concurrent.Callable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -117,9 +117,9 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
     UserGroupInformation proxyUserUgi = UserGroupInformation.createProxyUser(
         PROXY_USER_NAME, realUserUgi);
     UserGroupInformation curUGI = proxyUserUgi
-        .doAs(new PrivilegedExceptionAction<UserGroupInformation>() {
+        .callAs(new Callable<UserGroupInformation>() {
           @Override
-          public UserGroupInformation run() throws IOException {
+          public UserGroupInformation call() throws IOException {
             return UserGroupInformation.getCurrentUser();
           }
         });
@@ -130,9 +130,9 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
 
   private void checkRemoteUgi(final UserGroupInformation ugi,
                               final Configuration conf) throws Exception {
-    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+    ugi.callAs(new Callable<Void>() {
       @Override
-      public Void run() throws ServiceException {
+      public Void call() throws ServiceException {
         client = getClient(addr, conf);
         String currentUser = client.getCurrentUser(null,
             newEmptyRequest()).getUser();
@@ -233,9 +233,9 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
       UserGroupInformation proxyUserUgi = UserGroupInformation
           .createProxyUserForTesting(PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
       String retVal = proxyUserUgi
-          .doAs(new PrivilegedExceptionAction<String>() {
+          .callAs(new Callable<String>() {
             @Override
-            public String run() throws ServiceException {
+            public String call() throws ServiceException {
               client = getClient(addr, conf);
               return client.getCurrentUser(null,
                   newEmptyRequest()).getUser();
@@ -269,9 +269,9 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
       UserGroupInformation proxyUserUgi = UserGroupInformation
           .createProxyUserForTesting(PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
       String retVal = proxyUserUgi
-          .doAs(new PrivilegedExceptionAction<String>() {
+          .callAs(new Callable<String>() {
             @Override
-            public String run() throws ServiceException {
+            public String call() throws ServiceException {
               client = getClient(addr, conf);
               return client.getCurrentUser(null,
                   newEmptyRequest()).getUser();
@@ -302,9 +302,9 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
       UserGroupInformation proxyUserUgi = UserGroupInformation
           .createProxyUserForTesting(PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
       String retVal = proxyUserUgi
-          .doAs(new PrivilegedExceptionAction<String>() {
+          .callAs(new Callable<String>() {
             @Override
-            public String run() throws ServiceException {
+            public String call() throws ServiceException {
               client = getClient(addr, conf);
               return client.getCurrentUser(null,
                   newEmptyRequest()).getUser();
@@ -340,9 +340,9 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
       UserGroupInformation proxyUserUgi = UserGroupInformation
           .createProxyUserForTesting(PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
       String retVal = proxyUserUgi
-          .doAs(new PrivilegedExceptionAction<String>() {
+          .callAs(new Callable<String>() {
             @Override
-            public String run() throws ServiceException {
+            public String call() throws ServiceException {
               client = getClient(addr, conf);
               return client.getCurrentUser(null,
                   newEmptyRequest()).getUser();
@@ -386,9 +386,9 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
     
     refreshConf(conf);
 
-    String retVal = proxyUserUgi.doAs(new PrivilegedExceptionAction<String>() {
+    String retVal = proxyUserUgi.callAs(new Callable<String>() {
       @Override
-      public String run() throws Exception {
+      public String call() throws Exception {
         try {
           client = getClient(addr, conf);
           return client.getCurrentUser(null,
@@ -430,9 +430,9 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
     Token<TestTokenIdentifier> token = new Token<>(tokenId, sm);
     SecurityUtil.setTokenService(token, addr);
     current.addToken(token);
-    String retVal = current.doAs(new PrivilegedExceptionAction<String>() {
+    String retVal = current.callAs(new Callable<String>() {
       @Override
-      public String run() throws Exception {
+      public String call() throws Exception {
         try {
           client = getClient(addr, newConf);
           return client.getCurrentUser(null,

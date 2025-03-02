@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -122,10 +122,10 @@ class BlockPoolManager {
   
   synchronized void startAll() throws IOException {
     try {
-      UserGroupInformation.getLoginUser().doAs(
-          new PrivilegedExceptionAction<Object>() {
+      UserGroupInformation.getLoginUser().callAs(
+          new Callable<Object>() {
             @Override
-            public Object run() throws Exception {
+            public Object call() throws Exception {
               for (BPOfferService bpos : offerServices) {
                 bpos.start();
               }
@@ -275,9 +275,9 @@ class BlockPoolManager {
         }
         try {
           UserGroupInformation.getLoginUser()
-              .doAs(new PrivilegedExceptionAction<Object>() {
+              .callAs(new Callable<Object>() {
                 @Override
-                public Object run() throws Exception {
+                public Object call() throws Exception {
                   bpos.refreshNNList(nsToRefresh, nnIds, addrs, lifelineAddrs);
                   return null;
                 }

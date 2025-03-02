@@ -37,13 +37,13 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
@@ -722,9 +722,9 @@ public class TestSchedulerUtils {
                     credentials.getAllTokens());
     currentUser.addToken(amRMToken);
     ApplicationMasterProtocol client =
-            currentUser.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
+            currentUser.callAsNoException(new Callable<ApplicationMasterProtocol>() {
               @Override
-              public ApplicationMasterProtocol run() {
+              public ApplicationMasterProtocol call() {
                 return (ApplicationMasterProtocol) rpc.getProxy(
                         ApplicationMasterProtocol.class, rmBindAddress, yarnConf);
               }

@@ -20,9 +20,9 @@ package org.apache.hadoop.hdfs.tools;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
-import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.Date;
+import java.util.concurrent.Callable;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
@@ -132,9 +132,9 @@ public class DelegationTokenFetcher {
     final Path tokenFile = new Path(local.getWorkingDirectory(), remaining[0]);
 
     // Login the current user
-    UserGroupInformation.getCurrentUser().doAs(new PrivilegedExceptionAction<Object>() {
+    UserGroupInformation.getCurrentUser().callAs(new Callable<Object>() {
       @Override
-      public Object run() throws Exception {
+      public Object call() throws Exception {
         if (print) {
           printTokens(conf, tokenFile, verbose);
         } else if (cancel) {

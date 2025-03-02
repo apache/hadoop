@@ -21,12 +21,12 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
-import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -341,10 +341,10 @@ public class GetConf extends Configured implements Tool {
   @Override
   public int run(final String[] args) throws Exception {
     try {
-      return UserGroupInformation.getCurrentUser().doAs(
-          new PrivilegedExceptionAction<Integer>() {
+      return UserGroupInformation.getCurrentUser().callAs(
+          new Callable<Integer>() {
             @Override
-            public Integer run() throws Exception {
+            public Integer call() throws Exception {
               return doWork(args);
             }
           });

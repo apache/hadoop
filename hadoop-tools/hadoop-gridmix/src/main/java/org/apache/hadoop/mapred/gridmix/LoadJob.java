@@ -44,10 +44,10 @@ import org.apache.hadoop.tools.rumen.TaskInfo;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Callable;
 
 /**
  * Synthetic job generated from a trace description.
@@ -64,9 +64,9 @@ class LoadJob extends GridmixJob {
 
   public Job call() throws IOException, InterruptedException,
                            ClassNotFoundException {
-    ugi.doAs(
-      new PrivilegedExceptionAction<Job>() {
-        public Job run() throws IOException, ClassNotFoundException,
+    ugi.callAs(
+      new Callable<Job>() {
+        public Job call() throws IOException, ClassNotFoundException,
                                 InterruptedException {
           job.setMapperClass(LoadMapper.class);
           job.setReducerClass(LoadReducer.class);

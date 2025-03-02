@@ -20,10 +20,10 @@ package org.apache.hadoop.mapreduce;
 
 import java.io.IOException;
 import java.net.URI;
-import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -326,9 +326,9 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
    */
   synchronized void updateStatus() throws IOException {
     try {
-      this.status = ugi.doAs(new PrivilegedExceptionAction<JobStatus>() {
+      this.status = ugi.callAs(new Callable<JobStatus>() {
         @Override
-        public JobStatus run() throws IOException, InterruptedException {
+        public JobStatus call() throws IOException, InterruptedException {
           return cluster.getClient().getJobStatus(getJobID());
         }
       });
@@ -504,10 +504,10 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
       InterruptedException {
     int failCount = 1;
     TaskCompletionEvent lastEvent = null;
-    TaskCompletionEvent[] events = ugi.doAs(new 
-        PrivilegedExceptionAction<TaskCompletionEvent[]>() {
+    TaskCompletionEvent[] events = ugi.callAs(new 
+        Callable<TaskCompletionEvent[]>() {
           @Override
-          public TaskCompletionEvent[] run() throws IOException,
+          public TaskCompletionEvent[] call() throws IOException,
           InterruptedException {
             return cluster.getClient().getTaskCompletionEvents(
                 status.getJobID(), 0, 10);
@@ -542,8 +542,8 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
       throws IOException, InterruptedException {
     ensureState(JobState.RUNNING);
     final TaskType tmpType = type;
-    return ugi.doAs(new PrivilegedExceptionAction<TaskReport[]>() {
-      public TaskReport[] run() throws IOException, InterruptedException {
+    return ugi.callAs(new Callable<TaskReport[]>() {
+      public TaskReport[] call() throws IOException, InterruptedException {
         return cluster.getClient().getTaskReports(getJobID(), tmpType);
       }
     });
@@ -659,9 +659,9 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
     } else {
       ensureState(JobState.RUNNING);
       final int tmpPriority = convertPriorityToInteger(jobPriority);
-      ugi.doAs(new PrivilegedExceptionAction<Object>() {
+      ugi.callAs(new Callable<Object>() {
         @Override
-        public Object run() throws IOException, InterruptedException {
+        public Object call() throws IOException, InterruptedException {
           cluster.getClient()
               .setJobPriority(getJobID(), Integer.toString(tmpPriority));
           return null;
@@ -684,9 +684,9 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
     } else {
       ensureState(JobState.RUNNING);
       final int tmpPriority = jobPriority;
-      ugi.doAs(new PrivilegedExceptionAction<Object>() {
+      ugi.callAs(new Callable<Object>() {
         @Override
-        public Object run() throws IOException, InterruptedException {
+        public Object call() throws IOException, InterruptedException {
           cluster.getClient()
               .setJobPriority(getJobID(), Integer.toString(tmpPriority));
           return null;
@@ -727,9 +727,9 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
   public TaskCompletionEvent[] getTaskCompletionEvents(final int startFrom,
       final int numEvents) throws IOException, InterruptedException {
     ensureState(JobState.RUNNING);
-    return ugi.doAs(new PrivilegedExceptionAction<TaskCompletionEvent[]>() {
+    return ugi.callAs(new Callable<TaskCompletionEvent[]>() {
       @Override
-      public TaskCompletionEvent[] run() throws IOException, InterruptedException {
+      public TaskCompletionEvent[] call() throws IOException, InterruptedException {
         return cluster.getClient().getTaskCompletionEvents(getJobID(),
             startFrom, numEvents); 
       }
@@ -771,8 +771,8 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
                           final boolean shouldFail) throws IOException {
     ensureState(JobState.RUNNING);
     try {
-      return ugi.doAs(new PrivilegedExceptionAction<Boolean>() {
-        public Boolean run() throws IOException, InterruptedException {
+      return ugi.callAs(new Callable<Boolean>() {
+        public Boolean call() throws IOException, InterruptedException {
           return cluster.getClient().killTask(taskId, shouldFail);
         }
       });
@@ -815,9 +815,9 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
       throws IOException {
     ensureState(JobState.RUNNING);
     try {
-      return ugi.doAs(new PrivilegedExceptionAction<Counters>() {
+      return ugi.callAs(new Callable<Counters>() {
         @Override
-        public Counters run() throws IOException, InterruptedException {
+        public Counters call() throws IOException, InterruptedException {
           return cluster.getClient().getJobCounters(getJobID());
         }
       });
@@ -836,9 +836,9 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
   public String[] getTaskDiagnostics(final TaskAttemptID taskid) 
       throws IOException, InterruptedException {
     ensureState(JobState.RUNNING);
-    return ugi.doAs(new PrivilegedExceptionAction<String[]>() {
+    return ugi.callAs(new Callable<String[]>() {
       @Override
-      public String[] run() throws IOException, InterruptedException {
+      public String[] call() throws IOException, InterruptedException {
         return cluster.getClient().getTaskDiagnostics(taskid);
       }
     });
@@ -1639,8 +1639,8 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
           throws IOException, InterruptedException, ClassNotFoundException {
     if (cluster == null) {
       cluster = 
-        ugi.doAs(new PrivilegedExceptionAction<Cluster>() {
-                   public Cluster run()
+        ugi.callAs(new Callable<Cluster>() {
+                   public Cluster call()
                           throws IOException, InterruptedException, 
                                  ClassNotFoundException {
                      return new Cluster(getConfiguration());
@@ -1671,8 +1671,8 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
     connect();
     final JobSubmitter submitter = 
         getJobSubmitter(cluster.getFileSystem(), cluster.getClient());
-    status = ugi.doAs(new PrivilegedExceptionAction<JobStatus>() {
-      public JobStatus run() throws IOException, InterruptedException, 
+    status = ugi.callAs(new Callable<JobStatus>() {
+      public JobStatus call() throws IOException, InterruptedException, 
       ClassNotFoundException {
         return submitter.submitJobInternal(Job.this, cluster);
       }

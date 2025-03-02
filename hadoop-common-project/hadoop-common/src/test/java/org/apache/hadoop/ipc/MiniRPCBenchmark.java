@@ -21,10 +21,10 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.test.GenericTestUtils;
 
@@ -208,9 +208,9 @@ public class MiniRPCBenchmark {
             MINI_USER, current, GROUP_NAMES);
       
       try {
-        client =  proxyUserUgi.doAs(new PrivilegedExceptionAction<MiniProtocol>() {
+        client =  proxyUserUgi.callAs(new Callable<MiniProtocol>() {
           @Override
-          public MiniProtocol run() throws IOException {
+          public MiniProtocol call() throws IOException {
             MiniProtocol p = RPC.getProxy(MiniProtocol.class,
                 MiniProtocol.versionID, addr, conf);
             Token<TestDelegationTokenIdentifier> token;
@@ -236,9 +236,9 @@ public class MiniRPCBenchmark {
     try {
       long start = Time.now();
       try {
-        client = currentUgi.doAs(new PrivilegedExceptionAction<MiniProtocol>() {
+        client = currentUgi.callAs(new Callable<MiniProtocol>() {
           @Override
-          public MiniProtocol run() throws IOException {
+          public MiniProtocol call() throws IOException {
             return RPC.getProxy(MiniProtocol.class,
                 MiniProtocol.versionID, addr, conf);
           }

@@ -20,10 +20,10 @@ package org.apache.hadoop.mapred.gridmix;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -107,8 +107,8 @@ class GenerateDistCacheData extends GridmixJob {
   public Job call() throws IOException, InterruptedException,
                            ClassNotFoundException {
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-    ugi.doAs( new PrivilegedExceptionAction <Job>() {
-       public Job run() throws IOException, ClassNotFoundException,
+    ugi.callAs( new Callable <Job>() {
+       public Job call() throws IOException, ClassNotFoundException,
                                InterruptedException {
         job.setMapperClass(GenDCDataMapper.class);
         job.setNumReduceTasks(0);

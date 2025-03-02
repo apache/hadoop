@@ -23,7 +23,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -113,9 +113,9 @@ class YarnChild {
     SecurityUtil.setTokenService(jt, address);
     taskOwner.addToken(jt);
     final TaskUmbilicalProtocol umbilical =
-      taskOwner.doAs(new PrivilegedExceptionAction<TaskUmbilicalProtocol>() {
+      taskOwner.callAs(new Callable<TaskUmbilicalProtocol>() {
       @Override
-      public TaskUmbilicalProtocol run() throws Exception {
+      public TaskUmbilicalProtocol call() throws Exception {
         return (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
             TaskUmbilicalProtocol.versionID, address, job);
       }
@@ -169,9 +169,9 @@ class YarnChild {
 
       // Create a final reference to the task for the doAs block
       final Task taskFinal = task;
-      childUGI.doAs(new PrivilegedExceptionAction<Object>() {
+      childUGI.callAs(new Callable<Object>() {
         @Override
-        public Object run() throws Exception {
+        public Object call() throws Exception {
           // use job-specified working directory
           setEncryptedSpillKeyIfRequired(taskFinal);
           FileSystem.get(job).setWorkingDirectory(job.getWorkingDirectory());
@@ -194,9 +194,9 @@ class YarnChild {
             task.taskCleanup(umbilical);
           } else {
             final Task taskFinal = task;
-            childUGI.doAs(new PrivilegedExceptionAction<Object>() {
+            childUGI.callAs(new Callable<Object>() {
               @Override
-              public Object run() throws Exception {
+              public Object call() throws Exception {
                 taskFinal.taskCleanup(umbilical);
                 return null;
               }

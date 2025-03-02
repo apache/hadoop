@@ -22,9 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
-import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosTicket;
@@ -80,10 +80,10 @@ public class TestFixKerberosTicketOrder extends KerberosSecurityTestcase {
     UserGroupInformation ugi =
         UserGroupInformation.loginUserFromKeytabAndReturnUGI(clientPrincipal,
             keytabFile.getCanonicalPath());
-    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+    ugi.callAs(new Callable<Void>() {
 
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
         SaslClient client = Sasl.createSaslClient(
             new String[] {AuthMethod.KERBEROS.getMechanismName()},
             clientPrincipal, server1Protocol, host, props, null);
@@ -115,10 +115,10 @@ public class TestFixKerberosTicketOrder extends KerberosSecurityTestcase {
         + "please reconsider the problem in HADOOP-13433");
     // should fail as we send a service ticket instead of tgt to KDC.
     intercept(SaslException.class,
-        () -> ugi.doAs(new PrivilegedExceptionAction<Void>() {
+        () -> ugi.callAs(new Callable<Void>() {
 
           @Override
-          public Void run() throws Exception {
+          public Void call() throws Exception {
             SaslClient client = Sasl.createSaslClient(
                 new String[] {AuthMethod.KERBEROS.getMechanismName()},
                 clientPrincipal, server2Protocol, host, props, null);
@@ -139,10 +139,10 @@ public class TestFixKerberosTicketOrder extends KerberosSecurityTestcase {
         "The first ticket is not tgt");
 
     // make sure we can still get new service ticket after the fix.
-    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+    ugi.callAs(new Callable<Void>() {
 
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
         SaslClient client = Sasl.createSaslClient(
             new String[] {AuthMethod.KERBEROS.getMechanismName()},
             clientPrincipal, server2Protocol, host, props, null);
@@ -163,10 +163,10 @@ public class TestFixKerberosTicketOrder extends KerberosSecurityTestcase {
     UserGroupInformation ugi =
         UserGroupInformation.loginUserFromKeytabAndReturnUGI(clientPrincipal,
             keytabFile.getCanonicalPath());
-    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+    ugi.callAs(new Callable<Void>() {
 
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
         SaslClient client = Sasl.createSaslClient(
             new String[] {AuthMethod.KERBEROS.getMechanismName()},
             clientPrincipal, server1Protocol, host, props, null);
@@ -199,10 +199,10 @@ public class TestFixKerberosTicketOrder extends KerberosSecurityTestcase {
 
     // should fail as we send a service ticket instead of tgt to KDC.
     intercept(SaslException.class,
-        () -> ugi.doAs(new PrivilegedExceptionAction<Void>() {
+        () -> ugi.callAs(new Callable<Void>() {
 
           @Override
-          public Void run() throws Exception {
+          public Void call() throws Exception {
             SaslClient client = Sasl.createSaslClient(
                 new String[] {AuthMethod.KERBEROS.getMechanismName()},
                 clientPrincipal, server2Protocol, host, props, null);
@@ -216,10 +216,10 @@ public class TestFixKerberosTicketOrder extends KerberosSecurityTestcase {
     ugi.reloginFromKeytab();
 
     // make sure we can get new service ticket after the relogin.
-    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+    ugi.callAs(new Callable<Void>() {
 
       @Override
-      public Void run() throws Exception {
+      public Void call() throws Exception {
         SaslClient client = Sasl.createSaslClient(
             new String[] {AuthMethod.KERBEROS.getMechanismName()},
             clientPrincipal, server2Protocol, host, props, null);

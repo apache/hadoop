@@ -30,10 +30,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -87,8 +87,8 @@ public class Statistics implements Component<Statistics.JobStats> {
     final Configuration conf, int pollingInterval, CountDownLatch startFlag)
     throws IOException, InterruptedException {
       UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-      this.cluster = ugi.doAs(new PrivilegedExceptionAction<JobClient>() {
-        public JobClient run() throws IOException {
+      this.cluster = ugi.callAs(new Callable<JobClient>() {
+        public JobClient call() throws IOException {
           return new JobClient(new JobConf(conf));
         }
       });

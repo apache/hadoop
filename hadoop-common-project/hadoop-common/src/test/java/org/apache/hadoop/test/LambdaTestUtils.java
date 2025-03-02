@@ -785,7 +785,7 @@ public final class LambdaTestUtils {
    */
   public static<T> T doAs(UserGroupInformation user, Callable<T> eval)
       throws IOException, InterruptedException {
-    return user.doAs(new PrivilegedOperation<>(eval));
+    return user.callAs(eval);
   }
 
   /**

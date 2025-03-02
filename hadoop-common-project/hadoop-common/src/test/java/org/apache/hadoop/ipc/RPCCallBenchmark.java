@@ -43,7 +43,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -352,9 +352,9 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
     for (int i = 0; i < numProxies; i++) {
       proxies[i] =
         UserGroupInformation.createUserForTesting("proxy-" + i,new String[]{})
-        .doAs(new PrivilegedExceptionAction<RpcServiceWrapper>() {
+        .callAsNoException(new Callable<RpcServiceWrapper>() {
           @Override
-          public RpcServiceWrapper run() throws Exception {
+          public RpcServiceWrapper call() throws Exception {
             return createRpcClient(opts);
           }
         });
