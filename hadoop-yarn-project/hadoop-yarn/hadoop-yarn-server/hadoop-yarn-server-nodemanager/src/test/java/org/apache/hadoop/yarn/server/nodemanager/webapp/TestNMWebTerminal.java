@@ -17,7 +17,7 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,9 +36,9 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit test for hosting web terminal servlet in node manager.
@@ -96,12 +96,12 @@ public class TestNMWebTerminal {
     return server.getPort();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     port = startNMWebAppServer("0.0.0.0:0");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     server.close();
     healthChecker.close();

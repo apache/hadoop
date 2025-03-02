@@ -55,10 +55,11 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestNMWebServer {
 
@@ -67,13 +68,13 @@ public class TestNMWebServer {
   private static File testLogDir = new File("target",
       TestNMWebServer.class.getSimpleName() + "LogDir");
 
-  @Before
+  @BeforeEach
   public void setup() {
     testRootDir.mkdirs();
     testLogDir.mkdir(); 
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     FileUtil.fullyDelete(testRootDir);
     FileUtil.fullyDelete(testLogDir);
@@ -137,9 +138,9 @@ public class TestNMWebServer {
   }
 
   private void validatePortVal(int portVal) {
-    Assert.assertTrue("Port is not updated", portVal > 0);
-    Assert.assertTrue("Port is default "+ YarnConfiguration.DEFAULT_NM_PORT,
-        portVal != YarnConfiguration.DEFAULT_NM_PORT);
+    assertTrue(portVal > 0, "Port is not updated");
+    assertTrue(portVal != YarnConfiguration.DEFAULT_NM_PORT,
+        "Port is default "+ YarnConfiguration.DEFAULT_NM_PORT);
   }
 
   @Test

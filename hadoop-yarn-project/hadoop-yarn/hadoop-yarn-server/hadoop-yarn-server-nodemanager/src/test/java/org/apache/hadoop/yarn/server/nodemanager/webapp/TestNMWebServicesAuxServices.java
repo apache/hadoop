@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -62,9 +62,9 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -171,13 +171,13 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
     super.setUp();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     testRootDir.mkdirs();
     testLogDir.mkdir();
   }
 
-  @AfterClass
+  @AfterAll
   static public void cleanup() {
     FileUtil.fullyDelete(testRootDir);
     FileUtil.fullyDelete(testLogDir);
@@ -236,9 +236,9 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
     JSONObject info = json.getJSONObject("services");
-    assertEquals("incorrect number of elements", 1, info.length());
+    assertEquals(1, info.length(), "incorrect number of elements");
     JSONArray auxInfo = info.getJSONArray("service");
-    assertEquals("incorrect number of elements", 2, auxInfo.length());
+    assertEquals(2, auxInfo.length(), "incorrect number of elements");
 
     verifyNodeAuxServiceInfo(auxInfo.getJSONObject(0), r1);
     verifyNodeAuxServiceInfo(auxInfo.getJSONObject(1), r2);
@@ -265,7 +265,7 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodes = dom.getElementsByTagName("service");
-    assertEquals("incorrect number of elements", 2, nodes.getLength());
+    assertEquals(2, nodes.getLength(), "incorrect number of elements");
     verifyAuxServicesInfoXML(nodes, r1, r2);
   }
 
@@ -286,7 +286,7 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
           response.getMediaType().toString());
       JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
+      assertEquals(3, exception.length(), "incorrect number of elements");
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -316,8 +316,8 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
     if (info.has("version")) {
       version = info.getString("version");
     }
-    assertEquals("incorrect number of elements",
-        version == null ? 2 : 3, info.length());
+    assertEquals(version == null ? 2 : 3, info.length(),
+        "incorrect number of elements");
     verifyNodeAuxServiceInfoGeneric(r, info.getString("name"),
         version, info.getString("startTime"));
   }
@@ -326,7 +326,7 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
       String version, String startTime) {
     assertEquals(r.getName(), name);
     assertEquals(r.getVersion(), version);
-    assertEquals("startTime", dateFormat.format(r.getLaunchTime()),
-        startTime);
+    assertEquals(dateFormat.format(r.getLaunchTime()),
+        startTime, "startTime");
   }
 }

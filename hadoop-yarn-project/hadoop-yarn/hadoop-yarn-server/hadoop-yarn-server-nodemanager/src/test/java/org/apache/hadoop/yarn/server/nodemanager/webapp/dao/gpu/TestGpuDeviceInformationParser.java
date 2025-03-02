@@ -21,15 +21,15 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestGpuDeviceInformationParser {
   private static final double DELTA = 1e-6;
