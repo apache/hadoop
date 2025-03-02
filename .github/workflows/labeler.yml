@@ -28,11 +28,11 @@ jobs:
   triage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4.2.2
         with:
           sparse-checkout: |
             .github
-      - uses: actions/labeler@v4.3.0
+      - uses: actions/labeler@v5
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           sync-labels: true
