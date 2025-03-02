@@ -24,8 +24,6 @@ import org.apache.hadoop.util.SubjectUtil;
 
 import java.io.File;
 import java.security.Principal;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.UUID;
 import java.util.HashMap;
 import java.util.HashSet;

@@ -19,15 +19,11 @@ import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 
-import org.apache.hadoop.security.authentication.KerberosTestUtils;
-import org.apache.hadoop.security.authentication.KerberosTestUtils.KerberosConfiguration;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.util.SubjectUtil;
 
 import java.io.File;
 import java.security.Principal;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
