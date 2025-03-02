@@ -861,7 +861,7 @@ public class TestSaslRPC extends TestRpcBase {
       Token<?> token = new Token<>(tokenId, sm);
       SecurityUtil.setTokenService(token, addr);
       clientUgi.addToken(token);
-      clientUgi.callAsNoException(new Callable<Void>() {
+      clientUgi.callAs(new Callable<Void>() {
         @Override
         public Void call() throws Exception {
           final TestRpcService proxy = getClient(addr, conf);
@@ -987,7 +987,7 @@ public class TestSaslRPC extends TestRpcBase {
 
   private Server startServer(Configuration serverConf, UserGroupInformation serverUgi,
       SecretManager<?> serverSm) throws IOException, InterruptedException {
-    Server server = serverUgi.callAsNoException(new Callable<Server>() {
+    Server server = serverUgi.callAs(new Callable<Server>() {
       @Override
       public Server call() throws IOException {
         return setupTestServer(serverConf, 5, serverSm);
@@ -1047,7 +1047,7 @@ public class TestSaslRPC extends TestRpcBase {
       Configuration clientConf, UserGroupInformation clientUgi, AtomicBoolean fallbackToSimpleAuth)
       throws IOException, InterruptedException {
     LOG.info("trying ugi:"+ clientUgi +" tokens:"+ clientUgi.getTokens());
-    return clientUgi.callAsNoException(new Callable<String>() {
+    return clientUgi.callAs(new Callable<String>() {
       @Override
       public String call() throws IOException {
         TestRpcService proxy = null;

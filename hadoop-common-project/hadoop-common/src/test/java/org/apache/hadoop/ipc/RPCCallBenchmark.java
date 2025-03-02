@@ -352,7 +352,7 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
     for (int i = 0; i < numProxies; i++) {
       proxies[i] =
         UserGroupInformation.createUserForTesting("proxy-" + i,new String[]{})
-        .callAsNoException(new Callable<RpcServiceWrapper>() {
+        .callAs(new Callable<RpcServiceWrapper>() {
           @Override
           public RpcServiceWrapper call() throws Exception {
             return createRpcClient(opts);
