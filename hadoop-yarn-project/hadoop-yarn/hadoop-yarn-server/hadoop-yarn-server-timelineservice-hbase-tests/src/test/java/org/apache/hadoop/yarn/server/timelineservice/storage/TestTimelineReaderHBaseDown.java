@@ -28,8 +28,9 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Set;
@@ -41,7 +42,8 @@ import static org.apache.hadoop.yarn.server.timelineservice.storage.HBaseStorage
 
 public class TestTimelineReaderHBaseDown {
 
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testTimelineReaderHBaseUp() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
@@ -60,7 +62,8 @@ public class TestTimelineReaderHBaseDown {
     }
   }
 
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testTimelineReaderInitWhenHBaseIsDown() throws
       TimeoutException, InterruptedException {
     HBaseTestingUtility util = new HBaseTestingUtility();
@@ -74,7 +77,8 @@ public class TestTimelineReaderHBaseDown {
     waitForHBaseDown(htr);
   }
 
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testTimelineReaderDetectsHBaseDown() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
@@ -101,7 +105,8 @@ public class TestTimelineReaderHBaseDown {
     }
   }
 
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testTimelineReaderDetectsZooKeeperDown() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
@@ -128,7 +133,8 @@ public class TestTimelineReaderHBaseDown {
     }
   }
 
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testTimelineReaderRecoversAfterHBaseReturns() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
@@ -177,9 +183,9 @@ public class TestTimelineReaderHBaseDown {
         }
       }, 1000, 150000);
       checkQuery(htr);
-      Assert.fail("Query should fail when HBase is down");
+      Assertions.fail("Query should fail when HBase is down");
     } catch (IOException e) {
-      Assert.assertEquals("HBase is down", e.getMessage());
+      Assertions.assertEquals("HBase is down", e.getMessage());
     }
   }
 

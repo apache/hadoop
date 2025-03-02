@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.URI;
@@ -55,9 +55,9 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineSchemaUtils;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import com.sun.jersey.api.client.Client;
@@ -75,14 +75,14 @@ public class TestTimelineReaderWebServicesHBaseStorage
       HBaseTimelineSchemaUtils.getTopOfTheDayTimestamp(ts);
   private static String doAsUser = "remoteuser";
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     setup();
     loadData();
     initialize();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     tearDown();
   }
@@ -505,13 +505,13 @@ public class TestTimelineReaderWebServicesHBaseStorage
       assertNotNull(entities);
       assertEquals(2, entities.size());
       for (FlowRunEntity entity : entities) {
-        assertTrue("Id, run id or start time does not match.",
-            ((entity.getId().equals("user1@flow_name/1002345678919")) &&
+        assertTrue(
+           ((entity.getId().equals("user1@flow_name/1002345678919")) &&
             (entity.getRunId() == 1002345678919L) &&
             (entity.getStartTime() == 1425016501000L)) ||
             ((entity.getId().equals("user1@flow_name/1002345678920")) &&
             (entity.getRunId() == 1002345678920L) &&
-            (entity.getStartTime() == 1425016501034L)));
+            (entity.getStartTime() == 1425016501034L)), "Id, run id or start time does not match.");
         assertEquals(0, entity.getMetrics().size());
       }
 
@@ -525,10 +525,10 @@ public class TestTimelineReaderWebServicesHBaseStorage
       assertNotNull(entities);
       assertEquals(1, entities.size());
       for (FlowRunEntity entity : entities) {
-        assertTrue("Id, run id or start time does not match.",
-            entity.getId().equals("user1@flow_name/1002345678920") &&
+        assertTrue(
+           entity.getId().equals("user1@flow_name/1002345678920") &&
             entity.getRunId() == 1002345678920L &&
-            entity.getStartTime() == 1425016501034L);
+            entity.getStartTime() == 1425016501034L, "Id, run id or start time does not match.");
         assertEquals(0, entity.getMetrics().size());
       }
 
@@ -542,10 +542,10 @@ public class TestTimelineReaderWebServicesHBaseStorage
       assertNotNull(entities);
       assertEquals(1, entities.size());
       for (FlowRunEntity entity : entities) {
-        assertTrue("Id, run id or start time does not match.",
-            entity.getId().equals("user1@flow_name/1002345678920") &&
+        assertTrue(
+           entity.getId().equals("user1@flow_name/1002345678920") &&
             entity.getRunId() == 1002345678920L &&
-            entity.getStartTime() == 1425016501034L);
+            entity.getStartTime() == 1425016501034L, "Id, run id or start time does not match.");
         assertEquals(0, entity.getMetrics().size());
       }
 
@@ -559,13 +559,13 @@ public class TestTimelineReaderWebServicesHBaseStorage
       assertNotNull(entities);
       assertEquals(2, entities.size());
       for (FlowRunEntity entity : entities) {
-        assertTrue("Id, run id or start time does not match.",
-            ((entity.getId().equals("user1@flow_name/1002345678919")) &&
+        assertTrue(
+           ((entity.getId().equals("user1@flow_name/1002345678919")) &&
             (entity.getRunId() == 1002345678919L) &&
             (entity.getStartTime() == 1425016501000L)) ||
             ((entity.getId().equals("user1@flow_name/1002345678920")) &&
             (entity.getRunId() == 1002345678920L) &&
-            (entity.getStartTime() == 1425016501034L)));
+            (entity.getStartTime() == 1425016501034L)), "Id, run id or start time does not match.");
         assertEquals(0, entity.getMetrics().size());
       }
 
@@ -579,10 +579,10 @@ public class TestTimelineReaderWebServicesHBaseStorage
       assertNotNull(entities);
       assertEquals(1, entities.size());
       for (FlowRunEntity entity : entities) {
-        assertTrue("Id, run id or start time does not match.",
-             entity.getId().equals("user1@flow_name/1002345678919") &&
+        assertTrue(
+            entity.getId().equals("user1@flow_name/1002345678919") &&
              entity.getRunId() == 1002345678919L &&
-             entity.getStartTime() == 1425016501000L);
+             entity.getStartTime() == 1425016501000L, "Id, run id or start time does not match.");
         assertEquals(0, entity.getMetrics().size());
       }
 
@@ -596,15 +596,15 @@ public class TestTimelineReaderWebServicesHBaseStorage
       assertNotNull(entities);
       assertEquals(2, entities.size());
       for (FlowRunEntity entity : entities) {
-        assertTrue("Id, run id or start time does not match.",
-            ((entity.getId().equals("user1@flow_name/1002345678919")) &&
+        assertTrue(
+           ((entity.getId().equals("user1@flow_name/1002345678919")) &&
             (entity.getRunId() == 1002345678919L) &&
             (entity.getStartTime() == 1425016501000L) &&
             (entity.getMetrics().size() == 3)) ||
             ((entity.getId().equals("user1@flow_name/1002345678920")) &&
             (entity.getRunId() == 1002345678920L) &&
             (entity.getStartTime() == 1425016501034L) &&
-            (entity.getMetrics().size() == 1)));
+            (entity.getMetrics().size() == 1)), "Id, run id or start time does not match.");
       }
 
       // fields as CONFIGS will lead to a HTTP 400 as it makes no sense for
@@ -1999,11 +1999,11 @@ public class TestTimelineReaderWebServicesHBaseStorage
       assertNotNull(entities);
       assertEquals(2, entities.size());
       for (TimelineEntity entity : entities) {
-        assertTrue("Unexpected app in result",
-            (entity.getId().equals("application_1111111111_1111") &&
+        assertTrue(
+           (entity.getId().equals("application_1111111111_1111") &&
             entity.getMetrics().size() == 3) ||
             (entity.getId().equals("application_1111111111_2222") &&
-            entity.getMetrics().size() == 1));
+            entity.getMetrics().size() == 1), "Unexpected app in result");
         for (TimelineMetric metric : entity.getMetrics()) {
           assertEquals(TimelineMetric.Type.SINGLE_VALUE, metric.getType());
           assertEquals(1, metric.getValues().size());
@@ -2018,11 +2018,11 @@ public class TestTimelineReaderWebServicesHBaseStorage
       assertNotNull(entities);
       assertEquals(2, entities.size());
       for (TimelineEntity entity : entities) {
-        assertTrue("Unexpected app in result",
-            (entity.getId().equals("application_1111111111_1111") &&
+        assertTrue(
+           (entity.getId().equals("application_1111111111_1111") &&
             entity.getMetrics().size() == 3) ||
             (entity.getId().equals("application_1111111111_2222") &&
-            entity.getMetrics().size() == 1));
+            entity.getMetrics().size() == 1), "Unexpected app in result");
         for (TimelineMetric metric : entity.getMetrics()) {
           assertTrue(metric.getValues().size() <= 2);
           assertEquals(TimelineMetric.Type.TIME_SERIES, metric.getType());
@@ -2062,15 +2062,15 @@ public class TestTimelineReaderWebServicesHBaseStorage
       assertNotNull(entities);
       assertEquals(3, entities.size());
       for (TimelineEntity entity : entities) {
-        assertTrue("Unexpected app in result",
-            (entity.getId().equals("application_1111111111_1111") &&
+        assertTrue(
+           (entity.getId().equals("application_1111111111_1111") &&
             entity.getConfigs().size() == 1 &&
             entity.getConfigs().equals(ImmutableMap.of("cfg2", "value1"))) ||
             (entity.getId().equals("application_1111111111_2222") &&
             entity.getConfigs().size() == 1 &&
             entity.getConfigs().equals(ImmutableMap.of("cfg1", "value1"))) ||
             (entity.getId().equals("application_1111111111_2224") &&
-            entity.getConfigs().size() == 0));
+            entity.getConfigs().size() == 0), "Unexpected app in result");
         for (TimelineMetric metric : entity.getMetrics()) {
           if (entity.getId().equals("application_1111111111_1111")) {
             TimelineMetric m1 = newMetric(TimelineMetric.Type.SINGLE_VALUE,
@@ -2100,15 +2100,15 @@ public class TestTimelineReaderWebServicesHBaseStorage
       assertNotNull(entities);
       assertEquals(3, entities.size());
       for (TimelineEntity entity : entities) {
-        assertTrue("Unexpected app in result",
-            (entity.getId().equals("application_1111111111_1111") &&
+        assertTrue(
+           (entity.getId().equals("application_1111111111_1111") &&
             entity.getConfigs().size() == 1 &&
             entity.getConfigs().equals(ImmutableMap.of("cfg2", "value1"))) ||
             (entity.getId().equals("application_1111111111_2222") &&
             entity.getConfigs().size() == 1 &&
             entity.getConfigs().equals(ImmutableMap.of("cfg1", "value1"))) ||
             (entity.getId().equals("application_1111111111_2224") &&
-            entity.getConfigs().size() == 0));
+            entity.getConfigs().size() == 0), "Unexpected app in result");
         for (TimelineMetric metric : entity.getMetrics()) {
           if (entity.getId().equals("application_1111111111_1111")) {
             TimelineMetric m1 = newMetric(TimelineMetric.Type.TIME_SERIES,
@@ -2167,8 +2167,8 @@ public class TestTimelineReaderWebServicesHBaseStorage
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
       assertNotNull(entities);
       assertEquals(1, entities.size());
-      assertTrue("Unexpected app in result", entities.contains(
-          newEntity(entityType, "application_1111111111_1111")));
+      assertTrue(entities.contains(
+          newEntity(entityType, "application_1111111111_1111")), "Unexpected app in result");
 
       uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/apps?" +
@@ -2177,8 +2177,8 @@ public class TestTimelineReaderWebServicesHBaseStorage
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
       assertNotNull(entities);
       assertEquals(1, entities.size());
-      assertTrue("Unexpected app in result", entities.contains(
-          newEntity(entityType, "application_1111111111_1111")));
+      assertTrue(entities.contains(
+          newEntity(entityType, "application_1111111111_1111")), "Unexpected app in result");
 
       uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/apps?" +
@@ -2187,8 +2187,8 @@ public class TestTimelineReaderWebServicesHBaseStorage
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
       assertNotNull(entities);
       assertEquals(1, entities.size());
-      assertTrue("Unexpected app in result", entities.contains(
-          newEntity(entityType, "application_1111111111_2222")));
+      assertTrue(entities.contains(
+          newEntity(entityType, "application_1111111111_2222")), "Unexpected app in result");
     } finally {
       client.destroy();
     }

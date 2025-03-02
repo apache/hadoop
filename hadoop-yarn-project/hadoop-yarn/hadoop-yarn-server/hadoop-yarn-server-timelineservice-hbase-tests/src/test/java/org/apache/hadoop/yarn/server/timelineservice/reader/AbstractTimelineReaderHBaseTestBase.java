@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.DataGeneratorForTest;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -104,7 +104,7 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
       server.start();
       serverPort = server.getWebServerPort();
     } catch (Exception e) {
-      Assert.fail("Web server failed to start");
+      Assertions.fail("Web server failed to start");
     }
   }
 
@@ -137,8 +137,8 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
         client.resource(uri).accept(MediaType.APPLICATION_JSON)
             .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertNotNull(resp);
-    assertTrue("Response from server should have been " + status,
-        resp.getStatusInfo().getStatusCode() == status.getStatusCode());
+    assertTrue(
+       resp.getStatusInfo().getStatusCode() == status.getStatusCode(), "Response from server should have been " + status);
     System.out.println("Response is: " + resp.getEntity(String.class));
   }
 
