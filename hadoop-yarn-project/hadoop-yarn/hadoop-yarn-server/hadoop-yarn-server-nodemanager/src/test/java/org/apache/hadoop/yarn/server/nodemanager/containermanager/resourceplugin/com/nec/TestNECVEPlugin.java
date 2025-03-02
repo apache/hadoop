@@ -19,10 +19,11 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.com.nec;
 
 import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -50,18 +51,18 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Shell.CommandExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
  * Unit tests for NECVEPlugin class.
  *
  */
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class TestNECVEPlugin {
   private static final String DEFAULT_SCRIPT_NAME = "nec-ve-get.py";
   private static final String[] EMPTY_SEARCH_DIRS = new String[] {};
@@ -84,7 +85,7 @@ public class TestNECVEPlugin {
 
   private NECVEPlugin plugin;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     env = new HashMap<>();
     envProvider = (String var) -> env.get(var);
@@ -101,7 +102,7 @@ public class TestNECVEPlugin {
         0);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException {
     if (testFolder != null) {
       File f = new File(testFolder);
@@ -120,14 +121,14 @@ public class TestNECVEPlugin {
 
     Set<Device> devices = plugin.getDevices();
 
-    assertEquals("Number of devices", 1, devices.size());
+    assertEquals(1, devices.size(), "Number of devices");
     Device device = devices.iterator().next();
-    assertEquals("Device id", 0, device.getId());
-    assertEquals("Device path", "/dev/ve0", device.getDevPath());
-    assertEquals("Bus Id", "0000:65:00.0", device.getBusID());
-    assertEquals("Status", "ONLINE", device.getStatus());
-    assertEquals("Major number", 243, device.getMajorNumber());
-    assertEquals("Minor number", 0, device.getMinorNumber());
+    assertEquals(0, device.getId(), "Device id");
+    assertEquals("/dev/ve0", device.getDevPath(), "Device path");
+    assertEquals("0000:65:00.0", device.getBusID(), "Bus Id");
+    assertEquals("ONLINE", device.getStatus(), "Status");
+    assertEquals(243, device.getMajorNumber(), "Major number");
+    assertEquals(0, device.getMinorNumber(), "Minor number");
   }
 
   @Test
@@ -158,34 +159,34 @@ public class TestNECVEPlugin {
 
     Set<Device> devices = plugin.getDevices();
 
-    assertEquals("Number of devices", 3, devices.size());
+    assertEquals(3, devices.size(), "Number of devices");
     List<Device> devicesList = Lists.newArrayList(devices);
     // Sort devices by id
     Collections.sort(devicesList, DEVICE_COMPARATOR);
 
     Device device0 = devicesList.get(0);
-    assertEquals("Device id", 0, device0.getId());
-    assertEquals("Device path", "/dev/ve0", device0.getDevPath());
-    assertEquals("Bus Id", "0000:65:00.0", device0.getBusID());
-    assertEquals("Status", "ONLINE", device0.getStatus());
-    assertEquals("Major number", 243, device0.getMajorNumber());
-    assertEquals("Minor number", 0, device0.getMinorNumber());
+    assertEquals(0, device0.getId(), "Device id");
+    assertEquals("/dev/ve0", device0.getDevPath(), "Device path");
+    assertEquals("0000:65:00.0", device0.getBusID(), "Bus Id");
+    assertEquals("ONLINE", device0.getStatus(), "Status");
+    assertEquals(243, device0.getMajorNumber(), "Major number");
+    assertEquals(0, device0.getMinorNumber(), "Minor number");
 
     Device device1 = devicesList.get(1);
-    assertEquals("Device id", 1, device1.getId());
-    assertEquals("Device path", "/dev/ve1", device1.getDevPath());
-    assertEquals("Bus Id", "0000:66:00.0", device1.getBusID());
-    assertEquals("Status", "ONLINE", device1.getStatus());
-    assertEquals("Major number", 244, device1.getMajorNumber());
-    assertEquals("Minor number", 1, device1.getMinorNumber());
+    assertEquals(1, device1.getId(), "Device id");
+    assertEquals("/dev/ve1", device1.getDevPath(), "Device path");
+    assertEquals("0000:66:00.0", device1.getBusID(), "Bus Id");
+    assertEquals("ONLINE", device1.getStatus(), "Status");
+    assertEquals(244, device1.getMajorNumber(), "Major number");
+    assertEquals(1, device1.getMinorNumber(), "Minor number");
 
     Device device2 = devicesList.get(2);
-    assertEquals("Device id", 2, device2.getId());
-    assertEquals("Device path", "/dev/ve2", device2.getDevPath());
-    assertEquals("Bus Id", "0000:67:00.0", device2.getBusID());
-    assertEquals("Status", "ONLINE", device2.getStatus());
-    assertEquals("Major number", 245, device2.getMajorNumber());
-    assertEquals("Minor number", 2, device2.getMinorNumber());
+    assertEquals(2, device2.getId(), "Device id");
+    assertEquals("/dev/ve2", device2.getDevPath(), "Device path");
+    assertEquals("0000:67:00.0", device2.getBusID(), "Bus Id");
+    assertEquals("ONLINE", device2.getStatus(), "Status");
+    assertEquals(245, device2.getMajorNumber(), "Major number");
+    assertEquals(2, device2.getMinorNumber(), "Minor number");
   }
 
   @Test
@@ -206,7 +207,7 @@ public class TestNECVEPlugin {
 
     Set<Device> devices = plugin.getDevices();
 
-    assertEquals("Number of devices", 0, devices.size());
+    assertEquals(0, devices.size(), "Number of devices");
   }
 
   @Test
@@ -231,25 +232,25 @@ public class TestNECVEPlugin {
 
     Set<Device> devices = plugin.getDevices();
 
-    assertEquals("Number of devices", 2, devices.size());
+    assertEquals(2, devices.size(), "Number of devices");
     List<Device> devicesList = Lists.newArrayList(devices);
     Collections.sort(devicesList, DEVICE_COMPARATOR);
 
     Device device0 = devicesList.get(0);
-    assertEquals("Device id", 0, device0.getId());
-    assertEquals("Device path", "/dev/ve0", device0.getDevPath());
-    assertEquals("Bus Id", "0000:65:00.0", device0.getBusID());
-    assertEquals("Status", "ONLINE", device0.getStatus());
-    assertEquals("Major number", 243, device0.getMajorNumber());
-    assertEquals("Minor number", 0, device0.getMinorNumber());
+    assertEquals(0, device0.getId(), "Device id");
+    assertEquals("/dev/ve0", device0.getDevPath(), "Device path");
+    assertEquals("0000:65:00.0", device0.getBusID(), "Bus Id");
+    assertEquals("ONLINE", device0.getStatus(), "Status");
+    assertEquals(243, device0.getMajorNumber(), "Major number");
+    assertEquals(0, device0.getMinorNumber(), "Minor number");
 
     Device device1 = devicesList.get(1);
-    assertEquals("Device id", 1, device1.getId());
-    assertEquals("Device path", "/dev/ve1", device1.getDevPath());
-    assertEquals("Bus Id", "0000:66:00.0", device1.getBusID());
-    assertEquals("Status", "ONLINE", device1.getStatus());
-    assertEquals("Major number", 244, device1.getMajorNumber());
-    assertEquals("Minor number", 1, device1.getMinorNumber());
+    assertEquals(1, device1.getId(), "Device id");
+    assertEquals("/dev/ve1", device1.getDevPath(), "Device path");
+    assertEquals("0000:66:00.0", device1.getBusID(), "Bus Id");
+    assertEquals("ONLINE", device1.getStatus(), "Status");
+    assertEquals(244, device1.getMajorNumber(), "Major number");
+    assertEquals(1, device1.getMinorNumber(), "Minor number");
   }
 
   @Test
@@ -277,7 +278,7 @@ public class TestNECVEPlugin {
     Path scriptPath = Paths.get(testFolder, DEFAULT_SCRIPT_NAME);
     Files.createFile(scriptPath);
     scriptPath.toFile().setExecutable(true);
-    assertTrue("Cannot set executable flag", scriptPath.toFile().canExecute());
+    assertTrue(scriptPath.toFile().canExecute(), "Cannot set executable flag");
 
     env.put("NEC_VE_GET_SCRIPT_PATH",
         testFolder + "/" + DEFAULT_SCRIPT_NAME);
@@ -287,30 +288,34 @@ public class TestNECVEPlugin {
     verifyBinaryPathSet(scriptPath);
   }
 
-  @Test(expected = ResourceHandlerException.class)
+  @Test
   public void testExplicitPathPointsToDirectory()
       throws ResourceHandlerException, IOException {
-    setupTestDirectory("_temp_" + System.currentTimeMillis());
+    assertThrows(ResourceHandlerException.class, () -> {
+      setupTestDirectory("_temp_" + System.currentTimeMillis());
 
-    env.put("NEC_VE_GET_SCRIPT_PATH", testFolder);
+      env.put("NEC_VE_GET_SCRIPT_PATH", testFolder);
 
-    plugin = new NECVEPlugin(envProvider, EMPTY_SEARCH_DIRS, udevUtil);
+      plugin = new NECVEPlugin(envProvider, EMPTY_SEARCH_DIRS, udevUtil);
+    });
   }
 
-  @Test(expected = ResourceHandlerException.class)
+  @Test
   public void testExplicitPathIsNotExecutable()
       throws ResourceHandlerException, IOException{
-    setupTestDirectory("_temp_" + System.currentTimeMillis());
+    assertThrows(ResourceHandlerException.class, ()->{
+      setupTestDirectory("_temp_" + System.currentTimeMillis());
 
-    Path scriptPath = Paths.get(testFolder, DEFAULT_SCRIPT_NAME);
-    Files.createFile(scriptPath);
-    scriptPath.toFile().setExecutable(false);
-    assertFalse("File is executable", scriptPath.toFile().canExecute());
+      Path scriptPath = Paths.get(testFolder, DEFAULT_SCRIPT_NAME);
+      Files.createFile(scriptPath);
+      scriptPath.toFile().setExecutable(false);
+      assertFalse(scriptPath.toFile().canExecute(), "File is executable");
 
-    env.put("NEC_VE_GET_SCRIPT_PATH",
-        testFolder + "/" + DEFAULT_SCRIPT_NAME);
+      env.put("NEC_VE_GET_SCRIPT_PATH",
+              testFolder + "/" + DEFAULT_SCRIPT_NAME);
 
-    plugin = new NECVEPlugin(envProvider, EMPTY_SEARCH_DIRS, udevUtil);
+      plugin = new NECVEPlugin(envProvider, EMPTY_SEARCH_DIRS, udevUtil);
+    });
   }
 
   @Test
@@ -353,9 +358,9 @@ public class TestNECVEPlugin {
 
     Set<Device> allocated = plugin.allocateDevices(available, 1, env);
 
-    assertEquals("No. of devices", 1, allocated.size());
+    assertEquals(1, allocated.size(), "No. of devices");
     Device allocatedDevice = allocated.iterator().next();
-    assertSame("Device", device, allocatedDevice);
+    assertSame(device, allocatedDevice, "Device");
   }
 
   @Test
@@ -371,9 +376,9 @@ public class TestNECVEPlugin {
 
     Set<Device> allocated = plugin.allocateDevices(available, 2, env);
 
-    assertEquals("No. of devices", 2, allocated.size());
-    assertTrue("Device missing", allocated.contains(device0));
-    assertTrue("Device missing", allocated.contains(device1));
+    assertEquals(2, allocated.size(), "No. of devices");
+    assertTrue(allocated.contains(device0), "Device missing");
+    assertTrue(allocated.contains(device1), "Device missing");
   }
 
   @Test
@@ -391,9 +396,9 @@ public class TestNECVEPlugin {
 
     Set<Device> devices = plugin.getDevices();
 
-    assertEquals("No. of devices", 1, devices.size());
+    assertEquals(1, devices.size(), "No. of devices");
     Device device = devices.iterator().next();
-    assertSame("Device", device, testDevice);
+    assertSame(device, testDevice, "Device");
     verifyZeroInteractions(mockCommandExecutor);
     verify(mockEnvProvider).apply(eq("NEC_USE_UDEV"));
     verifyNoMoreInteractions(mockEnvProvider);
@@ -440,8 +445,7 @@ public class TestNECVEPlugin {
   }
 
   private void verifyBinaryPathSet(Path expectedPath) {
-    assertEquals("Binary path", expectedPath.toString(),
-        plugin.getBinaryPath());
+    assertEquals(expectedPath.toString(), plugin.getBinaryPath(), "Binary path");
     verifyZeroInteractions(udevUtil);
   }
 }

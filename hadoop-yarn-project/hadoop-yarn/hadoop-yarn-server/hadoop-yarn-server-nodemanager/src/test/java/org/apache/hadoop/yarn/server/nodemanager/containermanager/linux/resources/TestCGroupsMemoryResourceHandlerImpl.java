@@ -26,12 +26,19 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit test for CGroupsMemoryResourceHandlerImpl.
@@ -41,7 +48,7 @@ public class TestCGroupsMemoryResourceHandlerImpl {
   private CGroupsHandler mockCGroupsHandler;
   private CGroupsMemoryResourceHandlerImpl cGroupsMemoryResourceHandler;
 
-  @Before
+  @BeforeEach
   public void setup() {
     mockCGroupsHandler = mock(CGroupsHandler.class);
     when(mockCGroupsHandler.getPathForCGroup(any(), any())).thenReturn(".");
@@ -58,21 +65,21 @@ public class TestCGroupsMemoryResourceHandlerImpl {
         cGroupsMemoryResourceHandler.bootstrap(conf);
     verify(mockCGroupsHandler, times(1))
         .initializeCGroupController(CGroupsHandler.CGroupController.MEMORY);
-    Assert.assertNull(ret);
-    Assert.assertEquals("Default swappiness value incorrect", 0,
-        cGroupsMemoryResourceHandler.getSwappiness());
+    assertNull(ret);
+    assertEquals(0, cGroupsMemoryResourceHandler.getSwappiness(),
+        "Default swappiness value incorrect");
     conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, true);
     try {
       cGroupsMemoryResourceHandler.bootstrap(conf);
     } catch(ResourceHandlerException re) {
-      Assert.fail("Pmem check should be allowed to run with cgroups");
+      fail("Pmem check should be allowed to run with cgroups");
     }
     conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
     conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, true);
     try {
       cGroupsMemoryResourceHandler.bootstrap(conf);
     } catch(ResourceHandlerException re) {
-      Assert.fail("Vmem check should be allowed to run with cgroups");
+      fail("Vmem check should be allowed to run with cgroups");
     }
   }
 
@@ -84,22 +91,22 @@ public class TestCGroupsMemoryResourceHandlerImpl {
     conf.setInt(YarnConfiguration.NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS, -1);
     try {
       cGroupsMemoryResourceHandler.bootstrap(conf);
-      Assert.fail("Negative values for swappiness should not be allowed.");
+      fail("Negative values for swappiness should not be allowed.");
     } catch (ResourceHandlerException re) {
       // do nothing
     }
     try {
       conf.setInt(YarnConfiguration.NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS, 101);
       cGroupsMemoryResourceHandler.bootstrap(conf);
-      Assert.fail("Values greater than 100 for swappiness"
+      fail("Values greater than 100 for swappiness"
           + " should not be allowed.");
     } catch (ResourceHandlerException re) {
       // do nothing
     }
     conf.setInt(YarnConfiguration.NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS, 60);
     cGroupsMemoryResourceHandler.bootstrap(conf);
-    Assert.assertEquals("Swappiness value incorrect", 60,
-        cGroupsMemoryResourceHandler.getSwappiness());
+    assertEquals(60, cGroupsMemoryResourceHandler.getSwappiness(),
+        "Swappiness value incorrect");
   }
 
   @Test
@@ -135,14 +142,14 @@ public class TestCGroupsMemoryResourceHandlerImpl {
     verify(mockCGroupsHandler, times(1))
         .updateCGroupParam(CGroupsHandler.CGroupController.MEMORY, id,
             CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS, String.valueOf(0));
-    Assert.assertNotNull(ret);
-    Assert.assertEquals(1, ret.size());
+    assertNotNull(ret);
+    assertEquals(1, ret.size());
     PrivilegedOperation op = ret.get(0);
-    Assert.assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
+    assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
         op.getOperationType());
     List<String> args = op.getArguments();
-    Assert.assertEquals(1, args.size());
-    Assert.assertEquals(PrivilegedOperation.CGROUP_ARG_PREFIX + path,
+    assertEquals(1, args.size());
+    assertEquals(PrivilegedOperation.CGROUP_ARG_PREFIX + path,
         args.get(0));
   }
 
@@ -180,21 +187,21 @@ public class TestCGroupsMemoryResourceHandlerImpl {
     verify(mockCGroupsHandler, times(0))
         .updateCGroupParam(CGroupsHandler.CGroupController.MEMORY, id,
             CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS, String.valueOf(0));
-    Assert.assertNotNull(ret);
-    Assert.assertEquals(1, ret.size());
+    assertNotNull(ret);
+    assertEquals(1, ret.size());
     PrivilegedOperation op = ret.get(0);
-    Assert.assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
+    assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
         op.getOperationType());
     List<String> args = op.getArguments();
-    Assert.assertEquals(1, args.size());
-    Assert.assertEquals(PrivilegedOperation.CGROUP_ARG_PREFIX + path,
+    assertEquals(1, args.size());
+    assertEquals(PrivilegedOperation.CGROUP_ARG_PREFIX + path,
         args.get(0));
   }
 
   @Test
   public void testReacquireContainer() throws Exception {
     ContainerId containerIdMock = mock(ContainerId.class);
-    Assert.assertNull(
+    assertNull(
         cGroupsMemoryResourceHandler.reacquireContainer(containerIdMock));
   }
 
@@ -203,15 +210,14 @@ public class TestCGroupsMemoryResourceHandlerImpl {
     String id = "container_01_01";
     ContainerId mockContainerId = mock(ContainerId.class);
     when(mockContainerId.toString()).thenReturn(id);
-    Assert
-        .assertNull(cGroupsMemoryResourceHandler.postComplete(mockContainerId));
+    assertNull(cGroupsMemoryResourceHandler.postComplete(mockContainerId));
     verify(mockCGroupsHandler, times(1))
         .deleteCGroup(CGroupsHandler.CGroupController.MEMORY, id);
   }
 
   @Test
   public void testTeardown() throws Exception {
-    Assert.assertNull(cGroupsMemoryResourceHandler.teardown());
+    assertNull(cGroupsMemoryResourceHandler.teardown());
   }
 
   @Test

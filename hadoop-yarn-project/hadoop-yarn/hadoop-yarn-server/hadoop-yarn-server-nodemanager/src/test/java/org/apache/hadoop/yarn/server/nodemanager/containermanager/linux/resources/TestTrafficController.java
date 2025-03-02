@@ -26,10 +26,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +40,9 @@ import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -92,7 +94,7 @@ public class TestTrafficController {
 
   private PrivilegedOperationExecutor privilegedOperationExecutorMock;
 
-  @Before
+  @BeforeEach
   public void setup() {
     privilegedOperationExecutorMock = mock(PrivilegedOperationExecutor.class);
     conf = new YarnConfiguration();
@@ -107,26 +109,26 @@ public class TestTrafficController {
       List<String> expectedTcCmds)
       throws IOException {
     //Verify that the optype matches
-    Assert.assertEquals(expectedOpType, op.getOperationType());
+    assertEquals(expectedOpType, op.getOperationType());
 
     List<String> args = op.getArguments();
 
     //Verify that arg count is always 1 (tc command file) for a tc operation
-    Assert.assertEquals(1, args.size());
+    assertEquals(1, args.size());
 
     File tcCmdsFile = new File(args.get(0));
 
     //Verify that command file exists
-    Assert.assertTrue(tcCmdsFile.exists());
+    assertTrue(tcCmdsFile.exists());
 
     List<String> tcCmds = Files.readAllLines(tcCmdsFile.toPath(),
         StandardCharsets.UTF_8);
 
     //Verify that the number of commands is the same as expected and verify
     //that each command is the same, in sequence
-    Assert.assertEquals(expectedTcCmds.size(), tcCmds.size());
+    assertEquals(expectedTcCmds.size(), tcCmds.size());
     for (int i = 0; i < tcCmds.size(); ++i) {
-      Assert.assertEquals(expectedTcCmds.get(i), tcCmds.get(i));
+      assertEquals(expectedTcCmds.get(i), tcCmds.get(i));
     }
   }
 
@@ -163,7 +165,7 @@ public class TestTrafficController {
     } catch (ResourceHandlerException | PrivilegedOperationException |
         IOException e) {
       LOG.error("Unexpected exception: " + e);
-      Assert.fail("Caught unexpected exception: "
+      fail("Caught unexpected exception: "
           + e.getClass().getSimpleName());
     }
   }
@@ -215,7 +217,7 @@ public class TestTrafficController {
     } catch (ResourceHandlerException | PrivilegedOperationException |
         IOException e) {
       LOG.error("Unexpected exception: " + e);
-      Assert.fail("Caught unexpected exception: "
+      fail("Caught unexpected exception: "
           + e.getClass().getSimpleName());
     }
   }
@@ -235,13 +237,13 @@ public class TestTrafficController {
         TrafficController.BatchBuilder invalidBuilder = trafficController.
             new BatchBuilder(
             PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP);
-        Assert.fail("Invalid builder check failed!");
+        fail("Invalid builder check failed!");
       } catch (ResourceHandlerException e) {
         //expected
       }
     } catch (ResourceHandlerException e) {
       LOG.error("Unexpected exception: " + e);
-      Assert.fail("Caught unexpected exception: "
+      fail("Caught unexpected exception: "
           + e.getClass().getSimpleName());
     }
   }
@@ -259,7 +261,7 @@ public class TestTrafficController {
     int parsedClassId = trafficController.getClassIdFromFileContents
         (TEST_CLASS_ID_DECIMAL_STR);
 
-    Assert.assertEquals(TEST_CLASS_ID, parsedClassId);
+    assertEquals(TEST_CLASS_ID, parsedClassId);
   }
 
   @Test
@@ -274,8 +276,8 @@ public class TestTrafficController {
 
       int classId = trafficController.getNextClassId();
 
-      Assert.assertTrue(classId >= MIN_CONTAINER_CLASS_ID);
-      Assert.assertEquals(String.format(FORMAT_CONTAINER_CLASS_STR, classId),
+      assertTrue(classId >= MIN_CONTAINER_CLASS_ID);
+      assertEquals(String.format(FORMAT_CONTAINER_CLASS_STR, classId),
           trafficController.getStringForNetClsClassId(classId));
 
       //Verify that the operation is setup correctly with strictMode = false
@@ -316,12 +318,12 @@ public class TestTrafficController {
           Arrays.asList(expectedDeleteClassCmd));
     } catch (ResourceHandlerException | IOException e) {
       LOG.error("Unexpected exception: " + e);
-      Assert.fail("Caught unexpected exception: "
+      fail("Caught unexpected exception: "
           + e.getClass().getSimpleName());
     }
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     FileUtil.fullyDelete(new File(tmpPath));
   }

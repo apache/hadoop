@@ -19,7 +19,9 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
 import static org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider.initResourceTypes;
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -49,10 +51,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.gpu.GpuResourceAllocator.GpuAllocation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Captor;
@@ -90,12 +90,9 @@ public class TestGpuResourceAllocator {
   @Mock
   private NMStateStoreService nmStateStore;
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
   private GpuResourceAllocator testSubject;
 
-  @Before
+  @BeforeEach
   public void setup() {
     initResourceTypes(ResourceInformation.GPU_URI);
     MockitoAnnotations.initMocks(this);
@@ -309,64 +306,68 @@ public class TestGpuResourceAllocator {
   @Test
   public void testRequestMoreThanAvailableGpu()
       throws ResourceHandlerException {
-    addGpus(new GpuDevice(1, 1));
-    Container container = createMockContainer(2, 5L);
-
-    exception.expect(ResourceHandlerException.class);
-    exception.expectMessage("Failed to find enough GPUs");
-    testSubject.assignGpus(container);
+    ResourceHandlerException exception = assertThrows(ResourceHandlerException.class, () -> {
+      addGpus(new GpuDevice(1, 1));
+      Container container = createMockContainer(2, 5L);
+      testSubject.assignGpus(container);
+    });
+    assertThat(exception.getMessage()).contains("Failed to find enough GPUs");
   }
 
   @Test
   public void testRequestMoreThanAvailableGpuAndOneContainerIsReleasingGpus()
       throws ResourceHandlerException, IOException {
-    addGpus(new GpuDevice(1, 1), new GpuDevice(1, 2), new GpuDevice(1, 3));
-    Container container = createMockContainer(2, 5L);
-    GpuAllocation allocation = testSubject.assignGpus(container);
-    assertAllocatedGpus(2, 1, container, allocation);
+    ResourceHandlerException exception = assertThrows(ResourceHandlerException.class, () -> {
+      addGpus(new GpuDevice(1, 1), new GpuDevice(1, 2), new GpuDevice(1, 3));
+      Container container = createMockContainer(2, 5L);
+      GpuAllocation allocation = testSubject.assignGpus(container);
+      assertAllocatedGpus(2, 1, container, allocation);
 
-    assertEquals(2, testSubject.getDeviceAllocationMapping().size());
-    assertEquals(2, testSubject.getAssignedGpus().size());
-    assertEquals(3, testSubject.getAllowedGpus().size());
-    assertEquals(1, testSubject.getAvailableGpus());
+      assertEquals(2, testSubject.getDeviceAllocationMapping().size());
+      assertEquals(2, testSubject.getAssignedGpus().size());
+      assertEquals(3, testSubject.getAllowedGpus().size());
+      assertEquals(1, testSubject.getAvailableGpus());
 
-    setupContainerAsReleasingGpus(container);
-    Container container2 = createMockContainer(2, 6L);
+      setupContainerAsReleasingGpus(container);
+      Container container2 = createMockContainer(2, 6L);
+      GpuAllocation allocation2 = testSubject.assignGpus(container2);
+      assertAllocatedGpus(2, 1, container, allocation2);
+    });
 
-    exception.expect(ResourceHandlerException.class);
-    exception.expectMessage("as some other containers might not " +
-        "releasing GPUs");
-    GpuAllocation allocation2 = testSubject.assignGpus(container2);
-    assertAllocatedGpus(2, 1, container, allocation2);
+    assertThat(exception.getMessage()).
+        contains("as some other containers might not releasing GPUs");
   }
 
   @Test
   public void testThreeContainersJustTwoOfThemSatisfied()
       throws ResourceHandlerException, IOException {
-    addGpus(new GpuDevice(1, 1), new GpuDevice(1, 2),
-            new GpuDevice(1, 3), new GpuDevice(1, 4),
-            new GpuDevice(1, 5), new GpuDevice(1, 6));
-    Container container = createMockContainer(3, 5L);
-    Container container2 = createMockContainer(2, 6L);
-    Container container3 = createMockContainer(2, 6L);
+    ResourceHandlerException exception =
+        assertThrows(ResourceHandlerException.class, () -> {
+          addGpus(new GpuDevice(1, 1), new GpuDevice(1, 2),
+              new GpuDevice(1, 3), new GpuDevice(1, 4),
+              new GpuDevice(1, 5), new GpuDevice(1, 6));
+          Container container = createMockContainer(3, 5L);
+          Container container2 = createMockContainer(2, 6L);
+          Container container3 = createMockContainer(2, 6L);
 
-    GpuAllocation allocation = testSubject.assignGpus(container);
-    assertAllocatedGpus(3, 3, container, allocation);
-    assertEquals(3, testSubject.getDeviceAllocationMapping().size());
-    assertEquals(3, testSubject.getAssignedGpus().size());
-    assertEquals(6, testSubject.getAllowedGpus().size());
-    assertEquals(3, testSubject.getAvailableGpus());
+          GpuAllocation allocation = testSubject.assignGpus(container);
+          assertAllocatedGpus(3, 3, container, allocation);
+          assertEquals(3, testSubject.getDeviceAllocationMapping().size());
+          assertEquals(3, testSubject.getAssignedGpus().size());
+          assertEquals(6, testSubject.getAllowedGpus().size());
+          assertEquals(3, testSubject.getAvailableGpus());
 
-    GpuAllocation allocation2 = testSubject.assignGpus(container2);
-    assertAllocatedGpus(2, 4, container2, allocation2);
-    assertEquals(5, testSubject.getDeviceAllocationMapping().size());
-    assertEquals(5, testSubject.getAssignedGpus().size());
-    assertEquals(6, testSubject.getAllowedGpus().size());
-    assertEquals(1, testSubject.getAvailableGpus());
+          GpuAllocation allocation2 = testSubject.assignGpus(container2);
+          assertAllocatedGpus(2, 4, container2, allocation2);
+          assertEquals(5, testSubject.getDeviceAllocationMapping().size());
+          assertEquals(5, testSubject.getAssignedGpus().size());
+          assertEquals(6, testSubject.getAllowedGpus().size());
+          assertEquals(1, testSubject.getAvailableGpus());
 
-    exception.expect(ResourceHandlerException.class);
-    exception.expectMessage("Failed to find enough GPUs");
-    testSubject.assignGpus(container3);
+          testSubject.assignGpus(container3);
+        });
+
+    assertThat(exception.getMessage()).contains("Failed to find enough GPUs");
   }
 
   @Test
@@ -425,17 +426,15 @@ public class TestGpuResourceAllocator {
   @Test
   public void testGpuGetsUnassignedWhenStateStoreThrowsException()
       throws ResourceHandlerException, IOException {
-    doThrow(new IOException("Failed to save container mappings " +
-        "to NM state store!"))
-        .when(nmStateStore).storeAssignedResources(any(Container.class),
-        anyString(), anyList());
+    assertThrows(ResourceHandlerException.class, () -> {
+      doThrow(new IOException("Failed to save container mappings " +
+          "to NM state store!"))
+          .when(nmStateStore).storeAssignedResources(any(Container.class),
+          anyString(), anyList());
 
-    createAndAddGpus(1);
-
-    exception.expect(ResourceHandlerException.class);
-    exception.expectMessage("Failed to save container mappings " +
-        "to NM state store");
-    Container container = createMockContainer(1, 5L);
-    testSubject.assignGpus(container);
+      createAndAddGpus(1);
+      Container container = createMockContainer(1, 5L);
+      testSubject.assignGpus(container);
+    });
   }
 }
