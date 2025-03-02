@@ -26,8 +26,11 @@ import java.util.Set;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test {@link SubClusterResolver} against correct and malformed Federation
@@ -87,20 +90,20 @@ public class TestDefaultSubClusterResolver {
     setUpGoodFile();
 
     // All lowercase, no whitespace in machine list file
-    Assert.assertEquals(SubClusterId.newInstance("subcluster1"),
+    assertEquals(SubClusterId.newInstance("subcluster1"),
         resolver.getSubClusterForNode("node1"));
     // Leading and trailing whitespace in machine list file
-    Assert.assertEquals(SubClusterId.newInstance("subcluster2"),
+    assertEquals(SubClusterId.newInstance("subcluster2"),
         resolver.getSubClusterForNode("node2"));
     // Node name capitalization in machine list file
-    Assert.assertEquals(SubClusterId.newInstance("subcluster3"),
+    assertEquals(SubClusterId.newInstance("subcluster3"),
         resolver.getSubClusterForNode("node3"));
 
     try {
       resolver.getSubClusterForNode("nodeDoesNotExist");
-      Assert.fail();
+      fail();
     } catch (YarnException e) {
-      Assert.assertTrue(
+      assertTrue(
           e.getMessage().startsWith("Cannot find subClusterId for node"));
     }
   }
@@ -111,28 +114,28 @@ public class TestDefaultSubClusterResolver {
 
     try {
       resolver.getSubClusterForNode("node1");
-      Assert.fail();
+      fail();
     } catch (YarnException e) {
-      Assert.assertTrue(
+      assertTrue(
           e.getMessage().startsWith("Cannot find subClusterId for node"));
     }
 
     try {
       resolver.getSubClusterForNode("node2");
-      Assert.fail();
+      fail();
     } catch (YarnException e) {
-      Assert.assertTrue(
+      assertTrue(
           e.getMessage().startsWith("Cannot find subClusterId for node"));
     }
 
-    Assert.assertEquals(SubClusterId.newInstance("subcluster3"),
+    assertEquals(SubClusterId.newInstance("subcluster3"),
         resolver.getSubClusterForNode("node3"));
 
     try {
       resolver.getSubClusterForNode("nodeDoesNotExist");
-      Assert.fail();
+      fail();
     } catch (YarnException e) {
-      Assert.assertTrue(
+      assertTrue(
           e.getMessage().startsWith("Cannot find subClusterId for node"));
     }
   }
@@ -143,9 +146,9 @@ public class TestDefaultSubClusterResolver {
 
     try {
       resolver.getSubClusterForNode("node1");
-      Assert.fail();
+      fail();
     } catch (YarnException e) {
-      Assert.assertTrue(
+      assertTrue(
           e.getMessage().startsWith("Cannot find subClusterId for node"));
     }
   }
@@ -162,16 +165,16 @@ public class TestDefaultSubClusterResolver {
     rack2Expected.add(SubClusterId.newInstance("subcluster3"));
 
     // Two subclusters have nodes in rack1
-    Assert.assertEquals(rack1Expected, resolver.getSubClustersForRack("rack1"));
+    assertEquals(rack1Expected, resolver.getSubClustersForRack("rack1"));
 
     // Two nodes are in rack2, but both belong to subcluster3
-    Assert.assertEquals(rack2Expected, resolver.getSubClustersForRack("rack2"));
+    assertEquals(rack2Expected, resolver.getSubClustersForRack("rack2"));
 
     try {
       resolver.getSubClustersForRack("rackDoesNotExist");
-      Assert.fail();
+      fail();
     } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage().startsWith("Cannot resolve rack"));
+      assertTrue(e.getMessage().startsWith("Cannot resolve rack"));
     }
   }
 
@@ -181,9 +184,9 @@ public class TestDefaultSubClusterResolver {
 
     try {
       resolver.getSubClustersForRack("rack1");
-      Assert.fail();
+      fail();
     } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage().startsWith("Cannot resolve rack"));
+      assertTrue(e.getMessage().startsWith("Cannot resolve rack"));
     }
   }
 }

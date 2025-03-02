@@ -27,11 +27,12 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreException;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreInvalidInputException;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreRetriableException;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.zaxxer.hikari.pool.HikariPool.PoolInitializationException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test class to validate FederationStateStoreFacade retry policy.
@@ -41,7 +42,7 @@ public class TestFederationStateStoreFacadeRetry {
   private int maxRetries = 4;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = new Configuration();
     conf.setInt(YarnConfiguration.CLIENT_FAILOVER_RETRIES, maxRetries);
@@ -58,12 +59,12 @@ public class TestFederationStateStoreFacadeRetry {
         new FederationStateStoreRetriableException(""), 0, 0, false);
     // We compare only the action, since delay and the reason are random values
     // during this test
-    Assert.assertEquals(RetryAction.RETRY.action, action.action);
+    assertEquals(RetryAction.RETRY.action, action.action);
 
     // After maxRetries we stop to retry
     action = policy.shouldRetry(new FederationStateStoreRetriableException(""),
         maxRetries, 0, false);
-    Assert.assertEquals(RetryAction.FAIL.action, action.action);
+    assertEquals(RetryAction.FAIL.action, action.action);
   }
 
   /*
@@ -73,7 +74,7 @@ public class TestFederationStateStoreFacadeRetry {
   public void testFacadeYarnException() throws Exception {
     RetryPolicy policy = FederationStateStoreFacade.createRetryPolicy(conf);
     RetryAction action = policy.shouldRetry(new YarnException(), 0, 0, false);
-    Assert.assertEquals(RetryAction.FAIL.action, action.action);
+    assertEquals(RetryAction.FAIL.action, action.action);
   }
 
   /*
@@ -85,7 +86,7 @@ public class TestFederationStateStoreFacadeRetry {
     RetryPolicy policy = FederationStateStoreFacade.createRetryPolicy(conf);
     RetryAction action = policy
         .shouldRetry(new FederationStateStoreException("Error"), 0, 0, false);
-    Assert.assertEquals(RetryAction.FAIL.action, action.action);
+    assertEquals(RetryAction.FAIL.action, action.action);
   }
 
   /*
@@ -97,7 +98,7 @@ public class TestFederationStateStoreFacadeRetry {
     RetryPolicy policy = FederationStateStoreFacade.createRetryPolicy(conf);
     RetryAction action = policy.shouldRetry(
         new FederationStateStoreInvalidInputException(""), 0, 0, false);
-    Assert.assertEquals(RetryAction.FAIL.action, action.action);
+    assertEquals(RetryAction.FAIL.action, action.action);
   }
 
   /*
@@ -110,12 +111,12 @@ public class TestFederationStateStoreFacadeRetry {
         policy.shouldRetry(new CacheLoaderException(""), 0, 0, false);
     // We compare only the action, since delay and the reason are random values
     // during this test
-    Assert.assertEquals(RetryAction.RETRY.action, action.action);
+    assertEquals(RetryAction.RETRY.action, action.action);
 
     // After maxRetries we stop to retry
     action =
         policy.shouldRetry(new CacheLoaderException(""), maxRetries, 0, false);
-    Assert.assertEquals(RetryAction.FAIL.action, action.action);
+    assertEquals(RetryAction.FAIL.action, action.action);
   }
 
   /*
@@ -129,12 +130,12 @@ public class TestFederationStateStoreFacadeRetry {
         new PoolInitializationException(new YarnException()), 0, 0, false);
     // We compare only the action, delay and the reason are random value
     // during this test
-    Assert.assertEquals(RetryAction.RETRY.action, action.action);
+    assertEquals(RetryAction.RETRY.action, action.action);
 
     // After maxRetries we stop to retry
     action =
         policy.shouldRetry(new PoolInitializationException(new YarnException()),
             maxRetries, 0, false);
-    Assert.assertEquals(RetryAction.FAIL.action, action.action);
+    assertEquals(RetryAction.FAIL.action, action.action);
   }
 }
