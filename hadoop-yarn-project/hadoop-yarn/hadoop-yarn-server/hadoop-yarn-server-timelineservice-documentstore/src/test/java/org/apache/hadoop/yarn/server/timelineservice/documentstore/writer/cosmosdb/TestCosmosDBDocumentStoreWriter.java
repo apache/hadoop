@@ -24,13 +24,12 @@ import org.apache.hadoop.yarn.server.timelineservice.documentstore.DocumentStore
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.DocumentStoreUtils;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.CollectionType;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.entity.TimelineEntityDocument;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 
@@ -40,11 +39,10 @@ import static org.mockito.Mockito.mockStatic;
 /**
  * Test case for {@link CosmosDBDocumentStoreWriter}.
  */
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(DocumentStoreUtils.class)
+@ExtendWith(MockitoExtension.class)
 public class TestCosmosDBDocumentStoreWriter {
 
-  @Before
+  @BeforeEach
   public void setUp() {
     AsyncDocumentClient asyncDocumentClient =
         Mockito.mock(AsyncDocumentClient.class);
@@ -67,30 +65,30 @@ public class TestCosmosDBDocumentStoreWriter {
     TimelineEntityDocument expectedEntityDoc =
         DocumentStoreTestUtils.bakeTimelineEntityDoc();
 
-    Assert.assertEquals(1, actualEntityDoc.getInfo().size());
-    Assert.assertEquals(0, actualEntityDoc.getMetrics().size());
-    Assert.assertEquals(0, actualEntityDoc.getEvents().size());
-    Assert.assertEquals(0, actualEntityDoc.getConfigs().size());
-    Assert.assertEquals(0,
+    Assertions.assertEquals(1, actualEntityDoc.getInfo().size());
+    Assertions.assertEquals(0, actualEntityDoc.getMetrics().size());
+    Assertions.assertEquals(0, actualEntityDoc.getEvents().size());
+    Assertions.assertEquals(0, actualEntityDoc.getConfigs().size());
+    Assertions.assertEquals(0,
         actualEntityDoc.getIsRelatedToEntities().size());
-    Assert.assertEquals(0, actualEntityDoc.
+    Assertions.assertEquals(0, actualEntityDoc.
         getRelatesToEntities().size());
 
     actualEntityDoc = (TimelineEntityDocument) documentStoreWriter
         .applyUpdatesOnPrevDoc(CollectionType.ENTITY,
             actualEntityDoc, null);
 
-    Assert.assertEquals(expectedEntityDoc.getInfo().size(),
+    Assertions.assertEquals(expectedEntityDoc.getInfo().size(),
         actualEntityDoc.getInfo().size());
-    Assert.assertEquals(expectedEntityDoc.getMetrics().size(),
+    Assertions.assertEquals(expectedEntityDoc.getMetrics().size(),
         actualEntityDoc.getMetrics().size());
-    Assert.assertEquals(expectedEntityDoc.getEvents().size(),
+    Assertions.assertEquals(expectedEntityDoc.getEvents().size(),
         actualEntityDoc.getEvents().size());
-    Assert.assertEquals(expectedEntityDoc.getConfigs().size(),
+    Assertions.assertEquals(expectedEntityDoc.getConfigs().size(),
         actualEntityDoc.getConfigs().size());
-    Assert.assertEquals(expectedEntityDoc.getRelatesToEntities().size(),
+    Assertions.assertEquals(expectedEntityDoc.getRelatesToEntities().size(),
         actualEntityDoc.getIsRelatedToEntities().size());
-    Assert.assertEquals(expectedEntityDoc.getRelatesToEntities().size(),
+    Assertions.assertEquals(expectedEntityDoc.getRelatesToEntities().size(),
         actualEntityDoc.getRelatesToEntities().size());
   }
 }
