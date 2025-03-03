@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.s3a.impl.ClientManager;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
 import org.apache.hadoop.fs.s3a.impl.S3AFileSystemOperations;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.fs.s3a.impl.store.StoreConfiguration;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
@@ -366,4 +367,12 @@ public interface S3AStore extends
   /*
    =============== END ObjectInputStreamFactory ===============
    */
+
+
+  /**
+   * Get the store configuration.
+   * @return the store configuration.
+   */
+  StoreConfiguration getStoreConfiguration();
+
 }
