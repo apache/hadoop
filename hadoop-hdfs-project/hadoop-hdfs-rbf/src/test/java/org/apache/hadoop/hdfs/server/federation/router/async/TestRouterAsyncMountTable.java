@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.federation.router.async;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
@@ -35,7 +34,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
-import org.apache.hadoop.util.Time;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -43,6 +42,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collections;
 
@@ -56,8 +56,6 @@ public class TestRouterAsyncMountTable {
   public static final Logger LOG = LoggerFactory.getLogger(TestRouterAsyncMountTable.class);
 
   private static StateStoreDFSCluster cluster;
-  private static MiniRouterDFSCluster.NamenodeContext nnContext0;
-  private static MiniRouterDFSCluster.NamenodeContext nnContext1;
   private static MiniRouterDFSCluster.RouterContext routerContext;
   private static MountTableResolver mountTable;
   private static FileSystem routerFs;
@@ -78,9 +76,6 @@ public class TestRouterAsyncMountTable {
     cluster.startRouters();
     cluster.waitClusterUp();
 
-    // Get the end points.
-    nnContext0 = cluster.getNamenode("ns0", null);
-    nnContext1 = cluster.getNamenode("ns1", null);
     routerContext = cluster.getRandomRouter();
     routerFs = routerContext.getFileSystem();
     Router router = routerContext.getRouter();
@@ -134,7 +129,6 @@ public class TestRouterAsyncMountTable {
 
   @Test
   public void testGetEnclosingRoot() throws Exception {
-
     // Add a read only entry.
     MountTable readOnlyEntry = MountTable.newInstance(
         "/readonly", Collections.singletonMap("ns0", "/testdir"));
@@ -154,5 +148,14 @@ public class TestRouterAsyncMountTable {
 
     // Path does not need to exist.
     assertEquals(routerFs.getEnclosingRoot(new Path("/regular/pathDNE")), new Path("/regular"));
+  }
+
+  @Test
+  public void testListNonExistPath() throws Exception {
+    mountTable.setDefaultNSEnable(false);
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+        "File /base does not exist.",
+        "Expect FileNotFoundException.",
+        () -> routerFs.listStatus(new Path("/base")));
   }
 }
