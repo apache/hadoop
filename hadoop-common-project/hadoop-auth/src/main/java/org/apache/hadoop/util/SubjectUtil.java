@@ -129,7 +129,7 @@ public class SubjectUtil {
 	 * @return the result of the action
 	 */
 	public static <T> T doAs(Subject subject, PrivilegedAction<T> action) {
-		return callAs(subject, wrap(privilegedActionToCallable(action)));
+		return callAs(subject, privilegedActionToCallable(action));
 	}
 
 	 /**
@@ -143,7 +143,7 @@ public class SubjectUtil {
    */
 	public static <T> T doAs(Subject subject, PrivilegedExceptionAction<T> action) throws PrivilegedActionException {
 		try {
-			return callAs(subject, wrap(privilegedExceptionActionToCallable(action)));
+			return callAs(subject, privilegedExceptionActionToCallable(action));
 		} catch (CompletionException ce) {
 			try {
 				Exception cause = (Exception) (ce.getCause());
