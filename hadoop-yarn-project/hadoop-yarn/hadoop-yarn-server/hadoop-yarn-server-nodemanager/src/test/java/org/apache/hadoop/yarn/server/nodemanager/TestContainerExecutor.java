@@ -89,10 +89,10 @@ public class TestContainerExecutor {
       assertEquals(Shell.WINUTILS, command[0],
           "first command should be the run command for the platform");
     } else {
-      assertEquals("first command should be nice", "nice", command[0]); 
-      assertEquals("second command should be -n", "-n", command[1]); 
-      assertEquals("third command should be the priority", Integer.toString(2),
-                   command[2]); 
+      assertEquals("nice", command[0], "first command should be nice");
+      assertEquals("-n", command[1], "second command should be -n");
+      assertEquals(Integer.toString(2), command[2],
+          "third command should be the priority");
     }
 
     // test with negative number
@@ -103,10 +103,10 @@ public class TestContainerExecutor {
       assertEquals(Shell.WINUTILS, command[0],
           "first command should be the run command for the platform");
     } else {
-      assertEquals("first command should be nice", "nice", command[0]); 
-      assertEquals("second command should be -n", "-n", command[1]); 
-      assertEquals("third command should be the priority", Integer.toString(-5),
-                    command[2]); 
+      assertEquals("nice", command[0], "first command should be nice");
+      assertEquals("-n", command[1], "second command should be -n");
+      assertEquals(Integer.toString(-5),
+          command[2], "third command should be the priority");
     }
   }
 

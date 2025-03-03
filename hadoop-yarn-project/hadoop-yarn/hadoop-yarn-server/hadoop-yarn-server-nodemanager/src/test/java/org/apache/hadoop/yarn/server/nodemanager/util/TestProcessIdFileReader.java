@@ -65,7 +65,7 @@ public class TestProcessIdFileReader {
                   
       processId = ProcessIdFileReader.getProcessId(
           new Path(rootDir + Path.SEPARATOR + "temp.txt"));
-      assertEquals(expectedProcessId, processId);      
+      assertEquals(expectedProcessId, processId);
       
     } finally {
       if (testFile != null

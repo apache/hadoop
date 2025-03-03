@@ -202,7 +202,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("apps isn't empty", "{\"containers\":\"\"}", json.toString());
+    assertEquals("{\"containers\":\"\"}", json.toString(), "apps isn't empty");
   }
 
   private HashMap<String, String> addAppContainers(Application app) 

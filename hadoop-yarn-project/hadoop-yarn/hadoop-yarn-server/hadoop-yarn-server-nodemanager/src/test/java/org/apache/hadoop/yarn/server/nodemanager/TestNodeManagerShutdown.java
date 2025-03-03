@@ -168,8 +168,8 @@ public class TestNodeManagerShutdown {
     // There is no way for the process to trap and respond.  Instead, we can
     // verify that the job object with ID matching container ID no longer exists.
     if (Shell.WINDOWS) {
-      assertFalse(
-       DefaultContainerExecutor.containerIsAlive(cId.toString()), "Process is still alive!");
+      assertFalse(DefaultContainerExecutor.containerIsAlive(cId.toString()),
+          "Process is still alive!");
     } else {
       BufferedReader reader =
           new BufferedReader(new FileReader(processStartFile));

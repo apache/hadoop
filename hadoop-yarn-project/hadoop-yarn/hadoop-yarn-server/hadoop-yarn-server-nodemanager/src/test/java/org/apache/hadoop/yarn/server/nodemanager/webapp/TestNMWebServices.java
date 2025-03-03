@@ -259,18 +259,18 @@ public class TestNMWebServices extends JerseyTestBase {
 
   private void assertNMResourceInfoResponse(Response response, long value)
       throws JSONException {
-    assertEquals("MediaType of the response is not the expected!",
-        MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
-        response.getMediaType().toString());
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString(),
+        "MediaType of the response is not the expected!");
     JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(value, json.getJSONObject("nmResourceInfo").getLong("resourceValue"),
         "Unexpected value in the json response!");
   }
 
   private void assertEmptyNMResourceInfo(Response response) throws JSONException {
-    assertEquals("MediaType of the response is not the expected!",
-        MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
-        response.getMediaType().toString());
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString(),
+        "MediaType of the response is not the expected!");
     JSONObject json = response.readEntity(JSONObject.class);
     assertEquals(1, json.length(), "Unexpected value in the json response!");
   }
@@ -580,8 +580,9 @@ public class TestNMWebServices extends JerseyTestBase {
         response.getMediaType().toString(), "MediaType of the response is not the expected!");
     JSONObject nmGpuResourceInfo = response.readEntity(JSONObject.class);
     JSONObject json = nmGpuResourceInfo.getJSONObject("nmGpuResourceInfo");
-    assertEquals("Unexpected driverVersion in the json response!",
-        "1.2.3", json.getJSONObject("gpuDeviceInformation").getString("driver_version"));
+    assertEquals("1.2.3",
+        json.getJSONObject("gpuDeviceInformation").getString("driver_version"),
+        "Unexpected driverVersion in the json response!");
     assertEquals(3, json.getJSONArray("totalGpuDevices").length(),
         "Unexpected totalGpuDevices in the json response!");
     assertEquals(2, json.getJSONArray("assignedGpuDevices").length(),
