@@ -1532,6 +1532,14 @@ public final class Constants {
   public static final String FS_S3A_CREATE_OVERWRITE_SUPPORTED = "fs.s3a.create.overwrite.supported";
 
   /**
+   * If conditional create is available, should it be used in
+   * createFile() operations to check for file existence?
+   * If set, this disables probes for directories.
+   * Value {@value}.
+   */
+  public static final String FS_S3A_CONDITIONAL_CREATE_FOR_FILES = "fs.s3a.conditional.create.for.files";
+
+  /**
    * Create a multipart file, always: {@value}.
    * <p>
    * This is inefficient and will not work on a store which doesn't support that feature,

@@ -79,6 +79,7 @@ import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStream;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
 import org.apache.hadoop.fs.s3a.impl.streams.StreamFactoryRequirements;
+import org.apache.hadoop.fs.s3a.impl.store.StoreConfigurationService;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
@@ -193,10 +194,12 @@ public class S3AStoreImpl
    */
   private ObjectInputStreamFactory objectInputStreamFactory;
 
+  private final StoreConfigurationService storeConfigurationService;
+
   /**
    * Constructor to create S3A store.
    * Package private, as {@link S3AStoreBuilder} creates them.
-   * */
+   */
   S3AStoreImpl(StoreContextFactory storeContextFactory,
       ClientManager clientManager,
       DurationTrackerFactory durationTrackerFactory,
@@ -206,7 +209,8 @@ public class S3AStoreImpl
       RateLimiting readRateLimiter,
       RateLimiting writeRateLimiter,
       AuditSpanSource<AuditSpanS3A> auditSpanSource,
-      @Nullable FileSystem.Statistics fsStatistics) {
+      @Nullable FileSystem.Statistics fsStatistics,
+      StoreConfigurationService storeConfigurationService) {
     super("S3AStore");
     this.auditSpanSource = requireNonNull(auditSpanSource);
     this.clientManager = requireNonNull(clientManager);
@@ -224,6 +228,8 @@ public class S3AStoreImpl
     this.bucket = requireNonNull(storeContext.getBucket());
     this.requestFactory = requireNonNull(storeContext.getRequestFactory());
     addService(clientManager);
+    this.storeConfigurationService = requireNonNull(storeConfigurationService);
+    addService(storeConfigurationService);
   }
 
   /**
