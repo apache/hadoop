@@ -6453,7 +6453,7 @@
       distance (default behavior) before returning to clients.
     </description>
   </property>
- 
+
   <property>
     <name>dfs.journalnode.edits.dir.perm</name>
     <value>700</value>

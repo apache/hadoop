@@ -229,7 +229,7 @@ public class DatanodeManager {
   private final long timeBetweenResendingCachingDirectivesMs;
 
   private final boolean randomNodeOrderEnabled;
-  
+
   DatanodeManager(final BlockManager blockManager, final Namesystem namesystem,
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
