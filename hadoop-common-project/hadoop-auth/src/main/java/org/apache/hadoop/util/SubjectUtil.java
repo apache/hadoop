@@ -113,34 +113,13 @@ public class SubjectUtil {
 	 */
 	public static <T> T callAs(Subject subject, Callable<T> action) throws CompletionException {
 		try {
-			return (T) CALL_AS.invoke(subject, wrap(action));
+			return (T) CALL_AS.invoke(subject, action);
 		} catch (PrivilegedActionException e) {
 			throw new CompletionException(e.getCause());
 		} catch (Throwable t) {
 			throw sneakyThrow(t);
 		}
 	}
-
-	 /**
-   * Maps to Subject.callAs() if available, otherwise maps to Subject.doAs()
-   * 
-   * 
-   * 
-   * @param subject the subject this action runs as
-   * @param action  the action to run
-   * @return the result of the action
-   * @param <T> the type of the result
-   * @throws CompletionException
-   */
-  private static <T> T callAsNoWrap(Subject subject, Callable<T> action) throws CompletionException {
-    try {
-      return (T) CALL_AS.invoke(subject, action);
-    } catch (PrivilegedActionException e) {
-      throw new CompletionException(e.getCause());
-    } catch (Throwable t) {
-      throw sneakyThrow(t);
-    }
-  }
 	
 	/**
 	 * Maps action to a Callable, and delegates to callAs(). On older JVMs, the
@@ -203,7 +182,7 @@ public class SubjectUtil {
       return r;
     }
     Subject s = current();
-    return () -> callAsNoWrap(s, () -> {
+    return () -> callAs(s, () -> {
       r.run();
       return null;
     });
@@ -220,7 +199,7 @@ public class SubjectUtil {
       return c;
     }
     Subject s = current();
-    return () -> callAsNoWrap(s, () -> c.call());
+    return () -> callAs(s, () -> c.call());
   }
 
 	@SuppressWarnings("unused")
