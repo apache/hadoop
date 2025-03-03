@@ -108,6 +108,7 @@ public class TestMiniMRWithDFSWithDistinctUsers {
   @Test
   public void testDistinctUsers() throws Exception {
     JobConf job1 = mr.createJobConf();
+    job1.set(MRJobConfig.MR_AM_LOG_LEVEL, "ALL");
     String input = "The quick brown fox\nhas many silly\n" 
       + "red fox sox\n";
     Path inDir = new Path("/testing/distinct/input");
@@ -117,6 +118,7 @@ public class TestMiniMRWithDFSWithDistinctUsers {
     runJobAsUser(job1, ALICE_UGI);
 
     JobConf job2 = mr.createJobConf();
+    job2.set(MRJobConfig.MR_AM_LOG_LEVEL, "ALL");
     Path inDir2 = new Path("/testing/distinct/input2");
     Path outDir2 = new Path("/user/bob/output2");
     TestMiniMRClasspath.configureWordCount(fs, job2, input, 2, 1, inDir2,
@@ -136,6 +138,8 @@ public class TestMiniMRWithDFSWithDistinctUsers {
     // Make sure it spills twice
     job1.setFloat(MRJobConfig.MAP_SORT_SPILL_PERCENT, 0.0001f);
     job1.setInt(MRJobConfig.IO_SORT_MB, 1);
+    job1.set(MRJobConfig.MR_AM_LOG_LEVEL, "ALL");
+
 
     // Make sure the spill records don't fit in index cache
     job1.setInt(MRJobConfig.INDEX_CACHE_MEMORY_LIMIT, 0);
