@@ -170,6 +170,11 @@ public class SubjectUtil {
 		}
 	}
 
+  /**
+   * Wraps Runnable in callAs() to preserve pre-JEP486 behaviour
+   * @param r Runnable
+   * @return r wrapped in callAs()
+   */
   public static Runnable wrap(Runnable r) {
     if (!HAS_CALL_AS) {
       return r;
@@ -181,12 +186,56 @@ public class SubjectUtil {
     });
   }
 
+  /**
+   * Wraps Callable in callAs() to preserve pre-JEP486 behaviour
+   * @param <T> the return type of the Callable
+   * @param c Callable
+   * @return c wrapped in callAs()
+   */
   public static <T> Callable<T> wrap(Callable<T> c) {
     if (!HAS_CALL_AS) {
       return c;
     }
     Subject s = current();
     return () -> callAs(s, () -> c.call());
+  }
+
+  /**
+   * @param <T> the return type of the PrivilegedExceptionAction
+   * @param a PrivilegedExceptionAction
+   * @return a wrapped in doAs()
+   */
+  // FIXME this can result in multiple wraps. Optimize ?
+  public static <T> PrivilegedExceptionAction<T> wrap(PrivilegedExceptionAction<T> a) {
+    if (!HAS_CALL_AS) {
+      return a;
+    }
+    Subject s = current();
+    return new PrivilegedExceptionAction<T>() {
+      @Override
+      public T run() throws Exception {
+        return doAs(s, a);
+      }
+    };
+  }
+
+  /**
+   * @param <T> the return type of the PrivilegedAction
+   * @param a PrivilegedAction
+   * @return a wrapped in doAs()
+   */
+  // FIXME this can result in multiple wraps. Optimize ?
+  public static <T> PrivilegedAction<T> wrap(PrivilegedAction<T> a) {
+    if (!HAS_CALL_AS) {
+      return a;
+    }
+    Subject s = current();
+    return new PrivilegedAction<T>() {
+      @Override
+      public T run() {
+        return doAs(s, a);
+      }
+    };
   }
 
 	@SuppressWarnings("unused")

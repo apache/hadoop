@@ -31,6 +31,9 @@ import org.apache.hadoop.util.ExitUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnJre;
+import org.junit.jupiter.api.condition.JRE;
+
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -47,6 +50,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+//We could run this on somewhat newer JREs if we enabled SecurityManager
+@EnabledOnJre({JRE.JAVA_8, JRE.JAVA_17})
 public class TestExternalCall {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestExternalCall.class);

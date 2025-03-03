@@ -2014,7 +2014,7 @@ public class UserGroupInformation {
   @Deprecated
   public <T> T doAs(PrivilegedAction<T> action) {
     tracePrivilegedAction(action);
-    return SubjectUtil.doAs(subject, action);
+    return SubjectUtil.doAs(subject, SubjectUtil.wrap(action));
   }
 
 
@@ -2036,7 +2036,7 @@ public class UserGroupInformation {
                     ) throws IOException, InterruptedException {
     try {
       tracePrivilegedAction(action);
-      return SubjectUtil.doAs(subject, action);
+      return SubjectUtil.doAs(subject, SubjectUtil.wrap(action));
     } catch (PrivilegedActionException pae) {
       Throwable cause = pae.getCause();
       LOG.debug("PrivilegedActionException as: {}", this, cause);

@@ -18,6 +18,9 @@
 package org.apache.hadoop.util;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnJre;
+import org.junit.jupiter.api.condition.JRE;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -38,6 +41,7 @@ public class TestNativeCodeLoader {
   }
 
   @Test
+  //@EnabledOnJre({JRE.JAVA_8, JRE.JAVA_17}) /* JEP416 related ? */
   public void testNativeCodeLoaded() {
     if (requireTestJni() == false) {
       LOG.info("TestNativeCodeLoader: libhadoop.so testing is not required.");
