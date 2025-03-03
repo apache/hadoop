@@ -26,6 +26,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
 import org.slf4j.Logger;
@@ -51,6 +52,15 @@ public final class VectoredReadUtils {
 
   private static final Logger LOG =
         LoggerFactory.getLogger(VectoredReadUtils.class);
+
+  /**
+   * This releaser just logs at debug that the buffer
+   * was released.
+   */
+  public static final Consumer<ByteBuffer> LOG_BYTE_BUFFER_RELEASED =
+      (buffer) -> {
+        LOG.debug("Release buffer of length {}: {}", buffer.limit(), buffer);
+      };
 
   /**
    * Validate a single range.
@@ -98,8 +108,26 @@ public final class VectoredReadUtils {
   public static void readVectored(PositionedReadable stream,
                                   List<? extends FileRange> ranges,
                                   IntFunction<ByteBuffer> allocate) throws EOFException {
+    readVectored(stream, ranges, allocate, LOG_BYTE_BUFFER_RELEASED);
+  }
+
+  /**
+   * Variant of {@link #readVectored(PositionedReadable, List, IntFunction)}
+   * where a release() function is invoked if problems surface during reads.
+   * @param stream the stream to read the data from
+   * @param ranges the byte ranges to read
+   * @param allocate the function to allocate ByteBuffer
+   * @param release the function to release a ByteBuffer.
+   * @throws IllegalArgumentException if the any of ranges are invalid, or they overlap.
+   * @throws EOFException the range offset is negative
+   */
+  public static void readVectored(PositionedReadable stream,
+      List<? extends FileRange> ranges,
+      IntFunction<ByteBuffer> allocate,
+      Consumer<ByteBuffer> release) throws EOFException {
+
     for (FileRange range: validateAndSortRanges(ranges, Optional.empty())) {
-      range.setData(readRangeFrom(stream, range, allocate));
+      range.setData(readRangeFrom(stream, range, allocate, release));
     }
   }
 
@@ -118,11 +146,31 @@ public final class VectoredReadUtils {
       PositionedReadable stream,
       FileRange range,
       IntFunction<ByteBuffer> allocate) throws EOFException {
+    return readRangeFrom(stream, range, allocate, LOG_BYTE_BUFFER_RELEASED);
+  }
+
+  /**
+   * Synchronously reads a range from the stream dealing with the combinations
+   * of ByteBuffers buffers and PositionedReadable streams.
+   * @param stream the stream to read from
+   * @param range the range to read
+   * @param allocate the function to allocate ByteBuffers
+   * @param release the function to release a ByteBuffer.
+   * @return the CompletableFuture that contains the read data or an exception.
+   * @throws IllegalArgumentException the range is invalid other than by offset or being null.
+   * @throws EOFException the range offset is negative
+   * @throws NullPointerException if the range is null.
+   */
+  public static CompletableFuture<ByteBuffer> readRangeFrom(
+      PositionedReadable stream,
+      FileRange range,
+      IntFunction<ByteBuffer> allocate,
+      Consumer<ByteBuffer> release) throws EOFException {
 
     validateRangeRequest(range);
     CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
+    ByteBuffer buffer = allocate.apply(range.getLength());
     try {
-      ByteBuffer buffer = allocate.apply(range.getLength());
       if (stream instanceof ByteBufferPositionedReadable) {
         LOG.debug("ByteBufferPositionedReadable.readFully of {}", range);
         ((ByteBufferPositionedReadable) stream).readFully(range.getOffset(),
@@ -136,6 +184,7 @@ public final class VectoredReadUtils {
       result.complete(buffer);
     } catch (IOException ioe) {
       LOG.debug("Failed to read {}", range, ioe);
+      release.accept(buffer);
       result.completeExceptionally(ioe);
     }
     return result;
@@ -147,6 +196,8 @@ public final class VectoredReadUtils {
    * @param range file range
    * @param buffer destination buffer
    * @throws IOException IO problems.
+   * @throws EOFException the end of the data was reached before
+   * the read operation completed
    */
   private static void readNonByteBufferPositionedReadable(
       PositionedReadable stream,
