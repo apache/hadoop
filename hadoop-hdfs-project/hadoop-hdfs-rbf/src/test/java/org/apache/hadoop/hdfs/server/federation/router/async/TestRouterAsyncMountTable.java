@@ -163,6 +163,5 @@ public class TestRouterAsyncMountTable {
 
     // path does not need to exist
     assertEquals(routerFs.getEnclosingRoot(new Path("/regular/pathDNE")), new Path("/regular"));
-
   }
 }
