@@ -73,6 +73,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
+import com.aliyun.oss.common.comm.SignVersion;
 
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
@@ -112,6 +113,16 @@ public class AliyunOSSFileSystemStore {
     clientConf.setUserAgent(
         conf.get(USER_AGENT_PREFIX, USER_AGENT_PREFIX_DEFAULT) + ", Hadoop/"
             + VersionInfo.getVersion());
+
+    String region = conf.get(REGION_KEY, "");
+    String signatureVersion = conf.get(SIGNATURE_VERSION_KEY, SIGNATURE_VERSION_DEFAULT);
+    if ("V4".equalsIgnoreCase(signatureVersion)) {
+      clientConf.setSignatureVersion(SignVersion.V4);
+      if (StringUtils.isEmpty(region)) {
+        LOG.error("Signature version is V4 ,but region is empty.");
+        throw new IOException("SignVersion is V4 but region is empty");
+      }
+    }
 
     String proxyHost = conf.getTrimmed(PROXY_HOST_KEY, "");
     int proxyPort = conf.getInt(PROXY_PORT_KEY, -1);
@@ -169,6 +180,11 @@ public class AliyunOSSFileSystemStore {
           CannedAccessControlList.valueOf(cannedACLName);
       ossClient.setBucketAcl(bucketName, cannedACL);
       statistics.incrementWriteOps(1);
+    }
+
+    if (StringUtils.isNotEmpty(region)) {
+      ossClient.setRegion(region);
+      LOG.debug("ossClient setRegion {}", region);
     }
 
     maxKeys = conf.getInt(MAX_PAGING_KEYS_KEY, MAX_PAGING_KEYS_DEFAULT);

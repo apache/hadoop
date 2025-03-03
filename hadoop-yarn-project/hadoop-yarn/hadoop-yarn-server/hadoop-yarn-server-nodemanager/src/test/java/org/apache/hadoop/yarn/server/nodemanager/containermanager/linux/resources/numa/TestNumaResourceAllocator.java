@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.numa;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -40,9 +40,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings.AssignedResources;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for NumaResourceAllocator.
@@ -52,7 +51,7 @@ public class TestNumaResourceAllocator {
   private Configuration conf;
   private NumaResourceAllocator numaResourceAllocator;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, YarnException {
     conf = new YarnConfiguration();
     Context mockContext = mock(Context.class);
@@ -76,7 +75,7 @@ public class TestNumaResourceAllocator {
     Collection<NumaNodeResource> nodesList = numaResourceAllocator
         .getNumaNodesList();
     Collection<NumaNodeResource> expectedNodesList = getExpectedNumaNodesList();
-    Assert.assertEquals(expectedNodesList, nodesList);
+    assertEquals(expectedNodesList, nodesList);
   }
 
   @Test
@@ -104,7 +103,7 @@ public class TestNumaResourceAllocator {
     Collection<NumaNodeResource> nodesList = numaResourceAllocator
         .getNumaNodesList();
     Collection<NumaNodeResource> expectedNodesList = getExpectedNumaNodesList();
-    Assert.assertEquals(expectedNodesList, nodesList);
+    assertEquals(expectedNodesList, nodesList);
   }
 
   @Test
@@ -113,8 +112,8 @@ public class TestNumaResourceAllocator {
         .allocateNumaNodes(getContainer(
             ContainerId.fromString("container_1481156246874_0001_01_000001"),
             Resource.newInstance(2048, 2)));
-    Assert.assertEquals("0", String.join(",", nodeInfo.getMemNodes()));
-    Assert.assertEquals("0", String.join(",", nodeInfo.getCpuNodes()));
+    assertEquals("0", String.join(",", nodeInfo.getMemNodes()));
+    assertEquals("0", String.join(",", nodeInfo.getCpuNodes()));
   }
 
   @Test
@@ -124,29 +123,29 @@ public class TestNumaResourceAllocator {
         .allocateNumaNodes(getContainer(
             ContainerId.fromString("container_1481156246874_0001_01_000001"),
             Resource.newInstance(2048, 2)));
-    Assert.assertEquals("0", String.join(",", nodeInfo1.getMemNodes()));
-    Assert.assertEquals("0", String.join(",", nodeInfo1.getCpuNodes()));
+    assertEquals("0", String.join(",", nodeInfo1.getMemNodes()));
+    assertEquals("0", String.join(",", nodeInfo1.getCpuNodes()));
 
     NumaResourceAllocation nodeInfo2 = numaResourceAllocator
         .allocateNumaNodes(getContainer(
             ContainerId.fromString("container_1481156246874_0001_01_000002"),
             Resource.newInstance(2048, 2)));
-    Assert.assertEquals("1", String.join(",", nodeInfo2.getMemNodes()));
-    Assert.assertEquals("1", String.join(",", nodeInfo2.getCpuNodes()));
+    assertEquals("1", String.join(",", nodeInfo2.getMemNodes()));
+    assertEquals("1", String.join(",", nodeInfo2.getCpuNodes()));
 
     NumaResourceAllocation nodeInfo3 = numaResourceAllocator
         .allocateNumaNodes(getContainer(
             ContainerId.fromString("container_1481156246874_0001_01_000003"),
             Resource.newInstance(2048, 2)));
-    Assert.assertEquals("0", String.join(",", nodeInfo3.getMemNodes()));
-    Assert.assertEquals("0", String.join(",", nodeInfo3.getCpuNodes()));
+    assertEquals("0", String.join(",", nodeInfo3.getMemNodes()));
+    assertEquals("0", String.join(",", nodeInfo3.getCpuNodes()));
 
     NumaResourceAllocation nodeInfo4 = numaResourceAllocator
         .allocateNumaNodes(getContainer(
             ContainerId.fromString("container_1481156246874_0001_01_000003"),
             Resource.newInstance(2048, 2)));
-    Assert.assertEquals("1", String.join(",", nodeInfo4.getMemNodes()));
-    Assert.assertEquals("1", String.join(",", nodeInfo4.getCpuNodes()));
+    assertEquals("1", String.join(",", nodeInfo4.getMemNodes()));
+    assertEquals("1", String.join(",", nodeInfo4.getCpuNodes()));
   }
 
   @Test
@@ -156,8 +155,8 @@ public class TestNumaResourceAllocator {
         .allocateNumaNodes(getContainer(
             ContainerId.fromString("container_1481156246874_0001_01_000001"),
             Resource.newInstance(102400, 2)));
-    Assert.assertEquals("0,1", String.join(",", nodeInfo.getMemNodes()));
-    Assert.assertEquals("0", String.join(",", nodeInfo.getCpuNodes()));
+    assertEquals("0,1", String.join(",", nodeInfo.getMemNodes()));
+    assertEquals("0", String.join(",", nodeInfo.getCpuNodes()));
   }
 
   @Test
@@ -166,8 +165,8 @@ public class TestNumaResourceAllocator {
         .allocateNumaNodes(getContainer(
             ContainerId.fromString("container_1481156246874_0001_01_000001"),
             Resource.newInstance(2048, 6)));
-    Assert.assertEquals("0", String.join(",", nodeInfo.getMemNodes()));
-    Assert.assertEquals("0,1", String.join(",", nodeInfo.getCpuNodes()));
+    assertEquals("0", String.join(",", nodeInfo.getMemNodes()));
+    assertEquals("0,1", String.join(",", nodeInfo.getCpuNodes()));
   }
 
   @Test
@@ -177,8 +176,8 @@ public class TestNumaResourceAllocator {
         .allocateNumaNodes(getContainer(
             ContainerId.fromString("container_1481156246874_0001_01_000001"),
             Resource.newInstance(2048000, 6)));
-    Assert.assertNull("Should not assign numa nodes when there"
-        + " are no sufficient memory resources available.", nodeInfo);
+    assertNull(nodeInfo, "Should not assign numa nodes when there"
+        + " are no sufficient memory resources available.");
   }
 
   @Test
@@ -188,8 +187,8 @@ public class TestNumaResourceAllocator {
         .allocateNumaNodes(getContainer(
             ContainerId.fromString("container_1481156246874_0001_01_000001"),
             Resource.newInstance(2048, 600)));
-    Assert.assertNull("Should not assign numa nodes when there"
-        + " are no sufficient cpu resources available.", nodeInfo);
+    assertNull(nodeInfo, "Should not assign numa nodes when there"
+        + " are no sufficient cpu resources available.");
   }
 
   @Test
@@ -198,15 +197,15 @@ public class TestNumaResourceAllocator {
         .allocateNumaNodes(getContainer(
             ContainerId.fromString("container_1481156246874_0001_01_000001"),
             Resource.newInstance(2048, 8)));
-    Assert.assertEquals("0", String.join(",", nodeInfo.getMemNodes()));
-    Assert.assertEquals("0,1", String.join(",", nodeInfo.getCpuNodes()));
+    assertEquals("0", String.join(",", nodeInfo.getMemNodes()));
+    assertEquals("0,1", String.join(",", nodeInfo.getCpuNodes()));
 
     // Request the resource when all cpu nodes occupied
     nodeInfo = numaResourceAllocator.allocateNumaNodes(getContainer(
         ContainerId.fromString("container_1481156246874_0001_01_000002"),
         Resource.newInstance(2048, 4)));
-    Assert.assertNull("Should not assign numa nodes when there"
-        + " are no sufficient cpu resources available.", nodeInfo);
+    assertNull(nodeInfo, "Should not assign numa nodes when there"
+        + " are no sufficient cpu resources available.");
 
     // Release the resources
     numaResourceAllocator.releaseNumaResource(
@@ -215,8 +214,8 @@ public class TestNumaResourceAllocator {
     nodeInfo = numaResourceAllocator.allocateNumaNodes(getContainer(
         ContainerId.fromString("container_1481156246874_0001_01_000003"),
         Resource.newInstance(1024, 2)));
-    Assert.assertEquals("0", String.join(",", nodeInfo.getMemNodes()));
-    Assert.assertEquals("0", String.join(",", nodeInfo.getCpuNodes()));
+    assertEquals("0", String.join(",", nodeInfo.getMemNodes()));
+    assertEquals("0", String.join(",", nodeInfo.getCpuNodes()));
   }
 
   @Test

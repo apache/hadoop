@@ -38,8 +38,11 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.reduce.IntSumReducer;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestMapperReducerCleanup {
 
@@ -258,9 +261,9 @@ public class TestMapperReducerCleanup {
 
     job.waitForCompletion(true);
 
-    Assert.assertTrue(mapCleanup);
-    Assert.assertTrue(recordReaderCleanup);
-    Assert.assertTrue(recordWriterCleanup);
+    assertTrue(mapCleanup);
+    assertTrue(recordReaderCleanup);
+    assertTrue(recordWriterCleanup);
   }
 
   @Test
@@ -291,10 +294,10 @@ public class TestMapperReducerCleanup {
 
     job.waitForCompletion(true);
 
-    Assert.assertTrue(mapCleanup);
-    Assert.assertTrue(reduceCleanup);
-    Assert.assertTrue(recordReaderCleanup);
-    Assert.assertTrue(recordWriterCleanup);
+    assertTrue(mapCleanup);
+    assertTrue(reduceCleanup);
+    assertTrue(recordReaderCleanup);
+    assertTrue(recordWriterCleanup);
   }
   
   @Test
@@ -325,14 +328,14 @@ public class TestMapperReducerCleanup {
 
     job.waitForCompletion(true);
 
-    Assert.assertTrue(mapCleanup);
-    Assert.assertTrue(reduceCleanup);
-    Assert.assertTrue(recordReaderCleanup);
-    Assert.assertTrue(recordWriterCleanup);
+    assertTrue(mapCleanup);
+    assertTrue(reduceCleanup);
+    assertTrue(recordReaderCleanup);
+    assertTrue(recordWriterCleanup);
 
-    Assert.assertNotNull(job.getCluster());
+    assertNotNull(job.getCluster());
     job.close();
-    Assert.assertNull(job.getCluster());
+    assertNull(job.getCluster());
   }
 
 }

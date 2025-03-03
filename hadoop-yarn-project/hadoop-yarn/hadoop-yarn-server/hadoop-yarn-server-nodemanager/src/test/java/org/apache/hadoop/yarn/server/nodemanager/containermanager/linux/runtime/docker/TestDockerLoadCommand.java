@@ -17,10 +17,10 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests the docker load command and its command
@@ -31,7 +31,7 @@ public class TestDockerLoadCommand {
 
   private static final String LOCAL_IMAGE_NAME = "foo";
 
-  @Before
+  @BeforeEach
   public void setup() {
     dockerLoadCommand = new DockerLoadCommand(LOCAL_IMAGE_NAME);
   }

@@ -21,10 +21,10 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -57,12 +57,12 @@ public class TestFileInputFormatPathFilter {
       new Path(new Path(System.getProperty("test.build.data", "."), "data"),
           "TestFileInputFormatPathFilter");
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     tearDown();
     localFs.mkdirs(workDir);
   }
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (localFs.exists(workDir)) {
       localFs.delete(workDir, true);

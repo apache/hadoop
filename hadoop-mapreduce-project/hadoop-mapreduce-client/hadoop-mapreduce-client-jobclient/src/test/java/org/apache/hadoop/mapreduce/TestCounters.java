@@ -23,9 +23,12 @@ import org.apache.hadoop.mapreduce.counters.LimitExceededException;
 import org.apache.hadoop.mapreduce.counters.Limits;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 /**
  * TestCounters checks the sanity and recoverability of {@code Counters}
  */
@@ -46,19 +49,19 @@ public class TestCounters {
       long expectedValue = initValue;
       Counter counter = new Counters().findCounter("test", "foo");
       counter.setValue(initValue);
-      assertEquals("Counter value is not initialized correctly",
-          expectedValue, counter.getValue());
+      assertEquals(expectedValue, counter.getValue(),
+          "Counter value is not initialized correctly");
       for (int j = 0; j < NUMBER_INC; j++) {
         int incValue = rand.nextInt();
         counter.increment(incValue);
         expectedValue += incValue;
-        assertEquals("Counter value is not incremented correctly",
-            expectedValue, counter.getValue());
+        assertEquals(expectedValue, counter.getValue(),
+            "Counter value is not incremented correctly");
       }
       expectedValue = rand.nextInt();
       counter.setValue(expectedValue);
-      assertEquals("Counter value is not set correctly",
-          expectedValue, counter.getValue());
+      assertEquals(expectedValue, counter.getValue(),
+          "Counter value is not set correctly");
     }
   }
 
@@ -148,6 +151,6 @@ public class TestCounters {
       LOG.info("got expected: "+ e);
       return;
     }
-    assertTrue("Should've thrown "+ ecls.getSimpleName(), false);
+    assertTrue(false, "Should've thrown "+ ecls.getSimpleName());
   }
 }

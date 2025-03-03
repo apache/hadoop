@@ -558,3 +558,35 @@ Enable Router to rename across namespaces. Currently it is implemented based on 
 | dfs.federation.router.federation.rename.delay | 1000 | Specify the delayed duration(millie seconds) when the job needs to retry.|
 | dfs.federation.router.federation.rename.diff | 0 | Specify the threshold of the diff entries that used in incremental copy stage.|
 | dfs.federation.router.federation.rename.trash | trash | This options has 3 values: trash (move the source path to trash), delete (delete the source path directly) and skip (skip both trash and deletion).|
+
+Asynchronous Router RPC
+-------
+Asynchronous router RPC is designed to address the performance bottlenecks of synchronous router RPC in scenarios with high concurrency and multiple named services.
+By introducing an asynchronous processing mechanism, it optimizes the request-handling process, enhances the system's concurrency capacity and resource utilization efficiency.
+
+See the Apache JIRA ticket [HDFS-17531](https://issues.apache.org/jira/browse/HDFS-17531) for more information on this feature.
+
+### Asynchronous router RPC threads
+
+- **Handler**: Retrieves ```RpcCall``` from the ```CallQueue``` for preliminary processing. In case of exceptions (such as the non-existence of the mount point),
+it directly places the response into the response queue. Otherwise, it forwards the ```RpcCall``` to the **Async-Handler**.
+- **Async-Handler**: Puts the ```RpcCall``` into the ```connection.calls``` of the connection thread and returns immediately without blocking and waiting.
+- **Async-Responder**: Is responsible for processing the response received by the connection thread. If the ```RpcCall``` needs to be retried (such as the downstream service returns a ```StandbyException```),
+it re-adds the ```RpcCall``` to the ```connection.calls```; otherwise, it puts the response into the ```ResponseQueue```.
+- **Responder**: Retrieves the response from the ```ResponseQueue``` and returns it to the client.
+
+### Advantages of the Asynchronous Router Rpc
+
+- **High Processing Performance**: Benefiting from the asynchronous RPC (Remote Procedure Call) processing mechanism, the asynchronous router is capable of handling a large number of requests simultaneously.
+This not only significantly enhances the system's concurrent processing capacity but also optimizes the overall throughput. This mechanism enables the system to respond rapidly to high - traffic requests and maintain efficient operation even under high - load conditions.
+- **High Resource Utilization**: The asynchronous design effectively reduces thread blocking and frequent thread switching. As a result, it minimizes the resource waste associated with threads, thereby improving the overall efficiency of the system and reducing CPU idle time.
+- **Isolation**: Different name-services employ distinct asynchronous processor thread pools. This architecture achieves isolation among name-services. If a particular name-service experiences a performance degradation,
+it will not impact the processing capabilities of other name-services, ensuring the stability and reliability of the entire system.
+
+### Asynchronous Router Rpc configuration
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.async.rpc.enable | false | If true, router will process the ```RpcCall``` asynchronously. |
+| dfs.federation.router.async.rpc.ns.handler.count |  | The number of async-handlers per nameservice, separated by commas, internally separated by colons.  The identifier of nameservice is in dfs.nameservices configuration entry. Such as: ns1:count1,ns2:count2,ns3:count3. |
+| dfs.federation.router.async.rpc.handler.count | 10 | For those nameservices not in dfs.federation.router.async.rpc.ns.handler.count configuration entry, use this value as the async-handler counts. |
+| dfs.federation.router.async.rpc.responder.count | 10 | The thread counts of async-responders. |

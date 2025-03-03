@@ -57,7 +57,11 @@ import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
 import software.amazon.awssdk.transfer.s3.model.FileUpload;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.ProgressableProgressListener;
 import org.apache.hadoop.fs.s3a.Retries;
@@ -69,16 +73,26 @@ import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.UploadInfo;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
+import org.apache.hadoop.fs.s3a.impl.streams.FactoryBindingParameters;
+import org.apache.hadoop.fs.s3a.impl.streams.InputStreamType;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStream;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
+import org.apache.hadoop.fs.s3a.impl.streams.StreamFactoryRequirements;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
+import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.RateLimiting;
 import org.apache.hadoop.util.functional.Tuples;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
+import static org.apache.hadoop.fs.s3a.Constants.HADOOP_TMP_DIR;
 import static org.apache.hadoop.fs.s3a.S3AUtils.extractException;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getPutRequestLength;
 import static org.apache.hadoop.fs.s3a.S3AUtils.isThrottleException;
@@ -99,17 +113,21 @@ import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_THROTTLED;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_THROTTLE_RATE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
+import static org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration.factoryFromConfig;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
  * Store Layer.
  * This is where lower level storage operations are intended
  * to move.
  */
-public class S3AStoreImpl implements S3AStore {
+public class S3AStoreImpl
+    extends CompositeService
+    implements S3AStore, ObjectInputStreamFactory {
 
   private static final Logger LOG = LoggerFactory.getLogger(S3AStoreImpl.class);
 
@@ -165,7 +183,20 @@ public class S3AStoreImpl implements S3AStore {
    */
   private final FileSystem.Statistics fsStatistics;
 
-  /** Constructor to create S3A store. */
+  /**
+   * Allocator of local FS storage.
+   */
+  private LocalDirAllocator directoryAllocator;
+
+  /**
+   * Factory for input streams.
+   */
+  private ObjectInputStreamFactory objectInputStreamFactory;
+
+  /**
+   * Constructor to create S3A store.
+   * Package private, as {@link S3AStoreBuilder} creates them.
+   * */
   S3AStoreImpl(StoreContextFactory storeContextFactory,
       ClientManager clientManager,
       DurationTrackerFactory durationTrackerFactory,
@@ -176,25 +207,90 @@ public class S3AStoreImpl implements S3AStore {
       RateLimiting writeRateLimiter,
       AuditSpanSource<AuditSpanS3A> auditSpanSource,
       @Nullable FileSystem.Statistics fsStatistics) {
-    this.storeContextFactory = requireNonNull(storeContextFactory);
+    super("S3AStore");
+    this.auditSpanSource = requireNonNull(auditSpanSource);
     this.clientManager = requireNonNull(clientManager);
     this.durationTrackerFactory = requireNonNull(durationTrackerFactory);
+    this.fsStatistics = fsStatistics;
     this.instrumentation = requireNonNull(instrumentation);
     this.statisticsContext = requireNonNull(statisticsContext);
+    this.storeContextFactory = requireNonNull(storeContextFactory);
     this.storageStatistics = requireNonNull(storageStatistics);
     this.readRateLimiter = requireNonNull(readRateLimiter);
     this.writeRateLimiter = requireNonNull(writeRateLimiter);
-    this.auditSpanSource = requireNonNull(auditSpanSource);
     this.storeContext = requireNonNull(storeContextFactory.createStoreContext());
-    this.fsStatistics = fsStatistics;
-    this.invoker = storeContext.getInvoker();
-    this.bucket = storeContext.getBucket();
-    this.requestFactory = storeContext.getRequestFactory();
+
+    this.invoker = requireNonNull(storeContext.getInvoker());
+    this.bucket = requireNonNull(storeContext.getBucket());
+    this.requestFactory = requireNonNull(storeContext.getRequestFactory());
+    addService(clientManager);
+  }
+
+  /**
+   * Create and initialize any subsidiary services, including the input stream factory.
+   * @param conf configuration
+   */
+  @Override
+  protected void serviceInit(final Configuration conf) throws Exception {
+
+    // create and register the stream factory, which will
+    // then follow the service lifecycle
+    objectInputStreamFactory = factoryFromConfig(conf);
+    addService(objectInputStreamFactory);
+
+    // init all child services, including the stream factory
+    super.serviceInit(conf);
+
+    // pass down extra information to the stream factory.
+    finishStreamFactoryInit();
   }
 
   @Override
-  public void close() {
-    clientManager.close();
+  protected void serviceStart() throws Exception {
+    super.serviceStart();
+    initLocalDirAllocator();
+  }
+
+  /**
+   * Return the store path capabilities.
+   * If the object stream factory is non-null, hands off the
+   * query to that factory if not handled here.
+   * @param path path to query the capability of.
+   * @param capability non-null, non-empty string to query the path for support.
+   * @return known capabilities
+   */
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability) {
+    switch (toLowerCase(capability)) {
+    case StreamCapabilities.IOSTATISTICS:
+      return true;
+    default:
+      return inputStreamHasCapability(capability);
+    }
+  }
+
+  /**
+   * Return the capabilities of input streams created
+   * through the store.
+   * @param capability string to query the stream support for.
+   * @return capabilities declared supported in streams.
+   */
+  @Override
+  public boolean inputStreamHasCapability(final String capability) {
+    if (objectInputStreamFactory != null) {
+      return objectInputStreamFactory.hasCapability(capability);
+    }
+    return false;
+  }
+
+  /**
+   * Initialize dir allocator if not already initialized.
+   */
+  private void initLocalDirAllocator() {
+    String bufferDir = getConfig().get(BUFFER_DIR) != null
+        ? BUFFER_DIR
+        : HADOOP_TMP_DIR;
+    directoryAllocator = new LocalDirAllocator(bufferDir);
   }
 
   /** Acquire write capacity for rate limiting {@inheritDoc}. */
@@ -808,4 +904,101 @@ public class S3AStoreImpl implements S3AStore {
     return getS3Client().completeMultipartUpload(request);
   }
 
+  /**
+   * Get the directory allocator.
+   * @return the directory allocator
+   */
+  @Override
+  public LocalDirAllocator getDirectoryAllocator() {
+    return directoryAllocator;
+  }
+
+  /**
+   * Demand create the directory allocator, then create a temporary file.
+   * This does not mark the file for deletion when a process exits.
+   * Pass in a file size of {@link LocalDirAllocator#SIZE_UNKNOWN} if the
+   * size is unknown.
+   * {@link LocalDirAllocator#createTmpFileForWrite(String, long, Configuration)}.
+   * @param pathStr prefix for the temporary file
+   * @param size the size of the file that is going to be written
+   * @param conf the Configuration object
+   * @return a unique temporary file
+   * @throws IOException IO problems
+   */
+  @Override
+  public File createTemporaryFileForWriting(String pathStr,
+      long size,
+      Configuration conf) throws IOException {
+    requireNonNull(directoryAllocator, "directory allocator not initialized");
+    Path path = directoryAllocator.getLocalPathForWrite(pathStr,
+        size, conf);
+    File dir = new File(path.getParent().toUri().getPath());
+    String prefix = path.getName();
+    // create a temp file on this directory
+    return File.createTempFile(prefix, null, dir);
+  }
+
+  /*
+   =============== BEGIN ObjectInputStreamFactory ===============
+   */
+
+  /**
+   * All stream factory initialization required after {@code Service.init()},
+   * after all other services have themselves been initialized.
+   */
+  private void finishStreamFactoryInit() throws IOException {
+    // must be on be invoked during service initialization
+    Preconditions.checkState(isInState(STATE.INITED),
+        "Store is in wrong state: %s", getServiceState());
+    Preconditions.checkState(clientManager.isInState(STATE.INITED),
+        "Client Manager is in wrong state: %s", clientManager.getServiceState());
+
+    // finish initialization and pass down callbacks to self
+    objectInputStreamFactory.bind(new FactoryBindingParameters(new FactoryCallbacks()));
+  }
+
+  @Override /* ObjectInputStreamFactory */
+  public ObjectInputStream readObject(ObjectReadParameters parameters)
+      throws IOException {
+    parameters.withDirectoryAllocator(getDirectoryAllocator());
+    return objectInputStreamFactory.readObject(parameters.validate());
+  }
+
+  @Override /* ObjectInputStreamFactory */
+  public StreamFactoryRequirements factoryRequirements() {
+    return objectInputStreamFactory.factoryRequirements();
+  }
+
+  /**
+   * This operation is not implemented, as
+   * is this class which invokes it on the actual factory.
+   * @param factoryBindingParameters ignored
+   * @throws UnsupportedOperationException always
+   */
+  @Override /* ObjectInputStreamFactory */
+  public void bind(final FactoryBindingParameters factoryBindingParameters) {
+    throw new UnsupportedOperationException("Not supported");
+  }
+
+  @Override /* ObjectInputStreamFactory */
+  public InputStreamType streamType() {
+    return objectInputStreamFactory.streamType();
+  }
+
+  /**
+   * Callbacks from {@link ObjectInputStreamFactory} instances.
+   */
+  private class FactoryCallbacks implements StreamFactoryCallbacks {
+
+    @Override
+    public S3AsyncClient getOrCreateAsyncClient(final boolean requireCRT) throws IOException {
+      // Needs support of the CRT before the requireCRT can be used
+      LOG.debug("Stream factory requested async client");
+      return clientManager().getOrCreateAsyncClient();
+    }
+  }
+
+  /*
+   =============== END ObjectInputStreamFactory ===============
+   */
 }

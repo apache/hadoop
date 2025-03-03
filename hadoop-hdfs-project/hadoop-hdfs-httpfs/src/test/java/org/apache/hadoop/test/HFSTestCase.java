@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.test;
 
-import org.junit.Rule;
-import org.junit.rules.MethodRule;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public abstract class HFSTestCase extends HTestCase {
 
-  @Rule
-  public MethodRule hdfsTestHelper = new TestHdfsHelper();
+  @RegisterExtension
+  public TestHdfsHelper hdfsTestHelper = new TestHdfsHelper();
 
 }

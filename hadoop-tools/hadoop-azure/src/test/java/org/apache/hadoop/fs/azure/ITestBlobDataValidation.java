@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azure;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_CHECK_BLOCK_MD5;
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_STORE_BLOB_MD5;
-import static org.junit.Assume.assumeNotNull;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -35,8 +34,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.TestHookOperationContext;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import com.microsoft.azure.storage.Constants;
 import com.microsoft.azure.storage.OperationContext;
@@ -56,7 +55,7 @@ import com.microsoft.azure.storage.core.Base64;
 public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
   private AzureBlobStorageTestAccount testAccount;
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     testAccount = AzureTestUtils.cleanupTestAccount(testAccount);
   }
@@ -95,8 +94,7 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
     assumeNotNull(testAccount);
     // Write a test file.
     NativeAzureFileSystem fs = testAccount.getFileSystem();
-    Path testFilePath = AzureTestUtils.pathForTests(fs,
-        methodName.getMethodName());
+    Path testFilePath = AzureTestUtils.pathForTests(fs, methodName.getMethodName());
     String testFileKey = trim(testFilePath.toUri().getPath(), "/");
     OutputStream outStream = fs.create(testFilePath);
     outStream.write(new byte[] { 5, 15 });
@@ -109,7 +107,7 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
     if (expectMd5Stored) {
       assertNotNull(obtainedMd5);
     } else {
-      assertNull("Expected no MD5, found: " + obtainedMd5, obtainedMd5);
+      assertNull(obtainedMd5, "Expected no MD5, found: " + obtainedMd5);
     }
 
     // Mess with the content so it doesn't match the MD5.
@@ -137,8 +135,8 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
       }
       StorageException cause = (StorageException)ex.getCause();
       assertNotNull(cause);
-      assertEquals("Unexpected cause: " + cause,
-          StorageErrorCodeStrings.INVALID_MD5, cause.getErrorCode());
+      assertEquals(StorageErrorCodeStrings.INVALID_MD5, cause.getErrorCode(),
+          "Unexpected cause: " + cause);
     }
   }
 
@@ -192,7 +190,7 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
       if (expectMd5) {
         assertNotNull(obtainedMd5);
       } else {
-        assertNull("Expected no MD5, found: " + obtainedMd5, obtainedMd5);
+        assertNull(obtainedMd5, "Expected no MD5, found: " + obtainedMd5);
       }
     }
 

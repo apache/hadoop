@@ -24,17 +24,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileUtil;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * A test for MRAsyncDiskService.
@@ -47,7 +47,7 @@ public class TestMRAsyncDiskService {
   private static String TEST_ROOT_DIR = new Path(System.getProperty(
       "test.build.data", "/tmp")).toString();
   
-  @Before
+  @BeforeEach
   public void setUp() {
     FileUtil.fullyDelete(new File(TEST_ROOT_DIR));
   }
@@ -213,8 +213,8 @@ public class TestMRAsyncDiskService {
     } catch (IOException e) {
       ee = e;
     }
-    assertNotNull("asyncDiskService should not be able to delete files "
-        + "outside all volumes", ee);
+    assertNotNull(ee, "asyncDiskService should not be able to delete files "
+        + "outside all volumes");
     // asyncDiskService is able to automatically find the file in one
     // of the volumes.
     assertTrue(service.moveAndDeleteAbsolutePath(vols[1] + Path.SEPARATOR_CHAR + d));
@@ -325,14 +325,14 @@ public class TestMRAsyncDiskService {
     for (int i = 0; i < vols.length; i++) {
       File subDir = new File(vols[0]);
       String[] subDirContent = subDir.list();
-      assertEquals("Volume should contain a single child: "
-          + MRAsyncDiskService.TOBEDELETED, 1, subDirContent.length);
+      assertEquals(1, subDirContent.length, "Volume should contain a single child: "
+          + MRAsyncDiskService.TOBEDELETED);
       
       File toBeDeletedDir = new File(vols[0], MRAsyncDiskService.TOBEDELETED);
       String[] content = toBeDeletedDir.list();
-      assertNotNull("Cannot find " + toBeDeletedDir, content);
+      assertNotNull(content, "Cannot find " + toBeDeletedDir);
       assertThat(content).withFailMessage(
-          toBeDeletedDir.toString() + " should be empty now.").isEmpty();
+          toBeDeletedDir + " should be empty now.").isEmpty();
     }
   }
   

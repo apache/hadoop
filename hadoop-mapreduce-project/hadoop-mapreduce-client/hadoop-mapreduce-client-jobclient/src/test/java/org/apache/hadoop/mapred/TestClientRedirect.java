@@ -146,10 +146,12 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestClientRedirect {
 
@@ -200,7 +202,7 @@ public class TestClientRedirect {
     org.apache.hadoop.mapreduce.Counters counters =
         cluster.getJob(jobID).getCounters();
     validateCounters(counters);
-    Assert.assertTrue(amContact);
+    assertTrue(amContact);
 
     LOG.info("Sleeping for 5 seconds before stop for" +
     " the client socket to not get EOF immediately..");
@@ -218,7 +220,7 @@ public class TestClientRedirect {
     // Same client
     //results are returned from fake (not started job)
     counters = cluster.getJob(jobID).getCounters();
-    Assert.assertEquals(0, counters.countCounters());
+    assertEquals(0, counters.countCounters());
     Job job = cluster.getJob(jobID);
     org.apache.hadoop.mapreduce.TaskID taskId =
       new org.apache.hadoop.mapreduce.TaskID(jobID, TaskType.MAP, 0);
@@ -242,7 +244,7 @@ public class TestClientRedirect {
 
     counters = cluster.getJob(jobID).getCounters();
     validateCounters(counters);
-    Assert.assertTrue(amContact);
+    assertTrue(amContact);
 
     // Stop the AM. It is not even restarting. So it should be treated as
     // completed.
@@ -251,7 +253,7 @@ public class TestClientRedirect {
     // Same client
     counters = cluster.getJob(jobID).getCounters();
     validateCounters(counters);
-    Assert.assertTrue(hsContact);
+    assertTrue(hsContact);
 
     rmService.stop();
     historyService.stop();
@@ -267,7 +269,7 @@ public class TestClientRedirect {
         LOG.info("Counter is " + itc.next().getDisplayName());
       }
     }
-    Assert.assertEquals(1, counters.countCounters());
+    assertEquals(1, counters.countCounters());
   }
 
   class RMService extends AbstractService implements ApplicationClientProtocol {

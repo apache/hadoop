@@ -28,6 +28,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class AbfsErrors {
+  public static final String ERR_FILE_ALREADY_EXISTS = "File already exists.";
   public static final String ERR_WRITE_WITHOUT_LEASE = "Attempted to write to file without lease";
   public static final String ERR_LEASE_EXPIRED = "A lease ID was specified, but the lease for the resource has expired.";
   public static final String ERR_LEASE_EXPIRED_BLOB = "A lease ID was specified, but the lease for the blob has expired.";
@@ -68,5 +69,9 @@ public final class AbfsErrors {
       "FNS-Blob delete was not successful for path: ";
   public static final String ATOMIC_DIR_RENAME_RECOVERY_ON_GET_PATH_EXCEPTION =
       "Path had to be recovered from atomic rename operation.";
+  public static final String ERR_CREATE_RECOVERY =
+      "Error while recovering from create failure.";
+  public static final String ERR_RENAME_RECOVERY =
+      "Error while recovering from rename failure.";
   private AbfsErrors() {}
 }

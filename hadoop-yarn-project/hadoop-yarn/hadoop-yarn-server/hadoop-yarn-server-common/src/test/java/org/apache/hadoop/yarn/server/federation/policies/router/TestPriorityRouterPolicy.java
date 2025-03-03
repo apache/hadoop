@@ -30,9 +30,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Simple test class for the {@link PriorityRouterPolicy}. Tests that the
@@ -40,7 +41,7 @@ import org.junit.Test;
  */
 public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     setPolicy(new PriorityRouterPolicy());
     setPolicyInfo(new WeightedPolicyInfo());
@@ -80,7 +81,7 @@ public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
   public void testPickLowestWeight() throws YarnException {
     SubClusterId chosen = ((FederationRouterPolicy) getPolicy())
         .getHomeSubcluster(getApplicationSubmissionContext(), null);
-    Assert.assertEquals("sc5", chosen.getId());
+    assertEquals("sc5", chosen.getId());
   }
 
   @Test

@@ -29,11 +29,14 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStream;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_LEAKS;
 import static org.apache.hadoop.test.GenericTestUtils.LogCapturer.captureLogs;
@@ -58,7 +61,7 @@ public class ITestS3AInputStreamLeakage extends AbstractS3ATestBase {
   @Override
   public void setup() throws Exception {
     super.setup();
-    assume("Stream leak detection not avaialable",
+    assume("Stream leak detection not available",
         getFileSystem().hasCapability(STREAM_LEAKS));
   }
 
@@ -81,14 +84,15 @@ public class ITestS3AInputStreamLeakage extends AbstractS3ATestBase {
    * <p>
    * The stream leak counter of the FileSystem is also updated; this
    * is verified.
-   * <p>
-   * Note: if the stream under test is not an S3AInputStream (i.e. is a prefetching one,
-   * this test is skipped. If/when the prefetching stream adds the same code,
-   * this check can be removed.
    */
   @Test
   public void testFinalizer() throws Throwable {
     Path path = methodPath();
+    // Analytics accelerator currently does not support stream leak detection. This work is tracked
+    // in https://issues.apache.org/jira/browse/HADOOP-19451
+    skipIfAnalyticsAcceleratorEnabled(getConfiguration(),
+        "Analytics Accelerator currently does not support leak detection");
+
     final S3AFileSystem fs = getFileSystem();
 
     ContractTestUtils.createFile(fs, path, true, DATASET);
@@ -100,7 +104,7 @@ public class ITestS3AInputStreamLeakage extends AbstractS3ATestBase {
 
     try {
       Assertions.assertThat(in.hasCapability(STREAM_LEAKS))
-          .describedAs("Stream leak detection not supported in: " + in.getClass())
+          .describedAs("Stream leak detection not supported in: %s", in.getWrappedStream())
           .isTrue();
 
       Assertions.assertThat(in.read())
@@ -108,12 +112,12 @@ public class ITestS3AInputStreamLeakage extends AbstractS3ATestBase {
           .isEqualTo(DATASET[0]);
 
       // get a weak ref so that after a GC we can look for it and verify it is gone
-      Assertions.assertThat(((S3AInputStream) in.getWrappedStream()).isObjectStreamOpen())
-          .describedAs("stream http connection status")
-          .isTrue();
-      // weak reference to track GC progress
-      WeakReference<S3AInputStream> wrs =
-          new WeakReference<>((S3AInputStream) in.getWrappedStream());
+      WeakReference<ObjectInputStream> wrs =
+          new WeakReference<>((ObjectInputStream) in.getWrappedStream());
+
+      boolean isClassicStream = wrs.get() instanceof S3AInputStream;
+      final IOStatistics fsStats = fs.getIOStatistics();
+      final long leaks = fsStats.counters().getOrDefault(STREAM_LEAKS, 0L);
 
       // Capture the logs
       GenericTestUtils.LogCapturer logs =
@@ -125,7 +129,7 @@ public class ITestS3AInputStreamLeakage extends AbstractS3ATestBase {
       in = null;
       // force the gc.
       System.gc();
-      // make sure the GC removed the S3AInputStream.
+      // make sure the GC removed the Stream.
       Assertions.assertThat(wrs.get())
           .describedAs("weak stream reference wasn't GC'd")
           .isNull();
@@ -144,14 +148,26 @@ public class ITestS3AInputStreamLeakage extends AbstractS3ATestBase {
       LOG.info("output of leak log is {}", output);
       Assertions.assertThat(output)
           .describedAs("output from the logs during GC")
-          .contains("drain or abort reason finalize()")  // stream release
+          .contains("Stream not closed")  // stream release
           .contains(path.toUri().toString())             // path
           .contains(Thread.currentThread().getName())    // thread
           .contains("testFinalizer");                    // stack
-
       // verify that leakages are added to the FS statistics
-      assertThatStatisticCounter(fs.getIOStatistics(), STREAM_LEAKS)
-          .isEqualTo(1);
+
+      // for classic stream the counter is 1, but for prefetching
+      // the count is greater -the inner streams can also
+      // get finalized while open so increment the leak counter
+      // multiple times.
+      assertThatStatisticCounter(fsStats, STREAM_LEAKS)
+          .isGreaterThanOrEqualTo(leaks + 1);
+      if (isClassicStream) {
+        Assertions.assertThat(output)
+            .describedAs("output from the logs during GC")
+            .contains("drain or abort reason finalize()");  // stream release
+        assertThatStatisticCounter(fsStats, STREAM_LEAKS)
+            .isEqualTo(leaks + 1);
+      }
+
     } finally {
       if (in != null) {
         IOUtils.cleanupWithLogger(LOG, in);

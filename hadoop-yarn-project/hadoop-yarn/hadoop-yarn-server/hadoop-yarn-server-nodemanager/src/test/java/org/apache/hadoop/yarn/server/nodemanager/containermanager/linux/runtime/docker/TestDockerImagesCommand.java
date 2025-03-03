@@ -17,10 +17,10 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests the docker images command and its command
@@ -31,7 +31,7 @@ public class TestDockerImagesCommand {
 
   private static final String IMAGE_NAME = "foo";
 
-  @Before
+  @BeforeEach
   public void setup() {
     dockerImagesCommand = new DockerImagesCommand();
   }
@@ -55,8 +55,9 @@ public class TestDockerImagesCommand {
     assertEquals("images", StringUtils.join(",",
         dockerImagesCommand.getDockerCommandWithArguments()
             .get("docker-command")));
-    assertEquals("image name", "foo", StringUtils.join(",",
-        dockerImagesCommand.getDockerCommandWithArguments().get("image")));
+    assertEquals("foo",
+        StringUtils.join(",", dockerImagesCommand.getDockerCommandWithArguments().get("image")),
+        "image name");
     assertEquals(2, dockerImagesCommand.getDockerCommandWithArguments().size());
   }
 }

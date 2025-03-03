@@ -20,12 +20,16 @@ package org.apache.hadoop.mapred;
 
 import java.util.regex.Pattern;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * test JobConf
@@ -37,7 +41,8 @@ public class TestJobConf {
    * test getters and setters of JobConf
    */
   @SuppressWarnings("deprecation")
-  @Test (timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testJobConf() {
     JobConf conf = new JobConf();
     // test default value
@@ -153,10 +158,10 @@ public class TestJobConf {
     
     // make sure mapreduce.map|reduce.java.opts are not set by default
     // so that they won't override mapred.child.java.opts
-    assertNull("mapreduce.map.java.opts should not be set by default",
-        conf.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS));
-    assertNull("mapreduce.reduce.java.opts should not be set by default",
-        conf.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS));
+    assertNull(conf.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS),
+        "mapreduce.map.java.opts should not be set by default");
+    assertNull(conf.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS),
+        "mapreduce.reduce.java.opts should not be set by default");
   }
 
   /**
@@ -164,30 +169,31 @@ public class TestJobConf {
    * old property names
    */
   @SuppressWarnings("deprecation")
-  @Test (timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testDeprecatedPropertyNameForTaskVmem() {
     JobConf configuration = new JobConf();
 
     configuration.setLong(JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY, 1024);
     configuration.setLong(JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY, 1024);
-    Assert.assertEquals(1024, configuration.getMemoryForMapTask());
-    Assert.assertEquals(1024, configuration.getMemoryForReduceTask());
+    assertEquals(1024, configuration.getMemoryForMapTask());
+    assertEquals(1024, configuration.getMemoryForReduceTask());
     // Make sure new property names aren't broken by the old ones
     configuration.setLong(JobConf.MAPREDUCE_JOB_MAP_MEMORY_MB_PROPERTY, 1025);
     configuration.setLong(JobConf.MAPREDUCE_JOB_REDUCE_MEMORY_MB_PROPERTY, 1025);
-    Assert.assertEquals(1025, configuration.getMemoryForMapTask());
-    Assert.assertEquals(1025, configuration.getMemoryForReduceTask());
+    assertEquals(1025, configuration.getMemoryForMapTask());
+    assertEquals(1025, configuration.getMemoryForReduceTask());
 
     configuration.setMemoryForMapTask(2048);
     configuration.setMemoryForReduceTask(2048);
-    Assert.assertEquals(2048, configuration.getLong(
+    assertEquals(2048, configuration.getLong(
         JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY, -1));
-    Assert.assertEquals(2048, configuration.getLong(
+    assertEquals(2048, configuration.getLong(
         JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY, -1));
     // Make sure new property names aren't broken by the old ones
-    Assert.assertEquals(2048, configuration.getLong(
+    assertEquals(2048, configuration.getLong(
         JobConf.MAPREDUCE_JOB_MAP_MEMORY_MB_PROPERTY, -1));
-    Assert.assertEquals(2048, configuration.getLong(
+    assertEquals(2048, configuration.getLong(
         JobConf.MAPREDUCE_JOB_REDUCE_MEMORY_MB_PROPERTY, -1));
   }
 
@@ -196,9 +202,9 @@ public class TestJobConf {
   public void testProfileParamsDefaults() {
     JobConf configuration = new JobConf();
     String result = configuration.getProfileParams();
-    Assert.assertNotNull(result);
-    Assert.assertTrue(result.contains("file=%s"));
-    Assert.assertTrue(result.startsWith("-agentlib:hprof"));
+    assertNotNull(result);
+    assertTrue(result.contains("file=%s"));
+    assertTrue(result.startsWith("-agentlib:hprof"));
   }
 
   @Test
@@ -206,7 +212,7 @@ public class TestJobConf {
     JobConf configuration = new JobConf();
 
     configuration.setProfileParams("test");
-    Assert.assertEquals("test", configuration.get(MRJobConfig.TASK_PROFILE_PARAMS));
+    assertEquals("test", configuration.get(MRJobConfig.TASK_PROFILE_PARAMS));
   }
 
   @Test
@@ -214,7 +220,7 @@ public class TestJobConf {
     JobConf configuration = new JobConf();
 
     configuration.set(MRJobConfig.TASK_PROFILE_PARAMS, "test");
-    Assert.assertEquals("test", configuration.getProfileParams());
+    assertEquals("test", configuration.getProfileParams());
   }
 
   /**
@@ -275,15 +281,15 @@ public class TestJobConf {
     JobConf configuration = new JobConf();
 
     configuration.set(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY, "-3");
-    Assert.assertEquals(MRJobConfig.DEFAULT_MAP_MEMORY_MB,
+    assertEquals(MRJobConfig.DEFAULT_MAP_MEMORY_MB,
         configuration.getMemoryForMapTask());
-    Assert.assertEquals(MRJobConfig.DEFAULT_REDUCE_MEMORY_MB,
+    assertEquals(MRJobConfig.DEFAULT_REDUCE_MEMORY_MB,
         configuration.getMemoryForReduceTask());
 
     configuration.set(MRJobConfig.MAP_MEMORY_MB, "4");
     configuration.set(MRJobConfig.REDUCE_MEMORY_MB, "5");
-    Assert.assertEquals(4, configuration.getMemoryForMapTask());
-    Assert.assertEquals(5, configuration.getMemoryForReduceTask());
+    assertEquals(4, configuration.getMemoryForMapTask());
+    assertEquals(5, configuration.getMemoryForReduceTask());
 
   }
 
@@ -296,9 +302,9 @@ public class TestJobConf {
 
     configuration.set(MRJobConfig.MAP_MEMORY_MB, "-5");
     configuration.set(MRJobConfig.REDUCE_MEMORY_MB, "-6");
-    Assert.assertEquals(MRJobConfig.DEFAULT_MAP_MEMORY_MB,
+    assertEquals(MRJobConfig.DEFAULT_MAP_MEMORY_MB,
         configuration.getMemoryForMapTask());
-    Assert.assertEquals(MRJobConfig.DEFAULT_REDUCE_MEMORY_MB,
+    assertEquals(MRJobConfig.DEFAULT_REDUCE_MEMORY_MB,
         configuration.getMemoryForReduceTask());
   }
 
@@ -325,14 +331,14 @@ public class TestJobConf {
     configuration = new JobConf();
     configuration.set(MRJobConfig.MAP_MEMORY_MB, String.valueOf(-1));
     configuration.set(MRJobConfig.REDUCE_MEMORY_MB, String.valueOf(-1));
-    configuration.set("mapred.task.maxvmem", String.valueOf(1 * 1024 * 1024));
+    configuration.set("mapred.task.maxvmem", String.valueOf(1024 * 1024));
     assertThat(configuration.getMaxVirtualMemoryForTask())
-        .isEqualTo(1 * 1024 * 1024);
+        .isEqualTo(1024 * 1024);
 
     configuration = new JobConf();
-    configuration.set("mapred.task.maxvmem", String.valueOf(1 * 1024 * 1024));
+    configuration.set("mapred.task.maxvmem", String.valueOf(1024 * 1024));
     assertThat(configuration.getMaxVirtualMemoryForTask())
-        .isEqualTo(1 * 1024 * 1024);
+        .isEqualTo(1024 * 1024);
 
     //set test case
 
@@ -357,11 +363,10 @@ public class TestJobConf {
   @Test
   public void testMaxTaskFailuresPerTracker() {
     JobConf jobConf = new JobConf(true);
-    Assert.assertTrue("By default JobContext.MAX_TASK_FAILURES_PER_TRACKER was "
-      + "not less than JobContext.MAP_MAX_ATTEMPTS and REDUCE_MAX_ATTEMPTS"
-      ,jobConf.getMaxTaskFailuresPerTracker() < jobConf.getMaxMapAttempts() &&
-      jobConf.getMaxTaskFailuresPerTracker() < jobConf.getMaxReduceAttempts()
-      );
+    assertTrue(jobConf.getMaxTaskFailuresPerTracker() < jobConf.getMaxMapAttempts() &&
+        jobConf.getMaxTaskFailuresPerTracker() < jobConf.getMaxReduceAttempts(),
+        "By default JobContext.MAX_TASK_FAILURES_PER_TRACKER was "
+        + "not less than JobContext.MAP_MAX_ATTEMPTS and REDUCE_MAX_ATTEMPTS");
   }
 
   /**
@@ -370,14 +375,14 @@ public class TestJobConf {
   @Test
   public void testParseMaximumHeapSizeMB() {
     // happy cases
-    Assert.assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4294967296"));
-    Assert.assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4194304k"));
-    Assert.assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4096m"));
-    Assert.assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4g"));
+    assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4294967296"));
+    assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4194304k"));
+    assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4096m"));
+    assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4g"));
 
     // sad cases
-    Assert.assertEquals(-1, JobConf.parseMaximumHeapSizeMB("-Xmx4?"));
-    Assert.assertEquals(-1, JobConf.parseMaximumHeapSizeMB(""));
+    assertEquals(-1, JobConf.parseMaximumHeapSizeMB("-Xmx4?"));
+    assertEquals(-1, JobConf.parseMaximumHeapSizeMB(""));
   }
 
   /**

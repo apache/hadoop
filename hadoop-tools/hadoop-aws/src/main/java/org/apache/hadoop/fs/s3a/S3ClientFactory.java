@@ -203,6 +203,11 @@ public interface S3ClientFactory {
     private boolean fipsEnabled;
 
     /**
+     * Is analytics accelerator enabled?
+     */
+    private boolean isAnalyticsAcceleratorEnabled;
+
+    /**
      * List of execution interceptors to include in the chain
      * of interceptors in the SDK.
      * @return the interceptors list
@@ -458,6 +463,17 @@ public interface S3ClientFactory {
     }
 
     /**
+     * Set the analytics accelerator enabled flag.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withAnalyticsAcceleratorEnabled(final boolean value) {
+      this.isAnalyticsAcceleratorEnabled = value;
+      return this;
+    }
+
+    /**
      * Set the KMS client region.
      * This is required for CSE-KMS
      *
@@ -475,6 +491,14 @@ public interface S3ClientFactory {
      */
     public boolean isClientSideEncryptionEnabled() {
       return this.isCSEEnabled;
+    }
+
+    /**
+     * Get the analytics accelerator enabled flag.
+     * @return analytics accelerator enabled flag.
+     */
+    public boolean isAnalyticsAcceleratorEnabled() {
+      return this.isAnalyticsAcceleratorEnabled;
     }
 
     /**

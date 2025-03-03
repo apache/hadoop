@@ -812,10 +812,9 @@ public class AbfsBlobClient extends AbfsClient {
       final URL url = createRequestUrl(destination,
           abfsUriQueryBuilder.toString());
       final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-      final AbfsRestOperation successOp = getAbfsRestOperation(
+      final AbfsRestOperation successOp = getSuccessOp(
           AbfsRestOperationType.RenamePath, HTTP_METHOD_PUT,
           url, requestHeaders);
-      successOp.hardSetResult(HTTP_OK);
       return new AbfsClientRenameResult(successOp, true, false);
     } else {
       throw new AbfsRestOperationException(HTTP_INTERNAL_ERROR,
@@ -1206,9 +1205,9 @@ public class AbfsBlobClient extends AbfsClient {
       if (op.getResult().getStatusCode() == HTTP_NOT_FOUND
           && isImplicitCheckRequired && isNonEmptyDirectory(path, tracingContext)) {
         // Implicit path found.
-        AbfsRestOperation successOp = getAbfsRestOperation(
-            AbfsRestOperationType.GetPathStatus,
-            HTTP_METHOD_HEAD, url, requestHeaders);
+        AbfsRestOperation successOp = getSuccessOp(
+            AbfsRestOperationType.GetPathStatus, HTTP_METHOD_HEAD,
+            url, requestHeaders);
         successOp.hardSetGetFileStatusResult(HTTP_OK);
         return successOp;
       }
@@ -1306,11 +1305,8 @@ public class AbfsBlobClient extends AbfsClient {
           = createDefaultUriQueryBuilder();
       final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
       final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-      final AbfsRestOperation successOp = getAbfsRestOperation(
-          AbfsRestOperationType.DeletePath, HTTP_METHOD_DELETE,
-          url, requestHeaders);
-      successOp.hardSetResult(HTTP_OK);
-      return successOp;
+      return getSuccessOp(AbfsRestOperationType.DeletePath,
+          HTTP_METHOD_DELETE, url, requestHeaders);
     } else {
       throw new AbfsRestOperationException(HTTP_INTERNAL_ERROR,
           AzureServiceErrorCode.UNKNOWN.getErrorCode(),

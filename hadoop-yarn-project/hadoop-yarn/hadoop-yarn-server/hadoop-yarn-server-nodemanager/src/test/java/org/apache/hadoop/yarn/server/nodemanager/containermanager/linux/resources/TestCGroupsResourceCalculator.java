@@ -25,14 +25,14 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.util.CpuTimeTracker;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -44,12 +44,12 @@ public class TestCGroupsResourceCalculator {
 
   private Path root;
 
-  @Before
+  @BeforeEach
   public void before() throws IOException {
     root = Files.createTempDirectory("TestCGroupsResourceCalculator");
   }
 
-  @After
+  @AfterEach
   public void after() throws IOException {
     FileUtils.deleteDirectory(root.toFile());
   }

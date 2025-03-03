@@ -48,7 +48,7 @@ import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-class RouterStateIdContext implements AlignmentContext {
+public class RouterStateIdContext implements AlignmentContext {
 
   private final HashSet<String> coordinatedMethods;
   /**
@@ -93,6 +93,8 @@ class RouterStateIdContext implements AlignmentContext {
 
   /**
    * Adds the {@link #namespaceIdMap} to the response header that will be sent to a client.
+   *
+   * @param headerBuilder the response header that will be sent to a client.
    */
   public void setResponseHeaderState(RpcResponseHeaderProto.Builder headerBuilder) {
     if (namespaceIdMap.isEmpty()) {
@@ -110,7 +112,8 @@ class RouterStateIdContext implements AlignmentContext {
   }
 
   public LongAccumulator getNamespaceStateId(String nsId) {
-    return namespaceIdMap.computeIfAbsent(nsId, key -> new LongAccumulator(Math::max, Long.MIN_VALUE));
+    return namespaceIdMap.computeIfAbsent(nsId,
+        key -> new LongAccumulator(Math::max, Long.MIN_VALUE));
   }
 
   public List<String> getNamespaces() {
@@ -127,6 +130,9 @@ class RouterStateIdContext implements AlignmentContext {
 
   /**
    * Utility function to parse routerFederatedState field in RPC headers.
+   *
+   * @param byteString the byte string of routerFederatedState.
+   * @return the router federated state map.
    */
   public static Map<String, Long> getRouterFederatedStateMap(ByteString byteString) {
     if (byteString != null) {
@@ -148,7 +154,8 @@ class RouterStateIdContext implements AlignmentContext {
     if (call != null) {
       ByteString callFederatedNamespaceState = call.getFederatedNamespaceState();
       if (callFederatedNamespaceState != null) {
-        Map<String, Long> clientFederatedStateIds = getRouterFederatedStateMap(callFederatedNamespaceState);
+        Map<String, Long> clientFederatedStateIds =
+            getRouterFederatedStateMap(callFederatedNamespaceState);
         clientStateID = clientFederatedStateIds.getOrDefault(nsId, Long.MIN_VALUE);
       }
     }

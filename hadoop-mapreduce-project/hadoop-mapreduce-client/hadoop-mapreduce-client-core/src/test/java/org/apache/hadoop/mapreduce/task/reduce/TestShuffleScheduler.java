@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.mapreduce.task.reduce;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -37,8 +40,7 @@ import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.util.Progress;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestShuffleScheduler {
 
@@ -69,15 +71,13 @@ public class TestShuffleScheduler {
     TaskID taskId1 = new TaskID(jobId, TaskType.REDUCE, 1);
     scheduler.tipFailed(taskId1);
 
-    Assert.assertEquals("Progress should be 0.5", 0.5f, progress.getProgress(),
-        0.0f);
-    Assert.assertFalse(scheduler.waitUntilDone(1));
+    assertEquals(0.5f, progress.getProgress(), 0.0f, "Progress should be 0.5");
+    assertFalse(scheduler.waitUntilDone(1));
 
     TaskID taskId0 = new TaskID(jobId, TaskType.REDUCE, 0);
     scheduler.tipFailed(taskId0);
-    Assert.assertEquals("Progress should be 1.0", 1.0f, progress.getProgress(),
-        0.0f);
-    Assert.assertTrue(scheduler.waitUntilDone(1));
+    assertEquals(1.0f, progress.getProgress(), 0.0f, "Progress should be 1.0");
+    assertTrue(scheduler.waitUntilDone(1));
   }
 
   @SuppressWarnings("rawtypes")
@@ -134,7 +134,7 @@ public class TestShuffleScheduler {
     //adding the 1st interval, 40MB from 60s to 100s
     long bytes = (long)40 * 1024 * 1024;
     scheduler.copySucceeded(attemptID0, new MapHost(null, null), bytes, 60000, 100000, output);
-    Assert.assertEquals(copyMessage(1, 1, 1), progress.toString());
+    assertEquals(copyMessage(1, 1, 1), progress.toString());
 
     TaskAttemptID attemptID1 = new TaskAttemptID(
         new org.apache.hadoop.mapred.TaskID(
@@ -143,7 +143,7 @@ public class TestShuffleScheduler {
     //adding the 2nd interval before the 1st interval, 50MB from 0s to 50s
     bytes = (long)50 * 1024 * 1024;
     scheduler.copySucceeded(attemptID1, new MapHost(null, null), bytes, 0, 50000, output);
-    Assert.assertEquals(copyMessage(2, 1, 1), progress.toString());
+    assertEquals(copyMessage(2, 1, 1), progress.toString());
 
     TaskAttemptID attemptID2 = new TaskAttemptID(
         new org.apache.hadoop.mapred.TaskID(
@@ -153,7 +153,7 @@ public class TestShuffleScheduler {
     //110MB from 25s to 80s
     bytes = (long)110 * 1024 * 1024;
     scheduler.copySucceeded(attemptID2, new MapHost(null, null), bytes, 25000, 80000, output);
-    Assert.assertEquals(copyMessage(3, 2, 2), progress.toString());
+    assertEquals(copyMessage(3, 2, 2), progress.toString());
 
     TaskAttemptID attemptID3 = new TaskAttemptID(
         new org.apache.hadoop.mapred.TaskID(
@@ -162,7 +162,7 @@ public class TestShuffleScheduler {
     //adding the 4th interval just after the 2nd interval, 100MB from 100s to 300s
     bytes = (long)100 * 1024 * 1024;
     scheduler.copySucceeded(attemptID3, new MapHost(null, null), bytes, 100000, 300000, output);
-    Assert.assertEquals(copyMessage(4, 0.5, 1), progress.toString());
+    assertEquals(copyMessage(4, 0.5, 1), progress.toString());
 
     TaskAttemptID attemptID4 = new TaskAttemptID(
         new org.apache.hadoop.mapred.TaskID(
@@ -171,7 +171,7 @@ public class TestShuffleScheduler {
     //adding the 5th interval between after 4th, 50MB from 350s to 400s
     bytes = (long)50 * 1024 * 1024;
     scheduler.copySucceeded(attemptID4, new MapHost(null, null), bytes, 350000, 400000, output);
-    Assert.assertEquals(copyMessage(5, 1, 1), progress.toString());
+    assertEquals(copyMessage(5, 1, 1), progress.toString());
 
 
     TaskAttemptID attemptID5 = new TaskAttemptID(
@@ -180,7 +180,7 @@ public class TestShuffleScheduler {
     //adding the 6th interval between after 5th, 50MB from 450s to 500s
     bytes = (long)50 * 1024 * 1024;
     scheduler.copySucceeded(attemptID5, new MapHost(null, null), bytes, 450000, 500000, output);
-    Assert.assertEquals(copyMessage(6, 1, 1), progress.toString());
+    assertEquals(copyMessage(6, 1, 1), progress.toString());
 
     TaskAttemptID attemptID6 = new TaskAttemptID(
         new org.apache.hadoop.mapred.TaskID(
@@ -188,7 +188,7 @@ public class TestShuffleScheduler {
     //adding the 7th interval between after 5th and 6th interval, 20MB from 320s to 340s
     bytes = (long)20 * 1024 * 1024;
     scheduler.copySucceeded(attemptID6, new MapHost(null, null), bytes, 320000, 340000, output);
-    Assert.assertEquals(copyMessage(7, 1, 1), progress.toString());
+    assertEquals(copyMessage(7, 1, 1), progress.toString());
 
     TaskAttemptID attemptID7 = new TaskAttemptID(
         new org.apache.hadoop.mapred.TaskID(
@@ -196,7 +196,7 @@ public class TestShuffleScheduler {
     //adding the 8th interval overlapping with 4th, 5th, and 7th 30MB from 290s to 350s
     bytes = (long)30 * 1024 * 1024;
     scheduler.copySucceeded(attemptID7, new MapHost(null, null), bytes, 290000, 350000, output);
-    Assert.assertEquals(copyMessage(8, 0.5, 1), progress.toString());
+    assertEquals(copyMessage(8, 0.5, 1), progress.toString());
 
     TaskAttemptID attemptID8 = new TaskAttemptID(
         new org.apache.hadoop.mapred.TaskID(
@@ -204,7 +204,7 @@ public class TestShuffleScheduler {
     //adding the 9th interval overlapping with 5th and 6th, 50MB from 400s to 450s
     bytes = (long)50 * 1024 * 1024;
     scheduler.copySucceeded(attemptID8, new MapHost(null, null), bytes, 400000, 450000, output);
-    Assert.assertEquals(copyMessage(9, 1, 1), progress.toString());
+    assertEquals(copyMessage(9, 1, 1), progress.toString());
 
     TaskAttemptID attemptID9 = new TaskAttemptID(
         new org.apache.hadoop.mapred.TaskID(
@@ -212,7 +212,7 @@ public class TestShuffleScheduler {
     //adding the 10th interval overlapping with all intervals, 500MB from 0s to 500s
     bytes = (long)500 * 1024 * 1024;
     scheduler.copySucceeded(attemptID9, new MapHost(null, null), bytes, 0, 500000, output);
-    Assert.assertEquals(copyMessage(10, 1, 2), progress.toString());
+    assertEquals(copyMessage(10, 1, 2), progress.toString());
   }
 
   @SuppressWarnings("rawtypes")

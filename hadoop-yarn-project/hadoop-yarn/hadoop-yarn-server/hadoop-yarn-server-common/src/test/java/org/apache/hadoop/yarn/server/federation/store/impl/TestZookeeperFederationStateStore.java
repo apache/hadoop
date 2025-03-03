@@ -41,16 +41,16 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyReq
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.util.curator.ZKCuratorManager.getNodePath;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Unit tests for ZookeeperFederationStateStore.
@@ -80,7 +80,7 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
   private static TestingServer curatorTestingServer;
   private static CuratorFramework curatorFramework;
 
-  @Before
+  @BeforeEach
   public void before() throws IOException, YarnException {
     try {
       curatorTestingServer = new TestingServer();
@@ -104,7 +104,7 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     super.before();
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     super.after();
     curatorFramework.close();
@@ -123,6 +123,7 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
   @Test
   public void testMetricsInited() throws Exception {
     ZookeeperFederationStateStore zkStateStore = (ZookeeperFederationStateStore) createStateStore();
+    zkStateStore.resetOpDurations();
     ZKFederationStateStoreOpDurations zkStateStoreOpDurations = zkStateStore.getOpDurations();
     MetricsCollectorImpl collector = new MetricsCollectorImpl();
 
@@ -150,7 +151,7 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     zkStateStoreOpDurations.addUpdateReservationHomeSubClusterDuration(start, end);
 
     zkStateStoreOpDurations.getMetrics(collector, true);
-    assertEquals("Incorrect number of perf metrics", 1, collector.getRecords().size());
+    assertEquals(1, collector.getRecords().size(), "Incorrect number of perf metrics");
 
     MetricsRecord record = collector.getRecords().get(0);
     MetricsRecords.assertTag(record, ZKFederationStateStoreOpDurations.RECORD_INFO.name(),

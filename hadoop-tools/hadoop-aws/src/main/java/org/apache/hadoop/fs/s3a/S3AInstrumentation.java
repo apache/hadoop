@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.impl.WeakRefMetricsSource;
+import org.apache.hadoop.fs.s3a.impl.streams.InputStreamType;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
@@ -840,6 +841,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private final AtomicLong closed;
     private final AtomicLong forwardSeekOperations;
     private final AtomicLong openOperations;
+    private final AtomicLong analyticsStreamOpenOperations;
     private final AtomicLong readExceptions;
     private final AtomicLong readsIncomplete;
     private final AtomicLong readOperations;
@@ -888,7 +890,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS,
               StreamStatisticNames.STREAM_READ_VECTORED_READ_BYTES_DISCARDED,
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES,
-              StreamStatisticNames.STREAM_EVICT_BLOCKS_FROM_FILE_CACHE)
+              StreamStatisticNames.STREAM_EVICT_BLOCKS_FROM_FILE_CACHE,
+              StreamStatisticNames.STREAM_READ_ANALYTICS_OPENED)
           .withGauges(STREAM_READ_GAUGE_INPUT_POLICY,
               STREAM_READ_BLOCKS_IN_FILE_CACHE.getSymbol(),
               STREAM_READ_ACTIVE_PREFETCH_OPERATIONS.getSymbol(),
@@ -927,6 +930,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
           StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS);
       openOperations = st.getCounterReference(
           StreamStatisticNames.STREAM_READ_OPENED);
+      analyticsStreamOpenOperations = st.getCounterReference(
+          StreamStatisticNames.STREAM_READ_ANALYTICS_OPENED
+      );
       readExceptions = st.getCounterReference(
           StreamStatisticNames.STREAM_READ_EXCEPTIONS);
       readsIncomplete = st.getCounterReference(
@@ -1028,6 +1034,17 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public long streamOpened() {
       return openOperations.getAndIncrement();
+    }
+
+    @Override
+    public long streamOpened(InputStreamType type) {
+      long count = openOperations.getAndIncrement();
+
+      if (type == InputStreamType.Analytics) {
+        count = analyticsStreamOpenOperations.getAndIncrement();
+      }
+
+      return count;
     }
 
     /**
