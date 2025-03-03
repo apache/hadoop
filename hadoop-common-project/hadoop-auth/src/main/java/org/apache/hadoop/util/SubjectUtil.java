@@ -111,7 +111,7 @@ public class SubjectUtil {
 	 */
 	public static <T> T callAs(Subject subject, Callable<T> action) throws CompletionException {
 		try {
-			return (T) CALL_AS.invoke(subject, action);
+			return (T) CALL_AS.invoke(subject, wrap(action));
 		} catch (PrivilegedActionException e) {
 			throw new CompletionException(e.getCause());
 		} catch (Throwable t) {
@@ -129,7 +129,7 @@ public class SubjectUtil {
 	 * @return the result of the action
 	 */
 	public static <T> T doAs(Subject subject, PrivilegedAction<T> action) {
-		return callAs(subject, privilegedActionToCallable(action));
+		return callAs(subject, wrap(privilegedActionToCallable(action)));
 	}
 
 	 /**
@@ -143,7 +143,7 @@ public class SubjectUtil {
    */
 	public static <T> T doAs(Subject subject, PrivilegedExceptionAction<T> action) throws PrivilegedActionException {
 		try {
-			return callAs(subject, privilegedExceptionActionToCallable(action));
+			return callAs(subject, wrap(privilegedExceptionActionToCallable(action)));
 		} catch (CompletionException ce) {
 			try {
 				Exception cause = (Exception) (ce.getCause());
@@ -198,44 +198,6 @@ public class SubjectUtil {
     }
     Subject s = current();
     return () -> callAs(s, () -> c.call());
-  }
-
-  /**
-   * @param <T> the return type of the PrivilegedExceptionAction
-   * @param a PrivilegedExceptionAction
-   * @return a wrapped in doAs()
-   */
-  // FIXME this can result in multiple wraps. Optimize ?
-  public static <T> PrivilegedExceptionAction<T> wrap(PrivilegedExceptionAction<T> a) {
-    if (!HAS_CALL_AS) {
-      return a;
-    }
-    Subject s = current();
-    return new PrivilegedExceptionAction<T>() {
-      @Override
-      public T run() throws Exception {
-        return doAs(s, a);
-      }
-    };
-  }
-
-  /**
-   * @param <T> the return type of the PrivilegedAction
-   * @param a PrivilegedAction
-   * @return a wrapped in doAs()
-   */
-  // FIXME this can result in multiple wraps. Optimize ?
-  public static <T> PrivilegedAction<T> wrap(PrivilegedAction<T> a) {
-    if (!HAS_CALL_AS) {
-      return a;
-    }
-    Subject s = current();
-    return new PrivilegedAction<T>() {
-      @Override
-      public T run() {
-        return doAs(s, a);
-      }
-    };
   }
 
 	@SuppressWarnings("unused")
