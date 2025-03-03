@@ -224,7 +224,7 @@ public final class AbfsClientTestUtil {
         .when(intercept)
         .sendingRequest(any(), nullable(AbfsCounters.class));
     Mockito.doNothing().when(intercept).updateMetrics(any(), any());
-    Mockito.doReturn(listResponseData).when(abfsClient).parseListPathResults(any(), any(), any());
+    Mockito.doReturn(listResponseData).when(abfsClient).parseListPathResults(any(), any());
 
     // Returning correct retry policy based on failure reason
     Mockito.doReturn(exponentialRetryPolicy).when(abfsClient).getExponentialRetryPolicy();

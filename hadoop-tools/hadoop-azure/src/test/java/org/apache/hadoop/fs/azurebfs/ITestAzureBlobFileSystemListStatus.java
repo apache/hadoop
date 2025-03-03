@@ -184,14 +184,14 @@ public class ITestAzureBlobFileSystemListStatus extends
     // Assert that there were 2 paginated ListPath calls were made 1 and 2.
     // 1. Without continuation token
     Mockito.verify(spiedClient, times(1)).listPath(
-        eq("/"), eq(false),
-        eq(spiedFs.getAbfsStore().getAbfsConfiguration().getListMaxResults()),
-        eq(null), eq(spiedTracingContext), any(IdentityTransformerInterface.class), any(URI.class));
+        "/", false,
+        spiedFs.getAbfsStore().getAbfsConfiguration().getListMaxResults(),
+        null, spiedTracingContext, spiedFs.getAbfsStore().getUri());
     // 2. With continuation token
     Mockito.verify(spiedClient, times(1)).listPath(
         "/", false,
         spiedFs.getAbfsStore().getAbfsConfiguration().getListMaxResults(),
-        TEST_CONTINUATION_TOKEN, spiedTracingContext, null, null);
+        TEST_CONTINUATION_TOKEN, spiedTracingContext, spiedFs.getAbfsStore().getUri());
 
     // Assert that none of the API calls used the same tracing header.
     Mockito.verify(spiedTracingContext, times(0)).constructHeader(any(), any(), any());

@@ -1264,7 +1264,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       if (startFrom != null && !startFrom.isEmpty()) {
         /*
          * Blob Endpoint Does not support startFrom yet. Fallback to DFS Client.
-         * startFrom remains null for all HDFS APIs. This is only for internal use.
+         * startFrom remains null for all HDFS APIs. This is used only for tests.
          */
         listingClient = getClient(AbfsServiceType.DFS);
         continuation = getIsNamespaceEnabled(tracingContext)
@@ -1277,7 +1277,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       try (AbfsPerfInfo perfInfo = startTracking("listStatus", "listPath")) {
         ListResponseData listResponseData = listingClient.listPath(relativePath,
             false, abfsConfiguration.getListMaxResults(), continuation,
-            tracingContext, identityTransformer, this.uri);
+            tracingContext, this.uri);
         AbfsRestOperation op = listResponseData.getOp();
         perfInfo.registerResult(op.getResult());
         continuation = listResponseData.getContinuationToken();
@@ -2025,6 +2025,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   @VisibleForTesting
   void setNamespaceEnabled(Trilean isNamespaceEnabled){
     this.isNamespaceEnabled = isNamespaceEnabled;
+  }
+
+  @VisibleForTesting
+  public URI getUri() {
+    return this.uri;
   }
 
   private void updateInfiniteLeaseDirs() {

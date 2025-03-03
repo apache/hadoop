@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
@@ -49,6 +50,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -75,6 +77,7 @@ import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformer;
 import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformerInterface;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
@@ -123,6 +126,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.PLUS_ENC
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.UTF_8;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SERVER_SIDE_ENCRYPTION_ALGORITHM;
@@ -159,6 +163,7 @@ public abstract class AbfsClient implements Closeable {
   private final AbfsPerfTracker abfsPerfTracker;
   private String clientProvidedEncryptionKey = null;
   private String clientProvidedEncryptionKeySHA = null;
+  private final IdentityTransformerInterface identityTransformer;
 
   private final String accountName;
   private final AuthType authType;
@@ -293,6 +298,18 @@ public abstract class AbfsClient implements Closeable {
           metricIdlePeriod);
     }
     this.abfsMetricUrl = abfsConfiguration.getMetricUri();
+
+    final Class<? extends IdentityTransformerInterface> identityTransformerClass =
+        abfsConfiguration.getRawConfiguration().getClass(FS_AZURE_IDENTITY_TRANSFORM_CLASS, IdentityTransformer.class,
+            IdentityTransformerInterface.class);
+    try {
+      this.identityTransformer =
+          identityTransformerClass.getConstructor(Configuration.class).newInstance(abfsConfiguration.getRawConfiguration());
+    } catch (IllegalAccessException | InstantiationException | IllegalArgumentException |
+             InvocationTargetException | NoSuchMethodException e) {
+      throw new IOException(e);
+    }
+    LOG.trace("IdentityTransformer init complete");
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
@@ -509,8 +526,7 @@ public abstract class AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
    */
   public abstract ListResponseData listPath(String relativePath, boolean recursive,
-      int listMaxResults, String continuation, TracingContext tracingContext,
-      IdentityTransformerInterface identityTransformer, URI uri) throws IOException;
+      int listMaxResults, String continuation, TracingContext tracingContext, URI uri) throws IOException;
 
   /**
    * Retrieves user-defined metadata on filesystem.
@@ -1693,8 +1709,7 @@ public abstract class AbfsClient implements Closeable {
    * @return ListResultSchema
    * @throws IOException if parsing fails
    */
-  public abstract ListResponseData parseListPathResults(AbfsHttpOperation result,
-      IdentityTransformerInterface identityTransformer, URI uri) throws IOException;
+  public abstract ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri) throws IOException;
 
   /**
    * Parses response of Get Block List from server based on Endpoint used.
@@ -1783,7 +1798,6 @@ public abstract class AbfsClient implements Closeable {
 
   protected VersionedFileStatus getFileStatusFromEntry(
       ListResultEntrySchema entry,
-      IdentityTransformerInterface identityTransformer,
       URI uri) throws AzureBlobFileSystemException {
     final String owner, group;
     try{

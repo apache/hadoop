@@ -1359,13 +1359,12 @@ public class ITestAzureBlobFileSystemRename extends
           String continuation = answer.getArgument(3);
           TracingContext context = answer.getArgument(4);
           return getFileSystem().getAbfsClient()
-              .listPath(path, recursive, 1, continuation, context, null, null);
+              .listPath(path, recursive, 1, continuation, context, null);
         })
         .when(spiedClient)
         .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
             Mockito.nullable(String.class),
-            Mockito.any(TracingContext.class), Mockito.nullable(
-                IdentityTransformerInterface.class), Mockito.nullable(URI.class));
+            Mockito.any(TracingContext.class), Mockito.nullable(URI.class));
     fs.rename(new Path("/testDir/dir1"), new Path("/testDir/dir2"));
     for (int i = 0; i < 10; i++) {
       Assertions.assertThat(fs.exists(new Path("/testDir/dir2/file" + i)))
@@ -1443,13 +1442,13 @@ public class ITestAzureBlobFileSystemRename extends
             listCallInvocation[0]++;
             return getFileSystem().getAbfsClient().listPath(answer.getArgument(0),
                 answer.getArgument(1), 1,
-                answer.getArgument(3), answer.getArgument(4), answer.getArgument(5), answer.getArgument(6));
+                answer.getArgument(3), answer.getArgument(4), answer.getArgument(6));
           }
           return answer.callRealMethod();
         })
         .when(spiedClient)
         .listPath(Mockito.anyString(), Mockito.anyBoolean(), Mockito.anyInt(),
-            Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(IdentityTransformerInterface.class), Mockito.nullable(URI.class));
+            Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(URI.class));
     intercept(AccessDeniedException.class,
         () -> {
           fs.rename(new Path("/src"), new Path("/dst"));

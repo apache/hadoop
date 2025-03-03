@@ -322,8 +322,7 @@ public class AbfsDfsClient extends AbfsClient {
       final boolean recursive,
       final int listMaxResults,
       final String continuation,
-      TracingContext tracingContext,
-      IdentityTransformerInterface identityTransformer, URI uri) throws IOException {
+      TracingContext tracingContext, URI uri) throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -344,7 +343,7 @@ public class AbfsDfsClient extends AbfsClient {
         AbfsRestOperationType.ListPaths,
         HTTP_METHOD_GET, url, requestHeaders);
     op.execute(tracingContext);
-    ListResponseData listResponseData = parseListPathResults(op.getResult(), identityTransformer, uri);
+    ListResponseData listResponseData = parseListPathResults(op.getResult(), uri);
     listResponseData.setContinuationToken(getContinuationFromResponse(op.getResult()));
     listResponseData.setOp(op);
     return listResponseData;
@@ -1477,8 +1476,7 @@ public class AbfsDfsClient extends AbfsClient {
    * @throws IOException if parsing fails.
    */
   @Override
-  public ListResponseData parseListPathResults(AbfsHttpOperation result,
-      IdentityTransformerInterface identityTransformer, URI uri) throws IOException {
+  public ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri) throws IOException {
     InputStream listResultInputStream = result.getListResultStream();
     DfsListResultSchema listResultSchema;
     try {
@@ -1500,7 +1498,7 @@ public class AbfsDfsClient extends AbfsClient {
 
     List<FileStatus> fileStatuses = new ArrayList<>();
     for (DfsListResultEntrySchema entry : listResultSchema.paths()) {
-      fileStatuses.add(getFileStatusFromEntry(entry, identityTransformer, uri));
+      fileStatuses.add(getFileStatusFromEntry(entry, uri));
     }
     ListResponseData listResponseData = new ListResponseData();
     listResponseData.setFileStatusList(fileStatuses);

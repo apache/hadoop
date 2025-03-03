@@ -350,14 +350,12 @@ public class AbfsBlobClient extends AbfsClient {
    */
   @Override
   public ListResponseData listPath(final String relativePath, final boolean recursive,
-      final int listMaxResults, final String continuation, TracingContext tracingContext,
-      IdentityTransformerInterface identityTransformer, URI uri) throws IOException {
-    return listPath(relativePath, recursive, listMaxResults, continuation, tracingContext, identityTransformer, uri, true);
+      final int listMaxResults, final String continuation, TracingContext tracingContext, URI uri) throws IOException {
+    return listPath(relativePath, recursive, listMaxResults, continuation, tracingContext, uri, true);
   }
 
   public ListResponseData listPath(final String relativePath, final boolean recursive,
-      final int listMaxResults, final String continuation, TracingContext tracingContext,
-      IdentityTransformerInterface identityTransformer, URI uri, boolean is404CheckRequired)
+      final int listMaxResults, final String continuation, TracingContext tracingContext, URI uri, boolean is404CheckRequired)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
@@ -381,7 +379,7 @@ public class AbfsBlobClient extends AbfsClient {
         requestHeaders);
 
     op.execute(tracingContext);
-    ListResponseData listResponseData = parseListPathResults(op.getResult(), identityTransformer, uri);
+    ListResponseData listResponseData = parseListPathResults(op.getResult(), uri);
     listResponseData.setOp(op);
 
     // Filter the paths for which no rename redo operation is performed.
@@ -400,7 +398,7 @@ public class AbfsBlobClient extends AbfsClient {
       List<FileStatus> fileStatusList = new ArrayList<>();
       Map<Path, Integer> renamePendingJsonPaths = new HashMap<>();
       for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
-        fileStatusList.add(getFileStatusFromEntry(entry, identityTransformer, uri));
+        fileStatusList.add(getFileStatusFromEntry(entry, uri));
         if (isRenamePendingJsonPathEntry(entry)) {
           renamePendingJsonPaths.put(entry.path(), entry.contentLength().intValue());
         }
@@ -1594,8 +1592,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @return BlobListResultSchema containing the list of entries.
    */
   @Override
-  public ListResponseData parseListPathResults(AbfsHttpOperation result,
-      IdentityTransformerInterface identityTransformer, URI uri)
+  public ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri)
       throws AzureBlobFileSystemException {
     InputStream stream = result.getListResultStream();
     if (stream == null) {
@@ -1614,8 +1611,7 @@ public class AbfsBlobClient extends AbfsClient {
     }
 
     try {
-      return listResponseDataParsingXmlListResult(listResultSchema,
-          identityTransformer, uri);
+      return listResponseDataParsingXmlListResult(listResultSchema, uri);
     } catch (IOException e) {
       throw new AbfsDriverException(e);
     }
@@ -1915,7 +1911,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @return List of entries after removing duplicates.
    */
   private ListResponseData listResponseDataParsingXmlListResult(
-      BlobListResultSchema listResultSchema, IdentityTransformerInterface identityTransformer, URI uri) throws IOException {
+      BlobListResultSchema listResultSchema, URI uri) throws IOException {
     List<FileStatus> fileStatuses = new ArrayList<>();
     Map<Path, Integer> renamePendingJsonPaths = new HashMap<>();
     TreeMap<String, BlobListResultEntrySchema> nameToEntryMap = new TreeMap<>();
@@ -1925,7 +1921,7 @@ public class AbfsBlobClient extends AbfsClient {
         // This is a blob entry. It is either a file or a marker blob.
         // In both cases we will add this.
         nameToEntryMap.put(entry.name(), entry);
-        fileStatuses.add(getFileStatusFromEntry(entry, identityTransformer, uri));
+        fileStatuses.add(getFileStatusFromEntry(entry, uri));
 
         if (isRenamePendingJsonPathEntry(entry)) {
           renamePendingJsonPaths.put(entry.path(), entry.contentLength().intValue());
@@ -1935,7 +1931,7 @@ public class AbfsBlobClient extends AbfsClient {
         // This might have already been added as a marker blob.
         if (!nameToEntryMap.containsKey(entry.name())) {
           nameToEntryMap.put(entry.name(), entry);
-          fileStatuses.add(getFileStatusFromEntry(entry, identityTransformer, uri));
+          fileStatuses.add(getFileStatusFromEntry(entry, uri));
         }
       }
     }
@@ -2006,8 +2002,7 @@ public class AbfsBlobClient extends AbfsClient {
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     // This method is only called internally to determine state of a path
     // and hence don't need identity transformation to happen.
-    ListResponseData listResponseData = listPath(path, false, 1, null, tracingContext,
-        null, null, false);
+    ListResponseData listResponseData = listPath(path, false, 1, null, tracingContext, null, false);
     return !isEmptyListResults(listResponseData.getOp().getResult());
   }
 
