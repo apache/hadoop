@@ -91,10 +91,6 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_COPIED;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_CREATED;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_DELETED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APN_VERSION;
@@ -700,34 +696,6 @@ public abstract class AbfsClient implements Closeable {
    */
   protected void incrementAbfsRenamePath() {
     abfsCounters.incrementCounter(RENAME_PATH_ATTEMPTS, 1);
-  }
-
-  /**
-   * Increments AbfsCounters for get path status by 1.
-   */
-  protected void incrementAbfsGetPathStatus() {
-    abfsCounters.incrementCounter(CALL_GET_FILE_STATUS, 1);
-  }
-
-  /**
-   * Increments AbfsCounters for Delete File by 1.
-   */
-  protected void incrementAbfsDeleteFile() {
-    abfsCounters.incrementCounter(FILES_DELETED, 1);
-  }
-
-  /**
-   * Increments AbfsCounters for Create File by 1.
-   */
-  protected void incrementAbfsCreateFile() {
-    abfsCounters.incrementCounter(FILES_CREATED, 1);
-  }
-
-  /**
-   * Increments AbfsCounters for Copy Files by 1.
-   */
-  protected void incrementAbfsCopyFile() {
-    abfsCounters.incrementCounter(FILES_COPIED, 1);
   }
 
   /**

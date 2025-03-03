@@ -70,7 +70,6 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ACQUIRE_LEASE_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
@@ -462,8 +461,6 @@ public class AbfsDfsClient extends AbfsClient {
             + " because parent folder does not exist.");
       }
       throw ex;
-    } finally {
-      getAbfsCounters().incrementCounter(CALL_GET_FILE_STATUS, 1);
     }
   }
 
@@ -1228,8 +1225,6 @@ public class AbfsDfsClient extends AbfsClient {
       } else {
         return idempotencyOp;
       }
-    } finally {
-      incrementAbfsDeleteFile();
     }
 
     return op;

@@ -267,8 +267,6 @@ public class RenameAtomicity {
         }
       }
       throw e;
-    } finally {
-      abfsClient.incrementAbfsCreateFile();
     }
   }
 
@@ -312,8 +310,6 @@ public class RenameAtomicity {
         return;
       }
       throw e;
-    } finally {
-      abfsClient.incrementAbfsDeleteFile();
     }
   }
 

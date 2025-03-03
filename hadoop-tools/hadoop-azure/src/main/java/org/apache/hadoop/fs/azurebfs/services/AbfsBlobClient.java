@@ -443,7 +443,6 @@ public class AbfsBlobClient extends AbfsClient {
       }
       getPathStatus(parentPath.toUri().getPath(), false,
           tracingContext, null);
-      incrementAbfsGetPathStatus();
     } catch (AbfsRestOperationException ex) {
       if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
         throw new FileNotFoundException("Cannot create file "
@@ -508,7 +507,6 @@ public class AbfsBlobClient extends AbfsClient {
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
-    incrementAbfsCreateFile();
     return createPathRestOp(path, false, false, false, eTag,
         contextEncryptionAdapter, tracingContext);
   }
@@ -1745,7 +1743,6 @@ public class AbfsBlobClient extends AbfsClient {
       pendingJsonFileStatus = getPathStatus(
           pendingJsonPath.toUri().getPath(), tracingContext,
           null, false);
-      incrementAbfsGetPathStatus();
       if (checkIsDir(pendingJsonFileStatus.getResult())) {
         return;
       }

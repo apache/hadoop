@@ -993,6 +993,8 @@ public class AzureBlobFileSystem extends FileSystem
             delete(fs.getPath(), fs.isDirectory());
             if (fs.isDirectory()) {
               statIncrement(DIRECTORIES_DELETED);
+            } else {
+              statIncrement(FILES_DELETED);
             }
             return null;
           }
