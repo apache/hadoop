@@ -26,9 +26,8 @@ import org.apache.hadoop.yarn.server.timelineservice.documentstore.writer.Docume
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.writer.DummyDocumentStoreWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
@@ -37,8 +36,7 @@ import static org.mockito.Mockito.when;
 /**
  * Test case for ${@link DocumentStoreCollectionCreator}.
  */
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(DocumentStoreFactory.class)
+@ExtendWith(MockitoExtension.class)
 public class TestDocumentStoreCollectionCreator {
 
   private final DocumentStoreWriter<TimelineDocument> documentStoreWriter = new

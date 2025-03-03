@@ -54,14 +54,14 @@ public class TestCosmosDBDocumentStoreReader {
 
     assertThrows(IllegalArgumentException.class, ()->{
       Mockito.when(DocumentStoreUtils.isNullOrEmpty(
-                      ArgumentMatchers.any()))
-              .thenReturn(Boolean.TRUE);
+          ArgumentMatchers.any()))
+          .thenReturn(Boolean.TRUE);
 
       CosmosDBDocumentStoreReader cosmosDBDocumentStoreReader =
-              new CosmosDBDocumentStoreReader(null);
+          new CosmosDBDocumentStoreReader(null);
       cosmosDBDocumentStoreReader.addPredicates(
-              new TimelineReaderContext(null, "", "",
-                      null, "", "", null),
+          new TimelineReaderContext(null, "", "",
+              null, "", "", null),
               "DummyCollection", new StringBuilder());
     });
 

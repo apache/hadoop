@@ -24,7 +24,6 @@ import org.apache.hadoop.yarn.server.timelineservice.documentstore.DocumentStore
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.DocumentStoreUtils;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.CollectionType;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.entity.TimelineEntityDocument;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +32,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mockStatic;
 
@@ -65,30 +65,30 @@ public class TestCosmosDBDocumentStoreWriter {
     TimelineEntityDocument expectedEntityDoc =
         DocumentStoreTestUtils.bakeTimelineEntityDoc();
 
-    Assertions.assertEquals(1, actualEntityDoc.getInfo().size());
-    Assertions.assertEquals(0, actualEntityDoc.getMetrics().size());
-    Assertions.assertEquals(0, actualEntityDoc.getEvents().size());
-    Assertions.assertEquals(0, actualEntityDoc.getConfigs().size());
-    Assertions.assertEquals(0,
+    assertEquals(1, actualEntityDoc.getInfo().size());
+    assertEquals(0, actualEntityDoc.getMetrics().size());
+    assertEquals(0, actualEntityDoc.getEvents().size());
+    assertEquals(0, actualEntityDoc.getConfigs().size());
+    assertEquals(0,
         actualEntityDoc.getIsRelatedToEntities().size());
-    Assertions.assertEquals(0, actualEntityDoc.
+    assertEquals(0, actualEntityDoc.
         getRelatesToEntities().size());
 
     actualEntityDoc = (TimelineEntityDocument) documentStoreWriter
         .applyUpdatesOnPrevDoc(CollectionType.ENTITY,
             actualEntityDoc, null);
 
-    Assertions.assertEquals(expectedEntityDoc.getInfo().size(),
+    assertEquals(expectedEntityDoc.getInfo().size(),
         actualEntityDoc.getInfo().size());
-    Assertions.assertEquals(expectedEntityDoc.getMetrics().size(),
+    assertEquals(expectedEntityDoc.getMetrics().size(),
         actualEntityDoc.getMetrics().size());
-    Assertions.assertEquals(expectedEntityDoc.getEvents().size(),
+    assertEquals(expectedEntityDoc.getEvents().size(),
         actualEntityDoc.getEvents().size());
-    Assertions.assertEquals(expectedEntityDoc.getConfigs().size(),
+    assertEquals(expectedEntityDoc.getConfigs().size(),
         actualEntityDoc.getConfigs().size());
-    Assertions.assertEquals(expectedEntityDoc.getRelatesToEntities().size(),
+    assertEquals(expectedEntityDoc.getRelatesToEntities().size(),
         actualEntityDoc.getIsRelatedToEntities().size());
-    Assertions.assertEquals(expectedEntityDoc.getRelatesToEntities().size(),
+    assertEquals(expectedEntityDoc.getRelatesToEntities().size(),
         actualEntityDoc.getRelatesToEntities().size());
   }
 }
