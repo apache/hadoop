@@ -81,7 +81,7 @@ import static org.mockito.Mockito.when;
  */
 public class ITestAzureBlobFileSystemListStatus extends
     AbstractAbfsIntegrationTest {
-  private static final int TEST_FILES_NUMBER = 6;
+  private static final int TEST_FILES_NUMBER = 6000;
   private static final String TEST_CONTINUATION_TOKEN = "continuation";
 
   public ITestAzureBlobFileSystemListStatus() throws Exception {
@@ -91,7 +91,7 @@ public class ITestAzureBlobFileSystemListStatus extends
   @Test
   public void testListPath() throws Exception {
     Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(AZURE_LIST_MAX_RESULTS, "5");
+    config.set(AZURE_LIST_MAX_RESULTS, "5000");
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(getFileSystem().getUri(), config);
       final List<Future<Void>> tasks = new ArrayList<>();
@@ -369,6 +369,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     // Create an implicit directory under root
     Path dir = new Path("a");
+    Path fileInsideDir = new Path("a/file");
     createAzCopyFolder(dir);
 
     // Assert that implicit directory is returned
@@ -377,7 +378,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     assertImplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
 
     // Create a marker blob for the directory.
-    fs.mkdirs(dir);
+    fs.create(fileInsideDir);
 
     // Assert that only one entry of explicit directory is returned
     fileStatuses = fs.listStatus(root);
