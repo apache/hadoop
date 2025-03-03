@@ -206,6 +206,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private int blockOutputActiveBlocks;
   /** Bounded ThreadPool for this instance. */
   private ExecutorService boundedThreadPool;
+  WriteThreadPoolSizeManager poolSizeManager;
 
   /** ABFS instance reference to be held by the store to avoid GC close. */
   private BackReference fsBackRef;
@@ -282,11 +283,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     this.blockFactory = abfsStoreBuilder.blockFactory;
     this.blockOutputActiveBlocks = abfsStoreBuilder.blockOutputActiveBlocks;
-    this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
-        abfsConfiguration.getWriteMaxConcurrentRequestCount(),
-        abfsConfiguration.getMaxWriteRequestsToQueue(),
-        10L, TimeUnit.SECONDS,
-        "abfs-bounded");
+    this.poolSizeManager = WriteThreadPoolSizeManager.getInstance(abfsConfiguration);
+    poolSizeManager.startCPUMonitoring();
+    this.boundedThreadPool = poolSizeManager.getExecutorService();
   }
 
   /**
@@ -347,6 +346,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     } catch (ExecutionException e) {
       LOG.error("Error freeing leases", e);
     } finally {
+      try {
+        poolSizeManager.shutdown();
+      } catch (InterruptedException e) {
+        LOG.error("Interrupted freeing boundedThreadPool", e);
+      }
       IOUtils.cleanupWithLogger(LOG, getClient());
     }
   }

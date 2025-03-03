@@ -173,6 +173,9 @@ public final class AbfsHttpConstants {
   public static final char CHAR_EQUALS = '=';
   public static final char CHAR_STAR = '*';
   public static final char CHAR_PLUS = '+';
+  public static final double HIGH_CPU_THRESHOLD = 0.75;
+  public static final double MEDIUM_CPU_THRESHOLD = 0.50;
+  public static final double LOW_CPU_THRESHOLD = 0.25;
 
   /**
    * Specifies the version of the REST protocol used for processing the request.

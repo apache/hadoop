@@ -198,5 +198,9 @@ public final class FileSystemConfigurations {
 
   public static final int DEFAULT_FS_AZURE_BLOB_DELETE_THREAD = DEFAULT_FS_AZURE_LISTING_ACTION_THREADS;
 
+  public static final int DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME = 60;
+
+  public static final int DEFAULT_WRITE_THREADPOOL_CORE_POOL_SIZE = 1;
+
   private FileSystemConfigurations() {}
 }

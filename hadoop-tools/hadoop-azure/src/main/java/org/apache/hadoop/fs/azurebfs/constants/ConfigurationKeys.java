@@ -383,6 +383,20 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_BLOB_DIR_RENAME_MAX_THREAD = "fs.azure.blob.dir.rename.max.thread";
   /**Maximum number of thread per blob-delete orchestration: {@value}*/
   public static final String FS_AZURE_BLOB_DIR_DELETE_MAX_THREAD = "fs.azure.blob.dir.delete.max.thread";
+  /**
+   * Configuration key for the keep-alive time for the write thread pool.
+   * This value specifies the amount of time that threads in the write thread pool
+   * will remain idle before being terminated.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME = "fs.azure.write.threadpool.keep.alive.time";
 
+  /**
+   * Configuration key for the core pool size of the write thread pool.
+   * This value specifies the number of threads to keep in the write thread pool,
+   * even if they are idle.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_WRITE_THREADPOOL_CORE_POOL_SIZE = "fs.azure.write.threadpool.core.pool.size";
   private ConfigurationKeys() {}
 }

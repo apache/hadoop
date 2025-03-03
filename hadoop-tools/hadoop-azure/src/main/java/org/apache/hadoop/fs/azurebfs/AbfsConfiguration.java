@@ -430,6 +430,14 @@ public class AbfsConfiguration{
       FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
   private int maxApacheHttpClientIoExceptionsRetries;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_THREADPOOL_KEEP_ALIVE_TIME,
+      DefaultValue = DEFAULT_WRITE_THREADPOOL_KEEP_ALIVE_TIME)
+  private int writeThreadPoolKeepAliveTime;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_THREADPOOL_CORE_POOL_SIZE,
+      DefaultValue = DEFAULT_WRITE_THREADPOOL_CORE_POOL_SIZE)
+  private int writeCorePoolSize;
+
   /**
    * Max idle TTL configuration for connection given in
    * {@value org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys#FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL}
@@ -1413,6 +1421,21 @@ public class AbfsConfiguration{
       return 4 * Runtime.getRuntime().availableProcessors();
     }
     return this.writeMaxConcurrentRequestCount;
+  }
+
+  public int getWriteMaxThreadPoolSize() {
+    if (this.writeMaxConcurrentRequestCount < 1) {
+      return 50 * Runtime.getRuntime().availableProcessors();
+    }
+    return this.writeMaxConcurrentRequestCount;
+  }
+
+  public int getWriteThreadPoolKeepAliveTime() {
+    return writeThreadPoolKeepAliveTime;
+  }
+
+  public int getWriteCorePoolSize() {
+    return writeCorePoolSize;
   }
 
   public int getMaxWriteRequestsToQueue() {
