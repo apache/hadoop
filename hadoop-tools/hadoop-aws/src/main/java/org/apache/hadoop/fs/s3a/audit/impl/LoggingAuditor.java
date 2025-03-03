@@ -65,7 +65,6 @@ import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.OUTSIDE_SPAN;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_ENABLED;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_FILTER;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REJECT_OUT_OF_SPAN_OPERATIONS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.UNAUDITED_OPERATION;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.extractJobID;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.HEADER_REFERRER;
@@ -96,11 +95,6 @@ public class LoggingAuditor
    * Default span to use when there is no other.
    */
   private AuditSpanS3A warningSpan;
-
-  /**
-   * Should out of scope ops be rejected?
-   */
-  private boolean rejectOutOfSpan;
 
   /**
    * Map of attributes which will be added to all operations.
@@ -171,8 +165,6 @@ public class LoggingAuditor
   @Override
   protected void serviceInit(final Configuration conf) throws Exception {
     super.serviceInit(conf);
-    rejectOutOfSpan = conf.getBoolean(
-        REJECT_OUT_OF_SPAN_OPERATIONS, false);
     // attach the job ID if there is one in the configuration used
     // to create this file.
     String jobID = extractJobID(conf);
@@ -187,6 +179,7 @@ public class LoggingAuditor
         currentContext, createSpanID(), null, null);
     isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
               DEFAULT_MULTIPART_UPLOAD_ENABLED);
+    LOG.debug("Initialized {}", this);
   }
 
   @Override
@@ -195,7 +188,7 @@ public class LoggingAuditor
         "LoggingAuditor{");
     sb.append("ID='").append(getAuditorId()).append('\'');
     sb.append(", headerEnabled=").append(headerEnabled);
-    sb.append(", rejectOutOfSpan=").append(rejectOutOfSpan);
+    sb.append(", rejectOutOfSpan=").append(isRejectOutOfSpan());
     sb.append(", isMultipartUploadEnabled=").append(isMultipartUploadEnabled);
     sb.append('}');
     return sb.toString();
@@ -264,6 +257,7 @@ public class LoggingAuditor
   HttpReferrerAuditHeader getReferrer(AuditSpanS3A span) {
     return ((LoggingAuditSpan) span).getReferrer();
   }
+
   /**
    * Span which logs at debug and sets the HTTP referrer on
    * invocations.
@@ -545,7 +539,7 @@ public class LoggingAuditor
       } else {
         final RuntimeException ex = new AuditFailureException(unaudited);
         LOG.debug(unaudited, ex);
-        if (rejectOutOfSpan) {
+        if (isRejectOutOfSpan()) {
           throw ex;
         }
       }

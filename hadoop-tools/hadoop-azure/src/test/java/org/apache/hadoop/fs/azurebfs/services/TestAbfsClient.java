@@ -29,6 +29,7 @@ import org.mockito.Mockito;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
+import org.apache.hadoop.fs.azurebfs.MockIntercept;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
@@ -37,6 +38,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsClient.ABFS_CLIENT_TIMER_THREAD_NAME;
+import static org.mockito.ArgumentMatchers.any;
 
 /**
  * Unit test cases for the AbfsClient class.
@@ -138,4 +140,41 @@ public class TestAbfsClient {
         }
         return false;
     }
+
+  /**
+   * Mocks the creation of an `AbfsRestOperation` for the given `AbfsClient` and intercepts its execution.
+   * This method sets up a mock behavior where the `AbfsRestOperation` will call the provided `MockIntercept`
+   * to handle custom logic during the operation execution.
+   *
+   * @param abfsClient the `AbfsClient` to mock the operation for
+   * @param mockIntercept the mock interceptor that defines custom behavior during the operation execution
+   * @throws Exception if an error occurs while mocking the operation creation
+   */
+  public static void mockAbfsOperationCreation(final AbfsClient abfsClient,
+      final MockIntercept mockIntercept) throws Exception {
+    boolean[] flag = new boolean[1];
+    Mockito.doAnswer(answer -> {
+          if (!flag[0]) {
+            flag[0] = true;
+            AbfsRestOperation op = Mockito.spy(
+                new AbfsRestOperation(
+                    answer.getArgument(0),
+                    abfsClient,
+                    answer.getArgument(1),
+                    answer.getArgument(2),
+                    answer.getArgument(3),
+                    abfsClient.getAbfsConfiguration()
+                ));
+            Mockito.doAnswer((answer1) -> {
+                  mockIntercept.answer(op, answer1);
+                  return null;
+                }).when(op)
+                .execute(any());
+            Mockito.doReturn(true).when(op).isARetriedRequest();
+            return op;
+          }
+          return answer.callRealMethod();
+        }).when(abfsClient)
+        .getAbfsRestOperation(any(), any(), any(), any());
+  }
 }

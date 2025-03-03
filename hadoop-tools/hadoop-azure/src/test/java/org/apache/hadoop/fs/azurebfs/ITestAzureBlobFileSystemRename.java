@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 
@@ -43,6 +44,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
@@ -50,12 +52,14 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsLease;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.BlobRenameHandler;
 import org.apache.hadoop.fs.azurebfs.services.RenameAtomicity;
 import org.apache.hadoop.fs.azurebfs.services.RenameAtomicityTestUtils;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
@@ -63,6 +67,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
+import static java.net.HttpURLConnection.HTTP_CLIENT_TIMEOUT;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
@@ -70,11 +75,19 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_ABORTED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_FAILED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_PENDING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DIRECTORY;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_LEASE_THREADS;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_RESOURCE_TYPE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.COPY_BLOB_ABORTED;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.COPY_BLOB_FAILED;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.mockAddClientTransactionIdToHeader;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_RENAME_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
@@ -1641,4 +1654,180 @@ public class ITestAzureBlobFileSystemRename extends
             Mockito.any(TracingContext.class));
     fs.rename(new Path(dirPathStr), new Path("/dst/"));
   }
+
+  /**
+   * Test to verify the idempotency of the `rename` operation in Azure Blob File System when retrying
+   * after a failure. The test simulates a "path not found" error (HTTP 404) on the first attempt,
+   * checks that the operation correctly retries using the appropriate transaction ID,
+   * and ensures that the source file is renamed to the destination path once successful.
+   *
+   * @throws Exception if an error occurs during the file system operations or mocking
+   */
+  @Test
+  public void testRenamePathRetryIdempotency() throws Exception {
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.set(FS_AZURE_ENABLE_CLIENT_TRANSACTION_ID, "true");
+    try (AzureBlobFileSystem fs = getFileSystem()) {
+      assumeRecoveryThroughClientTransactionID(false);
+      AbfsDfsClient abfsClient = (AbfsDfsClient) Mockito.spy(fs.getAbfsClient());
+      fs.getAbfsStore().setClient(abfsClient);
+      Path sourceDir = path("/testSrc");
+      assertMkdirs(fs, sourceDir);
+      String filename = "file1";
+      Path sourceFilePath = new Path(sourceDir, filename);
+      touch(sourceFilePath);
+      Path destFilePath = new Path(sourceDir, "file2");
+
+      final List<AbfsHttpHeader> headers = new ArrayList<>();
+      mockRetriedRequest(abfsClient, headers);
+
+      AbfsRestOperation getPathRestOp = Mockito.mock(AbfsRestOperation.class);
+      AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
+      Mockito.doAnswer(answer -> {
+        String requiredHeader = null;
+        for (AbfsHttpHeader httpHeader : headers) {
+          if (X_MS_CLIENT_TRANSACTION_ID.equalsIgnoreCase(
+              httpHeader.getName())) {
+            requiredHeader = httpHeader.getValue();
+            break;
+          }
+        }
+        return requiredHeader;
+      }).when(op).getResponseHeader(X_MS_CLIENT_TRANSACTION_ID);
+      Mockito.doReturn(true).when(getPathRestOp).hasResult();
+      Mockito.doReturn(op).when(getPathRestOp).getResult();
+      Mockito.doReturn(DIRECTORY)
+          .when(op)
+          .getResponseHeader(X_MS_RESOURCE_TYPE);
+      Mockito.doReturn(getPathRestOp).when(abfsClient).getPathStatus(
+          Mockito.nullable(String.class), Mockito.nullable(Boolean.class),
+          Mockito.nullable(TracingContext.class),
+          Mockito.nullable(ContextEncryptionAdapter.class));
+      fs.rename(sourceFilePath, destFilePath);
+    }
+  }
+
+  /**
+   * Test to verify that the client transaction ID is included in the response header
+   * after renaming a file in Azure Blob Storage.
+   *
+   * This test ensures that when a file is renamed, the Azure Blob FileSystem client
+   * properly includes the client transaction ID in the response header for the renamed file.
+   * The test uses a configuration where client transaction ID is enabled and verifies
+   * its presence after performing a rename operation.
+   *
+   * @throws Exception if any error occurs during test execution
+   */
+  @Test
+  public void testGetClientTransactionIdAfterRename() throws Exception {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
+      assumeRecoveryThroughClientTransactionID(false);
+      AbfsDfsClient abfsDfsClient = (AbfsDfsClient) Mockito.spy(fs.getAbfsClient());
+      fs.getAbfsStore().setClient(abfsDfsClient);
+      final String[] clientTransactionId = new String[1];
+      mockAddClientTransactionIdToHeader(abfsDfsClient, clientTransactionId);
+      Path sourceDir = path("/testSrc");
+      assertMkdirs(fs, sourceDir);
+      String filename = "file1";
+      Path sourceFilePath = new Path(sourceDir, filename);
+      touch(sourceFilePath);
+      Path destFilePath = new Path(sourceDir, "file2");
+      fs.rename(sourceFilePath, destFilePath);
+
+      final AbfsHttpOperation getPathStatusOp =
+          abfsDfsClient.getPathStatus(destFilePath.toUri().getPath(), false,
+              getTestTracingContext(fs, true), null).getResult();
+      Assertions.assertThat(
+              getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))
+          .describedAs("Client transaction id should be present in dest file")
+          .isNotNull();
+      Assertions.assertThat(
+              getPathStatusOp.getResponseHeader(X_MS_CLIENT_TRANSACTION_ID))
+          .describedAs("Client transaction ID should be equal to the one set in the header")
+          .isEqualTo(clientTransactionId[0]);
+    }
+  }
+
+  /**
+   * Tests the recovery process during a file rename operation in Azure Blob File System when
+   * the `getPathStatus` method encounters a timeout exception. The test ensures that the proper
+   * error message is returned when the operation fails during recovery.
+   *
+   * @throws Exception If an error occurs during the test setup or execution.
+   */
+  @Test
+  public void testFailureInGetPathStatusDuringRenameRecovery() throws Exception {
+    try (AzureBlobFileSystem fs = getFileSystem()) {
+      assumeRecoveryThroughClientTransactionID(false);
+      AbfsDfsClient abfsDfsClient = (AbfsDfsClient) Mockito.spy(fs.getAbfsClient());
+      fs.getAbfsStore().setClient(abfsDfsClient);
+      final String[] clientTransactionId = new String[1];
+      mockAddClientTransactionIdToHeader(abfsDfsClient, clientTransactionId);
+      mockRetriedRequest(abfsDfsClient, new ArrayList<>());
+      boolean[] flag = new boolean[1];
+      Mockito.doAnswer(getPathStatus -> {
+        if (!flag[0]) {
+          flag[0] = true;
+          throw new AbfsRestOperationException(HTTP_CLIENT_TIMEOUT, "", "", new Exception());
+        }
+        return getPathStatus.callRealMethod();
+      }).when(abfsDfsClient).getPathStatus(
+          Mockito.nullable(String.class), Mockito.nullable(Boolean.class),
+          Mockito.nullable(TracingContext.class),
+          Mockito.nullable(ContextEncryptionAdapter.class));
+
+      Path sourceDir = path("/testSrc");
+      assertMkdirs(fs, sourceDir);
+      String filename = "file1";
+      Path sourceFilePath = new Path(sourceDir, filename);
+      touch(sourceFilePath);
+      Path destFilePath = new Path(sourceDir, "file2");
+
+      String errorMessage = intercept(AbfsDriverException.class,
+          () -> fs.rename(sourceFilePath, destFilePath)).getErrorMessage();
+
+      Assertions.assertThat(errorMessage)
+          .describedAs("getPathStatus should fail while recovering")
+          .contains(ERR_RENAME_RECOVERY);
+    }
+  }
+
+  /**
+   * Mocks the retry behavior for an AbfsDfsClient request. The method intercepts
+   * the Abfs operation and simulates an HTTP conflict (HTTP 404) error on the
+   * first invocation. It creates a mock HTTP operation with a PUT method and
+   * specific status codes and error messages.
+   *
+   * @param abfsDfsClient The AbfsDfsClient to mock operations for.
+   * @param headers The list of HTTP headers to which request headers will be added.
+   *
+   * @throws Exception If an error occurs during mock creation or operation execution.
+   */
+   private void mockRetriedRequest(AbfsDfsClient abfsDfsClient,
+       final List<AbfsHttpHeader> headers) throws Exception {
+     TestAbfsClient.mockAbfsOperationCreation(abfsDfsClient,
+         new MockIntercept<AbfsRestOperation>() {
+           private int count = 0;
+
+           @Override
+           public void answer(final AbfsRestOperation mockedObj,
+               final InvocationOnMock answer)
+               throws AbfsRestOperationException {
+             if (count == 0) {
+               count = 1;
+               AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
+               Mockito.doReturn(HTTP_METHOD_PUT).when(op).getMethod();
+               Mockito.doReturn(EMPTY_STRING).when(op).getStorageErrorMessage();
+               Mockito.doReturn(SOURCE_PATH_NOT_FOUND.getErrorCode()).when(op)
+                   .getStorageErrorCode();
+               Mockito.doReturn(true).when(mockedObj).hasResult();
+               Mockito.doReturn(op).when(mockedObj).getResult();
+               Mockito.doReturn(HTTP_NOT_FOUND).when(op).getStatusCode();
+               headers.addAll(mockedObj.getRequestHeaders());
+               throw new AbfsRestOperationException(HTTP_NOT_FOUND,
+                   SOURCE_PATH_NOT_FOUND.getErrorCode(), EMPTY_STRING, null, op);
+             }
+           }
+         });
+   }
 }

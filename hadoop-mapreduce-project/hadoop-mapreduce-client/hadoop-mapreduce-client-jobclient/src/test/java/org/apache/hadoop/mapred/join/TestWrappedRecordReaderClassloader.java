@@ -33,8 +33,8 @@ import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestWrappedRecordReaderClassloader {
   /**
@@ -123,9 +123,9 @@ public class TestWrappedRecordReaderClassloader {
 
     @SuppressWarnings("unchecked")
     public RR_ClassLoaderChecker(JobConf job) {
-      assertTrue("The class loader has not been inherited from "
-          + CompositeRecordReader.class.getSimpleName(),
-          job.getClassLoader() instanceof Fake_ClassLoader);
+      assertTrue(job.getClassLoader() instanceof Fake_ClassLoader,
+          "The class loader has not been inherited from "
+          + CompositeRecordReader.class.getSimpleName());
 
       keyclass = (Class<? extends K>) job.getClass("test.fakeif.keyclass",
           NullWritable.class, WritableComparable.class);

@@ -814,10 +814,9 @@ public class AbfsBlobClient extends AbfsClient {
       final URL url = createRequestUrl(destination,
           abfsUriQueryBuilder.toString());
       final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-      final AbfsRestOperation successOp = getAbfsRestOperation(
+      final AbfsRestOperation successOp = getSuccessOp(
           AbfsRestOperationType.RenamePath, HTTP_METHOD_PUT,
           url, requestHeaders);
-      successOp.hardSetResult(HTTP_OK);
       return new AbfsClientRenameResult(successOp, true, false);
     } else {
       throw new AbfsRestOperationException(HTTP_INTERNAL_ERROR,
@@ -1208,9 +1207,9 @@ public class AbfsBlobClient extends AbfsClient {
       if (op.getResult().getStatusCode() == HTTP_NOT_FOUND
           && isImplicitCheckRequired && isNonEmptyDirectory(path, tracingContext)) {
         // Implicit path found.
-        AbfsRestOperation successOp = getAbfsRestOperation(
-            AbfsRestOperationType.GetPathStatus,
-            HTTP_METHOD_HEAD, url, requestHeaders);
+        AbfsRestOperation successOp = getSuccessOp(
+            AbfsRestOperationType.GetPathStatus, HTTP_METHOD_HEAD,
+            url, requestHeaders);
         successOp.hardSetGetFileStatusResult(HTTP_OK);
         return successOp;
       }
@@ -1303,38 +1302,18 @@ public class AbfsBlobClient extends AbfsClient {
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
     BlobDeleteHandler blobDeleteHandler = getBlobDeleteHandler(path, recursive,
         tracingContext);
-    final AbfsUriQueryBuilder abfsUriQueryBuilder
-        = createDefaultUriQueryBuilder();
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    final AbfsRestOperation op = new AbfsRestOperation(
-        AbfsRestOperationType.DeletePath, this,
-        HTTP_METHOD_DELETE, url, requestHeaders, getAbfsConfiguration());
-
-    try {
-      if (blobDeleteHandler.execute()) {
-        op.hardSetResult(HttpURLConnection.HTTP_OK);
-        return op;
-      } else {
-        throw new AbfsRestOperationException(HTTP_INTERNAL_ERROR,
-            AzureServiceErrorCode.UNKNOWN.getErrorCode(),
-            ERR_DELETE_BLOB + path,
-            null);
-      }
-    } catch (AzureBlobFileSystemException e) {
-      if (!op.hasResult()) {
-        throw e;
-      }
-
-      final AbfsRestOperation idempotencyOp = deleteIdempotencyCheckOp(op);
-      if (idempotencyOp.getResult().getStatusCode()
-          == op.getResult().getStatusCode()) {
-        // idempotency did not return different result
-        // throw back the exception
-        throw e;
-      } else {
-        return idempotencyOp;
-      }
+    if (blobDeleteHandler.execute()) {
+      final AbfsUriQueryBuilder abfsUriQueryBuilder
+          = createDefaultUriQueryBuilder();
+      final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
+      final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+      return getSuccessOp(AbfsRestOperationType.DeletePath,
+          HTTP_METHOD_DELETE, url, requestHeaders);
+    } else {
+      throw new AbfsRestOperationException(HTTP_INTERNAL_ERROR,
+          AzureServiceErrorCode.UNKNOWN.getErrorCode(),
+          ERR_DELETE_BLOB + path,
+          null);
     }
   }
 
@@ -1533,8 +1512,24 @@ public class AbfsBlobClient extends AbfsClient {
     final AbfsRestOperation op = getAbfsRestOperation(
         AbfsRestOperationType.DeleteBlob, HTTP_METHOD_DELETE, url,
         requestHeaders);
-    op.execute(tracingContext);
-    return op;
+    try {
+      op.execute(tracingContext);
+      return op;
+    } catch (AzureBlobFileSystemException e) {
+      // If we have no HTTP response, throw the original exception.
+      if (!op.hasResult()) {
+        throw e;
+      }
+      final AbfsRestOperation idempotencyOp = deleteIdempotencyCheckOp(op);
+      if (idempotencyOp.getResult().getStatusCode()
+          == op.getResult().getStatusCode()) {
+        // idempotency did not return different result
+        // throw back the exception
+        throw e;
+      } else {
+        return idempotencyOp;
+      }
+    }
   }
 
   /**

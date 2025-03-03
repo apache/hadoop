@@ -345,8 +345,17 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     Long renamePathAttemptsBeforeRename = lookupCounterStatistic(ioStats, RENAME_PATH_ATTEMPTS.getStatName());
 
     // source eTag does not match -> rename should be a failure
+    int newConnections;
     boolean renameResult = fs.rename(path1, path2);
-    assertEquals(false, renameResult);
+    if (getConfiguration().getIsClientTransactionIdEnabled()) {
+      // Recovery based on client transaction id should be successful
+      assertTrue(renameResult);
+      // One extra getPathStatus call should have happened
+      newConnections = 5;
+    } else {
+      assertFalse(renameResult);
+      newConnections = 4;
+    }
 
     // validating stat counters after rename
     // 3 calls should have happened in total for rename
@@ -355,7 +364,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // last getPathStatus call should be skipped
     assertThatStatisticCounter(ioStats,
             CONNECTIONS_MADE.getStatName())
-            .isEqualTo(4 + connMadeBeforeRename);
+            .isEqualTo(newConnections + connMadeBeforeRename);
 
     // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
     // retries happen internally within AbfsRestOperation execute()
@@ -396,11 +405,16 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     fs.mkdirs(new Path(path1));
 
-    // source eTag does not match -> throw exception
-    expectErrorCode(SOURCE_PATH_NOT_FOUND, intercept(AbfsRestOperationException.class, () ->
-            spyClient.renamePath(path1, path2, null,
-                testTracingContext, null,
-                false)));
+    if (getConfiguration().getIsClientTransactionIdEnabled()) {
+      // Recovery based on client transaction id should be successful
+      assertTrue(fs.rename(new Path(path1), new Path(path2)));
+    } else {
+      // source eTag does not match -> throw exception
+      expectErrorCode(SOURCE_PATH_NOT_FOUND, intercept(AbfsRestOperationException.class, () ->
+          spyClient.renamePath(path1, path2, null,
+              testTracingContext, null,
+              false)));
+    }
   }
 
   /**
@@ -539,11 +553,20 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     final Path source = new Path(path1);
     touch(source);
-    final String sourceTag = ((EtagSource) fs.getFileStatus(source)).getEtag();
 
     final ResilientCommitByRename commit = fs.createResilientCommitSupport(source);
-    intercept(FileNotFoundException.class, () ->
-        commit.commitSingleFileByRename(source, new Path(path2), "not the right tag"));
+    // When client transaction ID is enabled, the commit should succeed.
+    if (getConfiguration().getIsClientTransactionIdEnabled()) {
+      Pair<Boolean, Duration> response = commit.commitSingleFileByRename(source, new Path(path2),
+          "not the right tag");
+      Assertions.assertThat(response.getKey())
+          .describedAs("Recovery using client transaction ID")
+          .isTrue();
+    } else {
+      intercept(FileNotFoundException.class, () ->
+          commit.commitSingleFileByRename(source, new Path(path2),
+              "not the right tag"));
+    }
   }
 
   /**

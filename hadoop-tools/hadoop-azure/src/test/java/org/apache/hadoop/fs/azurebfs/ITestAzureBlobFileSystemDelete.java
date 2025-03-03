@@ -373,26 +373,23 @@ public class ITestAzureBlobFileSystemDelete extends
     AzureBlobFileSystem fs = getFileSystem();
     assumeBlobServiceType();
 
-    Path p = new Path("/testDir/dir1");
-    Path p1 = new Path("/testDir/dir1/file1");
-    Path p2 = new Path("/testDir/dir1/file2");
+    Path file1 = new Path("/testDir/dir1/file1");
+    Path file2 = new Path("/testDir/dir1/file2");
+    Path implicitDir = file1.getParent();
 
-    fs.create(p1);
-    fs.create(p2);
-    AbfsBlobClient client = (AbfsBlobClient) fs.getAbfsClient();
-    client.deleteBlobPath(p, null,
-        getTestTracingContext(fs, true));
+    createAzCopyFile(file1);
+    createAzCopyFile(file2);
 
     // Deletion of file with different recursion values
-    fs.delete(p1, false);
-    fs.delete(p2, true);
+    fs.delete(file1, false);
+    fs.delete(file2, true);
 
-    Assertions.assertThat(fs.exists(p))
+    Assertions.assertThat(fs.exists(implicitDir))
         .describedAs("The directory should exist.")
         .isTrue();
-    Assertions.assertThat(fs.exists(p1))
+    Assertions.assertThat(fs.exists(file1))
         .describedAs("Deleted file should not be present.").isFalse();
-    Assertions.assertThat(fs.exists(p2))
+    Assertions.assertThat(fs.exists(file2))
         .describedAs("Deleted file should not be present.").isFalse();
   }
 
@@ -446,7 +443,7 @@ public class ITestAzureBlobFileSystemDelete extends
 
   /**
    * Assert that deleting a non-existing path
-   * leads to a FileNotFoundException.
+   * returns a false.
    *
    * @throws Exception if an error occurs during the test execution
    */
@@ -455,13 +452,12 @@ public class ITestAzureBlobFileSystemDelete extends
     AzureBlobFileSystem fs = getFileSystem();
 
     Path p = new Path("/nonExistingPath");
-    intercept(FileNotFoundException.class,
-        () -> fs.delete(p, true));
+    Assertions.assertThat(fs.delete(p, true)).isFalse();
   }
 
   /**
-   * Test to check if fileNotFoundException is
-   * injected after the file has already been deleted.
+   * Test to check test operation returns false
+   * after the file has already been deleted.
    *
    * @throws Exception if an error occurs during the test execution
    */
@@ -472,8 +468,7 @@ public class ITestAzureBlobFileSystemDelete extends
     fs.create(testFile);
     fs.delete(testFile, false);
 
-    intercept(FileNotFoundException.class,
-        () -> fs.delete(testFile, true));
+    Assertions.assertThat(fs.delete(testFile, true)).isFalse();
   }
 
   /**

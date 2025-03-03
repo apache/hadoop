@@ -17,13 +17,13 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests the docker run command and its command
@@ -38,7 +38,7 @@ public class TestDockerRunCommand {
   private static final String IMAGE_NAME = "image_name";
   private static final String CLIENT_CONFIG_PATH = "/path/to/client.json";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     dockerRunCommand = new DockerRunCommand(CONTAINER_NAME, USER_ID,
         IMAGE_NAME);

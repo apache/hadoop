@@ -27,9 +27,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Simple test class for the {@link HashBasedRouterPolicy}. Tests that one of
@@ -39,7 +40,7 @@ public class TestHashBasedRouterPolicy extends BaseRouterPoliciesTest {
 
   private int numSubclusters = 10;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
 
     // set policy in base class
@@ -74,7 +75,7 @@ public class TestHashBasedRouterPolicy extends BaseRouterPoliciesTest {
 
     // hash spread the jobs equally among the subclusters
     for (AtomicLong a : counter.values()) {
-      Assert.assertEquals(a.get(), jobPerSub);
+      assertEquals(a.get(), jobPerSub);
     }
 
   }

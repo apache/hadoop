@@ -46,11 +46,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -62,9 +60,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -114,12 +113,9 @@ public class TestGpuResourceHandlerImpl {
     return fakeBinary;
   }
 
-  @Rule
-  public ExpectedException expected = ExpectedException.none();
-
   private NvidiaBinaryHelper nvidiaBinaryHelper;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     createTestDataDirectory();
     nvidiaBinaryHelper = new NvidiaBinaryHelper();
@@ -147,7 +143,7 @@ public class TestGpuResourceHandlerImpl {
     return nmctx;
   }
 
-  @After
+  @AfterEach
   public void cleanupTestFiles() throws IOException {
     FileUtils.deleteDirectory(testDataDirectory);
     nvidiaBinaryHelper = new NvidiaBinaryHelper();
@@ -163,22 +159,22 @@ public class TestGpuResourceHandlerImpl {
 
     List<GpuDevice> allowedGpus =
         gpuResourceHandler.getGpuAllocator().getAllowedGpus();
-    assertEquals("Unexpected number of allowed GPU devices!", 1,
-        allowedGpus.size());
-    assertEquals("Expected GPU device does not equal to found device!",
-        new GpuDevice(0, 0), allowedGpus.get(0));
+    assertEquals(1, allowedGpus.size(),
+        "Unexpected number of allowed GPU devices!");
+    assertEquals(new GpuDevice(0, 0), allowedGpus.get(0),
+        "Expected GPU device does not equal to found device!");
     verify(mockCGroupsHandler).initializeCGroupController(
         CGroupsHandler.CGroupController.DEVICES);
   }
 
   @Test
   public void testBootstrapWithMockGpuDiscoverer() throws Exception {
-    GpuDiscoverer mockDiscoverer = mock(GpuDiscoverer.class);
-    Configuration conf = new YarnConfiguration();
-    mockDiscoverer.initialize(conf, nvidiaBinaryHelper);
-
-    expected.expect(ResourceHandlerException.class);
-    gpuResourceHandler.bootstrap(conf);
+    assertThrows(ResourceHandlerException.class, () -> {
+      GpuDiscoverer mockDiscoverer = mock(GpuDiscoverer.class);
+      Configuration conf = new YarnConfiguration();
+      mockDiscoverer.initialize(conf, nvidiaBinaryHelper);
+      gpuResourceHandler.bootstrap(conf);
+    });
   }
 
   private static ContainerId getContainerId(int id) {
@@ -259,9 +255,9 @@ public class TestGpuResourceHandlerImpl {
 
   private void verifyNumberOfAvailableGpus(int expectedAvailable,
       GpuResourceHandlerImpl resourceHandler) {
-    assertEquals("Unexpected number of available GPU devices!",
-        expectedAvailable,
-        resourceHandler.getGpuAllocator().getAvailableGpus());
+    assertEquals(expectedAvailable,
+        resourceHandler.getGpuAllocator().getAvailableGpus(),
+        "Unexpected number of available GPU devices!");
   }
 
   private void verifyCgroupsDeletedForContainer(int i)
@@ -300,7 +296,7 @@ public class TestGpuResourceHandlerImpl {
     } catch (ResourceHandlerException e) {
       failedToAllocate = true;
     }
-    assertTrue("Container allocation is expected to fail!", failedToAllocate);
+    assertTrue(failedToAllocate, "Container allocation is expected to fail!");
 
     startContainerWithGpuRequestsDocker(3, 1);
     verifyDeniedDevices(getContainerId(3), Collections.emptyList());
@@ -333,7 +329,7 @@ public class TestGpuResourceHandlerImpl {
     } catch (ResourceHandlerException e) {
       failedToAllocate = true;
     }
-    assertTrue("Container allocation is expected to fail!", failedToAllocate);
+    assertTrue(failedToAllocate, "Container allocation is expected to fail!");
 
     // Start container 3, ask 1 container, succeeded
     // devices = 0/1/3 will be blocked
@@ -374,7 +370,7 @@ public class TestGpuResourceHandlerImpl {
       exception = true;
     }
 
-    assertTrue("preStart should throw exception", exception);
+    assertTrue(exception, "preStart should throw exception");
 
     // After preStart, we still have 4 available GPU since the store op failed.
     verifyNumberOfAvailableGpus(4, gpuResourceHandler);
@@ -406,7 +402,7 @@ public class TestGpuResourceHandlerImpl {
     } catch (ResourceHandlerException e) {
       failedToAllocate = true;
     }
-    assertTrue("Container allocation is expected to fail!", failedToAllocate);
+    assertTrue(failedToAllocate, "Container allocation is expected to fail!");
 
     /* Release container 1, expect cgroups deleted */
     gpuResourceHandler.postComplete(getContainerId(1));
@@ -440,9 +436,9 @@ public class TestGpuResourceHandlerImpl {
     verifyDeniedDevices(getContainerId(2), Arrays
         .asList(new GpuDevice(0, 0), new GpuDevice(1, 1), new GpuDevice(2, 3),
             new GpuDevice(3, 4)));
-    assertEquals("Number of GPU device allocations is not the expected!", 0,
-        container.getResourceMappings()
-        .getAssignedResources(ResourceInformation.GPU_URI).size());
+    assertEquals(0, container.getResourceMappings()
+        .getAssignedResources(ResourceInformation.GPU_URI).size(),
+        "Number of GPU device allocations is not the expected!");
 
     // Store assigned resource will not be invoked.
     verify(mockNMStateStore, never()).storeAssignedResources(
@@ -502,15 +498,14 @@ public class TestGpuResourceHandlerImpl {
 
     Map<GpuDevice, ContainerId> deviceAllocationMapping =
         gpuResourceHandler.getGpuAllocator().getDeviceAllocationMapping();
-    assertEquals("Unexpected number of allocated GPU devices!", 2,
-        deviceAllocationMapping.size());
-    assertTrue("Expected GPU device is not found in allocations!",
-        deviceAllocationMapping.keySet().contains(new GpuDevice(1, 1)));
-    assertTrue("Expected GPU device is not found in allocations!",
-        deviceAllocationMapping.keySet().contains(new GpuDevice(2, 3)));
-    assertEquals("GPU device is not assigned to the expected container!",
-        deviceAllocationMapping.get(new GpuDevice(1, 1)),
-        getContainerId(1));
+    assertEquals(2, deviceAllocationMapping.size(),
+        "Unexpected number of allocated GPU devices!");
+    assertTrue(deviceAllocationMapping.keySet().contains(new GpuDevice(1, 1)),
+        "Expected GPU device is not found in allocations!");
+    assertTrue(deviceAllocationMapping.keySet().contains(new GpuDevice(2, 3)),
+        "Expected GPU device is not found in allocations!");
+    assertEquals(deviceAllocationMapping.get(new GpuDevice(1, 1)),
+        getContainerId(1), "GPU device is not assigned to the expected container!");
 
     // TEST CASE
     // Try to reacquire a container but requested device is not in allowed list.
@@ -531,21 +526,19 @@ public class TestGpuResourceHandlerImpl {
     } catch (ResourceHandlerException e) {
       caughtException = true;
     }
-    assertTrue(
-        "Should fail since requested device Id is not in allowed list",
-        caughtException);
+    assertTrue(caughtException,
+        "Should fail since requested device Id is not in allowed list");
 
     // Make sure internal state not changed.
     deviceAllocationMapping =
         gpuResourceHandler.getGpuAllocator().getDeviceAllocationMapping();
-    assertEquals("Unexpected number of allocated GPU devices!",
-        2, deviceAllocationMapping.size());
-    assertTrue("Expected GPU devices are not found in allocations!",
-        deviceAllocationMapping.keySet()
-        .containsAll(Arrays.asList(new GpuDevice(1, 1), new GpuDevice(2, 3))));
-    assertEquals("GPU device is not assigned to the expected container!",
-        deviceAllocationMapping.get(new GpuDevice(1, 1)),
-        getContainerId(1));
+    assertEquals(2, deviceAllocationMapping.size(),
+        "Unexpected number of allocated GPU devices!");
+    assertTrue(deviceAllocationMapping.keySet()
+        .containsAll(Arrays.asList(new GpuDevice(1, 1), new GpuDevice(2, 3))),
+        "Expected GPU devices are not found in allocations!");
+    assertEquals(deviceAllocationMapping.get(new GpuDevice(1, 1)),
+        getContainerId(1), "GPU device is not assigned to the expected container!");
 
     // TEST CASE
     // Try to reacquire a container but requested device is already assigned.
@@ -566,20 +559,19 @@ public class TestGpuResourceHandlerImpl {
     } catch (ResourceHandlerException e) {
       caughtException = true;
     }
-    assertTrue(
-        "Should fail since requested device Id is already assigned",
-        caughtException);
+    assertTrue(caughtException,
+        "Should fail since requested device Id is already assigned");
 
     // Make sure internal state not changed.
     deviceAllocationMapping =
         gpuResourceHandler.getGpuAllocator().getDeviceAllocationMapping();
-    assertEquals("Unexpected number of allocated GPU devices!",
-        2, deviceAllocationMapping.size());
-    assertTrue("Expected GPU devices are not found in allocations!",
-        deviceAllocationMapping.keySet()
-        .containsAll(Arrays.asList(new GpuDevice(1, 1), new GpuDevice(2, 3))));
-    assertEquals("GPU device is not assigned to the expected container!",
-        deviceAllocationMapping.get(new GpuDevice(1, 1)),
-        getContainerId(1));
+    assertEquals(2, deviceAllocationMapping.size(),
+        "Unexpected number of allocated GPU devices!");
+    assertTrue(deviceAllocationMapping.keySet()
+        .containsAll(Arrays.asList(new GpuDevice(1, 1), new GpuDevice(2, 3))),
+        "Expected GPU devices are not found in allocations!");
+    assertEquals(deviceAllocationMapping.get(new GpuDevice(1, 1)),
+        getContainerId(1),
+        "GPU device is not assigned to the expected container!");
   }
 }

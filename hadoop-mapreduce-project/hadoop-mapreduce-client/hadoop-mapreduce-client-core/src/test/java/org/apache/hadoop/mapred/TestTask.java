@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -26,13 +27,13 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class TestTask {
   @Mock
   private TaskUmbilicalProtocol umbilical;
@@ -42,7 +43,7 @@ public class TestTask {
 
   private Task task;
 
-  @Before
+  @BeforeEach
   public void setup() {
     task = new StubTask();
     ExitUtil.disableSystemExit();
@@ -55,11 +56,12 @@ public class TestTask {
     task.statusUpdate(umbilical);
   }
 
-  @Test(expected = ExitException.class)
+  @Test
   public void testStatusUpdateExitsInNonUberMode() throws Exception {
-    setupTest(false);
-
-    task.statusUpdate(umbilical);
+    assertThrows(ExitException.class, () -> {
+      setupTest(false);
+      task.statusUpdate(umbilical);
+    });
   }
 
   private void setupTest(boolean uberized)

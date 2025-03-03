@@ -98,6 +98,13 @@ public final class StreamStatisticNames {
   public static final String STREAM_READ_OPENED = "stream_read_opened";
 
   /**
+   * Total count of times an analytics input stream was opened.
+   *
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_ANALYTICS_OPENED = "stream_read_analytics_opened";
+
+  /**
    * Count of exceptions raised during input stream reads.
    * Value: {@value}.
    */

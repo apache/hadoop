@@ -33,10 +33,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGContext;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGContextImpl;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit test for Sub-cluster Cleaner in GPG.
@@ -53,7 +53,7 @@ public class TestSubClusterCleaner {
 
   private ArrayList<SubClusterId> subClusterIds;
 
-  @Before
+  @BeforeEach
   public void setup() throws YarnException {
     conf = new YarnConfiguration();
 
@@ -89,7 +89,7 @@ public class TestSubClusterCleaner {
     }
   }
 
-  @After
+  @AfterEach
   public void breakDown() throws Exception {
     stateStore.close();
   }
@@ -97,7 +97,7 @@ public class TestSubClusterCleaner {
   @Test
   public void testSubClusterRegisterHeartBeatTime() throws YarnException {
     cleaner.run();
-    Assert.assertEquals(3, facade.getSubClusters(true, true).size());
+    Assertions.assertEquals(3, facade.getSubClusters(true, true).size());
   }
 
   /**
@@ -116,6 +116,6 @@ public class TestSubClusterCleaner {
         System.currentTimeMillis() - TWO_SECONDS);
 
     cleaner.run();
-    Assert.assertEquals(1, facade.getSubClusters(true, true).size());
+    Assertions.assertEquals(1, facade.getSubClusters(true, true).size());
   }
 }

@@ -40,6 +40,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopSpan;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
+import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.http.NoHttpResponseException;
 
@@ -164,7 +166,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
    * @return a stream.
    */
   private S3AInputStream getMockedS3AInputStream(
-      S3AInputStream.InputStreamCallbacks streamCallback) {
+      ObjectInputStreamCallbacks streamCallback) {
     Path path = new Path("test-path");
     String eTag = "test-etag";
     String versionId = "test-version-id";
@@ -187,12 +189,15 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
         s3AFileStatus,
         NoopSpan.INSTANCE);
 
-    return new S3AInputStream(
-        s3AReadOpContext,
-        s3ObjectAttributes,
-        streamCallback,
-        s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics(),
-            null);
+    ObjectReadParameters parameters = new ObjectReadParameters()
+        .withCallbacks(streamCallback)
+        .withObjectAttributes(s3ObjectAttributes)
+        .withContext(s3AReadOpContext)
+        .withStreamStatistics(
+            s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics())
+        .withBoundedThreadPool(null);
+
+    return new S3AInputStream(parameters);
   }
 
   /**
@@ -203,7 +208,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
    * @param ex exception to raise on failure
    * @return mocked object.
    */
-  private S3AInputStream.InputStreamCallbacks failingInputStreamCallbacks(
+  private ObjectInputStreamCallbacks failingInputStreamCallbacks(
       final RuntimeException ex) {
 
     GetObjectResponse objectResponse = GetObjectResponse.builder()
@@ -238,7 +243,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
    * @param ex exception to raise on failure
    * @return mocked object.
    */
-  private S3AInputStream.InputStreamCallbacks maybeFailInGetCallback(
+  private ObjectInputStreamCallbacks maybeFailInGetCallback(
       final RuntimeException ex,
       final Function<Integer, Boolean> failurePredicate) {
     GetObjectResponse objectResponse = GetObjectResponse.builder()
@@ -259,13 +264,13 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
   * @param streamFactory factory for the stream to return on the given attempt.
   * @return mocked object.
   */
-  private S3AInputStream.InputStreamCallbacks mockInputStreamCallback(
+  private ObjectInputStreamCallbacks mockInputStreamCallback(
       final RuntimeException ex,
       final Function<Integer, Boolean> failurePredicate,
       final Function<Integer, ResponseInputStream<GetObjectResponse>> streamFactory) {
 
 
-    return new S3AInputStream.InputStreamCallbacks() {
+    return new ObjectInputStreamCallbacks() {
       private int attempt = 0;
 
       @Override

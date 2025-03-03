@@ -58,6 +58,7 @@ import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.HttpStatus;
@@ -75,7 +76,7 @@ import static org.junit.Assert.*;
 /**
  * S3A tests for configuration, especially credentials.
  */
-public class ITestS3AConfiguration {
+public class ITestS3AConfiguration extends AbstractHadoopTestBase {
   private static final String EXAMPLE_ID = "AKASOMEACCESSKEY";
   private static final String EXAMPLE_KEY =
       "RGV0cm9pdCBSZ/WQgY2xl/YW5lZCB1cAEXAMPLE";
@@ -487,9 +488,18 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     conf.unset(Constants.BUFFER_DIR);
     fs = S3ATestUtils.createTestFileSystem(conf);
-    File tmp = fs.createTmpFileForWrite("out-", 1024, conf);
+    File tmp = createTemporaryFileForWriting();
     assertTrue("not found: " + tmp, tmp.exists());
     tmp.delete();
+  }
+
+  /**
+   * Create a temporary file for writing; requires the FS to have been created/initialized.
+   * @return a temporary file
+   * @throws IOException creation issues.
+   */
+  private File createTemporaryFileForWriting() throws IOException {
+    return fs.getS3AInternals().getStore().createTemporaryFileForWriting("out-", 1024, conf);
   }
 
   @Test
@@ -501,9 +511,9 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     conf.set(Constants.BUFFER_DIR, dir1 + ", " + dir2);
     fs = S3ATestUtils.createTestFileSystem(conf);
-    File tmp1 = fs.createTmpFileForWrite("out-", 1024, conf);
+    File tmp1 = createTemporaryFileForWriting();
     tmp1.delete();
-    File tmp2 = fs.createTmpFileForWrite("out-", 1024, conf);
+    File tmp2 = createTemporaryFileForWriting();
     tmp2.delete();
     assertNotEquals("round robin not working",
         tmp1.getParent(), tmp2.getParent());

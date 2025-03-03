@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.mapreduce.security;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -27,7 +28,6 @@ import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,8 +104,8 @@ public class TestJHSSecurity {
       // Fake the authentication-method
       UserGroupInformation loggedInUser = UserGroupInformation
           .createRemoteUser("testrenewer@APACHE.ORG");
-      Assert.assertEquals("testrenewer", loggedInUser.getShortUserName());
-   // Default realm is APACHE.ORG
+      assertEquals("testrenewer", loggedInUser.getShortUserName());
+      // Default realm is APACHE.ORG
       loggedInUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
 
 
@@ -124,7 +124,7 @@ public class TestJHSSecurity {
       try {
         clientUsingDT.getJobReport(jobReportRequest);
       } catch (IOException e) {
-        Assert.assertEquals("Unknown job job_123456_0001", e.getMessage());
+        assertEquals("Unknown job job_123456_0001", e.getMessage());
       }
       
    // Renew after 50% of token age.
@@ -147,7 +147,7 @@ public class TestJHSSecurity {
       try {
         clientUsingDT.getJobReport(jobReportRequest);
       } catch (IOException e) {
-        Assert.assertEquals("Unknown job job_123456_0001", e.getMessage());
+        assertEquals("Unknown job job_123456_0001", e.getMessage());
       }
       
       // Wait for expiry.

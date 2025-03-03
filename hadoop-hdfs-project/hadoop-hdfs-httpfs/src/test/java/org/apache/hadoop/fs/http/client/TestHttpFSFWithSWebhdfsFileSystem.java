@@ -25,16 +25,13 @@ import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.TestJettyHelper;
-import org.junit.AfterClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
 
 import java.io.File;
 import java.net.URI;
 import java.net.URL;
 import java.util.UUID;
 
-@RunWith(value = Parameterized.class)
 public class TestHttpFSFWithSWebhdfsFileSystem
   extends TestHttpFSWithHttpFSFileSystem {
   private static String classpathDir;
@@ -69,15 +66,14 @@ public class TestHttpFSFWithSWebhdfsFileSystem
         "serverP");
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanUp() throws Exception {
     new File(classpathDir, "ssl-client.xml").delete();
     new File(classpathDir, "ssl-server.xml").delete();
     KeyStoreTestUtil.cleanupSSLConfig(keyStoreDir, classpathDir);
   }
 
-  public TestHttpFSFWithSWebhdfsFileSystem(Operation operation) {
-    super(operation);
+  public TestHttpFSFWithSWebhdfsFileSystem() {
   }
 
   @Override

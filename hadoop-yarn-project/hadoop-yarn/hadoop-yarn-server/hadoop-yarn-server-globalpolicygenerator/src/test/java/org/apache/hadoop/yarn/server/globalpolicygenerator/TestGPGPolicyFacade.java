@@ -45,10 +45,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Matchers;
 
 import java.util.List;
@@ -84,7 +84,7 @@ public class TestGPGPolicyFacade {
     facade = FederationStateStoreFacade.getInstance(conf);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws YarnException {
     stateStore = new MemoryFederationStateStore();
     stateStore.init(conf);
@@ -103,7 +103,7 @@ public class TestGPGPolicyFacade {
         .newInstance(testConf));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     stateStore.close();
     stateStore = null;
@@ -114,7 +114,7 @@ public class TestGPGPolicyFacade {
     WeightedLocalityPolicyManager manager =
         (WeightedLocalityPolicyManager) policyFacade
             .getPolicyManager(TEST_QUEUE);
-    Assert.assertEquals(testConf, manager.serializeConf());
+    Assertions.assertEquals(testConf, manager.serializeConf());
   }
 
   /**
@@ -135,7 +135,7 @@ public class TestGPGPolicyFacade {
     manager =
         (WeightedLocalityPolicyManager) policyFacade
             .getPolicyManager(TEST_QUEUE + 0);
-    Assert.assertEquals(policyConf, manager.serializeConf());
+    Assertions.assertEquals(policyConf, manager.serializeConf());
   }
 
   /**
@@ -157,7 +157,7 @@ public class TestGPGPolicyFacade {
     manager =
         (WeightedLocalityPolicyManager) policyFacade
             .getPolicyManager(TEST_QUEUE);
-    Assert.assertEquals(policyConf, manager.serializeConf());
+    Assertions.assertEquals(policyConf, manager.serializeConf());
   }
 
   /**
@@ -243,28 +243,28 @@ public class TestGPGPolicyFacade {
     facade.reinitialize(stateStore, conf);
     policyFacade = new GPGPolicyFacade(facade, conf);
     FederationPolicyManager policyManager = policyFacade.getPolicyManager("root.a");
-    Assert.assertNotNull(policyManager);
-    Assert.assertTrue(policyManager.isSupportWeightedPolicyInfo());
+    Assertions.assertNotNull(policyManager);
+    Assertions.assertTrue(policyManager.isSupportWeightedPolicyInfo());
     WeightedPolicyInfo weightedPolicyInfo1 = policyManager.getWeightedPolicyInfo();
-    Assert.assertNotNull(weightedPolicyInfo1);
-    Assert.assertTrue(policyManager instanceof WeightedLocalityPolicyManager);
+    Assertions.assertNotNull(weightedPolicyInfo1);
+    Assertions.assertTrue(policyManager instanceof WeightedLocalityPolicyManager);
 
     // Step4. Confirm amrmPolicyWeight is accurate.
     Map<SubClusterIdInfo, Float> amrmPolicyWeights1 = weightedPolicyInfo1.getAMRMPolicyWeights();
-    Assert.assertNotNull(amrmPolicyWeights1);
+    Assertions.assertNotNull(amrmPolicyWeights1);
     Float sc1Float = amrmPolicyWeights1.get(new SubClusterIdInfo("SC-1"));
     Float sc2Float = amrmPolicyWeights1.get(new SubClusterIdInfo("SC-2"));
-    Assert.assertEquals(0.7, sc1Float, 0.001);
-    Assert.assertEquals(0.3, sc2Float, 0.001);
+    Assertions.assertEquals(0.7, sc1Float, 0.001);
+    Assertions.assertEquals(0.3, sc2Float, 0.001);
 
     // Step5. Confirm amrmPolicyWeight is accurate.
     Map<SubClusterIdInfo, Float> routerPolicyWeights1 =
         weightedPolicyInfo1.getRouterPolicyWeights();
-    Assert.assertNotNull(routerPolicyWeights1);
+    Assertions.assertNotNull(routerPolicyWeights1);
     Float sc1Float1 = routerPolicyWeights1.get(new SubClusterIdInfo("SC-1"));
     Float sc2Float2 = routerPolicyWeights1.get(new SubClusterIdInfo("SC-2"));
-    Assert.assertEquals(0.6, sc1Float1, 0.001);
-    Assert.assertEquals(0.4, sc2Float2, 0.001);
+    Assertions.assertEquals(0.6, sc1Float1, 0.001);
+    Assertions.assertEquals(0.4, sc2Float2, 0.001);
   }
 
   @Test
@@ -294,24 +294,24 @@ public class TestGPGPolicyFacade {
     facade.reinitialize(stateStore, conf);
     policyFacade = new GPGPolicyFacade(facade, conf);
     FederationPolicyManager policyManager = policyFacade.getPolicyManager("root.b");
-    Assert.assertNotNull(policyManager);
-    Assert.assertTrue(policyManager.isSupportWeightedPolicyInfo());
+    Assertions.assertNotNull(policyManager);
+    Assertions.assertTrue(policyManager.isSupportWeightedPolicyInfo());
     WeightedPolicyInfo weightedPolicyInfo1 = policyManager.getWeightedPolicyInfo();
-    Assert.assertNotNull(weightedPolicyInfo1);
+    Assertions.assertNotNull(weightedPolicyInfo1);
 
     // Step4. Confirm amrmPolicyWeight is accurate.
     Map<SubClusterIdInfo, Float> amrmPolicyWeights1 = weightedPolicyInfo1.getAMRMPolicyWeights();
-    Assert.assertNotNull(amrmPolicyWeights1);
-    Assert.assertEquals(0, amrmPolicyWeights1.size());
+    Assertions.assertNotNull(amrmPolicyWeights1);
+    Assertions.assertEquals(0, amrmPolicyWeights1.size());
 
     // Step5. Confirm amrmPolicyWeight is accurate.
     Map<SubClusterIdInfo, Float> routerPolicyWeights1 =
         weightedPolicyInfo1.getRouterPolicyWeights();
-    Assert.assertNotNull(routerPolicyWeights1);
+    Assertions.assertNotNull(routerPolicyWeights1);
     Float sc1Float1 = routerPolicyWeights1.get(new SubClusterIdInfo("SC-1"));
     Float sc2Float2 = routerPolicyWeights1.get(new SubClusterIdInfo("SC-2"));
-    Assert.assertEquals(0.8, sc1Float1, 0.001);
-    Assert.assertEquals(0.2, sc2Float2, 0.001);
+    Assertions.assertEquals(0.8, sc1Float1, 0.001);
+    Assertions.assertEquals(0.2, sc2Float2, 0.001);
   }
 
   @Test
@@ -343,8 +343,8 @@ public class TestGPGPolicyFacade {
       facade.reinitialize(stateStore, conf);
       policyFacade = new GPGPolicyFacade(facade, conf);
       FederationPolicyManager policyManager = policyFacade.getPolicyManager("root.c");
-      Assert.assertNotNull(policyManager);
-      Assert.assertFalse(policyManager.isSupportWeightedPolicyInfo());
+      Assertions.assertNotNull(policyManager);
+      Assertions.assertFalse(policyManager.isSupportWeightedPolicyInfo());
       String policyManagerTypeSimple = policyManagerType.replace(prefix, "");
       // Verify that PolicyManager is initialized successfully,
       // but getWeightedPolicyInfo is not supported.

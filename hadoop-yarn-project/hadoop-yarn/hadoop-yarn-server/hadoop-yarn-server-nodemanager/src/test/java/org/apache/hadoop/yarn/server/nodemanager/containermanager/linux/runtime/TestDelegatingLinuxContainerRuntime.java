@@ -21,13 +21,15 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test container runtime delegation.
@@ -38,7 +40,7 @@ public class TestDelegatingLinuxContainerRuntime {
   private Configuration conf;
   private Map<String, String> env = new HashMap<>();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     delegatingLinuxContainerRuntime = new DelegatingLinuxContainerRuntime();
     conf = new Configuration();

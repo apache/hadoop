@@ -33,13 +33,13 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.BitSet;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class TestMRSequenceFileAsTextInputFormat {
   private static int MAX_LENGTH = 10000;
@@ -100,15 +100,15 @@ public class TestMRSequenceFileAsTextInputFormat {
             split);
           reader.initialize(split, mcontext);
           Class<?> readerClass = reader.getClass();
-          assertEquals("reader class is SequenceFileAsTextRecordReader.",
-            SequenceFileAsTextRecordReader.class, readerClass);        
+          assertEquals(SequenceFileAsTextRecordReader.class, readerClass,
+              "reader class is SequenceFileAsTextRecordReader.");
           Text key;
           try {
             int count = 0;
             while (reader.nextKeyValue()) {
               key = reader.getCurrentKey();
               int keyInt = Integer.parseInt(key.toString());
-              assertFalse("Key in multiple partitions.", bits.get(keyInt));
+              assertFalse(bits.get(keyInt), "Key in multiple partitions.");
               bits.set(keyInt);
               count++;
             }
@@ -116,7 +116,7 @@ public class TestMRSequenceFileAsTextInputFormat {
             reader.close();
           }
         }
-        assertEquals("Some keys in no partition.", length, bits.cardinality());
+        assertEquals(length, bits.cardinality(), "Some keys in no partition.");
       }
 
     }

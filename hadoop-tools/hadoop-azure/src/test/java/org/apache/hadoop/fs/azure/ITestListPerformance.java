@@ -32,10 +32,10 @@ import java.util.concurrent.TimeUnit;
 
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
-import org.junit.Assume;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,11 +48,12 @@ import org.apache.hadoop.fs.azure.integration.AbstractAzureScaleTest;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+
 /**
  * Test list performance.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 public class ITestListPerformance extends AbstractAzureScaleTest {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestListPerformance.class);
@@ -69,6 +70,7 @@ public class ITestListPerformance extends AbstractAzureScaleTest {
 
   private int expectedFileCount;
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -97,7 +99,7 @@ public class ITestListPerformance extends AbstractAzureScaleTest {
 
   @Test
   public void test_0101_CreateDirectoryWithFiles() throws Exception {
-    Assume.assumeFalse("Test path exists; skipping", fs.exists(TEST_DIR_PATH));
+    assumeFalse(fs.exists(TEST_DIR_PATH), "Test path exists; skipping");
 
     ExecutorService executorService = Executors.newFixedThreadPool(threads);
     CloudBlobContainer container = testAccount.getRealContainer();
@@ -137,9 +139,9 @@ public class ITestListPerformance extends AbstractAzureScaleTest {
     LOG.info("time to create files: {} millis", elapsedMs);
 
     for (Future<Integer> future : futures) {
-      assertTrue("Future timed out", future.isDone());
-      assertEquals("Future did not write all files timed out",
-          filesPerThread, future.get().intValue());
+      assertTrue(future.isDone(), "Future timed out");
+      assertEquals(filesPerThread, future.get().intValue(),
+          "Future did not write all files timed out");
     }
   }
 
@@ -159,8 +161,8 @@ public class ITestListPerformance extends AbstractAzureScaleTest {
       LOG.info("{}: {}", fileStatus.getPath(),
           fileStatus.isDirectory() ? "dir" : "file");
     }
-    assertEquals("Mismatch between expected files and actual",
-        expectedFileCount, fileList.length);
+    assertEquals(expectedFileCount, fileList.length,
+        "Mismatch between expected files and actual");
 
 
     // now do a listFiles() recursive
@@ -174,14 +176,14 @@ public class ITestListPerformance extends AbstractAzureScaleTest {
       FileStatus fileStatus = listing.next();
       Path path = fileStatus.getPath();
       FileStatus removed = foundInList.remove(path);
-      assertNotNull("Did not find "  + path + "{} in the previous listing",
-          removed);
+      assertNotNull(removed,
+          "Did not find "  + path + "{} in the previous listing");
     }
     elapsedMs = timer.elapsedTimeMs();
     LOG.info("time for listFiles() initial call: {} millis;"
         + " time to iterate: {} millis", initialListTime, elapsedMs);
-    assertEquals("Not all files from listStatus() were found in listFiles()",
-        0, foundInList.size());
+    assertEquals(0, foundInList.size(),
+        "Not all files from listStatus() were found in listFiles()");
 
   }
 

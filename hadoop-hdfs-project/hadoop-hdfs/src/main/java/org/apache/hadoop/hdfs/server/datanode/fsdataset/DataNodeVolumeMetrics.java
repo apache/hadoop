@@ -31,6 +31,8 @@ import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * This class is for maintaining Datanode Volume IO related statistics and
@@ -42,6 +44,13 @@ import java.util.concurrent.ThreadLocalRandom;
     context = "dfs")
 public class DataNodeVolumeMetrics {
   private final MetricsRegistry registry = new MetricsRegistry("FsVolume");
+
+  @Metric(value = {"VolumeName", "Current VolumeName"}, type = Metric.Type.TAG)
+  public String getVolumeName() {
+    Pattern pattern = Pattern.compile("(?:DataNodeVolume-|UndefinedDataNodeVolume)(.*)");
+    Matcher matcher = pattern.matcher(name);
+    return matcher.find() ? matcher.group(1) : name;
+  }
 
   @Metric("number of metadata operations")
   private MutableCounterLong totalMetadataOperations;

@@ -19,8 +19,8 @@
 package org.apache.hadoop.fs.slive;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.DataInputStream;
 import java.io.File;
@@ -40,8 +40,8 @@ import org.apache.hadoop.fs.slive.Constants.OperationType;
 import org.apache.hadoop.fs.slive.DataVerifier.VerifyOutput;
 import org.apache.hadoop.fs.slive.DataWriter.GenerateOutput;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -194,7 +194,7 @@ public class TestSlive {
     return extractor;
   }
 
-  @Before
+  @BeforeEach
   public void ensureDeleted() throws Exception {
     rDelete(getTestFile());
     rDelete(getTestDir());
