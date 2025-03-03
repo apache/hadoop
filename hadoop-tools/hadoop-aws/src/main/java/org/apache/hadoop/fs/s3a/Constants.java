@@ -1529,7 +1529,7 @@ public final class Constants {
    * A configuration option and a path status probe.
    * Value {@value}.
    */
-  public static final String FS_S3A_CREATE_OVERWRITE_SUPPORTED = "fs.s3a.create.overwrite.supported";
+  public static final String FS_S3A_CONDITIONAL_CREATE_ENABLED = "fs.s3a.conditional.create.enabled";
 
   /**
    * If conditional create is available, should it be used in
@@ -1537,10 +1537,10 @@ public final class Constants {
    * If set, this disables probes for directories.
    * Value {@value}.
    */
-  public static final String FS_S3A_CONDITIONAL_CREATE_FOR_FILES = "fs.s3a.conditional.create.for.files";
+  public static final String FS_S3A_CONDITIONAL_CREATE_FILES = "fs.s3a.conditional.create.files";
 
   /**
-   * Create a multipart file, always: {@value}.
+   * createFile() boolean option toreate a multipart file, always: {@value}.
    * <p>
    * This is inefficient and will not work on a store which doesn't support that feature,
    * so is primarily for testing.

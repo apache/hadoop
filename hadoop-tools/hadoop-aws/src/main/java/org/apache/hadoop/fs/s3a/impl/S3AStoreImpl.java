@@ -73,6 +73,7 @@ import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.UploadInfo;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
+import org.apache.hadoop.fs.s3a.impl.store.StoreConfiguration;
 import org.apache.hadoop.fs.s3a.impl.streams.FactoryBindingParameters;
 import org.apache.hadoop.fs.s3a.impl.streams.InputStreamType;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStream;
@@ -194,7 +195,10 @@ public class S3AStoreImpl
    */
   private ObjectInputStreamFactory objectInputStreamFactory;
 
-  private final StoreConfigurationService storeConfigurationService;
+  /**
+   * Store Configuration.
+   */
+  private final StoreConfigurationService storeConfiguration;
 
   /**
    * Constructor to create S3A store.
@@ -210,7 +214,7 @@ public class S3AStoreImpl
       RateLimiting writeRateLimiter,
       AuditSpanSource<AuditSpanS3A> auditSpanSource,
       @Nullable FileSystem.Statistics fsStatistics,
-      StoreConfigurationService storeConfigurationService) {
+      StoreConfigurationService storeConfiguration) {
     super("S3AStore");
     this.auditSpanSource = requireNonNull(auditSpanSource);
     this.clientManager = requireNonNull(clientManager);
@@ -227,9 +231,9 @@ public class S3AStoreImpl
     this.invoker = requireNonNull(storeContext.getInvoker());
     this.bucket = requireNonNull(storeContext.getBucket());
     this.requestFactory = requireNonNull(storeContext.getRequestFactory());
+    this.storeConfiguration = requireNonNull(storeConfiguration);
     addService(clientManager);
-    this.storeConfigurationService = requireNonNull(storeConfigurationService);
-    addService(storeConfigurationService);
+    addService(storeConfiguration);
   }
 
   /**
@@ -259,20 +263,26 @@ public class S3AStoreImpl
 
   /**
    * Return the store path capabilities.
-   * If the object stream factory is non-null, hands off the
-   * query to that factory if not handled here.
+   * This may hand off the probe to assistant classes/services.
    * @param path path to query the capability of.
    * @param capability non-null, non-empty string to query the path for support.
-   * @return known capabilities
+   * @return true if the capability is known and enabled.
    */
   @Override
   public boolean hasPathCapability(final Path path, final String capability) {
-    switch (toLowerCase(capability)) {
-    case StreamCapabilities.IOSTATISTICS:
-      return true;
-    default:
-      return inputStreamHasCapability(capability);
+
+    // only support this once started; avoids worrying about
+    // state of services which assist in this calculation.
+    if (!isInState(STATE.STARTED)) {
+      return false;
     }
+    final String cap = toLowerCase(capability);
+    if (cap.equals(StreamCapabilities.IOSTATISTICS)) {
+      return true;
+    }
+    // probe store configuration and the input stream for
+    // the capability.
+    return storeConfiguration.hasPathCapability(path, cap)|| inputStreamHasCapability(cap);
   }
 
   /**
@@ -1007,4 +1017,19 @@ public class S3AStoreImpl
   /*
    =============== END ObjectInputStreamFactory ===============
    */
+
+
+  /*
+   =============== BEGIN StoreConfigurationService ===============
+   */
+
+  @Override
+  public StoreConfiguration getStoreConfiguration() {
+    return storeConfiguration;
+  }
+
+  /*
+   =============== END StoreConfigurationService ===============
+   */
+
 }

@@ -81,7 +81,6 @@ import org.apache.hadoop.util.Progressable;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
-import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_NONE_MATCH;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_OCTET_STREAM;
 import static org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent.*;
 import static org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext.EMPTY_BLOCK_OUTPUT_STREAM_STATISTICS;
@@ -151,7 +150,6 @@ class S3ABlockOutputStream extends OutputStream implements
    * the blocks themselves are closed: 15 seconds.
    */
   private static final Duration TIME_TO_AWAIT_CANCEL_COMPLETION = Duration.ofSeconds(15);
-  public static final String IF_NONE_MATCH_HEADER = "If-None-Match";
 
   /** Object being uploaded. */
   private final String key;
@@ -712,7 +710,7 @@ class S3ABlockOutputStream extends OutputStream implements
     final S3ADataBlocks.DataBlock block = getActiveBlock();
     final long size = block.dataSize();
     final S3ADataBlocks.BlockUploadData uploadData = block.startUpload();
-    PutObjectRequest putObjectRequest =
+    final PutObjectRequest putObjectRequest =
         writeOperationHelper.createPutObjectRequest(
             key,
             uploadData.getSize(),
@@ -1432,7 +1430,7 @@ class S3ABlockOutputStream extends OutputStream implements
     private boolean isConditionalPutEnabled;
 
     /**
-     * etag used for write
+     * etag used for write.
      */
     private String etag;
 

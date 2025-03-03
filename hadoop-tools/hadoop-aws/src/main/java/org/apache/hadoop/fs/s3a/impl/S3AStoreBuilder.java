@@ -125,7 +125,8 @@ public class S3AStoreBuilder {
    * @param value new value
    * @return the builder
    */
-  public S3AStoreBuilder withStoreConfigurationService(final StoreConfigurationService value) {
+  public S3AStoreBuilder withStoreConfigurationService(
+      final StoreConfigurationService value) {
     storeConfigurationService = value;
     return this;
   }
@@ -140,6 +141,7 @@ public class S3AStoreBuilder {
         readRateLimiter,
         writeRateLimiter,
         auditSpanSource,
-        fsStatistics, storeConfigurationService);
+        fsStatistics,
+        storeConfigurationService);
   }
 }

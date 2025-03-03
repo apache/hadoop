@@ -44,7 +44,7 @@ import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_ARRAY;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_MULTIPART;
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_OVERWRITE_SUPPORTED;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CONDITIONAL_CREATE_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
@@ -86,7 +86,7 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
     public void setup() throws Exception {
         super.setup();
         Configuration conf = getConfiguration();
-        skipIfNotEnabled(conf, FS_S3A_CREATE_OVERWRITE_SUPPORTED,
+        skipIfNotEnabled(conf, FS_S3A_CONDITIONAL_CREATE_ENABLED,
                 "Skipping IfNoneMatch tests");
     }
 
@@ -109,11 +109,12 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
             boolean ifNoneMatchFlag,
             String etag,
             boolean forceMultipart) throws Exception {
-        FSDataOutputStream stream = getStreamWithFlags(fs, path, ifNoneMatchFlag, etag, forceMultipart);
+      try (FSDataOutputStream stream = getStreamWithFlags(fs, path, ifNoneMatchFlag, etag,
+          forceMultipart)) {
         if (data != null && data.length > 0) {
-            stream.write(data);
+          stream.write(data);
         }
-        stream.close();
+      }
     }
 
     private static void createFileWithFlags(
@@ -133,13 +134,13 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
             boolean forceMultipart) throws Exception {
         FSDataOutputStreamBuilder builder = fs.createFile(path);
         if (ifNoneMatchFlag) {
-            builder.must(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE, "true");
+            builder.must(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE, true);
         }
         if (etag != null) {
             builder.must(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG, etag);
         }
         if (forceMultipart) {
-            builder.opt(FS_S3A_CREATE_MULTIPART, "true");
+            builder.opt(FS_S3A_CREATE_MULTIPART, true);
         }
         return builder.create().build();
     }
@@ -470,8 +471,7 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
 
         // Attempt to create a file at the same path without overwrite, using If-Match with the etag
         FileAlreadyExistsException exception = intercept(FileAlreadyExistsException.class, () -> {
-            fs.createFile(testFile)
-                    .overwrite(false)
+            fs.createFile(testFile).overwrite(false)
                     .opt(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG, etag)
                     .build();
         });
@@ -506,8 +506,7 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
 
         // write in path where file already exists with overwrite = false
         // conditional_write, conditional_write_statistics should remain 0
-        try (FSDataOutputStream outputStream = fs.create(testFile, false)) {
-            outputStream.write(SMALL_FILE_BYTES);
+        try (FSDataOutputStream outputStream = fs.create(testFile, false)) {outputStream.write(SMALL_FILE_BYTES);
             updateStatistics(outputStream);
         } catch (FileAlreadyExistsException e) {}
         conditionalCreate = statistics.lookupCounterValue(Statistic.CONDITIONAL_CREATE.getSymbol());

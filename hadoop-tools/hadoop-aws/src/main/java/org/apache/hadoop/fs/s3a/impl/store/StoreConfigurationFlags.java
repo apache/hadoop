@@ -20,19 +20,37 @@ package org.apache.hadoop.fs.s3a.impl.store;
 
 import org.apache.hadoop.conf.Configuration;
 
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CONDITIONAL_CREATE_FOR_FILES;
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_OVERWRITE_SUPPORTED;
+import static org.apache.hadoop.fs.s3a.Constants.DOWNGRADE_SYNCABLE_EXCEPTIONS;
+import static org.apache.hadoop.fs.s3a.Constants.DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CONDITIONAL_CREATE_FILES;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CONDITIONAL_CREATE_ENABLED;
 
 /**
  * Store configuration flags.
  */
 public enum StoreConfigurationFlags {
 
-  ConditionCreateAvailable(FS_S3A_CREATE_OVERWRITE_SUPPORTED,
-      true),
-  UseConditionalCreateForFiles(FS_S3A_CONDITIONAL_CREATE_FOR_FILES,
-      false);
+  /* When adding new flags, insert in alphabetical order */
 
+  /**
+   * Is Conditional Create available?
+   */
+  ConditionalCreateAvailable(FS_S3A_CONDITIONAL_CREATE_ENABLED,
+      true),
+
+  /**
+   * Should Conditional Create be used
+   * as the file overwrite check?
+   */
+  ConditionalCreateForFiles(FS_S3A_CONDITIONAL_CREATE_FILES,
+      false),
+
+  /**
+   * Downgrade exception raising on syncable API use when writing a file.
+   */
+  DowngradeSyncableExceptions(
+      DOWNGRADE_SYNCABLE_EXCEPTIONS,
+      DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT);
   /**
    * Key name; read from the configuration, and
    * for the capability probe unless the arity 3

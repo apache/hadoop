@@ -21,9 +21,15 @@ package org.apache.hadoop.fs.s3a.impl.store;
 import java.util.Arrays;
 import java.util.EnumSet;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.service.AbstractService;
+
+import static org.apache.hadoop.fs.s3a.impl.store.StoreConfigurationFlags.*;
 
 /**
  * A service which handles store configurations.
@@ -46,79 +52,79 @@ import org.apache.hadoop.service.AbstractService;
  * The start and close operations are (currently) no-ops.
  */
 public class StoreConfigurationService extends AbstractService
-  implements StreamCapabilities {
+  implements StoreConfiguration {
 
-  private EnumSet<StoreConfigurationFlags> configurationFlags;
+  private static final Logger LOG = LoggerFactory.getLogger(StoreConfigurationService.class);
+
+  private static final LogExactlyOnce LOG_CREATE_DOWNGRADE = new LogExactlyOnce(LOG);
+
+  /** Store configuration flags. */
+  private final EnumSet<StoreConfigurationFlags> storeFlags =
+      EnumSet.noneOf(StoreConfigurationFlags.class);;
+
 
   public StoreConfigurationService(final String name) {
     super(name);
   }
 
   public StoreConfigurationService() {
-    super("StoreConfigurationService");
+    this("StoreConfigurationService");
   }
 
   /**
-   * Initialize the service by reading in configuration
-   * settings.
+   * Initialize the service by reading in configuration settings.
    * @param conf configuration
    * @throws Exception parser failures.
    */
   @Override
   protected void serviceInit(final Configuration conf) throws Exception {
     super.serviceInit(conf);
-    configurationFlags = EnumSet.noneOf(StoreConfigurationFlags.class);
+    // build up the store flag enumset.
+    storeFlags.clear();
     Arrays.stream(StoreConfigurationFlags.values())
         .filter(v -> v.evaluate(conf))
-        .forEach(configurationFlags::add);
+        .forEach(storeFlags::add);
+
+    // tune some flags based on the state of others
+    if (!isFlagSet(ConditionalCreateAvailable) && isFlagSet(ConditionalCreateForFiles)) {
+      // only use the conditional create for files option if conditional
+      // create is actually available.
+      LOG_CREATE_DOWNGRADE.debug("Ignoring ConditionalCreateForFiles option");
+      clearFlag(ConditionalCreateForFiles);
+    }
   }
 
-  /**
-   * Is a configuration flag set?
-   * @param flag flag to probe for.
-   * @return true iff the flag is set
-   */
-  public boolean isFlagSet(StoreConfigurationFlags flag) {
-    return configurationFlags.contains(flag);
-  }
-
-  /**
-   * Get a clone of the flags.
-   * @return a copy of the flags.
-   */
-  public EnumSet<StoreConfigurationFlags> getConfigurationFlags() {
-    return configurationFlags.clone();
-  }
-
-  /**
-   * Does one of the flags have this capability?
-   * @param capability what to probe for
-   * @return true if the capability is implellmented.
-   */
   @Override
-  public boolean hasCapability(String capability) {
-    return configurationFlags.stream()
-        .anyMatch(f -> f.keyMatches(capability));
+  public boolean isFlagSet(StoreConfigurationFlags flag) {
+    return storeFlags.contains(flag);
   }
 
-  /**
-   * Set a flag.
-   * This is NOT thread safe.
-   * @param flag flag to set
-   * @return true if the flag enumset changed state.
-   */
+  @Override
+  public EnumSet<StoreConfigurationFlags> getStoreFlags() {
+    return storeFlags.clone();
+  }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability) {
+
+    // check the configuration flags.
+    if (storeFlags.stream()
+        .anyMatch(f -> f.keyMatches(capability))) {
+      return true;
+    }
+
+    // no match
+    return false;
+  }
+
+  @Override
   public boolean setFlag(StoreConfigurationFlags flag) {
-    return configurationFlags.add(flag);
+    return storeFlags.add(flag);
   }
 
-  /**
-   * Clear a flag.
-   * This is NOT thread safe.
-   * @param flag flag to clear
-   * @return true if the flag enumset changed state.
-   */
+  @Override
   public boolean clearFlag(StoreConfigurationFlags flag) {
-    return configurationFlags.remove(flag);
+    return storeFlags.remove(flag);
   }
 
 }
