@@ -54,7 +54,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestRouterAsyncMountTable {
   public static final Logger LOG = LoggerFactory.getLogger(TestRouterAsyncMountTable.class);
-  
+
   private static StateStoreDFSCluster cluster;
   private static MiniRouterDFSCluster.NamenodeContext nnContext0;
   private static MiniRouterDFSCluster.NamenodeContext nnContext1;
