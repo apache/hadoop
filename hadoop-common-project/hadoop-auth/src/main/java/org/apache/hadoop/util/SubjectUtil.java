@@ -101,7 +101,9 @@ public class SubjectUtil {
 	}
 
 	/**
-	 * Maps to Subject.callAs() if available, otherwise maps to Subject.doAs()
+	 * Maps to Subject.callAs() if available, otherwise maps to Subject.doAs().
+	 * It also wraps the Callable so that the Subject is propagated to the new thread
+	 * in all Java versions.
 	 * 
 	 * @param subject the subject this action runs as
 	 * @param action  the action to run
@@ -119,6 +121,27 @@ public class SubjectUtil {
 		}
 	}
 
+	 /**
+   * Maps to Subject.callAs() if available, otherwise maps to Subject.doAs()
+   * 
+   * 
+   * 
+   * @param subject the subject this action runs as
+   * @param action  the action to run
+   * @return the result of the action
+   * @param <T> the type of the result
+   * @throws CompletionException
+   */
+  private static <T> T callAsNoWrap(Subject subject, Callable<T> action) throws CompletionException {
+    try {
+      return (T) CALL_AS.invoke(subject, action);
+    } catch (PrivilegedActionException e) {
+      throw new CompletionException(e.getCause());
+    } catch (Throwable t) {
+      throw sneakyThrow(t);
+    }
+  }
+	
 	/**
 	 * Maps action to a Callable, and delegates to callAs(). On older JVMs, the
 	 * action may be double wrapped (into Callable, and then back into
@@ -180,7 +203,7 @@ public class SubjectUtil {
       return r;
     }
     Subject s = current();
-    return () -> callAs(s, () -> {
+    return () -> callAsNoWrap(s, () -> {
       r.run();
       return null;
     });
@@ -197,7 +220,7 @@ public class SubjectUtil {
       return c;
     }
     Subject s = current();
-    return () -> callAs(s, () -> c.call());
+    return () -> callAsNoWrap(s, () -> c.call());
   }
 
 	@SuppressWarnings("unused")
