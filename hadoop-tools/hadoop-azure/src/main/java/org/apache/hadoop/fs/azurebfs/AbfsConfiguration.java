@@ -452,6 +452,7 @@ public class AbfsConfiguration{
    * Constructor for AbfsConfiguration for specified service type.
    * @param rawConfig used to initialize the configuration.
    * @param accountName the name of the azure storage account.
+   * @param fsName the name of the file system (container name).
    * @param fsConfiguredServiceType service type configured for the file system.
    * @throws IllegalAccessException if the field is not accessible.
    * @throws IOException if an I/O error occurs.
@@ -666,7 +667,7 @@ public class AbfsConfiguration{
    */
   public String getPasswordString(String key) throws IOException {
     char[] passchars = rawConfig.getPassword(containerConf(key));
-    if (passchars == null) {
+    if(passchars == null) {
       passchars = rawConfig.getPassword(accountConf(key));
       if(passchars == null){
         passchars = rawConfig.getPassword(key);

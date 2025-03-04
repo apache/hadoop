@@ -147,6 +147,13 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
   }
 
   /**
+   * Helper method to get the Fixed SAS token value
+   */
+  private String getFixedSASToken(AbfsConfiguration config) throws Exception {
+    return config.getSASTokenProvider().getSASToken(this.getAccountName(), this.getFileSystemName(), getMethodName(), "read");
+  }
+
+  /**
    * Tests the implementation sequence if all fixed SAS configs are set.
    * The expected sequence is Container Specific Fixed SAS, Account Specific Fixed SAS, Account Agnostic Fixed SAS.
    * @throws IOException
@@ -161,21 +168,18 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
     testAbfsConfig.set(containerProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getFileSystemName(), this.getAccountName()), containerSAS);
     testAbfsConfig.set(accountProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getAccountName()), accountSAS);
     testAbfsConfig.set(FS_AZURE_SAS_FIXED_TOKEN, accountSAS);
-    String ContainerSASExpected = testAbfsConfig.getSASTokenProvider().getSASToken(this.getAccountName(), this.getFileSystemName(), getMethodName(), "read");
 
     // Assert that Container Specific Fixed SAS is used
-    Assertions.assertThat(ContainerSASExpected).contains("sr=c");
+    Assertions.assertThat(getFixedSASToken(testAbfsConfig)).contains("sr=c");
 
     // Assert that Account Specific Fixed SAS is used if container SAS isn't set
     testAbfsConfig.unset(containerProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getFileSystemName(), this.getAccountName()));
-    String AccountSASExpected = testAbfsConfig.getSASTokenProvider().getSASToken(this.getAccountName(), this.getFileSystemName(), getMethodName(), "read");
-    Assertions.assertThat(AccountSASExpected).contains("ss=bf");
+    Assertions.assertThat(getFixedSASToken(testAbfsConfig)).contains("ss=bf");
 
     //Assert that Account-Agnostic fixed SAS is used if no other fixed SAS configs are set.
     // The token is the same as the Account Specific Fixed SAS.
-    testAbfsConfig.unset(FS_AZURE_SAS_FIXED_TOKEN);
-    String AccountAgnosticSASExpected = testAbfsConfig.getSASTokenProvider().getSASToken(this.getAccountName(), this.getFileSystemName(), getMethodName(), "read");
-    Assertions.assertThat(AccountAgnosticSASExpected).contains("ss=bf");
+    testAbfsConfig.unset(accountProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getAccountName()));
+    Assertions.assertThat(getFixedSASToken(testAbfsConfig)).contains("ss=bf");
   }
 
   /**
