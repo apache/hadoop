@@ -115,7 +115,8 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
         .register(FlowActivityEntityReader.class)
         .register(FlowRunEntityReader.class)
         .register(FlowActivityEntitySetReader.class)
-        .register(FlowActivityEntityListReader.class);
+        .register(FlowActivityEntityListReader.class)
+        .register(FlowRunEntitySetReader.class);
   }
 
   protected Response getResponse(Client client, URI uri)
