@@ -38,7 +38,6 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.powermock.api.mockito.PowerMockito;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.times;
