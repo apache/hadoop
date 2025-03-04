@@ -371,6 +371,7 @@ org.glassfish.jersey.containers:jersey-container-servlet:2.46
 org.glassfish.jersey.containers:jersey-container-servlet-core:2.46
 org.glassfish.jersey.media:jersey-media-json-jettison:2.46
 org.glassfish.jersey.media:jersey-media-jaxb:2.46
+ro.isdc.wro4j:wro4j-maven-plugin:1.8.0
 net.jodah:failsafe:2.4.4
 
 --------------------------------------------------------------------------------
