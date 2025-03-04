@@ -61,7 +61,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -202,7 +201,7 @@ public class DelegationTokenRenewer extends AbstractService {
     dtCancelThread.start();
     if (tokenKeepAliveEnabled) {
       delayedRemovalThread =
-          new Thread(SubjectUtil.wrap(new DelayedTokenRemovalRunnable(getConfig())),
+          new HadoopThread(new DelayedTokenRemovalRunnable(getConfig()),
               "DelayedTokenCanceller");
       delayedRemovalThread.start();
     }

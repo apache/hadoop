@@ -30,7 +30,6 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.AsyncGetFuture;
-import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -74,7 +73,7 @@ public class TestAsyncIPC {
     Client.setAsynchronousMode(true);
   }
 
-  static class AsyncCaller extends HadoopThread {
+  static class AsyncCaller extends Thread {
     private Client client;
     private InetSocketAddress server;
     private int count;
@@ -97,7 +96,7 @@ public class TestAsyncIPC {
     }
 
     @Override
-    public void work() {
+    public void run() {
       // in case Thread#Start is called, which will spawn new thread
       Client.setAsynchronousMode(true);
       for (int i = 0; i < count; i++) {
@@ -155,7 +154,7 @@ public class TestAsyncIPC {
    * For testing the asynchronous calls of the RPC client
    * implemented with CompletableFuture.
    */
-  static class AsyncCompletableFutureCaller extends HadoopThread {
+  static class AsyncCompletableFutureCaller extends Thread {
     private final Client client;
     private final InetSocketAddress server;
     private final int count;
@@ -172,7 +171,7 @@ public class TestAsyncIPC {
     }
 
     @Override
-    public void work() {
+    public void run() {
       // Set the RPC client to use asynchronous mode.
       Client.setAsynchronousMode(true);
       long startTime = Time.monotonicNow();

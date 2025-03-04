@@ -28,7 +28,7 @@ import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownHookManager;
-import org.apache.hadoop.util.SubjectUtil;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import java.util.concurrent.BlockingQueue;
@@ -106,7 +106,7 @@ public class EventDispatcher<T extends Event> extends
   public EventDispatcher(EventHandler<T> handler, String name) {
     super(name);
     this.handler = handler;
-    this.eventProcessor = new Thread(SubjectUtil.wrap(new EventProcessor()));
+    this.eventProcessor = new HadoopThread(new EventProcessor());
     this.eventProcessor.setName(getName() + ":Event Processor");
   }
 

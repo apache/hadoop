@@ -47,8 +47,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.DomainSocket.DomainChannel;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.SubjectUtil;
-import org.apache.hadoop.util.concurrent.HadoopThread;
+
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -458,8 +457,8 @@ public class TestDomainSocket {
         new ArrayBlockingQueue<Throwable>(2);
     final DomainSocket serv = (preConnectedSockets != null) ?
       null : DomainSocket.bindAndListen(TEST_PATH);
-    HadoopThread serverThread = new HadoopThread() {
-      public void work(){
+    Thread serverThread = new Thread() {
+      public void run(){
         // Run server
         DomainSocket conn = null;
         try {
@@ -627,8 +626,8 @@ public class TestDomainSocket {
     for (int i = 0; i < passedFiles.length; i++) {
       passedFds[i] = passedFiles[i].getInputStream().getFD();
     }
-    HadoopThread serverThread = new HadoopThread() {
-      public void work(){
+    Thread serverThread = new Thread() {
+      public void run(){
         // Run server
         DomainSocket conn = null;
         try {
@@ -784,7 +783,7 @@ public class TestDomainSocket {
         }
       }
     };
-    Thread readerThread = new Thread(SubjectUtil.wrap(reader));
+    Thread readerThread = new Thread(reader);
     readerThread.start();
     socks[0].getOutputStream().write(1);
     socks[0].getOutputStream().write(2);

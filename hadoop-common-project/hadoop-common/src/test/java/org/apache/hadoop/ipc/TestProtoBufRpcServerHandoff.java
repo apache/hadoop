@@ -31,7 +31,6 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
-import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.protobuf.TestProtos;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcHandoffProto;
@@ -220,9 +219,9 @@ public class TestProtoBufRpcServerHandoff {
       final ProtobufRpcEngineCallback2 callback =
           ProtobufRpcEngine2.Server.registerForDeferredResponse2();
       final long sleepTime = request.getSleepTime();
-      new HadoopThread() {
+      new Thread() {
         @Override
-        public void work() {
+        public void run() {
           try {
             Thread.sleep(sleepTime);
           } catch (InterruptedException e) {

@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -38,7 +39,6 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.util.SubjectUtil;
 
 class FSEditLogAsync extends FSEditLog implements Runnable {
   static final Logger LOG = LoggerFactory.getLogger(FSEditLog.class);
@@ -79,7 +79,7 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
   private void startSyncThread() {
     synchronized(syncThreadLock) {
       if (!isSyncThreadAlive()) {
-        syncThread = new Thread(SubjectUtil.wrap(this), this.getClass().getSimpleName());
+        syncThread = new HadoopThread(this, this.getClass().getSimpleName());
         syncThread.start();
       }
     }

@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.util.SubjectUtil;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 
 /**
  * A simple liveliness monitor with which clients can register, trust the
@@ -67,7 +67,7 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
   protected void serviceStart() throws Exception {
     assert !stopped : "starting when already stopped";
     resetTimer();
-    checkerThread = new Thread(SubjectUtil.wrap(new PingChecker()));
+    checkerThread = new HadoopThread(new PingChecker());
     checkerThread.setName("Ping Checker for "+getName());
     checkerThread.start();
     super.serviceStart();

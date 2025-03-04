@@ -36,7 +36,7 @@ import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
-import org.apache.hadoop.util.concurrent.HadoopThread;
+
 import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_CREATION_PARALLEL_COUNT;
@@ -125,9 +125,9 @@ public class TestFileSystemCaching extends HadoopTestBase {
   @Test
   public void testCacheEnabledWithInitializeForeverFS() throws Exception {
     final Configuration conf = new Configuration();
-    HadoopThread t = new HadoopThread() {
+    Thread t = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         conf.set("fs.localfs1.impl", "org.apache.hadoop.fs." +
          "TestFileSystemCaching$InitializeForeverFileSystem");
         try {

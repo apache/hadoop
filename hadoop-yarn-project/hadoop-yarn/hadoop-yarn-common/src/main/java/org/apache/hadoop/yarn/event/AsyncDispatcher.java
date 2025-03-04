@@ -42,7 +42,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownHookManager;
-import org.apache.hadoop.util.SubjectUtil;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
@@ -219,7 +219,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   protected void serviceStart() throws Exception {
     //start all the components
     super.serviceStart();
-    eventHandlingThread = new Thread(SubjectUtil.wrap(createThread()));
+    eventHandlingThread = new HadoopThread(createThread());
     eventHandlingThread.setName(dispatcherThreadName);
     eventHandlingThread.start();
   }
@@ -285,7 +285,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
           && (ShutdownHookManager.get().isShutdownInProgress()) == false
           && stopped == false) {
         stopped = true;
-        Thread shutDownThread = new Thread(SubjectUtil.wrap(createShutDownThread()));
+        Thread shutDownThread = new HadoopThread(createShutDownThread());
         shutDownThread.setName("AsyncDispatcher ShutDown handler");
         shutDownThread.start();
       }

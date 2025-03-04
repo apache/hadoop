@@ -21,7 +21,6 @@ package org.apache.hadoop.conf;
 import java.util.function.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 import org.junit.jupiter.api.Test;
@@ -285,7 +284,7 @@ public class TestReconfiguration {
   public void testThread() throws ReconfigurationException { 
     ReconfigurableDummy dummy = new ReconfigurableDummy(conf1);
     assertTrue(dummy.getConf().get(PROP1).equals(VAL1));
-    Thread dummyThread = new Thread(SubjectUtil.wrap(dummy));
+    Thread dummyThread = new Thread(dummy);
     dummyThread.start();
     try {
       Thread.sleep(500);

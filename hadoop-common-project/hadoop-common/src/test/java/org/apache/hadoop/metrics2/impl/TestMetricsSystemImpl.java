@@ -50,7 +50,7 @@ import static org.mockito.Mockito.verify;
 
 import java.util.function.Supplier;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
-import org.apache.hadoop.util.SubjectUtil;
+
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -209,7 +209,7 @@ public class TestMetricsSystemImpl {
       sources[i] = ms.register("threadSource" + i,
           "A source of my threaded goodness.",
           new TestSource("threadSourceRec" + i));
-      threads[i] = new Thread(SubjectUtil.wrap(new Runnable() {
+      threads[i] = new Thread(new Runnable() {
         private boolean safeAwait(int mySource, CyclicBarrier barrier) {
           try {
             barrier.await(2, TimeUnit.SECONDS);
@@ -247,7 +247,7 @@ public class TestMetricsSystemImpl {
           }
           results[mySource] = "Passed";
         }
-      }), "" + i);
+      }, "" + i);
     }
     for (Thread t : threads)
       t.start();

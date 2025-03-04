@@ -47,7 +47,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.SubjectUtil;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.util.concurrent.HadoopThreadPoolExecutor;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -137,7 +137,7 @@ public class CommitterEventHandler extends AbstractService
     ThreadFactory tf = tfBuilder.build();
     launcherPool = new HadoopThreadPoolExecutor(5, 5, 1,
         TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>(), tf);
-    eventHandlingThread = new Thread(SubjectUtil.wrap(new Runnable() {
+    eventHandlingThread = new HadoopThread(new Runnable() {
       @Override
       public void run() {
         CommitterEvent event = null;
@@ -154,7 +154,7 @@ public class CommitterEventHandler extends AbstractService
           // using a thread pool
           launcherPool.execute(new EventProcessor(event));        }
       }
-    }));
+    });
     eventHandlingThread.setName("CommitterEvent Handler");
     eventHandlingThread.start();
     super.serviceStart();

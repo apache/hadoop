@@ -46,8 +46,8 @@ import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -203,11 +203,7 @@ public class Router extends CompositeService {
   }
 
   protected void shutDown() {
-    new Thread(SubjectUtil.wrap(new Runnable() {
-      public void run() {
-        stop();
-      };
-    })).start();
+    new HadoopThread(Router.this::stop).start();
   }
 
   protected RouterClientRMService createClientRMProxyService() {

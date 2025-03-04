@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import org.apache.hadoop.util.SubjectUtil;
-import org.apache.hadoop.util.concurrent.HadoopThread;
-
 import static org.apache.hadoop.metrics2.impl.MsInfo.Context;
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 import static org.apache.hadoop.test.MetricsAsserts.*;
@@ -212,7 +209,7 @@ public class TestMutableMetrics {
       rates.add("metric" + i, 0);
     }
 
-    HadoopThread[] threads = new HadoopThread[n];
+    Thread[] threads = new Thread[n];
     final CountDownLatch firstAddsFinished = new CountDownLatch(threads.length);
     final CountDownLatch firstSnapshotsFinished = new CountDownLatch(1);
     final CountDownLatch secondAddsFinished =
@@ -223,9 +220,9 @@ public class TestMutableMetrics {
     final Random sleepRandom = new Random(seed);
     for (int tIdx = 0; tIdx < threads.length; tIdx++) {
       final int threadIdx = tIdx;
-      threads[threadIdx] = new HadoopThread() {
+      threads[threadIdx] = new Thread() {
         @Override
-        public void work() {
+        public void run() {
           try {
             for (int i = 0; i < 1000; i++) {
               rates.add("metric" + (i % n), (i / n) % 2 == 0 ? 1 : 2);

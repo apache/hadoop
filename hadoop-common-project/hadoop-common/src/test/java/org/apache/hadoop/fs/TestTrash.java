@@ -48,7 +48,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.TrashPolicyDefault.Emptier;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -725,7 +724,7 @@ public class TestTrash {
 
     // Start Emptier in background
     Runnable emptier = trash.getEmptier();
-    Thread emptierThread = new Thread(SubjectUtil.wrap(emptier));
+    Thread emptierThread = new Thread(emptier);
     emptierThread.start();
 
     FsShell shell = new FsShell();
@@ -793,7 +792,7 @@ public class TestTrash {
 
     // Start Emptier in background.
     Runnable emptier = trash.getEmptier();
-    Thread emptierThread = new Thread(SubjectUtil.wrap(emptier));
+    Thread emptierThread = new Thread(emptier);
     emptierThread.start();
 
     FsShell shell = new FsShell();
@@ -1050,7 +1049,7 @@ public class TestTrash {
     Thread emptierThread = null;
     try {
       Runnable emptier = trash.getEmptier();
-      emptierThread = new Thread(SubjectUtil.wrap(emptier));
+      emptierThread = new Thread(emptier);
       emptierThread.start();
 
       // Shutdown the emptier thread after a given time
