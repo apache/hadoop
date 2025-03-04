@@ -327,12 +327,11 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameBlobToDstWithColonInSourcePath() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    assumeBlobServiceType();
     fs.create(new Path("/src:/file"));
     Assertions.assertThat(
-        fs.rename(new Path("/src:"),
-            new Path("/dst"))
-    ).isTrue();
+        fs.rename(new Path("/src:"), new Path("/dst")))
+        .describedAs("Rename should succeed")
+        .isTrue();
   }
 
   /**
@@ -349,9 +348,9 @@ public class ITestAzureBlobFileSystemRename extends
     AzureBlobFileSystem fs = getFileSystem();
     fs.create(new Path("/src"));
     Assertions.assertThat(
-        fs.rename(new Path("/src"),
-            new Path("/dst:"))
-    ).isTrue();
+        fs.rename(new Path("/src"), new Path("/dst:")))
+        .describedAs("Rename should succeed")
+        .isTrue();
   }
 
   @Test
@@ -364,26 +363,29 @@ public class ITestAzureBlobFileSystemRename extends
     fs.create(new Path(sourceDirectory + "/Test:", fileName));
     // Rename from source to destination
     Assertions.assertThat(
-        fs.rename(new Path(sourceDirectory),
-            new Path(destinationDirectory))
-    ).isTrue();
+        fs.rename(new Path(sourceDirectory), new Path(destinationDirectory)))
+        .describedAs("Rename should succeed")
+        .isTrue();
     Assertions.assertThat(
-            fs.exists(new Path(sourceDirectory, fileName)))
+        fs.exists(new Path(sourceDirectory, fileName)))
+        .describedAs("Source directory should not exist after rename")
         .isFalse();
     Assertions.assertThat(
         fs.exists(new Path(destinationDirectory, fileName)))
+        .describedAs("Destination directory should exist after rename")
         .isTrue();
 
     // Rename from destination to source
     Assertions.assertThat(
-        fs.rename(new Path(destinationDirectory),
-            new Path(sourceDirectory))
-    ).isTrue();
+        fs.rename(new Path(destinationDirectory), new Path(sourceDirectory)))
+        .describedAs("Rename should succeed").isTrue();
     Assertions.assertThat(
             fs.exists(new Path(sourceDirectory, fileName)))
+        .describedAs("Destination directory should exist after rename")
         .isTrue();
     Assertions.assertThat(
             fs.exists(new Path(destinationDirectory, fileName)))
+        .describedAs("Source directory should not exist after rename")
         .isFalse();
   }
 
@@ -1793,7 +1795,7 @@ public class ITestAzureBlobFileSystemRename extends
    * Test the renaming of a directory with different parallelism configurations.
    */
   @Test
-  public void testRenameDirWithDifferentParallelism() throws Exception {
+  public void testRenameDirWithDifferentParallelismConfig() throws Exception {
     try (AzureBlobFileSystem currentFs = getFileSystem()) {
       assumeBlobServiceType();
       Path src = new Path("/hbase/A1/A2");
@@ -2073,7 +2075,8 @@ public class ITestAzureBlobFileSystemRename extends
    * @return file system
    * @throws IOException in case of failure
    */
-  public AzureBlobFileSystem createJsonFile(Path path, Path renameJson) throws IOException {
+  public AzureBlobFileSystem createJsonFile(Path path, Path renameJson)
+      throws IOException {
     final AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem());
     assumeBlobServiceType();
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
@@ -2084,9 +2087,12 @@ public class ITestAzureBlobFileSystemRename extends
     fs.setWorkingDirectory(new Path(ROOT_PATH));
     fs.create(new Path(path, "file.txt"));
 
-    AzureBlobFileSystemStore.VersionedFileStatus fileStatus = (AzureBlobFileSystemStore.VersionedFileStatus) fs.getFileStatus(path);
+    AzureBlobFileSystemStore.VersionedFileStatus fileStatus
+        = (AzureBlobFileSystemStore.VersionedFileStatus) fs.getFileStatus(path);
 
-    new RenameAtomicity(path, new Path("/hbase/test4"), renameJson, getTestTracingContext(fs, true), fileStatus.getEtag(), client)
+    new RenameAtomicity(path, new Path("/hbase/test4"),
+        renameJson, getTestTracingContext(fs, true),
+        fileStatus.getEtag(), client)
         .preRename();
 
     Assertions.assertThat(fs.exists(renameJson))
@@ -2106,7 +2112,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws Exception if any error occurs during the test execution
    */
   @Test
-  public void listCrashRecoveryWithSingleChildFolder() throws Exception {
+  public void testListCrashRecoveryWithSingleChildFolder() throws Exception {
     AzureBlobFileSystem fs = null;
     try {
       Path path = new Path("/hbase/A1/A2");
@@ -2135,7 +2141,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws Exception if any error occurs during the test execution
    */
   @Test
-  public void listCrashRecoveryWithMultipleChildFolder() throws Exception {
+  public void testListCrashRecoveryWithMultipleChildFolder() throws Exception {
     AzureBlobFileSystem fs = null;
     try {
       Path path = new Path("/hbase/A1/A2");
@@ -2167,7 +2173,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws Exception if any error occurs during the test execution
    */
   @Test
-  public void listCrashRecoveryWithPendingJsonFile() throws Exception {
+  public void testListCrashRecoveryWithPendingJsonFile() throws Exception {
     AzureBlobFileSystem fs = null;
     try {
       Path path = new Path("/hbase/A1/A2");
@@ -2200,7 +2206,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws Exception if any error occurs during the test execution
    */
   @Test
-  public void listCrashRecoveryWithoutAnyPendingJsonFile() throws Exception {
+  public void testListCrashRecoveryWithoutAnyPendingJsonFile() throws Exception {
     AzureBlobFileSystem fs = null;
     try {
       Path path = new Path("/hbase/A1/A2");
@@ -2233,7 +2239,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws Exception if any error occurs during the test execution
    */
   @Test
-  public void listCrashRecoveryWithPendingJsonDir() throws Exception {
+  public void testListCrashRecoveryWithPendingJsonDir() throws Exception {
     try (AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem())) {
       assumeBlobServiceType();
       AbfsBlobClient client = (AbfsBlobClient) addSpyHooksOnClient(fs);
@@ -2280,7 +2286,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws Exception if any error occurs during the test execution
    */
   @Test
-  public void listCrashRecoveryWithMultipleJsonFile() throws Exception {
+  public void testListCrashRecoveryWithMultipleJsonFile() throws Exception {
     AzureBlobFileSystem fs = null;
     try {
       Path path = new Path("/hbase/A1/A2");
@@ -2295,9 +2301,12 @@ public class ITestAzureBlobFileSystemRename extends
       fs.create(new Path(path2, "file3.txt"));
 
       Path renameJson2 = new Path(path2.getParent(), path2.getName() + SUFFIX);
-      AzureBlobFileSystemStore.VersionedFileStatus fileStatus = (AzureBlobFileSystemStore.VersionedFileStatus) fs.getFileStatus(path2);
+      AzureBlobFileSystemStore.VersionedFileStatus fileStatus
+          = (AzureBlobFileSystemStore.VersionedFileStatus) fs.getFileStatus(path2);
 
-      new RenameAtomicity(path2, new Path("/hbase/test4"), renameJson2, getTestTracingContext(fs, true), fileStatus.getEtag(), client).preRename();
+      new RenameAtomicity(path2, new Path("/hbase/test4"),
+          renameJson2, getTestTracingContext(fs, true),
+          fileStatus.getEtag(), client).preRename();
 
       fs.create(new Path(path, "file2.txt"));
 
@@ -2334,7 +2343,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws Exception if any error occurs during the test execution
    */
   @Test
-  public void getPathStatusWithPendingJsonFile() throws Exception {
+  public void testGetPathStatusWithPendingJsonFile() throws Exception {
     AzureBlobFileSystem fs = null;
     try {
       Path path = new Path("/hbase/A1/A2");
@@ -2387,7 +2396,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws Exception if any error occurs during the test execution
    */
   @Test
-  public void getPathStatusWithoutPendingJsonFile() throws Exception {
+  public void testGetPathStatusWithoutPendingJsonFile() throws Exception {
     try (AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem())) {
       assumeBlobServiceType();
 
@@ -2441,7 +2450,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws Exception if any error occurs during the test execution
    */
   @Test
-  public void getPathStatusWithPendingJsonDir() throws Exception {
+  public void testGetPathStatusWithPendingJsonDir() throws Exception {
     try (AzureBlobFileSystem fs = Mockito.spy(this.getFileSystem())) {
       assumeBlobServiceType();
 
@@ -2466,7 +2475,9 @@ public class ITestAzureBlobFileSystemRename extends
           conf.getClientCorrelationId(), fs.getFileSystemId(),
           FSOperationType.GET_FILESTATUS, TracingHeaderFormat.ALL_ID_FORMAT, null);
 
-      AbfsHttpOperation abfsHttpOperation = client.getPathStatus(path.toUri().getPath(), true, tracingContext, null).getResult();
+      AbfsHttpOperation abfsHttpOperation
+          = client.getPathStatus(path.toUri().getPath(), true,
+          tracingContext, null).getResult();
 
       Assertions.assertThat(abfsHttpOperation.getStatusCode())
           .describedAs("Path should be found.")
@@ -2502,7 +2513,7 @@ public class ITestAzureBlobFileSystemRename extends
    * @throws Exception if any error occurs during the test execution
    */
   @Test
-  public void eTagChangedDuringRename() throws Exception {
+  public void testETagChangedDuringRename() throws Exception {
     AzureBlobFileSystem fs = null;
     try {
       assumeBlobServiceType();

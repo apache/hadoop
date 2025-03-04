@@ -166,7 +166,6 @@ public class BlobRenameHandler extends ListActionTaker {
           result = renameInternal(src, dst);
         }
       } finally {
-        getAbfsClient().incrementAbfsRenamePath();
         if (srcAbfsLease != null) {
           // If the operation is successful, cancel the timer and no need to release
           // the lease as rename on the blob-path has taken place.
