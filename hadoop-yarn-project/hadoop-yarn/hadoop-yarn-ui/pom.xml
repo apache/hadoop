@@ -269,15 +269,7 @@
           <plugin>
             <groupId>ro.isdc.wro4j</groupId>
             <artifactId>wro4j-maven-plugin</artifactId>
-            <version>1.7.9</version>
-            <dependencies>
-              <!-- TODO: Remove this dependency after upgrading wro4j-maven-plugin to 1.8.1 or later. -->
-              <dependency>
-                <groupId>org.mockito</groupId>
-                <artifactId>mockito-inline</artifactId>
-                <version>4.11.0</version>
-              </dependency>
-            </dependencies>
+            <version>1.8.0</version>
             <executions>
               <execution>
                 <phase>prepare-package</phase>
