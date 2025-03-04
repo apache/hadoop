@@ -262,12 +262,12 @@ public class TestRouterNamenodeHeartbeat {
     NamenodeHeartbeatService service0 = iterator.next();
     service0.init(conf);
     assertNotNull(service0.getLocalTarget());
-    assertEquals(expected0, service0.getLocalTarget().getHealthMonitorAddress().toString());
+    assertEquals(expected0, service0.getLocalTarget().getHealthMonitorAddress().toString().replaceAll("/<unresolved>", ""));
 
     NamenodeHeartbeatService service1 = iterator.next();
     service1.init(conf);
     assertNotNull(service1.getLocalTarget());
-    assertEquals(expected1, service1.getLocalTarget().getHealthMonitorAddress().toString());
+    assertEquals(expected1, service1.getLocalTarget().getHealthMonitorAddress().toString().replaceAll("/<unresolved>", ""));
   }
 
   @Test
