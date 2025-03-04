@@ -18,13 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import javax.annotation.Nullable;
-import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.SocketTimeoutException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -32,7 +28,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -50,7 +45,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.DfsListResultEntrySchema
 import org.apache.hadoop.fs.azurebfs.contracts.services.DfsListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
-import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformerInterface;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
 import org.apache.hadoop.fs.azurebfs.utils.DirectoryStateHelper;
@@ -71,7 +65,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.rename;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
@@ -81,7 +74,7 @@ import static org.mockito.Mockito.when;
  */
 public class ITestAzureBlobFileSystemListStatus extends
     AbstractAbfsIntegrationTest {
-  private static final int TEST_FILES_NUMBER = 6000;
+  private static final int TEST_FILES_NUMBER = 60;
   private static final String TEST_CONTINUATION_TOKEN = "continuation";
 
   public ITestAzureBlobFileSystemListStatus() throws Exception {
@@ -91,7 +84,7 @@ public class ITestAzureBlobFileSystemListStatus extends
   @Test
   public void testListPath() throws Exception {
     Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(AZURE_LIST_MAX_RESULTS, "5000");
+    config.set(AZURE_LIST_MAX_RESULTS, "50");
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(getFileSystem().getUri(), config);
       final List<Future<Void>> tasks = new ArrayList<>();

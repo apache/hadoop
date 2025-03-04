@@ -143,6 +143,7 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.UNAUTHORIZED_BLOB_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_CREATE_RECOVERY;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_DFS_LIST_PARSING;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_FILE_ALREADY_EXISTS;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_RENAME_RECOVERY;
 
@@ -313,7 +314,8 @@ public class AbfsDfsClient extends AbfsClient {
    * @param listMaxResults maximum number of blobs to return.
    * @param continuation marker to specify the continuation token.
    * @param tracingContext for tracing the server calls.
-   * @return executed rest operation containing response from server.
+   * @param uri to be used for path conversion.
+   * @return {@link ListResponseData}. containing listing response.
    * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
    */
   @Override
@@ -343,7 +345,6 @@ public class AbfsDfsClient extends AbfsClient {
         HTTP_METHOD_GET, url, requestHeaders);
     op.execute(tracingContext);
     ListResponseData listResponseData = parseListPathResults(op.getResult(), uri);
-    listResponseData.setContinuationToken(getContinuationFromResponse(op.getResult()));
     listResponseData.setOp(op);
     return listResponseData;
   }
@@ -1452,7 +1453,7 @@ public class AbfsDfsClient extends AbfsClient {
    * @param result The response from the server.
    * @return The continuation token.
    */
-  public String getContinuationFromResponse(AbfsHttpOperation result) {
+  private String getContinuationFromResponse(AbfsHttpOperation result) {
     return result.getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
   }
 
@@ -1472,37 +1473,45 @@ public class AbfsDfsClient extends AbfsClient {
   /**
    * Parse the list file response from DFS ListPath API in Json format
    * @param result InputStream contains the list results.
-   * @throws IOException if parsing fails.
+   * @param uri to be used for path conversion.
+   * @return {@link ListResponseData}. containing listing response.
+   * @throws AzureBlobFileSystemException if parsing fails.
    */
   @Override
-  public ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri) throws IOException {
-    InputStream listResultInputStream = result.getListResultStream();
-    DfsListResultSchema listResultSchema;
-    try {
-      final ObjectMapper objectMapper = new ObjectMapper();
-      listResultSchema = objectMapper.readValue(listResultInputStream, DfsListResultSchema.class);
-      result.setListResultSchema(listResultSchema);
+  public ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri) throws AzureBlobFileSystemException {
+    try (InputStream listResultInputStream = result.getListResultStream()) {
+      DfsListResultSchema listResultSchema;
+      try {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        listResultSchema = objectMapper.readValue(listResultInputStream,
+            DfsListResultSchema.class);
+        result.setListResultSchema(listResultSchema);
+      } catch (IOException ex) {
+        throw new AbfsDriverException(ex);
+      }
+
+      if (listResultSchema == null) {
+        throw new AbfsRestOperationException(
+            AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+            AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+            "listStatusAsync path not found",
+            null);
+      }
+
+      List<FileStatus> fileStatuses = new ArrayList<>();
+      for (DfsListResultEntrySchema entry : listResultSchema.paths()) {
+        fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
+      }
+      ListResponseData listResponseData = new ListResponseData();
+      listResponseData.setFileStatusList(fileStatuses);
+      listResponseData.setRenamePendingJsonPaths(null);
+      listResponseData.setContinuationToken(
+          getContinuationFromResponse(result));
+      return listResponseData;
     } catch (IOException ex) {
       LOG.error("Unable to deserialize list results", ex);
-      throw ex;
+      throw new AbfsDriverException(ERR_DFS_LIST_PARSING, ex);
     }
-
-    if (listResultSchema == null) {
-      throw new AbfsRestOperationException(
-          AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
-          AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-          "listStatusAsync path not found",
-          null);
-    }
-
-    List<FileStatus> fileStatuses = new ArrayList<>();
-    for (DfsListResultEntrySchema entry : listResultSchema.paths()) {
-      fileStatuses.add(getFileStatusFromEntry(entry, uri));
-    }
-    ListResponseData listResponseData = new ListResponseData();
-    listResponseData.setFileStatusList(fileStatuses);
-    listResponseData.setRenamePendingJsonPaths(null);
-    return listResponseData;
   }
 
   @Override

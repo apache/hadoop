@@ -305,8 +305,8 @@ public abstract class AbfsClient implements Closeable {
     try {
       this.identityTransformer =
           identityTransformerClass.getConstructor(Configuration.class).newInstance(abfsConfiguration.getRawConfiguration());
-    } catch (IllegalAccessException | InstantiationException | IllegalArgumentException |
-             InvocationTargetException | NoSuchMethodException e) {
+    } catch (IllegalAccessException | InstantiationException | IllegalArgumentException
+             | InvocationTargetException | NoSuchMethodException e) {
       throw new IOException(e);
     }
     LOG.trace("IdentityTransformer init complete");
@@ -522,7 +522,8 @@ public abstract class AbfsClient implements Closeable {
    * @param listMaxResults maximum number of blobs to return.
    * @param continuation marker to specify the continuation token.
    * @param tracingContext for tracing the server calls.
-   * @return executed rest operation containing response from server.
+   * @param uri to be used for the path conversion.
+   * @return {@link ListResponseData}. containing listing response.
    * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
    */
   public abstract ListResponseData listPath(String relativePath, boolean recursive,
@@ -1705,8 +1706,9 @@ public abstract class AbfsClient implements Closeable {
 
   /**
    * Parses response of Listing API from server based on Endpoint used.
-   * @param result AbfsHttpOperation of list Operation
-   * @return ListResultSchema
+   * @param result AbfsHttpOperation of list Operation.
+   * @param uri to be used for the path conversion.
+   * @return {@link ListResponseData} containing the list of entries.
    * @throws IOException if parsing fails
    */
   public abstract ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri) throws IOException;
@@ -1796,7 +1798,14 @@ public abstract class AbfsClient implements Closeable {
     }
   }
 
-  protected VersionedFileStatus getFileStatusFromEntry(
+  /**
+   * Creates a VersionedFileStatus object from the ListResultEntrySchema.
+   * @param entry ListResultEntrySchema object.
+   * @param uri to be used for the path conversion.
+   * @return VersionedFileStatus object.
+   * @throws AzureBlobFileSystemException if transformation fails.
+   */
+  protected VersionedFileStatus getVersionedFileStatusFromEntry(
       ListResultEntrySchema entry,
       URI uri) throws AzureBlobFileSystemException {
     final String owner, group;

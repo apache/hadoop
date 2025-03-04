@@ -79,7 +79,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSche
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
-import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformerInterface;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
@@ -168,6 +167,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_MAX_RESULTS;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_PREFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_RESTYPE;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_BLOB_LIST_PARSING;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.PATH_EXISTS;
 import static org.apache.hadoop.fs.azurebfs.utils.UriUtils.isKeyForDirectorySet;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ATOMIC_DIR_RENAME_RECOVERY_ON_GET_PATH_EXCEPTION;
@@ -345,7 +345,8 @@ public class AbfsBlobClient extends AbfsClient {
    * @param listMaxResults maximum number of blobs to return.
    * @param continuation marker to specify the continuation token.
    * @param tracingContext for tracing the service call.
-   * @return executed rest operation containing response from server.
+   * @param uri to be used for path conversion.
+   * @return {@link ListResponseData}. containing listing response.
    * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
    */
   @Override
@@ -383,7 +384,8 @@ public class AbfsBlobClient extends AbfsClient {
     listResponseData.setOp(op);
 
     // Filter the paths for which no rename redo operation is performed.
-    retryRenameOnAtomicEntriesInListResults(op, tracingContext, listResponseData.getRenamePendingJsonPaths());
+    retryRenameOnAtomicEntriesInListResults(op, tracingContext,
+        listResponseData.getRenamePendingJsonPaths());
 
     if (isEmptyListResults(op.getResult()) && is404CheckRequired) {
       // If the list operation returns no paths, we need to check if the path is a file.
@@ -398,7 +400,7 @@ public class AbfsBlobClient extends AbfsClient {
       List<FileStatus> fileStatusList = new ArrayList<>();
       Map<Path, Integer> renamePendingJsonPaths = new HashMap<>();
       for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
-        fileStatusList.add(getFileStatusFromEntry(entry, uri));
+        fileStatusList.add(getVersionedFileStatusFromEntry(entry, uri));
         if (isRenamePendingJsonPathEntry(entry)) {
           renamePendingJsonPaths.put(entry.path(), entry.contentLength().intValue());
         }
@@ -1589,31 +1591,38 @@ public class AbfsBlobClient extends AbfsClient {
   /**
    * Parse the XML response body returned by ListBlob API on Blob Endpoint.
    * @param result InputStream contains the response from server.
-   * @return BlobListResultSchema containing the list of entries.
+   * @param uri to be used for path conversion.
+   * @return {@link ListResponseData}. containing listing response.
+   * @throws AzureBlobFileSystemException if parsing fails.
    */
   @Override
   public ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri)
       throws AzureBlobFileSystemException {
-    InputStream stream = result.getListResultStream();
-    if (stream == null) {
-      return null;
-    }
     BlobListResultSchema listResultSchema;
-    try {
-      final SAXParser saxParser = saxParserThreadLocal.get();
-      saxParser.reset();
-      listResultSchema = new BlobListResultSchema();
-      saxParser.parse(stream,
-          new BlobListXmlParser(listResultSchema, getBaseUrl().toString()));
-      result.setListResultSchema(listResultSchema);
-    } catch (SAXException | IOException e) {
-      throw new RuntimeException(e);
+    try (InputStream stream = result.getListResultStream()) {
+      if (stream == null) {
+        return null;
+      }
+      try {
+        final SAXParser saxParser = saxParserThreadLocal.get();
+        saxParser.reset();
+        listResultSchema = new BlobListResultSchema();
+        saxParser.parse(stream,
+            new BlobListXmlParser(listResultSchema, getBaseUrl().toString()));
+        result.setListResultSchema(listResultSchema);
+      } catch (SAXException | IOException e) {
+        throw new AbfsDriverException(e);
+      }
+    } catch (IOException e) {
+      LOG.error("Unable to deserialize list results", e);
+      throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, e);
     }
 
     try {
-      return listResponseDataParsingXmlListResult(listResultSchema, uri);
+      return filterDuplicateEntriesAndRenamePendingFiles(listResultSchema, uri);
     } catch (IOException e) {
-      throw new AbfsDriverException(e);
+      LOG.error("Unable to filter list results", e);
+      throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, e);
     }
   }
 
@@ -1907,10 +1916,12 @@ public class AbfsBlobClient extends AbfsClient {
    * This is to handle duplicate listing entries returned by Blob Endpoint for
    * implicit paths that also has a marker file created for them.
    * This will retain entry corresponding to marker file and remove the BlobPrefix entry.
+   * This will also filter out all the rename pending json files in listing output.
    * @param listResultSchema List of entries returned by Blob Endpoint.
+   * @param uri URI to be used for path conversion.
    * @return List of entries after removing duplicates.
    */
-  private ListResponseData listResponseDataParsingXmlListResult(
+  private ListResponseData filterDuplicateEntriesAndRenamePendingFiles(
       BlobListResultSchema listResultSchema, URI uri) throws IOException {
     List<FileStatus> fileStatuses = new ArrayList<>();
     Map<Path, Integer> renamePendingJsonPaths = new HashMap<>();
@@ -1921,7 +1932,7 @@ public class AbfsBlobClient extends AbfsClient {
         // This is a blob entry. It is either a file or a marker blob.
         // In both cases we will add this.
         nameToEntryMap.put(entry.name(), entry);
-        fileStatuses.add(getFileStatusFromEntry(entry, uri));
+        fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
 
         if (isRenamePendingJsonPathEntry(entry)) {
           renamePendingJsonPaths.put(entry.path(), entry.contentLength().intValue());
@@ -1931,7 +1942,7 @@ public class AbfsBlobClient extends AbfsClient {
         // This might have already been added as a marker blob.
         if (!nameToEntryMap.containsKey(entry.name())) {
           nameToEntryMap.put(entry.name(), entry);
-          fileStatuses.add(getFileStatusFromEntry(entry, uri));
+          fileStatuses.add(getVersionedFileStatusFromEntry(entry, uri));
         }
       }
     }
@@ -1953,9 +1964,9 @@ public class AbfsBlobClient extends AbfsClient {
    * When listing is done on a file, Blob Endpoint returns the empty listing
    * but DFS Endpoint returns the file status as one of the entries.
    * This is to convert file status into ListResultSchema.
-   * @param relativePath
-   * @param pathStatus
-   * @return
+   * @param relativePath relative path of the file.
+   * @param pathStatus AbfsRestOperation containing the file status.
+   * @return BlobListResultSchema containing the file status.
    */
   private BlobListResultSchema getListResultSchemaFromPathStatus(String relativePath, AbfsRestOperation pathStatus) {
     BlobListResultSchema listResultSchema = new BlobListResultSchema();
