@@ -138,8 +138,8 @@ public class TestNodeManager {
       NodeLabelsProvider labelsProviderService =
           nodeManager.createNodeLabelsProvider(conf);
 
-          assertNull(labelsProviderService,
-              "LabelsProviderService should not be initialized in default configuration");
+      assertNull(labelsProviderService,
+          "LabelsProviderService should not be initialized in default configuration");
 
       // With valid className
       conf.set(

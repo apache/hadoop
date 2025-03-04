@@ -166,6 +166,7 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
     }
   }
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -196,7 +197,7 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("aux services isn't empty", "{\"services\":\"\"}", json.toString());
+    assertEquals("{\"services\":\"\"}", json.toString(), "aux services isn't empty");
   }
 
   private void addAuxServices(AuxServiceRecord... records) {

@@ -381,8 +381,8 @@ public class TestLinuxContainerExecutorWithMocks {
             public Object answer(InvocationOnMock invocationOnMock)
                 throws Throwable {
               String diagnostics = (String) invocationOnMock.getArguments()[0];
-              assertTrue(
-                 diagnostics.contains(expecetedMessage[j]), "Invalid Diagnostics message: " + diagnostics);
+              assertTrue(diagnostics.contains(expecetedMessage[j]),
+                  "Invalid Diagnostics message: " + diagnostics);
               return null;
             }
           }

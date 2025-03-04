@@ -140,7 +140,8 @@ public class TestDirectoryCollection {
     assertEquals(1, dc.getFailedDirs().size());
     assertEquals(1, dc.getFullDirs().size());
     assertNotNull(dc.getDirectoryErrorInfo(dirA));
-    assertEquals(DirectoryCollection.DiskErrorCause.DISK_FULL, dc.getDirectoryErrorInfo(dirA).cause);
+    assertEquals(DirectoryCollection.DiskErrorCause.DISK_FULL,
+        dc.getDirectoryErrorInfo(dirA).cause);
 
     // no good dirs
     assertEquals(0, dc.getGoodDirsDiskUtilizationPercentage());
@@ -348,7 +349,8 @@ public class TestDirectoryCollection {
     assertEquals(1, dc.getFullDirs().size());
     assertEquals(0, dc.getErroredDirs().size());
     assertNotNull(dc.getDirectoryErrorInfo(dirA));
-    assertEquals(DirectoryCollection.DiskErrorCause.DISK_FULL, dc.getDirectoryErrorInfo(dirA).cause);
+    assertEquals(DirectoryCollection.DiskErrorCause.DISK_FULL,
+        dc.getDirectoryErrorInfo(dirA).cause);
 
     dc.setDiskUtilizationPercentageCutoff(100.0F, 100.0F);
     dc.checkDirs();

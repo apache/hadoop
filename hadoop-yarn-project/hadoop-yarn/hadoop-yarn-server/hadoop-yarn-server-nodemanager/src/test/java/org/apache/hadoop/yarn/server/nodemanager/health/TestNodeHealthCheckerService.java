@@ -154,8 +154,8 @@ public class TestNodeHealthCheckerService {
     // Check proper report conditions.
     assertTrue(healthStatus
         .getIsNodeHealthy(), "Node health status reported unhealthy");
-    assertTrue(healthStatus
-        .getHealthReport().equals(nodeHealthChecker.getHealthReport()), "Node health status reported unhealthy");
+    assertTrue(healthStatus.getHealthReport().equals(nodeHealthChecker.getHealthReport()),
+        "Node health status reported unhealthy");
 
     doReturn(false).when(nodeHealthScriptRunner).isHealthy();
     // update health status

@@ -218,7 +218,7 @@ public class TestDistributedScheduler {
   private RequestInterceptor setup(Configuration conf,
       DistributedScheduler distributedScheduler) {
     NodeStatusUpdater nodeStatusUpdater = mock(NodeStatusUpdater.class);
-    when(nodeStatusUpdater.getRMIdentifier()).thenReturn(12345l);
+    when(nodeStatusUpdater.getRMIdentifier()).thenReturn(12345L);
     NMContainerTokenSecretManager nmContainerTokenSecretManager = new
         NMContainerTokenSecretManager(conf);
     MasterKey mKey = new MasterKey() {
