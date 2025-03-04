@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.api.records.timelineservice;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -31,6 +32,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
@@ -150,7 +152,7 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   private NavigableSet<TimelineEvent> events = new TreeSet<>();
   private HashMap<String, Set<String>> isRelatedToEntities = new HashMap<>();
   private HashMap<String, Set<String>> relatesToEntities = new HashMap<>();
-  private Long createdTime;
+  private Long createdTime = Instant.EPOCH.toEpochMilli();
   private long idPrefix;
 
   public TimelineEntity() {

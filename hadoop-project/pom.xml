@@ -222,7 +222,7 @@
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
     <snakeyaml.version>2.0</snakeyaml.version>
     <sshd.version>2.11.0</sshd.version>
-    <hbase.version>2.5.8-hadoop3</hbase.version>
+    <hbase.version>2.6.1-hadoop3</hbase.version>
     <junit.version>4.13.2</junit.version>
     <junit.jupiter.version>5.8.2</junit.jupiter.version>
     <junit.vintage.version>5.8.2</junit.vintage.version>

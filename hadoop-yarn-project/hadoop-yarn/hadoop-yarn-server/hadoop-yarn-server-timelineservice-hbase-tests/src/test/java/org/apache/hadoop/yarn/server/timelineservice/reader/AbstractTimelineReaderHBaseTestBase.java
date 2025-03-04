@@ -38,6 +38,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.reader.TimelineEntityReader;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.DataGeneratorForTest;
 import org.glassfish.jersey.client.ClientConfig;
@@ -107,7 +108,14 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
   protected Client createClient() {
     final ClientConfig cc = new ClientConfig();
     cc.connectorProvider(getHttpURLConnectionFactory());
-    return ClientBuilder.newClient(cc);
+    return ClientBuilder.newClient(cc)
+        .register(TimelineEntityReader.class)
+        .register(TimelineEntitySetReader.class)
+        .register(TimelineEntityListReader.class)
+        .register(FlowActivityEntityReader.class)
+        .register(FlowRunEntityReader.class)
+        .register(FlowActivityEntitySetReader.class)
+        .register(FlowActivityEntityListReader.class);
   }
 
   protected Response getResponse(Client client, URI uri)
@@ -130,7 +138,7 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
     Response resp = client.target(uri).request(MediaType.APPLICATION_JSON).get();
     assertNotNull(resp);
     assertTrue("Response from server should have been " + status,
-        resp.getStatusInfo().getStatusCode() == HttpURLConnection.HTTP_OK);
+        resp.getStatusInfo().getStatusCode() == status.getStatusCode());
     System.out.println("Response is: " + resp.readEntity(String.class));
   }
 

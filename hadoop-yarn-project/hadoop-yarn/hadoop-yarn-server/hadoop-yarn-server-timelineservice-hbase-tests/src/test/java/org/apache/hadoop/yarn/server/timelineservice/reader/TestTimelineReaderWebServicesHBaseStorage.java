@@ -454,7 +454,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
           "1002345678919");
       Response resp = getResponse(client, uri);
       FlowRunEntity entity = resp.readEntity(FlowRunEntity.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";charset=utf-8",
           resp.getMediaType().toString());
       assertNotNull(entity);
       assertEquals("user1@flow_name/1002345678919", entity.getId());
@@ -670,7 +670,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
     try {
       // Query all flows.
       URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
-          "timeline/flows");
+          "timeline/flows/");
       Response resp = getResponse(client, uri);
       Set<FlowActivityEntity> flowEntities =
           resp.readEntity(new GenericType<Set<FlowActivityEntity>>(){});
@@ -2216,7 +2216,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
       Response resp = getResponse(client, uri);
       Set<FlowActivityEntity> entities =
           resp.readEntity(new GenericType<Set<FlowActivityEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";charset=utf-8",
           resp.getMediaType().toString());
       assertNotNull(entities);
       assertEquals(0, entities.size());
@@ -2247,7 +2247,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
       Response resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.readEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";charset=utf-8",
           resp.getMediaType().toString());
       assertNotNull(entities);
       assertEquals(0, entities.size());
@@ -2265,7 +2265,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
       Response resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.readEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + ";charset=utf-8",
           resp.getMediaType().toString());
       assertNotNull(entities);
       assertEquals(0, entities.size());
