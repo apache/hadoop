@@ -28,8 +28,8 @@ public interface DataNodeLockManager<T extends AutoCloseDataSetLock> {
    * Or only acquire block pool level lock.
    * There are several locking sequential patterns as below:
    * 1. block pool
-   * 2. block poll -> volume
-   * 3. block pool level -> volume -> dir
+   * 2. block pool -&gt; volume
+   * 3. block pool level -&gt; volume -&gt; dir
    */
   enum LockLevel {
     BLOCK_POOl,
