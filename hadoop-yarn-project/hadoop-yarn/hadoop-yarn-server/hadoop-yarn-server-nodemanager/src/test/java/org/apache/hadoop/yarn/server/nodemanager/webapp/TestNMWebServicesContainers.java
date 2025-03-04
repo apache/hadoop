@@ -20,9 +20,9 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -70,9 +70,9 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -172,19 +172,19 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
     }
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     testRootDir.mkdirs();
     testLogDir.mkdir();
   }
 
-  @AfterClass
+  @AfterAll
   static public void cleanup() {
     FileUtil.fullyDelete(testRootDir);
     FileUtil.fullyDelete(testLogDir);
@@ -202,7 +202,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("apps isn't empty", "{\"containers\":\"\"}", json.toString());
+    assertEquals("{\"containers\":\"\"}", json.toString(), "apps isn't empty");
   }
 
   private HashMap<String, String> addAppContainers(Application app) 
@@ -277,9 +277,9 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
     JSONObject info = json.getJSONObject("containers");
-    assertEquals("incorrect number of elements", 1, info.length());
+    assertEquals(1, info.length(), "incorrect number of elements");
     JSONArray conInfo = info.getJSONArray("container");
-    assertEquals("incorrect number of elements", 4, conInfo.length());
+    assertEquals(4, conInfo.length(), "incorrect number of elements");
 
     for (int i = 0; i < conInfo.length(); i++) {
       verifyNodeContainerInfo(conInfo.getJSONObject(i),
@@ -344,7 +344,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
           response.getMediaType().toString());
       JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
+      assertEquals(3, exception.length(), "incorrect number of elements");
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -376,7 +376,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
           response.getMediaType().toString());
       JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
+      assertEquals(3, exception.length(), "incorrect number of elements");
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -409,7 +409,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
           response.getMediaType().toString());
       JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
+      assertEquals(3, exception.length(), "incorrect number of elements");
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -445,7 +445,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
       is.setCharacterStream(new StringReader(xml));
       Document dom = db.parse(is);
       NodeList nodes = dom.getElementsByTagName("container");
-      assertEquals("incorrect number of elements", 1, nodes.getLength());
+      assertEquals(1, nodes.getLength(), "incorrect number of elements");
       verifyContainersInfoXML(nodes,
           nmContext.getContainers().get(ContainerId.fromString(id)));
 
@@ -474,7 +474,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodes = dom.getElementsByTagName("container");
-    assertEquals("incorrect number of elements", 4, nodes.getLength());
+    assertEquals(4, nodes.getLength(), "incorrect number of elements");
   }
 
   public void verifyContainersInfoXML(NodeList nodes, Container cont)
@@ -495,17 +495,16 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
       // verify that the container log files element exists
       List<String> containerLogFiles =
           WebServicesTestUtils.getXmlStrings(element, "containerLogFiles");
-      assertFalse("containerLogFiles missing",containerLogFiles.isEmpty());
+      assertFalse(containerLogFiles.isEmpty(), "containerLogFiles missing");
       assertEquals(2, containerLogFiles.size());
-      assertTrue("syslog and stdout expected",
-          containerLogFiles.contains("syslog") &&
-          containerLogFiles.contains("stdout"));
+      assertTrue(containerLogFiles.contains("syslog") &&
+          containerLogFiles.contains("stdout"), "syslog and stdout expected");
     }
   }
 
   public void verifyNodeContainerInfo(JSONObject info, Container cont)
       throws JSONException, Exception {
-    assertEquals("incorrect number of elements", 11, info.length());
+    assertEquals(11, info.length(), "incorrect number of elements");
 
     verifyNodeContainerInfoGeneric(cont, info.getString("id"),
         info.getString("state"), info.getString("user"),
@@ -515,12 +514,11 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
         info.getString("containerLogsLink"));
     // verify that the container log files element exists
     JSONArray containerLogFilesArr = info.getJSONArray("containerLogFiles");
-    assertTrue("containerLogFiles missing", containerLogFilesArr != null);
+    assertTrue(containerLogFilesArr != null, "containerLogFiles missing");
     assertEquals(2, containerLogFilesArr.length());
     for (int i = 0; i < 2; i++) {
-      assertTrue("syslog and stdout expected",
-          containerLogFilesArr.get(i).equals("syslog") ||
-          containerLogFilesArr.get(i).equals("stdout"));
+      assertTrue(containerLogFilesArr.get(i).equals("syslog") ||
+          containerLogFilesArr.get(i).equals("stdout"), "syslog and stdout expected");
     }
   }
 
@@ -535,21 +533,19 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
         .toString(), state);
     WebServicesTestUtils.checkStringMatch("user", cont.getUser().toString(),
         user);
-    assertEquals("exitCode wrong", 0, exitCode);
+    assertEquals(0, exitCode, "exitCode wrong");
     WebServicesTestUtils
         .checkStringMatch("diagnostics", "testing", diagnostics);
 
     WebServicesTestUtils.checkStringMatch("nodeId", nmContext.getNodeId()
         .toString(), nodeId);
-    assertEquals("totalMemoryNeededMB wrong",
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
-      totalMemoryNeededMB);
-    assertEquals("totalVCoresNeeded wrong",
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
-      totalVCoresNeeded);
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        totalMemoryNeededMB, "totalMemoryNeededMB wrong");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+        totalVCoresNeeded, "totalVCoresNeeded wrong");
     String shortLink =
         ujoin("containerlogs", cont.getContainerId().toString(),
             cont.getUser());
-    assertTrue("containerLogsLink wrong", logsLink.contains(shortLink));
+    assertTrue(logsLink.contains(shortLink), "containerLogsLink wrong");
   }
 }
