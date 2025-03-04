@@ -1406,7 +1406,7 @@ public class ResourceLocalizationService extends CompositeService
     return fingerprint.toString();
   }
 
-  static class CacheCleanup extends Thread {
+  static class CacheCleanup extends HadoopThread {
 
     private final Dispatcher dispatcher;
 
@@ -1417,7 +1417,7 @@ public class ResourceLocalizationService extends CompositeService
 
     @Override
     @SuppressWarnings("unchecked") // dispatcher not typed
-    public void run() {
+    public void work() {
       dispatcher.getEventHandler().handle(
           new LocalizationEvent(LocalizationEventType.CACHE_CLEANUP));
     }

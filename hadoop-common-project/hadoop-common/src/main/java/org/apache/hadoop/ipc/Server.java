@@ -1473,7 +1473,7 @@ public abstract class Server {
   }
 
   /** Listens on the socket. Creates jobs for the handler threads*/
-  private class Listener extends Thread {
+  private class Listener extends HadoopThread {
     
     private ServerSocketChannel acceptChannel = null; //the accept channel
     private Selector selector = null; //the selector that we use for the server
@@ -1522,7 +1522,7 @@ public abstract class Server {
       this.isOnAuxiliaryPort = true;
     }
     
-    private class Reader extends Thread {
+    private class Reader extends HadoopThread {
       final private BlockingQueue<Connection> pendingConnections;
       private final Selector readSelector;
 
@@ -1535,7 +1535,7 @@ public abstract class Server {
       }
       
       @Override
-      public void run() {
+      public void work() {
         LOG.info("Starting " + Thread.currentThread().getName());
         try {
           doRunLoop();
@@ -1614,7 +1614,7 @@ public abstract class Server {
     }
 
     @Override
-    public void run() {
+    public void work() {
       LOG.info(Thread.currentThread().getName() + ": starting");
       SERVER.set(Server.this);
       connectionManager.startIdleScan();
@@ -3221,7 +3221,7 @@ public abstract class Server {
   }
 
   /** Handles queued calls . */
-  private class Handler extends Thread {
+  private class Handler extends HadoopThread {
     public Handler(int instanceNumber) {
       this.setDaemon(true);
       this.setName("IPC Server handler "+ instanceNumber +
@@ -3229,7 +3229,7 @@ public abstract class Server {
     }
 
     @Override
-    public void run() {
+    public void work() {
       LOG.debug("{}: starting", Thread.currentThread().getName());
       SERVER.set(Server.this);
       while (running) {

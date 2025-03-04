@@ -227,7 +227,7 @@ public class TestByteArrayManager {
     }
   }
 
-  static class AllocatorThread extends Thread {
+  static class AllocatorThread extends HadoopThread {
     private final ByteArrayManager bam;
     private final int arrayLength;
     private byte[] array;
@@ -238,7 +238,7 @@ public class TestByteArrayManager {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         array = bam.newByteArray(arrayLength);
       } catch (InterruptedException e) {
