@@ -60,17 +60,11 @@ public class TestRouterAsyncMountTable {
   private static MiniRouterDFSCluster.NamenodeContext nnContext1;
   private static MiniRouterDFSCluster.RouterContext routerContext;
   private static MountTableResolver mountTable;
-  private static ClientProtocol routerProtocol;
-  private static long startTime;
-  private static FileSystem nnFs0;
-  private static FileSystem nnFs1;
   private static FileSystem routerFs;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
-    startTime = Time.now();
-
-    // Build and start a federated cluster
+    // Build and start a federated cluster.
     cluster = new StateStoreDFSCluster(false, 2);
     Configuration conf = new RouterConfigBuilder()
         .stateStore()
@@ -84,15 +78,12 @@ public class TestRouterAsyncMountTable {
     cluster.startRouters();
     cluster.waitClusterUp();
 
-    // Get the end points
+    // Get the end points.
     nnContext0 = cluster.getNamenode("ns0", null);
     nnContext1 = cluster.getNamenode("ns1", null);
-    nnFs0 = nnContext0.getFileSystem();
-    nnFs1 = nnContext1.getFileSystem();
     routerContext = cluster.getRandomRouter();
     routerFs = routerContext.getFileSystem();
     Router router = routerContext.getRouter();
-    routerProtocol = routerContext.getClient().getNamenode();
     mountTable = (MountTableResolver) router.getSubclusterResolver();
   }
 
@@ -135,7 +126,7 @@ public class TestRouterAsyncMountTable {
     AddMountTableEntryResponse addResponse =
         mountTableManager.addMountTableEntry(addRequest);
 
-    // Reload the Router cache
+    // Reload the Router cache.
     mountTable.loadCache(true);
 
     return addResponse.getStatus();
@@ -144,7 +135,7 @@ public class TestRouterAsyncMountTable {
   @Test
   public void testGetEnclosingRoot() throws Exception {
 
-    // Add a read only entry
+    // Add a read only entry.
     MountTable readOnlyEntry = MountTable.newInstance(
         "/readonly", Collections.singletonMap("ns0", "/testdir"));
     readOnlyEntry.setReadOnly(true);
@@ -155,13 +146,13 @@ public class TestRouterAsyncMountTable {
     assertEquals(routerFs.getEnclosingRoot(new Path("/regular")),
         routerFs.getEnclosingRoot(routerFs.getEnclosingRoot(new Path("/regular"))));
 
-    // Add a regular entry
+    // Add a regular entry.
     MountTable regularEntry = MountTable.newInstance(
         "/regular", Collections.singletonMap("ns0", "/testdir"));
     assertTrue(addMountTable(regularEntry));
     assertEquals(routerFs.getEnclosingRoot(new Path("/regular")), new Path("/regular"));
 
-    // path does not need to exist
+    // Path does not need to exist.
     assertEquals(routerFs.getEnclosingRoot(new Path("/regular/pathDNE")), new Path("/regular"));
   }
 }
