@@ -692,7 +692,7 @@ public class CapacityScheduler extends
 
   }
 
-  static class ResourceCommitterService extends Thread {
+  static class ResourceCommitterService extends HadoopThread {
     private final CapacityScheduler cs;
     private BlockingQueue<ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode>>
         backlogs = new LinkedBlockingQueue<>();
@@ -703,7 +703,7 @@ public class CapacityScheduler extends
     }
 
     @Override
-    public void run() {
+    public void work() {
       while (!Thread.currentThread().isInterrupted()) {
         try {
           ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request =

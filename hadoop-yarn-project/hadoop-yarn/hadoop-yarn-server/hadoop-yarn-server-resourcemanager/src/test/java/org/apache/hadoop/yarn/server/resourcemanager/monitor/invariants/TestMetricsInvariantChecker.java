@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants;
 
+import static org.junit.Assume.assumeNotNull;
+
+import javax.script.ScriptEngineManager;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -57,6 +61,7 @@ public class TestMetricsInvariantChecker {
 
   @BeforeEach
   public void setup() {
+    assumeNotNull(new ScriptEngineManager().getEngineByName("JavaScript"));
     this.metricsSystem = DefaultMetricsSystem.instance();
     JvmMetrics.initSingleton("ResourceManager", null);
     this.ic = new MetricsInvariantChecker();

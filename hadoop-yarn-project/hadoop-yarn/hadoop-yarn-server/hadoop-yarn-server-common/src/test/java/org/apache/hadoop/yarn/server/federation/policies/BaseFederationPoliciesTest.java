@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.federation.policies;
 
+import static org.junit.Assume.assumeNoException;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;

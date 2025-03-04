@@ -84,6 +84,8 @@ import org.junit.contrib.java.lang.system.internal.NoExitSecurityManager;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import static org.junit.Assume.assumeNoException;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
