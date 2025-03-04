@@ -88,6 +88,7 @@ public class AbfsConfiguration{
 
   private final Configuration rawConfig;
   private final String accountName;
+  private final String fsName;
   // Service type identified from URL used to initialize FileSystem.
   private final AbfsServiceType fsConfiguredServiceType;
   private final boolean isSecure;
@@ -457,11 +458,13 @@ public class AbfsConfiguration{
    */
   public AbfsConfiguration(final Configuration rawConfig,
       String accountName,
+      String fsName,
       AbfsServiceType fsConfiguredServiceType)
       throws IllegalAccessException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
         rawConfig, AzureBlobFileSystem.class);
     this.accountName = accountName;
+    this.fsName = fsName;
     this.fsConfiguredServiceType = fsConfiguredServiceType;
     this.isSecure = getBoolean(FS_AZURE_SECURE_MODE, false);
 
@@ -493,7 +496,7 @@ public class AbfsConfiguration{
    */
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, IOException {
-    this(rawConfig, accountName, AbfsServiceType.DFS);
+    this(rawConfig, accountName, EMPTY_STRING, AbfsServiceType.DFS);
   }
 
   /**
@@ -590,6 +593,16 @@ public class AbfsConfiguration{
   }
 
   /**
+   * Appends the container, account name to a configuration key yielding the
+   * container-specific form.
+   * @param key Account-agnostic configuration key
+   * @return Container-specific configuration key
+   */
+  public String containerConf(String key) {
+    return key + "." + fsName + "." + accountName;
+  }
+
+  /**
    * Returns the account-specific value if it exists, then looks for an
    * account-agnostic value.
    * @param key Account-agnostic configuration key
@@ -644,16 +657,20 @@ public class AbfsConfiguration{
   }
 
   /**
-   * Returns the account-specific password in string form if it exists, then
+   * Returns the container-specific password if it exists,
+   * else searches for the account-specific password, else finally
    * looks for an account-agnostic value.
    * @param key Account-agnostic configuration key
    * @return value in String form if one exists, else null
    * @throws IOException if parsing fails.
    */
   public String getPasswordString(String key) throws IOException {
-    char[] passchars = rawConfig.getPassword(accountConf(key));
+    char[] passchars = rawConfig.getPassword(containerConf(key));
     if (passchars == null) {
-      passchars = rawConfig.getPassword(key);
+      passchars = rawConfig.getPassword(accountConf(key));
+      if(passchars == null){
+        passchars = rawConfig.getPassword(key);
+      }
     }
     if (passchars != null) {
       return new String(passchars);

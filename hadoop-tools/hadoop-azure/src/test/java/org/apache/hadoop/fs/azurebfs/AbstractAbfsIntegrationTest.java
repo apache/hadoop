@@ -117,7 +117,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
     URI defaultUri = null;
 
-    abfsConfig = new AbfsConfiguration(rawConfig, accountName, identifyAbfsServiceTypeFromUrl(abfsUrl));
+    abfsConfig = new AbfsConfiguration(rawConfig, accountName, getFileSystemName(), identifyAbfsServiceTypeFromUrl(abfsUrl));
 
     authType = abfsConfig.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
     assumeValidAuthConfigsPresent();

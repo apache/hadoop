@@ -32,11 +32,13 @@ import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.FixedSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.AccountSASGenerator;
+import org.apache.hadoop.fs.azurebfs.utils.ServiceSASGenerator;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.accountProperty;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.containerProperty;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_APP_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_APP_SECRET;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID;
@@ -50,6 +52,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTest{
 
   private String accountSAS = null;
+  private String containerSAS = null;
   private static final String TEST_PATH = "testPath";
 
   /**
@@ -69,6 +72,7 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
     super.setup();
     createFilesystemWithTestFileForSASTests(new Path(TEST_PATH));
     generateAccountSAS();
+    generateContainerSAS();
   }
 
   /**
@@ -85,6 +89,22 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
     accountSAS = configAccountSASGenerator.getAccountSAS(getAccountName());
   }
 
+  /**
+   * Generates a Container SAS Token using the Account Shared Key to be used as a fixed SAS Token.
+   * Container SAS used here will have only read permissions to resources.
+   * This will be used by individual tests to set in the configurations.
+   * @throws AzureBlobFileSystemException
+   */
+  private void generateContainerSAS() throws AzureBlobFileSystemException {
+    final byte[] accountKey = Base64.decode(
+        getConfiguration().getStorageAccountKey());
+    ServiceSASGenerator configServiceSASGenerator = new ServiceSASGenerator(
+        accountKey);
+    // Setting only read permissions.
+    configServiceSASGenerator.setPermissions("r");
+    containerSAS = configServiceSASGenerator.getContainerSASWithFullControl(
+        getAccountName(), getFileSystemName());
+  }
   /**
    * Tests the scenario where both the custom SASTokenProvider and a fixed SAS token are configured.
    * Custom implementation of SASTokenProvider class should be chosen and User Delegation SAS should be used.
@@ -124,6 +144,38 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
       newTestFs.create(testPath).close();
       newTestFs.open(testPath).close();
     }
+  }
+
+  /**
+   * Tests the implementation sequence if all fixed SAS configs are set.
+   * The expected sequence is Container Specific Fixed SAS, Account Specific Fixed SAS, Account Agnostic Fixed SAS.
+   * @throws IOException
+   */
+  @Test
+  public void testFixedTokenPreference() throws Exception {
+    AbfsConfiguration testAbfsConfig = new AbfsConfiguration(
+        getRawConfiguration(), this.getAccountName(), this.getFileSystemName(), getAbfsServiceType());
+
+    // setting all types of Fixed SAS configs (container-specific, account-specific, account-agnostic)
+    removeAnyPresetConfiguration(testAbfsConfig);
+    testAbfsConfig.set(containerProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getFileSystemName(), this.getAccountName()), containerSAS);
+    testAbfsConfig.set(accountProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getAccountName()), accountSAS);
+    testAbfsConfig.set(FS_AZURE_SAS_FIXED_TOKEN, accountSAS);
+    String ContainerSASExpected = testAbfsConfig.getSASTokenProvider().getSASToken(this.getAccountName(), this.getFileSystemName(), getMethodName(), "read");
+
+    // Assert that Container Specific Fixed SAS is used
+    Assertions.assertThat(ContainerSASExpected).contains("sr=c");
+
+    // Assert that Account Specific Fixed SAS is used if container SAS isn't set
+    testAbfsConfig.unset(containerProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getFileSystemName(), this.getAccountName()));
+    String AccountSASExpected = testAbfsConfig.getSASTokenProvider().getSASToken(this.getAccountName(), this.getFileSystemName(), getMethodName(), "read");
+    Assertions.assertThat(AccountSASExpected).contains("ss=bf");
+
+    //Assert that Account-Agnostic fixed SAS is used if no other fixed SAS configs are set.
+    // The token is the same as the Account Specific Fixed SAS.
+    testAbfsConfig.unset(FS_AZURE_SAS_FIXED_TOKEN);
+    String AccountAgnosticSASExpected = testAbfsConfig.getSASTokenProvider().getSASToken(this.getAccountName(), this.getFileSystemName(), getMethodName(), "read");
+    Assertions.assertThat(AccountAgnosticSASExpected).contains("ss=bf");
   }
 
   /**
@@ -189,5 +241,6 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
     testAbfsConfig.unset(FS_AZURE_SAS_FIXED_TOKEN);
     testAbfsConfig.unset(accountProperty(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, this.getAccountName()));
     testAbfsConfig.unset(accountProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getAccountName()));
+    testAbfsConfig.unset(containerProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getFileSystemName(), this.getAccountName()));
   }
 }

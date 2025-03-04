@@ -322,6 +322,10 @@ public final class ConfigurationKeys {
     return property + "." + account;
   }
 
+  public static String containerProperty(String property, String FsName, String account) {
+    return property + "." + FsName + "." + account;
+  }
+
   public static final String FS_AZURE_ENABLE_DELEGATION_TOKEN = "fs.azure.enable.delegation.token";
   public static final String FS_AZURE_DELEGATION_TOKEN_PROVIDER_TYPE = "fs.azure.delegation.token.provider.type";
 
