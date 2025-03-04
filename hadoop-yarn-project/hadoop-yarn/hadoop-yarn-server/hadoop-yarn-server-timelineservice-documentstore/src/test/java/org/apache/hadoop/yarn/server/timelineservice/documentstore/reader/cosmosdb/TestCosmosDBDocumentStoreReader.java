@@ -22,26 +22,24 @@ import com.microsoft.azure.cosmosdb.rx.AsyncDocumentClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.DocumentStoreUtils;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
  * Test case for {@link CosmosDBDocumentStoreReader}.
  */
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(DocumentStoreUtils.class)
+@ExtendWith(MockitoExtension.class)
 public class TestCosmosDBDocumentStoreReader {
 
-  @Before
+  @BeforeEach
   public void setUp(){
     AsyncDocumentClient asyncDocumentClient =
         Mockito.mock(AsyncDocumentClient.class);
@@ -51,17 +49,21 @@ public class TestCosmosDBDocumentStoreReader {
     when(DocumentStoreUtils.createCosmosDBAsyncClient(conf)).thenReturn(asyncDocumentClient);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testFailureFOnEmptyPredicates() {
-    PowerMockito.when(DocumentStoreUtils.isNullOrEmpty(
-        ArgumentMatchers.any()))
-        .thenReturn(Boolean.TRUE);
 
-    CosmosDBDocumentStoreReader cosmosDBDocumentStoreReader =
-        new CosmosDBDocumentStoreReader(null);
-    cosmosDBDocumentStoreReader.addPredicates(
-        new TimelineReaderContext(null, "", "",
-            null, "", "", null),
-        "DummyCollection", new StringBuilder());
+    assertThrows(IllegalArgumentException.class, ()->{
+      Mockito.when(DocumentStoreUtils.isNullOrEmpty(
+          ArgumentMatchers.any()))
+          .thenReturn(Boolean.TRUE);
+
+      CosmosDBDocumentStoreReader cosmosDBDocumentStoreReader =
+          new CosmosDBDocumentStoreReader(null);
+      cosmosDBDocumentStoreReader.addPredicates(
+          new TimelineReaderContext(null, "", "",
+              null, "", "", null),
+              "DummyCollection", new StringBuilder());
+    });
+
   }
 }

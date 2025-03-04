@@ -28,24 +28,24 @@ import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.do
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.writer.DocumentStoreWriter;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.writer.DummyDocumentStoreWriter;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.times;
 
 /**
  * Test case for {@link DocumentStoreTimelineWriterImpl}.
  */
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(DocumentStoreFactory.class)
+@ExtendWith(MockitoExtension.class)
 public class TestDocumentStoreTimelineWriterImpl {
 
   private final DocumentStoreWriter<TimelineDocument> documentStoreWriter = new
@@ -53,7 +53,7 @@ public class TestDocumentStoreTimelineWriterImpl {
   private final Configuration conf = new Configuration();
   private MockedStatic<DocumentStoreFactory> mockedFactory;
 
-  @Before
+  @BeforeEach
   public void setUp() throws YarnException {
     conf.set(DocumentStoreUtils.TIMELINE_SERVICE_DOCUMENTSTORE_DATABASE_NAME,
         "TestDB");
@@ -67,16 +67,18 @@ public class TestDocumentStoreTimelineWriterImpl {
             .thenReturn(documentStoreWriter);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (mockedFactory != null) {
       mockedFactory.close();
     }
   }
 
-  @Test(expected = YarnException.class)
+  @Test
   public void testFailOnNoCosmosDBConfigs() throws Exception {
-    DocumentStoreUtils.validateCosmosDBConf(new Configuration());
+    assertThrows(YarnException.class, ()->{
+      DocumentStoreUtils.validateCosmosDBConf(new Configuration());
+    });
   }
 
   @Test
@@ -91,7 +93,9 @@ public class TestDocumentStoreTimelineWriterImpl {
     entities.addEntity(DocumentStoreTestUtils.bakeTimelineEntityDoc()
         .fetchTimelineEntity());
 
-    PowerMockito.verifyStatic(DocumentStoreFactory.class);
+    mockedFactory.verify(()->
+        DocumentStoreFactory.createDocumentStoreWriter(ArgumentMatchers.any(Configuration.class)),
+        times(4));
 
     TimelineCollectorContext context = new TimelineCollectorContext();
     context.setFlowName("TestFlow");
