@@ -211,22 +211,6 @@ public class SubjectUtil {
     Subject s = current();
     return () -> callAs(s, () -> c.call());
   }
-
-  public static <T extends Thread> Thread wrap(T t) {
-    if (!HAS_CALL_AS) {
-      return t;
-    }
-    Subject s = current();
-    return new Thread() {
-      @Override
-      public void run() {
-        callAs(s, () -> {
-          t.run();
-          return null;
-        });
-      }
-    };
-  }
   
 	@SuppressWarnings("unused")
 	private static <T> PrivilegedExceptionAction<T> callableToPrivilegedExceptionAction(Callable<T> callable) {

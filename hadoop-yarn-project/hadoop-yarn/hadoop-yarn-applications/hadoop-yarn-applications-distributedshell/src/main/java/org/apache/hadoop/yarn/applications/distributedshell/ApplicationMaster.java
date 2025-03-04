@@ -69,7 +69,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.SubjectUtil;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
@@ -1200,7 +1200,7 @@ public class ApplicationMaster {
           // launch and start the container on a separate thread to keep
           // the main thread unblocked
           // as all containers may not be allocated at one go.
-          launchThreads.add(SubjectUtil.wrap(launchThread));
+          launchThreads.add(launchThread);
           launchedContainers.add(allocatedContainer.getId());
           launchThread.start();
 
@@ -1762,7 +1762,7 @@ public class ApplicationMaster {
     LaunchContainerRunnable runnableLaunchContainer =
         new LaunchContainerRunnable(allocatedContainer, containerListener,
             shellId);
-    return new Thread(runnableLaunchContainer);
+    return new HadoopThread(runnableLaunchContainer);
   }
 
   private void publishContainerStartEventOnTimelineServiceV2(

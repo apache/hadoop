@@ -448,7 +448,7 @@ public class Client implements AutoCloseable {
         Consumer<Connection> removeMethod) {
       this.remoteId = remoteId;
       this.server = remoteId.getAddress();
-      this.rpcRequestThread = new Thread(new RpcRequestSender(),
+      this.rpcRequestThread = new HadoopThread(new RpcRequestSender(),
           "IPC Parameter Sending Thread for " + remoteId);
       this.rpcRequestThread.setDaemon(true);
 

@@ -29,8 +29,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.SubjectUtil;
-import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -69,27 +67,25 @@ public class ITestNativeAzureFileSystemLive extends
     for (int i = 0; i < 10; i++) {
       final int threadNumber = i;
       Path src = path("test" + threadNumber);
-      threads.add(new Thread(SubjectUtil.wrap(new Runnable() {
-        public void run() {
-          try {
-            latch.await(Long.MAX_VALUE, TimeUnit.SECONDS);
-          } catch (InterruptedException e) {
-          }
-          try {
-            try (OutputStream output = fs.create(src)) {
-              output.write(("Source file number " + threadNumber).getBytes());
-            }
-
-            if (fs.rename(src, dest)) {
-              LOG.info("rename succeeded for thread " + threadNumber);
-              successfulRenameCount.incrementAndGet();
-            }
-          } catch (IOException e) {
-            unexpectedError.compareAndSet(null, e);
-            ContractTestUtils.fail("Exception unexpected", e);
-          }
+      threads.add(new Thread(() -> {
+        try {
+          latch.await(Long.MAX_VALUE, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
         }
-      })));
+        try {
+          try (OutputStream output = fs.create(src)) {
+            output.write(("Source file number " + threadNumber).getBytes());
+          }
+
+          if (fs.rename(src, dest)) {
+            LOG.info("rename succeeded for thread " + threadNumber);
+            successfulRenameCount.incrementAndGet();
+          }
+        } catch (IOException e) {
+          unexpectedError.compareAndSet(null, e);
+          ContractTestUtils.fail("Exception unexpected", e);
+        }
+      }));
     }
 
     // Start each thread
@@ -159,9 +155,9 @@ public class ITestNativeAzureFileSystemLive extends
     // Acquire the lease on the file in a background thread
     final CountDownLatch leaseAttemptComplete = new CountDownLatch(1);
     final CountDownLatch beginningDeleteAttempt = new CountDownLatch(1);
-    Thread t = new HadoopThread() {
+    Thread t = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         // Acquire the lease and then signal the main test thread.
         SelfRenewingLease lease = null;
         try {

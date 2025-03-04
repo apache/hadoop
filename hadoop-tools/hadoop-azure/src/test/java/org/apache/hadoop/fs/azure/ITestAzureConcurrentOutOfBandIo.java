@@ -75,7 +75,7 @@ public class ITestAzureConcurrentOutOfBandIo extends AbstractWasbTestBase {
      * Start writing blocks to Azure storage.
      */
     public void startWriting() {
-      runner = new Thread(SubjectUtil.wrap(this)); // Create the block writer thread.
+      runner = new Thread(this); // Create the block writer thread.
       runner.start(); // Start the block writer thread.
     }
 

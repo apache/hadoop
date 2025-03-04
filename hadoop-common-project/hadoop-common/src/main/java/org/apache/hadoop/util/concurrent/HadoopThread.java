@@ -11,12 +11,23 @@ import org.apache.hadoop.util.SubjectUtil;
  * 
  * This is shim for the cases where the run() method is directly overridden in the Thread class.
  */
-public abstract class HadoopThread extends Thread {
+public class HadoopThread extends Thread {
   
   Subject startSubject;
+  Runnable hadoopTarget;
   
   public HadoopThread() {
     super();
+  }
+  
+  public HadoopThread(Runnable target) {
+    super();
+    this.hadoopTarget = target;
+  }
+  
+  public HadoopThread(Runnable target, String name) {
+    super(name);
+    this.hadoopTarget = target;
   }
   
   public HadoopThread(String name) {
@@ -36,7 +47,9 @@ public abstract class HadoopThread extends Thread {
   /**
    * Override this instead of run()
    */
-  public abstract void work();
+  public void work() {
+    throw new IllegalArgumentException("No Runnable was specified and work() is not overriden");
+  }
   
   @Override
   public final void run() {
@@ -44,7 +57,11 @@ public abstract class HadoopThread extends Thread {
 
       @Override
       public Void call() throws Exception {
-        work();
+        if (hadoopTarget != null) {
+          hadoopTarget.run();
+        } else {
+          work();
+        }
         return null;
       }
       

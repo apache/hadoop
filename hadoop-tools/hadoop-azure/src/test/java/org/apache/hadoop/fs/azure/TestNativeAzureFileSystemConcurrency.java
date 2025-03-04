@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.SubjectUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -150,7 +149,7 @@ public class TestNativeAzureFileSystemConcurrency extends AbstractWasbTestBase {
       final ConcurrentLinkedQueue<Throwable> exceptionsEncountered = new ConcurrentLinkedQueue<Throwable>();
       for (int i = 0; i < numThreads; i++) {
         final Path threadLocalFile = new Path("/myFile" + i);
-        threads[i] = new Thread(SubjectUtil.wrap(new Runnable() {
+        threads[i] = new Thread(new Runnable() {
           @Override
           public void run() {
             try {
@@ -164,7 +163,7 @@ public class TestNativeAzureFileSystemConcurrency extends AbstractWasbTestBase {
               exceptionsEncountered.add(ex);
             }
           }
-        }));
+        });
       }
       for (Thread t : threads) {
         t.start();
