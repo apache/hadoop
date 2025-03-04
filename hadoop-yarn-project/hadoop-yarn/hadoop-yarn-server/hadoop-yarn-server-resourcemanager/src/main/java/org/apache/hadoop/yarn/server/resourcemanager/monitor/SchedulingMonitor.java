@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 
 import org.apache.hadoop.classification.VisibleForTesting;
