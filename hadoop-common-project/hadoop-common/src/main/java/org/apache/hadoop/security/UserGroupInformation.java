@@ -33,8 +33,6 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.security.Principal;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
@@ -93,7 +91,7 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.util.Time;
-
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -934,7 +932,7 @@ public class UserGroupInformation {
                   new ThreadFactory() {
                     @Override
                     public Thread newThread(Runnable r) {
-                      Thread t = new Thread(r);
+                      Thread t = new HadoopThread(r);
                       t.setDaemon(true);
                       t.setName("TGT Renewer for " + userName);
                       return t;

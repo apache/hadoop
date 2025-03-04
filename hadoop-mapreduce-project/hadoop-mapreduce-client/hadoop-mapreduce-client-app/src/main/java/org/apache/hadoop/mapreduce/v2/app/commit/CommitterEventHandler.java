@@ -127,7 +127,7 @@ public class CommitterEventHandler extends AbstractService
       ThreadFactory backingTf = new ThreadFactory() {
         @Override
         public Thread newThread(Runnable r) {
-          Thread thread = new Thread(r);
+          Thread thread = new HadoopThread(r);
           thread.setContextClassLoader(jobClassLoader);
           return thread;
         }

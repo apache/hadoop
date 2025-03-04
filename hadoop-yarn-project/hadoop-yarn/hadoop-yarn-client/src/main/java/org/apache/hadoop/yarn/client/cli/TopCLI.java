@@ -1230,7 +1230,7 @@ public class TopCLI extends YarnCLI {
 
   private void addShutdownHook() {
     //clear screen when the program exits
-    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+    Runtime.getRuntime().addShutdownHook(new HadoopThread(() -> {
       clearScreen();
     }));
   }

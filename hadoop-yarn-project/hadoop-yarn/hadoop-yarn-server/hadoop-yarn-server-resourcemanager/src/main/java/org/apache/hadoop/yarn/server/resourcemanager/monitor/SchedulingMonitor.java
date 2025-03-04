@@ -70,7 +70,7 @@ public class SchedulingMonitor extends AbstractService {
     assert !stopped : "starting when already stopped";
     ses = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
       public Thread newThread(Runnable r) {
-        Thread t = new Thread(r);
+        Thread t = new HadoopThread(r);
         t.setName(getName());
         return t;
       }

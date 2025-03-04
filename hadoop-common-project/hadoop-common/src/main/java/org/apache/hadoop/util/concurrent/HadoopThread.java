@@ -25,6 +25,13 @@ public class HadoopThread extends Thread {
     this.hadoopTarget = target;
   }
   
+  public HadoopThread(ThreadGroup group, Runnable target) {
+    // The target passed to Thread has no effect, we only pass it
+    // because there is no super(group) constructor.
+    super(group, target);
+    this.hadoopTarget = target;
+  }
+  
   public HadoopThread(Runnable target, String name) {
     super(name);
     this.hadoopTarget = target;
@@ -36,6 +43,11 @@ public class HadoopThread extends Thread {
   
   public HadoopThread(ThreadGroup group, String name) {
     super(group, name);
+  }
+  
+  public HadoopThread(ThreadGroup group, Runnable target, String name) {
+    super(group, name);
+    this.hadoopTarget = target;
   }
   
   @Override
