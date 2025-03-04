@@ -124,6 +124,8 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.HadoopThread;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.SpanContext;
@@ -1760,7 +1762,7 @@ public abstract class Server {
   }
 
   // Sends responses of RPC back to clients.
-  private class Responder extends Thread {
+  private class Responder extends HadoopThread {
     private final Selector writeSelector;
     private int pending;         // connections waiting to register
 
@@ -1772,7 +1774,7 @@ public abstract class Server {
     }
 
     @Override
-    public void run() {
+    public void work() {
       LOG.info(Thread.currentThread().getName() + ": starting");
       SERVER.set(Server.this);
       try {

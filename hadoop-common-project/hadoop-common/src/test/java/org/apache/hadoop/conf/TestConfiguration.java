@@ -81,6 +81,7 @@ import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.LocalJavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
@@ -2478,7 +2479,7 @@ public class TestConfiguration {
     Configuration conf = new Configuration();
     conf.addResource(fileResource);
 
-    class ConfigModifyThread extends Thread {
+    class ConfigModifyThread extends HadoopThread {
       final private Configuration config;
       final private String prefix;
 
@@ -2488,7 +2489,7 @@ public class TestConfiguration {
       }
 
       @Override
-      public void run() {
+      public void work() {
         for (int i = 0; i < 10000; i++) {
           config.set("some.config.value-" + prefix + i, "value");
         }
@@ -2746,21 +2747,25 @@ public class TestConfiguration {
   @Test
   public void testConcurrentModificationDuringIteration() throws InterruptedException {
     Configuration configuration = new Configuration();
-    new Thread(() -> {
-      while (true) {
-        configuration.set(String.valueOf(Math.random()), String.valueOf(Math.random()));
+    (new HadoopThread() {
+      public void work() {
+        while (true) {
+          configuration.set(String.valueOf(Math.random()), String.valueOf(Math.random()));
+        }
       }
     }).start();
 
     AtomicBoolean exceptionOccurred = new AtomicBoolean(false);
 
-    new Thread(() -> {
-      while (true) {
-        try {
-          configuration.iterator();
-        } catch (final ConcurrentModificationException e) {
-          exceptionOccurred.set(true);
-          break;
+    (new HadoopThread() {
+      public void work() {
+        while (true) {
+          try {
+            configuration.iterator();
+          } catch (final ConcurrentModificationException e) {
+            exceptionOccurred.set(true);
+            break;
+          }
         }
       }
     }).start();

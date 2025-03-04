@@ -486,7 +486,7 @@ public class TestUnmanagedApplicationManager {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         getUGIWithToken(attemptId).doAs((PrivilegedExceptionAction<Object>) () -> {
           TestableAMRequestHandlerThread.super.run();

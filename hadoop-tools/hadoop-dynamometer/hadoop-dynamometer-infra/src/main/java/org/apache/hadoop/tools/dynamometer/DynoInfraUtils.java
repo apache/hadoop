@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 
@@ -319,7 +320,8 @@ public final class DynoInfraUtils {
           .get(getNameNodeHdfsUri(nameNodeProperties), conf);
       log.info("Launching thread to trigger block reports for Datanodes with <"
           + blockThreshold + " blocks reported");
-      Thread blockReportThread = new Thread(() -> {
+      Thread blockReportThread = new HadoopThread() {
+        public void work() {
         // Here we count both Missing and UnderReplicated within under
         // replicated
         long lastUnderRepBlocks = Long.MAX_VALUE;
@@ -376,7 +378,7 @@ public final class DynoInfraUtils {
           // Do nothing; just exit
         }
         log.info("Block reporting thread exiting");
-      });
+      }};
       blockReportThread.setDaemon(true);
       blockReportThread
           .setUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());

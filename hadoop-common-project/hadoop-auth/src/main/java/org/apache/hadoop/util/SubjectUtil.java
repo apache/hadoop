@@ -174,6 +174,11 @@ public class SubjectUtil {
 
   /**
    * Wraps Runnable in callAs() to preserve pre-JEP486 behaviour
+   * 
+   * Note that this snapshots the subject at the time wrap() is called.
+   * If the subject is changed between calling this and starting the thread,
+   * that is going to be ignored.
+   * 
    * @param r Runnable
    * @return r wrapped in callAs()
    */
@@ -190,6 +195,11 @@ public class SubjectUtil {
 
   /**
    * Wraps Callable in callAs() to preserve pre-JEP486 behaviour
+   * 
+   * Note that this snapshots the subject at the time wrap() is called.
+   * If the subject is changed between calling this and starting the thread,
+   * that is going to be ignored.
+   * 
    * @param <T> the return type of the Callable
    * @param c Callable
    * @return c wrapped in callAs()
@@ -202,6 +212,22 @@ public class SubjectUtil {
     return () -> callAs(s, () -> c.call());
   }
 
+  public static <T extends Thread> Thread wrap(T t) {
+    if (!HAS_CALL_AS) {
+      return t;
+    }
+    Subject s = current();
+    return new Thread() {
+      @Override
+      public void run() {
+        callAs(s, () -> {
+          t.run();
+          return null;
+        });
+      }
+    };
+  }
+  
 	@SuppressWarnings("unused")
 	private static <T> PrivilegedExceptionAction<T> callableToPrivilegedExceptionAction(Callable<T> callable) {
 		return callable::call;

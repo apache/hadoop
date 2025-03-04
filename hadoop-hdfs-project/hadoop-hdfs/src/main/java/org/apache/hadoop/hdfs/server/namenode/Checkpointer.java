@@ -128,7 +128,7 @@ class Checkpointer extends Daemon {
   // The main work loop
   //
   @Override
-  public void run() {
+  public void work() {
     // How often to check the size of the edit log (min of checkpointCheckPeriod and checkpointPeriod)
     long periodMSec = checkpointConf.getCheckPeriod() * 1000;
     // How often to checkpoint regardless of number of txns

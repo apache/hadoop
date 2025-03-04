@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.apache.hadoop.util.SubjectUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,7 +98,7 @@ public abstract class RouterResolver<K, V> implements OrderedResolver {
     if (subclusterMapping == null
         || (monotonicNow() - lastUpdated) > minUpdateTime) {
       // Fetch the mapping asynchronously
-      Thread updater = new Thread(new Runnable() {
+      Thread updater = new Thread(SubjectUtil.wrap(new Runnable() {
         @Override
         public void run() {
           final MembershipStore membershipStore = getMembershipStore();
@@ -109,7 +110,7 @@ public abstract class RouterResolver<K, V> implements OrderedResolver {
           subclusterMapping = getSubclusterInfo(membershipStore);
           lastUpdated = monotonicNow();
         }
-      });
+      }));
       updater.start();
 
       // Wait until initialized

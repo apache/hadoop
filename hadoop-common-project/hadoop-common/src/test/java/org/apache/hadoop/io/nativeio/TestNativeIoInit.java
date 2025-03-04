@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -44,15 +45,15 @@ public class TestNativeIoInit {
   @Test
   @Timeout(value = 10)
   public void testDeadlockLinux() throws Exception {
-    Thread one = new Thread() {
+    Thread one = new HadoopThread() {
       @Override
-      public void run() {
+      public void work() {
         NativeIO.isAvailable();
       }
     };
-    Thread two = new Thread() {
+    Thread two = new HadoopThread() {
       @Override
-      public void run() {
+      public void work() {
         NativeIO.POSIX.isAvailable();
       }
     };
@@ -72,9 +73,9 @@ public class TestNativeIoInit {
         NativeIO.isAvailable();
       }
     };
-    Thread two = new Thread() {
+    Thread two = new HadoopThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           NativeIO.Windows.extendWorkingSetSize(100);
         } catch (IOException e) {

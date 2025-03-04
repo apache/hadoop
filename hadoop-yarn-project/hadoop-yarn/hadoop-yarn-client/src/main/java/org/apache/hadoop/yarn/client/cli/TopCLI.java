@@ -63,6 +63,7 @@ import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -367,9 +368,9 @@ public class TopCLI extends YarnCLI {
     long pendingContainers;
   }
 
-  private class KeyboardMonitor extends Thread {
+  private class KeyboardMonitor extends HadoopThread {
 
-    public void run() {
+    public void work() {
       Scanner keyboard = new Scanner(System.in, "UTF-8");
       while (runKeyboardMonitor.get()) {
         String in = keyboard.next();

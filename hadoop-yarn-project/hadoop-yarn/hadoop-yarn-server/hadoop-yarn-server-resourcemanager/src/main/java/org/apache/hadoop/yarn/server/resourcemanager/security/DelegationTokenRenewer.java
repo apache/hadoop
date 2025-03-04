@@ -61,7 +61,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AbstractEvent;
@@ -200,7 +202,7 @@ public class DelegationTokenRenewer extends AbstractService {
     dtCancelThread.start();
     if (tokenKeepAliveEnabled) {
       delayedRemovalThread =
-          new Thread(new DelayedTokenRemovalRunnable(getConfig()),
+          new Thread(SubjectUtil.wrap(new DelayedTokenRemovalRunnable(getConfig())),
               "DelayedTokenCanceller");
       delayedRemovalThread.start();
     }
@@ -347,7 +349,7 @@ public class DelegationTokenRenewer extends AbstractService {
   }
   
   
-  private static class DelegationTokenCancelThread extends Thread {
+  private static class DelegationTokenCancelThread extends HadoopThread {
     private static class TokenWithConf {
       Token<?> token;
       Configuration conf;
@@ -377,7 +379,7 @@ public class DelegationTokenRenewer extends AbstractService {
       }
     }
 
-    public void run() {
+    public void work() {
       TokenWithConf tokenWithConf = null;
       while (true) {
         try {

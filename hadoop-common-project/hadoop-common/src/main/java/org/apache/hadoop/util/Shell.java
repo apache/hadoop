@@ -36,6 +36,7 @@ import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
@@ -1020,9 +1021,9 @@ public abstract class Shell {
 
     // read error and input streams as this would free up the buffers
     // free the error stream buffer
-    Thread errThread = new Thread() {
+    Thread errThread = new HadoopThread() {
       @Override
-      public void run() {
+      public void work() {
         try {
           String line = errReader.readLine();
           while((line != null) && !isInterrupted()) {

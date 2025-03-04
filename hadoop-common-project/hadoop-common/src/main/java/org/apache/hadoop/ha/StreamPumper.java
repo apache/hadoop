@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ha;
 
+import org.apache.hadoop.util.SubjectUtil;
 import org.slf4j.Logger;
 
 import java.io.BufferedReader;
@@ -50,7 +51,7 @@ class StreamPumper {
     this.stream = stream;
     this.type = type;
     
-    thread = new Thread(new Runnable() {
+    thread = new Thread(SubjectUtil.wrap(new Runnable() {
       @Override
       public void run() {
         try {
@@ -61,7 +62,7 @@ class StreamPumper {
               t);
         }
       }
-    }, logPrefix + ": StreamPumper for " + type);
+    }), logPrefix + ": StreamPumper for " + type);
     thread.setDaemon(true);
   }
   

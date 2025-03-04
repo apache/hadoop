@@ -515,7 +515,7 @@ public class TestPipeApplication {
     }
 
     @Override
-    public void run() {
+    public void work() {
       super.run();
     }
 

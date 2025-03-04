@@ -24,6 +24,7 @@ import org.apache.hadoop.ipc.metrics.RpcMetrics;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -470,7 +471,7 @@ public class TestRPC extends TestRpcBase {
       proxy = getClient(addr, conf);
 
       SlowRPC slowrpc = new SlowRPC(proxy);
-      Thread thread = new Thread(slowrpc, "SlowRPC");
+      Thread thread = new Thread(SubjectUtil.wrap(slowrpc), "SlowRPC");
       thread.start(); // send a slow RPC, which won't return until two fast pings
       assertTrue(!slowrpc.isDone(), "Slow RPC should not have finished1.");
 
@@ -588,7 +589,7 @@ public class TestRPC extends TestRpcBase {
       Thread threadId[] = new Thread[numThreads];
       for (int i = 0; i < numThreads; i++) {
         Transactions trans = new Transactions(proxy, datasize);
-        threadId[i] = new Thread(trans, "TransactionThread-" + i);
+        threadId[i] = new Thread(SubjectUtil.wrap(trans), "TransactionThread-" + i);
         threadId[i].start();
       }
 
@@ -962,7 +963,7 @@ public class TestRPC extends TestRpcBase {
       for (int i = 0; i < numConcurrentRPC; i++) {
         final int num = i;
         final TestRpcService proxy = getClient(addr, conf);
-        Thread rpcThread = new Thread(new Runnable() {
+        Thread rpcThread = new Thread(SubjectUtil.wrap(new Runnable() {
           @Override
           public void run() {
             try {
@@ -984,7 +985,7 @@ public class TestRPC extends TestRpcBase {
               latch.countDown();
             }
           }
-        });
+        }));
         rpcThread.start();
 
         if (leaderThread == null) {

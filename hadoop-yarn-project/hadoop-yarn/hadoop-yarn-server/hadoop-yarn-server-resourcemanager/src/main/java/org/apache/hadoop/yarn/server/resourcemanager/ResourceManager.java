@@ -54,6 +54,7 @@ import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.hadoop.util.VersionInfo;
@@ -1135,8 +1136,8 @@ public class ResourceManager extends CompositeService
     SchedulerEventDispatcher(String name, int samplesPerMin) {
       super(scheduler, name);
       this.eventProcessorMonitor =
-          new Thread(new EventProcessorMonitor(getEventProcessorId(),
-              samplesPerMin));
+          new Thread(SubjectUtil.wrap(new EventProcessorMonitor(getEventProcessorId(),
+              samplesPerMin)));
       this.eventProcessorMonitor
           .setName("ResourceManager Event Processor Monitor");
     }
@@ -1220,7 +1221,7 @@ public class ResourceManager extends CompositeService
    */
   private void handleTransitionToStandByInNewThread() {
     Thread standByTransitionThread =
-        new Thread(activeServices.standByTransitionRunnable);
+        new Thread(SubjectUtil.wrap(activeServices.standByTransitionRunnable));
     standByTransitionThread.setName("StandByTransitionThread");
     standByTransitionThread.start();
   }

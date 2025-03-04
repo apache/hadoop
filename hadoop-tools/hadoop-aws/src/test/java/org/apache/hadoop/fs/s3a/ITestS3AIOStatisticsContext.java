@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsContextImpl;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 import org.apache.hadoop.util.functional.TaskPool;
 
@@ -457,7 +458,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
    * If constructed with an IOStatisticsContext then
    * that context is switched to before performing the IO.
    */
-  private class TestWorkerThread extends Thread implements Runnable {
+  private class TestWorkerThread extends HadoopThread implements Runnable {
     private final Path workerThreadPath;
 
     private final IOStatisticsContext ioStatisticsContext;
@@ -475,7 +476,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     }
 
     @Override
-    public void run() {
+    public void work() {
       // Setting the worker thread's name.
       Thread.currentThread().setName("worker thread");
       S3AFileSystem fs = getFileSystem();

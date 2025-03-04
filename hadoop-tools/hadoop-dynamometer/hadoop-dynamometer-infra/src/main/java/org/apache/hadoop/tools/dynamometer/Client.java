@@ -77,6 +77,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ClassUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
@@ -891,46 +892,40 @@ public class Client extends Configured implements Tool {
     boolean loggedApplicationInfo = false;
     boolean success = false;
 
-    Thread namenodeMonitoringThread = new Thread(() -> {
-      Supplier<Boolean> exitCritera = () ->
-          Apps.isApplicationFinalState(infraAppState);
-      Optional<Properties> namenodeProperties = Optional.empty();
-      while (!exitCritera.get()) {
-        try {
-          if (!namenodeProperties.isPresent()) {
-            namenodeProperties = DynoInfraUtils
-                .waitForAndGetNameNodeProperties(exitCritera, getConf(),
-                    getNameNodeInfoPath(), LOG);
-            if (namenodeProperties.isPresent()) {
-              Properties props = namenodeProperties.get();
-              LOG.info("NameNode can be reached via HDFS at: {}",
-                  DynoInfraUtils.getNameNodeHdfsUri(props));
-              LOG.info("NameNode web UI available at: {}",
-                  DynoInfraUtils.getNameNodeWebUri(props));
-              LOG.info("NameNode can be tracked at: {}",
-                  DynoInfraUtils.getNameNodeTrackingUri(props));
-            } else {
-              // Only happens if we should be shutting down
-              break;
+    HadoopThread namenodeMonitoringThread = new HadoopThread() {
+      public void work() {
+        Supplier<Boolean> exitCritera = () -> Apps.isApplicationFinalState(infraAppState);
+        Optional<Properties> namenodeProperties = Optional.empty();
+        while (!exitCritera.get()) {
+          try {
+            if (!namenodeProperties.isPresent()) {
+              namenodeProperties = DynoInfraUtils.waitForAndGetNameNodeProperties(exitCritera, getConf(),
+                  getNameNodeInfoPath(), LOG);
+              if (namenodeProperties.isPresent()) {
+                Properties props = namenodeProperties.get();
+                LOG.info("NameNode can be reached via HDFS at: {}", DynoInfraUtils.getNameNodeHdfsUri(props));
+                LOG.info("NameNode web UI available at: {}", DynoInfraUtils.getNameNodeWebUri(props));
+                LOG.info("NameNode can be tracked at: {}", DynoInfraUtils.getNameNodeTrackingUri(props));
+              } else {
+                // Only happens if we should be shutting down
+                break;
+              }
             }
+            DynoInfraUtils.waitForNameNodeStartup(namenodeProperties.get(), exitCritera, LOG);
+            DynoInfraUtils.waitForNameNodeReadiness(namenodeProperties.get(), numTotalDataNodes, false, exitCritera,
+                getConf(), LOG);
+            break;
+          } catch (IOException ioe) {
+            LOG.error("Unexpected exception while waiting for NameNode readiness", ioe);
+          } catch (InterruptedException ie) {
+            return;
           }
-          DynoInfraUtils.waitForNameNodeStartup(namenodeProperties.get(),
-              exitCritera, LOG);
-          DynoInfraUtils.waitForNameNodeReadiness(namenodeProperties.get(),
-              numTotalDataNodes, false, exitCritera, getConf(), LOG);
-          break;
-        } catch (IOException ioe) {
-          LOG.error(
-              "Unexpected exception while waiting for NameNode readiness",
-              ioe);
-        } catch (InterruptedException ie) {
-          return;
+        }
+        if (!Apps.isApplicationFinalState(infraAppState) && launchWorkloadJob) {
+          launchAndMonitorWorkloadDriver(namenodeProperties.get());
         }
       }
-      if (!Apps.isApplicationFinalState(infraAppState) && launchWorkloadJob) {
-        launchAndMonitorWorkloadDriver(namenodeProperties.get());
-      }
-    });
+    };
     if (launchNameNode) {
       namenodeMonitoringThread.start();
     }

@@ -288,7 +288,7 @@ public class TestableFederationInterceptor extends FederationInterceptor {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         getUGIWithToken(getAttemptId())
             .doAs((PrivilegedExceptionAction<Object>) () -> {

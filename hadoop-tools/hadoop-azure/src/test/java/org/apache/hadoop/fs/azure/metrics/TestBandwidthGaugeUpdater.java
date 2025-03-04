@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.SubjectUtil;
 import org.junit.jupiter.api.Test;
 
 public class TestBandwidthGaugeUpdater {
@@ -56,13 +57,13 @@ public class TestBandwidthGaugeUpdater {
         new BandwidthGaugeUpdater(instrumentation, 1000, true);
     Thread[] threads = new Thread[10];
     for (int i = 0; i < threads.length; i++) {
-      threads[i] = new Thread(new Runnable() {
+      threads[i] = new Thread(SubjectUtil.wrap(new Runnable() {
         @Override
         public void run() {
           updater.blockDownloaded(new Date(), new Date(), 10);
           updater.blockDownloaded(new Date(0), new Date(0), 10);
         }
-      });
+      }));
     }
     for (Thread t : threads) {
       t.start();

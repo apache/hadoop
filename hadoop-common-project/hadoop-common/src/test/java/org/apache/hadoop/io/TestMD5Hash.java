@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 
 
 import java.io.ByteArrayInputStream;
@@ -93,9 +94,9 @@ public class TestMD5Hash {
     assertTrue(closeHash1.hashCode() != closeHash2.hashCode(),
         "hash collision");
      
-    Thread t1 = new Thread() {      
+    Thread t1 = new HadoopThread() {      
       @Override
-      public void run() {
+      public void work() {
         for (int i = 0; i < 100; i++) {
           MD5Hash hash = new MD5Hash(DFF);
           assertEquals(hash, md5HashFF);
@@ -103,9 +104,9 @@ public class TestMD5Hash {
       }
     };
     
-    Thread t2 = new Thread() {
+    Thread t2 = new HadoopThread() {
       @Override
-      public void run() {
+      public void work() {
         for (int i = 0; i < 100; i++) {
           MD5Hash hash = new MD5Hash(D00);
           assertEquals(hash, md5Hash00);

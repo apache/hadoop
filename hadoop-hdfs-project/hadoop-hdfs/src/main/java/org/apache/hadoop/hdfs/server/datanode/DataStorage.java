@@ -62,7 +62,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Lists;
-
+import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ComparisonChain;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -989,7 +989,7 @@ public class DataStorage extends Storage {
     // 2. delete finalized.tmp dir in a separate thread
     // Also delete the blocksBeingWritten from HDFS 1.x and earlier, if
     // it exists.
-    new Daemon(new Runnable() {
+    new Daemon(SubjectUtil.wrap(new Runnable() {
         @Override
         public void run() {
           try {
@@ -1004,7 +1004,7 @@ public class DataStorage extends Storage {
         }
         @Override
         public String toString() { return "Finalize " + dataDirPath; }
-      }).start();
+      })).start();
   }
   
   

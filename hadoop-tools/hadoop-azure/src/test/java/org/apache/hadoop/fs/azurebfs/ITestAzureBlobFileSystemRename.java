@@ -69,6 +69,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
 import static java.net.HttpURLConnection.HTTP_CLIENT_TIMEOUT;
@@ -1011,21 +1012,23 @@ public class ITestAzureBlobFileSystemRename extends
         .acquireLease(Mockito.anyString(), Mockito.anyInt(),
             Mockito.nullable(String.class),
             Mockito.any(TracingContext.class));
-    new Thread(() -> {
-      while (!leaseAcquired.get()) {}
-      try {
-        fs.rename(src, dst);
-      } catch (Exception e) {
-        if (e.getCause() instanceof AbfsLease.LeaseException
-            && e.getCause().getCause() instanceof AbfsRestOperationException
-            && ((AbfsRestOperationException) e.getCause()
-            .getCause()).getStatusCode() == HTTP_CONFLICT) {
-          exceptionOnParallelRename.set(true);
+    new Thread(SubjectUtil.wrap(new Runnable() {
+      public void run() {
+        while (!leaseAcquired.get()) {
         }
-      } finally {
-        parallelThreadDone.set(true);
+        try {
+          fs.rename(src, dst);
+        } catch (Exception e) {
+          if (e.getCause() instanceof AbfsLease.LeaseException
+              && e.getCause().getCause() instanceof AbfsRestOperationException
+              && ((AbfsRestOperationException) e.getCause().getCause()).getStatusCode() == HTTP_CONFLICT) {
+            exceptionOnParallelRename.set(true);
+          }
+        } finally {
+          parallelThreadDone.set(true);
+        }
       }
-    }).start();
+    })).start();
     fs.rename(src, dst);
     while (!parallelThreadDone.get()) {}
     Assertions.assertThat(exceptionOnParallelRename.get())
@@ -1061,17 +1064,20 @@ public class ITestAzureBlobFileSystemRename extends
       return answer.callRealMethod();
     }).when(client).copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
         Mockito.nullable(String.class), Mockito.any(TracingContext.class));
-    new Thread(() -> {
-      while (!copyInProgress.get()) {}
-      try {
-        os.write(1);
-        os.close();
-      } catch (IOException e) {
-        appendFailed.set(true);
-      } finally {
-        outputStreamClosed.set(true);
+    new Thread(SubjectUtil.wrap(new Runnable() {
+      public void run() {
+        while (!copyInProgress.get()) {
+        }
+        try {
+          os.write(1);
+          os.close();
+        } catch (IOException e) {
+          appendFailed.set(true);
+        } finally {
+          outputStreamClosed.set(true);
+        }
       }
-    }).start();
+    })).start();
     fs.rename(src, dst);
     Assertions.assertThat(appendFailed.get())
         .describedAs("Append should fail")

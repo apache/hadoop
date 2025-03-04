@@ -39,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.util.ShutdownHookManager;
+import org.apache.hadoop.util.SubjectUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -1247,7 +1248,7 @@ public class FSImage implements Closeable {
              = storage.dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
         StorageDirectory sd = it.next();
         FSImageSaver saver = new FSImageSaver(ctx, sd, nnf);
-        Thread saveThread = new Thread(saver, saver.toString());
+        Thread saveThread = new Thread(SubjectUtil.wrap(saver), saver.toString());
         saveThreads.add(saveThread);
         saveThread.start();
       }

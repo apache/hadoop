@@ -72,9 +72,11 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.slf4j.Logger;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -599,7 +601,7 @@ class BPServiceActor implements Runnable {
       //Thread is started already
       return;
     }
-    bpThread = new Thread(this);
+    bpThread = new Thread(SubjectUtil.wrap(this));
     bpThread.setDaemon(true); // needed for JUnit testing
 
     if (lifelineSender != null) {
@@ -1078,7 +1080,7 @@ class BPServiceActor implements Runnable {
     }
 
     public void start() {
-      lifelineThread = new Thread(this,
+      lifelineThread = new Thread(SubjectUtil.wrap(this),
           formatThreadName("lifeline", lifelineNnAddr));
       lifelineThread.setDaemon(true);
       lifelineThread.setUncaughtExceptionHandler(
@@ -1384,7 +1386,7 @@ class BPServiceActor implements Runnable {
   /**
    * CommandProcessingThread that process commands asynchronously.
    */
-  class CommandProcessingThread extends Thread {
+  class CommandProcessingThread extends HadoopThread {
     private final BPServiceActor actor;
     private final BlockingQueue<Runnable> queue;
 
@@ -1396,7 +1398,7 @@ class BPServiceActor implements Runnable {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         processQueue();
       } catch (Throwable t) {

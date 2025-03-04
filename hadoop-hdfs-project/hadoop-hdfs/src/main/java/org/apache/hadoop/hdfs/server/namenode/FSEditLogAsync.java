@@ -38,6 +38,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.SubjectUtil;
 
 class FSEditLogAsync extends FSEditLog implements Runnable {
   static final Logger LOG = LoggerFactory.getLogger(FSEditLog.class);
@@ -78,7 +79,7 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
   private void startSyncThread() {
     synchronized(syncThreadLock) {
       if (!isSyncThreadAlive()) {
-        syncThread = new Thread(this, this.getClass().getSimpleName());
+        syncThread = new Thread(SubjectUtil.wrap(this), this.getClass().getSimpleName());
         syncThread.start();
       }
     }

@@ -98,6 +98,7 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.GcTimeMonitor;
 import org.apache.hadoop.util.GcTimeMonitor.Builder;
@@ -1076,7 +1077,7 @@ public class NameNode extends ReconfigurableBase implements
             return dfs;
           }
         });
-    this.emptier = new Thread(new Trash(fs, conf).getEmptier(), "Trash Emptier");
+    this.emptier = new Thread(SubjectUtil.wrap(new Trash(fs, conf).getEmptier()), "Trash Emptier");
     this.emptier.setDaemon(true);
     this.emptier.start();
   }

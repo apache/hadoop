@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.SubjectUtil;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -597,7 +598,7 @@ public class FederationStateStoreService extends AbstractService
    */
   public void createCleanUpFinishApplicationThread(String stage) {
     String threadName = cleanUpThreadNamePrefix + "-" + stage;
-    Thread finishApplicationThread = new Thread(createCleanUpFinishApplicationThread());
+    Thread finishApplicationThread = new Thread(SubjectUtil.wrap(createCleanUpFinishApplicationThread()));
     finishApplicationThread.setName(threadName);
     finishApplicationThread.start();
     LOG.info("CleanUpFinishApplicationThread has been started {}.", threadName);

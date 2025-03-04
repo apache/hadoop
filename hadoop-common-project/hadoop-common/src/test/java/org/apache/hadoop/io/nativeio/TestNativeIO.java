@@ -56,6 +56,8 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.StatUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.HadoopThread;
+
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.*;
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.Stat.*;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
@@ -135,9 +137,9 @@ public class TestNativeIO {
       new AtomicReference<Throwable>();
     List<Thread> statters = new ArrayList<Thread>();
     for (int i = 0; i < 10; i++) {
-      Thread statter = new Thread() {
+      HadoopThread statter = new HadoopThread() {
         @Override
-        public void run() {
+        public void work() {
           long et = Time.now() + 5000;
           while (Time.now() < et) {
             try {

@@ -54,6 +54,7 @@ import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.AsyncGet;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.Tracer;
 import org.slf4j.Logger;
@@ -406,7 +407,7 @@ public class Client implements AutoCloseable {
   /** Thread that reads responses and notifies callers.  Each connection owns a
    * socket connected to a remote address.  Calls are multiplexed through this
    * socket: responses may be delivered out of order. */
-  private class Connection extends Thread {
+  private class Connection extends HadoopThread {
     private InetSocketAddress server;             // server ip:port
     private final ConnectionId remoteId;          // connection id
     private AuthMethod authMethod; // authentication method
@@ -1125,7 +1126,7 @@ public class Client implements AutoCloseable {
     }
 
     @Override
-    public void run() {
+    public void work() {
       try {
         // Don't start the ipc parameter sending thread until we start this
         // thread, because the shutdown logic only gets triggered if this

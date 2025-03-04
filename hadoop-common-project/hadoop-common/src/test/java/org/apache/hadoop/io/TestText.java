@@ -17,6 +17,7 @@
  */
 
 package org.apache.hadoop.io;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 
 import java.io.IOException;
 import java.nio.BufferUnderflowException;
@@ -300,13 +301,13 @@ public class TestText {
     assertEquals(8, a.copyBytes().length);
   }
   
-  private class ConcurrentEncodeDecodeThread extends Thread {
+  private class ConcurrentEncodeDecodeThread extends HadoopThread {
     public ConcurrentEncodeDecodeThread(String name) {
       super(name);
     }
 
     @Override
-    public void run() {
+    public void work() {
       final String name = this.getName();
       DataOutputBuffer out = new DataOutputBuffer();
       DataInputBuffer in = new DataInputBuffer();

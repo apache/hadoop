@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.XMLUtils;
+import org.apache.hadoop.util.concurrent.HadoopThread;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.security.Permission;
@@ -118,7 +119,8 @@ public class AllocationFileLoaderService extends AbstractService {
     this.allocFile = getAllocationFile(conf);
     if (this.allocFile != null) {
       this.fs = allocFile.getFileSystem(conf);
-      reloadThread = new Thread(() -> {
+      reloadThread = new HadoopThread() {
+        public void work() {
         while (running) {
           try {
             synchronized (this) {
@@ -156,7 +158,8 @@ public class AllocationFileLoaderService extends AbstractService {
                 "Interrupted while waiting to reload alloc configuration");
           }
         }
-      });
+        }
+      };
       reloadThread.setName("AllocationFileReloader");
       reloadThread.setDaemon(true);
     }

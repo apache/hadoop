@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.SubjectUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem.FolderRenamePending;
@@ -1643,9 +1644,9 @@ public abstract class NativeAzureFileSystemBaseTest
     NativeAzureFileSystem nfs = (NativeAzureFileSystem) fs;
     String fullKey = nfs.pathToKey(nfs.makeAbsolute(new Path(LEASE_LOCK_FILE_KEY)));
 
-    Thread first = new Thread(new LeaseLockAction("first-thread", fullKey));
+    Thread first = new Thread(SubjectUtil.wrap(new LeaseLockAction("first-thread", fullKey)));
     first.start();
-    Thread second = new Thread(new LeaseLockAction("second-thread", fullKey));
+    Thread second = new Thread(SubjectUtil.wrap(new LeaseLockAction("second-thread", fullKey)));
     second.start();
     try {
 
