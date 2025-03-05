@@ -520,7 +520,7 @@ public class WebHdfsFileSystem extends FileSystem
       final Map<?, ?> m;
       try {
         m = jsonParse(conn, true);
-      } catch(Exception e) {
+      } catch (Exception e) {
         throw new IOException("Unexpected HTTP response: code=" + code + " != "
             + op.getExpectedHttpResponseCode() + ", " + op.toQueryString()
             + ", message=" + conn.getResponseMessage(), e);
@@ -536,22 +536,28 @@ public class WebHdfsFileSystem extends FileSystem
 
       IOException re = JsonUtilClient.toRemoteException(m);
 
-      //check if exception is due to communication with a Standby name node
-      if (re.getMessage() != null && re.getMessage().endsWith(
-          StandbyException.class.getSimpleName())) {
+      if (re.getMessage() == null) {
+        throw unwrapException ? toIOException(re) : re;
+      }
+
+      // check if exception is due to communication with a Standby name node
+      if (re.getMessage().endsWith(StandbyException.class.getSimpleName())) {
         LOG.trace("Detected StandbyException", re);
         throw new IOException(re);
       }
       // extract UGI-related exceptions and unwrap InvalidToken
       // the NN mangles these exceptions but the DN does not and may need
       // to re-fetch a token if either report the token is expired
-      if (re.getMessage() != null && re.getMessage().startsWith(
-          SecurityUtil.FAILED_TO_GET_UGI_MSG_HEADER)) {
-        String[] parts = re.getMessage().split(":\\s+", 3);
-        re = new RemoteException(parts[1], parts[2]);
-        re = ((RemoteException)re).unwrapRemoteException(InvalidToken.class);
+      if (re.getMessage().startsWith(SecurityUtil.FAILED_TO_GET_UGI_MSG_HEADER) ||
+          // For HttpFS responses, there is no header string
+          re.getMessage().startsWith(InvalidToken.class.getName() + ":")) {
+        final String invalidTokenMsg = re.getMessage()
+                .substring(re.getMessage().indexOf(InvalidToken.class.getName()));
+        String[] parts = invalidTokenMsg.split(":\\s+", 2);
+        re = new RemoteException(parts[0], parts[1]);
+        re = ((RemoteException) re).unwrapRemoteException(InvalidToken.class);
       }
-      throw unwrapException? toIOException(re): re;
+      throw unwrapException ? toIOException(re) : re;
     }
     return null;
   }
