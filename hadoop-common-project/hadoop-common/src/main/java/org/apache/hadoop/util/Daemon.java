@@ -19,6 +19,7 @@
 package org.apache.hadoop.util;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadFactory;
 
 import javax.security.auth.Subject;
@@ -55,19 +56,30 @@ public class Daemon extends Thread {
   
   @Override
   public final void run() {
-    SubjectUtil.callAs(startSubject, new Callable<Void>() {
+    try {
+      SubjectUtil.callAs(startSubject, new Callable<Void>() {
 
-      @Override
-      public Void call() throws Exception {
-        if (runnable != null) {
-          runnable.run();
-        } else {
-          work();
+        @Override
+        public Void call() throws Exception {
+          if (runnable != null) {
+            runnable.run();
+          } else {
+            work();
+          }
+          return null;
         }
-        return null;
+
+      });
+    } catch (CompletionException ce) {
+      Throwable t = ce.getCause();
+      if (t instanceof RuntimeException) {
+        throw (RuntimeException) t;
+      } else if (t instanceof Error) {
+        throw (Error) t;
+      } else {
+        throw new RuntimeException("Unexpected exception", t);
       }
-      
-    });
+    }
   }
   
   {
