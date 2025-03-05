@@ -17,16 +17,12 @@
  */
 package org.apache.hadoop.util;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledOnJre;
-import org.junit.jupiter.api.condition.JRE;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.crypto.OpensslCipher;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
-import org.apache.hadoop.util.NativeCodeLoader;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +37,6 @@ public class TestNativeCodeLoader {
   }
 
   @Test
-  //@EnabledOnJre({JRE.JAVA_8, JRE.JAVA_17}) /* JEP416 related ? */
   public void testNativeCodeLoaded() {
     if (requireTestJni() == false) {
       LOG.info("TestNativeCodeLoader: libhadoop.so testing is not required.");
