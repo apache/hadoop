@@ -348,7 +348,7 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
     ugi.addToken(maliciousToken);
 
     try {
-      ugi.callAsNoException(new Callable<Void>()  {
+      ugi.callAs(new Callable<Void>()  {
         @Override
         public Void call() throws Exception {
           try {
