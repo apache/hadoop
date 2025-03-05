@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -253,7 +254,7 @@ public class QueueMetrics implements MetricsSource {
    * Simple metrics cache to help prevent re-registrations.
    */
   private static final Map<String, QueueMetrics> QUEUE_METRICS =
-      new HashMap<String, QueueMetrics>();
+      new ConcurrentHashMap<>();
 
   /**
    * Returns the metrics cache to help prevent re-registrations.
