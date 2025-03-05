@@ -487,6 +487,7 @@
     <dependency>
       <groupId>software.amazon.s3.analyticsaccelerator</groupId>
       <artifactId>analyticsaccelerator-s3</artifactId>
+      <version>1.0.0</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
