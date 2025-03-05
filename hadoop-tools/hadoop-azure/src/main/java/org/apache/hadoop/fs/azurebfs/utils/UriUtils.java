@@ -248,8 +248,13 @@ public final class UriUtils {
    */
   public static boolean isKeyForDirectorySet(String key, Set<String> dirSet) {
     for (String dir : dirSet) {
-      if (dir.isEmpty() || key.startsWith(
-          dir + AbfsHttpConstants.FORWARD_SLASH)) {
+      // Ensure the directory ends with a forward slash
+      if (StringUtils.isNotEmpty(dir)
+          && !dir.endsWith(AbfsHttpConstants.FORWARD_SLASH)) {
+        dir += AbfsHttpConstants.FORWARD_SLASH;
+      }
+      // Return true if the directory is empty or the key starts with the directory
+      if (dir.isEmpty() || key.startsWith(dir)) {
         return true;
       }
 
