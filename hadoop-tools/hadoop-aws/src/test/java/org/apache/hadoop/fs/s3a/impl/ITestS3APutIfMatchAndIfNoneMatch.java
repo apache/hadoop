@@ -35,11 +35,11 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
+import org.apache.hadoop.fs.s3a.Statistic;;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 
 import static org.apache.hadoop.fs.Options.CreateFileOptionKeys.FS_OPTION_CREATE_CONDITIONAL_OVERWRITE;
@@ -67,7 +67,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
  * This test class verifies the behavior of "If-Match" and "If-None-Match"
  * conditions while writing files.
  */
-public class ITestS3APutIfMatch extends AbstractS3ACostTest {
+public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
   private static final int UPDATED_MULTIPART_THRESHOLD = 100 * _1KB;
 
@@ -564,8 +564,6 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
     Path testFile = methodPath();
     fs.mkdirs(testFile.getParent());
 
-    getConfiguration().set(FS_S3A_PERFORMANCE_FLAGS, "create");
-
     // Create a file and retrieve the etag
     createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, false, null);
     String etag = getEtag(fs, testFile);
@@ -576,6 +574,7 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
     // Attempt to create a file at the same path without overwrite, using If-Match with the etag
     FileAlreadyExistsException exception = intercept(FileAlreadyExistsException.class, () -> {
       fs.createFile(testFile).overwrite(false)
+              .must(FS_S3A_CREATE_PERFORMANCE, true)
               .opt(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG, etag)
               .build();
     });
@@ -652,5 +651,28 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
 
     verifyStatisticCounterValue(statistics.getIOStatistics(), Statistic.CONDITIONAL_CREATE.getSymbol(), 1);
     verifyStatisticCounterValue(statistics.getIOStatistics(), Statistic.CONDITIONAL_CREATE_FAILED.getSymbol(), 1);
+  }
+
+  /**
+   * Tests that a conditional create operation is triggered when the performance flag is enabled
+   * and the overwrite option is set to false.
+   */
+  @Test
+  public void testConditionalCreateWhenPerformanceFlagEnabledAndOverwriteDisabled() throws Throwable {
+    FileSystem fs = getFileSystem();
+    Path testFile = methodPath();
+    fs.mkdirs(testFile.getParent());
+
+    // Create a file
+    createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, false, null);
+
+    // Attempt to override the file without overwrite and performance flag.
+    // Should throw RemoteFileChangedException (due to conditional write operation)
+    intercept(RemoteFileChangedException.class, () -> {
+      FSDataOutputStreamBuilder cf = fs.createFile(testFile);
+      cf.overwrite(false);
+      cf.must(FS_S3A_CREATE_PERFORMANCE, true);
+      cf.build().close();
+    });
   }
 }
