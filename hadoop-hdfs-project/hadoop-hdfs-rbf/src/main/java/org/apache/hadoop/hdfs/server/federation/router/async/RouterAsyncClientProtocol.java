@@ -168,7 +168,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
       LOG.debug("Creating {} requires creating parent {}", src, parent);
       FsPermission parentPermissions = getParentPermission(masked);
       mkdirs(parent, parentPermissions, createParent);
-      asyncApply((ApplyFunction<Boolean, Object>) success -> {
+      asyncApply((ApplyFunction<Boolean, Boolean>) success -> {
         if (!success) {
           // This shouldn't happen as mkdirs returns true or exception
           LOG.error("Couldn't create parents for {}", src);
