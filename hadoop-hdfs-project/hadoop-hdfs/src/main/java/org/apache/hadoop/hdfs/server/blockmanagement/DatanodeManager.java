@@ -704,6 +704,11 @@ public class DatanodeManager {
   }
 
   /** @return the datanode descriptor for the host. */
+  public DatanodeDescriptor getDatanodeByHostName(final String hostname) {
+    return host2DatanodeMap.getDataNodeByHostName(hostname);
+  }
+
+  /** @return the datanode descriptor for the host. */
   public DatanodeDescriptor getDatanodeByXferAddr(String host, int xferPort) {
     return host2DatanodeMap.getDatanodeByXferAddr(host, xferPort);
   }
@@ -1235,6 +1240,10 @@ public class DatanodeManager {
           NameNode.stateChangeLog.info("BLOCK* registerDatanode: " + nodeS
               + " is replaced by " + nodeReg + " with the same storageID "
               + nodeReg.getDatanodeUuid());
+        }
+
+        if (!updateHost2DatanodeMap) {
+          updateHost2DatanodeMap = !nodeS.getHostName().equals(nodeReg.getHostName());
         }
         
         boolean success = false;
