@@ -109,7 +109,7 @@ public class FlowRunEntity extends HierarchicalTimelineEntity {
     addInfo(FLOW_RUN_ID_INFO_KEY, runId);
   }
 
-  public long getStartTime() {
+  public Long getStartTime() {
     return getCreatedTime();
   }
 

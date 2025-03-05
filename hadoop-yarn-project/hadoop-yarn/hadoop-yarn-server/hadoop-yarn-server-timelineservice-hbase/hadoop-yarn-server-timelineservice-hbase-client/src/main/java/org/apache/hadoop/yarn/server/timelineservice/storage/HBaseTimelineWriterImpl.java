@@ -690,7 +690,9 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
         conn.close();
       }
     }
-    storageMonitor.stop();
+    if (storageMonitor != null) {
+      storageMonitor.stop();
+    }
     super.serviceStop();
   }
 

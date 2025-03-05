@@ -160,7 +160,6 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
         url -> {
           HttpURLConnection conn;
           try {
-            HttpURLConnection.setFollowRedirects(false);
             conn =  (HttpURLConnection) url.openConnection();
           } catch (Exception e) {
             throw new IOException(e);
