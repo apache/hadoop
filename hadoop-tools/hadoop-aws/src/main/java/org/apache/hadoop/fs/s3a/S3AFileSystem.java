@@ -152,6 +152,7 @@ import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.fs.s3a.impl.streams.StreamFactoryRequirements;
 import org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration;
+import org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -2177,11 +2178,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         committerIntegration.createTracker(path, key, outputStreamStatistics);
     String destKey = putTracker.getDestKey();
 
+    EnumSet<WriteObjectFlags> putFlags = options.writeObjectFlags();
+    if (conditionalPut) {
+      putFlags.add(WriteObjectFlags.ConditionalOverwrite);
+    }
+
     // put options are derived from the option builder.
     final PutObjectOptions putOptions =
         new PutObjectOptions(null,
             options.getHeaders(),
-            options.writeObjectFlags(),
+            putFlags,
             options.etag());
 
     validateOutputStreamConfiguration(path, getConf());

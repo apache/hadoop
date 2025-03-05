@@ -108,6 +108,12 @@ public enum Statistic {
       "Filesystem close",
       TYPE_DURATION),
 
+  CONDITIONAL_CREATE(StoreStatisticNames.CONDITIONAL_CREATE,
+          "Count of successful conditional create operations.",
+          TYPE_COUNTER),
+  CONDITIONAL_CREATE_FAILED(StoreStatisticNames.CONDITIONAL_CREATE_FAILED,
+          "Count of failed conditional create operations.",
+          TYPE_COUNTER),
   DIRECTORIES_CREATED("directories_created",
       "Total number of directories created through the object store.",
       TYPE_COUNTER),
@@ -136,12 +142,6 @@ public enum Statistic {
       "Total number of fake directory deletes submitted to object store.",
       TYPE_COUNTER),
   IGNORED_ERRORS("ignored_errors", "Errors caught and ignored",
-      TYPE_COUNTER),
-  CONDITIONAL_CREATE(StoreStatisticNames.CONDITIONAL_CREATE,
-      "Count of successful conditional create operations.",
-      TYPE_COUNTER),
-  CONDITIONAL_CREATE_FAILED(StoreStatisticNames.CONDITIONAL_CREATE_FAILED,
-      "Count of failed conditional create operations.",
       TYPE_COUNTER),
 
   INVOCATION_ABORT(
