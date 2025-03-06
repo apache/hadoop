@@ -440,7 +440,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       for (String dir : allSubDirNameForDataSetLock) {
         lockManager.addLock(LockLevel.DIR, bp, ref.getVolume().getStorageID(), dir);
       }
-      LOG.info("Added DIR lock for bpid:{}, volume storageid:{}.", bp, ref.getVolume().getStorageID());
+      LOG.info("Added DIR lock for bpid:{}, volume storageid:{}.", bp,
+          ref.getVolume().getStorageID());
     }
     DatanodeStorage dnStorage = storageMap.get(sd.getStorageUuid());
     if (dnStorage != null) {
