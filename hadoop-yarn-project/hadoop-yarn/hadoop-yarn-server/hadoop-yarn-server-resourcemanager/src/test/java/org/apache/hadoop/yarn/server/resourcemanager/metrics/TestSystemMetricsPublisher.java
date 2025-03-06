@@ -27,10 +27,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -96,7 +97,7 @@ public class TestSystemMetricsPublisher {
     this.rmTimelineServerV1PublisherInterval = rmTimelineServerV1PublisherInterval;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
@@ -123,7 +124,7 @@ public class TestSystemMetricsPublisher {
     metricsPublisher.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (metricsPublisher != null) {
       metricsPublisher.stop();
@@ -133,7 +134,8 @@ public class TestSystemMetricsPublisher {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testPublishApplicationMetrics() throws Exception {
     long stateUpdateTimeStamp = System.currentTimeMillis();
     for (int i = 1; i <= 2; ++i) {
@@ -178,92 +180,92 @@ public class TestSystemMetricsPublisher {
         // ensure Five events are both published before leaving the loop
       } while (entity == null || entity.getEvents().size() < 6);
       // verify all the fields
-      Assert.assertEquals(ApplicationMetricsConstants.ENTITY_TYPE,
+      Assertions.assertEquals(ApplicationMetricsConstants.ENTITY_TYPE,
           entity.getEntityType());
-      Assert
+      Assertions
           .assertEquals(app.getApplicationId().toString(), entity.getEntityId());
-      Assert
+      Assertions
           .assertEquals(
               app.getName(),
               entity.getOtherInfo().get(
                   ApplicationMetricsConstants.NAME_ENTITY_INFO));
       if (i != 1) {
-        Assert.assertEquals(
+        Assertions.assertEquals(
             app.getQueue(),
             entity.getOtherInfo().get(
                 ApplicationMetricsConstants.QUEUE_ENTITY_INFO));
       }
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           app.getApplicationSubmissionContext().getUnmanagedAM(),
           entity.getOtherInfo().get(
               ApplicationMetricsConstants.UNMANAGED_APPLICATION_ENTITY_INFO));
 
       if (i != 1) {
-        Assert.assertEquals(
+        Assertions.assertEquals(
             app.getApplicationSubmissionContext().getPriority().getPriority(),
             entity.getOtherInfo().get(
                 ApplicationMetricsConstants.APPLICATION_PRIORITY_INFO));
       }
 
-      Assert.assertEquals(app.getAmNodeLabelExpression(), entity.getOtherInfo()
+      Assertions.assertEquals(app.getAmNodeLabelExpression(), entity.getOtherInfo()
           .get(ApplicationMetricsConstants.AM_NODE_LABEL_EXPRESSION));
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           app.getApplicationSubmissionContext().getNodeLabelExpression(),
           entity.getOtherInfo()
               .get(ApplicationMetricsConstants.APP_NODE_LABEL_EXPRESSION));
 
-      Assert
+      Assertions
           .assertEquals(
               app.getUser(),
               entity.getOtherInfo().get(
                   ApplicationMetricsConstants.USER_ENTITY_INFO));
-      Assert
+      Assertions
           .assertEquals(
               app.getApplicationType(),
               entity.getOtherInfo().get(
                   ApplicationMetricsConstants.TYPE_ENTITY_INFO));
-      Assert.assertEquals(app.getSubmitTime(),
+      Assertions.assertEquals(app.getSubmitTime(),
           entity.getOtherInfo().get(
               ApplicationMetricsConstants.SUBMITTED_TIME_ENTITY_INFO));
-      Assert.assertTrue(verifyAppTags(app.getApplicationTags(),
+      Assertions.assertTrue(verifyAppTags(app.getApplicationTags(),
           entity.getOtherInfo()));
       if (i == 1) {
-        Assert.assertEquals("uers1,user2",
+        Assertions.assertEquals("uers1,user2",
             entity.getOtherInfo().get(
                 ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO));
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
             app.getApplicationSubmissionContext().getAMContainerSpec()
                 .getCommands(),
             entity.getOtherInfo()
                 .get(ApplicationMetricsConstants.AM_CONTAINER_LAUNCH_COMMAND));
       } else {
-        Assert.assertEquals(
+        Assertions.assertEquals(
             "",
             entity.getOtherInfo().get(
                 ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO));
-        Assert.assertEquals(
+        Assertions.assertEquals(
             app.getRMAppMetrics().getMemorySeconds(),
             Long.parseLong(entity.getOtherInfo()
                 .get(ApplicationMetricsConstants.APP_MEM_METRICS).toString()));
-        Assert.assertEquals(
+        Assertions.assertEquals(
             app.getRMAppMetrics().getVcoreSeconds(),
             Long.parseLong(entity.getOtherInfo()
                 .get(ApplicationMetricsConstants.APP_CPU_METRICS).toString()));
-        Assert.assertEquals(
+        Assertions.assertEquals(
             app.getRMAppMetrics().getPreemptedMemorySeconds(),
             Long.parseLong(entity.getOtherInfo()
                 .get(ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS)
                 .toString()));
-        Assert.assertEquals(
+        Assertions.assertEquals(
             app.getRMAppMetrics().getPreemptedVcoreSeconds(),
             Long.parseLong(entity.getOtherInfo()
                 .get(ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS)
                 .toString()));
       }
-      Assert.assertEquals("context", entity.getOtherInfo()
+      Assertions.assertEquals("context", entity.getOtherInfo()
           .get(ApplicationMetricsConstants.YARN_APP_CALLER_CONTEXT));
       boolean hasCreatedEvent = false;
       boolean hasLaunchedEvent = false;
@@ -275,35 +277,35 @@ public class TestSystemMetricsPublisher {
         if (event.getEventType().equals(
             ApplicationMetricsConstants.CREATED_EVENT_TYPE)) {
           hasCreatedEvent = true;
-          Assert.assertEquals(app.getStartTime(), event.getTimestamp());
+          Assertions.assertEquals(app.getStartTime(), event.getTimestamp());
         } else if (event.getEventType().equals(
             ApplicationMetricsConstants.LAUNCHED_EVENT_TYPE)) {
           hasLaunchedEvent = true;
-          Assert.assertEquals(app.getLaunchTime(), event.getTimestamp());
+          Assertions.assertEquals(app.getLaunchTime(), event.getTimestamp());
         } else if (event.getEventType().equals(
             ApplicationMetricsConstants.FINISHED_EVENT_TYPE)) {
           hasFinishedEvent = true;
-          Assert.assertEquals(app.getFinishTime(), event.getTimestamp());
-          Assert.assertEquals(
+          Assertions.assertEquals(app.getFinishTime(), event.getTimestamp());
+          Assertions.assertEquals(
               app.getDiagnostics().toString(),
               event.getEventInfo().get(
                   ApplicationMetricsConstants.DIAGNOSTICS_INFO_EVENT_INFO));
-          Assert.assertEquals(
+          Assertions.assertEquals(
               app.getFinalApplicationStatus().toString(),
               event.getEventInfo().get(
                   ApplicationMetricsConstants.FINAL_STATUS_EVENT_INFO));
-          Assert.assertEquals(YarnApplicationState.FINISHED.toString(), event
+          Assertions.assertEquals(YarnApplicationState.FINISHED.toString(), event
               .getEventInfo().get(ApplicationMetricsConstants.STATE_EVENT_INFO));
         } else if (event.getEventType().equals(
             ApplicationMetricsConstants.UPDATED_EVENT_TYPE)) {
           hasUpdatedEvent = true;
-          Assert.assertEquals(4L, event.getTimestamp());
+          Assertions.assertEquals(4L, event.getTimestamp());
           if (1 == i) {
-            Assert.assertEquals(
+            Assertions.assertEquals(
                 1,
                 event.getEventInfo().get(
                     ApplicationMetricsConstants.APPLICATION_PRIORITY_INFO));
-            Assert.assertEquals(
+            Assertions.assertEquals(
                 "new test queue",
                 event.getEventInfo().get(
                     ApplicationMetricsConstants.QUEUE_ENTITY_INFO));
@@ -311,27 +313,28 @@ public class TestSystemMetricsPublisher {
         } else if (event.getEventType().equals(
             ApplicationMetricsConstants.ACLS_UPDATED_EVENT_TYPE)) {
           hasACLsUpdatedEvent = true;
-          Assert.assertEquals(4L, event.getTimestamp());
+          Assertions.assertEquals(4L, event.getTimestamp());
         } else if (event.getEventType().equals(
               ApplicationMetricsConstants.STATE_UPDATED_EVENT_TYPE)) {
           hasStateUpdateEvent = true;
           assertThat(event.getTimestamp()).isEqualTo(stateUpdateTimeStamp);
-          Assert.assertEquals(YarnApplicationState.RUNNING.toString(), event
+          Assertions.assertEquals(YarnApplicationState.RUNNING.toString(), event
               .getEventInfo().get(
                    ApplicationMetricsConstants.STATE_EVENT_INFO));
         }
       }
       // Do assertTrue verification separately for easier debug
-      Assert.assertTrue(hasCreatedEvent);
-      Assert.assertTrue(hasLaunchedEvent);
-      Assert.assertTrue(hasFinishedEvent);
-      Assert.assertTrue(hasACLsUpdatedEvent);
-      Assert.assertTrue(hasUpdatedEvent);
-      Assert.assertTrue(hasStateUpdateEvent);
+      Assertions.assertTrue(hasCreatedEvent);
+      Assertions.assertTrue(hasLaunchedEvent);
+      Assertions.assertTrue(hasFinishedEvent);
+      Assertions.assertTrue(hasACLsUpdatedEvent);
+      Assertions.assertTrue(hasUpdatedEvent);
+      Assertions.assertTrue(hasStateUpdateEvent);
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testPublishAppAttemptMetricsForUnmanagedAM() throws Exception {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1);
@@ -351,7 +354,8 @@ public class TestSystemMetricsPublisher {
     } while (entity == null || entity.getEvents().size() < 2);
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testPublishAppAttemptMetrics() throws Exception {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1);
@@ -370,10 +374,10 @@ public class TestSystemMetricsPublisher {
       // ensure two events are both published before leaving the loop
     } while (entity == null || entity.getEvents().size() < 2);
     // verify all the fields
-    Assert.assertEquals(AppAttemptMetricsConstants.ENTITY_TYPE,
+    Assertions.assertEquals(AppAttemptMetricsConstants.ENTITY_TYPE,
         entity.getEntityType());
-    Assert.assertEquals(appAttemptId.toString(), entity.getEntityId());
-    Assert.assertEquals(
+    Assertions.assertEquals(appAttemptId.toString(), entity.getEntityId());
+    Assertions.assertEquals(
         appAttemptId.getApplicationId().toString(),
         entity.getPrimaryFilters()
             .get(AppAttemptMetricsConstants.PARENT_PRIMARY_FILTER).iterator()
@@ -384,42 +388,43 @@ public class TestSystemMetricsPublisher {
       if (event.getEventType().equals(
           AppAttemptMetricsConstants.REGISTERED_EVENT_TYPE)) {
         hasRegisteredEvent = true;
-        Assert.assertEquals(appAttempt.getHost(),
+        Assertions.assertEquals(appAttempt.getHost(),
             event.getEventInfo()
                 .get(AppAttemptMetricsConstants.HOST_INFO));
-        Assert
+        Assertions
             .assertEquals(appAttempt.getRpcPort(),
                 event.getEventInfo().get(
                     AppAttemptMetricsConstants.RPC_PORT_INFO));
-        Assert.assertEquals(
+        Assertions.assertEquals(
             appAttempt.getMasterContainer().getId().toString(),
             event.getEventInfo().get(
                 AppAttemptMetricsConstants.MASTER_CONTAINER_INFO));
       } else if (event.getEventType().equals(
           AppAttemptMetricsConstants.FINISHED_EVENT_TYPE)) {
         hasFinishedEvent = true;
-        Assert.assertEquals(appAttempt.getDiagnostics(), event.getEventInfo()
+        Assertions.assertEquals(appAttempt.getDiagnostics(), event.getEventInfo()
             .get(AppAttemptMetricsConstants.DIAGNOSTICS_INFO));
-        Assert.assertEquals(appAttempt.getTrackingUrl(), event.getEventInfo()
+        Assertions.assertEquals(appAttempt.getTrackingUrl(), event.getEventInfo()
             .get(AppAttemptMetricsConstants.TRACKING_URL_INFO));
-        Assert.assertEquals(
+        Assertions.assertEquals(
             appAttempt.getOriginalTrackingUrl(),
             event.getEventInfo().get(
                 AppAttemptMetricsConstants.ORIGINAL_TRACKING_URL_INFO));
-        Assert.assertEquals(
+        Assertions.assertEquals(
             FinalApplicationStatus.UNDEFINED.toString(),
             event.getEventInfo().get(
                 AppAttemptMetricsConstants.FINAL_STATUS_INFO));
-        Assert.assertEquals(
+        Assertions.assertEquals(
             YarnApplicationAttemptState.FINISHED.toString(),
             event.getEventInfo().get(
                 AppAttemptMetricsConstants.STATE_INFO));
       }
     }
-    Assert.assertTrue(hasRegisteredEvent && hasFinishedEvent);
+    Assertions.assertTrue(hasRegisteredEvent && hasFinishedEvent);
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testPublishHostPortInfoOnContainerFinished() throws Exception {
     ContainerId containerId =
         ContainerId.newContainerId(ApplicationAttemptId.newInstance(
@@ -433,23 +438,24 @@ public class TestSystemMetricsPublisher {
               ContainerMetricsConstants.ENTITY_TYPE,
               EnumSet.allOf(Field.class));
     } while (entity == null || entity.getEvents().size() < 1);
-    Assert.assertNotNull(entity.getOtherInfo());
-    Assert.assertEquals(2, entity.getOtherInfo().size());
-    Assert.assertNotNull(entity.getOtherInfo().get(
+    Assertions.assertNotNull(entity.getOtherInfo());
+    Assertions.assertEquals(2, entity.getOtherInfo().size());
+    Assertions.assertNotNull(entity.getOtherInfo().get(
         ContainerMetricsConstants.ALLOCATED_HOST_INFO));
-    Assert.assertNotNull(entity.getOtherInfo().get(
+    Assertions.assertNotNull(entity.getOtherInfo().get(
         ContainerMetricsConstants.ALLOCATED_PORT_INFO));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         container.getAllocatedNode().getHost(),
         entity.getOtherInfo().get(
             ContainerMetricsConstants.ALLOCATED_HOST_INFO));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         container.getAllocatedNode().getPort(),
         entity.getOtherInfo().get(
             ContainerMetricsConstants.ALLOCATED_PORT_INFO));
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testPublishContainerMetrics() throws Exception {
     ContainerId containerId =
         ContainerId.newContainerId(ApplicationAttemptId.newInstance(
@@ -466,33 +472,33 @@ public class TestSystemMetricsPublisher {
       // ensure two events are both published before leaving the loop
     } while (entity == null || entity.getEvents().size() < 2);
     // verify all the fields
-    Assert.assertEquals(ContainerMetricsConstants.ENTITY_TYPE,
+    Assertions.assertEquals(ContainerMetricsConstants.ENTITY_TYPE,
         entity.getEntityType());
-    Assert.assertEquals(containerId.toString(), entity.getEntityId());
-    Assert.assertEquals(
+    Assertions.assertEquals(containerId.toString(), entity.getEntityId());
+    Assertions.assertEquals(
         containerId.getApplicationAttemptId().toString(),
         entity.getPrimaryFilters()
             .get(ContainerMetricsConstants.PARENT_PRIMARIY_FILTER).iterator()
             .next());
-    Assert.assertEquals(
+    Assertions.assertEquals(
         container.getAllocatedNode().getHost(),
         entity.getOtherInfo().get(
             ContainerMetricsConstants.ALLOCATED_HOST_INFO));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         container.getAllocatedNode().getPort(),
         entity.getOtherInfo().get(
             ContainerMetricsConstants.ALLOCATED_PORT_INFO));
-    Assert.assertEquals(container.getAllocatedResource().getMemorySize(),
+    Assertions.assertEquals(container.getAllocatedResource().getMemorySize(),
         // KeyValueBasedTimelineStore could cast long to integer, need make sure
         // variables for compare have same type.
         ((Integer) entity.getOtherInfo().get(
             ContainerMetricsConstants.ALLOCATED_MEMORY_INFO))
             .longValue());
-    Assert.assertEquals(
+    Assertions.assertEquals(
         container.getAllocatedResource().getVirtualCores(),
         entity.getOtherInfo().get(
             ContainerMetricsConstants.ALLOCATED_VCORE_INFO));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         container.getAllocatedPriority().getPriority(),
         entity.getOtherInfo().get(
             ContainerMetricsConstants.ALLOCATED_PRIORITY_INFO));
@@ -502,24 +508,24 @@ public class TestSystemMetricsPublisher {
       if (event.getEventType().equals(
           ContainerMetricsConstants.CREATED_EVENT_TYPE)) {
         hasCreatedEvent = true;
-        Assert.assertEquals(container.getCreationTime(), event.getTimestamp());
+        Assertions.assertEquals(container.getCreationTime(), event.getTimestamp());
       } else if (event.getEventType().equals(
           ContainerMetricsConstants.FINISHED_EVENT_TYPE)) {
         hasFinishedEvent = true;
-        Assert.assertEquals(container.getFinishTime(), event.getTimestamp());
-        Assert.assertEquals(
+        Assertions.assertEquals(container.getFinishTime(), event.getTimestamp());
+        Assertions.assertEquals(
             container.getDiagnosticsInfo(),
             event.getEventInfo().get(
                 ContainerMetricsConstants.DIAGNOSTICS_INFO));
-        Assert.assertEquals(
+        Assertions.assertEquals(
             container.getContainerExitStatus(),
             event.getEventInfo().get(
                 ContainerMetricsConstants.EXIT_STATUS_INFO));
-        Assert.assertEquals(container.getContainerState().toString(), event
+        Assertions.assertEquals(container.getContainerState().toString(), event
             .getEventInfo().get(ContainerMetricsConstants.STATE_INFO));
       }
     }
-    Assert.assertTrue(hasCreatedEvent && hasFinishedEvent);
+    Assertions.assertTrue(hasCreatedEvent && hasFinishedEvent);
   }
 
   private static RMApp createRMApp(ApplicationId appId) {

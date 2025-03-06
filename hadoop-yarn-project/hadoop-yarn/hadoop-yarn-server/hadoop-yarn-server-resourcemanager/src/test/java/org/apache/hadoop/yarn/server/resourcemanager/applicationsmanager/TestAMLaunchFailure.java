@@ -24,7 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,9 +53,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 */
 
 /* a test case that tests the launch failure of a AM */
@@ -179,7 +179,7 @@ public class TestAMLaunchFailure {
 //  }
 //
 //
-//  @Before
+//  @BeforeEach
 //  public void setUp() {
 //    context = new RMContextImpl(new MemStore());
 //    Configuration conf = new Configuration();
@@ -202,7 +202,7 @@ public class TestAMLaunchFailure {
 //    asmImpl.start();
 //  }
 //
-//  @After
+//  @AfterEach
 //  public void tearDown() {
 //    asmImpl.stop();
 //  }
@@ -229,6 +229,6 @@ public class TestAMLaunchFailure {
 //      Thread.sleep(200);
 //      application = context.getApplications().get(appID);
 //    }
-//    Assert.assertEquals(ApplicationState.FAILED, application.getState());
+//    Assertions.assertEquals(ApplicationState.FAILED, application.getState());
 //  }
 }
