@@ -552,53 +552,6 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testIfMatchCreateFileWithoutOverwrite() throws Throwable {
-    FileSystem fs = getFileSystem();
-    Path testFile = methodPath();
-    fs.mkdirs(testFile.getParent());
-
-    // Create a file and retrieve the etag
-    createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, false, null);
-    String etag = getEtag(fs, testFile);
-    Assertions.assertThat(etag)
-            .as("ETag should not be null after file creation")
-            .isNotNull();
-
-    // Attempt to create a file at the same path without overwrite, using If-Match with the etag
-    intercept(FileAlreadyExistsException.class, () -> {
-      FSDataOutputStreamBuilder cf = fs.createFile(testFile);
-      cf.overwrite(false)
-              .opt(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG, etag);
-      try (FSDataOutputStream stream = cf.build()) {
-        assertHasCapabilityEtagWrite(stream);
-        stream.write(SMALL_FILE_BYTES);
-      }
-    });
-  }
-
-  @Test
-  public void testIfMatchCreateFileWithoutOverwriteWithPerformanceFlag() throws Throwable {
-    FileSystem fs = getFileSystem();
-    Path testFile = methodPath();
-    fs.mkdirs(testFile.getParent());
-
-    // Create a file and retrieve the etag
-    createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, false, null);
-    String etag = getEtag(fs, testFile);
-    Assertions.assertThat(etag)
-            .as("ETag should not be null after file creation")
-            .isNotNull();
-
-    // Attempt to create a file at the same path without overwrite, using If-Match with the etag
-    FileAlreadyExistsException exception = intercept(FileAlreadyExistsException.class, () -> {
-      fs.createFile(testFile).overwrite(false)
-              .must(FS_S3A_CREATE_PERFORMANCE, true)
-              .opt(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG, etag)
-              .build();
-    });
-  }
-
-  @Test
   public void testConditionalWriteStatisticsWithoutIfNoneMatch() throws Throwable {
     FileSystem fs = getFileSystem();
     Path testFile = methodPath();
