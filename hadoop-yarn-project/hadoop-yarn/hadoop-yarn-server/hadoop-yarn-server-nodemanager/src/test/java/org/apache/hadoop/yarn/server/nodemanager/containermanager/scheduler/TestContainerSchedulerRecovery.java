@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,9 +37,9 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService
         .RecoveredContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -98,7 +98,7 @@ public class TestContainerSchedulerRecovery {
     spy = new ContainerScheduler(context, dispatcher, metrics, 0);
   }
 
-  @Before public void setUp() throws Exception {
+  @BeforeEach public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
     setupContainerMonitor();
     when(container.getContainerId()).thenReturn(containerId);
@@ -109,7 +109,7 @@ public class TestContainerSchedulerRecovery {
     when(containerId.getContainerId()).thenReturn(123L);
   }
 
-  @After public void tearDown() {
+  @AfterEach public void tearDown() {
   }
 
   /*Test if a container is recovered as QUEUED, GUARANTEED,

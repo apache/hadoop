@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router.async;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.ContentSummary;
@@ -85,7 +86,6 @@ import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncU
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncForEach;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncReturn;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncTry;
-import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.getCompletableFuture;
 
 /**
  * Module that implements all the async RPC calls in {@link ClientProtocol} in the
@@ -1055,11 +1055,11 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
    * @param src the source path
    * @return true if the path is directory and is supposed to be present in all
    *         subclusters else false in all other scenarios.
-   * @throws IOException if unable to get the file status.
    */
+  @VisibleForTesting
   @Override
-  public boolean isMultiDestDirectory(String src) throws IOException {
-    try {
+  public boolean isMultiDestDirectory(String src) {
+    asyncTry(() -> {
       if (rpcServer.isPathAll(src)) {
         List<RemoteLocation> locations;
         locations = rpcServer.getLocationsForPath(src, false, false);
@@ -1067,23 +1067,23 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
             new Class<?>[] {String.class}, new RemoteParam());
         rpcClient.invokeSequential(locations,
             method, HdfsFileStatus.class, null);
-        CompletableFuture<Object> completableFuture = getCompletableFuture();
-        completableFuture = completableFuture.thenApply(o -> {
-          HdfsFileStatus fileStatus = (HdfsFileStatus) o;
+        asyncApply((ApplyFunction<HdfsFileStatus, Boolean>) fileStatus -> {
           if (fileStatus != null) {
             return fileStatus.isDirectory();
           } else {
             LOG.debug("The destination {} doesn't exist.", src);
+            return false;
           }
-          return false;
         });
-        asyncCompleteWith(completableFuture);
-        return asyncReturn(Boolean.class);
+      } else {
+        asyncComplete(false);
       }
-    } catch (UnresolvedPathException e) {
+    });
+    asyncCatch((CatchFunction<Object, UnresolvedPathException>) (o, e) -> {
       LOG.debug("The destination {} is a symlink.", src);
-    }
-    asyncCompleteWith(CompletableFuture.completedFuture(false));
-    return asyncReturn(Boolean.class);
+      return false;
+    }, UnresolvedPathException.class);
+
+    return asyncReturn(boolean.class);
   }
 }

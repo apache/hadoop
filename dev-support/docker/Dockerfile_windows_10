@@ -147,6 +147,11 @@ RUN setx PATH "%PATH%;C:\Maven\apache-maven-3.8.8\bin"
 RUN setx PATH "%PATH%;C:\CMake\cmake-3.19.0-win64-x64\bin"
 RUN setx PATH "%PATH%;C:\ZStd"
 RUN setx PATH "%PATH%;C:\Program Files\Git\usr\bin"
+RUN setx PATH "%PATH%;C:\Python"
+
+# The mvnsite module runs a bash script and somewhere down in the invocation, it resorts to call
+# /usr/bin/env python3. Thus, we need to create the following symbolic link to satisfy this need.
+RUN powershell New-Item -ItemType SymbolicLink -Path "C:\Python\python3" -Target "C:\Python\python.exe"
 
 # We get strange Javadoc errors without this.
 RUN setx classpath ""

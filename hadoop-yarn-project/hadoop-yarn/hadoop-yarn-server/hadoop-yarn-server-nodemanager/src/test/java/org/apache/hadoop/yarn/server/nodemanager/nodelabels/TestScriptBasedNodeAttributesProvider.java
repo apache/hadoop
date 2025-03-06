@@ -26,10 +26,9 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -39,6 +38,9 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.concurrent.TimeoutException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test cases for script based node attributes provider.
@@ -54,13 +56,13 @@ public class TestScriptBasedNodeAttributesProvider {
 
   private ScriptBasedNodeAttributesProvider nodeAttributesProvider;
 
-  @Before
+  @BeforeEach
   public void setup() {
     testRootDir.mkdirs();
     nodeAttributesProvider = new ScriptBasedNodeAttributesProvider();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (testRootDir.exists()) {
       FileContext.getLocalFSFileContext()
@@ -96,7 +98,7 @@ public class TestScriptBasedNodeAttributesProvider {
       pw.flush();
     } catch (Exception e) {
       e.printStackTrace();
-      Assert.fail();
+      fail();
     } finally {
       if (null != pw) {
         pw.close();
@@ -121,7 +123,7 @@ public class TestScriptBasedNodeAttributesProvider {
           () -> nodeAttributesProvider.getDescriptors().size() == 3,
           500, 3000);
     } catch (TimeoutException e) {
-      Assert.fail("Expecting node attributes size is 3, but got "
+      fail("Expecting node attributes size is 3, but got "
           + nodeAttributesProvider.getDescriptors().size());
     }
 
@@ -131,19 +133,19 @@ public class TestScriptBasedNodeAttributesProvider {
       NodeAttribute att = it.next();
       switch (att.getAttributeKey().getAttributeName()) {
       case "host":
-        Assert.assertEquals(NodeAttributeType.STRING, att.getAttributeType());
-        Assert.assertEquals("host1234", att.getAttributeValue());
+        assertEquals(NodeAttributeType.STRING, att.getAttributeType());
+        assertEquals("host1234", att.getAttributeValue());
         break;
       case "os":
-        Assert.assertEquals(NodeAttributeType.STRING, att.getAttributeType());
-        Assert.assertEquals("redhat_6_3", att.getAttributeValue());
+        assertEquals(NodeAttributeType.STRING, att.getAttributeType());
+        assertEquals("redhat_6_3", att.getAttributeValue());
         break;
       case "ip":
-        Assert.assertEquals(NodeAttributeType.STRING, att.getAttributeType());
-        Assert.assertEquals("10.0.0.1", att.getAttributeValue());
+        assertEquals(NodeAttributeType.STRING, att.getAttributeType());
+        assertEquals("10.0.0.1", att.getAttributeValue());
         break;
       default:
-        Assert.fail("Unexpected attribute name "
+        fail("Unexpected attribute name "
             + att.getAttributeKey().getAttributeName());
         break;
       }
@@ -164,10 +166,10 @@ public class TestScriptBasedNodeAttributesProvider {
       GenericTestUtils.waitFor(
           () -> nodeAttributesProvider.getDescriptors().size() == 1,
           500, 3000);
-      Assert.fail("This test should timeout because the provide is unable"
+      fail("This test should timeout because the provide is unable"
           + " to parse any attributes from the script output.");
     } catch (TimeoutException e) {
-      Assert.assertEquals(0, nodeAttributesProvider
+      assertEquals(0, nodeAttributesProvider
           .getDescriptors().size());
     }
   }
@@ -189,10 +191,10 @@ public class TestScriptBasedNodeAttributesProvider {
           .waitFor(() -> nodeAttributesProvider
                   .getDescriptors().size() == 1,
               500, 3000);
-      Assert.fail("This test should timeout because the provide is unable"
+      fail("This test should timeout because the provide is unable"
           + " to parse any attributes from the script output.");
     } catch (TimeoutException e) {
-      Assert.assertEquals(0, nodeAttributesProvider
+      assertEquals(0, nodeAttributesProvider
           .getDescriptors().size());
     }
   }
@@ -213,7 +215,7 @@ public class TestScriptBasedNodeAttributesProvider {
       Set<NodeAttribute> attributes =
           nodeAttributesProvider.getDescriptors();
       if (attributes != null) {
-        Assert.assertEquals(1, attributes.size());
+        assertEquals(1, attributes.size());
         resultSet.add(attributes.iterator().next().getAttributeValue());
         return resultSet.size() > 1;
       } else {
@@ -241,10 +243,10 @@ public class TestScriptBasedNodeAttributesProvider {
           .waitFor(() -> nodeAttributesProvider
                   .getDescriptors().size() == 3,
               500, 3000);
-      Assert.fail("This test should timeout because the provide is unable"
+      fail("This test should timeout because the provide is unable"
           + " to parse any attributes from the script output.");
     } catch (TimeoutException e) {
-      Assert.assertEquals(0, nodeAttributesProvider
+      assertEquals(0, nodeAttributesProvider
           .getDescriptors().size());
     }
   }

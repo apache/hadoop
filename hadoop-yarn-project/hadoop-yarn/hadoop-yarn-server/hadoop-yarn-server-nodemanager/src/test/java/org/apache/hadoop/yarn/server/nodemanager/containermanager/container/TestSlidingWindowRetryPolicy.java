@@ -21,9 +21,12 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
 import org.apache.hadoop.yarn.api.records.ContainerRetryPolicy;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for {@link SlidingWindowRetryPolicy}.
@@ -33,7 +36,7 @@ public class TestSlidingWindowRetryPolicy {
   private ControlledClock clock;
   private SlidingWindowRetryPolicy retryPolicy;
 
-  @Before
+  @BeforeEach
   public void setup() {
     clock = new ControlledClock();
     retryPolicy = new SlidingWindowRetryPolicy(clock);
@@ -45,10 +48,9 @@ public class TestSlidingWindowRetryPolicy {
         ContainerRetryContext.NEVER_RETRY_CONTEXT;
     SlidingWindowRetryPolicy.RetryContext windowContext = new
         SlidingWindowRetryPolicy.RetryContext(retryContext);
-    Assert.assertFalse("never retry", retryPolicy.shouldRetry(windowContext,
-        12));
-    Assert.assertEquals("remaining retries", 0,
-        windowContext.getRemainingRetries());
+    assertFalse(retryPolicy.shouldRetry(windowContext,
+        12), "never retry");
+    assertEquals(0, windowContext.getRemainingRetries(), "remaining retries");
   }
 
   @Test
@@ -58,11 +60,10 @@ public class TestSlidingWindowRetryPolicy {
         0, 10);
     SlidingWindowRetryPolicy.RetryContext windowContext = new
         SlidingWindowRetryPolicy.RetryContext(retryContext);
-    Assert.assertTrue("always retry", retryPolicy.shouldRetry(windowContext,
-        12));
-    Assert.assertEquals("remaining retries",
-        ContainerRetryContext.RETRY_FOREVER,
-        windowContext.getRemainingRetries());
+    assertTrue(retryPolicy.shouldRetry(windowContext,
+        12), "always retry");
+    assertEquals(ContainerRetryContext.RETRY_FOREVER,
+        windowContext.getRemainingRetries(), "remaining retries");
   }
 
   @Test
@@ -71,31 +72,31 @@ public class TestSlidingWindowRetryPolicy {
         .newInstance(ContainerRetryPolicy.RETRY_ON_ALL_ERRORS, null, 1, 0, 10);
     SlidingWindowRetryPolicy.RetryContext windowRetryContext =
         new SlidingWindowRetryPolicy.RetryContext(retryContext);
-    Assert.assertTrue("retry 1",
-        retryPolicy.shouldRetry(windowRetryContext, 12));
+    assertTrue(
+        retryPolicy.shouldRetry(windowRetryContext, 12), "retry 1");
     retryPolicy.updateRetryContext(windowRetryContext);
-    Assert.assertEquals("remaining retries", 1,
-        windowRetryContext.getRemainingRetries());
+    assertEquals(1,
+        windowRetryContext.getRemainingRetries(), "remaining retries");
 
     clock.setTime(20);
-    Assert.assertTrue("retry 2",
-        retryPolicy.shouldRetry(windowRetryContext, 12));
+    assertTrue(
+        retryPolicy.shouldRetry(windowRetryContext, 12), "retry 2");
     retryPolicy.updateRetryContext(windowRetryContext);
-    Assert.assertEquals("remaining retries", 1,
-        windowRetryContext.getRemainingRetries());
+    assertEquals(1,
+        windowRetryContext.getRemainingRetries(), "remaining retries");
 
     clock.setTime(40);
-    Assert.assertTrue("retry 3",
-        retryPolicy.shouldRetry(windowRetryContext, 12));
+    assertTrue(
+        retryPolicy.shouldRetry(windowRetryContext, 12), "retry 3");
     retryPolicy.updateRetryContext(windowRetryContext);
-    Assert.assertEquals("remaining retries", 1,
-        windowRetryContext.getRemainingRetries());
+    assertEquals(1,
+        windowRetryContext.getRemainingRetries(), "remaining retries");
 
     clock.setTime(45);
-    Assert.assertFalse("retry failed",
-        retryPolicy.shouldRetry(windowRetryContext, 12));
+    assertFalse(
+        retryPolicy.shouldRetry(windowRetryContext, 12), "retry failed");
     retryPolicy.updateRetryContext(windowRetryContext);
-    Assert.assertEquals("remaining retries", 0,
-        windowRetryContext.getRemainingRetries());
+    assertEquals(0,
+        windowRetryContext.getRemainingRetries(), "remaining retries");
   }
 }

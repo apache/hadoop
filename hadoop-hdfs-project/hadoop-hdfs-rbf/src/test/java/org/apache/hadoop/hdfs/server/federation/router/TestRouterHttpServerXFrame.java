@@ -23,12 +23,12 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
 
+import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 import static org.apache.hadoop.http.HttpServer2.XFrameOption.SAMEORIGIN;
 
@@ -39,7 +39,9 @@ public class TestRouterHttpServerXFrame {
 
   @Test
   public void testRouterXFrame() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = new RouterConfigBuilder()
+        .http()
+        .build();
     conf.setBoolean(DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED, true);
     conf.set(DFSConfigKeys.DFS_XFRAME_OPTION_VALUE, SAMEORIGIN.toString());
 

@@ -28,9 +28,11 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for the {@link AllocationBasedResourceUtilizationTracker} class.
@@ -39,7 +41,7 @@ public class TestAllocationBasedResourceUtilizationTracker {
 
   private ContainerScheduler mockContainerScheduler;
 
-  @Before
+  @BeforeEach
   public void setup() {
     mockContainerScheduler = mock(ContainerScheduler.class);
     ContainersMonitor containersMonitor =
@@ -67,9 +69,9 @@ public class TestAllocationBasedResourceUtilizationTracker {
     Container testContainer = mock(Container.class);
     when(testContainer.getResource()).thenReturn(Resource.newInstance(512, 4));
     for (int i = 0; i < 2; i++) {
-      Assert.assertTrue(tracker.hasResourcesAvailable(testContainer));
+      assertTrue(tracker.hasResourcesAvailable(testContainer));
       tracker.addContainerResources(testContainer);
     }
-    Assert.assertFalse(tracker.hasResourcesAvailable(testContainer));
+    assertFalse(tracker.hasResourcesAvailable(testContainer));
   }
 }

@@ -28,26 +28,23 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Unit tests for FederationCache.
  */
-@RunWith(Parameterized.class)
+
 public class TestFederationCache {
 
-  @Parameterized.Parameters
   public static Collection<Class[]> getParameters() {
     return Arrays.asList(new Class[][]{{FederationGuavaCache.class}, {FederationJCache.class},
         {FederationCaffeineCache.class}});
@@ -63,15 +60,16 @@ public class TestFederationCache {
   private FederationStateStoreTestUtil stateStoreTestUtil;
   private FederationStateStoreFacade facade;
 
-  public TestFederationCache(Class cacheClassName) {
+  private void initTestFederationCache(Class cacheClassName)
+      throws IOException, YarnException {
     conf = new Configuration();
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 1);
     conf.setClass(YarnConfiguration.FEDERATION_FACADE_CACHE_CLASS,
         cacheClassName, FederationCache.class);
     facade = FederationStateStoreFacade.getInstance(conf);
+    setUp();
   }
 
-  @Before
   public void setUp() throws IOException, YarnException {
     stateStore = new MemoryFederationStateStore();
     stateStore.init(conf);
@@ -83,14 +81,17 @@ public class TestFederationCache {
     stateStoreTestUtil.addPolicyConfigs(numQueues);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     stateStore.close();
     stateStore = null;
   }
 
-  @Test
-  public void testGetSubCluster() throws YarnException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetSubCluster(Class cacheClassName)
+      throws YarnException, IOException {
+    initTestFederationCache(cacheClassName);
     for (int i = 0; i < numSubClusters; i++) {
       SubClusterId subClusterId =
           SubClusterId.newInstance(FederationStateStoreTestUtil.SC_PREFIX + i);
@@ -100,8 +101,11 @@ public class TestFederationCache {
     }
   }
 
-  @Test
-  public void testGetPoliciesConfigurations() throws YarnException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetPoliciesConfigurations(Class cacheClassName)
+      throws YarnException, IOException {
+    initTestFederationCache(cacheClassName);
     Map<String, SubClusterPolicyConfiguration> queuePolicies =
         facade.getPoliciesConfigurations();
     for (String queue : queuePolicies.keySet()) {
@@ -111,8 +115,11 @@ public class TestFederationCache {
     }
   }
 
-  @Test
-  public void testGetHomeSubClusterForApp() throws YarnException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testGetHomeSubClusterForApp(Class cacheClassName)
+      throws YarnException, IOException {
+    initTestFederationCache(cacheClassName);
     for (int i = 0; i < numApps; i++) {
       ApplicationId appId = ApplicationId.newInstance(clusterTs, i);
       SubClusterId expectedSC = stateStoreTestUtil.queryApplicationHomeSC(appId);

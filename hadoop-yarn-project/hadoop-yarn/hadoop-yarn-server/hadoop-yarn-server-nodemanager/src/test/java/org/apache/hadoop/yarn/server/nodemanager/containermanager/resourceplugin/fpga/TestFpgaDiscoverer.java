@@ -19,7 +19,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -38,15 +40,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestFpgaDiscoverer {
-  @Rule
-  public ExpectedException expected = ExpectedException.none();
 
   private File fakeBinary;
   private IntelFpgaOpenclPlugin openclPlugin;
@@ -62,7 +60,7 @@ public class TestFpgaDiscoverer {
     new FileOutputStream(f).close();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws IOException {
     String folder = getTestParentFolder();
     File f = new File(folder);
@@ -79,7 +77,7 @@ public class TestFpgaDiscoverer {
     fpgaDiscoverer.setResourceHanderPlugin(openclPlugin);
   }
 
-  @After
+  @AfterEach
   public void afterTest() {
     if (fakeBinary != null) {
       fakeBinary.delete();
@@ -91,9 +89,9 @@ public class TestFpgaDiscoverer {
       throws YarnException {
     fpgaDiscoverer.initialize(conf);
 
-    assertEquals("No configuration(no environment ALTERAOCLSDKROOT set)" +
-            " should return just a single binary name",
-        "aocl", openclPlugin.getPathToExecutable());
+    assertEquals("aocl", openclPlugin.getPathToExecutable(),
+        "No configuration(no environment ALTERAOCLSDKROOT set)" +
+        " should return just a single binary name");
   }
 
   @Test
@@ -106,8 +104,8 @@ public class TestFpgaDiscoverer {
 
     fpgaDiscoverer.initialize(conf);
 
-    assertEquals("Correct configuration should return user setting",
-        getTestParentFolder() + "/aocl", openclPlugin.getPathToExecutable());
+    assertEquals(getTestParentFolder() + "/aocl", openclPlugin.getPathToExecutable(),
+        "Correct configuration should return user setting");
   }
 
   @Test
@@ -118,8 +116,8 @@ public class TestFpgaDiscoverer {
 
     fpgaDiscoverer.initialize(conf);
 
-    assertEquals("File doesn't exists - expected a single binary name",
-        "aocl", openclPlugin.getPathToExecutable());
+    assertEquals("aocl", openclPlugin.getPathToExecutable(),
+        "File doesn't exists - expected a single binary name");
   }
 
   @Test
@@ -129,8 +127,8 @@ public class TestFpgaDiscoverer {
 
     fpgaDiscoverer.initialize(conf);
 
-    assertEquals("configuration with empty string value, should use aocl",
-        "aocl", openclPlugin.getPathToExecutable());
+    assertEquals("aocl", openclPlugin.getPathToExecutable(),
+        "configuration with empty string value, should use aocl");
   }
 
   @Test
@@ -146,8 +144,8 @@ public class TestFpgaDiscoverer {
 
     fpgaDiscoverer.initialize(conf);
 
-    assertEquals("No configuration but with environment ALTERAOCLSDKROOT set",
-        getTestParentFolder() + "/bin/aocl", openclPlugin.getPathToExecutable());
+    assertEquals(getTestParentFolder() + "/bin/aocl", openclPlugin.getPathToExecutable(),
+        "No configuration but with environment ALTERAOCLSDKROOT set");
   }
 
   @Test
@@ -159,43 +157,42 @@ public class TestFpgaDiscoverer {
     fpgaDiscoverer.initialize(conf);
     List<FpgaDevice> devices = fpgaDiscoverer.discover();
 
-    assertEquals("Number of devices", 2, devices.size());
+    assertEquals(2, devices.size(), "Number of devices");
     FpgaDevice device0 = devices.get(0);
     FpgaDevice device1 = devices.get(1);
 
-    assertEquals("Device id", "acl0", device0.getAliasDevName());
-    assertEquals("Minor number", 0, device0.getMinor());
-    assertEquals("Major", 243, device0.getMajor());
+    assertEquals("acl0", device0.getAliasDevName(), "Device id");
+    assertEquals(0, device0.getMinor(), "Minor number");
+    assertEquals(243, device0.getMajor(), "Major");
 
-    assertEquals("Device id", "acl1", device1.getAliasDevName());
-    assertEquals("Minor number", 1, device1.getMinor());
-    assertEquals("Major", 244, device1.getMajor());
+    assertEquals("acl1", device1.getAliasDevName(), "Device id");
+    assertEquals(1, device1.getMinor(), "Minor number");
+    assertEquals(244, device1.getMajor(), "Major");
   }
 
   @Test
   public void testDiscoveryWhenAvailableDevicesEmpty()
       throws YarnException {
-    expected.expect(ResourceHandlerException.class);
-    expected.expectMessage("No FPGA devices were specified");
+    ResourceHandlerException exception = assertThrows(ResourceHandlerException.class, () -> {
+      conf.set(YarnConfiguration.NM_FPGA_AVAILABLE_DEVICES, "");
 
-    conf.set(YarnConfiguration.NM_FPGA_AVAILABLE_DEVICES,
-        "");
-
-    fpgaDiscoverer.initialize(conf);
-    fpgaDiscoverer.discover();
+      fpgaDiscoverer.initialize(conf);
+      fpgaDiscoverer.discover();
+    });
+    assertThat(exception.getMessage()).contains("No FPGA devices were specified");
   }
 
   @Test
   public void testDiscoveryWhenAvailableDevicesAreIllegalString()
       throws YarnException {
-    expected.expect(ResourceHandlerException.class);
-    expected.expectMessage("Illegal device specification string");
+    ResourceHandlerException exception = assertThrows(ResourceHandlerException.class, () -> {
+      conf.set(YarnConfiguration.NM_FPGA_AVAILABLE_DEVICES,
+              "illegal/243:0,acl1/244=1");
 
-    conf.set(YarnConfiguration.NM_FPGA_AVAILABLE_DEVICES,
-        "illegal/243:0,acl1/244=1");
-
-    fpgaDiscoverer.initialize(conf);
-    fpgaDiscoverer.discover();
+      fpgaDiscoverer.initialize(conf);
+      fpgaDiscoverer.discover();
+    });
+    assertThat(exception.getMessage()).contains("Illegal device specification string");
   }
 
   @Test
@@ -209,82 +206,85 @@ public class TestFpgaDiscoverer {
     fpgaDiscoverer.initialize(conf);
     List<FpgaDevice> devices = fpgaDiscoverer.discover();
 
-    assertEquals("Number of devices", 2, devices.size());
+    assertEquals(2, devices.size(), "Number of devices");
     FpgaDevice device0 = devices.get(0);
     FpgaDevice device1 = devices.get(1);
 
-    assertEquals("Device id", "acl0", device0.getAliasDevName());
-    assertEquals("Minor number", 0, device0.getMinor());
-    assertEquals("Major", 243, device0.getMajor());
+    assertEquals("acl0", device0.getAliasDevName(), "Device id");
+    assertEquals(0, device0.getMinor(), "Minor number");
+    assertEquals(243, device0.getMajor(), "Major");
 
-    assertEquals("Device id", "acl1", device1.getAliasDevName());
-    assertEquals("Minor number", 1, device1.getMinor());
-    assertEquals("Major", 244, device1.getMajor());
+    assertEquals("acl1", device1.getAliasDevName(), "Device id");
+    assertEquals(1, device1.getMinor(), "Minor number");
+    assertEquals(244, device1.getMajor(), "Major");
   }
 
   @Test
   public void testDiscoveryWhenExternalScriptReturnsEmptyString()
       throws YarnException {
-    expected.expect(ResourceHandlerException.class);
-    expected.expectMessage("No FPGA devices were specified");
 
-    conf.set(YarnConfiguration.NM_FPGA_DEVICE_DISCOVERY_SCRIPT,
-        "/dummy/script");
+    ResourceHandlerException exception = assertThrows(ResourceHandlerException.class, () -> {
+      conf.set(YarnConfiguration.NM_FPGA_DEVICE_DISCOVERY_SCRIPT, "/dummy/script");
 
-    fpgaDiscoverer.setScriptRunner(s -> {
-      return Optional.of(""); });
+      fpgaDiscoverer.setScriptRunner(s -> {
+        return Optional.of("");
+      });
 
-    fpgaDiscoverer.initialize(conf);
-    fpgaDiscoverer.discover();
+      fpgaDiscoverer.initialize(conf);
+      fpgaDiscoverer.discover();
+    });
+    assertThat(exception.getMessage()).contains("No FPGA devices were specified");
   }
 
   @Test
   public void testDiscoveryWhenExternalScriptFails()
       throws YarnException {
-    expected.expect(ResourceHandlerException.class);
-    expected.expectMessage("Unable to run external script");
+    ResourceHandlerException exception = assertThrows(ResourceHandlerException.class, () -> {
+      conf.set(YarnConfiguration.NM_FPGA_DEVICE_DISCOVERY_SCRIPT, "/dummy/script");
 
-    conf.set(YarnConfiguration.NM_FPGA_DEVICE_DISCOVERY_SCRIPT,
-        "/dummy/script");
+      fpgaDiscoverer.setScriptRunner(s -> {
+        return Optional.empty();
+      });
 
-    fpgaDiscoverer.setScriptRunner(s -> {
-      return Optional.empty(); });
-
-    fpgaDiscoverer.initialize(conf);
-    fpgaDiscoverer.discover();
+      fpgaDiscoverer.initialize(conf);
+      fpgaDiscoverer.discover();
+    });
+    assertThat(exception.getMessage()).contains("Unable to run external script");
   }
 
   @Test
   public void testDiscoveryWhenExternalScriptUndefined()
       throws YarnException {
-    expected.expect(ResourceHandlerException.class);
-    expected.expectMessage("Unable to run external script");
+    ResourceHandlerException exception = assertThrows(ResourceHandlerException.class, () -> {
+      conf.set(YarnConfiguration.NM_FPGA_DEVICE_DISCOVERY_SCRIPT, "");
 
-    conf.set(YarnConfiguration.NM_FPGA_DEVICE_DISCOVERY_SCRIPT, "");
-
-    fpgaDiscoverer.initialize(conf);
-    fpgaDiscoverer.discover();
+      fpgaDiscoverer.initialize(conf);
+      fpgaDiscoverer.discover();
+    });
+    assertThat(exception.getMessage()).contains("Unable to run external script");
   }
 
   @Test
   public void testDiscoveryWhenExternalScriptCannotBeExecuted()
       throws YarnException, IOException {
-    File fakeScript = new File(getTestParentFolder() + "/fakeScript");
-    try {
-      expected.expect(ResourceHandlerException.class);
-      expected.expectMessage("Unable to run external script");
 
-      fakeScript = new File(getTestParentFolder() + "/fakeScript");
-      touchFile(fakeScript);
-      fakeScript.setExecutable(false);
-      conf.set(YarnConfiguration.NM_FPGA_DEVICE_DISCOVERY_SCRIPT,
-          fakeScript.getAbsolutePath());
+    ResourceHandlerException exception = assertThrows(ResourceHandlerException.class, () -> {
+      File fakeScript = new File(getTestParentFolder() + "/fakeScript");
+      try {
+        fakeScript = new File(getTestParentFolder() + "/fakeScript");
+        touchFile(fakeScript);
+        fakeScript.setExecutable(false);
+        conf.set(YarnConfiguration.NM_FPGA_DEVICE_DISCOVERY_SCRIPT,
+                fakeScript.getAbsolutePath());
 
-      fpgaDiscoverer.initialize(conf);
-      fpgaDiscoverer.discover();
-    } finally {
-      fakeScript.delete();
-    }
+        fpgaDiscoverer.initialize(conf);
+        fpgaDiscoverer.discover();
+      } finally {
+        fakeScript.delete();
+      }
+    });
+
+    assertThat(exception.getMessage()).contains("Unable to run external script");
   }
 
   @Test
@@ -297,7 +297,7 @@ public class TestFpgaDiscoverer {
     List<FpgaDevice> devices = fpgaDiscoverer.discover();
     List<FpgaDevice> currentFpgaInfo = fpgaDiscoverer.getCurrentFpgaInfo();
 
-    assertEquals("Devices", devices, currentFpgaInfo);
+    assertEquals(devices, currentFpgaInfo, "Devices");
   }
 
   @Test
@@ -311,13 +311,13 @@ public class TestFpgaDiscoverer {
     List<FpgaDevice> devices = fpgaDiscoverer.discover();
     List<FpgaDevice> currentFpgaInfo = fpgaDiscoverer.getCurrentFpgaInfo();
 
-    assertEquals("Devices", devices, currentFpgaInfo);
-    assertEquals("List of devices", 1, currentFpgaInfo.size());
+    assertEquals(devices, currentFpgaInfo, "Devices");
+    assertEquals(1, currentFpgaInfo.size(), "List of devices");
 
     FpgaDevice device = currentFpgaInfo.get(0);
-    assertEquals("Device id", "acl0", device.getAliasDevName());
-    assertEquals("Minor number", 0, device.getMinor());
-    assertEquals("Major", 243, device.getMajor());
+    assertEquals("acl0", device.getAliasDevName(), "Device id");
+    assertEquals(0, device.getMinor(), "Minor number");
+    assertEquals(243, device.getMajor(), "Major");
   }
 
   private IntelFpgaOpenclPlugin.InnerShellExecutor mockPuginShell() {

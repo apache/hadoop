@@ -26,10 +26,11 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Unit test for FederationRegistryClient.
@@ -40,7 +41,7 @@ public class TestFederationRegistryClient {
   private RegistryOperations registry;
   private FederationRegistryClient registryClient;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     this.conf = new YarnConfiguration();
 
@@ -52,13 +53,13 @@ public class TestFederationRegistryClient {
     this.registryClient =
         new FederationRegistryClient(this.conf, this.registry, this.user);
     this.registryClient.cleanAllApplications();
-    Assert.assertEquals(0, this.registryClient.getAllApplications().size());
+    assertEquals(0, this.registryClient.getAllApplications().size());
   }
 
-  @After
+  @AfterEach
   public void breakDown() {
     registryClient.cleanAllApplications();
-    Assert.assertEquals(0, registryClient.getAllApplications().size());
+    assertEquals(0, registryClient.getAllApplications().size());
     registry.stop();
   }
 
@@ -76,14 +77,14 @@ public class TestFederationRegistryClient {
     this.registryClient.writeAMRMTokenForUAM(appId, scId1,
         new Token<AMRMTokenIdentifier>());
 
-    Assert.assertEquals(1, this.registryClient.getAllApplications().size());
-    Assert.assertEquals(2,
+    assertEquals(1, this.registryClient.getAllApplications().size());
+    assertEquals(2,
         this.registryClient.loadStateFromRegistry(appId).size());
 
     this.registryClient.removeAppFromRegistry(appId);
 
-    Assert.assertEquals(0, this.registryClient.getAllApplications().size());
-    Assert.assertEquals(0,
+    assertEquals(0, this.registryClient.getAllApplications().size());
+    assertEquals(0,
         this.registryClient.loadStateFromRegistry(appId).size());
   }
 
@@ -95,7 +96,7 @@ public class TestFederationRegistryClient {
 
     this.registryClient.writeAMRMTokenForUAM(appId1, scId0, new Token<>());
     this.registryClient.writeAMRMTokenForUAM(appId2, scId0, new Token<>());
-    Assert.assertEquals(2, this.registryClient.getAllApplications().size());
+    assertEquals(2, this.registryClient.getAllApplications().size());
 
     // Create a new client instance
     this.registryClient =
@@ -104,14 +105,14 @@ public class TestFederationRegistryClient {
     this.registryClient.loadStateFromRegistry(appId2);
     // Should remove app2
     this.registryClient.removeAppFromRegistry(appId2, false);
-    Assert.assertEquals(1, this.registryClient.getAllApplications().size());
+    assertEquals(1, this.registryClient.getAllApplications().size());
 
     // Should not remove app1 since memory state don't have it
     this.registryClient.removeAppFromRegistry(appId1, false);
-    Assert.assertEquals(1, this.registryClient.getAllApplications().size());
+    assertEquals(1, this.registryClient.getAllApplications().size());
 
     // Should remove app1
     this.registryClient.removeAppFromRegistry(appId1, true);
-    Assert.assertEquals(0, this.registryClient.getAllApplications().size());
+    assertEquals(0, this.registryClient.getAllApplications().size());
   }
 }

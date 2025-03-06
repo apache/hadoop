@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.federation.policies;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import java.nio.ByteBuffer;
@@ -48,7 +49,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Base class for policies tests, tests for common reinitialization cases.
@@ -81,49 +82,57 @@ public abstract class BaseFederationPoliciesTest {
     getPolicy().reinitialize(fpc);
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void testReinitilializeBad1() throws YarnException {
-    getPolicy().reinitialize(null);
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      getPolicy().reinitialize(null);
+    });
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void testReinitilializeBad2() throws YarnException {
-    FederationPolicyInitializationContext fpc =
-        new FederationPolicyInitializationContext();
-    getPolicy().reinitialize(fpc);
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      FederationPolicyInitializationContext fpc =
+          new FederationPolicyInitializationContext();
+      getPolicy().reinitialize(fpc);
+    });
   }
 
-  @Test(expected = FederationPolicyInitializationException.class)
+  @Test
   public void testReinitilializeBad3() throws YarnException {
-    FederationPolicyInitializationContext fpc =
-        new FederationPolicyInitializationContext();
-    ByteBuffer buf = mock(ByteBuffer.class);
-    fpc.setSubClusterPolicyConfiguration(SubClusterPolicyConfiguration
-        .newInstance("queue1", "WrongPolicyName", buf));
-    fpc.setFederationSubclusterResolver(
-        FederationPoliciesTestUtil.initResolver());
-    Configuration conf = new Configuration();
-    fpc.setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade(conf));
-    getPolicy().reinitialize(fpc);
+    assertThrows(FederationPolicyInitializationException.class, () -> {
+      FederationPolicyInitializationContext fpc =
+          new FederationPolicyInitializationContext();
+      ByteBuffer buf = mock(ByteBuffer.class);
+      fpc.setSubClusterPolicyConfiguration(SubClusterPolicyConfiguration
+          .newInstance("queue1", "WrongPolicyName", buf));
+      fpc.setFederationSubclusterResolver(
+          FederationPoliciesTestUtil.initResolver());
+      Configuration conf = new Configuration();
+      fpc.setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade(conf));
+      getPolicy().reinitialize(fpc);
+    });
   }
 
-  @Test(expected = FederationPolicyException.class)
+  @Test
   public void testNoSubclusters() throws YarnException {
-    // empty the activeSubclusters map
-    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-        getPolicyInfo(), new HashMap<>());
+    assertThrows(FederationPolicyException.class, () -> {
+      // empty the activeSubclusters map
+      FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
+          getPolicyInfo(), new HashMap<>());
 
-    ConfigurableFederationPolicy localPolicy = getPolicy();
-    if (localPolicy instanceof FederationRouterPolicy) {
-      ((FederationRouterPolicy) localPolicy)
-          .getHomeSubcluster(getApplicationSubmissionContext(), null);
-    } else {
-      String[] hosts = new String[] {"host1", "host2"};
-      List<ResourceRequest> resourceRequests = FederationPoliciesTestUtil
-          .createResourceRequests(hosts, 2 * 1024, 2, 1, 3, null, false);
-      ((FederationAMRMProxyPolicy) localPolicy).splitResourceRequests(
-          resourceRequests, new HashSet<SubClusterId>());
-    }
+      ConfigurableFederationPolicy localPolicy = getPolicy();
+      if (localPolicy instanceof FederationRouterPolicy) {
+        ((FederationRouterPolicy) localPolicy)
+        .getHomeSubcluster(getApplicationSubmissionContext(), null);
+      } else {
+        String[] hosts = new String[] {"host1", "host2"};
+        List<ResourceRequest> resourceRequests = FederationPoliciesTestUtil
+            .createResourceRequests(hosts, 2 * 1024, 2, 1, 3, null, false);
+        ((FederationAMRMProxyPolicy) localPolicy).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
+      }
+    });
   }
 
   public ConfigurableFederationPolicy getPolicy() {
