@@ -17,6 +17,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.federation;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.UnknownHostException;
@@ -75,7 +80,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -136,12 +140,12 @@ public class TestFederationRMStateStoreService {
     rm.init(conf);
     stateStore = rm.getFederationStateStoreService().getStateStoreClient();
     GetSubClusterInfoResponse response = stateStore.getSubCluster(request);
-    Assertions.assertNull(response);
+    assertNull(response);
 
     // Validate if sub-cluster is registered
     rm.start();
     String capability = checkSubClusterInfo(SubClusterState.SC_NEW);
-    Assertions.assertTrue(capability.isEmpty());
+    assertTrue(capability.isEmpty());
 
     // Heartbeat to see if sub-cluster transitions to running
     FederationStateStoreHeartbeat storeHeartbeat =
@@ -166,7 +170,7 @@ public class TestFederationRMStateStoreService {
     explicitFailover(rm);
 
     capability = checkSubClusterInfo(SubClusterState.SC_NEW);
-    Assertions.assertTrue(capability.isEmpty());
+    assertTrue(capability.isEmpty());
 
     // Heartbeat to see if sub-cluster transitions to running
     storeHeartbeat =
@@ -186,10 +190,10 @@ public class TestFederationRMStateStoreService {
 
   private void explicitFailover(MockRM rm) throws IOException {
     rm.getAdminService().transitionToStandby(requestInfo);
-    Assertions.assertTrue(rm.getRMContext()
+    assertTrue(rm.getRMContext()
         .getHAServiceState() == HAServiceProtocol.HAServiceState.STANDBY);
     rm.getAdminService().transitionToActive(requestInfo);
-    Assertions.assertTrue(rm.getRMContext()
+    assertTrue(rm.getRMContext()
         .getHAServiceState() == HAServiceProtocol.HAServiceState.ACTIVE);
     lastHearbeatTS = 0;
     stateStore = rm.getFederationStateStoreService().getStateStoreClient();
@@ -199,23 +203,23 @@ public class TestFederationRMStateStoreService {
       throws JAXBException {
     ClusterMetricsInfo clusterMetricsInfo = jsonUnmarshaller.unmarshalFromJSON(
         new StringReader(capability), ClusterMetricsInfo.class);
-    Assertions.assertEquals(numNodes, clusterMetricsInfo.getTotalNodes());
+    assertEquals(numNodes, clusterMetricsInfo.getTotalNodes());
   }
 
   private String checkSubClusterInfo(SubClusterState state)
       throws YarnException, UnknownHostException {
-    Assertions.assertNotNull(stateStore.getSubCluster(request));
+    assertNotNull(stateStore.getSubCluster(request));
     SubClusterInfo response =
         stateStore.getSubCluster(request).getSubClusterInfo();
-    Assertions.assertEquals(state, response.getState());
-    Assertions.assertTrue(response.getLastHeartBeat() >= lastHearbeatTS);
+    assertEquals(state, response.getState());
+    assertTrue(response.getLastHeartBeat() >= lastHearbeatTS);
     String expectedAddress =
         (response.getClientRMServiceAddress().split(":"))[0];
-    Assertions.assertEquals(expectedAddress,
+    assertEquals(expectedAddress,
         (response.getAMRMServiceAddress().split(":"))[0]);
-    Assertions.assertEquals(expectedAddress,
+    assertEquals(expectedAddress,
         (response.getRMAdminServiceAddress().split(":"))[0]);
-    Assertions.assertEquals(expectedAddress,
+    assertEquals(expectedAddress,
         (response.getRMWebServiceAddress().split(":"))[0]);
     lastHearbeatTS = response.getLastHeartBeat();
     return response.getCapability();
@@ -236,12 +240,12 @@ public class TestFederationRMStateStoreService {
     rm.init(conf);
     stateStore = rm.getFederationStateStoreService().getStateStoreClient();
     GetSubClusterInfoResponse response = stateStore.getSubCluster(request);
-    Assertions.assertNull(response);
+    assertNull(response);
 
     // Validate if sub-cluster is registered
     rm.start();
     String capability = checkSubClusterInfo(SubClusterState.SC_NEW);
-    Assertions.assertTrue(capability.isEmpty());
+    assertTrue(capability.isEmpty());
 
     // Heartbeat to see if sub-cluster transitions to running
     FederationStateStoreHeartbeat storeHeartbeat =
@@ -250,7 +254,7 @@ public class TestFederationRMStateStoreService {
     capability = checkSubClusterInfo(SubClusterState.SC_RUNNING);
     checkClusterMetricsInfo(capability, 0);
 
-    Assertions.assertTrue(logCapture.getOutput().contains(
+    assertTrue(logCapture.getOutput().contains(
         "Started federation membership heartbeat with interval: 300 and initial delay: 10"));
     rm.stop();
   }
@@ -285,16 +289,16 @@ public class TestFederationRMStateStoreService {
          GetApplicationHomeSubClusterRequest.newInstance(appId);
     GetApplicationHomeSubClusterResponse response =
          stateStore.getApplicationHomeSubCluster(appRequest);
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
     ApplicationHomeSubCluster appHomeSubCluster = response.getApplicationHomeSubCluster();
-    Assertions.assertNotNull(appHomeSubCluster);
-    Assertions.assertNotNull(appHomeSubCluster.getApplicationId());
-    Assertions.assertEquals(appId, appHomeSubCluster.getApplicationId());
+    assertNotNull(appHomeSubCluster);
+    assertNotNull(appHomeSubCluster.getApplicationId());
+    assertEquals(appId, appHomeSubCluster.getApplicationId());
 
     // clean up the app.
     boolean cleanUpResult =
         stateStoreService.cleanUpFinishApplicationsWithRetries(appId, true);
-    Assertions.assertTrue(cleanUpResult);
+    assertTrue(cleanUpResult);
 
     // after clean, the app can no longer be queried from the stateStore.
     LambdaTestUtils.intercept(FederationStateStoreException.class,
@@ -344,10 +348,10 @@ public class TestFederationRMStateStoreService {
         GetApplicationsHomeSubClusterRequest.newInstance(subClusterId);
     GetApplicationsHomeSubClusterResponse allResponse =
         stateStore.getApplicationsHomeSubCluster(allRequest);
-    Assertions.assertNotNull(allResponse);
+    assertNotNull(allResponse);
     List<ApplicationHomeSubCluster> appHomeSCLists = allResponse.getAppsHomeSubClusters();
-    Assertions.assertNotNull(appHomeSCLists);
-    Assertions.assertEquals(3, appHomeSCLists.size());
+    assertNotNull(appHomeSCLists);
+    assertEquals(3, appHomeSCLists.size());
 
     // app04 exists in both RM memory and stateStore.
     ApplicationId appId04 = ApplicationId.newInstance(Time.now(), 4);
@@ -363,7 +367,7 @@ public class TestFederationRMStateStoreService {
       try {
         List<ApplicationHomeSubCluster> subClusters =
             getApplicationsFromStateStore();
-        Assertions.assertNotNull(subClusters);
+        assertNotNull(subClusters);
         appsSize = subClusters.size();
       } catch (YarnException e) {
         e.printStackTrace();
@@ -446,11 +450,11 @@ public class TestFederationRMStateStoreService {
 
     // app03 should remain in statestore
     List<ApplicationHomeSubCluster> appHomeScList = getApplicationsFromStateStore();
-    Assertions.assertNotNull(appHomeScList);
-    Assertions.assertEquals(1, appHomeScList.size());
+    assertNotNull(appHomeScList);
+    assertEquals(1, appHomeScList.size());
     ApplicationHomeSubCluster homeSubCluster = appHomeScList.get(0);
-    Assertions.assertNotNull(homeSubCluster);
-    Assertions.assertEquals(appId03, homeSubCluster.getApplicationId());
+    assertNotNull(homeSubCluster);
+    assertEquals(appId03, homeSubCluster.getApplicationId());
   }
 
   private void addApplication2StateStore(ApplicationId appId,
@@ -468,9 +472,9 @@ public class TestFederationRMStateStoreService {
         GetApplicationsHomeSubClusterRequest.newInstance(subClusterId);
     GetApplicationsHomeSubClusterResponse allResponse =
         stateStore.getApplicationsHomeSubCluster(allRequest);
-    Assertions.assertNotNull(allResponse);
+    assertNotNull(allResponse);
     List<ApplicationHomeSubCluster> appHomeSCLists = allResponse.getAppsHomeSubClusters();
-    Assertions.assertNotNull(appHomeSCLists);
+    assertNotNull(appHomeSCLists);
     return appHomeSCLists;
   }
 
@@ -533,25 +537,25 @@ public class TestFederationRMStateStoreService {
         GetSubClusterPolicyConfigurationRequest.newInstance(queue1);
     GetSubClusterPolicyConfigurationResponse response =
         stateStoreService.getPolicyConfiguration(request1);
-    Assertions.assertNotNull(response);
+    assertNotNull(response);
 
     SubClusterPolicyConfiguration responsePolicyConf =
         response.getPolicyConfiguration();
-    Assertions.assertNotNull(responsePolicyConf);
-    Assertions.assertEquals(requestPolicyConf1, responsePolicyConf);
+    assertNotNull(responsePolicyConf);
+    assertEquals(requestPolicyConf1, responsePolicyConf);
 
     // get policy configurations
     GetSubClusterPoliciesConfigurationsRequest policiesRequest1 =
         GetSubClusterPoliciesConfigurationsRequest.newInstance();
     GetSubClusterPoliciesConfigurationsResponse policiesResponse1 =
         stateStoreService.getPoliciesConfigurations(policiesRequest1);
-    Assertions.assertNotNull(policiesResponse1);
+    assertNotNull(policiesResponse1);
 
     List<SubClusterPolicyConfiguration> policiesConfigs = policiesResponse1.getPoliciesConfigs();
-    Assertions.assertNotNull(policiesConfigs);
-    Assertions.assertEquals(2, policiesConfigs.size());
-    Assertions.assertTrue(policiesConfigs.contains(requestPolicyConf1));
-    Assertions.assertTrue(policiesConfigs.contains(requestPolicyConf2));
+    assertNotNull(policiesConfigs);
+    assertEquals(2, policiesConfigs.size());
+    assertTrue(policiesConfigs.contains(requestPolicyConf1));
+    assertTrue(policiesConfigs.contains(requestPolicyConf2));
   }
 
   public SubClusterPolicyConfiguration getUniformPolicy(String queue)
@@ -596,12 +600,12 @@ public class TestFederationRMStateStoreService {
         GetSubClusterInfoRequest.newInstance(subClusterId1);
     GetSubClusterInfoResponse subClusterResponse =
         stateStoreService.getSubCluster(subClusterRequest);
-    Assertions.assertNotNull(subClusterResponse);
+    assertNotNull(subClusterResponse);
 
     // We query subCluster1, we want to get SubClusterInfo of subCluster1
     SubClusterInfo subClusterInfo1Resp = subClusterResponse.getSubClusterInfo();
-    Assertions.assertNotNull(subClusterInfo1Resp);
-    Assertions.assertEquals(subClusterInfo1, subClusterInfo1Resp);
+    assertNotNull(subClusterInfo1Resp);
+    assertEquals(subClusterInfo1, subClusterInfo1Resp);
 
     // We call the getSubClusters method and filter the Active SubCluster
     // subCluster1 and subCluster2 are just registered, they are in NEW state,
@@ -610,10 +614,10 @@ public class TestFederationRMStateStoreService {
         GetSubClustersInfoRequest.newInstance(true);
     GetSubClustersInfoResponse subClustersInfoResp =
         stateStoreService.getSubClusters(subClustersInfoRequest);
-    Assertions.assertNotNull(subClustersInfoResp);
+    assertNotNull(subClustersInfoResp);
     List<SubClusterInfo> subClusterInfos = subClustersInfoResp.getSubClusters();
-    Assertions.assertNotNull(subClusterInfos);
-    Assertions.assertEquals(0, subClusterInfos.size());
+    assertNotNull(subClusterInfos);
+    assertEquals(0, subClusterInfos.size());
 
     // We let subCluster1 heartbeat and set subCluster1 to Running state
     SubClusterHeartbeatRequest heartbeatRequest =
@@ -621,7 +625,7 @@ public class TestFederationRMStateStoreService {
         "capability");
     SubClusterHeartbeatResponse heartbeatResponse =
         stateStoreService.subClusterHeartbeat(heartbeatRequest);
-    Assertions.assertNotNull(heartbeatResponse);
+    assertNotNull(heartbeatResponse);
 
     // We call the getSubClusters method again and filter the Active SubCluster
     // We want to get 1 active SubCluster
@@ -629,10 +633,10 @@ public class TestFederationRMStateStoreService {
         GetSubClustersInfoRequest.newInstance(true);
     GetSubClustersInfoResponse subClustersInfoResp1 =
         stateStoreService.getSubClusters(subClustersInfoRequest1);
-    Assertions.assertNotNull(subClustersInfoResp1);
+    assertNotNull(subClustersInfoResp1);
     List<SubClusterInfo> subClusterInfos1 = subClustersInfoResp1.getSubClusters();
-    Assertions.assertNotNull(subClusterInfos1);
-    Assertions.assertEquals(1, subClusterInfos1.size());
+    assertNotNull(subClusterInfos1);
+    assertEquals(1, subClusterInfos1.size());
   }
 
   private SubClusterInfo createSubClusterInfo(SubClusterId clusterId) {

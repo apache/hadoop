@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.ahs;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -28,7 +33,6 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
-import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -188,8 +192,8 @@ public class TestRMApplicationHistoryWriter {
     writer.init(conf);
     writer.start();
     try {
-      Assertions.assertFalse(writer.historyServiceEnabled);
-      Assertions.assertNull(writer.writer);
+      assertFalse(writer.historyServiceEnabled);
+      assertNull(writer.writer);
     } finally {
       writer.stop();
       writer.close();
@@ -210,13 +214,13 @@ public class TestRMApplicationHistoryWriter {
         Thread.sleep(100);
       }
     }
-    Assertions.assertNotNull(appHD);
-    Assertions.assertEquals("test app", appHD.getApplicationName());
-    Assertions.assertEquals("test app type", appHD.getApplicationType());
-    Assertions.assertEquals("test user", appHD.getUser());
-    Assertions.assertEquals("test queue", appHD.getQueue());
-    Assertions.assertEquals(0L, appHD.getSubmitTime());
-    Assertions.assertEquals(1L, appHD.getStartTime());
+    assertNotNull(appHD);
+    assertEquals("test app", appHD.getApplicationName());
+    assertEquals("test app type", appHD.getApplicationType());
+    assertEquals("test user", appHD.getUser());
+    assertEquals("test queue", appHD.getQueue());
+    assertEquals(0L, appHD.getSubmitTime());
+    assertEquals(1L, appHD.getStartTime());
 
     writer.applicationFinished(app, RMAppState.FINISHED);
     for (int i = 0; i < MAX_RETRIES; ++i) {
@@ -227,11 +231,11 @@ public class TestRMApplicationHistoryWriter {
         Thread.sleep(100);
       }
     }
-    Assertions.assertEquals(2L, appHD.getFinishTime());
-    Assertions.assertEquals("test diagnostics info", appHD.getDiagnosticsInfo());
-    Assertions.assertEquals(FinalApplicationStatus.UNDEFINED,
+    assertEquals(2L, appHD.getFinishTime());
+    assertEquals("test diagnostics info", appHD.getDiagnosticsInfo());
+    assertEquals(FinalApplicationStatus.UNDEFINED,
       appHD.getFinalApplicationStatus());
-    Assertions.assertEquals(YarnApplicationState.FINISHED,
+    assertEquals(YarnApplicationState.FINISHED,
       appHD.getYarnApplicationState());
   }
 
@@ -252,10 +256,10 @@ public class TestRMApplicationHistoryWriter {
         Thread.sleep(100);
       }
     }
-    Assertions.assertNotNull(appAttemptHD);
-    Assertions.assertEquals("test host", appAttemptHD.getHost());
-    Assertions.assertEquals(-100, appAttemptHD.getRPCPort());
-    Assertions.assertEquals(ContainerId.newContainerId(
+    assertNotNull(appAttemptHD);
+    assertEquals("test host", appAttemptHD.getHost());
+    assertEquals(-100, appAttemptHD.getRPCPort());
+    assertEquals(ContainerId.newContainerId(
       ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1), 1),
       appAttemptHD.getMasterContainerId());
 
@@ -270,12 +274,12 @@ public class TestRMApplicationHistoryWriter {
         Thread.sleep(100);
       }
     }
-    Assertions.assertEquals("test diagnostics info",
+    assertEquals("test diagnostics info",
       appAttemptHD.getDiagnosticsInfo());
-    Assertions.assertEquals("test url", appAttemptHD.getTrackingURL());
-    Assertions.assertEquals(FinalApplicationStatus.UNDEFINED,
+    assertEquals("test url", appAttemptHD.getTrackingURL());
+    assertEquals(FinalApplicationStatus.UNDEFINED,
       appAttemptHD.getFinalApplicationStatus());
-    Assertions.assertEquals(YarnApplicationAttemptState.FINISHED,
+    assertEquals(YarnApplicationAttemptState.FINISHED,
       appAttemptHD.getYarnApplicationAttemptState());
   }
 
@@ -297,13 +301,13 @@ public class TestRMApplicationHistoryWriter {
         Thread.sleep(100);
       }
     }
-    Assertions.assertNotNull(containerHD);
-    Assertions.assertEquals(NodeId.newInstance("test host", -100),
+    assertNotNull(containerHD);
+    assertEquals(NodeId.newInstance("test host", -100),
       containerHD.getAssignedNode());
-    Assertions.assertEquals(Resource.newInstance(-1, -1),
+    assertEquals(Resource.newInstance(-1, -1),
       containerHD.getAllocatedResource());
-    Assertions.assertEquals(Priority.UNDEFINED, containerHD.getPriority());
-    Assertions.assertEquals(0L, container.getCreationTime());
+    assertEquals(Priority.UNDEFINED, containerHD.getPriority());
+    assertEquals(0L, container.getCreationTime());
 
     writer.containerFinished(container);
     for (int i = 0; i < MAX_RETRIES; ++i) {
@@ -316,10 +320,10 @@ public class TestRMApplicationHistoryWriter {
         Thread.sleep(100);
       }
     }
-    Assertions.assertEquals("test diagnostics info",
+    assertEquals("test diagnostics info",
       containerHD.getDiagnosticsInfo());
-    Assertions.assertEquals(-1, containerHD.getContainerExitStatus());
-    Assertions.assertEquals(ContainerState.COMPLETE,
+    assertEquals(-1, containerHD.getContainerExitStatus());
+    assertEquals(ContainerState.COMPLETE,
       containerHD.getContainerState());
   }
 
@@ -355,10 +359,10 @@ public class TestRMApplicationHistoryWriter {
         Thread.sleep(500);
       }
     }
-    Assertions.assertTrue(allEventsHandled(20 * 10 * 10 + 20 * 10 + 20));
+    assertTrue(allEventsHandled(20 * 10 * 10 + 20 * 10 + 20));
     // Validate all events of one application are handled by one dispatcher
     for (ApplicationId appId : appIds) {
-      Assertions.assertTrue(handledByOne(appId));
+      assertTrue(handledByOne(appId));
     }
   }
 
@@ -438,7 +442,7 @@ public class TestRMApplicationHistoryWriter {
     long elapsedTime2 = finishTime2 - startTime2;
     // No more than 10% additional workload
     // Should be much less, but computation time is fluctuated
-    Assertions.assertTrue(elapsedTime2 - elapsedTime1 < elapsedTime1 / 10);
+    assertTrue(elapsedTime2 - elapsedTime1 < elapsedTime1 / 10);
   }
 
   private void testRMWritingMassiveHistory(MockRM rm) throws Exception {
@@ -470,7 +474,7 @@ public class TestRMApplicationHistoryWriter {
       allocatedSize += allocated.size();
       nm.nodeHeartbeat(true);
     }
-    Assertions.assertEquals(request, allocatedSize);
+    assertEquals(request, allocatedSize);
 
     am.unregisterAppAttempt();
     rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHING);
@@ -487,7 +491,7 @@ public class TestRMApplicationHistoryWriter {
       cleaned = resp.getContainersToCleanup();
       cleanedSize += cleaned.size();
     }
-    Assertions.assertEquals(allocatedSize, cleanedSize);
+    assertEquals(allocatedSize, cleanedSize);
     rm.waitForState(app.getApplicationId(), RMAppState.FINISHED);
 
     rm.stop();

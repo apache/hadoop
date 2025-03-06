@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.blacklist;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class TestBlacklistManager {
@@ -45,14 +46,10 @@ public class TestBlacklistManager {
     Collections.sort(blacklistAdditions);
     List<String> blacklistRemovals = blacklist.getBlacklistRemovals();
     String[] expectedBlacklistAdditions = new String[]{anyNode2, anyNode};
-    Assertions.assertArrayEquals(
-    
-       expectedBlacklistAdditions
-,         blacklistAdditions.toArray(), "Blacklist additions was not as expected");
-    Assertions.assertTrue(
-    
-       blacklistRemovals.isEmpty(), "Blacklist removals should be empty but was " +
-            blacklistRemovals);
+    assertArrayEquals(expectedBlacklistAdditions,
+        blacklistAdditions.toArray(), "Blacklist additions was not as expected");
+    assertTrue(blacklistRemovals.isEmpty(),
+        "Blacklist removals should be empty but was " + blacklistRemovals);
   }
 
   @Test
@@ -69,14 +66,10 @@ public class TestBlacklistManager {
     Collections.sort(blacklistAdditions);
     List<String> blacklistRemovals = blacklist.getBlacklistRemovals();
     String[] expectedBlacklistAdditions = new String[]{anyNode};
-    Assertions.assertArrayEquals(
-    
-       expectedBlacklistAdditions
-,         blacklistAdditions.toArray(), "Blacklist additions was not as expected");
-    Assertions.assertTrue(
-    
-       blacklistRemovals.isEmpty(), "Blacklist removals should be empty but was " +
-            blacklistRemovals);
+    assertArrayEquals(expectedBlacklistAdditions,
+        blacklistAdditions.toArray(), "Blacklist additions was not as expected");
+    assertTrue(blacklistRemovals.isEmpty(),
+        "Blacklist removals should be empty but was " + blacklistRemovals);
 
     manager.addNode(anyNode2);
 
@@ -87,14 +80,10 @@ public class TestBlacklistManager {
     blacklistRemovals = blacklist.getBlacklistRemovals();
     Collections.sort(blacklistRemovals);
     String[] expectedBlacklistRemovals = new String[] {anyNode2, anyNode};
-    Assertions.assertTrue(
-    
-       blacklistAdditions.isEmpty(), "Blacklist additions should be empty but was " +
-            blacklistAdditions);
-    Assertions.assertArrayEquals(
-    
-       expectedBlacklistRemovals
-,         blacklistRemovals.toArray(), "Blacklist removals was not as expected");
+    assertTrue(blacklistAdditions.isEmpty(),
+        "Blacklist additions should be empty but was " + blacklistAdditions);
+    assertArrayEquals(expectedBlacklistRemovals,
+        blacklistRemovals.toArray(), "Blacklist removals was not as expected");
   }
 
   @Test
@@ -107,13 +96,9 @@ public class TestBlacklistManager {
 
     List<String> blacklistAdditions = blacklist.getBlacklistAdditions();
     List<String> blacklistRemovals = blacklist.getBlacklistRemovals();
-    Assertions.assertTrue(
-    
-       blacklistAdditions.isEmpty(), "Blacklist additions should be empty but was " +
-            blacklistAdditions);
-    Assertions.assertTrue(
-    
-       blacklistRemovals.isEmpty(), "Blacklist removals should be empty but was " +
-            blacklistRemovals);
+    assertTrue(blacklistAdditions.isEmpty(),
+        "Blacklist additions should be empty but was " + blacklistAdditions);
+    assertTrue(blacklistRemovals.isEmpty(),
+        "Blacklist removals should be empty but was " + blacklistRemovals);
   }
 }

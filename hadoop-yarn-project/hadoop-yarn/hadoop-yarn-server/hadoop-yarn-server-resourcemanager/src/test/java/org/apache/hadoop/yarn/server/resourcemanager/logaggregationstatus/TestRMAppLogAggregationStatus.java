@@ -19,6 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.logaggregationstatus;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -61,7 +64,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -156,13 +158,13 @@ public class TestRMAppLogAggregationStatus {
     // should be NOT_STARTED
     Map<NodeId, LogAggregationReport> logAggregationStatus =
         rmApp.getLogAggregationReportsForApp();
-    Assertions.assertEquals(2, logAggregationStatus.size());
-    Assertions.assertTrue(logAggregationStatus.containsKey(nodeId1));
-    Assertions.assertTrue(logAggregationStatus.containsKey(nodeId2));
+    assertEquals(2, logAggregationStatus.size());
+    assertTrue(logAggregationStatus.containsKey(nodeId1));
+    assertTrue(logAggregationStatus.containsKey(nodeId2));
     for (Entry<NodeId, LogAggregationReport> report : logAggregationStatus
       .entrySet()) {
-      Assertions.assertEquals(LogAggregationStatus.NOT_START, report.getValue()
-        .getLogAggregationStatus());
+      assertEquals(LogAggregationStatus.NOT_START, report.getValue()
+          .getLogAggregationStatus());
     }
 
     List<LogAggregationReport> node1ReportForApp =
@@ -196,25 +198,24 @@ public class TestRMAppLogAggregationStatus {
     // verify that the log aggregation status for node1, node2
     // has been changed
     logAggregationStatus = rmApp.getLogAggregationReportsForApp();
-    Assertions.assertEquals(2, logAggregationStatus.size());
-    Assertions.assertTrue(logAggregationStatus.containsKey(nodeId1));
-    Assertions.assertTrue(logAggregationStatus.containsKey(nodeId2));
+    assertEquals(2, logAggregationStatus.size());
+    assertTrue(logAggregationStatus.containsKey(nodeId1));
+    assertTrue(logAggregationStatus.containsKey(nodeId2));
     for (Entry<NodeId, LogAggregationReport> report : logAggregationStatus
       .entrySet()) {
       if (report.getKey().equals(node1.getNodeID())) {
-        Assertions.assertEquals(LogAggregationStatus.RUNNING, report.getValue()
-          .getLogAggregationStatus());
-        Assertions.assertEquals(messageForNode1_1, report.getValue()
-          .getDiagnosticMessage());
+        assertEquals(LogAggregationStatus.RUNNING, report.getValue()
+           .getLogAggregationStatus());
+        assertEquals(messageForNode1_1, report.getValue()
+            .getDiagnosticMessage());
       } else if (report.getKey().equals(node2.getNodeID())) {
-        Assertions.assertEquals(LogAggregationStatus.RUNNING, report.getValue()
-          .getLogAggregationStatus());
-        Assertions.assertEquals(messageForNode2_1, report.getValue()
-          .getDiagnosticMessage());
+        assertEquals(LogAggregationStatus.RUNNING, report.getValue()
+            .getLogAggregationStatus());
+        assertEquals(messageForNode2_1, report.getValue()
+            .getDiagnosticMessage());
       } else {
         // should not contain log aggregation report for other nodes
-        Assertions
-          .fail("should not contain log aggregation report for other nodes");
+        fail("should not contain log aggregation report for other nodes");
       }
     }
 
@@ -235,26 +236,25 @@ public class TestRMAppLogAggregationStatus {
     // verify that the log aggregation status for node2
     // does not change
     logAggregationStatus = rmApp.getLogAggregationReportsForApp();
-    Assertions.assertEquals(2, logAggregationStatus.size());
-    Assertions.assertTrue(logAggregationStatus.containsKey(nodeId1));
-    Assertions.assertTrue(logAggregationStatus.containsKey(nodeId2));
+    assertEquals(2, logAggregationStatus.size());
+    assertTrue(logAggregationStatus.containsKey(nodeId1));
+    assertTrue(logAggregationStatus.containsKey(nodeId2));
     for (Entry<NodeId, LogAggregationReport> report : logAggregationStatus
       .entrySet()) {
       if (report.getKey().equals(node1.getNodeID())) {
-        Assertions.assertEquals(LogAggregationStatus.RUNNING, report.getValue()
+        assertEquals(LogAggregationStatus.RUNNING, report.getValue()
           .getLogAggregationStatus());
-        Assertions.assertEquals(
+        assertEquals(
           messageForNode1_1 + "\n" + messageForNode1_2, report
             .getValue().getDiagnosticMessage());
       } else if (report.getKey().equals(node2.getNodeID())) {
-        Assertions.assertEquals(LogAggregationStatus.RUNNING, report.getValue()
+        assertEquals(LogAggregationStatus.RUNNING, report.getValue()
           .getLogAggregationStatus());
-        Assertions.assertEquals(messageForNode2_1, report.getValue()
+        assertEquals(messageForNode2_1, report.getValue()
           .getDiagnosticMessage());
       } else {
         // should not contain log aggregation report for other nodes
-        Assertions
-          .fail("should not contain log aggregation report for other nodes");
+        fail("should not contain log aggregation report for other nodes");
       }
     }
 
@@ -262,7 +262,7 @@ public class TestRMAppLogAggregationStatus {
     rmApp.handle(new RMAppEvent(appId, RMAppEventType.KILL));
     rmApp.handle(new RMAppEvent(appId, RMAppEventType.ATTEMPT_KILLED));
     rmApp.handle(new RMAppEvent(appId, RMAppEventType.APP_UPDATE_SAVED));
-    Assertions.assertEquals(RMAppState.KILLED, rmApp.getState());
+    assertEquals(RMAppState.KILLED, rmApp.getState());
 
     // wait for 1500 ms
     Thread.sleep(1500);
@@ -270,12 +270,12 @@ public class TestRMAppLogAggregationStatus {
     // the log aggregation status for both nodes should be changed
     // to TIME_OUT
     logAggregationStatus = rmApp.getLogAggregationReportsForApp();
-    Assertions.assertEquals(2, logAggregationStatus.size());
-    Assertions.assertTrue(logAggregationStatus.containsKey(nodeId1));
-    Assertions.assertTrue(logAggregationStatus.containsKey(nodeId2));
+    assertEquals(2, logAggregationStatus.size());
+    assertTrue(logAggregationStatus.containsKey(nodeId1));
+    assertTrue(logAggregationStatus.containsKey(nodeId2));
     for (Entry<NodeId, LogAggregationReport> report : logAggregationStatus
       .entrySet()) {
-      Assertions.assertEquals(LogAggregationStatus.TIME_OUT, report.getValue()
+      assertEquals(LogAggregationStatus.TIME_OUT, report.getValue()
         .getLogAggregationStatus());
     }
 
@@ -299,13 +299,13 @@ public class TestRMAppLogAggregationStatus {
         node1ReportForApp3));
 
     logAggregationStatus = rmApp.getLogAggregationReportsForApp();
-    Assertions.assertEquals(2, logAggregationStatus.size());
-    Assertions.assertTrue(logAggregationStatus.containsKey(nodeId1));
-    Assertions.assertTrue(logAggregationStatus.containsKey(nodeId2));
+    assertEquals(2, logAggregationStatus.size());
+    assertTrue(logAggregationStatus.containsKey(nodeId1));
+    assertTrue(logAggregationStatus.containsKey(nodeId2));
     for (Entry<NodeId, LogAggregationReport> report : logAggregationStatus
       .entrySet()) {
       if (report.getKey().equals(node1.getNodeID())) {
-        Assertions.assertEquals(LogAggregationStatus.SUCCEEDED, report.getValue()
+        assertEquals(LogAggregationStatus.SUCCEEDED, report.getValue()
           .getLogAggregationStatus());
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < 9; i ++) {
@@ -313,15 +313,14 @@ public class TestRMAppLogAggregationStatus {
           builder.append("\n");
         }
         builder.append("test_message_" + 9);
-        Assertions.assertEquals(builder.toString(), report.getValue()
+        assertEquals(builder.toString(), report.getValue()
           .getDiagnosticMessage());
       } else if (report.getKey().equals(node2.getNodeID())) {
-        Assertions.assertEquals(LogAggregationStatus.TIME_OUT, report.getValue()
+        assertEquals(LogAggregationStatus.TIME_OUT, report.getValue()
           .getLogAggregationStatus());
       } else {
         // should not contain log aggregation report for other nodes
-        Assertions
-          .fail("should not contain log aggregation report for other nodes");
+        fail("should not contain log aggregation report for other nodes");
       }
     }
 
@@ -341,13 +340,13 @@ public class TestRMAppLogAggregationStatus {
     node2ReportForApp2.add(report2_3);
     node2.handle(new RMNodeStatusEvent(node2.getNodeID(), nodeStatus2,
         node2ReportForApp2));
-    Assertions.assertEquals(LogAggregationStatus.FAILED,
+    assertEquals(LogAggregationStatus.FAILED,
       rmApp.getLogAggregationStatusForAppReport());
     logAggregationStatus = rmApp.getLogAggregationReportsForApp();
-    Assertions.assertTrue(logAggregationStatus.size() == 1);
-    Assertions.assertTrue(logAggregationStatus.containsKey(node2.getNodeID()));
-    Assertions.assertTrue(!logAggregationStatus.containsKey(node1.getNodeID()));
-    Assertions.assertEquals("Fail_Message",
+    assertTrue(logAggregationStatus.size() == 1);
+    assertTrue(logAggregationStatus.containsKey(node2.getNodeID()));
+    assertTrue(!logAggregationStatus.containsKey(node1.getNodeID()));
+    assertEquals("Fail_Message",
       ((RMAppImpl)rmApp).getLogAggregationFailureMessagesForNM(nodeId2));
   }
 
@@ -360,7 +359,7 @@ public class TestRMAppLogAggregationStatus {
     conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, false);
     RMAppImpl rmApp = (RMAppImpl)createRMApp(conf);
     // The log aggregation status should be DISABLED.
-    Assertions.assertEquals(LogAggregationStatus.DISABLED,
+    assertEquals(LogAggregationStatus.DISABLED,
       rmApp.getLogAggregationStatusForAppReport());
 
     // Enable the log aggregation
@@ -369,7 +368,7 @@ public class TestRMAppLogAggregationStatus {
     // If we do not know any NodeManagers for this application , and
     // the log aggregation is enabled, the log aggregation status will
     // return NOT_START
-    Assertions.assertEquals(LogAggregationStatus.NOT_START,
+    assertEquals(LogAggregationStatus.NOT_START,
       rmApp.getLogAggregationStatusForAppReport());
 
     NodeId nodeId1 = NodeId.newInstance("localhost", 1111);
@@ -387,7 +386,7 @@ public class TestRMAppLogAggregationStatus {
       rmApp.getApplicationId(), LogAggregationStatus.NOT_START, ""));
     rmApp.aggregateLogReport(nodeId4, LogAggregationReport.newInstance(
       rmApp.getApplicationId(), LogAggregationStatus.NOT_START, ""));
-    Assertions.assertEquals(LogAggregationStatus.NOT_START,
+    assertEquals(LogAggregationStatus.NOT_START,
       rmApp.getLogAggregationStatusForAppReport());
 
     rmApp.aggregateLogReport(nodeId1, LogAggregationReport.newInstance(
@@ -398,11 +397,11 @@ public class TestRMAppLogAggregationStatus {
       rmApp.getApplicationId(), LogAggregationStatus.SUCCEEDED, ""));
     rmApp.aggregateLogReport(nodeId4, LogAggregationReport.newInstance(
       rmApp.getApplicationId(), LogAggregationStatus.SUCCEEDED, ""));
-    Assertions.assertEquals(LogAggregationStatus.RUNNING,
+    assertEquals(LogAggregationStatus.RUNNING,
       rmApp.getLogAggregationStatusForAppReport());
 
     rmApp.handle(new RMAppEvent(rmApp.getApplicationId(), RMAppEventType.KILL));
-    Assertions.assertTrue(RMAppImpl.isAppInFinalState(rmApp));
+    assertTrue(RMAppImpl.isAppInFinalState(rmApp));
 
     // If at least of one log aggregation status for one NM is TIME_OUT,
     // others are SUCCEEDED, the log aggregation status for this app will
@@ -415,7 +414,7 @@ public class TestRMAppLogAggregationStatus {
       rmApp.getApplicationId(), LogAggregationStatus.SUCCEEDED, ""));
     rmApp.aggregateLogReport(nodeId4, LogAggregationReport.newInstance(
       rmApp.getApplicationId(), LogAggregationStatus.SUCCEEDED, ""));
-    Assertions.assertEquals(LogAggregationStatus.TIME_OUT,
+    assertEquals(LogAggregationStatus.TIME_OUT,
       rmApp.getLogAggregationStatusForAppReport());
 
     rmApp = (RMAppImpl)createRMApp(conf);
@@ -431,7 +430,7 @@ public class TestRMAppLogAggregationStatus {
       rmApp.getApplicationId(), LogAggregationStatus.SUCCEEDED, ""));
     rmApp.aggregateLogReport(nodeId4, LogAggregationReport.newInstance(
       rmApp.getApplicationId(), LogAggregationStatus.SUCCEEDED, ""));
-    Assertions.assertEquals(LogAggregationStatus.SUCCEEDED,
+    assertEquals(LogAggregationStatus.SUCCEEDED,
       rmApp.getLogAggregationStatusForAppReport());
 
     rmApp = (RMAppImpl)createRMApp(conf);
@@ -445,7 +444,7 @@ public class TestRMAppLogAggregationStatus {
       rmApp.getApplicationId(), LogAggregationStatus.NOT_START, ""));
     rmApp.aggregateLogReport(nodeId4, LogAggregationReport.newInstance(
       rmApp.getApplicationId(), LogAggregationStatus.NOT_START, ""));
-    Assertions.assertEquals(LogAggregationStatus.RUNNING,
+    assertEquals(LogAggregationStatus.RUNNING,
       rmApp.getLogAggregationStatusForAppReport());
 
     // If the log aggregation status for at least one of NMs
@@ -460,7 +459,7 @@ public class TestRMAppLogAggregationStatus {
     rmApp.aggregateLogReport(nodeId4, LogAggregationReport.newInstance(
       rmApp.getApplicationId(), LogAggregationStatus.RUNNING_WITH_FAILURE,
       ""));
-    Assertions.assertEquals(LogAggregationStatus.RUNNING_WITH_FAILURE,
+    assertEquals(LogAggregationStatus.RUNNING_WITH_FAILURE,
       rmApp.getLogAggregationStatusForAppReport());
 
     // For node4, the previous log aggregation status is RUNNING_WITH_FAILURE,
@@ -474,11 +473,11 @@ public class TestRMAppLogAggregationStatus {
       rmApp.getApplicationId(), LogAggregationStatus.NOT_START, ""));
     rmApp.aggregateLogReport(nodeId4, LogAggregationReport.newInstance(
       rmApp.getApplicationId(), LogAggregationStatus.RUNNING, ""));
-    Assertions.assertEquals(LogAggregationStatus.RUNNING_WITH_FAILURE,
+    assertEquals(LogAggregationStatus.RUNNING_WITH_FAILURE,
       rmApp.getLogAggregationStatusForAppReport());
 
     rmApp.handle(new RMAppEvent(rmApp.getApplicationId(), RMAppEventType.KILL));
-    Assertions.assertTrue(RMAppImpl.isAppInFinalState(rmApp));
+    assertTrue(RMAppImpl.isAppInFinalState(rmApp));
     // If at least of one log aggregation status for one NM is FAILED,
     // others are either SUCCEEDED or TIME_OUT, and this application is
     // at the final state, the log aggregation status for this app
@@ -491,7 +490,7 @@ public class TestRMAppLogAggregationStatus {
       rmApp.getApplicationId(), LogAggregationStatus.FAILED, ""));
     rmApp.aggregateLogReport(nodeId4, LogAggregationReport.newInstance(
       rmApp.getApplicationId(), LogAggregationStatus.FAILED, ""));
-    Assertions.assertEquals(LogAggregationStatus.FAILED,
+    assertEquals(LogAggregationStatus.FAILED,
       rmApp.getLogAggregationStatusForAppReport());
 
   }

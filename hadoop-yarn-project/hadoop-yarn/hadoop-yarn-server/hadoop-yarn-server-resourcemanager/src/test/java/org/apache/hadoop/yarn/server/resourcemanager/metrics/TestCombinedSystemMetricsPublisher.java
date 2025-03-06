@@ -19,7 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -62,7 +65,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineW
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -133,18 +135,18 @@ public class TestCombinedSystemMetricsPublisher {
         new ArrayList<SystemMetricsPublisher>();
 
     if (YarnConfiguration.timelineServiceV1Enabled(conf)) {
-      Assertions.assertTrue(enableV1);
+      assertTrue(enableV1);
       publisherV1 = new TimelineServiceV1Publisher();
       publishers.add(publisherV1);
       publisherV1.init(conf);
       publisherV1.start();
     } else {
-      Assertions.assertFalse(enableV1);
+      assertFalse(enableV1);
       publisherV1 = null;
     }
 
     if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
-      Assertions.assertTrue(enableV2);
+      assertTrue(enableV2);
       publisherV2 = new TimelineServiceV2Publisher(
           rmTimelineCollectorManager) {
         @Override
@@ -156,7 +158,7 @@ public class TestCombinedSystemMetricsPublisher {
       publisherV2.init(conf);
       publisherV2.start();
     } else {
-      Assertions.assertFalse(enableV2);
+      assertFalse(enableV2);
       publisherV2 = null;
     }
 
@@ -221,7 +223,7 @@ public class TestCombinedSystemMetricsPublisher {
                 testRootDir.getCanonicalPath());
       } catch (IOException e) {
         e.printStackTrace();
-        Assertions.fail("Exception while setting the " +
+        fail("Exception while setting the " +
             "TIMELINE_SERVICE_STORAGE_DIR_ROOT ");
       }
     }
@@ -281,21 +283,21 @@ public class TestCombinedSystemMetricsPublisher {
     config.set(YarnConfiguration.TIMELINE_SERVICE_VERSIONS, "2.0,1.5");
     config.set(YarnConfiguration.TIMELINE_SERVICE_VERSION, "2.0");
 
-    Assertions.assertTrue(YarnConfiguration.timelineServiceV2Enabled(config));
-    Assertions.assertTrue(YarnConfiguration.timelineServiceV15Enabled(config));
-    Assertions.assertTrue(YarnConfiguration.timelineServiceV1Enabled(config));
+    assertTrue(YarnConfiguration.timelineServiceV2Enabled(config));
+    assertTrue(YarnConfiguration.timelineServiceV15Enabled(config));
+    assertTrue(YarnConfiguration.timelineServiceV1Enabled(config));
 
     config.set(YarnConfiguration.TIMELINE_SERVICE_VERSIONS, "2.0,1");
     config.set(YarnConfiguration.TIMELINE_SERVICE_VERSION, "1.5");
-    Assertions.assertTrue(YarnConfiguration.timelineServiceV2Enabled(config));
-    Assertions.assertFalse(YarnConfiguration.timelineServiceV15Enabled(config));
-    Assertions.assertTrue(YarnConfiguration.timelineServiceV1Enabled(config));
+    assertTrue(YarnConfiguration.timelineServiceV2Enabled(config));
+    assertFalse(YarnConfiguration.timelineServiceV15Enabled(config));
+    assertTrue(YarnConfiguration.timelineServiceV1Enabled(config));
 
     config.set(YarnConfiguration.TIMELINE_SERVICE_VERSIONS, "2.0");
     config.set(YarnConfiguration.TIMELINE_SERVICE_VERSION, "1.5");
-    Assertions.assertTrue(YarnConfiguration.timelineServiceV2Enabled(config));
-    Assertions.assertFalse(YarnConfiguration.timelineServiceV15Enabled(config));
-    Assertions.assertFalse(YarnConfiguration.timelineServiceV1Enabled(config));
+    assertTrue(YarnConfiguration.timelineServiceV2Enabled(config));
+    assertFalse(YarnConfiguration.timelineServiceV15Enabled(config));
+    assertFalse(YarnConfiguration.timelineServiceV1Enabled(config));
   }
 
   private void publishEvents(boolean v1Enabled, boolean v2Enabled) {
@@ -332,7 +334,7 @@ public class TestCombinedSystemMetricsPublisher {
           store.getEntity(appAttemptId.toString(),
               AppAttemptMetricsConstants.ENTITY_TYPE,
               EnumSet.allOf(Field.class));
-      Assertions.assertNull(entity);
+      assertNull(entity);
       return;
     }
 
@@ -355,19 +357,18 @@ public class TestCombinedSystemMetricsPublisher {
       } else if (event.getEventType().equals(
           AppAttemptMetricsConstants.FINISHED_EVENT_TYPE)) {
         hasFinishedEvent = true;
-        Assertions.assertEquals(
+        assertEquals(
             FinalApplicationStatus.UNDEFINED.toString(),
             event.getEventInfo().get(
                 AppAttemptMetricsConstants.FINAL_STATUS_INFO));
-        Assertions.assertEquals(
+        assertEquals(
             YarnApplicationAttemptState.FINISHED.toString(),
             event.getEventInfo().get(
                 AppAttemptMetricsConstants.STATE_INFO));
       }
-      Assertions
-      .assertEquals(appAttemptId.toString(), entity.getEntityId());
+      assertEquals(appAttemptId.toString(), entity.getEntityId());
     }
-    Assertions.assertTrue(hasRegisteredEvent && hasFinishedEvent);
+    assertTrue(hasRegisteredEvent && hasFinishedEvent);
   }
 
   private void validateV2(boolean v2Enabled) throws Exception {
@@ -376,13 +377,13 @@ public class TestCombinedSystemMetricsPublisher {
             + TimelineEntityType.YARN_APPLICATION_ATTEMPT + "/";
 
     File entityFolder = new File(outputDirApp);
-    Assertions.assertEquals(v2Enabled, entityFolder.isDirectory());
+    assertEquals(v2Enabled, entityFolder.isDirectory());
 
     if (v2Enabled) {
       String timelineServiceFileName = appAttemptId.toString()
           + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
       File entityFile = new File(outputDirApp, timelineServiceFileName);
-      Assertions.assertTrue(entityFile.exists());
+      assertTrue(entityFile.exists());
       long idPrefix = TimelineServiceHelper
           .invertLong(appAttemptId.getAttemptId());
       verifyEntity(entityFile, 2,
