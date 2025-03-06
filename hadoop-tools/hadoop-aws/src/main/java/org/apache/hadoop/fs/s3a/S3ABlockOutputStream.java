@@ -1424,16 +1424,6 @@ class S3ABlockOutputStream extends OutputStream implements
      */
     private boolean isMultipartUploadEnabled;
 
-    /**
-     * Is conditional create enabled.
-     */
-    private boolean isConditionalPutEnabled;
-
-    /**
-     * etag used for write.
-     */
-    private String etag;
-
     private BlockOutputStreamBuilder() {
     }
 
@@ -1593,18 +1583,6 @@ class S3ABlockOutputStream extends OutputStream implements
     public BlockOutputStreamBuilder withMultipartEnabled(
         final boolean value) {
       isMultipartUploadEnabled = value;
-      return this;
-    }
-
-    public BlockOutputStreamBuilder withConditionalPutEnabled(
-            final boolean value) {
-      isConditionalPutEnabled = value;
-      return this;
-    }
-
-    public BlockOutputStreamBuilder withEtag(
-            final String value) {
-      etag = value;
       return this;
     }
   }

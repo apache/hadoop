@@ -2216,9 +2216,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             .withPutOptions(putOptions)
             .withIOStatisticsAggregator(
                 IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator())
-            .withMultipartEnabled(isMultipartUploadEnabled)
-            .withConditionalPutEnabled(conditionalPut)
-            .withEtag(options.etag());
+            .withMultipartEnabled(isMultipartUploadEnabled);
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);
