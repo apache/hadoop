@@ -13,9 +13,10 @@ MAIN_POM="${SCRIPT_DIR}/../pom.xml"
 POM_FILE="${POM_FILE:-$MAIN_POM}"
 TEST_EXCLUDE_PATTERN="${TEST_EXCLUDE_PATTERN:-$(cat "${SCRIPT_DIR}/test-excludes.txt" | { grep -v "^#" || test $? = 1; } | paste -sd "," -)}"
 
-SKIP_SONAR=1
+
 SONAR_URL="${SONAR_URL:-https://sonarqube.infra.cloudera.com}"
 SONAR_LOGIN="${SONAR_LOGIN:-}"
+SONAR_TOKEN="${SONAR_TOKEN:-}"
 SONAR_PROJECT_KEY="${SONAR_PROJECT_KEY:-}"
 SONAR_PROJECT_NAME="${SONAR_PROJECT_NAME:-}"
 
@@ -30,10 +31,14 @@ mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "$POM_FILE" test -Dparallel-tests -Dt
 mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "$POM_FILE" clover:aggregate clover:clover
 
 if [ -z ${SKIP_SONAR+x} ]; then
+    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64/
+    export PATH=$JAVA_HOME/bin:$PATH
+
     if [ -n "$SONAR_LOGIN" ]; then
-        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64/
-        export PATH=$JAVA_HOME/bin:$PATH
         mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "$POM_FILE" sonar:sonar -Dsonar.clover.reportPath=./target/clover/clover.xml \
             -Dsonar.host.url="$SONAR_URL" -Dsonar.login="$SONAR_LOGIN" -Dsonar.projectKey="$SONAR_PROJECT_KEY" -Dsonar.projectName="$SONAR_PROJECT_NAME"
+    elif [ -n "$SONAR_TOKEN" ]; then
+        mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "$POM_FILE" sonar:sonar -Dsonar.clover.reportPath=./target/clover/clover.xml \
+            -Dsonar.host.url="$SONAR_URL" -Dsonar.token="$SONAR_TOKEN" -Dsonar.projectKey="$SONAR_PROJECT_KEY" -Dsonar.projectName="$SONAR_PROJECT_NAME"
     fi
 fi
