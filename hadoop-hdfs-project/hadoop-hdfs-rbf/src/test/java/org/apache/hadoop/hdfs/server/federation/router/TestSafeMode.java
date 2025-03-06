@@ -18,43 +18,55 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.ASYNC_MODE;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.SYNC_MODE;
+import static org.apache.hadoop.hdfs.server.federation.router.TestSafeMode.setUp;
 
-import java.io.IOException;
+import java.lang.reflect.Method;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
+import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Test the SafeMode.
  */
 public class TestSafeMode {
 
-  /** Federated HDFS cluster. */
-  private MiniRouterDFSCluster cluster;
+  private static StateStoreDFSCluster cluster;
+  public static void setUp(String rpcMode) throws Exception {
+    cluster = new StateStoreDFSCluster(true, 2);
 
-  @BeforeEach
-  public  void setup() throws Exception {
-    cluster = new MiniRouterDFSCluster(true, 2);
+    Configuration routerConf = new RouterConfigBuilder()
+        .rpc()
+        .heartbeat()
+        .stateStore()
+        .build();
+    if (rpcMode.equals(ASYNC_MODE)) {
+      routerConf.setBoolean(RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, true);
+    }
+    cluster.addRouterOverrides(routerConf);
 
-    // Start NNs and DNs and wait until ready
+    // Start NNs and DNs and wait until ready.
     cluster.startCluster();
-
-    // Start routers with only an RPC service
+    // Start routers with only an RPC service.
     cluster.startRouters();
 
-    // Register and verify all NNs with all routers
+    // Register and verify all NNs with all routers.
     cluster.registerNamenodes();
     cluster.waitNamenodeRegistration();
 
-    // Setup the mount table
-    cluster.installMockLocations();
-
-    // Making one Namenodes active per nameservice
+    // Making one Namenodes active per nameservice.
     if (cluster.isHighAvailability()) {
       for (String ns : cluster.getNameservices()) {
         cluster.switchToActive(ns, NAMENODES[0]);
@@ -64,19 +76,68 @@ public class TestSafeMode {
     cluster.waitActiveNamespaces();
   }
 
-  @AfterEach
-  public void teardown() throws IOException {
-    if (cluster != null) {
-      cluster.shutdown();
-      cluster = null;
+  @Nested
+  @ExtendWith(RouterServerHelperInTestSafeMode.class)
+  class TestWithAsyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testProxySetSafemodeWithAsyncRouter(String rpcMode) throws Exception {
+      testProxySetSafemode();
     }
   }
 
-  @Test
+  @Nested
+  @ExtendWith(RouterServerHelperInTestSafeMode.class)
+  class TestWithSyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testProxySetSafemodeWithSyncRouter(String rpcMode) throws Exception {
+      testProxySetSafemode();
+    }
+  }
+
   public void testProxySetSafemode() throws Exception {
     RouterContext routerContext = cluster.getRandomRouter();
     ClientProtocol routerProtocol = routerContext.getClient().getNamenode();
     routerProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, true);
     routerProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, false);
+  }
+
+  public static StateStoreDFSCluster getCluster() {
+    return cluster;
+  }
+
+  public static void setCluster(StateStoreDFSCluster cluster) {
+    TestSafeMode.cluster = cluster;
+  }
+}
+
+class RouterServerHelperInTestSafeMode implements BeforeEachCallback, AfterAllCallback {
+
+  private static final ThreadLocal<RouterServerHelperInTestSafeMode> TEST_ROUTER_SERVER_TL =
+      new InheritableThreadLocal<>();
+
+  @Override
+  public void beforeEach(ExtensionContext context) throws Exception {
+    Method testMethod = context.getRequiredTestMethod();
+    ValueSource enumAnnotation = testMethod.getAnnotation(ValueSource.class);
+    if (enumAnnotation != null) {
+      String[] strings = enumAnnotation.strings();
+      for (String rpcMode : strings) {
+        if (TEST_ROUTER_SERVER_TL.get() == null) {
+          setUp(rpcMode);
+        }
+      }
+    }
+    TEST_ROUTER_SERVER_TL.set(RouterServerHelperInTestSafeMode.this);
+  }
+
+  @Override
+  public void afterAll(ExtensionContext context) {
+    if (TestSafeMode.getCluster() != null) {
+      TestSafeMode.getCluster().shutdown();
+      TestSafeMode.setCluster(null);
+    }
+    TEST_ROUTER_SERVER_TL.remove();
   }
 }

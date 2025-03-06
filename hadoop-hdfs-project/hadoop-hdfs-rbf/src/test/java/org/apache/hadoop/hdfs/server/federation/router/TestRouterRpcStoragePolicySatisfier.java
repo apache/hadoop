@@ -34,12 +34,19 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.namenode.sps.Context;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import java.lang.reflect.Method;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.ASYNC_MODE;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.SYNC_MODE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -58,8 +65,15 @@ public class TestRouterRpcStoragePolicySatisfier {
   /** Filesystem interface to the Namenode. */
   private static FileSystem nnFS;
 
-  @BeforeAll
-  public static void globalSetUp() throws Exception {
+  public static MiniRouterDFSCluster getCluster() {
+    return cluster;
+  }
+
+  public static void setCluster(MiniRouterDFSCluster cluster) {
+    TestRouterRpcStoragePolicySatisfier.cluster = cluster;
+  }
+
+  public static void globalSetUp(String rpcMode) throws Exception {
     cluster = new MiniRouterDFSCluster(false, 1);
     // Set storage types for the cluster
     StorageType[][] newtypes = new StorageType[][] {
@@ -87,6 +101,9 @@ public class TestRouterRpcStoragePolicySatisfier {
     // We decrease the DN cache times to make the test faster
     routerConf.setTimeDuration(
         RBFConfigKeys.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
+    if (rpcMode.equals(ASYNC_MODE)) {
+      routerConf.setBoolean(RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, true);
+    }
     cluster.addRouterOverrides(routerConf);
     cluster.startRouters();
 
@@ -114,12 +131,26 @@ public class TestRouterRpcStoragePolicySatisfier {
     externalSps.start(HdfsConstants.StoragePolicySatisfierMode.EXTERNAL);
   }
 
-  @AfterAll
-  public static void tearDown() {
-    cluster.shutdown();
+  @Nested
+  @ExtendWith(RouterServerHelperInTestRouterRpcStoragePolicySatisfier.class)
+  class TestWithAsyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testStoragePolicySatisfierAsync() throws Exception {
+      testStoragePolicySatisfier();
+    }
   }
 
-  @Test
+  @Nested
+  @ExtendWith(RouterServerHelperInTestRouterRpcStoragePolicySatisfier.class)
+  class TestWithSyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testStoragePolicySatisfierSync() throws Exception {
+      testStoragePolicySatisfier();
+    }
+  }
+
   public void testStoragePolicySatisfier() throws Exception {
     final String file = "/testStoragePolicySatisfierCommand";
     short repl = 1;
@@ -144,5 +175,34 @@ public class TestRouterRpcStoragePolicySatisfier {
     // Verify storage type via NN
     DFSTestUtil.waitExpectedStorageType(file, StorageType.ARCHIVE, 1, 20000,
         (DistributedFileSystem) nnFS);
+  }
+}
+
+class RouterServerHelperInTestRouterRpcStoragePolicySatisfier implements
+    BeforeEachCallback, AfterAllCallback {
+
+  private static final ThreadLocal<RouterServerHelperInTestRouterRpcStoragePolicySatisfier>
+      TEST_ROUTER_SERVER_TL = new InheritableThreadLocal<>();
+
+  @Override
+  public void afterAll(ExtensionContext context){
+    TestRouterRpcStoragePolicySatisfier.getCluster().shutdown();
+    TestRouterRpcStoragePolicySatisfier.setCluster(null);
+    TEST_ROUTER_SERVER_TL.remove();
+  }
+
+  @Override
+  public void beforeEach(ExtensionContext context) throws Exception {
+    Method testMethod = context.getRequiredTestMethod();
+    ValueSource enumAnnotation = testMethod.getAnnotation(ValueSource.class);
+    if (enumAnnotation != null) {
+      String[] strings = enumAnnotation.strings();
+      for (String rpcMode : strings) {
+        if (TEST_ROUTER_SERVER_TL.get() == null) {
+          TestRouterRpcStoragePolicySatisfier.globalSetUp(rpcMode);
+        }
+      }
+    }
+    TEST_ROUTER_SERVER_TL.set(RouterServerHelperInTestRouterRpcStoragePolicySatisfier.this);
   }
 }

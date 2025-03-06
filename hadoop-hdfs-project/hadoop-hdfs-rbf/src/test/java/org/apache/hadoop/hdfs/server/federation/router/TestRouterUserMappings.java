@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
+import org.apache.hadoop.hdfs.server.federation.router.TestRouterUserMappings.MockUnixGroupsMapping;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.tools.GetGroups;
@@ -39,9 +40,14 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +59,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
@@ -63,6 +70,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.ASYNC_MODE;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.SYNC_MODE;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterUserMappings.getCluster;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterUserMappings.getRouter;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterUserMappings.getTempResource;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterUserMappings.setUp;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterUserMappings.setCluster;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterUserMappings.setRouter;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterUserMappings.setTempResource;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -78,15 +94,15 @@ public class TestRouterUserMappings {
   private static final Logger LOG = LoggerFactory.getLogger(
       TestRouterUserMappings.class);
 
-  private MiniRouterDFSCluster cluster;
-  private Router router;
-  private Configuration conf;
+  private static MiniRouterDFSCluster cluster;
+  private static Router router;
+  private static Configuration routerConf;
   private static final long GROUP_REFRESH_TIMEOUT_SEC = 1L;
   private static final String ROUTER_NS = "rbfns";
   private static final String HDFS_SCHEMA = "hdfs://";
   private static final String LOOPBACK_ADDRESS = "127.0.0.1";
 
-  private String tempResource = null;
+  private static String tempResource = null;
 
   /**
    * Mock class to get group mapping for fake users.
@@ -125,21 +141,49 @@ public class TestRouterUserMappings {
       i++;
       return s;
     }
+
+    public static void setI(int i) {
+      MockUnixGroupsMapping.i = i;
+    }
   }
 
-  @BeforeEach
-  public void setUp() {
-    conf = new Configuration(false);
-    conf.setClass("hadoop.security.group.mapping",
-        TestRouterUserMappings.MockUnixGroupsMapping.class,
+  public static void setUp(String rpcMode) throws Exception {
+    routerConf = new Configuration(false);
+    routerConf.setClass("hadoop.security.group.mapping",
+        MockUnixGroupsMapping.class,
         GroupMappingServiceProvider.class);
-    conf.setLong("hadoop.security.groups.cache.secs",
+    routerConf.setLong("hadoop.security.groups.cache.secs",
         GROUP_REFRESH_TIMEOUT_SEC);
-    conf = new RouterConfigBuilder(conf)
+    routerConf = new RouterConfigBuilder(routerConf)
         .rpc()
         .admin()
         .build();
-    Groups.getUserToGroupsMappingService(conf);
+    if (rpcMode.equals(ASYNC_MODE)) {
+      routerConf.setBoolean(RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, true);
+    }
+    Groups.getUserToGroupsMappingService(routerConf);
+    //setup a miniroutercluster with 2 nameservices, 4 routers.
+    cluster = new MiniRouterDFSCluster(true, 2);
+    cluster.addRouterOverrides(routerConf);
+    cluster.startRouters();
+
+    //construct client conf.
+    routerConf.set(DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY, "ns0,ns1");
+    routerConf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns0,ns1,"+ ROUTER_NS);
+    routerConf.set(HdfsClientConfigKeys.Failover.
+            PROXY_PROVIDER_KEY_PREFIX +"." + ROUTER_NS,
+        ConfiguredFailoverProxyProvider.class.getCanonicalName());
+    routerConf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
+        HDFS_SCHEMA + ROUTER_NS);
+    routerConf.set(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX+
+        "."+ ROUTER_NS, "r1,r2");
+    List<MiniRouterDFSCluster.RouterContext> routers = cluster.getRouters();
+    for(int i = 0; i < routers.size(); i++) {
+      MiniRouterDFSCluster.RouterContext context = routers.get(i);
+      routerConf.set(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY +
+          "." + ROUTER_NS+".r" +(i+1), LOOPBACK_ADDRESS +
+          ":" +context.getRouter().getRpcServerAddress().getPort());
+    }
   }
 
   /**
@@ -155,39 +199,49 @@ public class TestRouterUserMappings {
    * @throws Exception
    */
   private String setUpMultiRoutersAndReturnDefaultFs() throws Exception {
-    //setup a miniroutercluster with 2 nameservices, 4 routers.
-    cluster = new MiniRouterDFSCluster(true, 2);
-    cluster.addRouterOverrides(conf);
-    cluster.startRouters();
-
-    //construct client conf.
-    conf.set(DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY, "ns0,ns1");
-    conf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns0,ns1,"+ ROUTER_NS);
-    conf.set(HdfsClientConfigKeys.Failover.
-        PROXY_PROVIDER_KEY_PREFIX +"." + ROUTER_NS,
-        ConfiguredFailoverProxyProvider.class.getCanonicalName());
-    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
-        HDFS_SCHEMA + ROUTER_NS);
-    conf.set(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX+
-        "."+ ROUTER_NS, "r1,r2");
-    List<MiniRouterDFSCluster.RouterContext> routers = cluster.getRouters();
-    for(int i = 0; i < routers.size(); i++) {
-      MiniRouterDFSCluster.RouterContext context = routers.get(i);
-      conf.set(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY +
-          "." + ROUTER_NS+".r" +(i+1), LOOPBACK_ADDRESS +
-          ":" +context.getRouter().getRpcServerAddress().getPort());
-    }
     return HDFS_SCHEMA + ROUTER_NS;
   }
 
-  @Test
+  @Nested
+  @ExtendWith(RouterServerHelperInTestRouterUserMappings.class)
+  class TestWithAsyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testRefreshSuperUserGroupsConfigurationAsync()
+        throws Exception {
+      testRefreshSuperUserGroupsConfiguration();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testGroupMappingRefreshAsync() throws Exception {
+      testGroupMappingRefresh();
+    }
+  }
+
+  @Nested
+  @ExtendWith(RouterServerHelperInTestRouterUserMappings.class)
+  class TestWithSyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testRefreshSuperUserGroupsConfigurationSync()
+        throws Exception {
+      testRefreshSuperUserGroupsConfiguration();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testGroupMappingRefreshSync() throws Exception {
+      testGroupMappingRefresh();
+    }
+  }
+
   public void testRefreshSuperUserGroupsConfiguration()
       throws Exception {
     testRefreshSuperUserGroupsConfigurationInternal(
         setUpMultiRoutersAndReturnDefaultFs());
   }
 
-  @Test
   public void testGroupMappingRefresh() throws Exception {
     testGroupMappingRefreshInternal(
         setUpMultiRoutersAndReturnDefaultFs());
@@ -217,9 +271,9 @@ public class TestRouterUserMappings {
         getProxySuperuserIpConfKey(superUser);
 
     // superuser can proxy for this group
-    conf.set(userKeyGroups, "gr3,gr4,gr5");
-    conf.set(userKeyHosts, LOOPBACK_ADDRESS);
-    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    routerConf.set(userKeyGroups, "gr3,gr4,gr5");
+    routerConf.set(userKeyHosts, LOOPBACK_ADDRESS);
+    ProxyUsers.refreshSuperUserGroupsConfiguration(routerConf);
 
     UserGroupInformation ugi1 = mock(UserGroupInformation.class);
     UserGroupInformation ugi2 = mock(UserGroupInformation.class);
@@ -262,8 +316,8 @@ public class TestRouterUserMappings {
     tempResource = addNewConfigResource(rsrc, userKeyGroups, "gr2",
         userKeyHosts, LOOPBACK_ADDRESS);
 
-    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, defaultFs);
-    DFSAdmin admin = new DFSAdmin(conf);
+    routerConf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, defaultFs);
+    DFSAdmin admin = new DFSAdmin(routerConf);
     String[] args = new String[]{"-refreshSuperUserGroupsConfiguration"};
     admin.run(args);
 
@@ -279,8 +333,8 @@ public class TestRouterUserMappings {
     }
 
     // get groups
-    testGroupsForUserCLI(conf, "user");
-    testGroupsForUserProtocol(conf, "user");
+    testGroupsForUserCLI(routerConf, "user");
+    testGroupsForUserProtocol(routerConf, "user");
   }
 
   /**
@@ -312,7 +366,9 @@ public class TestRouterUserMappings {
     GetUserMappingsProtocol proto = NameNodeProxies.createProxy(
         config, FileSystem.getDefaultUri(config),
         GetUserMappingsProtocol.class).getProxy();
+    LOG.info("BZL#Test. Groups for user {}", username);
     String[] groups = proto.getGroupsForUser(username);
+    LOG.info("BZL#Test. groups is {}", groups);
     assertArrayEquals(new String[] {"user1", "user2"}, groups);
   }
 
@@ -321,7 +377,7 @@ public class TestRouterUserMappings {
    */
   private void testGroupMappingRefreshInternal(String defaultFs)
       throws Exception {
-    Groups groups = Groups.getUserToGroupsMappingService(conf);
+    Groups groups = Groups.getUserToGroupsMappingService(routerConf);
     String user = "test_user123";
 
     LOG.info("First attempt:");
@@ -336,9 +392,9 @@ public class TestRouterUserMappings {
     }
 
     // set fs.defaultFS point to router(s).
-    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, defaultFs);
+    routerConf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, defaultFs);
     // Test refresh command
-    DFSAdmin admin = new DFSAdmin(conf);
+    DFSAdmin admin = new DFSAdmin(routerConf);
     String[] args =  new String[]{"-refreshUserToGroupsMappings"};
     admin.run(args);
 
@@ -397,22 +453,81 @@ public class TestRouterUserMappings {
     return tmp;
   }
 
-  @AfterEach
-  public void tearDown() {
-    if (router != null) {
-      router.shutDown();
-      router = null;
+  public static MiniRouterDFSCluster getCluster() {
+    return cluster;
+  }
+
+  public static void setCluster(MiniRouterDFSCluster cluster) {
+    TestRouterUserMappings.cluster = cluster;
+  }
+
+  public static Router getRouter() {
+    return router;
+  }
+
+  public static void setRouter(Router router) {
+    TestRouterUserMappings.router = router;
+  }
+
+  public static Configuration getRouterConf() {
+    return routerConf;
+  }
+
+  public static void setRouterConf(Configuration routerConf) {
+    TestRouterUserMappings.routerConf = routerConf;
+  }
+
+  public static String getTempResource() {
+    return tempResource;
+  }
+
+  public static void setTempResource(String tempResource) {
+    TestRouterUserMappings.tempResource = tempResource;
+  }
+}
+
+class RouterServerHelperInTestRouterUserMappings implements
+    AfterAllCallback, BeforeEachCallback, AfterEachCallback {
+
+  private static final ThreadLocal<RouterServerHelperInTestRouterUserMappings>
+      TEST_ROUTER_SERVER_TL = new InheritableThreadLocal<>();
+  @Override
+  public void afterAll(ExtensionContext context) {
+    MockUnixGroupsMapping.setI(0);
+  }
+
+  @Override
+  public void afterEach(ExtensionContext context) {
+    if (getRouter() != null) {
+      getRouter().shutDown();
+      setRouter(null);
     }
 
-    if (cluster != null) {
-      cluster.shutdown();
-      cluster = null;
+    if (getCluster() != null) {
+      getCluster().shutdown();
+      setCluster(null);
     }
 
-    if (tempResource != null) {
-      File f = new File(tempResource);
+    if (getTempResource() != null) {
+      File f = new File(getTempResource());
       f.delete();
-      tempResource = null;
+      setTempResource(null);
     }
+    TEST_ROUTER_SERVER_TL.remove();
+  }
+
+  @Override
+  public void beforeEach(ExtensionContext context) throws Exception {
+    Method testMethod = context.getRequiredTestMethod();
+    ValueSource enumAnnotation = testMethod.getAnnotation(ValueSource.class);
+    if (enumAnnotation != null) {
+      String[] strings = enumAnnotation.strings();
+      for (String rpcMode : strings) {
+        if (TEST_ROUTER_SERVER_TL.get() == null) {
+          setUp(rpcMode);
+        }
+      }
+    }
+    TEST_ROUTER_SERVER_TL.set(RouterServerHelperInTestRouterUserMappings.this);
   }
 }

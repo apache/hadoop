@@ -38,16 +38,24 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.ASYNC_MODE;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.SYNC_MODE;
+import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -64,8 +72,23 @@ public class TestRouterMountTableWithoutDefaultNS {
   private static FileSystem nnFs0;
   private static FileSystem nnFs1;
 
-  @BeforeAll
-  public static void globalSetUp() throws Exception {
+  public static StateStoreDFSCluster getCluster() {
+    return cluster;
+  }
+
+  public static void setCluster(StateStoreDFSCluster cluster) {
+    TestRouterMountTableWithoutDefaultNS.cluster = cluster;
+  }
+
+  public static RouterContext getRouterContext() {
+    return routerContext;
+  }
+
+  public static void setRouterContext(RouterContext routerContext) {
+    TestRouterMountTableWithoutDefaultNS.routerContext = routerContext;
+  }
+
+  public static void globalSetUp(String rpcMode) throws Exception {
     // Build and start a federated cluster
     cluster = new StateStoreDFSCluster(false, 2);
     Configuration conf = new RouterConfigBuilder()
@@ -75,6 +98,9 @@ public class TestRouterMountTableWithoutDefaultNS {
         .build();
     conf.setInt(RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_KEY, 20);
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE, false);
+    if (rpcMode.equals(ASYNC_MODE)) {
+      conf.setBoolean(RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, true);
+    }
     cluster.addRouterOverrides(conf);
     cluster.startCluster();
     cluster.startRouters();
@@ -89,17 +115,7 @@ public class TestRouterMountTableWithoutDefaultNS {
     mountTable = (MountTableResolver) router.getSubclusterResolver();
   }
 
-  @AfterAll
-  public static void tearDown() {
-    if (cluster != null) {
-      cluster.stopRouter(routerContext);
-      cluster.shutdown();
-      cluster = null;
-    }
-  }
-
-  @AfterEach
-  public void clearMountTable() throws IOException {
+  public static void clearMountTable() throws IOException {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTableManager = client.getMountTableManager();
     GetMountTableEntriesRequest req1 = GetMountTableEntriesRequest.newInstance("/");
@@ -129,11 +145,90 @@ public class TestRouterMountTableWithoutDefaultNS {
     return addResponse.getStatus();
   }
 
+  @Nested
+  @ExtendWith(RouterServerHelperInTestRouterMountTableWithoutDefaultNS.class)
+  class TestWithAsyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testGetFileInfoWithSubMountPointAsync() throws IOException {
+      testGetFileInfoWithSubMountPoint();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testGetFileInfoWithoutSubMountPointAsync() throws Exception {
+      testGetFileInfoWithoutSubMountPoint(ASYNC_MODE);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testGetContentSummaryWithSubMountPointAsync() throws Exception {
+      testGetContentSummaryWithSubMountPoint(ASYNC_MODE);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testGetAllLocationsAsync() throws IOException {
+      testGetAllLocations();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testGetLocationsForContentSummaryAsync() throws Exception {
+      testGetLocationsForContentSummary();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testGetContentSummaryAsync() throws Exception {
+      testGetContentSummary(ASYNC_MODE);
+    }
+  }
+
+  @Nested
+  @ExtendWith(RouterServerHelperInTestRouterMountTableWithoutDefaultNS.class)
+  class TestWithSyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testGetFileInfoWithSubMountPointSync() throws IOException {
+      testGetFileInfoWithSubMountPoint();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testGetFileInfoWithoutSubMountPointSync() throws Exception {
+      testGetFileInfoWithoutSubMountPoint(SYNC_MODE);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testGetContentSummaryWithSubMountPointSync() throws Exception {
+      testGetContentSummaryWithSubMountPoint(SYNC_MODE);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testGetAllLocationsSync() throws IOException {
+      testGetAllLocations();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testGetLocationsForContentSummarySync() throws Exception {
+      testGetLocationsForContentSummary();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testGetContentSummarySync() throws Exception {
+      testGetContentSummary(SYNC_MODE);
+    }
+  }
+
   /**
    * Verify that RBF that disable default nameservice should support
    * get information about ancestor mount points.
    */
-  @Test
   public void testGetFileInfoWithSubMountPoint() throws IOException {
     MountTable addEntry = MountTable.newInstance("/testdir/1",
         Collections.singletonMap("ns0", "/testdir/1"));
@@ -148,21 +243,26 @@ public class TestRouterMountTableWithoutDefaultNS {
    * Verify that RBF doesn't support get the file information
    * with no location and sub mount points.
    */
-  @Test
-  public void testGetFileInfoWithoutSubMountPoint() throws Exception {
+  public void testGetFileInfoWithoutSubMountPoint(String rpcMode) throws Exception {
     MountTable addEntry = MountTable.newInstance("/testdir/1",
         Collections.singletonMap("ns0", "/testdir/1"));
     assertTrue(addMountTable(addEntry));
     LambdaTestUtils.intercept(RouterResolveException.class,
-        () -> routerContext.getRouter().getRpcServer().getFileInfo("/testdir2"));
+        () -> {
+          if (rpcMode.equals(ASYNC_MODE)) {
+            routerContext.getRouter().getRpcServer().getFileInfo("/testdir2");
+            syncReturn(HdfsFileStatus.class);
+          } else {
+            routerContext.getRouter().getRpcServer().getFileInfo("/testdir2");
+          }
+        });
   }
 
   /**
    * Verify that RBF that disable default nameservice should support
    * get information about ancestor mount points.
    */
-  @Test
-  public void testGetContentSummaryWithSubMountPoint() throws IOException {
+  public void testGetContentSummaryWithSubMountPoint(String rpcMode) throws Exception {
     MountTable addEntry = MountTable.newInstance("/testdir/1/2",
         Collections.singletonMap("ns0", "/testdir/1/2"));
     assertTrue(addMountTable(addEntry));
@@ -171,7 +271,13 @@ public class TestRouterMountTableWithoutDefaultNS {
       writeData(nnFs0, new Path("/testdir/1/2/3"), 10 * 1024 * 1024);
 
       RouterRpcServer routerRpcServer = routerContext.getRouterRpcServer();
-      ContentSummary summaryFromRBF = routerRpcServer.getContentSummary("/testdir");
+      ContentSummary summaryFromRBF;
+      if (rpcMode.equals(ASYNC_MODE)) {
+        routerRpcServer.getContentSummary("/testdir");
+        summaryFromRBF = syncReturn(ContentSummary.class);
+      } else {
+        summaryFromRBF = routerRpcServer.getContentSummary("/testdir");
+      }
       assertNotNull(summaryFromRBF);
       assertEquals(1, summaryFromRBF.getFileCount());
       assertEquals(10 * 1024 * 1024, summaryFromRBF.getLength());
@@ -180,7 +286,6 @@ public class TestRouterMountTableWithoutDefaultNS {
     }
   }
 
-  @Test
   public void testGetAllLocations() throws IOException {
     // Add mount table entry.
     MountTable addEntry = MountTable.newInstance("/testA",
@@ -198,7 +303,6 @@ public class TestRouterMountTableWithoutDefaultNS {
     assertEquals(3, locations.size());
   }
 
-  @Test
   public void testGetLocationsForContentSummary() throws Exception {
     // Add mount table entry.
     MountTable addEntry = MountTable.newInstance("/testA/testB",
@@ -227,8 +331,7 @@ public class TestRouterMountTableWithoutDefaultNS {
         () -> protocol.getLocationsForContentSummary("/testB"));
   }
 
-  @Test
-  public void testGetContentSummary() throws Exception {
+  public void testGetContentSummary(String rpcMode) throws Exception {
     try {
       // Add mount table entry.
       MountTable addEntry = MountTable.newInstance("/testA",
@@ -246,7 +349,13 @@ public class TestRouterMountTableWithoutDefaultNS {
       writeData(nnFs1, new Path("/testA/testB/testC/file3"), 1024 * 1024);
 
       RouterRpcServer routerRpcServer = routerContext.getRouterRpcServer();
-      ContentSummary summary = routerRpcServer.getContentSummary("/testA");
+      ContentSummary summary;
+      if (rpcMode.equals(ASYNC_MODE)) {
+        routerRpcServer.getContentSummary("/testA");
+        summary = syncReturn(ContentSummary.class);
+      } else {
+        summary = routerRpcServer.getContentSummary("/testA");
+      }
       assertEquals(3, summary.getFileCount());
       assertEquals(1024 * 1024 * 3, summary.getLength());
 
@@ -264,5 +373,42 @@ public class TestRouterMountTableWithoutDefaultNS {
         outputStream.write(writeSize);
       }
     }
+  }
+}
+
+class RouterServerHelperInTestRouterMountTableWithoutDefaultNS implements
+    AfterAllCallback, BeforeEachCallback, AfterEachCallback {
+  public static final ThreadLocal<RouterServerHelperInTestRouterMountTableWithoutDefaultNS>
+      TEST_ROUTER_SERVER_TL = new InheritableThreadLocal<>();
+
+  @Override
+  public void afterAll(ExtensionContext context) {
+    if (TestRouterMountTableWithoutDefaultNS.getCluster() != null) {
+      TestRouterMountTableWithoutDefaultNS.getCluster().stopRouter(
+          TestRouterMountTableWithoutDefaultNS.getRouterContext());
+      TestRouterMountTableWithoutDefaultNS.getCluster().shutdown();
+      TestRouterMountTableWithoutDefaultNS.setCluster(null);
+    }
+    TEST_ROUTER_SERVER_TL.remove();
+  }
+
+  @Override
+  public void afterEach(ExtensionContext context) throws IOException {
+    TestRouterMountTableWithoutDefaultNS.clearMountTable();
+  }
+
+  @Override
+  public void beforeEach(ExtensionContext context) throws Exception {
+    Method testMethod = context.getRequiredTestMethod();
+    ValueSource enumAnnotation = testMethod.getAnnotation(ValueSource.class);
+    if (enumAnnotation != null) {
+      String[] strings = enumAnnotation.strings();
+      for (String rpcMode : strings) {
+        if (TEST_ROUTER_SERVER_TL.get() == null) {
+          TestRouterMountTableWithoutDefaultNS.globalSetUp(rpcMode);
+        }
+      }
+    }
+    TEST_ROUTER_SERVER_TL.set(RouterServerHelperInTestRouterMountTableWithoutDefaultNS.this);
   }
 }

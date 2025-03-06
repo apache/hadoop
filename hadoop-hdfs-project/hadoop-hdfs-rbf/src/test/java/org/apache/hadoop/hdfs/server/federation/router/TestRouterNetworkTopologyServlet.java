@@ -41,6 +41,8 @@ import java.util.Iterator;
 import java.util.Map;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HTTP_ENABLE;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.ASYNC_MODE;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.SYNC_MODE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.apache.hadoop.hdfs.server.federation.router.TestRouterNetworkTopologyServlet.clusterNoDatanodes;
@@ -53,16 +55,13 @@ public class TestRouterNetworkTopologyServlet {
   public static StateStoreDFSCluster clusterWithDatanodes;
   public static StateStoreDFSCluster clusterNoDatanodes;
 
-  public static final String ASYNC_MODE = "ASYNC";
-  public static final String SYNC_MODE = "SYNC";
-
   public static void setUp(String rpcMode) throws Exception {
     // Builder configuration.
     Configuration routerConf =
         new RouterConfigBuilder().stateStore().admin().quota().rpc().build();
     routerConf.set(DFS_ROUTER_HTTP_ENABLE, "true");
     // Use async router rpc.
-    if (rpcMode.equals("ASYNC")) {
+    if (rpcMode.equals(ASYNC_MODE)) {
       routerConf.setBoolean(RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, true);
     }
     Configuration hdfsConf = new Configuration(false);

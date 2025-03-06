@@ -2004,10 +2004,11 @@ public class RouterRpcClient {
    * Checks and sets last refresh time for a namespace's stateId.
    * Returns true if refresh time is newer than threshold.
    * Otherwise, return false and call should be handled by active namenode.
-   * @param nsId namespaceID
+   * @param nsId namespaceID.
+   * @return true if refresh time is newer than threshold. Otherwise, return false.
    */
   @VisibleForTesting
-  boolean isNamespaceStateIdFresh(String nsId) {
+  public boolean isNamespaceStateIdFresh(String nsId) {
     if (activeNNStateIdRefreshPeriodMs < 0) {
       return true;
     }

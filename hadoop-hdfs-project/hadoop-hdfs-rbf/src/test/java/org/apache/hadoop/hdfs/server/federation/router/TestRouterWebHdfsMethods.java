@@ -19,11 +19,17 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createMountTableEntry;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.ASYNC_MODE;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterConstants.SYNC_MODE;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterWebHdfsMethods.clearMountTable;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterWebHdfsMethods.cluster;
+import static org.apache.hadoop.hdfs.server.federation.router.TestRouterWebHdfsMethods.globalSetUp;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Collections;
@@ -36,11 +42,21 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
+import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
+import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,36 +69,90 @@ public class TestRouterWebHdfsMethods {
       LoggerFactory.getLogger(TestRouterWebHdfsMethods.class);
 
   protected static StateStoreDFSCluster cluster;
-  protected static RouterContext router;
+  protected static RouterContext routerContext;
+  protected static MountTableResolver mountTable;
   protected static String httpUri;
 
-  @BeforeAll
-  public static void globalSetUp() throws Exception {
+  public static void globalSetUp(String rpcMode) throws Exception {
     cluster = new StateStoreDFSCluster(false, 2);
-    Configuration conf = new RouterConfigBuilder()
+    Configuration routerConf = new RouterConfigBuilder()
         .stateStore()
         .rpc()
         .http()
         .admin()
         .build();
-    cluster.addRouterOverrides(conf);
+    if (rpcMode.equals(ASYNC_MODE)) {
+      routerConf.setBoolean(RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, true);
+    }
+
+    cluster.addRouterOverrides(routerConf);
     cluster.setIndependentDNs();
     cluster.startCluster();
     cluster.startRouters();
     cluster.waitClusterUp();
-    router = cluster.getRandomRouter();
-    httpUri = "http://"+router.getHttpAddress();
+    routerContext = cluster.getRandomRouter();
+    httpUri = "http://" + routerContext.getHttpAddress();
+    Router router = routerContext.getRouter();
+    mountTable = (MountTableResolver) router.getSubclusterResolver();
   }
 
-  @AfterAll
-  public static void tearDown() {
-    if (cluster != null) {
-      cluster.shutdown();
-      cluster = null;
+  @Nested
+  @ExtendWith(RouterServerHelperInTestRouterWebHdfsMethods.class)
+  class TestWithAsyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testWebHdfsCreateAsync(String rpcMode) throws Exception {
+      testWebHdfsCreate();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testWebHdfsCreateWithMountsAsync(String rpcMode) throws Exception {
+      testWebHdfsCreate();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testGetNsFromDataNodeNetworkLocationAsync(String rpcMode) {
+      testGetNsFromDataNodeNetworkLocation();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {ASYNC_MODE})
+    public void testWebHdfsCreateWithInvalidPathAsync(String rpcMode) throws Exception {
+      testWebHdfsCreateWithInvalidPath();
+    }
+
+  }
+
+  @Nested
+  @ExtendWith(RouterServerHelperInTestRouterWebHdfsMethods.class)
+  class TestWithSyncRouterRpc {
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testWebHdfsCreateSync(String rpcMode) throws Exception {
+      testWebHdfsCreate();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testWebHdfsCreateWithMountsSync(String rpcMode) throws Exception {
+      testWebHdfsCreateWithMounts();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testGetNsFromDataNodeNetworkLocationSync(String rpcMode) {
+      testGetNsFromDataNodeNetworkLocation();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {SYNC_MODE})
+    public void testWebHdfsCreateWithInvalidPathSync(String rpcMode) throws Exception {
+      testWebHdfsCreateWithInvalidPath();
     }
   }
 
-  @Test
   public void testWebHdfsCreate() throws Exception {
     // the file is created at default ns (ns0)
     String path = "/tmp/file";
@@ -96,13 +166,12 @@ public class TestRouterWebHdfsMethods {
     conn.disconnect();
   }
 
-  @Test
   public void testWebHdfsCreateWithMounts() throws Exception {
     // the file is created at mounted ns (ns1)
     String mountPoint = "/tmp-ns1";
     String path = "/tmp-ns1/file";
     createMountTableEntry(
-        router.getRouter(), mountPoint,
+        routerContext.getRouter(), mountPoint,
         DestinationOrder.RANDOM, Collections.singletonList("ns1"));
     URL url = new URL(getUri(path));
     LOG.info("URL: {}", url);
@@ -139,7 +208,6 @@ public class TestRouterWebHdfsMethods {
     }
   }
 
-  @Test
   public void testGetNsFromDataNodeNetworkLocation() {
     assertEquals("ns0", RouterWebHdfsMethods
         .getNsFromDataNodeNetworkLocation("/ns0/rack-info1"));
@@ -151,7 +219,6 @@ public class TestRouterWebHdfsMethods {
         .getNsFromDataNodeNetworkLocation("whatever-rack-info1"));
   }
 
-  @Test
   public void testWebHdfsCreateWithInvalidPath() throws Exception {
     // A path name include duplicated slashes.
     String path = "//tmp//file";
@@ -169,5 +236,53 @@ public class TestRouterWebHdfsMethods {
     assertEquals("InvalidPathException",
         ((LinkedHashMap) response.get("RemoteException")).get("exception"));
     conn.disconnect();
+  }
+
+  public static void clearMountTable() throws IOException {
+    RouterClient client = routerContext.getAdminClient();
+    MountTableManager mountTableManager = client.getMountTableManager();
+    GetMountTableEntriesRequest req1 =
+        GetMountTableEntriesRequest.newInstance("/");
+    GetMountTableEntriesResponse response =
+        mountTableManager.getMountTableEntries(req1);
+    for (MountTable entry : response.getEntries()) {
+      RemoveMountTableEntryRequest req2 =
+          RemoveMountTableEntryRequest.newInstance(entry.getSourcePath());
+      mountTableManager.removeMountTableEntry(req2);
+    }
+    mountTable.setDefaultNSEnable(true);
+  }
+}
+
+class RouterServerHelperInTestRouterWebHdfsMethods implements
+    BeforeEachCallback, AfterAllCallback {
+
+  private static final ThreadLocal<RouterServerHelperInTestRouterWebHdfsMethods>
+      TEST_ROUTER_SERVER_TL = new InheritableThreadLocal<>();
+
+  @Override
+  public void afterAll(ExtensionContext context) throws IOException {
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
+    TEST_ROUTER_SERVER_TL.remove();
+  }
+
+  @Override
+  public void beforeEach(ExtensionContext context) throws Exception {
+    Method testMethod = context.getRequiredTestMethod();
+    ValueSource enumAnnotation = testMethod.getAnnotation(ValueSource.class);
+    if (enumAnnotation != null) {
+      String[] strings = enumAnnotation.strings();
+      for (String rpcMode : strings) {
+        if (TEST_ROUTER_SERVER_TL.get() == null) {
+          globalSetUp(rpcMode);
+        }
+      }
+    }
+    TEST_ROUTER_SERVER_TL.set(RouterServerHelperInTestRouterWebHdfsMethods.this);
+    cluster.deleteAllFiles();
+    clearMountTable();
   }
 }
