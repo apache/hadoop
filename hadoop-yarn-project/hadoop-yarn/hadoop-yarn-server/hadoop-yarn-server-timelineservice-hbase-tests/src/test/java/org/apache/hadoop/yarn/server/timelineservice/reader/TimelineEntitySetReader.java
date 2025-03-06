@@ -99,7 +99,7 @@ public class TimelineEntitySetReader implements MessageBodyReader<Set<TimelineEn
         JsonNode jnConfigs = jNode.get("configs");
         if (jnConfigs != null) {
           Map<String, String> configInfos =
-             objectMapper.treeToValue(jnConfigs, Map.class);
+              objectMapper.treeToValue(jnConfigs, Map.class);
           entity.setConfigs(configInfos);
         }
 

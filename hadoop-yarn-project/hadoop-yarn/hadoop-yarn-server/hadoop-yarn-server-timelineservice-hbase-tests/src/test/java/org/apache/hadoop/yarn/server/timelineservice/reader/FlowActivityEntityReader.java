@@ -53,7 +53,8 @@ public class FlowActivityEntityReader implements MessageBodyReader<FlowActivityE
       Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, String> httpHeaders,
       InputStream entityStream) throws IOException, WebApplicationException {
     try {
-      FlowActivityEntity timelineEntity = objectMapper.readValue(entityStream, FlowActivityEntity.class);
+      FlowActivityEntity timelineEntity =
+          objectMapper.readValue(entityStream, FlowActivityEntity.class);
       return timelineEntity;
     } catch (Exception e) {
       return new FlowActivityEntity();

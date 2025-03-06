@@ -72,7 +72,8 @@ public class FlowActivityEntityListReader implements MessageBodyReader<List<Flow
         JsonNode jnIdentifier = jNode.get("identifier");
         JsonNode jnType = jnIdentifier.get("type");
         JsonNode jnId = jnIdentifier.get("id");
-        TimelineEntity.Identifier identifier = new TimelineEntity.Identifier(jnType.asText(), jnId.asText());
+        TimelineEntity.Identifier identifier =
+            new TimelineEntity.Identifier(jnType.asText(), jnId.asText());
         entity.setIdentifier(identifier);
 
         // Get Type
