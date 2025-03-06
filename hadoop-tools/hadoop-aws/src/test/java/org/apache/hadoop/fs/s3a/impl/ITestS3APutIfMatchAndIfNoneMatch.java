@@ -116,6 +116,28 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
     }
   }
 
+  /**
+   * Asserts that the FSDataOutputStream has the conditional create capability enabled.
+   *
+   * @param stream The output stream to check.
+   */
+  private static void assertHasCapabilityConditionalCreate(FSDataOutputStream stream) {
+    Assertions.assertThat(stream.hasCapability(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE))
+            .as("Conditional create capability should be enabled")
+            .isTrue();
+  }
+
+  /**
+   * Asserts that the FSDataOutputStream has the ETag-based conditional create capability enabled.
+   *
+   * @param stream The output stream to check.
+   */
+  private static void assertHasCapabilityEtagWrite(FSDataOutputStream stream) {
+    Assertions.assertThat(stream.hasCapability(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG))
+            .as("ETag-based conditional create capability should be enabled")
+            .isTrue();
+  }
+
   protected String getBlockOutputBufferName() {
     return FAST_UPLOAD_BUFFER_ARRAY;
   }
@@ -141,6 +163,12 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
           boolean forceMultipart) throws Exception {
     try (FSDataOutputStream stream = getStreamWithFlags(fs, path, ifNoneMatchFlag, etag,
             forceMultipart)) {
+      if (ifNoneMatchFlag) {
+        assertHasCapabilityConditionalCreate(stream);
+      }
+      if (etag != null) {
+        assertHasCapabilityEtagWrite(stream);
+      }
       if (data != null && data.length > 0) {
         stream.write(data);
       }
@@ -310,6 +338,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
     // Create a file with multipart upload but do not close the stream
     FSDataOutputStream stream = getStreamWithFlags(fs, testFile, true, null, true);
+    assertHasCapabilityConditionalCreate(stream);
     stream.write(MULTIPART_FILE_BYTES);
 
     // create and close another small file in parallel
@@ -332,6 +361,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
     // Create a file with multipart upload but do not close the stream
     FSDataOutputStream stream = getStreamWithFlags(fs, testFile, true, null, true);
+    assertHasCapabilityConditionalCreate(stream);
     stream.write(MULTIPART_FILE_BYTES);
 
     // create and close another multipart file in parallel
@@ -353,6 +383,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
     // overwrite with zero-byte file (no write)
     FSDataOutputStream stream = getStreamWithFlags(fs, testFile, true, null);
+    assertHasCapabilityConditionalCreate(stream);
 
     // close the stream, should throw RemoteFileChangedException
     RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream::close);
@@ -367,6 +398,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
     // create an empty file (no write)
     FSDataOutputStream stream = getStreamWithFlags(fs, testFile, true, null);
+    assertHasCapabilityConditionalCreate(stream);
     stream.close();
 
     // overwrite with non-empty file, should throw RemoteFileChangedException
@@ -383,10 +415,12 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
     // create an empty file (no write)
     FSDataOutputStream stream1 = getStreamWithFlags(fs, testFile, true, null);
+    assertHasCapabilityConditionalCreate(stream1);
     stream1.close();
 
     // overwrite with another empty file, should throw RemoteFileChangedException
     FSDataOutputStream stream2 = getStreamWithFlags(fs, testFile, true, null);
+    assertHasCapabilityConditionalCreate(stream2);
     RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream2::close);
     assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
   }
@@ -482,28 +516,6 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testIfMatchMultipartUploadWithRaceCondition() throws Throwable {
-    FileSystem fs = getFileSystem();
-    Path testFile = methodPath();
-
-    // Skip test if multipart uploads are not supported
-    assumeThat(fs.hasPathCapability(testFile, STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED))
-            .as("Skipping as multipart upload not supported")
-            .isTrue();
-
-    // Create a file with multipart upload but do not close the stream
-    FSDataOutputStream stream = getStreamWithFlags(fs, testFile, true, null, true);
-    stream.write(MULTIPART_FILE_BYTES);
-
-    // create and close another small file in parallel
-    createFileWithFlags(fs, testFile, SMALL_FILE_BYTES, true, null);
-
-    // Closing the first stream should throw RemoteFileChangedException
-    RemoteFileChangedException exception = intercept(RemoteFileChangedException.class, stream::close);
-    assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
-  }
-
-  @Test
   public void testIfMatchTwoMultipartUploadsRaceConditionOneClosesFirst() throws Throwable {
     FileSystem fs = getFileSystem();
     Path testFile = methodPath();
@@ -522,7 +534,10 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
 
     // Start two multipart uploads with the same etag
     FSDataOutputStream stream1 = getStreamWithFlags(fs, testFile, false, etag, true);
+    assertHasCapabilityEtagWrite(stream1);
+
     FSDataOutputStream stream2 = getStreamWithFlags(fs, testFile, false, etag, true);
+    assertHasCapabilityEtagWrite(stream2);
 
     // Write data to both streams
     stream1.write(MULTIPART_FILE_BYTES);
@@ -554,7 +569,10 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
       FSDataOutputStreamBuilder cf = fs.createFile(testFile);
       cf.overwrite(false)
               .opt(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG, etag);
-      cf.build().close();
+      try (FSDataOutputStream stream = cf.build()) {
+        assertHasCapabilityEtagWrite(stream);
+        stream.write(SMALL_FILE_BYTES);
+      }
     });
   }
 
@@ -672,7 +690,14 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
       FSDataOutputStreamBuilder cf = fs.createFile(testFile);
       cf.overwrite(false);
       cf.must(FS_S3A_CREATE_PERFORMANCE, true);
-      cf.build().close();
+      try (FSDataOutputStream stream = cf.build()) {
+        assertHasCapabilityConditionalCreate(stream);
+        stream.write(SMALL_FILE_BYTES);
+        updateStatistics(stream);
+      }
     });
+
+    verifyStatisticCounterValue(statistics.getIOStatistics(), Statistic.CONDITIONAL_CREATE.getSymbol(), 0);
+    verifyStatisticCounterValue(statistics.getIOStatistics(), Statistic.CONDITIONAL_CREATE_FAILED.getSymbol(), 1);
   }
 }

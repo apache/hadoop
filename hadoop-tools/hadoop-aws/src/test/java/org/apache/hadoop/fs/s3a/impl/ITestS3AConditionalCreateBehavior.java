@@ -72,6 +72,28 @@ public class ITestS3AConditionalCreateBehavior extends AbstractS3ATestBase {
     });
   }
 
+  /**
+   * Asserts that the FSDataOutputStream has the conditional create capability enabled.
+   *
+   * @param stream The output stream to check.
+   */
+  private static void assertHasCapabilityConditionalCreate(FSDataOutputStream stream) {
+    Assertions.assertThat(stream.hasCapability(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE))
+            .as("Conditional create capability should be enabled")
+            .isTrue();
+  }
+
+  /**
+   * Asserts that the FSDataOutputStream has the ETag-based conditional create capability enabled.
+   *
+   * @param stream The output stream to check.
+   */
+  private static void assertHasCapabilityEtagWrite(FSDataOutputStream stream) {
+    Assertions.assertThat(stream.hasCapability(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG))
+            .as("ETag-based conditional create capability should be enabled")
+            .isTrue();
+  }
+
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
@@ -111,6 +133,7 @@ public class ITestS3AConditionalCreateBehavior extends AbstractS3ATestBase {
       FSDataOutputStreamBuilder cf = fs.createFile(testFile);
       cf.opt(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE, true);
       try (FSDataOutputStream stream = cf.build()) {
+        assertHasCapabilityConditionalCreate(stream);
         stream.write(SMALL_FILE_BYTES);
       }
     });
@@ -141,6 +164,7 @@ public class ITestS3AConditionalCreateBehavior extends AbstractS3ATestBase {
       FSDataOutputStreamBuilder cf = fs.createFile(testFile);
       cf.must(FS_OPTION_CREATE_CONDITIONAL_OVERWRITE_ETAG, etag);
       try (FSDataOutputStream stream = cf.build()) {
+        assertHasCapabilityEtagWrite(stream);
         stream.write(SMALL_FILE_BYTES);
       }
     });
