@@ -363,7 +363,7 @@ org.xerial.snappy:snappy-java:1.1.10.4
 org.yaml:snakeyaml:2.0
 org.wildfly.openssl:wildfly-openssl:2.1.4.Final
 ro.isdc.wro4j:wro4j-maven-plugin:1.8.0
-software.amazon.awssdk:bundle:2.25.53
+software.amazon.awssdk:bundle:2.29.52
 net.jodah:failsafe:2.4.4
 
 --------------------------------------------------------------------------------
