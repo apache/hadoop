@@ -54,276 +54,300 @@ import static org.mockserver.model.HttpResponse.response;
 
 public class TestWebHDFSResponse {
 
-    private ClientAndServer mockWebHDFS;
+  private ClientAndServer mockWebHDFS;
 
-    private final static String WEBHDFS_HOST = "localhost";
-    private final static int WEBHDFS_PORT = 8552;
-    private final static URI WEBHDFS_URI = URI.create("webhdfs://" + WEBHDFS_HOST + ":" + WEBHDFS_PORT);
-    private final static Header CONTENT_TYPE_APPLICATION_JSON = new Header("Content-Type", "application/json");
-    private final static String TEST_WEBHDFS_PATH = "/test1/test2";
-    final HttpRequest FILE_SYSTEM_REQUEST = request()
-            .withMethod("GET")
-            .withPath(WebHdfsFileSystem.PATH_PREFIX + TEST_WEBHDFS_PATH);
+  private final static String WEBHDFS_HOST = "localhost";
+  private final static int WEBHDFS_PORT = 8552;
+  private final static URI WEBHDFS_URI =
+      URI.create("webhdfs://" + WEBHDFS_HOST + ":" + WEBHDFS_PORT);
+  private final static Header CONTENT_TYPE_APPLICATION_JSON =
+      new Header("Content-Type", "application/json");
+  private final static String TEST_WEBHDFS_PATH = "/test1/test2";
+  private final static String INVALID_TOKEN_MESSAGE =
+      SecretManager.InvalidToken.class.getName() + ": " +
+          "token (token for test_user: HDFS_DELEGATION_TOKEN owner=test_user, " +
+          "renewer=test_user, realUser=test_user, issueDate=0, maxDate=99999, " +
+          "sequenceNumber=9999, masterKeyId=999) can't be found in cache";
+  private final static HttpRequest FILE_SYSTEM_REQUEST = request()
+      .withMethod("GET")
+      .withPath(WebHdfsFileSystem.PATH_PREFIX + TEST_WEBHDFS_PATH);
 
-    @Before
-    public void startMockWebHDFSServer() {
-        System.setProperty("hadoop.home.dir", System.getProperty("user.dir"));
-        mockWebHDFS = startClientAndServer(WEBHDFS_PORT);
+  @Before
+  public void startMockWebHDFSServer() {
+    System.setProperty("hadoop.home.dir", System.getProperty("user.dir"));
+    mockWebHDFS = startClientAndServer(WEBHDFS_PORT);
+  }
+
+  @Test
+  public void testSuccess() throws IOException {
+    try (MockServerClient mockWebHDFSServerClient =
+             new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
+      final String responseBody = "{\n" +
+          "  \"FileStatuses\": {\n" +
+          "    \"FileStatus\": [{\n" +
+          "      \"accessTime\": 1320171722771,\n" +
+          "      \"blockSize\": 33554432,\n" +
+          "      \"group\": \"supergroup\",\n" +
+          "      \"length\": 24930,\n" +
+          "      \"modificationTime\": 1320171722771,\n" +
+          "      \"owner\": \"webuser\",\n" +
+          "      \"pathSuffix\": \"a.patch\",\n" +
+          "      \"permission\": \"644\",\n" +
+          "      \"replication\": 1,\n" +
+          "      \"type\": \"FILE\"\n" +
+          "    }]\n" +
+          "  }\n" +
+          "}\n";
+
+      mockWebHDFSServerClient
+          .when(FILE_SYSTEM_REQUEST, exactly(1))
+          .respond(response()
+              .withStatusCode(HttpStatus.SC_OK)
+              .withHeaders(CONTENT_TYPE_APPLICATION_JSON)
+              .withBody(responseBody));
+
+      try (FileSystem fs = new WebHdfsFileSystem()) {
+        fs.initialize(WEBHDFS_URI, new Configuration());
+        fs.listStatus(new Path(TEST_WEBHDFS_PATH));
+      }
     }
+  }
 
-    @Test
-    public void testSuccess() throws IOException {
-        try (final MockServerClient mockWebHDFSServerClient = new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
-            mockWebHDFSServerClient
-                    .when(FILE_SYSTEM_REQUEST, exactly(1))
-                    .respond(response()
-                            .withStatusCode(HttpStatus.SC_OK)
-                            .withHeaders(CONTENT_TYPE_APPLICATION_JSON)
-                            .withBody("{\n" +
-                                    "  \"FileStatuses\": {\n" +
-                                    "    \"FileStatus\": [{\n" +
-                                    "      \"accessTime\": 1320171722771,\n" +
-                                    "      \"blockSize\": 33554432,\n" +
-                                    "      \"group\": \"supergroup\",\n" +
-                                    "      \"length\": 24930,\n" +
-                                    "      \"modificationTime\": 1320171722771,\n" +
-                                    "      \"owner\": \"webuser\",\n" +
-                                    "      \"pathSuffix\": \"a.patch\",\n" +
-                                    "      \"permission\": \"644\",\n" +
-                                    "      \"replication\": 1,\n" +
-                                    "      \"type\": \"FILE\"\n" +
-                                    "    }]\n" +
-                                    "  }\n" +
-                                    "}\n"));
+  @Test(expected = AccessControlException.class)
+  public void testUnAuthorized() throws IOException {
+    try (MockServerClient mockWebHDFSServerClient =
+             new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
+      mockWebHDFSServerClient
+          .when(FILE_SYSTEM_REQUEST, exactly(1))
+          .respond(response()
+              .withStatusCode(HttpStatus.SC_UNAUTHORIZED));
 
-            try (FileSystem fs = new WebHdfsFileSystem()) {
-                fs.initialize(WEBHDFS_URI, new Configuration());
-                fs.listStatus(new Path(TEST_WEBHDFS_PATH));
-            }
-        }
+      try (FileSystem fs = new WebHdfsFileSystem()) {
+        fs.initialize(WEBHDFS_URI, new Configuration());
+        fs.listStatus(new Path(TEST_WEBHDFS_PATH));
+      }
     }
+  }
 
-    @Test(expected = AccessControlException.class)
-    public void testUnAuthorized() throws IOException {
-        try (final MockServerClient mockWebHDFSServerClient = new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
-            mockWebHDFSServerClient
-                    .when(FILE_SYSTEM_REQUEST, exactly(1))
-                    .respond(response()
-                            .withStatusCode(HttpStatus.SC_UNAUTHORIZED));
+  @Test
+  public void testUnexpectedResponse() throws IOException {
+    try (MockServerClient mockWebHDFSServerClient =
+             new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
+      mockWebHDFSServerClient
+          .when(FILE_SYSTEM_REQUEST, exactly(1))
+          .respond(response()
+              .withStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+              .withBody("Unexpected error occurred"));
 
-            try (FileSystem fs = new WebHdfsFileSystem()) {
-                fs.initialize(WEBHDFS_URI, new Configuration());
-                fs.listStatus(new Path(TEST_WEBHDFS_PATH));
-            }
-        }
+      try (FileSystem fs = new WebHdfsFileSystem()) {
+        fs.initialize(WEBHDFS_URI, new Configuration());
+
+        final Exception e = assertThrows(IOException.class,
+            () -> fs.listStatus(new Path(TEST_WEBHDFS_PATH)));
+
+        assertEquals(JsonParseException.class, e.getCause().getClass());
+      }
     }
+  }
 
-    @Test
-    public void testUnexpectedResponse() throws IOException {
-        try (final MockServerClient mockWebHDFSServerClient = new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
-            mockWebHDFSServerClient
-                    .when(FILE_SYSTEM_REQUEST, exactly(1))
-                    .respond(response()
-                            .withStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR)
-                            .withBody("Unexpected error occurred"));
+  @Test
+  public void testEmptyResponse() throws IOException {
+    try (MockServerClient mockWebHDFSServerClient =
+             new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
+      mockWebHDFSServerClient
+          .when(FILE_SYSTEM_REQUEST, exactly(1))
+          .respond(response()
+              .withStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR));
 
-            try (FileSystem fs = new WebHdfsFileSystem()) {
-                fs.initialize(WEBHDFS_URI, new Configuration());
+      try (FileSystem fs = new WebHdfsFileSystem()) {
+        fs.initialize(WEBHDFS_URI, new Configuration());
 
-                final Exception e = assertThrows(IOException.class,
-                        () -> fs.listStatus(new Path(TEST_WEBHDFS_PATH)));
+        final Exception e = assertThrows(IOException.class,
+            () -> fs.listStatus(new Path(TEST_WEBHDFS_PATH)));
 
-                assertEquals(JsonParseException.class, e.getCause().getClass());
-            }
-        }
+        assertNull(e.getCause());
+      }
     }
+  }
 
-    @Test
-    public void testEmptyResponse() throws IOException {
-        try (final MockServerClient mockWebHDFSServerClient = new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
-            mockWebHDFSServerClient
-                    .when(FILE_SYSTEM_REQUEST, exactly(1))
-                    .respond(response()
-                            .withStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR));
+  @Test
+  public void testNonRemoteExceptions() throws IOException {
+    try (MockServerClient mockWebHDFSServerClient =
+             new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
+      final int expectedStatus = HttpStatus.SC_BAD_REQUEST;
+      final String responseBody = "{\n" +
+          "  \"UnexpectedServerException\": {\n" +
+          "    \"javaClassName\": \"" + UnexpectedServerException.class.getName() + "\",\n" +
+          "    \"exception\": \"" + UnexpectedServerException.class.getSimpleName() + "\",\n" +
+          "    \"message\": \"Unexpected exception thrown\"\n" +
+          "  }\n" +
+          "}";
 
-            try (FileSystem fs = new WebHdfsFileSystem()) {
-                fs.initialize(WEBHDFS_URI, new Configuration());
+      mockWebHDFSServerClient
+          .when(FILE_SYSTEM_REQUEST, exactly(1))
+          .respond(response()
+              .withStatusCode(expectedStatus)
+              .withHeaders(CONTENT_TYPE_APPLICATION_JSON)
+              .withBody(responseBody));
 
-                final Exception e = assertThrows(IOException.class,
-                        () -> fs.listStatus(new Path(TEST_WEBHDFS_PATH)));
+      try (FileSystem fs = new WebHdfsFileSystem()) {
+        fs.initialize(WEBHDFS_URI, new Configuration());
 
-                assertNull(e.getCause());
-            }
-        }
+        final Exception e = assertThrows(IOException.class,
+            () -> fs.listStatus(new Path(TEST_WEBHDFS_PATH)));
+
+        assertThat(e.getMessage(),
+            startsWith(WEBHDFS_HOST + ":" + WEBHDFS_PORT +
+                ": Server returned HTTP response code: " + expectedStatus));
+      }
     }
+  }
 
-    @Test
-    public void testNonRemoteExceptions() throws IOException {
-        try (final MockServerClient mockWebHDFSServerClient = new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
-            final int expectedStatus = HttpStatus.SC_BAD_REQUEST;
+  @Test
+  public void testExceptionMessageIsNull() throws IOException {
+    try (MockServerClient mockWebHDFSServerClient =
+             new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
+      final String responseBody = "{\n" +
+          "  \"RemoteException\": {\n" +
+          "    \"javaClassName\": \"" + Exception.class.getName() + "\",\n" +
+          "    \"exception\": \"" + Exception.class.getSimpleName() + "\"\n" +
+          "  }\n" +
+          "}";
 
-            mockWebHDFSServerClient
-                    .when(FILE_SYSTEM_REQUEST, exactly(1))
-                    .respond(response()
-                            .withStatusCode(expectedStatus)
-                            .withHeaders(CONTENT_TYPE_APPLICATION_JSON)
-                            .withBody("{\n" +
-                                    "  \"UnexpectedServerException\": {\n" +
-                                    "    \"javaClassName\": \"" + UnexpectedServerException.class.getName() + "\",\n" +
-                                    "    \"exception\": \"" + UnexpectedServerException.class.getSimpleName() + "\",\n" +
-                                    "    \"message\": \"Unexpected exception thrown\"\n" +
-                                    "  }\n" +
-                                    "}"));
+      mockWebHDFSServerClient
+          .when(FILE_SYSTEM_REQUEST, exactly(1))
+          .respond(response()
+              .withStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+              .withHeaders(CONTENT_TYPE_APPLICATION_JSON)
+              .withBody(responseBody));
 
-            try (FileSystem fs = new WebHdfsFileSystem()) {
-                fs.initialize(WEBHDFS_URI, new Configuration());
+      try (FileSystem fs = new WebHdfsFileSystem()) {
+        fs.initialize(WEBHDFS_URI, new Configuration());
 
-                final Exception e = assertThrows(IOException.class,
-                        () -> fs.listStatus(new Path(TEST_WEBHDFS_PATH)));
+        final Exception e = assertThrows(IOException.class,
+            () -> fs.listStatus(new Path(TEST_WEBHDFS_PATH)));
 
-                assertThat(e.getMessage(), startsWith(WEBHDFS_HOST + ":" + WEBHDFS_PORT + ": Server returned HTTP response code: " + expectedStatus));
-            }
-        }
+        assertNull(e.getMessage());
+      }
     }
+  }
 
-    @Test
-    public void testExceptionMessageIsNull() throws IOException {
-        try (final MockServerClient mockWebHDFSServerClient = new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
-            mockWebHDFSServerClient
-                    .when(FILE_SYSTEM_REQUEST, exactly(1))
-                    .respond(response()
-                            .withStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR)
-                            .withHeaders(CONTENT_TYPE_APPLICATION_JSON)
-                            .withBody("{\n" +
-                                    "  \"RemoteException\": {\n" +
-                                    "    \"javaClassName\": \"" + Exception.class.getName() + "\",\n" +
-                                    "    \"exception\": \"" + Exception.class.getSimpleName() + "\"\n" +
-                                    "  }\n" +
-                                    "}"));
+  @Test
+  public void testStandbyException() throws IOException {
+    final String reMessage = "Server returned: " + StandbyException.class.getSimpleName();
 
-            try (FileSystem fs = new WebHdfsFileSystem()) {
-                fs.initialize(WEBHDFS_URI, new Configuration());
+    try (MockServerClient mockWebHDFSServerClient =
+             new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
+      final String responseBody = "{\n" +
+          "  \"RemoteException\": {\n" +
+          "    \"javaClassName\": \"" + StandbyException.class.getName() + "\",\n" +
+          "    \"exception\": \"" + StandbyException.class.getSimpleName() + "\",\n" +
+          "    \"message\": \"" + reMessage + "\"\n" +
+          "  }\n" +
+          "}";
 
-                final Exception e = assertThrows(IOException.class,
-                        () -> fs.listStatus(new Path(TEST_WEBHDFS_PATH)));
+      mockWebHDFSServerClient
+          .when(FILE_SYSTEM_REQUEST, exactly(1))
+          .respond(response()
+              .withStatusCode(HttpStatus.SC_FORBIDDEN)
+              .withHeaders(CONTENT_TYPE_APPLICATION_JSON)
+              .withBody(responseBody));
 
-                assertNull(e.getMessage());
-            }
-        }
+      try (FileSystem fs = new WebHdfsFileSystem()) {
+        fs.initialize(WEBHDFS_URI, new Configuration());
+
+        final Exception e = assertThrows(IOException.class,
+            () -> fs.listStatus(new Path(TEST_WEBHDFS_PATH)));
+
+        assertEquals(WEBHDFS_HOST + ":" + WEBHDFS_PORT + ": " + RemoteException.class.getName() +
+                "(" + StandbyException.class.getName() + "): " + reMessage,
+            e.getMessage());
+      }
     }
+  }
 
-    @Test
-    public void testStandbyException() throws IOException {
-        final String reMessage = "Server returned: " + StandbyException.class.getSimpleName();
+  @Test(expected = SecretManager.InvalidToken.class)
+  public void testInvalidToken() throws IOException {
+    try (MockServerClient mockWebHDFSServerClient =
+             new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
+      final String responseBody = "{\n" +
+          "  \"RemoteException\": {\n" +
+          "    \"javaClassName\": \"" + SecretManager.InvalidToken.class.getName() + "\",\n" +
+          "    \"exception\": \"" + SecretManager.InvalidToken.class.getSimpleName() + "\",\n" +
+          "    \"message\": \"" + SecurityUtil.FAILED_TO_GET_UGI_MSG_HEADER + " " +
+          INVALID_TOKEN_MESSAGE + "\"\n" +
+          "  }\n" +
+          "}";
 
-        try (final MockServerClient mockWebHDFSServerClient = new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
-            mockWebHDFSServerClient
-                    .when(FILE_SYSTEM_REQUEST, exactly(1))
-                    .respond(response()
-                            .withStatusCode(HttpStatus.SC_FORBIDDEN)
-                            .withHeaders(CONTENT_TYPE_APPLICATION_JSON)
-                            .withBody("{\n" +
-                                    "  \"RemoteException\": {\n" +
-                                    "    \"javaClassName\": \"" + StandbyException.class.getName() + "\",\n" +
-                                    "    \"exception\": \"" + StandbyException.class.getSimpleName() + "\",\n" +
-                                    "    \"message\": \"" + reMessage + "\"\n" +
-                                    "  }\n" +
-                                    "}"));
+      mockWebHDFSServerClient
+          .when(FILE_SYSTEM_REQUEST, exactly(1))
+          .respond(response()
+              .withStatusCode(HttpStatus.SC_FORBIDDEN)
+              .withHeaders(CONTENT_TYPE_APPLICATION_JSON)
+              .withBody(responseBody));
 
-            try (FileSystem fs = new WebHdfsFileSystem()) {
-                fs.initialize(WEBHDFS_URI, new Configuration());
-
-                final Exception e = assertThrows(IOException.class,
-                        () -> fs.listStatus(new Path(TEST_WEBHDFS_PATH)));
-
-                assertEquals(WEBHDFS_HOST + ":" + WEBHDFS_PORT + ": " + RemoteException.class.getName() +
-                                "(" + StandbyException.class.getName() + "): " + reMessage,
-                        e.getMessage());
-            }
-        }
+      try (FileSystem fs = new WebHdfsFileSystem()) {
+        fs.initialize(WEBHDFS_URI, new Configuration());
+        fs.listStatus(new Path(TEST_WEBHDFS_PATH));
+      }
     }
+  }
 
-    @Test(expected = SecretManager.InvalidToken.class)
-    public void testInvalidToken() throws IOException {
-        try (final MockServerClient mockWebHDFSServerClient = new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
-            final String reMessage = SecurityUtil.FAILED_TO_GET_UGI_MSG_HEADER + " " +
-                    SecretManager.InvalidToken.class.getName() + ": " +
-                    "token (token for test_user: HDFS_DELEGATION_TOKEN owner=test_user, renewer=test_user, " +
-                    "realUser=test_user, issueDate=0, maxDate=99999, sequenceNumber=9999, masterKeyId=999) can't be found in cache";
+  @Test(expected = SecretManager.InvalidToken.class)
+  public void testInvalidTokenForHttpFS() throws IOException {
+    try (MockServerClient mockWebHDFSServerClient =
+             new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
+      final String responseBody = "{\n" +
+          "  \"RemoteException\": {\n" +
+          "    \"javaClassName\": \"" + AuthenticationException.class.getName() + "\",\n" +
+          "    \"exception\": \"" + AuthenticationException.class.getSimpleName() + "\",\n" +
+          "    \"message\": \"" + INVALID_TOKEN_MESSAGE + "\"\n" +
+          "  }\n" +
+          "}";
 
-            mockWebHDFSServerClient
-                    .when(FILE_SYSTEM_REQUEST, exactly(1))
-                    .respond(response()
-                            .withStatusCode(HttpStatus.SC_FORBIDDEN)
-                            .withHeaders(CONTENT_TYPE_APPLICATION_JSON)
-                            .withBody("{\n" +
-                                    "  \"RemoteException\": {\n" +
-                                    "    \"javaClassName\": \"" + SecretManager.InvalidToken.class.getName() + "\",\n" +
-                                    "    \"exception\": \"" + SecretManager.InvalidToken.class.getSimpleName() + "\",\n" +
-                                    "    \"message\": \"" + reMessage + "\"\n" +
-                                    "  }\n" +
-                                    "}"));
+      mockWebHDFSServerClient
+          .when(FILE_SYSTEM_REQUEST, exactly(1))
+          .respond(response()
+              .withStatusCode(HttpStatus.SC_FORBIDDEN)
+              .withHeaders(CONTENT_TYPE_APPLICATION_JSON)
+              .withBody(responseBody));
 
-            try (FileSystem fs = new WebHdfsFileSystem()) {
-                fs.initialize(WEBHDFS_URI, new Configuration());
-                fs.listStatus(new Path(TEST_WEBHDFS_PATH));
-            }
-        }
+      try (FileSystem fs = new WebHdfsFileSystem()) {
+        fs.initialize(WEBHDFS_URI, new Configuration());
+        fs.listStatus(new Path(TEST_WEBHDFS_PATH));
+      }
     }
+  }
 
-    @Test(expected = SecretManager.InvalidToken.class)
-    public void testInvalidTokenForHttpFS() throws IOException {
-        try (final MockServerClient mockWebHDFSServerClient = new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
-            final String reMessage = SecretManager.InvalidToken.class.getName() + ": " +
-                    "token (token for test_user: HDFS_DELEGATION_TOKEN owner=test_user, renewer=test_user, " +
-                    "realUser=test_user, issueDate=0, maxDate=99999, sequenceNumber=9999, masterKeyId=999) can't be found in cache";
+  @Test(expected = RemoteException.class)
+  public void testOtherRemoteException() throws IOException {
+    try (MockServerClient mockWebHDFSServerClient =
+             new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
+      final String responseBody = "{\n" +
+          "  \"RemoteException\": {\n" +
+          "    \"javaClassName\": \"" + Exception.class.getName() + "\",\n" +
+          "    \"exception\": \"" + Exception.class.getSimpleName() + "\",\n" +
+          "    \"message\": \"Other RemoteException\"\n" +
+          "  }\n" +
+          "}";
 
-            mockWebHDFSServerClient
-                    .when(FILE_SYSTEM_REQUEST, exactly(1))
-                    .respond(response()
-                            .withStatusCode(HttpStatus.SC_FORBIDDEN)
-                            .withHeaders(CONTENT_TYPE_APPLICATION_JSON)
-                            .withBody("{\n" +
-                                    "  \"RemoteException\": {\n" +
-                                    "    \"javaClassName\": \"" + AuthenticationException.class.getName() + "\",\n" +
-                                    "    \"exception\": \"" + AuthenticationException.class.getSimpleName() + "\",\n" +
-                                    "    \"message\": \"" + reMessage + "\"\n" +
-                                    "  }\n" +
-                                    "}"));
+      mockWebHDFSServerClient
+          .when(FILE_SYSTEM_REQUEST, exactly(1))
+          .respond(response()
+              .withStatusCode(HttpStatus.SC_FORBIDDEN)
+              .withHeaders(CONTENT_TYPE_APPLICATION_JSON)
+              .withBody(responseBody));
 
-            try (FileSystem fs = new WebHdfsFileSystem()) {
-                fs.initialize(WEBHDFS_URI, new Configuration());
-                fs.listStatus(new Path(TEST_WEBHDFS_PATH));
-            }
-        }
+      try (FileSystem fs = new WebHdfsFileSystem()) {
+        fs.initialize(WEBHDFS_URI, new Configuration());
+        fs.listStatus(new Path(TEST_WEBHDFS_PATH));
+      }
     }
+  }
 
-    @Test(expected = RemoteException.class)
-    public void testOtherRemoteException() throws IOException {
-        try (final MockServerClient mockWebHDFSServerClient = new MockServerClient(WEBHDFS_HOST, WEBHDFS_PORT)) {
-            mockWebHDFSServerClient
-                    .when(FILE_SYSTEM_REQUEST, exactly(1))
-                    .respond(response()
-                            .withStatusCode(HttpStatus.SC_FORBIDDEN)
-                            .withHeaders(CONTENT_TYPE_APPLICATION_JSON)
-                            .withBody("{\n" +
-                                    "  \"RemoteException\": {\n" +
-                                    "    \"javaClassName\": \"" + Exception.class.getName() + "\",\n" +
-                                    "    \"exception\": \"" + Exception.class.getSimpleName() + "\",\n" +
-                                    "    \"message\": \"Other RemoteException\"\n" +
-                                    "  }\n" +
-                                    "}"));
-
-            try (FileSystem fs = new WebHdfsFileSystem()) {
-                fs.initialize(WEBHDFS_URI, new Configuration());
-                fs.listStatus(new Path(TEST_WEBHDFS_PATH));
-            }
-        }
-    }
-
-    @After
-    public void stopMockWebHDFSServer() {
-        mockWebHDFS.stop();
-    }
+  @After
+  public void stopMockWebHDFSServer() {
+    mockWebHDFS.stop();
+  }
 
 }
