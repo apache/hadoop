@@ -38,6 +38,7 @@ import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.auth.spi.scheme.AuthScheme;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
+import software.amazon.awssdk.metrics.LoggingMetricPublisher;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
@@ -201,11 +202,19 @@ public class DefaultS3ClientFactory extends Configured
     final ClientOverrideConfiguration.Builder override =
         createClientOverrideConfiguration(parameters, conf);
 
-    S3BaseClientBuilder s3BaseClientBuilder = builder
+    S3BaseClientBuilder<BuilderT, ClientT> s3BaseClientBuilder = builder
         .overrideConfiguration(override.build())
         .credentialsProvider(parameters.getCredentialSet())
         .disableS3ExpressSessionAuth(!parameters.isExpressCreateSession())
         .serviceConfiguration(serviceConfiguration);
+
+    if (LOG.isTraceEnabled()) {
+      // if this log is set to "trace" then we turn on logging of SDK metrics.
+      // The metrics itself will log at info; it is just that reflection work
+      // would be needed to change that setting safely for shaded and unshaded aws artifacts.
+      s3BaseClientBuilder.overrideConfiguration(o ->
+          o.addMetricPublisher(LoggingMetricPublisher.create()));
+    }
 
     if (conf.getBoolean(HTTP_SIGNER_ENABLED, HTTP_SIGNER_ENABLED_DEFAULT)) {
       // use an http signer through an AuthScheme
