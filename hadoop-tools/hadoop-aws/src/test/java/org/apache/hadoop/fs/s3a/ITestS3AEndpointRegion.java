@@ -24,9 +24,9 @@ import java.net.UnknownHostException;
 import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Ignore;
 import org.junit.Test;
 import software.amazon.awssdk.awscore.AwsExecutionAttribute;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
@@ -106,6 +106,10 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
 
   public static final String EXCEPTION_THROWN_BY_INTERCEPTOR = "Exception thrown by interceptor";
 
+  /**
+   * Text to include in assertions.
+   */
+  private static final AtomicReference<String> EXPECTED_MESSAGE = new AtomicReference<>();
   /**
    * New FS instance which will be closed in teardown.
    */
@@ -576,7 +580,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         .isFalse();
   }
 
-  private final class RegionInterceptor implements ExecutionInterceptor {
+  private static final class RegionInterceptor implements ExecutionInterceptor {
     private final String endpoint;
     private final String region;
     private final boolean isFips;
@@ -591,28 +595,49 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     public void beforeExecution(Context.BeforeExecution context,
         ExecutionAttributes executionAttributes)  {
 
-      if (endpoint != null && !endpoint.endsWith(CENTRAL_ENDPOINT)) {
-        Assertions.assertThat(
-                executionAttributes.getAttribute(AwsExecutionAttribute.ENDPOINT_OVERRIDDEN))
-            .describedAs("Endpoint not overridden").isTrue();
 
-        Assertions.assertThat(
-                executionAttributes.getAttribute(AwsExecutionAttribute.CLIENT_ENDPOINT).toString())
-            .describedAs("There is an endpoint mismatch").isEqualTo("https://" + endpoint);
+      // extract state from the execution attributes.
+      final Boolean endpointOveridden =
+          executionAttributes.getAttribute(AwsExecutionAttribute.ENDPOINT_OVERRIDDEN);
+      final String clientEndpoint =
+          executionAttributes.getAttribute(AwsExecutionAttribute.CLIENT_ENDPOINT).toString();
+      final Boolean fipsEnabled = executionAttributes.getAttribute(
+          AwsExecutionAttribute.FIPS_ENDPOINT_ENABLED);
+      final String reg = executionAttributes.getAttribute(AwsExecutionAttribute.AWS_REGION).
+          toString();
+
+      String state = "SDK beforeExecution callback; "
+          + "endpointOveridden=" + endpointOveridden
+          + "; clientEndpoint=" + clientEndpoint
+          + "; fipsEnabled=" + fipsEnabled
+          + "; region=" + reg;
+
+      if (endpoint != null && !endpoint.endsWith(CENTRAL_ENDPOINT)) {
+        Assertions.assertThat(endpointOveridden)
+            .describedAs("Endpoint not overridden in %s. Client Config=%s",
+                state, EXPECTED_MESSAGE.get())
+            .isTrue();
+
+        Assertions.assertThat(clientEndpoint)
+            .describedAs("There is an endpoint mismatch in %s. Client Config=%s",
+                state, EXPECTED_MESSAGE.get())
+            .isEqualTo("https://" + endpoint);
       } else {
-        Assertions.assertThat(
-                executionAttributes.getAttribute(AwsExecutionAttribute.ENDPOINT_OVERRIDDEN))
-            .describedAs("Endpoint is overridden").isEqualTo(null);
+        Assertions.assertThat(endpointOveridden)
+            .describedAs("Attribute endpointOveridden is null in %s. Client Config=%s",
+                state, EXPECTED_MESSAGE.get())
+            .isEqualTo(false);
       }
 
-      Assertions.assertThat(
-              executionAttributes.getAttribute(AwsExecutionAttribute.AWS_REGION).toString())
-          .describedAs("Incorrect region set").isEqualTo(region);
+      Assertions.assertThat(reg)
+          .describedAs("Incorrect region set in %s. Client Config=%s",
+              state, EXPECTED_MESSAGE.get())
+          .isEqualTo(region);
 
       // verify the fips state matches expectation.
-      Assertions.assertThat(executionAttributes.getAttribute(
-          AwsExecutionAttribute.FIPS_ENDPOINT_ENABLED))
-          .describedAs("Incorrect FIPS flag set in execution attributes")
+      Assertions.assertThat(fipsEnabled)
+          .describedAs("Incorrect FIPS flag set in %s; Client Config=%s",
+              state, EXPECTED_MESSAGE.get())
           .isNotNull()
           .isEqualTo(isFips);
 
@@ -637,6 +662,11 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
       String endpoint, String configuredRegion, String expectedRegion, boolean isFips)
       throws IOException {
 
+    String expected =
+        "endpoint=" + endpoint + "; region=" + configuredRegion
+        + "; expectedRegion=" + expectedRegion + "; isFips=" + isFips;
+    LOG.info("Creating S3 client with {}", expected);
+    EXPECTED_MESSAGE.set(expected);
     List<ExecutionInterceptor> interceptors = new ArrayList<>();
     interceptors.add(new RegionInterceptor(endpoint, expectedRegion, isFips));
 
