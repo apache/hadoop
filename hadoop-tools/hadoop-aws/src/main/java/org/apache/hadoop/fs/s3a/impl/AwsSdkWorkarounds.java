@@ -43,8 +43,7 @@ public final class AwsSdkWorkarounds {
    * @return true if the log tuning operation took place.
    */
   public static boolean prepareLogging() {
-    return LogControllerFactory.createController().
-        setLogLevel(TRANSFER_MANAGER, LogControl.LogLevel.ERROR);
+    return true;
   }
 
   /**
@@ -53,7 +52,6 @@ public final class AwsSdkWorkarounds {
    */
   @VisibleForTesting
   static boolean restoreNoisyLogging() {
-    return LogControllerFactory.createController().
-        setLogLevel(TRANSFER_MANAGER, LogControl.LogLevel.INFO);
+    return true;
   }
 }
