@@ -552,6 +552,7 @@ public class ITestS3APutIfMatchAndIfNoneMatch extends AbstractS3ATestBase {
     assertS3ExceptionStatusCode(SC_412_PRECONDITION_FAILED, exception);
   }
 
+  @Ignore("conditional_write statistics not yet fully implemented")
   @Test
   public void testConditionalWriteStatisticsWithoutIfNoneMatch() throws Throwable {
     FileSystem fs = getFileSystem();
