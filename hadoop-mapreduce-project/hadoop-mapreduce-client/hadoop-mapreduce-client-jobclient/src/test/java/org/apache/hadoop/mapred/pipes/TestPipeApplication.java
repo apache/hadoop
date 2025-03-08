@@ -515,10 +515,6 @@ public class TestPipeApplication {
     }
 
     @Override
-    public void work() {
-      super.run();
-    }
-
     protected void closeSocketInternal(Socket clientSocket) {
       if (!clientSocket.isClosed()) {
         closeSocketCount++;
