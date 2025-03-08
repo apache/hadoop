@@ -24,8 +24,8 @@ import java.util.Collection;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -108,11 +108,11 @@ public class TestQueueCapacities {
 
     // Set to 1, and check
     set(qc, suffix, label, 1f);
-    Assert.assertEquals(1f, get(qc, suffix, label), 1e-8);
+    Assertions.assertEquals(1f, get(qc, suffix, label), 1e-8);
 
     // Set to 2, and check
     set(qc, suffix, label, 2f);
-    Assert.assertEquals(2f, get(qc, suffix, label), 1e-8);
+    Assertions.assertEquals(2f, get(qc, suffix, label), 1e-8);
   }
 
   @Test
@@ -125,9 +125,9 @@ public class TestQueueCapacities {
   @Test
   public void testDefaultValues() {
     QueueCapacities qc = new QueueCapacities(false);
-    Assert.assertEquals(-1, qc.getWeight(""), 1e-6);
-    Assert.assertEquals(-1, qc.getWeight("x"), 1e-6);
-    Assert.assertEquals(0, qc.getCapacity(""), 1e-6);
-    Assert.assertEquals(0, qc.getCapacity("x"), 1e-6);
+    Assertions.assertEquals(-1, qc.getWeight(""), 1e-6);
+    Assertions.assertEquals(-1, qc.getWeight("x"), 1e-6);
+    Assertions.assertEquals(0, qc.getCapacity(""), 1e-6);
+    Assertions.assertEquals(0, qc.getCapacity("x"), 1e-6);
   }
 }

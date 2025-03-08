@@ -32,14 +32,14 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.hamcrest.CoreMatchers;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 
 /**
@@ -49,7 +49,7 @@ public class TestFSSchedulerConfigurationStore extends
     PersistentConfigurationStoreBaseTest {
   private File testSchedulerConfigurationDir;
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -73,7 +73,7 @@ public class TestFSSchedulerConfigurationStore extends
     outputStream.close();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     FileUtils.deleteDirectory(testSchedulerConfigurationDir);
   }
@@ -163,9 +163,7 @@ public class TestFSSchedulerConfigurationStore extends
       fail("Expected an IOException with message containing \"no capacity " +
           "scheduler file in\" to be thrown");
     } catch (IOException e) {
-      assertThat("Exception message should contain the predefined string.",
-          e.getMessage(),
-          CoreMatchers.containsString("no capacity scheduler file in"));
+      assertThat(e.getMessage()).contains("no capacity scheduler file in").as("Exception message should contain the predefined string.");
     }
   }
 

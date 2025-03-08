@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
@@ -29,8 +29,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -58,7 +58,7 @@ public class TestUsersManager {
   @Mock
   private QueueMetrics metrics;
 
-  @Before
+  @BeforeEach
   public void setup() {
     usersManager = new UsersManager(metrics,
         lQueue,
@@ -100,6 +100,6 @@ public class TestUsersManager {
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY,
         true);
 
-    assertEquals("User limit", expectedLimit, limit);
+    assertEquals(expectedLimit, limit, "User limit");
   }
 }

@@ -53,7 +53,8 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.event.Level;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -62,9 +63,9 @@ import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -415,27 +416,32 @@ public class TestCapacitySchedulerPerf {
     rm.stop();
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testUserLimitThroughputForTwoResources() throws Exception {
     testUserLimitThroughputWithNumberOfResourceTypes(2, 1, 100, 100);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testUserLimitThroughputForThreeResources() throws Exception {
     testUserLimitThroughputWithNumberOfResourceTypes(3, 1, 100, 100);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testUserLimitThroughputForFourResources() throws Exception {
     testUserLimitThroughputWithNumberOfResourceTypes(4, 1, 100, 100);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testUserLimitThroughputForFiveResources() throws Exception {
     testUserLimitThroughputWithNumberOfResourceTypes(5, 1, 100, 100);
   }
 
-  @Test(timeout = 1800000)
+  @Test
+  @Timeout(value = 1800)
   public void testUserLimitThroughputWithManyQueues() throws Exception {
 
     int numQueues = Integer.getInteger("NumberOfQueues", 40);

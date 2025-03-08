@@ -26,8 +26,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueUpdateWarning.QueueUpdateWarningType;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -323,10 +323,10 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
     Optional<QueueUpdateWarning> queueA11ZeroResourceWarning = getSpecificWarning(
         updateContext.getUpdateWarnings(), QueueUpdateWarningType.QUEUE_ZERO_RESOURCE, A11);
 
-    Assert.assertTrue(queueCZeroResourceWarning.isPresent());
-    Assert.assertTrue(queueARemainingResourceWarning.isPresent());
-    Assert.assertTrue(queueBDownscalingWarning.isPresent());
-    Assert.assertTrue(queueA11ZeroResourceWarning.isPresent());
+    Assertions.assertTrue(queueCZeroResourceWarning.isPresent());
+    Assertions.assertTrue(queueARemainingResourceWarning.isPresent());
+    Assertions.assertTrue(queueBDownscalingWarning.isPresent());
+    Assertions.assertTrue(queueA11ZeroResourceWarning.isPresent());
   }
 
   @Test
@@ -346,8 +346,8 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
         updateContext.getUpdateWarnings(), QueueUpdateWarningType.QUEUE_ZERO_RESOURCE, A);
     Optional<QueueUpdateWarning> rootUnderUtilizedWarning = getSpecificWarning(
         updateContext.getUpdateWarnings(), QueueUpdateWarningType.BRANCH_UNDERUTILIZED, ROOT);
-    Assert.assertTrue(queueAZeroResourceWarning.isPresent());
-    Assert.assertTrue(rootUnderUtilizedWarning.isPresent());
+    Assertions.assertTrue(queueAZeroResourceWarning.isPresent());
+    Assertions.assertTrue(rootUnderUtilizedWarning.isPresent());
   }
 
   @Test
@@ -367,14 +367,14 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
         .build();
 
     QueueCapacityUpdateContext updateContext = update(assertionBuilder, UPDATE_RESOURCE);
-    Assert.assertEquals(0, updateContext.getUpdateWarnings().size());
+    Assertions.assertEquals(0, updateContext.getUpdateWarnings().size());
 
     // WEIGHT capacity type for maximum capacity is not supported
     csConf.setMaximumCapacityVector(B, NO_LABEL, B_INVALID_MAX_VECTOR);
     try {
       cs.reinitialize(csConf, mockRM.getRMContext());
       update(assertionBuilder, UPDATE_RESOURCE);
-      Assert.fail("WEIGHT maximum capacity type is not supported, an error should be thrown when " +
+      Assertions.fail("WEIGHT maximum capacity type is not supported, an error should be thrown when " +
           "set up");
     } catch (IOException ignored) {
     }
@@ -402,8 +402,8 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
         A11);
     Optional<QueueUpdateWarning> queueA11MinExceedsMaxWarning = getSpecificWarning(
         updateContext.getUpdateWarnings(), QueueUpdateWarningType.QUEUE_EXCEEDS_MAX_RESOURCE, A11);
-    Assert.assertTrue(queueA11ExceedsParentMaxResourceWarning.isPresent());
-    Assert.assertTrue(queueA11MinExceedsMaxWarning.isPresent());
+    Assertions.assertTrue(queueA11ExceedsParentMaxResourceWarning.isPresent());
+    Assertions.assertTrue(queueA11MinExceedsMaxWarning.isPresent());
   }
 
   @Test

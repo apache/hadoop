@@ -50,9 +50,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -99,7 +100,7 @@ public class TestSchedulingRequestContainerAllocation {
     this.placementConstraintHandler = placementConstraintHandler;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -126,7 +127,8 @@ public class TestSchedulingRequestContainerAllocation {
     return MockRMAppSubmitter.submit(rm, data);
   }
 
-  @Test(timeout = 30000L)
+  @Test
+  @Timeout(30)
   public void testIntraAppAntiAffinity() throws Exception {
     Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(conf);
 
@@ -168,8 +170,8 @@ public class TestSchedulingRequestContainerAllocation {
         Priority.newInstance(1), 1L, ImmutableSet.of("mapper"), "mapper");
 
     List<Container> allocated = waitForAllocation(4, 3000, am1, nms);
-    Assert.assertEquals(4, allocated.size());
-    Assert.assertEquals(4, getContainerNodesNum(allocated));
+    Assertions.assertEquals(4, allocated.size());
+    Assertions.assertEquals(4, getContainerNodesNum(allocated));
 
     // Similarly, app1 asks 10 anti-affinity containers at different priority,
     // it should be satisfied as well.
@@ -180,8 +182,8 @@ public class TestSchedulingRequestContainerAllocation {
         Priority.newInstance(2), 1L, ImmutableSet.of("reducer"), "reducer");
 
     allocated = waitForAllocation(4, 3000, am1, nms);
-    Assert.assertEquals(4, allocated.size());
-    Assert.assertEquals(4, getContainerNodesNum(allocated));
+    Assertions.assertEquals(4, allocated.size());
+    Assertions.assertEquals(4, getContainerNodesNum(allocated));
 
     // Test anti-affinity to both of "mapper/reducer", we should only get no
     // container allocated
@@ -195,12 +197,13 @@ public class TestSchedulingRequestContainerAllocation {
     } catch (Exception e) {
       caughtException = true;
     }
-    Assert.assertTrue(caughtException);
+    Assertions.assertTrue(caughtException);
 
     rm1.close();
   }
 
-  @Test(timeout = 30000L)
+  @Test
+  @Timeout(30)
   public void testIntraAppAntiAffinityWithMultipleTags() throws Exception {
     Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(conf);
 
@@ -242,8 +245,8 @@ public class TestSchedulingRequestContainerAllocation {
         "tag_1_1", "tag_1_2");
 
     List<Container> allocated = waitForAllocation(2, 3000, am1, nms);
-    Assert.assertEquals(2, allocated.size());
-    Assert.assertEquals(2, getContainerNodesNum(allocated));
+    Assertions.assertEquals(2, allocated.size());
+    Assertions.assertEquals(2, getContainerNodesNum(allocated));
 
     // app1 asks for 1 anti-affinity containers for the same app. anti-affinity
     // to tag_1_1/tag_1_2. With allocation_tag = tag_2_1/tag_2_2
@@ -253,9 +256,9 @@ public class TestSchedulingRequestContainerAllocation {
         "tag_1_1", "tag_1_2");
 
     List<Container> allocated1 = waitForAllocation(1, 3000, am1, nms);
-    Assert.assertEquals(1, allocated1.size());
+    Assertions.assertEquals(1, allocated1.size());
     allocated.addAll(allocated1);
-    Assert.assertEquals(3, getContainerNodesNum(allocated));
+    Assertions.assertEquals(3, getContainerNodesNum(allocated));
 
     // app1 asks for 1 anti-affinity containers for the same app. anti-affinity
     // to tag_1_1/tag_1_2/tag_2_1/tag_2_2. With allocation_tag = tag_3
@@ -265,9 +268,9 @@ public class TestSchedulingRequestContainerAllocation {
         "tag_1_1", "tag_1_2", "tag_2_1", "tag_2_2");
 
     allocated1 = waitForAllocation(1, 3000, am1, nms);
-    Assert.assertEquals(1, allocated1.size());
+    Assertions.assertEquals(1, allocated1.size());
     allocated.addAll(allocated1);
-    Assert.assertEquals(4, getContainerNodesNum(allocated));
+    Assertions.assertEquals(4, getContainerNodesNum(allocated));
 
     rm1.close();
   }
@@ -278,7 +281,8 @@ public class TestSchedulingRequestContainerAllocation {
    * types, see more in TestPlacementConstraintsUtil.
    * @throws Exception
    */
-  @Test(timeout = 30000L)
+  @Test
+  @Timeout(30)
   public void testInterAppAntiAffinity() throws Exception {
     Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(conf);
 
@@ -320,8 +324,8 @@ public class TestSchedulingRequestContainerAllocation {
         Priority.newInstance(1), 1L, ImmutableSet.of("mapper"), "mapper");
 
     List<Container> allocated = waitForAllocation(3, 3000, am1, nms);
-    Assert.assertEquals(3, allocated.size());
-    Assert.assertEquals(3, getContainerNodesNum(allocated));
+    Assertions.assertEquals(3, allocated.size());
+    Assertions.assertEquals(3, getContainerNodesNum(allocated));
 
     System.out.println("Mappers on HOST0: "
         + rmNodes[0].getAllocationTagsWithCount().get("mapper"));
@@ -353,10 +357,10 @@ public class TestSchedulingRequestContainerAllocation {
         ImmutableSet.of("foo"), "mapper");
 
     List<Container> allocated1 = waitForAllocation(3, 3000, am2, nms);
-    Assert.assertEquals(3, allocated1.size());
-    Assert.assertEquals(1, getContainerNodesNum(allocated1));
+    Assertions.assertEquals(3, allocated1.size());
+    Assertions.assertEquals(1, getContainerNodesNum(allocated1));
     allocated.addAll(allocated1);
-    Assert.assertEquals(4, getContainerNodesNum(allocated));
+    Assertions.assertEquals(4, getContainerNodesNum(allocated));
 
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
@@ -364,7 +368,7 @@ public class TestSchedulingRequestContainerAllocation {
         am2.getApplicationAttemptId());
 
     // The allocated node should not have mapper tag.
-    Assert.assertTrue(schedulerApp2.getLiveContainers()
+    Assertions.assertTrue(schedulerApp2.getLiveContainers()
         .stream().allMatch(rmContainer -> {
           // except the nm host
           if (!rmContainer.getContainer().getNodeId().equals(rmNodes[0])) {
@@ -396,9 +400,9 @@ public class TestSchedulingRequestContainerAllocation {
 
 
     allocated1 = waitForAllocation(1, 3000, am3, nms);
-    Assert.assertEquals(1, allocated1.size());
+    Assertions.assertEquals(1, allocated1.size());
     allocated.addAll(allocated1);
-    Assert.assertEquals(4, getContainerNodesNum(allocated));
+    Assertions.assertEquals(4, getContainerNodesNum(allocated));
 
     rm1.close();
   }
@@ -450,11 +454,12 @@ public class TestSchedulingRequestContainerAllocation {
     } catch (Exception e) {
       caughtException = true;
     }
-    Assert.assertTrue(caughtException);
+    Assertions.assertTrue(caughtException);
     rm1.close();
   }
 
-  @Test(timeout = 30000L)
+  @Test
+  @Timeout(30)
   public void testSchedulingRequestWithNullConstraint() throws Exception {
     Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(conf);
 
@@ -504,7 +509,7 @@ public class TestSchedulingRequestContainerAllocation {
     am1.allocate(request);
 
     List<Container> allocated = waitForAllocation(1, 3000, am1, nms);
-    Assert.assertEquals(1, allocated.size());
+    Assertions.assertEquals(1, allocated.size());
 
     // Send another request with null placement constraint,
     // ensure there is no NPE while handling this request.
@@ -519,12 +524,13 @@ public class TestSchedulingRequestContainerAllocation {
     am1.allocate(request1);
 
     allocated = waitForAllocation(2, 3000, am1, nms);
-    Assert.assertEquals(2, allocated.size());
+    Assertions.assertEquals(2, allocated.size());
 
     rm1.close();
   }
 
-  @Test(timeout = 30000L)
+  @Test
+  @Timeout(30)
   public void testInvalidSchedulingRequest() throws Exception {
 
     Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(conf);
@@ -580,7 +586,7 @@ public class TestSchedulingRequestContainerAllocation {
         }
       }, 500, 20000);
     } catch (Exception e) {
-      Assert.fail("Failed to reject invalid scheduling request");
+      Assertions.fail("Failed to reject invalid scheduling request");
     }
     rm1.stop();
   }
@@ -649,7 +655,8 @@ public class TestSchedulingRequestContainerAllocation {
     return nodes.size();
   }
 
-  @Test(timeout = 30000L)
+  @Test
+  @Timeout(30)
   public void testInterAppCompositeConstraints() throws Exception {
     // This test both intra and inter app constraints.
     // Including simple affinity, anti-affinity, cardinality constraints,
@@ -682,9 +689,9 @@ public class TestSchedulingRequestContainerAllocation {
       List<Container> allocated = waitForAllocation(2, 3000, am1, nm1, nm2);
 
       // 2 containers allocated
-      Assert.assertEquals(2, allocated.size());
+      Assertions.assertEquals(2, allocated.size());
       // containers should be distributed on 2 different nodes
-      Assert.assertEquals(2, getContainerNodesNum(allocated));
+      Assertions.assertEquals(2, getContainerNodesNum(allocated));
 
       // App1 (hbase)
       // h1: hbase-rs(1), hbase-master(1)
@@ -698,8 +705,8 @@ public class TestSchedulingRequestContainerAllocation {
               schedulingRequest(2, 4, 1, 1024, pc, "hbase-rs")));
       allocated = waitForAllocation(4, 3000, am1, nm1, nm2, nm3, nm4, nm5);
 
-      Assert.assertEquals(4, allocated.size());
-      Assert.assertEquals(4, getContainerNodesNum(allocated));
+      Assertions.assertEquals(4, allocated.size());
+      Assertions.assertEquals(4, getContainerNodesNum(allocated));
 
       // App2 (web-server)
       // Web server instance has 2 instance and non of them can be co-allocated
@@ -722,19 +729,19 @@ public class TestSchedulingRequestContainerAllocation {
           ImmutableList.of(
               schedulingRequest(1, 2, 1, 2048, pc, "ws-inst")));
       allocated = waitForAllocation(2, 3000, am2, nm1, nm2, nm3, nm4, nm5);
-      Assert.assertEquals(2, allocated.size());
-      Assert.assertEquals(2, getContainerNodesNum(allocated));
+      Assertions.assertEquals(2, allocated.size());
+      Assertions.assertEquals(2, getContainerNodesNum(allocated));
 
       ConcurrentMap<NodeId, RMNode> rmNodes = rm.getRMContext().getRMNodes();
       for (Container c : allocated) {
         RMNode rmNode = rmNodes.get(c.getNodeId());
-        Assert.assertNotNull(rmNode);
-        Assert.assertTrue("If ws-inst is allocated to a node,"
-                + " this node should have inherited the ws-inst tag ",
-            rmNode.getAllocationTagsWithCount().get("ws-inst") == 1);
-        Assert.assertTrue("ws-inst should be co-allocated to "
-                + "hbase-master nodes",
-            rmNode.getAllocationTagsWithCount().get("hbase-master") == 1);
+        Assertions.assertNotNull(rmNode);
+        Assertions.assertTrue(
+           rmNode.getAllocationTagsWithCount().get("ws-inst") == 1, "If ws-inst is allocated to a node,"
+                + " this node should have inherited the ws-inst tag ");
+        Assertions.assertTrue(
+           rmNode.getAllocationTagsWithCount().get("hbase-master") == 1, "ws-inst should be co-allocated to "
+                + "hbase-master nodes");
       }
 
       // App3 (ws-servant)
@@ -762,24 +769,25 @@ public class TestSchedulingRequestContainerAllocation {
       // total 6 containers can be allocated due to cardinality constraint
       // each round, 2 containers can be allocated
       allocated = waitForAllocation(6, 10000, am3, nm1, nm2, nm3, nm4, nm5);
-      Assert.assertEquals(6, allocated.size());
-      Assert.assertEquals(2, getContainerNodesNum(allocated));
+      Assertions.assertEquals(6, allocated.size());
+      Assertions.assertEquals(2, getContainerNodesNum(allocated));
 
       for (Container c : allocated) {
         RMNode rmNode = rmNodes.get(c.getNodeId());
-        Assert.assertNotNull(rmNode);
-        Assert.assertTrue("Node has ws-servant allocated must have 3 instances",
-            rmNode.getAllocationTagsWithCount().get("ws-servant") == 3);
-        Assert.assertTrue("Every ws-servant container should be co-allocated"
-                + " with ws-inst",
-            rmNode.getAllocationTagsWithCount().get("ws-inst") == 1);
+        Assertions.assertNotNull(rmNode);
+        Assertions.assertTrue(
+           rmNode.getAllocationTagsWithCount().get("ws-servant") == 3, "Node has ws-servant allocated must have 3 instances");
+        Assertions.assertTrue(
+           rmNode.getAllocationTagsWithCount().get("ws-inst") == 1, "Every ws-servant container should be co-allocated"
+                + " with ws-inst");
       }
     } finally {
       rm.stop();
     }
   }
 
-  @Test(timeout = 30000L)
+  @Test
+  @Timeout(30)
   public void testMultiAllocationTagsConstraints() throws Exception {
     // This test simulates to use PC to avoid port conflicts
 
@@ -814,9 +822,9 @@ public class TestSchedulingRequestContainerAllocation {
           am1, nm1, nm2, nm3, nm4, nm5);
 
       // 2 containers allocated
-      Assert.assertEquals(2, allocated.size());
+      Assertions.assertEquals(2, allocated.size());
       // containers should be distributed on 2 different nodes
-      Assert.assertEquals(2, getContainerNodesNum(allocated));
+      Assertions.assertEquals(2, getContainerNodesNum(allocated));
 
       // App1 uses ports: 6000
       String[] server2Ports = new String[] {"port_6000"};
@@ -835,19 +843,19 @@ public class TestSchedulingRequestContainerAllocation {
           ImmutableList.of(
               schedulingRequest(1, 3, 1, 1024, pc, server2Ports)));
       allocated = waitForAllocation(3, 3000, am2, nm1, nm2, nm3, nm4, nm5);
-      Assert.assertEquals(3, allocated.size());
-      Assert.assertEquals(3, getContainerNodesNum(allocated));
+      Assertions.assertEquals(3, allocated.size());
+      Assertions.assertEquals(3, getContainerNodesNum(allocated));
 
       ConcurrentMap<NodeId, RMNode> rmNodes = rm.getRMContext().getRMNodes();
       for (Container c : allocated) {
         RMNode rmNode = rmNodes.get(c.getNodeId());
-        Assert.assertNotNull(rmNode);
-        Assert.assertTrue("server2 should not co-allocate to server1 as"
-                + " they both need to use port 6000",
-            rmNode.getAllocationTagsWithCount().get("port_6000") == 1);
-        Assert.assertFalse(rmNode.getAllocationTagsWithCount()
+        Assertions.assertNotNull(rmNode);
+        Assertions.assertTrue(
+           rmNode.getAllocationTagsWithCount().get("port_6000") == 1, "server2 should not co-allocate to server1 as"
+                + " they both need to use port 6000");
+        Assertions.assertFalse(rmNode.getAllocationTagsWithCount()
             .containsKey("port_7000"));
-        Assert.assertFalse(rmNode.getAllocationTagsWithCount()
+        Assertions.assertFalse(rmNode.getAllocationTagsWithCount()
             .containsKey("port_8000"));
       }
     } finally {
@@ -855,7 +863,8 @@ public class TestSchedulingRequestContainerAllocation {
     }
   }
 
-  @Test(timeout = 30000L)
+  @Test
+  @Timeout(30)
   public void testInterAppConstraintsWithNamespaces() throws Exception {
     // This test verifies inter-app constraints with namespaces
     // not-self/app-id/app-tag
@@ -898,8 +907,8 @@ public class TestSchedulingRequestContainerAllocation {
             allocated);
       }
 
-      Assert.assertNotNull(app5Id);
-      Assert.assertEquals(3, getContainerNodesNum(allocMap.get(app5Id)));
+      Assertions.assertNotNull(app5Id);
+      Assertions.assertEquals(3, getContainerNodesNum(allocMap.get(app5Id)));
 
       // *** app-id
       // Submit another app, use app-id constraint against app5
@@ -925,11 +934,11 @@ public class TestSchedulingRequestContainerAllocation {
       List<Container> app5Alloc = allocMap.get(app5Id);
       for (Container c : allocated) {
         RMNode rmNode = rmNodes.get(c.getNodeId());
-        Assert.assertNotNull(rmNode);
-        Assert.assertTrue("This app is affinity with app-id/app5/foo "
-                + "containers",
-            app5Alloc.stream().anyMatch(
-                c5 -> c5.getNodeId() == c.getNodeId()));
+        Assertions.assertNotNull(rmNode);
+        Assertions.assertTrue(
+           app5Alloc.stream().anyMatch(
+                c5 -> c5.getNodeId() == c.getNodeId()), "This app is affinity with app-id/app5/foo "
+                + "containers");
       }
 
       // *** app-tag
@@ -949,11 +958,11 @@ public class TestSchedulingRequestContainerAllocation {
           ImmutableList.of(
               schedulingRequest(1, 2, 1, 1024, pc, "foo")));
       allocated = waitForAllocation(2, 3000, am2, nm1, nm2, nm3, nm4, nm5);
-      Assert.assertEquals(2, allocated.size());
+      Assertions.assertEquals(2, allocated.size());
 
       // none of them can be allocated to nodes that has app5 foo containers
       for (Container c : app5Alloc) {
-        Assert.assertNotEquals(c.getNodeId(),
+        Assertions.assertNotEquals(c.getNodeId(),
             allocated.iterator().next().getNodeId());
       }
 
@@ -972,9 +981,9 @@ public class TestSchedulingRequestContainerAllocation {
           ImmutableList.of(
               schedulingRequest(1, 1, 1, 1024, pc, "foo")));
       allocated = waitForAllocation(1, 3000, am3, nm1, nm2, nm3, nm4, nm5);
-      Assert.assertEquals(1, allocated.size());
+      Assertions.assertEquals(1, allocated.size());
       // All 5 containers should be allocated
-      Assert.assertTrue(rmNodes.get(allocated.iterator().next().getNodeId())
+      Assertions.assertTrue(rmNodes.get(allocated.iterator().next().getNodeId())
           .getAllocationTagsWithCount().get("foo") == 2);
     } finally {
       rm.stop();

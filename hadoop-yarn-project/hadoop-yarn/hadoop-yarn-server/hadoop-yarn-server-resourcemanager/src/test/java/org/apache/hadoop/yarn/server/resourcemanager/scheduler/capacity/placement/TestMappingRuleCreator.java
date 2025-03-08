@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,8 +33,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placemen
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule.Policy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule.Type;
 import org.assertj.core.util.Sets;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.ExpectedException;
 
 public class TestMappingRuleCreator {
@@ -56,7 +56,7 @@ public class TestMappingRuleCreator {
   @org.junit.Rule
   public ExpectedException expected = ExpectedException.none();
 
-  @Before
+  @BeforeEach
   public void setup() {
     ruleCreator = new MappingRuleCreator();
     prepareMappingRuleDescription();
@@ -356,8 +356,8 @@ public class TestMappingRuleCreator {
     List<MappingRule> rules = ruleCreator.getMappingRules(description);
     MappingRule mpr = rules.get(0);
 
-    assertEquals("Fallback result",
-        expectedType, mpr.getFallback().getResult());
+    assertEquals(
+       expectedType, mpr.getFallback().getResult(), "Fallback result");
   }
 
   @Test
@@ -365,8 +365,8 @@ public class TestMappingRuleCreator {
     rule.setFallbackResult(null);
     List<MappingRule> rules = ruleCreator.getMappingRules(description);
     MappingRule mpr = rules.get(0);
-    assertEquals("Fallback result", MappingRuleResultType.SKIP,
-        mpr.getFallback().getResult());
+    assertEquals(MappingRuleResultType.SKIP
+,         mpr.getFallback().getResult(), "Fallback result");
   }
 
   @Test
@@ -449,22 +449,22 @@ public class TestMappingRuleCreator {
   private void verifyPlacement(MappingRuleResultType expectedResultType,
       String expectedQueue, boolean allowCreate) {
     List<MappingRule> rules = ruleCreator.getMappingRules(description);
-    assertEquals("Number of rules", 1, rules.size());
+    assertEquals(1, rules.size(), "Number of rules");
     MappingRule mpr = rules.get(0);
     MappingRuleResult result = mpr.evaluate(variableContext);
 
-    assertEquals("Create flag", allowCreate, result.isCreateAllowed());
+    assertEquals(allowCreate, result.isCreateAllowed(), "Create flag");
 
     if (expectedResultType != null) {
-      assertEquals("Mapping rule result",
-          expectedResultType, result.getResult());
+      assertEquals(
+         expectedResultType, result.getResult(), "Mapping rule result");
     } else {
-      assertEquals("Mapping rule result",
-          MappingRuleResultType.SKIP, result.getResult());
+      assertEquals(
+         MappingRuleResultType.SKIP, result.getResult(), "Mapping rule result");
     }
 
     if (expectedQueue != null) {
-      assertEquals("Evaluated queue", expectedQueue, result.getQueue());
+      assertEquals(expectedQueue, result.getQueue(), "Evaluated queue");
     }
   }
 }

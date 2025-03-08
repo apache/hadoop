@@ -35,9 +35,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -71,7 +72,7 @@ public class TestSchedulingRequestContainerAllocationAsync {
     this.placementConstraintHandler = placementConstraintHandler;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -132,34 +133,39 @@ public class TestSchedulingRequestContainerAllocationAsync {
 
     List<Container> allocated = TestSchedulingRequestContainerAllocation.
             waitForAllocation(nNMs, 6000, am1, nms);
-    Assert.assertEquals(nNMs, allocated.size());
-    Assert.assertEquals(nNMs, TestSchedulingRequestContainerAllocation.
+    Assertions.assertEquals(nNMs, allocated.size());
+    Assertions.assertEquals(nNMs, TestSchedulingRequestContainerAllocation.
             getContainerNodesNum(allocated));
 
     rm1.close();
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testSingleThreadAsyncContainerAllocation() throws Exception {
     testIntraAppAntiAffinityAsync(1);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testTwoThreadsAsyncContainerAllocation() throws Exception {
     testIntraAppAntiAffinityAsync(2);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testThreeThreadsAsyncContainerAllocation() throws Exception {
     testIntraAppAntiAffinityAsync(3);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testFourThreadsAsyncContainerAllocation() throws Exception {
     testIntraAppAntiAffinityAsync(4);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testFiveThreadsAsyncContainerAllocation() throws Exception {
     testIntraAppAntiAffinityAsync(5);
   }

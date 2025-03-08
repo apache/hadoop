@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.Queu
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +41,8 @@ import java.util.List;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.getQueueMapping;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.setupQueueConfiguration;
 import static org.hamcrest.CoreMatchers.hasItems;
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestCapacitySchedulerQueueMappingFactory {
 
@@ -131,7 +132,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
       }
 
       // verify both placement rules were added successfully
-      assertThat(placementRuleNames, hasItems(QUEUE_MAPPING_RULE));
+      assertThat(placementRuleNames).contains(QUEUE_MAPPING_RULE);
     } finally {
       if(mockRM != null) {
         mockRM.close();
@@ -352,7 +353,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
       CSMappingPlacementRule r =
           (CSMappingPlacementRule) rules.get(0);
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, user);
-      assertEquals("Queue", user, ctx.getQueue());
+      assertEquals(user, ctx.getQueue(), "Queue");
 
       if (primary) {
         assertEquals(

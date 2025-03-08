@@ -61,10 +61,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
@@ -76,7 +76,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.registerNode;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.stopResourceManager;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.NULL_UPDATE_REQUESTS;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -86,12 +86,12 @@ public class TestCapacitySchedulerNodes {
 
   private ResourceManager resourceManager = null;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     resourceManager = createResourceManager();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     stopResourceManager(resourceManager);
   }
@@ -117,14 +117,14 @@ public class TestCapacitySchedulerNodes {
     cs.handle(new NodeAddedSchedulerEvent(n1));
     cs.handle(new NodeAddedSchedulerEvent(n2));
 
-    Assert.assertEquals(6 * GB, cs.getClusterResource().getMemorySize());
+    Assertions.assertEquals(6 * GB, cs.getClusterResource().getMemorySize());
 
     // reconnect n1 with downgraded memory
     n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 1);
     cs.handle(new NodeRemovedSchedulerEvent(n1));
     cs.handle(new NodeAddedSchedulerEvent(n1));
 
-    Assert.assertEquals(4 * GB, cs.getClusterResource().getMemorySize());
+    Assertions.assertEquals(4 * GB, cs.getClusterResource().getMemorySize());
     cs.stop();
   }
 
@@ -148,12 +148,12 @@ public class TestCapacitySchedulerNodes {
     cs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(), null,
         Collections.<ContainerId>emptyList(),
         Collections.singletonList(host), null, NULL_UPDATE_REQUESTS);
-    Assert.assertTrue(cs.getApplicationAttempt(appAttemptId)
+    Assertions.assertTrue(cs.getApplicationAttempt(appAttemptId)
         .isPlaceBlacklisted(host));
     cs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(), null,
         Collections.<ContainerId>emptyList(), null,
         Collections.singletonList(host), NULL_UPDATE_REQUESTS);
-    Assert.assertFalse(cs.getApplicationAttempt(appAttemptId)
+    Assertions.assertFalse(cs.getApplicationAttempt(appAttemptId)
         .isPlaceBlacklisted(host));
     rm.stop();
   }
@@ -202,19 +202,19 @@ public class TestCapacitySchedulerNodes {
     cs.start();
 
     QueueInfo queueInfoA = cs.getQueueInfo("a", true, false);
-    Assert.assertEquals("Queue Name should be a", "a",
+    Assertions.assertEquals("Queue Name should be a", "a",
         queueInfoA.getQueueName());
-    Assert.assertEquals("Queue Path should be root.a", "root.a",
+    Assertions.assertEquals("Queue Path should be root.a", "root.a",
         queueInfoA.getQueuePath());
-    Assert.assertEquals("Default Node Label Expression should be x", "x",
+    Assertions.assertEquals("Default Node Label Expression should be x", "x",
         queueInfoA.getDefaultNodeLabelExpression());
 
     QueueInfo queueInfoB = cs.getQueueInfo("b", true, false);
-    Assert.assertEquals("Queue Name should be b", "b",
+    Assertions.assertEquals("Queue Name should be b", "b",
         queueInfoB.getQueueName());
-    Assert.assertEquals("Queue Path should be root.b", "root.b",
+    Assertions.assertEquals("Queue Path should be root.b", "root.b",
         queueInfoB.getQueuePath());
-    Assert.assertEquals("Default Node Label Expression should be y", "y",
+    Assertions.assertEquals("Default Node Label Expression should be y", "y",
         queueInfoB.getDefaultNodeLabelExpression());
     cs.stop();
   }
@@ -311,30 +311,30 @@ public class TestCapacitySchedulerNodes {
     application0.schedule();
 
     // Check the used resource is 1 GB 1 core
-    Assert.assertEquals(1 * GB, nm0.getUsed().getMemorySize());
+    Assertions.assertEquals(1 * GB, nm0.getUsed().getMemorySize());
     Resource usedResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm0.getNodeId()).getAllocatedResource();
-    Assert.assertEquals("Used Resource Memory Size should be 1GB", 1 * GB,
-        usedResource.getMemorySize());
-    Assert.assertEquals("Used Resource Virtual Cores should be 1", 1,
-        usedResource.getVirtualCores());
+    Assertions.assertEquals(1 * GB
+,         usedResource.getMemorySize(), "Used Resource Memory Size should be 1GB");
+    Assertions.assertEquals(1
+,         usedResource.getVirtualCores(), "Used Resource Virtual Cores should be 1");
     // Check total resource of scheduler node is also changed to 1 GB 1 core
     Resource totalResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm0.getNodeId()).getTotalResource();
-    Assert.assertEquals("Total Resource Memory Size should be 1GB", 1 * GB,
-        totalResource.getMemorySize());
-    Assert.assertEquals("Total Resource Virtual Cores should be 1", 1,
-        totalResource.getVirtualCores());
+    Assertions.assertEquals(1 * GB
+,         totalResource.getMemorySize(), "Total Resource Memory Size should be 1GB");
+    Assertions.assertEquals(1
+,         totalResource.getVirtualCores(), "Total Resource Virtual Cores should be 1");
     // Check the available resource is 0/0
     Resource availableResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm0.getNodeId()).getUnallocatedResource();
-    Assert.assertEquals("Available Resource Memory Size should be 0", 0,
-        availableResource.getMemorySize());
-    Assert.assertEquals("Available Resource Memory Size should be 0", 0,
-        availableResource.getVirtualCores());
+    Assertions.assertEquals(0
+,         availableResource.getMemorySize(), "Available Resource Memory Size should be 0");
+    Assertions.assertEquals(0
+,         availableResource.getVirtualCores(), "Available Resource Memory Size should be 0");
     // Kick off another heartbeat where the RMNodeResourceUpdateEvent would
     // be skipped for DECOMMISSIONING state since the total resource is
     // already equal to used resource from the previous heartbeat.
