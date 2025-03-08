@@ -235,6 +235,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   @Timeout(180)
   @ParameterizedTest(name = "{0}")
   @MethodSource("getParameters")
+  @SuppressWarnings("checkstyle:MethodLength")
   public void testRMRestart(SchedulerType type) throws Exception {
     initTestRMRestart(type);
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
@@ -288,7 +289,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     ApplicationAttemptStateData attemptState =
                                 appState.getAttempt(attemptId1);
     assertNotNull(attemptState);
-    assertEquals(BuilderUtils.newContainerId(attemptId1, 1), 
+    assertEquals(BuilderUtils.newContainerId(attemptId1, 1),
                         attemptState.getMasterContainer().getId());
     
     // launch the AM
@@ -446,8 +447,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     appState = rmAppState.get(loadedApp1.getApplicationId());
     attemptState = appState.getAttempt(attemptId1);
     assertNotNull(attemptState);
-    assertEquals(BuilderUtils.newContainerId(attemptId1, 1), 
-                        attemptState.getMasterContainer().getId());
+    assertEquals(BuilderUtils.newContainerId(attemptId1, 1),
+        attemptState.getMasterContainer().getId());
 
     // Nodes on which the AM's run 
     MockNM am1Node = nm1;
@@ -463,8 +464,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     appState = rmAppState.get(loadedApp2.getApplicationId());
     attemptState = appState.getAttempt(attemptId2);
     assertNotNull(attemptState);
-    assertEquals(BuilderUtils.newContainerId(attemptId2, 1), 
-                        attemptState.getMasterContainer().getId());
+    assertEquals(BuilderUtils.newContainerId(attemptId2, 1),
+        attemptState.getMasterContainer().getId());
 
     MockNM am2Node = nm1;
     if (attemptState.getMasterContainer().getNodeId().toString()
@@ -648,6 +649,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   @Timeout(60)
   @ParameterizedTest(name = "{0}")
   @MethodSource("getParameters")
+  @SuppressWarnings("checkstyle:MethodLength")
   public void testRMRestartWaitForPreviousAMToFinish(SchedulerType type) throws Exception {
     initTestRMRestart(type);
     // testing 3 cases
@@ -761,7 +763,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     assertEquals(RMAppAttemptState.FAILED,
         rmApp.getAppAttempts().get(am2.getApplicationAttemptId())
             .getAppAttemptState());
-    assertEquals(RMAppAttemptState.LAUNCHED,rmApp.getAppAttempts()
+    assertEquals(RMAppAttemptState.LAUNCHED, rmApp.getAppAttempts()
         .get(latestAppAttemptId).getAppAttemptState());
 
     rm3.waitForState(latestAppAttemptId, RMAppAttemptState.FAILED);
@@ -1158,7 +1160,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rm1.waitForState(app2.getApplicationId(), RMAppState.KILLED);
     rm1.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.KILLED);
 
-    verify(rm1.getRMContext().getSystemMetricsPublisher(),times(3))
+    verify(rm1.getRMContext().getSystemMetricsPublisher(), times(3))
     .appCreated(any(RMApp.class), anyLong());
     // restart rm
 
@@ -1336,8 +1338,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     ApplicationAttemptStateData attemptState =
                                 appState.getAttempt(attemptId1);
     assertNotNull(attemptState);
-    assertEquals(BuilderUtils.newContainerId(attemptId1, 1), 
-                        attemptState.getMasterContainer().getId());
+    assertEquals(BuilderUtils.newContainerId(attemptId1, 1),
+        attemptState.getMasterContainer().getId());
 
     // Setting AMLivelinessMonitor interval to be 3 Secs.
     conf.setInt(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 3000);
@@ -1346,8 +1348,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rm2.start();
 
     // verify that maxAppAttempts is set to global value
-    assertEquals(2, 
-        rm2.getRMContext().getRMApps().get(app2.getApplicationId())
+    assertEquals(2, rm2.getRMContext().getRMApps().get(app2.getApplicationId())
         .getMaxAppAttempts());
 
     // app1 and app2 are loaded back, but app1 failed because it's
@@ -1632,6 +1633,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   @Timeout(60)
   @ParameterizedTest(name = "{0}")
   @MethodSource("getParameters")
+  @SuppressWarnings("checkstyle:MethodLength")
   public void testRMDelegationTokenRestoredOnRMRestart(SchedulerType type) throws Exception {
     initTestRMRestart(type);
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);

@@ -266,6 +266,7 @@ public class TestRM extends ParameterizedSchedulerTestBase {
   @ParameterizedTest(name = "{0}")
   @MethodSource("getParameters")
   @Timeout(40)
+  @SuppressWarnings("checkstyle:MethodLength")
   public void testNMToken(SchedulerType type) throws Exception {
     initTestRM(type);
     MockRM rm = new MockRM(conf);

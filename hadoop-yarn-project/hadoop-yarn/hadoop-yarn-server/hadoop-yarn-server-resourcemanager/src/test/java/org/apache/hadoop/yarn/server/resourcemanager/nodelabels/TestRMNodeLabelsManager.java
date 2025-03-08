@@ -236,6 +236,7 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
   
   @Test
   @Timeout(value = 5)
+  @SuppressWarnings("checkstyle:MethodLength")
   public void testGetQueueResource() throws Exception {
     Resource clusterResource = Resource.newInstance(9999, 1);
     
@@ -533,9 +534,9 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     schedEventsHandler.receivedEvent = false;
 
     mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p2")));
-    assertTrue(
-    
-       schedEventsHandler.receivedEvent, "Event should be sent when labels are modified at host though labels were set @ NM level");
+    assertTrue(schedEventsHandler.receivedEvent,
+        "Event should be sent when labels are " +
+        "modified at host though labels were set @ NM level");
     assertEquals(1, schedEventsHandler.updatedNodeToLabels.size(),
         "Single node label mapping modified");
     assertCollectionEquals(toSet("p2"),

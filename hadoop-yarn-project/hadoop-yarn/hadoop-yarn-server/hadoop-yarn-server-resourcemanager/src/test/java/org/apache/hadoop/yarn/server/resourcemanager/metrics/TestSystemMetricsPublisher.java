@@ -135,6 +135,7 @@ public class TestSystemMetricsPublisher {
   @ParameterizedTest
   @MethodSource("data")
   @Timeout(value = 10)
+  @SuppressWarnings("checkstyle:methodlength")
   public void testPublishApplicationMetrics(boolean pRmTimelineServerV1PublisherBatchEnabled,
       int pRmTimelineServerV1PublisherInterval) throws Exception {
     initTestSystemMetricsPublisher(pRmTimelineServerV1PublisherBatchEnabled,
@@ -336,7 +337,8 @@ public class TestSystemMetricsPublisher {
   @ParameterizedTest
   @MethodSource("data")
   @Timeout(value = 10)
-  public void testPublishAppAttemptMetricsForUnmanagedAM(boolean pRmTimelineServerV1PublisherBatchEnabled,
+  public void testPublishAppAttemptMetricsForUnmanagedAM(boolean
+      pRmTimelineServerV1PublisherBatchEnabled,
       int pRmTimelineServerV1PublisherInterval) throws Exception {
     initTestSystemMetricsPublisher(pRmTimelineServerV1PublisherBatchEnabled,
         pRmTimelineServerV1PublisherInterval);

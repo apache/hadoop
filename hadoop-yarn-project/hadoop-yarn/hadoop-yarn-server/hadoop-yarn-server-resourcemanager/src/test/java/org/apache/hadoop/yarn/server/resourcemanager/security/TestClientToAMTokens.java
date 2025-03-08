@@ -95,7 +95,7 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
     initParameterizedSchedulerTestBase(type);
     setup();
   }
-  
+
   public void setup() {
     conf = getConf();
   }

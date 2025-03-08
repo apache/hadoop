@@ -205,7 +205,7 @@ public class TestRMAppLogAggregationStatus {
       .entrySet()) {
       if (report.getKey().equals(node1.getNodeID())) {
         assertEquals(LogAggregationStatus.RUNNING, report.getValue()
-           .getLogAggregationStatus());
+            .getLogAggregationStatus());
         assertEquals(messageForNode1_1, report.getValue()
             .getDiagnosticMessage());
       } else if (report.getKey().equals(node2.getNodeID())) {

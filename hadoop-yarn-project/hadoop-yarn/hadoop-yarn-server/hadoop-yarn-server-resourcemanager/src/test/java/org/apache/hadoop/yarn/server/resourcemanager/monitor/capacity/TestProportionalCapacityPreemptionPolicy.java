@@ -151,7 +151,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   };
 
   @RegisterExtension
-  public TestName name = new TestName();
+  private TestName name = new TestName();
 
   @BeforeEach
   @SuppressWarnings("unchecked")

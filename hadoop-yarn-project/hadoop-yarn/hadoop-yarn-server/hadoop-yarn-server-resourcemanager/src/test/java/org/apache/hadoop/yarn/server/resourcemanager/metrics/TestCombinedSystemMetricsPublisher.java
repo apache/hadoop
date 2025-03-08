@@ -421,10 +421,10 @@ public class TestCombinedSystemMetricsPublisher {
     } finally {
       reader.close();
     }
-    assertEquals(
-       expectedEvents, count, "Expected " + expectedEvents + " events to be published");
-    assertEquals(
-       expectedMetrics, metricsCount, "Expected " + expectedMetrics + " metrics is incorrect");
+    assertEquals(expectedEvents, count,
+        "Expected " + expectedEvents + " events to be published");
+    assertEquals(expectedMetrics, metricsCount,
+        "Expected " + expectedMetrics + " metrics is incorrect");
   }
 
   private String getTimelineEntityDir() {

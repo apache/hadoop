@@ -95,6 +95,7 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
   @ParameterizedTest(name = "{0}")
   @MethodSource("getParameters")
   @Timeout(value = 30)
+  @SuppressWarnings("checkstyle:methodlength")
   public void testAMRestartWithExistingContainers(SchedulerType type) throws Exception {
     initTestAMRestart(type);
     getConf().setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);

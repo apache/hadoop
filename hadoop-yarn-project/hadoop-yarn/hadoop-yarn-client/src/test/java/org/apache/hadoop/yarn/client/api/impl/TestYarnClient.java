@@ -1217,7 +1217,8 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
   @ParameterizedTest(name = "{0}")
   @MethodSource("getParameters")
   @Timeout(value = 30)
-  public void testShouldNotRetryForeverForNonNetworkExceptions(SchedulerType type) throws Exception {
+  public void testShouldNotRetryForeverForNonNetworkExceptions(SchedulerType type)
+      throws Exception {
     assertThrows(ApplicationNotFoundException.class, () -> {
       initTestYarnClient(type);
       YarnConfiguration conf = getConf();
