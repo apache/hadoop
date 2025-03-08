@@ -36,6 +36,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_TO_ADD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_TO_REMOVE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_DEFAULT;
@@ -138,7 +140,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -351,6 +352,8 @@ public class DataNode extends ReconfigurableBase
       Collections.unmodifiableList(
           Arrays.asList(
               DFS_DATANODE_DATA_DIR_KEY,
+              DFS_DATANODE_DATA_DIR_TO_ADD_KEY,
+              DFS_DATANODE_DATA_DIR_TO_REMOVE_KEY,
               DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
               DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
               DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY,
@@ -639,34 +642,10 @@ public class DataNode extends ReconfigurableBase
   public String reconfigurePropertyImpl(String property, String newVal)
       throws ReconfigurationException {
     switch (property) {
-    case DFS_DATANODE_DATA_DIR_KEY: {
-      IOException rootException = null;
-      try {
-        LOG.info("Reconfiguring {} to {}", property, newVal);
-        this.refreshVolumes(newVal);
-        return getConf().get(DFS_DATANODE_DATA_DIR_KEY);
-      } catch (IOException e) {
-        rootException = e;
-      } finally {
-        // Send a full block report to let NN acknowledge the volume changes.
-        try {
-          triggerBlockReport(
-              new BlockReportOptions.Factory().setIncremental(false).build());
-        } catch (IOException e) {
-          LOG.warn("Exception while sending the block report after refreshing"
-              + " volumes {} to {}", property, newVal, e);
-          if (rootException == null) {
-            rootException = e;
-          }
-        } finally {
-          if (rootException != null) {
-            throw new ReconfigurationException(property, newVal,
-                getConf().get(property), rootException);
-          }
-        }
-      }
-      break;
-    }
+    case DFS_DATANODE_DATA_DIR_KEY:
+    case DFS_DATANODE_DATA_DIR_TO_ADD_KEY:
+    case DFS_DATANODE_DATA_DIR_TO_REMOVE_KEY:
+      return reconfDataDirsParameters(property, newVal);
     case DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY: {
       ReconfigurationException rootException = null;
       try {
@@ -1079,6 +1058,43 @@ public class DataNode extends ReconfigurableBase
     }
   }
 
+  private String reconfDataDirsParameters(String property, String newVal)
+      throws ReconfigurationException {
+    LOG.info("Reconfiguring {} to {}", property, newVal);
+    Set<String> allDataDirs = new HashSet<>();
+    List<StorageLocation> storageLocations = getStorageLocations(getConf());
+    for (StorageLocation location : storageLocations) {
+      allDataDirs.add(location.getNormalizedUri().getPath());
+    }
+    if (property.equals(DFS_DATANODE_DATA_DIR_TO_ADD_KEY)) {
+      Set<String> toAdd = new HashSet<>(Arrays.asList(newVal.split(",")));
+      allDataDirs.addAll(toAdd);
+    } else if (property.equals(DFS_DATANODE_DATA_DIR_TO_REMOVE_KEY)) {
+      Set<String> toRemove = new HashSet<>(Arrays.asList(newVal.split(",")));
+      allDataDirs.removeAll(toRemove);
+    }
+    String newDirs = String.join(",", allDataDirs);
+    IOException rootException = null;
+    try {
+      this.refreshVolumes(newDirs);
+      return getConf().get(DFS_DATANODE_DATA_DIR_KEY);
+    } catch (IOException e) {
+      rootException = e;
+    } finally {
+      // Send a full block report to let NN acknowledge the volume changes.
+      try {
+        triggerBlockReport(new BlockReportOptions.Factory().setIncremental(false).build());
+      } catch (IOException e) {
+        LOG.warn("Exception while sending the block report after refreshing volumes {} to {}",
+            property, newVal, e);
+        if (rootException == null) {
+          rootException = e;
+        }
+      }
+    }
+    throw new ReconfigurationException(property, newVal, getConf().get(property), rootException);
+  }
+
   /**
    * Get a list of the keys of the re-configurable properties in configuration.
    */
@@ -1286,10 +1302,9 @@ public class DataNode extends ReconfigurableBase
     for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
       nsInfos.add(bpos.getNamespaceInfo());
     }
-    synchronized(this) {
+    synchronized (this) {
       Configuration conf = getConf();
       conf.set(DFS_DATANODE_DATA_DIR_KEY, newVolumes);
-      ExecutorService service = null;
       int numOldDataDirs = dataDirs.size();
       ChangedVolumes changedVolumes = parseChangedVolumes(newVolumes);
       StringBuilder errorMessageBuilder = new StringBuilder();
@@ -1305,49 +1320,9 @@ public class DataNode extends ReconfigurableBase
           throw new IOException("Attempt to remove all volumes.");
         }
         if (!changedVolumes.newLocations.isEmpty()) {
-          LOG.info("Adding new volumes: {}",
-              Joiner.on(",").join(changedVolumes.newLocations));
-
-          service = Executors
-              .newFixedThreadPool(changedVolumes.newLocations.size());
-          List<Future<IOException>> exceptions = Lists.newArrayList();
-
-          checkStorageState("refreshVolumes");
-          for (final StorageLocation location : changedVolumes.newLocations) {
-            exceptions.add(service.submit(new Callable<IOException>() {
-              @Override
-              public IOException call() {
-                try {
-                  data.addVolume(location, nsInfos);
-                } catch (IOException e) {
-                  return e;
-                }
-                return null;
-              }
-            }));
-          }
-
-          for (int i = 0; i < changedVolumes.newLocations.size(); i++) {
-            StorageLocation volume = changedVolumes.newLocations.get(i);
-            Future<IOException> ioExceptionFuture = exceptions.get(i);
-            try {
-              IOException ioe = ioExceptionFuture.get();
-              if (ioe != null) {
-                errorMessageBuilder.append(
-                    String.format("FAILED TO ADD: %s: %s%n",
-                        volume, ioe.getMessage()));
-                LOG.error("Failed to add volume: {}", volume, ioe);
-              } else {
-                effectiveVolumes.add(volume.toString());
-                LOG.info("Successfully added volume: {}", volume);
-              }
-            } catch (Exception e) {
-              errorMessageBuilder.append(
-                  String.format("FAILED to ADD: %s: %s%n", volume,
-                      e.toString()));
-              LOG.error("Failed to add volume: {}", volume, e);
-            }
-          }
+          List<String> addedVolumes =
+              addVolumes(changedVolumes.newLocations, nsInfos, errorMessageBuilder);
+          effectiveVolumes.addAll(addedVolumes);
         }
 
         try {
@@ -1361,14 +1336,63 @@ public class DataNode extends ReconfigurableBase
           throw new IOException(errorMessageBuilder.toString());
         }
       } finally {
-        if (service != null) {
-          service.shutdown();
-        }
         conf.set(DFS_DATANODE_DATA_DIR_KEY,
             Joiner.on(",").join(effectiveVolumes));
         dataDirs = getStorageLocations(conf);
       }
     }
+  }
+
+  /**
+   * Add volumes from DataNode.
+   *
+   * @param locations the StorageLocations of the volumes to be added.
+   * @throws IOException storage not yet initialized
+   */
+  private List<String> addVolumes(final List<StorageLocation> locations,
+      List<NamespaceInfo> nsInfos, StringBuilder errorMessageBuilder) throws IOException {
+    LOG.info("Adding new volumes: {}", Joiner.on(",").join(locations));
+    List<String> effectiveVolumes = new ArrayList<>();
+    ExecutorService service = null;
+    List<Future<IOException>> exceptions = Lists.newArrayList();
+    checkStorageState("refreshVolumes");
+    try {
+      service = Executors.newFixedThreadPool(locations.size());
+      for (final StorageLocation location : locations) {
+        exceptions.add(service.submit(() -> {
+          try {
+            data.addVolume(location, nsInfos);
+          } catch (IOException e) {
+            return e;
+          }
+          return null;
+        }));
+      }
+
+      for (int i = 0; i < locations.size(); i++) {
+        StorageLocation volume = locations.get(i);
+        Future<IOException> ioExceptionFuture = exceptions.get(i);
+        try {
+          IOException ioe = ioExceptionFuture.get();
+          if (ioe != null) {
+            errorMessageBuilder.append(
+                String.format("FAILED TO ADD: %s: %s%n", volume, ioe.getMessage()));
+            LOG.error("Failed to add volume: {}", volume, ioe);
+          } else {
+            effectiveVolumes.add(volume.toString());
+            LOG.info("Successfully added volume: {}", volume);
+          }
+        } catch (Exception e) {
+          errorMessageBuilder.append(String.format("FAILED to ADD: %s: %s%n", volume, e));
+          LOG.error("Failed to add volume: {}", volume, e);
+        }
+      }
+    } finally {
+      if (service != null) {
+        service.shutdown();
+      }
+    }
+    return effectiveVolumes;
   }
 
   /**
@@ -3308,6 +3332,19 @@ public class DataNode extends ReconfigurableBase
   public static List<StorageLocation> getStorageLocations(Configuration conf) {
     Collection<String> rawLocations =
         conf.getTrimmedStringCollection(DFS_DATANODE_DATA_DIR_KEY);
+    // Compatible with local conf for service restarts
+    Collection<String> addedList =
+        conf.getTrimmedStringCollection(DFS_DATANODE_DATA_DIR_TO_ADD_KEY);
+    for (String location : addedList) {
+      if (!rawLocations.contains(location)) {
+        rawLocations.add(location);
+      }
+    }
+    Collection<String> removedList =
+        conf.getTrimmedStringCollection(DFS_DATANODE_DATA_DIR_TO_REMOVE_KEY);
+    for (String location : removedList) {
+      rawLocations.remove(location);
+    }
     List<StorageLocation> locations =
         new ArrayList<StorageLocation>(rawLocations.size());
 

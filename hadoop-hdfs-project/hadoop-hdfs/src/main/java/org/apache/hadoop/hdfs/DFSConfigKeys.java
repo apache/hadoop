@@ -676,6 +676,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_UPGRADE_DOMAIN_FACTOR = "dfs.namenode.upgrade.domain.factor";
   public static final int DFS_UPGRADE_DOMAIN_FACTOR_DEFAULT = DFS_REPLICATION_DEFAULT;
 
+  // Used to dynamically refresh the conf of data dirs
+  public static final String DFS_DATANODE_DATA_DIR_TO_ADD_KEY = "dfs.datanode.data.dir.to.add";
+  public static final String DFS_DATANODE_DATA_DIR_TO_REMOVE_KEY =
+      "dfs.datanode.data.dir.to.remove";
+
   //Following keys have no defaults
   public static final String  DFS_DATANODE_DATA_DIR_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_DATANODE_DATA_DIR_KEY;

@@ -31,6 +31,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_TO_ADD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_TO_REMOVE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY;
@@ -61,9 +64,12 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.google.common.base.Joiner;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -78,9 +84,14 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.BlockPoolSlice;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.test.LambdaTestUtils;
+
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -948,4 +959,50 @@ public class TestDataNodeReconfiguration {
     }
   }
 
+  @Test
+  public void testRefreshVolumes() throws Exception {
+    final String dataDir = cluster.getDataDirectory();
+    List<String> testDirs = new ArrayList<>();
+    for (int i = 0; i < 3; i++) {
+      File newVolume = new File(dataDir, "test_vol" + i);
+      testDirs.add(newVolume.toString());
+      if (i == 0) {
+        // Create file, make addVolume() fail.
+        Files.createFile(newVolume.toPath());
+      }
+    }
+
+    // add new vol.
+    DataNode dn = cluster.getDataNodes().get(0);
+    String newValue = Joiner.on(",").join(testDirs);
+    LambdaTestUtils.intercept(ReconfigurationException.class,
+        "test_vol0",
+        () -> dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_TO_ADD_KEY, newValue));
+    String[] effectiveVolumes = dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY).split(",");
+    Assertions.assertThat(4).isEqualTo(effectiveVolumes.length);
+    for (String volume : effectiveVolumes) {
+      Assertions.assertThat(volume).isNotIn(testDirs.get(0));
+    }
+
+    // remove vol.
+    dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_TO_REMOVE_KEY, newValue);
+    effectiveVolumes = dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY).split(",");
+    Assertions.assertThat(2).isEqualTo(effectiveVolumes.length);
+    for (String volume : effectiveVolumes) {
+      Assertions.assertThat(volume).isNotIn(testDirs.get(0), testDirs.get(1), testDirs.get(2));
+    }
+
+    // Make sure that test dir metadata are not left in memory.
+    FsDatasetSpi<?> dataset = dn.getFSDataset();
+    for (FsVolumeSpi volume : dataset.getVolumeList()) {
+      Assertions.assertThat(volume.getBaseURI().getPath())
+          .isNotIn(testDirs.get(0), testDirs.get(1), testDirs.get(2));
+    }
+    DataStorage storage = dn.getStorage();
+    for (int i = 0; i < storage.getNumStorageDirs(); i++) {
+      Storage.StorageDirectory storageDir = storage.getStorageDir(i);
+      Assertions.assertThat(storageDir.getRoot().toString())
+          .isNotIn(testDirs.get(0), testDirs.get(1), testDirs.get(2));
+    }
+  }
 }
