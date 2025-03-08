@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -80,7 +81,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -165,9 +165,7 @@ public class TestSystemMetricsPublisherForV2 {
           testRootDir.getCanonicalPath());
     } catch (IOException e) {
       e.printStackTrace();
-      Assertions
-          .fail("Exception while setting the " +
-              "TIMELINE_SERVICE_STORAGE_DIR_ROOT ");
+      fail("Exception while setting the TIMELINE_SERVICE_STORAGE_DIR_ROOT ");
     }
     return conf;
   }
@@ -182,9 +180,8 @@ public class TestSystemMetricsPublisherForV2 {
       conf.setBoolean(YarnConfiguration.RM_PUBLISH_CONTAINER_EVENTS_ENABLED,
           YarnConfiguration.DEFAULT_RM_PUBLISH_CONTAINER_EVENTS_ENABLED);
       publisher.init(conf);
-      assertFalse(
-      
-         publisher.isPublishContainerEvents(), "Default configuration should not publish container events from RM");
+      assertFalse(publisher.isPublishContainerEvents(),
+          "Default configuration should not publish container events from RM");
 
       publisher.stop();
 
@@ -192,12 +189,12 @@ public class TestSystemMetricsPublisherForV2 {
           mock(RMTimelineCollectorManager.class));
       conf = getTimelineV2Conf();
       publisher.init(conf);
-      assertTrue(
-         publisher.isPublishContainerEvents(), "Expected to have registered event handlers and set ready to "
+      assertTrue(publisher.isPublishContainerEvents(),
+          "Expected to have registered event handlers and set ready to "
           + "publish events after init");
       publisher.start();
-      assertTrue(
-         publisher.isPublishContainerEvents(), "Expected to publish container events from RM");
+      assertTrue(publisher.isPublishContainerEvents(),
+          "Expected to publish container events from RM");
     } finally {
       publisher.stop();
     }
@@ -220,14 +217,14 @@ public class TestSystemMetricsPublisherForV2 {
             + "/";
 
     File entityFolder = new File(outputDirApp);
-    Assertions.assertTrue(entityFolder.isDirectory());
+    assertTrue(entityFolder.isDirectory());
 
     // file name is <entityId>.thist
     String timelineServiceFileName =
         appId.toString()
             + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
     File appFile = new File(outputDirApp, timelineServiceFileName);
-    Assertions.assertTrue(appFile.exists());
+    assertTrue(appFile.exists());
     verifyEntity(
         appFile, 4, ApplicationMetricsConstants.CREATED_EVENT_TYPE, 8, 0);
   }
@@ -256,14 +253,14 @@ public class TestSystemMetricsPublisherForV2 {
             + TimelineEntityType.YARN_APPLICATION_ATTEMPT + "/";
 
     File entityFolder = new File(outputDirApp);
-    Assertions.assertTrue(entityFolder.isDirectory());
+    assertTrue(entityFolder.isDirectory());
 
     // file name is <entityId>.thist
     String timelineServiceFileName =
         appAttemptId.toString()
             + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
     File appFile = new File(outputDirApp, timelineServiceFileName);
-    Assertions.assertTrue(appFile.exists());
+    assertTrue(appFile.exists());
     verifyEntity(appFile, 2, AppAttemptMetricsConstants.REGISTERED_EVENT_TYPE,
         0, TimelineServiceHelper.invertLong(appAttemptId.getAttemptId()));
   }
@@ -289,14 +286,14 @@ public class TestSystemMetricsPublisherForV2 {
             + TimelineEntityType.YARN_CONTAINER + "/";
 
     File entityFolder = new File(outputDirApp);
-    Assertions.assertTrue(entityFolder.isDirectory());
+    assertTrue(entityFolder.isDirectory());
 
     // file name is <entityId>.thist
     String timelineServiceFileName =
         containerId.toString()
             + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
     File appFile = new File(outputDirApp, timelineServiceFileName);
-    Assertions.assertTrue(appFile.exists());
+    assertTrue(appFile.exists());
     verifyEntity(appFile, 2,
         ContainerMetricsConstants.CREATED_IN_RM_EVENT_TYPE, 0,
         TimelineServiceHelper.invertLong(containerId.getContainerId()));
@@ -337,8 +334,8 @@ public class TestSystemMetricsPublisherForV2 {
       metricsPublisher.appCreated(app, app.getStartTime());
       dispatcher.await();
       for (LoggingEvent event : appender.getLog()) {
-        assertFalse(
-           event.getRenderedMessage().contains("Error in dispatcher thread"), "Dispatcher Crashed");
+        assertFalse(event.getRenderedMessage().
+            contains("Error in dispatcher thread"), "Dispatcher Crashed");
       }
     } finally {
       logger.removeAppender(appender);
@@ -382,10 +379,10 @@ public class TestSystemMetricsPublisherForV2 {
     } finally {
       reader.close();
     }
-    assertEquals(
-       expectedEvents, count, "Expected " + expectedEvents + " events to be published");
-    assertEquals(
-       expectedMetrics, metricsCount, "Expected " + expectedMetrics + " metrics is incorrect");
+    assertEquals(expectedEvents, count,
+        "Expected " + expectedEvents + " events to be published");
+    assertEquals(expectedMetrics, metricsCount,
+        "Expected " + expectedMetrics + " metrics is incorrect");
   }
 
   private String getTimelineEntityDir(RMApp app) {

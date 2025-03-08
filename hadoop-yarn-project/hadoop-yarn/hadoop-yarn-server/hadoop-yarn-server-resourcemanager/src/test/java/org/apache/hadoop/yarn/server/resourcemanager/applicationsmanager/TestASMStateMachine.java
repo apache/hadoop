@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 /*
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.jupiter.api.Assertions;
+import org.junit.Assert;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,9 +37,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 */
 
 public class TestASMStateMachine {
@@ -56,7 +56,7 @@ public class TestASMStateMachine {
 //  private boolean launchCleanupCalled = false;
 //  private AtomicInteger waitForState = new AtomicInteger();
 //  private Configuration conf = new Configuration();
-//  @BeforeEach
+//  @Before
 //  public void setUp() {
 //    context.getDispatcher().init(conf);
 //    context.getDispatcher().start();
@@ -67,7 +67,7 @@ public class TestASMStateMachine {
 //    new MockAppplicationMasterInfo();
 //  }
 //
-//  @AfterEach
+//  @After
 //  public void tearDown() {
 //
 //  }
@@ -160,7 +160,7 @@ public class TestASMStateMachine {
 //      Thread.sleep(500);
 //      count++;
 //    }
-//    Assertions.assertEquals(finalState, masterInfo.getState());
+//    Assert.assertEquals(finalState, masterInfo.getState());
 //  }
 //
 //  /* Test the state machine.
@@ -183,13 +183,13 @@ public class TestASMStateMachine {
 //        ApplicationEventType.ALLOCATE, submissioncontext.getApplicationId()));
 //
 //    waitForState(ApplicationState.LAUNCHED, masterInfo);
-//    Assertions.assertTrue(snAllocateReceived);
-//    Assertions.assertTrue(launchCalled);
-//    Assertions.assertTrue(addedApplication);
+//    Assert.assertTrue(snAllocateReceived);
+//    Assert.assertTrue(launchCalled);
+//    Assert.assertTrue(addedApplication);
 //    handler
 //        .handle(new AMRegistrationEvent(masterInfo.getMaster()));
 //    waitForState(ApplicationState.RUNNING, masterInfo);
-//    Assertions.assertEquals(ApplicationState.RUNNING, masterInfo.getState());
+//    Assert.assertEquals(ApplicationState.RUNNING, masterInfo.getState());
 //
 //    ApplicationStatus status = recordFactory
 //        .newRecordInstance(ApplicationStatus.class);
@@ -198,20 +198,20 @@ public class TestASMStateMachine {
 //
 //    /* check if the state is still RUNNING */
 //
-//    Assertions.assertEquals(ApplicationState.RUNNING, masterInfo.getState());
+//    Assert.assertEquals(ApplicationState.RUNNING, masterInfo.getState());
 //
 //    handler.handle(new AMFinishEvent(masterInfo.getApplicationID(),
 //        ApplicationState.COMPLETED, "", ""));
 //    waitForState(ApplicationState.COMPLETED, masterInfo);
-//    Assertions.assertEquals(ApplicationState.COMPLETED, masterInfo.getState());
+//    Assert.assertEquals(ApplicationState.COMPLETED, masterInfo.getState());
 //    /* check if clean up is called for everyone */
-//    Assertions.assertTrue(launchCleanupCalled);
-//    Assertions.assertTrue(snreceivedCleanUp);
-//    Assertions.assertTrue(removedApplication);
+//    Assert.assertTrue(launchCleanupCalled);
+//    Assert.assertTrue(snreceivedCleanUp);
+//    Assert.assertTrue(removedApplication);
 //
 //    /* check if expiry doesnt make it failed */
 //    handler.handle(new ApplicationEvent(ApplicationEventType.EXPIRE,
 //        masterInfo.getApplicationID()));
-//    Assertions.assertEquals(ApplicationState.COMPLETED, masterInfo.getState());
+//    Assert.assertEquals(ApplicationState.COMPLETED, masterInfo.getState());
 //  }
 }

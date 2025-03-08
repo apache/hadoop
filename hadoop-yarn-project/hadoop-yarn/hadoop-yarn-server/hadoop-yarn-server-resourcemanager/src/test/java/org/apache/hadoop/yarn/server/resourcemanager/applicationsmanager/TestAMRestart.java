@@ -79,21 +79,24 @@ import org.apache.hadoop.yarn.util.Records;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Throwables;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test AM restart functions.
  */
 public class TestAMRestart extends ParameterizedSchedulerTestBase {
 
-  public TestAMRestart(SchedulerType type) throws IOException {
-    super(type);
+  public void initTestAMRestart(SchedulerType type) throws IOException {
+    initParameterizedSchedulerTestBase(type);
   }
 
-  @Test
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
   @Timeout(value = 30)
-  public void testAMRestartWithExistingContainers() throws Exception {
+  public void testAMRestartWithExistingContainers(SchedulerType type) throws Exception {
+    initTestAMRestart(type);
     getConf().setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
 
     MockRM rm1 = new MockRM(getConf());
@@ -286,8 +289,8 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
       Thread.sleep(200);
     }
 
-    assertEquals(
-       NUM_CONTAINERS, containers.size(), "Did not get all containers allocated");
+    assertEquals(NUM_CONTAINERS, containers.size(),
+        "Did not get all containers allocated");
     return containers;
   }
 
@@ -301,9 +304,11 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     }
   }
 
-  @Test
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
   @Timeout(value = 30)
-  public void testNMTokensRebindOnAMRestart() throws Exception {
+  public void testNMTokensRebindOnAMRestart(SchedulerType type) throws Exception {
+    initTestAMRestart(type);
     getConf().setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 3);
     // To prevent test from blacklisting nm1 for AM, we sit threshold to half
     // of 2 nodes which is 1
@@ -426,9 +431,11 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
    * AM container preempted, nm disk failure
    * should not be counted towards AM max retry count.
    */
-  @Test
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
   @Timeout(value = 100)
-  public void testShouldNotCountFailureToMaxAttemptRetry() throws Exception {
+  public void testShouldNotCountFailureToMaxAttemptRetry(SchedulerType type) throws Exception {
+    initTestAMRestart(type);
     getConf().setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
     getConf().setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     getConf().set(
@@ -552,9 +559,11 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     rm1.stop();
   }
 
-  @Test
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
   @Timeout(value = 100)
-  public void testMaxAttemptOneMeansOne() throws Exception {
+  public void testMaxAttemptOneMeansOne(SchedulerType type) throws Exception {
+    initTestAMRestart(type);
     getConf().setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
     getConf().setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     getConf().set(
@@ -589,9 +598,11 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
    * AM preemption failure towards the max-retry-account and should be able to
    * re-launch the AM.
    */
-  @Test
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
   @Timeout(value = 60)
-  public void testPreemptedAMRestartOnRMRestart() throws Exception {
+  public void testPreemptedAMRestartOnRMRestart(SchedulerType type) throws Exception {
+    initTestAMRestart(type);
     getConf().setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     getConf().setBoolean(
         YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, false);
@@ -677,10 +688,12 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
    * AM failure towards the max-retry-account and should be able to
    * re-launch the AM.
    */
-  @Test
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
   @Timeout(value = 50)
-  public void testRMRestartOrFailoverNotCountedForAMFailures()
+  public void testRMRestartOrFailoverNotCountedForAMFailures(SchedulerType type)
       throws Exception {
+    initTestAMRestart(type);
     getConf().setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     getConf().setBoolean(
         YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, false);
@@ -753,9 +766,11 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     rm2.stop();
   }
 
-  @Test
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
   @Timeout(value = 120)
-  public void testRMAppAttemptFailuresValidityInterval() throws Exception {
+  public void testRMAppAttemptFailuresValidityInterval(SchedulerType type) throws Exception {
+    initTestAMRestart(type);
     getConf().setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     getConf().setBoolean(
         YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, false);
@@ -915,9 +930,11 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     return false;
   }
 
-  @Test
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
   @Timeout(value = 40)
-  public void testAMRestartNotLostContainerCompleteMsg() throws Exception {
+  public void testAMRestartNotLostContainerCompleteMsg(SchedulerType type) throws Exception {
+    initTestAMRestart(type);
     getConf().setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
 
     MockRM rm1 = new MockRM(getConf());
@@ -1025,10 +1042,12 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
    * after AM reset window, even if AM who was the last is failed,
    * all containers are launched by previous AM should be kept.
    */
-  @Test
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
   @Timeout(value = 20)
-  public void testAMRestartNotLostContainerAfterAttemptFailuresValidityInterval()
+  public void testAMRestartNotLostContainerAfterAttemptFailuresValidityInterval(SchedulerType type)
       throws Exception {
+    initTestAMRestart(type);
     // explicitly set max-am-retry count as 2.
     getConf().setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
 
@@ -1118,10 +1137,12 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
    * 8. Verify that the app master receives container 3 in the RM response to
    *    its heartbeat.
    */
-  @Test
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
   @Timeout(value = 200)
-  public void testContainersFromPreviousAttemptsWithRMRestart()
+  public void testContainersFromPreviousAttemptsWithRMRestart(SchedulerType type)
       throws Exception {
+    initTestAMRestart(type);
     getConf().setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
     getConf().setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     getConf().setBoolean(
@@ -1217,8 +1238,8 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     // container2 is recovered from previous attempt
     assertEquals(1,
         registerResponse.getContainersFromPreviousAttempts().size());
-    assertEquals(containerId2
-,         registerResponse.getContainersFromPreviousAttempts().get(0).getId(), "container 2");
+    assertEquals(containerId2, registerResponse.getContainersFromPreviousAttempts().get(0).getId(),
+        "container 2");
     List<NMToken> prevNMTokens = registerResponse
         .getNMTokensFromPreviousAttempts();
     assertEquals(1, prevNMTokens.size());
@@ -1247,8 +1268,8 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
         if (allocateResponse.getContainersFromPreviousAttempts().size() > 0){
           containersFromPreviousAttempts.addAll(
               allocateResponse.getContainersFromPreviousAttempts());
-          assertEquals(
-             0, allocateResponse.getAllocatedContainers().size(), "new containers should not be allocated");
+          assertEquals(0, allocateResponse.getAllocatedContainers().size(),
+              "new containers should not be allocated");
           List<NMToken> nmTokens = allocateResponse.getNMTokens();
           assertEquals(1, nmTokens.size());
           // container 3 is running on node 2
@@ -1262,8 +1283,8 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
       }
       return false;
     }, 2000, 200000);
-    assertEquals(containerId3
-,         containersFromPreviousAttempts.get(0).getId(), "container 3");
+    assertEquals(containerId3,
+        containersFromPreviousAttempts.get(0).getId(), "container 3");
     rm2.stop();
     rm1.stop();
   }
@@ -1279,9 +1300,11 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
    * 4. Verify that the used resource of queue should be cleaned up normally
    *    after app fail.
    */
-  @Test
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
   @Timeout(value = 30)
-  public void testQueueResourceDoesNotLeak() throws Exception {
+  public void testQueueResourceDoesNotLeak(SchedulerType type) throws Exception {
+    initTestAMRestart(type);
     getConf().setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
     getConf().setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     getConf()

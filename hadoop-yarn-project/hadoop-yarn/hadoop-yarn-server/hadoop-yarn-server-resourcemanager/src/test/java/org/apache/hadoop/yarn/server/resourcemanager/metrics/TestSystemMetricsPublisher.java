@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -33,12 +29,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -76,15 +69,17 @@ import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.MemoryTimelineStateStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.TimelineStateStore;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(Parameterized.class)
 public class TestSystemMetricsPublisher {
 
-  @Parameters
   public static Collection<Object[]> data() {
-    return Arrays.asList(new Object[][] {{false, 0}, {true, 1}});
+    return Arrays.asList(new Object[][]{{false, 0}, {true, 1}});
   }
 
   private static ApplicationHistoryServer timelineServer;
@@ -94,13 +89,13 @@ public class TestSystemMetricsPublisher {
   private boolean rmTimelineServerV1PublisherBatchEnabled;
   private int rmTimelineServerV1PublisherInterval;
 
-  public TestSystemMetricsPublisher(boolean rmTimelineServerV1PublisherBatchEnabled,
-      int rmTimelineServerV1PublisherInterval) {
-    this.rmTimelineServerV1PublisherBatchEnabled = rmTimelineServerV1PublisherBatchEnabled;
-    this.rmTimelineServerV1PublisherInterval = rmTimelineServerV1PublisherInterval;
+  private void initTestSystemMetricsPublisher(boolean pRmTimelineServerV1PublisherBatchEnabled,
+      int pRmTimelineServerV1PublisherInterval) throws Exception {
+    this.rmTimelineServerV1PublisherBatchEnabled = pRmTimelineServerV1PublisherBatchEnabled;
+    this.rmTimelineServerV1PublisherInterval = pRmTimelineServerV1PublisherInterval;
+    setup();
   }
 
-  @BeforeEach
   public void setup() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
@@ -137,9 +132,13 @@ public class TestSystemMetricsPublisher {
     }
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("data")
   @Timeout(value = 10)
-  public void testPublishApplicationMetrics() throws Exception {
+  public void testPublishApplicationMetrics(boolean pRmTimelineServerV1PublisherBatchEnabled,
+      int pRmTimelineServerV1PublisherInterval) throws Exception {
+    initTestSystemMetricsPublisher(pRmTimelineServerV1PublisherBatchEnabled,
+        pRmTimelineServerV1PublisherInterval);
     long stateUpdateTimeStamp = System.currentTimeMillis();
     for (int i = 1; i <= 2; ++i) {
       ApplicationId appId = ApplicationId.newInstance(0, i);
@@ -334,9 +333,13 @@ public class TestSystemMetricsPublisher {
     }
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("data")
   @Timeout(value = 10)
-  public void testPublishAppAttemptMetricsForUnmanagedAM() throws Exception {
+  public void testPublishAppAttemptMetricsForUnmanagedAM(boolean pRmTimelineServerV1PublisherBatchEnabled,
+      int pRmTimelineServerV1PublisherInterval) throws Exception {
+    initTestSystemMetricsPublisher(pRmTimelineServerV1PublisherBatchEnabled,
+        pRmTimelineServerV1PublisherInterval);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1);
     RMAppAttempt appAttempt = createRMAppAttempt(appAttemptId,true);
@@ -355,9 +358,13 @@ public class TestSystemMetricsPublisher {
     } while (entity == null || entity.getEvents().size() < 2);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("data")
   @Timeout(value = 10)
-  public void testPublishAppAttemptMetrics() throws Exception {
+  public void testPublishAppAttemptMetrics(boolean pRmTimelineServerV1PublisherBatchEnabled,
+      int pRmTimelineServerV1PublisherInterval) throws Exception {
+    initTestSystemMetricsPublisher(pRmTimelineServerV1PublisherBatchEnabled,
+        pRmTimelineServerV1PublisherInterval);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1);
     RMAppAttempt appAttempt = createRMAppAttempt(appAttemptId, false);
@@ -423,9 +430,14 @@ public class TestSystemMetricsPublisher {
     assertTrue(hasRegisteredEvent && hasFinishedEvent);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("data")
   @Timeout(value = 10)
-  public void testPublishHostPortInfoOnContainerFinished() throws Exception {
+  public void testPublishHostPortInfoOnContainerFinished(
+      boolean pRmTimelineServerV1PublisherBatchEnabled,
+      int pRmTimelineServerV1PublisherInterval) throws Exception {
+    initTestSystemMetricsPublisher(pRmTimelineServerV1PublisherBatchEnabled,
+        pRmTimelineServerV1PublisherInterval);
     ContainerId containerId =
         ContainerId.newContainerId(ApplicationAttemptId.newInstance(
             ApplicationId.newInstance(0, 1), 1), 1);
@@ -454,9 +466,13 @@ public class TestSystemMetricsPublisher {
             ContainerMetricsConstants.ALLOCATED_PORT_INFO));
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("data")
   @Timeout(value = 10)
-  public void testPublishContainerMetrics() throws Exception {
+  public void testPublishContainerMetrics(boolean pRmTimelineServerV1PublisherBatchEnabled,
+      int pRmTimelineServerV1PublisherInterval) throws Exception {
+    initTestSystemMetricsPublisher(pRmTimelineServerV1PublisherBatchEnabled,
+        pRmTimelineServerV1PublisherInterval);
     ContainerId containerId =
         ContainerId.newContainerId(ApplicationAttemptId.newInstance(
             ApplicationId.newInstance(0, 1), 1), 1);

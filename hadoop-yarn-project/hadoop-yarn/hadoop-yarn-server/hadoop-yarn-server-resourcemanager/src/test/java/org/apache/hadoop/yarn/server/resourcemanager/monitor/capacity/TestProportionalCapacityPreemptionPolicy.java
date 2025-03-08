@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.test.TestName;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -59,9 +60,8 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
@@ -148,9 +148,10 @@ public class TestProportionalCapacityPreemptionPolicy {
     public int getValue() {
       return this.value;
     }
-  };  
+  };
 
-  @Rule public TestName name = new TestName();
+  @RegisterExtension
+  public TestName name = new TestName();
 
   @BeforeEach
   @SuppressWarnings("unchecked")
@@ -400,8 +401,8 @@ public class TestProportionalCapacityPreemptionPolicy {
     ApplicationAttemptId expectedAttemptOnQueueB = 
         ApplicationAttemptId.newInstance(
             appA.getApplicationId(), appA.getAttemptId());
-    assertTrue(
-       mCS.getAppsInQueue("queueB").contains(expectedAttemptOnQueueB), "appA should be running on queueB");
+    assertTrue(mCS.getAppsInQueue("queueB").contains(expectedAttemptOnQueueB),
+        "appA should be running on queueB");
     verify(mDisp, times(10)).handle(argThat(new IsPreemptionRequestFor(appA)));
 
     // Need to call setup() again to reset mDisp
@@ -418,10 +419,10 @@ public class TestProportionalCapacityPreemptionPolicy {
             appC.getApplicationId(), appC.getAttemptId());
     // Now, all of queueB's (appA) over capacity is not preemptable, so neither
     // is queueA's. Verify that capacity is taken from queueE (appC).
-    assertTrue(
-       mCS.getAppsInQueue("queueC").contains(expectedAttemptOnQueueC), "appB should be running on queueC");
-    assertTrue(
-       mCS.getAppsInQueue("queueE").contains(expectedAttemptOnQueueE), "appC should be running on queueE");
+    assertTrue(mCS.getAppsInQueue("queueC").contains(expectedAttemptOnQueueC),
+        "appB should be running on queueC");
+    assertTrue(mCS.getAppsInQueue("queueE").contains(expectedAttemptOnQueueE),
+        "appC should be running on queueE");
     // Resources should have come from queueE (appC) and neither of queueA's
     // children.
     verify(mDisp, never()).handle(argThat(new IsPreemptionRequestFor(appA)));
@@ -1118,8 +1119,8 @@ public class TestProportionalCapacityPreemptionPolicy {
 
     policy.editSchedule();
 
-    assertFalse(policy.getLeafQueueNames().contains("root.dynamicParent"), "dynamicParent should not be a LeafQueue " +
-        "candidate");
+    assertFalse(policy.getLeafQueueNames().contains("root.dynamicParent"),
+        "dynamicParent should not be a LeafQueue candidate");
   }
 
   static class IsPreemptionRequestFor
