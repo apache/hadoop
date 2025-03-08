@@ -6,7 +6,7 @@ Requirements:
 * Unix System
 * JDK 1.8
 * Maven 3.3 or later
-* Boost 1.72 (if compiling native code)
+* Boost 1.86.0 (if compiling native code)
 * Protocol Buffers 3.21.12 (if compiling native code)
 * CMake 3.19 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
@@ -526,7 +526,7 @@ Requirements:
 * Windows 10
 * JDK 1.8
 * Maven 3.0 or later (maven.apache.org)
-* Boost 1.72 (boost.org)
+* Boost 1.86.0 (boost.org)
 * Protocol Buffers 3.21.12 (https://github.com/protocolbuffers/protobuf/tags)
 * CMake 3.19 or newer (cmake.org)
 * Visual Studio 2019 (visualstudio.com)
