@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Map;
@@ -37,7 +39,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -66,10 +67,10 @@ public class TestRMDelegatedNodeLabelsUpdater extends NodeLabelTestBase {
       MockRM rm = new MockRM(conf);
       rm.init(conf);
       rm.start();
-      Assertions.fail("Expected an exception");
+      fail("Expected an exception");
     } catch (Exception e) {
       // expected an exception
-      Assertions.assertTrue(e.getMessage().contains(
+      assertTrue(e.getMessage().contains(
           "RMNodeLabelsMappingProvider should be configured"));
     }
   }

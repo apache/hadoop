@@ -86,12 +86,11 @@ import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.slf4j.event.Level;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.slf4j.event.Level;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.UnknownHostException;
@@ -110,7 +109,6 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.TestCapacitySchedulerAutoCreatedQueueBase.USER1;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp
     .RMWebServices.DEFAULT_QUEUE;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
