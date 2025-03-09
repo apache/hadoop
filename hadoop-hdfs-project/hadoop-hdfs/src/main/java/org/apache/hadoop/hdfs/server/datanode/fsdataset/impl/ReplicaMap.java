@@ -19,7 +19,9 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -164,13 +166,28 @@ class ReplicaMap {
    * Merge all entries from the given replica map into the local replica map.
    */
   void mergeAll(ReplicaMap other) {
-    other.map.forEach(
-        (bp, replicaInfos) -> {
-          replicaInfos.forEach(
-              replicaInfo -> add(bp, replicaInfo)
-          );
+    Set<String> bpList = other.map.keySet();
+    for (String bp : bpList) {
+      checkBlockPool(bp);
+      LightWeightResizableGSet<Block, ReplicaInfo> replicaInfos = other.map.get(bp);
+      HashSet<ReplicaInfo> replicaSet = new HashSet<>();
+      // Can't add to GSet while in another GSet iterator may cause endlessLoop
+      for (ReplicaInfo replicaInfo : replicaInfos) {
+        replicaSet.add(replicaInfo);
+      }
+      try (AutoCloseableLock lock = writeLock.acquire()) {
+        LightWeightResizableGSet<Block, ReplicaInfo> curSet = map.get(bp);
+        if (curSet == null && !replicaSet.isEmpty()) {
+          // Add an entry for block pool if it does not exist already
+          curSet = new LightWeightResizableGSet<>();
+          map.put(bp, curSet);
         }
-    );
+        for (ReplicaInfo replicaInfo : replicaSet) {
+          checkBlock(replicaInfo);
+          curSet.put(replicaInfo);
+        }
+      }
+    }
   }
   
   /**

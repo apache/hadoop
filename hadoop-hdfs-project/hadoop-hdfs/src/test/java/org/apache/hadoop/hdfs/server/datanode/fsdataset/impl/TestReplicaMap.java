@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
@@ -119,6 +120,22 @@ public class TestReplicaMap {
     map.mergeAll(temReplicaMap);
     assertNotNull(map.get(bpid, 1234));
     assertNotNull(map.get(bpid, 5678));
+  }
+
+  @Test
+  public void testMergeAllWithMultipleReplica() {
+    ReplicaMap otherMap = new ReplicaMap(new ReentrantReadWriteLock());
+    for (int i = 1; i <= 10; i++) {
+      Block b = new Block(i, i, i);
+      otherMap.add(bpid, new FinalizedReplica(b, null, null));
+    }
+    ReplicaMap m = new ReplicaMap(new ReentrantReadWriteLock());
+    for (int i = 11; i <= 20; i++) {
+      Block b = new Block(i, i, i);
+      m.add(bpid, new FinalizedReplica(b, null, null));
+    }
+    m.mergeAll(otherMap);
+    assertEquals(20, m.size(bpid));
   }
 
   @Test
