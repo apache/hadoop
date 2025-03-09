@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.ftp;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -529,7 +530,7 @@ public class FTPFileSystem extends FileSystem {
       return new FileStatus(length, isDir, blockReplication, blockSize,
           modTime, this.makeQualified(root));
     }
-    String pathName = parentPath.toUri().getPath();
+    String pathName = new File(parentPath.toUri().getPath()).getCanonicalPath();
     FTPFile[] ftpFiles = client.listFiles(pathName);
     if (ftpFiles != null) {
       for (FTPFile ftpFile : ftpFiles) {
