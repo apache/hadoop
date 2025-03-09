@@ -1178,7 +1178,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rms.add(rm2);
     rm2.start();
 
-    verify(rm2.getRMContext().getSystemMetricsPublisher(),times(3))
+    verify(rm2.getRMContext().getSystemMetricsPublisher(), times(3))
         .appCreated(any(RMApp.class), anyLong());
 
     GetApplicationsRequest request1 =
