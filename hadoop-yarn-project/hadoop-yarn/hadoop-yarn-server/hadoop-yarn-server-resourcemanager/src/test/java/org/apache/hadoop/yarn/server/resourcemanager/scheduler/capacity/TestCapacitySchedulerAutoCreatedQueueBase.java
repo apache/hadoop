@@ -73,7 +73,6 @@ import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
@@ -696,7 +695,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
             .withAmLabel(nodeLabel)
             .build();
     RMApp app = MockRMAppSubmitter.submit(mockRM, data);
-    Assertions.assertEquals(app.getAmNodeLabelExpression(), nodeLabel);
+    assertEquals(app.getAmNodeLabelExpression(), nodeLabel);
     // check preconditions
     List<ApplicationAttemptId> appsInC = cs.getAppsInQueue(PARENT_QUEUE);
     assertEquals(1, appsInC.size());

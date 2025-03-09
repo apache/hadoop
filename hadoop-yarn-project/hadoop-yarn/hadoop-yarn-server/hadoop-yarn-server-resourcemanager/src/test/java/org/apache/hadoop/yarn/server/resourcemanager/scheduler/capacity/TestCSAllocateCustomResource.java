@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -64,6 +63,7 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.FPGA_URI;
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_MB;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 /**
  * Test case for custom resource container allocation.
@@ -162,7 +162,7 @@ public class TestCSAllocateCustomResource {
     // Do nm heartbeats 1 times, will allocate a container on nm1
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
     rm.drainEvents();
-    Assertions.assertEquals(2, schedulerApp1.getLiveContainers().size());
+    assertEquals(2, schedulerApp1.getLiveContainers().size());
     rm.close();
   }
 
@@ -193,12 +193,12 @@ public class TestCSAllocateCustomResource {
 
     // Ensure the method can get custom resource type from
     // CapacitySchedulerConfiguration
-    Assertions.assertNotEquals(0,
+    assertNotEquals(0,
         ResourceUtils
             .fetchMaximumAllocationFromConfig(cs.getConfiguration())
             .getResourceValue("yarn.io/gpu"));
     // Ensure custom resource type exists in queue's maximumAllocation
-    Assertions.assertNotEquals(0,
+    assertNotEquals(0,
         cs.getMaximumResourceCapability("a")
             .getResourceValue("yarn.io/gpu"));
     rm.close();
@@ -236,26 +236,20 @@ public class TestCSAllocateCustomResource {
     }
 
     // Check GPU inc related cluster metrics.
-    assertEquals(
-       metrics.getCapabilityMB(), (4096 * 8), "Cluster Capability Memory incorrect");
-    assertEquals(
-       metrics.getCapabilityVirtualCores(), 4 * 8, "Cluster Capability Vcores incorrect");
-    assertEquals(
-       (metrics.getCustomResourceCapability()
-            .get(GPU_URI)).longValue(), 4 * 8, "Cluster Capability GPUs incorrect");
+    assertEquals(metrics.getCapabilityMB(), (4096 * 8), "Cluster Capability Memory incorrect");
+    assertEquals(metrics.getCapabilityVirtualCores(), 4 * 8, "Cluster Capability Vcores incorrect");
+    assertEquals((metrics.getCustomResourceCapability()
+        .get(GPU_URI)).longValue(), 4 * 8, "Cluster Capability GPUs incorrect");
 
     for (RMNode rmNode : rmNodes) {
       nodeTracker.removeNode(rmNode.getNodeID());
     }
 
     // Check GPU dec related cluster metrics.
-    assertEquals(
-       metrics.getCapabilityMB(), 0, "Cluster Capability Memory incorrect");
-    assertEquals(
-       metrics.getCapabilityVirtualCores(), 0, "Cluster Capability Vcores incorrect");
-    assertEquals(
-       (metrics.getCustomResourceCapability()
-            .get(GPU_URI)).longValue(), 0, "Cluster Capability GPUs incorrect");
+    assertEquals(metrics.getCapabilityMB(), 0, "Cluster Capability Memory incorrect");
+    assertEquals(metrics.getCapabilityVirtualCores(), 0, "Cluster Capability Vcores incorrect");
+    assertEquals((metrics.getCustomResourceCapability()
+        .get(GPU_URI)).longValue(), 0, "Cluster Capability GPUs incorrect");
     ClusterMetrics.destroy();
     rm.stop();
   }
@@ -317,17 +311,17 @@ public class TestCSAllocateCustomResource {
 
     // Check the gpu resource conf is right.
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-    Assertions.assertEquals(aMINRES,
+    assertEquals(aMINRES,
         cs.getConfiguration().
             getMinimumResourceRequirement("", A, resourceTypes));
-    Assertions.assertEquals(aMAXRES,
+    assertEquals(aMAXRES,
         cs.getConfiguration().
             getMaximumResourceRequirement("", A, resourceTypes));
 
     // Check the gpu resource of queue is right.
-    Assertions.assertEquals(aMINRES, cs.getQueue("root.a").
+    assertEquals(aMINRES, cs.getQueue("root.a").
         getQueueResourceQuotas().getConfiguredMinResource());
-    Assertions.assertEquals(aMAXRES, cs.getQueue("root.a").
+    assertEquals(aMAXRES, cs.getQueue("root.a").
         getQueueResourceQuotas().getConfiguredMaxResource());
 
     rm.close();

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
@@ -42,7 +44,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -120,7 +121,7 @@ public class TestAMAllocatedToNonExclusivePartition {
     // Request a container and it also should be allocated to non-partition node of h1
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
-    Assertions.assertTrue(rm1.waitForState(nm1, containerId, RMContainerState.ALLOCATED));
+    assertTrue(rm1.waitForState(nm1, containerId, RMContainerState.ALLOCATED));
 
     rm1.close();
   }

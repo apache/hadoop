@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
-import org.junit.jupiter.api.Assertions;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -32,6 +31,8 @@ import java.util.function.Supplier;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Provides a fluent API to assert resource and capacity attributes of queues.
@@ -141,7 +142,7 @@ class QueueAssertionBuilder {
           BiFunction<QueueResourceQuotas, String, Resource> assertion, String messageInfo) {
         CSQueue queue = cs.getQueue(queuePath.getFullPath());
         if (queue == null) {
-          Assertions.fail("Queue " + queuePath + " is not found");
+          fail("Queue " + queuePath + " is not found");
         }
 
         assertionType = messageInfo;
@@ -152,7 +153,7 @@ class QueueAssertionBuilder {
           BiFunction<QueueCapacities, String, Float> assertion, String messageInfo) {
         CSQueue queue = cs.getQueue(queuePath.getFullPath());
         if (queue == null) {
-          Assertions.fail("Queue " + queuePath + " is not found");
+          fail("Queue " + queuePath + " is not found");
         }
         assertionType = messageInfo;
         valueSupplier = () -> assertion.apply(queue.getQueueCapacities(), label);
@@ -187,13 +188,13 @@ class QueueAssertionBuilder {
           String errorMessage = String.format(RESOURCE_ASSERTION_ERROR_MESSAGE,
               assertion.assertionType, assertionEntry.getKey(),
               assertion.expectedResource.toString(), assertion.label);
-          Assertions.assertEquals(assertion.expectedResource,
+          assertEquals(assertion.expectedResource,
               assertion.resourceSupplier.get(), errorMessage);
         } else {
           String errorMessage = String.format(ASSERTION_ERROR_MESSAGE,
               assertion.assertionType, assertionEntry.getKey(), assertion.expectedValue,
               assertion.label);
-          Assertions.assertEquals(assertion.expectedValue,
+          assertEquals(assertion.expectedValue,
               assertion.valueSupplier.get(), EPSILON, errorMessage);
         }
       }

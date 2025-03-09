@@ -21,9 +21,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.Assertions;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public final class CapacitySchedulerQueueHelpers {
 
@@ -386,7 +385,7 @@ public final class CapacitySchedulerQueueHelpers {
     CSQueue rootQueue = cs.getRootQueue();
     for (Map.Entry<String, ExpectedCapacities> entry : capacities.entrySet()) {
       CSQueue queue = findQueue(rootQueue, entry.getKey());
-      Assertions.assertNotNull(queue);
+      assertNotNull(queue);
       assertQueueCapacities(queue, entry.getValue());
     }
   }

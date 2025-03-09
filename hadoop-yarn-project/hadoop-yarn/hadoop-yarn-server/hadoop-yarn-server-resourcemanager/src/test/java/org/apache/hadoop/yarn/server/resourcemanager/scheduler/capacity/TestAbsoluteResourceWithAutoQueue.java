@@ -20,7 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -288,18 +292,16 @@ public class TestAbsoluteResourceWithAutoQueue
 
   @Test
   public void testValidateLeafQueueTemplateConfigurations() {
-
-    assertThrows(Exception.class, ()->{
+    assertThrows(Exception.class, () -> {
       CapacitySchedulerConfiguration csConf = setupSimpleQueueConfiguration(true);
 
       csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-              ResourceScheduler.class);
+          ResourceScheduler.class);
 
       mockRM = new MockRM(csConf);
       fail("Exception should be thrown as leaf queue template configuration is "
-              + "not same as Parent configuration");
+          + "not same as Parent configuration");
     });
-
   }
 
   @Test

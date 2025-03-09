@@ -40,17 +40,23 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestCapacitySchedulerConfigValidator {
   public static final int NODE_MEMORY = 16;
@@ -120,14 +126,14 @@ public class TestCapacitySchedulerConfigValidator {
    */
   @Test
   public void testValidateMemoryAllocationInvalidMinMem() {
-    assertThrows(YarnRuntimeException.class, ()->{
+    assertThrows(YarnRuntimeException.class, () -> {
       Map<String, String> configs = new HashMap();
       configs.put(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, "0");
       Configuration config = CapacitySchedulerConfigGeneratorForTest
-              .createConfiguration(configs);
+          .createConfiguration(configs);
       CapacitySchedulerConfigValidator.validateMemoryAllocation(config);
       fail(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB +
-              " should be > 0");
+          " should be > 0");
     });
   }
 
@@ -137,16 +143,15 @@ public class TestCapacitySchedulerConfigValidator {
    */
   @Test
   public void testValidateMemoryAllocationHIgherMinThanMaxMem() {
-    assertThrows(YarnRuntimeException.class, ()->{
+    assertThrows(YarnRuntimeException.class, () -> {
       Map<String, String> configs = new HashMap();
       configs.put(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, "8192");
       configs.put(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, "1024");
       Configuration config = CapacitySchedulerConfigGeneratorForTest
-              .createConfiguration(configs);
+          .createConfiguration(configs);
       CapacitySchedulerConfigValidator.validateMemoryAllocation(config);
       fail(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB + " should be > "
-              + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
-
+          + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
     });
   }
 
@@ -168,14 +173,14 @@ public class TestCapacitySchedulerConfigValidator {
    */
   @Test
   public void testValidateVCoresInvalidMinVCore() {
-    assertThrows(YarnRuntimeException.class, ()->{
+    assertThrows(YarnRuntimeException.class, () -> {
       Map<String, String> configs = new HashMap();
       configs.put(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, "0");
       Configuration config = CapacitySchedulerConfigGeneratorForTest
-              .createConfiguration(configs);
+          .createConfiguration(configs);
       CapacitySchedulerConfigValidator.validateVCores(config);
       fail(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES
-              + " should be > 0");
+          + " should be > 0");
     });
   }
 
@@ -185,16 +190,16 @@ public class TestCapacitySchedulerConfigValidator {
    */
   @Test
   public void testValidateVCoresHigherMinThanMaxVCore() {
-    assertThrows(YarnRuntimeException.class, ()->{
+    assertThrows(YarnRuntimeException.class, () -> {
       Map<String, String> configs = new HashMap();
       configs.put(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, "4");
       configs.put(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES, "1");
       Configuration config = CapacitySchedulerConfigGeneratorForTest
-              .createConfiguration(configs);
+          .createConfiguration(configs);
       CapacitySchedulerConfigValidator.validateVCores(config);
       fail(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES +
-              " should be > "
-              + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
+          " should be > "
+          + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
     });
   }
 
@@ -224,8 +229,7 @@ public class TestCapacitySchedulerConfigValidator {
               .validateCSConfiguration(oldConfig, newConfig, rmContext);
       fail("Invalid capacity");
     } catch (IOException e) {
-      Assertions.assertTrue(e.getCause().getMessage()
-              .startsWith("Illegal capacity"));
+      assertTrue(e.getCause().getMessage().startsWith("Illegal capacity"));
     }
   }
 
@@ -244,7 +248,7 @@ public class TestCapacitySchedulerConfigValidator {
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
       fail("Parent maximum capacity exceeded");
     } catch (IOException e) {
-      Assertions.assertTrue(e.getCause().getMessage()
+      assertTrue(e.getCause().getMessage()
           .startsWith("Max resource configuration"));
     } finally {
       mockRM.stop();
@@ -285,7 +289,7 @@ public class TestCapacitySchedulerConfigValidator {
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
       fail("Parent maximum capacity exceeded");
     } catch (IOException e) {
-      Assertions.assertTrue(e.getCause().getMessage()
+      assertTrue(e.getCause().getMessage()
           .startsWith("Max resource configuration"));
     } finally {
       mockRM.stop();
@@ -306,7 +310,7 @@ public class TestCapacitySchedulerConfigValidator {
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
       fail("Parent maximum capacity exceeded");
     } catch (IOException e) {
-      Assertions.assertTrue(e.getCause().getMessage()
+      assertTrue(e.getCause().getMessage()
           .startsWith("Max resource configuration"));
     } finally {
       mockRM.stop();
@@ -327,7 +331,7 @@ public class TestCapacitySchedulerConfigValidator {
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
       fail("Parent maximum capacity exceeded");
     } catch (IOException e) {
-      Assertions.assertTrue(e.getCause().getMessage()
+      assertTrue(e.getCause().getMessage()
           .startsWith("Max resource configuration"));
     } finally {
       mockRM.stop();
@@ -344,7 +348,7 @@ public class TestCapacitySchedulerConfigValidator {
     RMContext rmContext = prepareRMContext();
     boolean isValidConfig = CapacitySchedulerConfigValidator
             .validateCSConfiguration(oldConfig, newConfig, rmContext);
-    Assertions.assertTrue(isValidConfig);
+    assertTrue(isValidConfig);
   }
 
   /**
@@ -363,7 +367,7 @@ public class TestCapacitySchedulerConfigValidator {
               .validateCSConfiguration(oldConfig, newConfig, rmContext);
       fail("There are child queues in running state");
     } catch (IOException e) {
-      Assertions.assertTrue(e.getCause().getMessage()
+      assertTrue(e.getCause().getMessage()
               .contains("The parent queue:root cannot be STOPPED"));
     }
   }
@@ -382,7 +386,7 @@ public class TestCapacitySchedulerConfigValidator {
     RMContext rmContext = prepareRMContext();
     Boolean isValidConfig = CapacitySchedulerConfigValidator
             .validateCSConfiguration(oldConfig, newConfig, rmContext);
-    Assertions.assertTrue(isValidConfig);
+    assertTrue(isValidConfig);
 
   }
 
@@ -410,7 +414,7 @@ public class TestCapacitySchedulerConfigValidator {
         fail("Invalid capacity for children of queue root");
       }
     } catch (IOException e) {
-      Assertions.assertTrue(e.getCause().getMessage()
+      assertTrue(e.getCause().getMessage()
               .startsWith("Illegal capacity"));
     }
   }
@@ -436,7 +440,7 @@ public class TestCapacitySchedulerConfigValidator {
     RMContext rmContext = prepareRMContext();
     Boolean isValidConfig = CapacitySchedulerConfigValidator
             .validateCSConfiguration(oldConfig, newConfig, rmContext);
-    Assertions.assertTrue(isValidConfig);
+    assertTrue(isValidConfig);
   }
 
   @Test
@@ -459,33 +463,33 @@ public class TestCapacitySchedulerConfigValidator {
 
       QueueMetrics origQM1 = cache.get("root.test1");
       QueueMetrics origQM2 = cache.get("root.test2");
-      Assertions.assertNotNull(origQM1, "Original queues should be found in the cache");
-      Assertions.assertNotNull(origQM2, "Original queues should be found in the cache");
+      assertNotNull(origQM1, "Original queues should be found in the cache");
+      assertNotNull(origQM2, "Original queues should be found in the cache");
 
       QueueMetrics origPQM1 = cache.get("default.root.test1");
       QueueMetrics origPQM2 = cache.get("default.root.test2");
-      Assertions.assertNotNull(
-         origPQM1, "Original queues should be found in the cache (PartitionQueueMetrics)");
-      Assertions.assertNotNull(
-         origPQM2, "Original queues should be found in the cache (PartitionQueueMetrics)");
+      assertNotNull(origPQM1,
+          "Original queues should be found in the cache (PartitionQueueMetrics)");
+      assertNotNull(origPQM2,
+          "Original queues should be found in the cache (PartitionQueueMetrics)");
 
       MetricsSource origMS1 =
           ms.getSource("QueueMetrics,q0=root,q1=test1");
       MetricsSource origMS2 =
           ms.getSource("QueueMetrics,q0=root,q1=test2");
-      Assertions.assertNotNull(
-         origMS1, "Original queues should be found in the Metrics System");
-      Assertions.assertNotNull(
-         origMS2, "Original queues should be found in the Metrics System");
+      assertNotNull(origMS1,
+          "Original queues should be found in the Metrics System");
+      assertNotNull(origMS2,
+          "Original queues should be found in the Metrics System");
 
       MetricsSource origPMS1 = ms
           .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test1");
       MetricsSource origPMS2 = ms
           .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test2");
-      Assertions.assertNotNull(
-      origPMS1, "Original queues should be found in Metrics System (PartitionQueueMetrics)");
-      Assertions.assertNotNull(
-      origPMS2, "Original queues should be found in Metrics System (PartitionQueueMetrics)");
+      assertNotNull(origPMS1,
+          "Original queues should be found in Metrics System (PartitionQueueMetrics)");
+      assertNotNull(origPMS2,
+          "Original queues should be found in Metrics System (PartitionQueueMetrics)");
 
       Configuration newConfig = new Configuration(oldConfig);
       newConfig
@@ -499,32 +503,30 @@ public class TestCapacitySchedulerConfigValidator {
 
       boolean isValidConfig = CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfig, newConfig, rmContext);
-      Assertions.assertTrue(isValidConfig);
+      assertTrue(isValidConfig);
 
-      Assertions.assertFalse(
-         cache.containsKey("root.test3"), "Validated new queue should not be in the cache");
-      Assertions.assertFalse(
-         cache.containsKey("default.root.test3"), "Validated new queue should not be in the cache (PartitionQueueMetrics)");
-      Assertions.assertNull(
-         ms.getSource("QueueMetrics,q0=root,q1=test3"), "Validated new queue should not be in the Metrics System");
-      Assertions.assertNull(
-      
-         ms
-              .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test3"), "Validated new queue should not be in Metrics System (PartitionQueueMetrics)");
+      assertFalse(cache.containsKey("root.test3"),
+          "Validated new queue should not be in the cache");
+      assertFalse(cache.containsKey("default.root.test3"),
+          "Validated new queue should not be in the cache (PartitionQueueMetrics)");
+      assertNull(ms.getSource("QueueMetrics,q0=root,q1=test3"),
+          "Validated new queue should not be in the Metrics System");
+      assertNull(ms.getSource("PartitionQueueMetrics,partition=,q0=root,q1=test3"),
+          "Validated new queue should not be in Metrics System (PartitionQueueMetrics)");
 
       // Config validation should not change the existing
       // objects in the cache and the metrics system
-      Assertions.assertEquals(origQM1, cache.get("root.test1"));
-      Assertions.assertEquals(origQM2, cache.get("root.test2"));
-      Assertions.assertEquals(origPQM1, cache.get("default.root.test1"));
-      Assertions.assertEquals(origPQM1, cache.get("default.root.test1"));
-      Assertions.assertEquals(origMS1,
+      assertEquals(origQM1, cache.get("root.test1"));
+      assertEquals(origQM2, cache.get("root.test2"));
+      assertEquals(origPQM1, cache.get("default.root.test1"));
+      assertEquals(origPQM1, cache.get("default.root.test1"));
+      assertEquals(origMS1,
           ms.getSource("QueueMetrics,q0=root,q1=test1"));
-      Assertions.assertEquals(origMS2,
+      assertEquals(origMS2,
           ms.getSource("QueueMetrics,q0=root,q1=test2"));
-      Assertions.assertEquals(origPMS1,
+      assertEquals(origPMS1,
           ms.getSource("PartitionQueueMetrics,partition=,q0=root,q1=test1"));
-      Assertions.assertEquals(origPMS2,
+      assertEquals(origPMS2,
           ms.getSource("PartitionQueueMetrics,partition=,q0=root,q1=test2"));
     } finally {
       mockRM.stop();
@@ -551,9 +553,9 @@ public class TestCapacitySchedulerConfigValidator {
               .validateCSConfiguration(oldConfig, newConfig, rmContext);
       fail("Invalid capacity for children of queue root");
     } catch (IOException e) {
-      Assertions.assertTrue(e.getCause().getMessage()
+      assertTrue(e.getCause().getMessage()
               .contains("root.test2 cannot be deleted"));
-      Assertions.assertTrue(e.getCause().getMessage()
+      assertTrue(e.getCause().getMessage()
               .contains("the queue is not yet in stopped state"));
     }
   }
@@ -580,7 +582,7 @@ public class TestCapacitySchedulerConfigValidator {
         fail("Invalid capacity for children of queue root");
       }
     } catch (IOException e) {
-      Assertions.assertTrue(e.getCause().getMessage()
+      assertTrue(e.getCause().getMessage()
               .contains("Illegal capacity"));
     }
   }
@@ -603,7 +605,7 @@ public class TestCapacitySchedulerConfigValidator {
     RMContext rmContext = prepareRMContext();
     boolean isValidConfig = CapacitySchedulerConfigValidator
               .validateCSConfiguration(oldConfig, newConfig, rmContext);
-    Assertions.assertTrue(isValidConfig);
+    assertTrue(isValidConfig);
 
   }
 
@@ -621,30 +623,26 @@ public class TestCapacitySchedulerConfigValidator {
     RMContext rmContext = prepareRMContext();
     boolean isValidConfig = CapacitySchedulerConfigValidator
             .validateCSConfiguration(oldConfig, newConfig, rmContext);
-    Assertions.assertTrue(isValidConfig);
+    assertTrue(isValidConfig);
   }
 
   public static RMContext prepareRMContext() {
     setupResources(false);
-    RMContext rmContext = Mockito.mock(RMContext.class);
-    CapacityScheduler mockCs = Mockito.mock(CapacityScheduler.class);
-    Mockito.when(rmContext.getScheduler()).thenReturn(mockCs);
-    LocalConfigurationProvider configProvider = Mockito
-            .mock(LocalConfigurationProvider.class);
-    Mockito.when(rmContext.getConfigurationProvider())
+    RMContext rmContext = mock(RMContext.class);
+    CapacityScheduler mockCs = mock(CapacityScheduler.class);
+    when(rmContext.getScheduler()).thenReturn(mockCs);
+    LocalConfigurationProvider configProvider = mock(LocalConfigurationProvider.class);
+    when(rmContext.getConfigurationProvider())
             .thenReturn(configProvider);
-    RMNodeLabelsManager nodeLabelsManager = Mockito
-            .mock(RMNodeLabelsManager.class);
-    Mockito.when(rmContext.getNodeLabelManager()).thenReturn(nodeLabelsManager);
-    LightWeightResource partitionResource = Mockito
-            .mock(LightWeightResource.class);
-    Mockito.when(nodeLabelsManager
-            .getResourceByLabel(Mockito.any(), Mockito.any()))
-            .thenReturn(partitionResource);
-    PlacementManager queuePlacementManager = Mockito
-            .mock(PlacementManager.class);
-    Mockito.when(rmContext.getQueuePlacementManager())
-            .thenReturn(queuePlacementManager);
+    RMNodeLabelsManager nodeLabelsManager = mock(RMNodeLabelsManager.class);
+    when(rmContext.getNodeLabelManager()).thenReturn(nodeLabelsManager);
+    LightWeightResource partitionResource = mock(LightWeightResource.class);
+    when(nodeLabelsManager
+        .getResourceByLabel(any(), any()))
+        .thenReturn(partitionResource);
+    PlacementManager queuePlacementManager = mock(PlacementManager.class);
+    when(rmContext.getQueuePlacementManager())
+        .thenReturn(queuePlacementManager);
     return rmContext;
   }
 
