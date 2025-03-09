@@ -25,8 +25,9 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.processor.BatchedRequests;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test Request Iterator.
@@ -48,7 +49,7 @@ public class TestBatchedRequestsIterators {
     long prevAllocId = 0;
     while (requestIterator.hasNext()) {
       SchedulingRequest request = requestIterator.next();
-      Assert.assertTrue(request.getAllocationRequestId() > prevAllocId);
+      assertTrue(request.getAllocationRequestId() > prevAllocId);
       prevAllocId = request.getAllocationRequestId();
     }
   }
@@ -71,9 +72,9 @@ public class TestBatchedRequestsIterators {
     while (requestIterator.hasNext()) {
       SchedulingRequest request = requestIterator.next();
       if (recCcount < 3) {
-        Assert.assertTrue(request.getAllocationTags().contains("pri"));
+        assertTrue(request.getAllocationTags().contains("pri"));
       } else {
-        Assert.assertTrue(request.getAllocationTags().contains("bar")
+        assertTrue(request.getAllocationTags().contains("bar")
             || request.getAllocationTags().contains("test"));
       }
       recCcount++;
