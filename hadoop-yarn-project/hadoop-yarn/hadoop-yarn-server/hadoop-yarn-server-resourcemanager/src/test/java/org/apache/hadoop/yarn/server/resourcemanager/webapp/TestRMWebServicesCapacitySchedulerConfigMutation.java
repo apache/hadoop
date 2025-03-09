@@ -26,7 +26,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.Collection;
@@ -46,15 +45,14 @@ import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
@@ -63,20 +61,18 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServic
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getCapacitySchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getExpectedResourceFile;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.restoreSchedulerConfigFileInTarget;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(Parameterized.class)
 public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTestBase {
   private static final String EXPECTED_FILE_TMPL = "webapp/configmutation-%s-%s.json";
-  private final boolean legacyQueueMode;
+  private boolean legacyQueueMode;
   private String userName;
   private Configuration absoluteConfig;
   private MockRM rm;
   private HttpServletRequest request;
 
-  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
   public static Collection<Boolean> getParameters() {
     return Arrays.asList(true, false);
   }
@@ -118,25 +114,33 @@ public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTest
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     backupSchedulerConfigFileInTarget();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() {
     restoreSchedulerConfigFileInTarget();
   }
 
-  public TestRMWebServicesCapacitySchedulerConfigMutation(boolean legacyQueueMode)
-      throws IOException {
-    this.legacyQueueMode = legacyQueueMode;
-    this.userName = UserGroupInformation.getCurrentUser().getShortUserName();
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
   }
 
-  @Test
-  public void testUpdateAbsoluteHierarchyWithZeroCapacities() throws Exception {
+  public void initTestRMWebServicesCapacitySchedulerConfigMutation(boolean pLegacyQueueMode)
+      throws Exception {
+    this.legacyQueueMode = pLegacyQueueMode;
+    this.userName = UserGroupInformation.getCurrentUser().getShortUserName();
+    setUp();
+  }
 
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testUpdateAbsoluteHierarchyWithZeroCapacities(boolean pLegacyQueueMode)
+      throws Exception {
+    initTestRMWebServicesCapacitySchedulerConfigMutation(pLegacyQueueMode);
     Principal principal = () -> userName;
     when(request.getUserPrincipal()).thenReturn(principal);
 

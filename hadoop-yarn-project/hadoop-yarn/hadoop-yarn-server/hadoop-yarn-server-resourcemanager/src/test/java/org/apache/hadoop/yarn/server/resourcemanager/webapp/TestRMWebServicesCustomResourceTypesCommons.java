@@ -34,7 +34,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestRMWebServicesCustomResourceTypesCommons {
 
@@ -62,8 +62,8 @@ public class TestRMWebServicesCustomResourceTypesCommons {
       throws JSONException {
     int expectedNumberOfElements = getExpectedNumberOfElements(app);
 
-    assertEquals("incorrect number of elements", expectedNumberOfElements,
-        info.length());
+    assertEquals(expectedNumberOfElements,
+        info.length(), "incorrect number of elements");
 
     AppInfoJsonVerifications.verify(info, app);
 

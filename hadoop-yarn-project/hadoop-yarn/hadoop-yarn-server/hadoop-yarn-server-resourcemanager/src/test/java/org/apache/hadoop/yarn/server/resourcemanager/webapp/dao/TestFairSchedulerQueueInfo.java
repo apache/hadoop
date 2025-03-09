@@ -28,11 +28,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager;
 import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -64,7 +65,7 @@ public class TestFairSchedulerQueueInfo {
         new FairSchedulerQueueInfo(testQueue, scheduler);
     Collection<FairSchedulerQueueInfo> childQueues =
         queueInfo.getChildQueues();
-    Assert.assertNotNull(childQueues);
-    Assert.assertEquals("Child QueueInfo was not empty", 0, childQueues.size());
+    assertNotNull(childQueues);
+    assertEquals(0, childQueues.size(), "Child QueueInfo was not empty");
   }
 }
