@@ -157,6 +157,7 @@ public class ITestBucketTool extends AbstractS3ATestBase {
 
   @Test
   public void testS3ExpressBucketWithoutZoneParam() throws Throwable {
+    assumeStoreAwsHosted(getFileSystem());
     expectErrorCode(EXIT_USAGE,
         intercept(ExitUtil.ExitException.class, NO_ZONE_SUPPLIED, () ->
             bucketTool.exec("bucket", d(CREATE),
