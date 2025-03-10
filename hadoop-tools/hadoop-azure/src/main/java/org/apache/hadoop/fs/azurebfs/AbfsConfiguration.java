@@ -88,7 +88,7 @@ public class AbfsConfiguration{
 
   private final Configuration rawConfig;
   private final String accountName;
-  private final String fsName;
+  private String fsName;
   // Service type identified from URL used to initialize FileSystem.
   private final AbfsServiceType fsConfiguredServiceType;
   private final boolean isSecure;
@@ -452,20 +452,17 @@ public class AbfsConfiguration{
    * Constructor for AbfsConfiguration for specified service type.
    * @param rawConfig used to initialize the configuration.
    * @param accountName the name of the azure storage account.
-   * @param fsName the name of the file system (container name).
    * @param fsConfiguredServiceType service type configured for the file system.
    * @throws IllegalAccessException if the field is not accessible.
    * @throws IOException if an I/O error occurs.
    */
   public AbfsConfiguration(final Configuration rawConfig,
       String accountName,
-      String fsName,
       AbfsServiceType fsConfiguredServiceType)
       throws IllegalAccessException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
         rawConfig, AzureBlobFileSystem.class);
     this.accountName = accountName;
-    this.fsName = fsName;
     this.fsConfiguredServiceType = fsConfiguredServiceType;
     this.isSecure = getBoolean(FS_AZURE_SECURE_MODE, false);
 
@@ -489,6 +486,24 @@ public class AbfsConfiguration{
   }
 
   /**
+   * Constructor for AbfsConfiguration for retrieve the FsName.
+   * @param rawConfig used to initialize the configuration.
+   * @param accountName the name of the azure storage account.
+   * @param fsName the name of the file system (container name).
+   * @param fsConfiguredServiceType service type configured for the file system.
+   * @throws IllegalAccessException if the field is not accessible.
+   * @throws IOException if an I/O error occurs.
+   */
+  public AbfsConfiguration(final Configuration rawConfig,
+      String accountName,
+      String fsName,
+      AbfsServiceType fsConfiguredServiceType)
+      throws IllegalAccessException, IOException {
+    this(rawConfig, accountName, fsConfiguredServiceType);
+    this.fsName = fsName;
+  }
+
+  /**
    * Constructor for AbfsConfiguration for default service type i.e. DFS.
    * @param rawConfig used to initialize the configuration.
    * @param accountName the name of the azure storage account.
@@ -497,7 +512,7 @@ public class AbfsConfiguration{
    */
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, IOException {
-    this(rawConfig, accountName, EMPTY_STRING, AbfsServiceType.DFS);
+    this(rawConfig, accountName, AbfsServiceType.DFS);
   }
 
   /**
@@ -666,13 +681,11 @@ public class AbfsConfiguration{
    * @throws IOException if parsing fails.
    */
   public String getPasswordString(String key) throws IOException {
-    char[] passchars = rawConfig.getPassword(containerConf(key));
-    if(passchars == null) {
-      passchars = rawConfig.getPassword(accountConf(key));
-      if(passchars == null){
-        passchars = rawConfig.getPassword(key);
-      }
-    }
+    char[] passchars = rawConfig.getPassword(containerConf(key)) != null ?
+        rawConfig.getPassword(containerConf(key)) :
+        rawConfig.getPassword(accountConf(key)) != null ?
+            rawConfig.getPassword(accountConf(key)) :
+            rawConfig.getPassword(key);
     if (passchars != null) {
       return new String(passchars);
     }

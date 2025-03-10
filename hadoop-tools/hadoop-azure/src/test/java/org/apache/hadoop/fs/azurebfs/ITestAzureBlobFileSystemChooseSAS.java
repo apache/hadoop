@@ -150,7 +150,9 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
    * Helper method to get the Fixed SAS token value
    */
   private String getFixedSASToken(AbfsConfiguration config) throws Exception {
-    return config.getSASTokenProvider().getSASToken(this.getAccountName(), this.getFileSystemName(), getMethodName(), "read");
+    String readPermission = "read";
+    return config.getSASTokenProvider().getSASToken(this.getAccountName(), this.getFileSystemName(), getMethodName(),
+        readPermission);
   }
 
   /**
