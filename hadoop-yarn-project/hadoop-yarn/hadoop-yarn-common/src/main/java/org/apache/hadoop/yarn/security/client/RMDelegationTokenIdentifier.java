@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.security.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.InetAddress;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -139,9 +140,10 @@ public class RMDelegationTokenIdentifier extends YARNDelegationTokenIdentifier {
       String[] services = token.getService().toString().split(",");
       for (String service : services) {
         InetSocketAddress addr = NetUtils.createSocketAddr(service);
-        if (localSecretManager != null) {
+        if (localSecretManager != null && localServiceAddress != null) {
           // return null if it's our token
-          if (localServiceAddress.getAddress().isAnyLocalAddress()) {
+          InetAddress localServiceAddr = localServiceAddress.getAddress();
+          if (localServiceAddr != null && localServiceAddr.isAnyLocalAddress()) {
             if (NetUtils.isLocalAddress(addr.getAddress()) &&
                 addr.getPort() == localServiceAddress.getPort()) {
               return null;

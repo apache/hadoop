@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RouterResolveException;
 import org.apache.hadoop.hdfs.server.federation.router.NoLocationException;
+import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteMethod;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteParam;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteResult;
@@ -104,6 +106,8 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   private final boolean allowPartialList;
   /** Time out when getting the mount statistics. */
   private long mountStatusTimeOut;
+  /** Default nameservice enabled. */
+  private final boolean defaultNameServiceEnabled;
   /** Identifier for the super user. */
   private String superUser;
   /** Identifier for the super group. */
@@ -126,6 +130,9 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
     this.mountStatusTimeOut = getMountStatusTimeOut();
     this.superUser = getSuperUser();
     this.superGroup = getSuperGroup();
+    this.defaultNameServiceEnabled = conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE,
+        RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE_DEFAULT);
   }
 
   @Override
@@ -1086,4 +1093,35 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
 
     return asyncReturn(boolean.class);
   }
+
+  @Override
+  public Path getEnclosingRoot(String src) throws IOException {
+    final Path[] mountPath = new Path[1];
+    if (defaultNameServiceEnabled) {
+      mountPath[0] = new Path("/");
+    }
+
+    if (subclusterResolver instanceof MountTableResolver) {
+      MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
+      if (mountTable.getMountPoint(src) != null) {
+        mountPath[0] = new Path(mountTable.getMountPoint(src).getSourcePath());
+      }
+    }
+
+    if (mountPath[0] == null) {
+      throw new IOException(String.format("No mount point for %s", src));
+    }
+
+    getEZForPath(src);
+    asyncApply((ApplyFunction<EncryptionZone, Path>)zone -> {
+      if (zone == null) {
+        return mountPath[0];
+      } else {
+        Path zonePath = new Path(zone.getPath());
+        return zonePath.depth() > mountPath[0].depth() ? zonePath : mountPath[0];
+      }
+    });
+    return asyncReturn(Path.class);
+  }
+
 }
