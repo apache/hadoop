@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router.async;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.ContentSummary;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
@@ -42,6 +44,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RouterResolveException;
 import org.apache.hadoop.hdfs.server.federation.router.NoLocationException;
+import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteMethod;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteParam;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteResult;
@@ -85,7 +88,6 @@ import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncU
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncForEach;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncReturn;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncTry;
-import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.getCompletableFuture;
 
 /**
  * Module that implements all the async RPC calls in {@link ClientProtocol} in the
@@ -104,6 +106,8 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   private final boolean allowPartialList;
   /** Time out when getting the mount statistics. */
   private long mountStatusTimeOut;
+  /** Default nameservice enabled. */
+  private final boolean defaultNameServiceEnabled;
   /** Identifier for the super user. */
   private String superUser;
   /** Identifier for the super group. */
@@ -126,6 +130,9 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
     this.mountStatusTimeOut = getMountStatusTimeOut();
     this.superUser = getSuperUser();
     this.superGroup = getSuperGroup();
+    this.defaultNameServiceEnabled = conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE,
+        RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE_DEFAULT);
   }
 
   @Override
@@ -1055,11 +1062,11 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
    * @param src the source path
    * @return true if the path is directory and is supposed to be present in all
    *         subclusters else false in all other scenarios.
-   * @throws IOException if unable to get the file status.
    */
+  @VisibleForTesting
   @Override
-  public boolean isMultiDestDirectory(String src) throws IOException {
-    try {
+  public boolean isMultiDestDirectory(String src) {
+    asyncTry(() -> {
       if (rpcServer.isPathAll(src)) {
         List<RemoteLocation> locations;
         locations = rpcServer.getLocationsForPath(src, false, false);
@@ -1067,23 +1074,54 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
             new Class<?>[] {String.class}, new RemoteParam());
         rpcClient.invokeSequential(locations,
             method, HdfsFileStatus.class, null);
-        CompletableFuture<Object> completableFuture = getCompletableFuture();
-        completableFuture = completableFuture.thenApply(o -> {
-          HdfsFileStatus fileStatus = (HdfsFileStatus) o;
+        asyncApply((ApplyFunction<HdfsFileStatus, Boolean>) fileStatus -> {
           if (fileStatus != null) {
             return fileStatus.isDirectory();
           } else {
             LOG.debug("The destination {} doesn't exist.", src);
+            return false;
           }
-          return false;
         });
-        asyncCompleteWith(completableFuture);
-        return asyncReturn(Boolean.class);
+      } else {
+        asyncComplete(false);
       }
-    } catch (UnresolvedPathException e) {
+    });
+    asyncCatch((CatchFunction<Object, UnresolvedPathException>) (o, e) -> {
       LOG.debug("The destination {} is a symlink.", src);
-    }
-    asyncCompleteWith(CompletableFuture.completedFuture(false));
-    return asyncReturn(Boolean.class);
+      return false;
+    }, UnresolvedPathException.class);
+
+    return asyncReturn(boolean.class);
   }
+
+  @Override
+  public Path getEnclosingRoot(String src) throws IOException {
+    final Path[] mountPath = new Path[1];
+    if (defaultNameServiceEnabled) {
+      mountPath[0] = new Path("/");
+    }
+
+    if (subclusterResolver instanceof MountTableResolver) {
+      MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
+      if (mountTable.getMountPoint(src) != null) {
+        mountPath[0] = new Path(mountTable.getMountPoint(src).getSourcePath());
+      }
+    }
+
+    if (mountPath[0] == null) {
+      throw new IOException(String.format("No mount point for %s", src));
+    }
+
+    getEZForPath(src);
+    asyncApply((ApplyFunction<EncryptionZone, Path>)zone -> {
+      if (zone == null) {
+        return mountPath[0];
+      } else {
+        Path zonePath = new Path(zone.getPath());
+        return zonePath.depth() > mountPath[0].depth() ? zonePath : mountPath[0];
+      }
+    });
+    return asyncReturn(Path.class);
+  }
+
 }

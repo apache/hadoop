@@ -26,12 +26,15 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -43,7 +46,7 @@ public class TestCgroupsV2MemoryResourceHandlerImpl {
   private CGroupsHandler mockCGroupsHandler;
   private CGroupsV2MemoryResourceHandlerImpl cGroupsMemoryResourceHandler;
 
-  @Before
+  @BeforeEach
   public void setup() {
     mockCGroupsHandler = mock(CGroupsHandler.class);
     when(mockCGroupsHandler.getPathForCGroup(any(), any())).thenReturn(".");
@@ -60,19 +63,19 @@ public class TestCgroupsV2MemoryResourceHandlerImpl {
         cGroupsMemoryResourceHandler.bootstrap(conf);
     verify(mockCGroupsHandler, times(1))
         .initializeCGroupController(CGroupsHandler.CGroupController.MEMORY);
-    Assert.assertNull(ret);
+    assertNull(ret);
     conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, true);
     try {
       cGroupsMemoryResourceHandler.bootstrap(conf);
     } catch (ResourceHandlerException re) {
-      Assert.fail("Pmem check should be allowed to run with cgroups");
+      fail("Pmem check should be allowed to run with cgroups");
     }
     conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
     conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, true);
     try {
       cGroupsMemoryResourceHandler.bootstrap(conf);
     } catch (ResourceHandlerException re) {
-      Assert.fail("Vmem check should be allowed to run with cgroups");
+      fail("Vmem check should be allowed to run with cgroups");
     }
   }
 
@@ -106,14 +109,14 @@ public class TestCgroupsV2MemoryResourceHandlerImpl {
         .updateCGroupParam(CGroupsHandler.CGroupController.MEMORY, id,
             CGroupsHandler.CGROUP_MEMORY_LOW,
             String.valueOf((int) (memory * 0.9)) + "M");
-    Assert.assertNotNull(ret);
-    Assert.assertEquals(1, ret.size());
+    assertNotNull(ret);
+    assertEquals(1, ret.size());
     PrivilegedOperation op = ret.get(0);
-    Assert.assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
+    assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
         op.getOperationType());
     List<String> args = op.getArguments();
-    Assert.assertEquals(1, args.size());
-    Assert.assertEquals(PrivilegedOperation.CGROUP_ARG_PREFIX + path,
+    assertEquals(1, args.size());
+    assertEquals(PrivilegedOperation.CGROUP_ARG_PREFIX + path,
         args.get(0));
   }
 
@@ -148,21 +151,21 @@ public class TestCgroupsV2MemoryResourceHandlerImpl {
         .updateCGroupParam(CGroupsHandler.CGroupController.MEMORY, id,
             CGroupsHandler.CGROUP_MEMORY_LOW,
             String.valueOf((int) (memory * 0.9)) + "M");
-    Assert.assertNotNull(ret);
-    Assert.assertEquals(1, ret.size());
+    assertNotNull(ret);
+    assertEquals(1, ret.size());
     PrivilegedOperation op = ret.get(0);
-    Assert.assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
+    assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
         op.getOperationType());
     List<String> args = op.getArguments();
-    Assert.assertEquals(1, args.size());
-    Assert.assertEquals(PrivilegedOperation.CGROUP_ARG_PREFIX + path,
+    assertEquals(1, args.size());
+    assertEquals(PrivilegedOperation.CGROUP_ARG_PREFIX + path,
         args.get(0));
   }
 
   @Test
   public void testReacquireContainer() throws Exception {
     ContainerId containerIdMock = mock(ContainerId.class);
-    Assert.assertNull(
+    assertNull(
         cGroupsMemoryResourceHandler.reacquireContainer(containerIdMock));
   }
 
@@ -171,15 +174,14 @@ public class TestCgroupsV2MemoryResourceHandlerImpl {
     String id = "container_01_01";
     ContainerId mockContainerId = mock(ContainerId.class);
     when(mockContainerId.toString()).thenReturn(id);
-    Assert
-        .assertNull(cGroupsMemoryResourceHandler.postComplete(mockContainerId));
+    assertNull(cGroupsMemoryResourceHandler.postComplete(mockContainerId));
     verify(mockCGroupsHandler, times(1))
         .deleteCGroup(CGroupsHandler.CGroupController.MEMORY, id);
   }
 
   @Test
   public void testTeardown() throws Exception {
-    Assert.assertNull(cGroupsMemoryResourceHandler.teardown());
+    assertNull(cGroupsMemoryResourceHandler.teardown());
   }
 
   @Test

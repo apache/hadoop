@@ -2095,4 +2095,9 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     }
     return applicationHomeSubClusters;
   }
+
+  @VisibleForTesting
+  public void resetOpDurations() {
+    opDurations = opDurations.resetOpDurations();
+  }
 }

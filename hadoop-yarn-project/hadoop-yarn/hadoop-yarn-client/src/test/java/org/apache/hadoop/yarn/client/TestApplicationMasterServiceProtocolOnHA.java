@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.client;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import java.util.concurrent.TimeUnit;
-import org.junit.Assert;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -35,18 +33,17 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@Timeout(180)
 public class TestApplicationMasterServiceProtocolOnHA
     extends ApplicationMasterServiceProtoTestBase {
-  @Rule
-  public Timeout timeout = new Timeout(180, TimeUnit.SECONDS);
 
-  @Before
+  @BeforeEach
   public void initialize() throws Exception {
     startHACluster(0, false, false, true);
     super.startupHAAndSetupClient();
@@ -59,7 +56,7 @@ public class TestApplicationMasterServiceProtocolOnHA
         RegisterApplicationMasterRequest.newInstance("localhost", 0, "");
     RegisterApplicationMasterResponse response =
         getAMClient().registerApplicationMaster(request);
-    Assert.assertEquals(response,
+    assertEquals(response,
         this.cluster.createFakeRegisterApplicationMasterResponse());
   }
 
@@ -71,7 +68,7 @@ public class TestApplicationMasterServiceProtocolOnHA
             FinalApplicationStatus.SUCCEEDED, "", "");
     FinishApplicationMasterResponse response =
         getAMClient().finishApplicationMaster(request);
-    Assert.assertEquals(response,
+    assertEquals(response,
         this.cluster.createFakeFinishApplicationMasterResponse());
   }
 
@@ -83,6 +80,6 @@ public class TestApplicationMasterServiceProtocolOnHA
         ResourceBlacklistRequest.newInstance(new ArrayList<String>(),
             new ArrayList<String>()));
     AllocateResponse response = getAMClient().allocate(request);
-    Assert.assertEquals(response, this.cluster.createFakeAllocateResponse());
+    assertEquals(response, this.cluster.createFakeAllocateResponse());
   }
 }

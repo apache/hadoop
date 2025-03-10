@@ -104,13 +104,13 @@ import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.ApplicationHomeSubClusterPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.GetReservationHomeSubClusterRequestPBImpl;
 import org.apache.hadoop.yarn.server.records.Version;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -118,7 +118,7 @@ import static org.mockito.Mockito.mock;
  */
 public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     generateByNewInstance(ApplicationId.class);
     generateByNewInstance(Version.class);

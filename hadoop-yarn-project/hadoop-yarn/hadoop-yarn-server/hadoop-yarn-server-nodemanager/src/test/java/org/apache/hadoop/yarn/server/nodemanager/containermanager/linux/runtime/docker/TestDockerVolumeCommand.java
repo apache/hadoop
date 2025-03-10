@@ -17,28 +17,28 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDockerVolumeCommand {
   @Test
   public void testDockerVolumeCommand() {
     DockerVolumeCommand dockerVolumeCommand = new DockerVolumeCommand("create");
     assertEquals("volume", dockerVolumeCommand.getCommandOption());
-    Assert.assertTrue(
+    assertTrue(
         dockerVolumeCommand.getDockerCommandWithArguments().get("sub-command")
             .contains("create"));
 
     dockerVolumeCommand.setDriverName("driver1");
     dockerVolumeCommand.setVolumeName("volume1");
 
-    Assert.assertTrue(
+    assertTrue(
         dockerVolumeCommand.getDockerCommandWithArguments().get("driver")
             .contains("driver1"));
 
-    Assert.assertTrue(
+    assertTrue(
         dockerVolumeCommand.getDockerCommandWithArguments().get("volume")
             .contains("volume1"));
   }

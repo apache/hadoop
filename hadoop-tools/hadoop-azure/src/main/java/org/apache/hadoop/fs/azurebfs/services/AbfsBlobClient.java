@@ -83,8 +83,8 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
-import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
+import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ACQUIRE_LEASE_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.AND_MARK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_BLOB_TYPE;
@@ -424,7 +424,7 @@ public class AbfsBlobClient extends AbfsClient {
     }
     List<BlobListResultEntrySchema> filteredEntries = new ArrayList<>();
     for (BlobListResultEntrySchema entry : listResultSchema.paths()) {
-      if (!takeListPathAtomicRenameKeyAction(entry.path(),
+      if (!takeListPathAtomicRenameKeyAction(entry.path(), entry.isDirectory(),
           entry.contentLength().intValue(), tracingContext)) {
         filteredEntries.add(entry);
       }
@@ -442,8 +442,12 @@ public class AbfsBlobClient extends AbfsClient {
       if (isAtomicRenameKey(parentPath.toUri().getPath())) {
         takeGetPathStatusAtomicRenameKeyAction(parentPath, tracingContext);
       }
-      getPathStatus(parentPath.toUri().getPath(), false,
-          tracingContext, null);
+      try {
+        getPathStatus(parentPath.toUri().getPath(), false,
+            tracingContext, null);
+      } finally {
+        getAbfsCounters().incrementCounter(CALL_GET_FILE_STATUS, 1);
+      }
     } catch (AbfsRestOperationException ex) {
       if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
         throw new FileNotFoundException("Cannot create file "
@@ -451,8 +455,6 @@ public class AbfsBlobClient extends AbfsClient {
             + " because parent folder does not exist.");
       }
       throw ex;
-    } finally {
-      getAbfsCounters().incrementCounter(CALL_GET_FILE_STATUS, 1);
     }
   }
 
@@ -807,23 +809,26 @@ public class AbfsBlobClient extends AbfsClient {
     BlobRenameHandler blobRenameHandler = getBlobRenameHandler(source,
         destination, sourceEtag, isAtomicRenameKey(source), tracingContext
     );
-    incrementAbfsRenamePath();
-    if (blobRenameHandler.execute()) {
-      final AbfsUriQueryBuilder abfsUriQueryBuilder
-          = createDefaultUriQueryBuilder();
-      final URL url = createRequestUrl(destination,
-          abfsUriQueryBuilder.toString());
-      final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-      final AbfsRestOperation successOp = getSuccessOp(
-          AbfsRestOperationType.RenamePath, HTTP_METHOD_PUT,
-          url, requestHeaders);
-      return new AbfsClientRenameResult(successOp, true, false);
-    } else {
-      throw new AbfsRestOperationException(HTTP_INTERNAL_ERROR,
-          AzureServiceErrorCode.UNKNOWN.getErrorCode(),
-          ERR_RENAME_BLOB + source + SINGLE_WHITE_SPACE + AND_MARK
-              + SINGLE_WHITE_SPACE + destination,
-          null);
+    try {
+      if (blobRenameHandler.execute()) {
+        final AbfsUriQueryBuilder abfsUriQueryBuilder
+            = createDefaultUriQueryBuilder();
+        final URL url = createRequestUrl(destination,
+            abfsUriQueryBuilder.toString());
+        final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+        final AbfsRestOperation successOp = getSuccessOp(
+            AbfsRestOperationType.RenamePath, HTTP_METHOD_PUT,
+            url, requestHeaders);
+        return new AbfsClientRenameResult(successOp, true, false);
+      } else {
+        throw new AbfsRestOperationException(HTTP_INTERNAL_ERROR,
+            AzureServiceErrorCode.UNKNOWN.getErrorCode(),
+            ERR_RENAME_BLOB + source + SINGLE_WHITE_SPACE + AND_MARK
+                + SINGLE_WHITE_SPACE + destination,
+            null);
+      }
+    } finally {
+      incrementAbfsRenamePath();
     }
   }
 
@@ -1801,11 +1806,11 @@ public class AbfsBlobClient extends AbfsClient {
    * @throws AzureBlobFileSystemException server error
    */
   private boolean takeListPathAtomicRenameKeyAction(final Path path,
-      final int renamePendingJsonLen,
+      final boolean isDirectory, final int renamePendingJsonLen,
       final TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     if (path == null || path.isRoot() || !isAtomicRenameKey(
-        path.toUri().getPath()) || !path.toUri()
+        path.toUri().getPath()) || isDirectory || !path.toUri()
         .getPath()
         .endsWith(RenameAtomicity.SUFFIX)) {
       return false;
@@ -1833,7 +1838,7 @@ public class AbfsBlobClient extends AbfsClient {
   }
 
   @VisibleForTesting
-  RenameAtomicity getRedoRenameAtomicity(final Path renamePendingJsonPath,
+  public RenameAtomicity getRedoRenameAtomicity(final Path renamePendingJsonPath,
       int fileLen,
       final TracingContext tracingContext) {
     return new RenameAtomicity(renamePendingJsonPath,

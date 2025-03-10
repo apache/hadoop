@@ -23,16 +23,18 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for the cgroups disk handler implementation.
@@ -42,7 +44,7 @@ public class TestCGroupsBlkioResourceHandlerImpl {
   private CGroupsHandler mockCGroupsHandler;
   private CGroupsBlkioResourceHandlerImpl cGroupsBlkioResourceHandlerImpl;
 
-  @Before
+  @BeforeEach
   public void setup() {
     mockCGroupsHandler = mock(CGroupsHandler.class);
     cGroupsBlkioResourceHandlerImpl =
@@ -56,7 +58,7 @@ public class TestCGroupsBlkioResourceHandlerImpl {
         cGroupsBlkioResourceHandlerImpl.bootstrap(conf);
     verify(mockCGroupsHandler, times(1)).initializeCGroupController(
         CGroupsHandler.CGroupController.BLKIO);
-    Assert.assertNull(ret);
+    assertNull(ret);
   }
 
   @Test
@@ -79,21 +81,21 @@ public class TestCGroupsBlkioResourceHandlerImpl {
         CGroupsHandler.CGroupController.BLKIO, id,
         CGroupsHandler.CGROUP_PARAM_WEIGHT,
         CGroupsBlkioResourceHandlerImpl.DEFAULT_WEIGHT);
-    Assert.assertNotNull(ret);
-    Assert.assertEquals(1, ret.size());
+    assertNotNull(ret);
+    assertEquals(1, ret.size());
     PrivilegedOperation op = ret.get(0);
-    Assert.assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
+    assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
         op.getOperationType());
     List<String> args = op.getArguments();
-    Assert.assertEquals(1, args.size());
-    Assert.assertEquals(PrivilegedOperation.CGROUP_ARG_PREFIX + path,
+    assertEquals(1, args.size());
+    assertEquals(PrivilegedOperation.CGROUP_ARG_PREFIX + path,
         args.get(0));
   }
 
   @Test
   public void testReacquireContainer() throws Exception {
     ContainerId containerIdMock = mock(ContainerId.class);
-    Assert.assertNull(cGroupsBlkioResourceHandlerImpl
+    assertNull(cGroupsBlkioResourceHandlerImpl
         .reacquireContainer(containerIdMock));
   }
 
@@ -102,7 +104,7 @@ public class TestCGroupsBlkioResourceHandlerImpl {
     String id = "container_01_01";
     ContainerId mockContainerId = mock(ContainerId.class);
     when(mockContainerId.toString()).thenReturn(id);
-    Assert.assertNull(cGroupsBlkioResourceHandlerImpl
+    assertNull(cGroupsBlkioResourceHandlerImpl
         .postComplete(mockContainerId));
     verify(mockCGroupsHandler, times(1)).deleteCGroup(
         CGroupsHandler.CGroupController.BLKIO, id);
@@ -110,7 +112,7 @@ public class TestCGroupsBlkioResourceHandlerImpl {
 
   @Test
   public void testTeardown() throws Exception {
-    Assert.assertNull(cGroupsBlkioResourceHandlerImpl.teardown());
+    assertNull(cGroupsBlkioResourceHandlerImpl.teardown());
   }
 
 }

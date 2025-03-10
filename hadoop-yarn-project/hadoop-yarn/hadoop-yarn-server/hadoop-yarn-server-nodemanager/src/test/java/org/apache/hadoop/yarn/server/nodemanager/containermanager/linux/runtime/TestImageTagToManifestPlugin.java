@@ -26,10 +26,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.runc.ImageTagToManifestPlugin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +40,7 @@ import java.io.PrintWriter;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_HDFS_RUNC_IMAGE_TAG_TO_HASH_FILE;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_LOCAL_RUNC_IMAGE_TAG_TO_HASH_FILE;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_IMAGE_TOPLEVEL_DIR;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -81,7 +81,7 @@ public class TestImageTagToManifestPlugin {
       "   ]\n" +
       "}";
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = new Configuration();
     mapper = new ObjectMapper();
@@ -89,7 +89,7 @@ public class TestImageTagToManifestPlugin {
     tmpDir.mkdirs();
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws IOException {
     File tmpDir = new File(tmpPath);
     FileUtils.deleteDirectory(tmpDir);
@@ -159,11 +159,11 @@ public class TestImageTagToManifestPlugin {
     String returnedCommentHash = mockImageTagToManifestPlugin
         .getHashFromImageTag(commentImage);
 
-    Assert.assertEquals(fakeImageHash, returnedFakeImageHash);
-    Assert.assertEquals(busyboxHash, returnedBusyboxHash);
+    assertEquals(fakeImageHash, returnedFakeImageHash);
+    assertEquals(busyboxHash, returnedBusyboxHash);
 
     //Image hash should not be found, so returned hash should be the tag
-    Assert.assertEquals(commentImage, returnedCommentHash);
+    assertEquals(commentImage, returnedCommentHash);
   }
 
   @Test
@@ -203,11 +203,11 @@ public class TestImageTagToManifestPlugin {
     String returnedCommentHash = mockImageTagToManifestPlugin
         .getHashFromImageTag(commentImage);
 
-    Assert.assertEquals(fakeImageHash, returnedFakeImageHash);
-    Assert.assertEquals(busyboxHash, returnedBusyboxHash);
+    assertEquals(fakeImageHash, returnedFakeImageHash);
+    assertEquals(busyboxHash, returnedBusyboxHash);
 
     //Image hash should not be found, so returned hash should be the tag
-    Assert.assertEquals(commentImage, returnedCommentHash);
+    assertEquals(commentImage, returnedCommentHash);
   }
 
   @Test
@@ -243,6 +243,6 @@ public class TestImageTagToManifestPlugin {
         .getManifestFromImageTag("image");
     ImageManifest expectedManifest =
         mapper.readValue(manifestJson, ImageManifest.class);
-    Assert.assertEquals(expectedManifest.toString(), manifest.toString());
+    assertEquals(expectedManifest.toString(), manifest.toString());
   }
 }

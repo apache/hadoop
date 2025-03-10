@@ -60,12 +60,12 @@ public class AuditLogHiveTableParser implements AuditCommandParser {
   }
 
   @Override
-  public AuditReplayCommand parse(Text inputLine,
+  public AuditReplayCommand parse(Long sequence, Text inputLine,
       Function<Long, Long> relativeToAbsolute) throws IOException {
     String[] fields = inputLine.toString().split(FIELD_SEPARATOR);
     long absoluteTimestamp = relativeToAbsolute
         .apply(Long.parseLong(fields[0]));
-    return new AuditReplayCommand(absoluteTimestamp, fields[1], fields[2],
+    return new AuditReplayCommand(sequence, absoluteTimestamp, fields[1], fields[2],
         fields[3], fields[4], fields[5]);
   }
 

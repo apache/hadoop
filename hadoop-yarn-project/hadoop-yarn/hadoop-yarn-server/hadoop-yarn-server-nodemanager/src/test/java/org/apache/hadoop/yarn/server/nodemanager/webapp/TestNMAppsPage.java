@@ -34,31 +34,30 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.ApplicationPage.Applicat
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 
-@RunWith(Parameterized.class)
 public class TestNMAppsPage {
 
   String applicationid;
 
-  public TestNMAppsPage(String appid) {
+  public void initTestNMAppsPage(String appid) {
     this.applicationid = appid;
   }
 
-  @Parameterized.Parameters
   public static Collection<Object[]> getAppIds() {
     return Arrays.asList(new Object[][] { { "appid" },
         { "application_123123213_0001" }, { "" } });
   }
 
-  @Test
-  public void testNMAppsPage() {
+  @ParameterizedTest
+  @MethodSource("getAppIds")
+  public void testNMAppsPage(String appid) {
+    initTestNMAppsPage(appid);
     Configuration conf = new Configuration();
     final NMContext nmcontext = new NMContext(
         new NMContainerTokenSecretManager(conf), new NMTokenSecretManagerInNM(),

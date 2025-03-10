@@ -25,12 +25,12 @@ import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.BeforeClass;
-import org.junit.Before;
-import org.junit.AfterClass;
-import org.junit.After;
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.mockito.Mockito;
 
@@ -41,6 +41,11 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.ArrayList;
 import java.util.concurrent.TimeoutException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test class for node configuration node attributes provider.
@@ -53,17 +58,17 @@ public class TestConfigurationNodeAttributesProvider {
 
   private ConfigurationNodeAttributesProvider nodeAttributesProvider;
 
-  @BeforeClass
+  @BeforeAll
   public static void create() {
     testRootDir.mkdirs();
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     nodeAttributesProvider = new ConfigurationNodeAttributesProvider();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (nodeAttributesProvider != null) {
       nodeAttributesProvider.close();
@@ -71,7 +76,7 @@ public class TestConfigurationNodeAttributesProvider {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void remove() throws Exception {
     if (testRootDir.exists()) {
       FileContext.getLocalFSFileContext()
@@ -79,7 +84,8 @@ public class TestConfigurationNodeAttributesProvider {
     }
   }
 
-  @Test(timeout=30000L)
+  @Test
+  @Timeout(30)
   public void testNodeAttributesFetchInterval()
       throws IOException, InterruptedException {
     Set<NodeAttribute> expectedAttributes1 = new HashSet<>();
@@ -100,7 +106,7 @@ public class TestConfigurationNodeAttributesProvider {
     spyProvider.start();
 
     // Verify init value is honored.
-    Assert.assertEquals(expectedAttributes1, spyProvider.getDescriptors());
+    assertEquals(expectedAttributes1, spyProvider.getDescriptors());
 
     // Configuration provider provides a different set of attributes.
     Set<NodeAttribute> expectedAttributes2 = new HashSet<>();
@@ -120,7 +126,7 @@ public class TestConfigurationNodeAttributesProvider {
     int times=5;
     while(times>0) {
       Set<NodeAttribute> current = spyProvider.getDescriptors();
-      Assert.assertEquals(1, current.size());
+      assertEquals(1, current.size());
       String attributeName =
           current.iterator().next().getAttributeKey().getAttributeName();
       if ("host".equals(attributeName)){
@@ -132,10 +138,10 @@ public class TestConfigurationNodeAttributesProvider {
       times--;
     }
     // We should either see the old value or the new value.
-    Assert.assertEquals(5, numOfNewValue + numOfOldValue);
+    assertEquals(5, numOfNewValue + numOfOldValue);
     // Both values should be more than 0.
-    Assert.assertTrue(numOfOldValue > 0);
-    Assert.assertTrue(numOfNewValue > 0);
+    assertTrue(numOfOldValue > 0);
+    assertTrue(numOfNewValue > 0);
   }
 
   @Test
@@ -156,7 +162,7 @@ public class TestConfigurationNodeAttributesProvider {
         .thenReturn(expectedAttributes1);
     spyProvider.init(conf);
     spyProvider.start();
-    Assert.assertEquals(expectedAttributes1,
+    assertEquals(expectedAttributes1,
         spyProvider.getDescriptors());
 
     // The configuration added another attribute,
@@ -178,11 +184,11 @@ public class TestConfigurationNodeAttributesProvider {
       }, 500, 1000);
     } catch (Exception e) {
       // Make sure we get the timeout exception.
-      Assert.assertTrue(e instanceof TimeoutException);
+      assertTrue(e instanceof TimeoutException);
       return;
     }
 
-    Assert.fail("Expecting a failure in previous check!");
+    fail("Expecting a failure in previous check!");
   }
 
   @Test
@@ -201,48 +207,48 @@ public class TestConfigurationNodeAttributesProvider {
     String attributesStr = "hostname,STRING,host1234:uptime,STRING,321543";
     Set<NodeAttribute> attributes = nodeAttributesProvider
         .parseAttributes(attributesStr);
-    Assert.assertEquals(2, attributes.size());
+    assertEquals(2, attributes.size());
     Iterator<NodeAttribute> ait = attributes.iterator();
 
     while(ait.hasNext()) {
       NodeAttribute attr = ait.next();
       NodeAttributeKey at = attr.getAttributeKey();
       if (at.getAttributeName().equals("hostname")) {
-        Assert.assertEquals("hostname", at.getAttributeName());
-        Assert.assertEquals(NodeAttribute.PREFIX_DISTRIBUTED,
+        assertEquals("hostname", at.getAttributeName());
+        assertEquals(NodeAttribute.PREFIX_DISTRIBUTED,
             at.getAttributePrefix());
-        Assert.assertEquals(NodeAttributeType.STRING,
+        assertEquals(NodeAttributeType.STRING,
             attr.getAttributeType());
-        Assert.assertEquals("host1234", attr.getAttributeValue());
+        assertEquals("host1234", attr.getAttributeValue());
       } else if (at.getAttributeName().equals("uptime")) {
-        Assert.assertEquals("uptime", at.getAttributeName());
-        Assert.assertEquals(NodeAttribute.PREFIX_DISTRIBUTED,
+        assertEquals("uptime", at.getAttributeName());
+        assertEquals(NodeAttribute.PREFIX_DISTRIBUTED,
             at.getAttributePrefix());
-        Assert.assertEquals(NodeAttributeType.STRING,
+        assertEquals(NodeAttributeType.STRING,
             attr.getAttributeType());
-        Assert.assertEquals("321543", attr.getAttributeValue());
+        assertEquals("321543", attr.getAttributeValue());
       } else {
-        Assert.fail("Unexpected attribute");
+        fail("Unexpected attribute");
       }
     }
     // Missing type
     attributesStr = "hostname,host1234";
     try {
       nodeAttributesProvider.parseAttributes(attributesStr);
-      Assert.fail("Expecting a parsing failure");
+      fail("Expecting a parsing failure");
     } catch (IOException e) {
-      Assert.assertNotNull(e);
-      Assert.assertTrue(e.getMessage().contains("Invalid value"));
+      assertNotNull(e);
+      assertTrue(e.getMessage().contains("Invalid value"));
     }
 
     // Extra prefix
     attributesStr = "prefix/hostname,STRING,host1234";
     try {
       nodeAttributesProvider.parseAttributes(attributesStr);
-      Assert.fail("Expecting a parsing failure");
+      fail("Expecting a parsing failure");
     } catch (IOException e) {
-      Assert.assertNotNull(e);
-      Assert.assertTrue(e.getMessage()
+      assertNotNull(e);
+      assertTrue(e.getMessage()
           .contains("should not contain any prefix."));
     }
 
@@ -250,11 +256,11 @@ public class TestConfigurationNodeAttributesProvider {
     attributesStr = "hostname,T,host1234";
     try {
       nodeAttributesProvider.parseAttributes(attributesStr);
-      Assert.fail("Expecting a parsing failure");
+      fail("Expecting a parsing failure");
     } catch (IOException e) {
       e.printStackTrace();
-      Assert.assertNotNull(e);
-      Assert.assertTrue(e.getMessage()
+      assertNotNull(e);
+      assertTrue(e.getMessage()
           .contains("Invalid node attribute type"));
     }
   }

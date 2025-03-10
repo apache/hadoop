@@ -72,9 +72,10 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -105,11 +106,11 @@ import java.util.Iterator;
 
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -258,20 +259,20 @@ public class TestNMWebServices extends JerseyTestBase {
 
   private void assertNMResourceInfoResponse(Response response, long value)
       throws JSONException {
-    assertEquals("MediaType of the response is not the expected!",
-        MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
-        response.getMediaType().toString());
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString(),
+        "MediaType of the response is not the expected!");
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("Unexpected value in the json response!", value,
-        json.getJSONObject("nmResourceInfo").getLong("resourceValue"));
+    assertEquals(value, json.getJSONObject("nmResourceInfo").getLong("resourceValue"),
+        "Unexpected value in the json response!");
   }
 
   private void assertEmptyNMResourceInfo(Response response) throws JSONException {
-    assertEquals("MediaType of the response is not the expected!",
-        MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
-        response.getMediaType().toString());
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString(),
+        "MediaType of the response is not the expected!");
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals("Unexpected value in the json response!", 1, json.length());
+    assertEquals(1, json.length(), "Unexpected value in the json response!");
   }
 
   private Response getNMResourceResponse(WebTarget target, String resourceName) {
@@ -280,14 +281,14 @@ public class TestNMWebServices extends JerseyTestBase {
         .get();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     testRemoteLogDir.mkdir();
     testRootDir.mkdirs();
     testLogDir.mkdir();
   }
 
-  @AfterClass
+  @AfterAll
   static public void stop() {
     FileUtil.fullyDelete(testRootDir);
     FileUtil.fullyDelete(testLogDir);
@@ -432,11 +433,12 @@ public class TestNMWebServices extends JerseyTestBase {
     InputSource is = new InputSource(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodes = dom.getElementsByTagName("nodeInfo");
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
     verifyNodesXML(nodes);
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testContainerLogsWithNewAPI() throws Exception {
     ContainerId containerId0 = BuilderUtils.newContainerId(0, 0, 0, 0);
     WebTarget r0 = targetWithJsonObject();
@@ -451,7 +453,8 @@ public class TestNMWebServices extends JerseyTestBase {
     testContainerLogs(r1, containerId1, "");
   }
 
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testContainerLogsWithOldAPI() throws Exception {
     final ContainerId containerId2 = BuilderUtils.newContainerId(1, 1, 0, 2);
     WebTarget r = targetWithJsonObject();
@@ -573,17 +576,17 @@ public class TestNMWebServices extends JerseyTestBase {
 
     WebTarget r = targetWithJsonObject();
     Response response = getNMResourceResponse(r, "resource-1");
-    assertEquals("MediaType of the response is not the expected!",
-        MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
-        response.getMediaType().toString());
+    assertEquals(MediaType.APPLICATION_JSON + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString(), "MediaType of the response is not the expected!");
     JSONObject nmGpuResourceInfo = response.readEntity(JSONObject.class);
     JSONObject json = nmGpuResourceInfo.getJSONObject("nmGpuResourceInfo");
-    assertEquals("Unexpected driverVersion in the json response!",
-        "1.2.3", json.getJSONObject("gpuDeviceInformation").getString("driver_version"));
-    assertEquals("Unexpected totalGpuDevices in the json response!",
-        3, json.getJSONArray("totalGpuDevices").length());
-    assertEquals("Unexpected assignedGpuDevices in the json response!",
-        2, json.getJSONArray("assignedGpuDevices").length());
+    assertEquals("1.2.3",
+        json.getJSONObject("gpuDeviceInformation").getString("driver_version"),
+        "Unexpected driverVersion in the json response!");
+    assertEquals(3, json.getJSONArray("totalGpuDevices").length(),
+        "Unexpected totalGpuDevices in the json response!");
+    assertEquals(2, json.getJSONArray("assignedGpuDevices").length(),
+        "Unexpected assignedGpuDevices in the json response!");
   }
 
   @SuppressWarnings("checkstyle:methodlength")
@@ -613,7 +616,7 @@ public class TestNMWebServices extends JerseyTestBase {
     if (logFile.getParentFile().exists()) {
       FileUtils.deleteDirectory(logFile.getParentFile());
     }
-    assertTrue("Failed to create log dir", logFile.getParentFile().mkdirs());
+    assertTrue(logFile.getParentFile().mkdirs(), "Failed to create log dir");
     PrintWriter pw = new PrintWriter(logFile);
     pw.print(logMessage);
     pw.close();
@@ -807,9 +810,9 @@ public class TestNMWebServices extends JerseyTestBase {
   }
 
   public void verifyNodeInfo(JSONObject json) throws JSONException, Exception {
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject info = json.getJSONObject("nodeInfo");
-    assertEquals("incorrect number of elements", 18, info.length());
+    assertEquals(18, info.length(), "incorrect number of elements");
     verifyNodeInfoGeneric(info.getString("id"), info.getString("healthReport"),
         info.getLong("totalVmemAllocatedContainersMB"),
         info.getLong("totalPmemAllocatedContainersMB"),
@@ -840,17 +843,17 @@ public class TestNMWebServices extends JerseyTestBase {
     WebServicesTestUtils.checkStringMatch("id", "testhost.foo.com:8042", id);
     WebServicesTestUtils.checkStringMatch("healthReport", "Healthy",
         healthReport);
-    assertEquals("totalVmemAllocatedContainersMB incorrect", 15872,
-        totalVmemAllocatedContainersMB);
-    assertEquals("totalPmemAllocatedContainersMB incorrect", 16384,
-        totalPmemAllocatedContainersMB);
-    assertEquals("totalVCoresAllocatedContainers incorrect", 4000,
-        totalVCoresAllocatedContainers);
-    assertTrue("vmemCheckEnabled incorrect", vmemCheckEnabled);
-    assertTrue("pmemCheckEnabled incorrect", pmemCheckEnabled);
-    assertEquals("lastNodeUpdateTime incorrect", lastNodeUpdateTime, nmContext
-        .getNodeHealthStatus().getLastHealthReportTime());
-    assertTrue("nodeHealthy isn't true", nodeHealthy);
+    assertEquals(15872,
+        totalVmemAllocatedContainersMB, "totalVmemAllocatedContainersMB incorrect");
+    assertEquals(16384,
+        totalPmemAllocatedContainersMB, "totalPmemAllocatedContainersMB incorrect");
+    assertEquals(4000,
+        totalVCoresAllocatedContainers, "totalVCoresAllocatedContainers incorrect");
+    assertTrue(vmemCheckEnabled, "vmemCheckEnabled incorrect");
+    assertTrue(pmemCheckEnabled, "pmemCheckEnabled incorrect");
+    assertEquals(lastNodeUpdateTime, nmContext
+        .getNodeHealthStatus().getLastHealthReportTime(), "lastNodeUpdateTime incorrect");
+    assertTrue(nodeHealthy, "nodeHealthy isn't true");
     WebServicesTestUtils.checkStringMatch("nodeHostName", "testhost.foo.com",
         nodeHostName);
 
