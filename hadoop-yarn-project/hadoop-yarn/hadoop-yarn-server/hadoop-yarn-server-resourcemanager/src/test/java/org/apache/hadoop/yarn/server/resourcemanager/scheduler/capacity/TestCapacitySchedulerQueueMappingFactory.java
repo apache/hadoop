@@ -40,9 +40,9 @@ import java.util.List;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.getQueueMapping;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.setupQueueConfiguration;
-import static org.hamcrest.CoreMatchers.hasItems;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestCapacitySchedulerQueueMappingFactory {
 
@@ -201,11 +201,11 @@ public class TestCapacitySchedulerQueueMappingFactory {
           (CSMappingPlacementRule) rules.get(0);
 
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "user1");
-      assertEquals("Queue", "b1", ctx.getQueue());
+      assertEquals("b1", ctx.getQueue(), "Queue");
 
       ApplicationPlacementContext ctx2 = r.getPlacementForApp(asc, "user2");
-      assertEquals("Queue", "user2", ctx2.getQueue());
-      assertEquals("Queue", "root.c", ctx2.getParentQueue());
+      assertEquals("user2", ctx2.getQueue(), "Queue");
+      assertEquals("root.c", ctx2.getParentQueue(), "Queue");
     } finally {
       if(mockRM != null) {
         mockRM.close();
@@ -356,11 +356,10 @@ public class TestCapacitySchedulerQueueMappingFactory {
       assertEquals(user, ctx.getQueue(), "Queue");
 
       if (primary) {
-        assertEquals(
-            "Primary Group", "root." + user + "group", ctx.getParentQueue());
+        assertEquals("root." + user + "group", ctx.getParentQueue(), "Primary Group");
       } else {
-        assertEquals("Secondary Group", "root." + user + "subgroup1",
-            ctx.getParentQueue());
+        assertEquals("root." + user + "subgroup1",
+            ctx.getParentQueue(), "Secondary Group");
       }
     } finally {
       if (mockRM != null) {
@@ -427,10 +426,10 @@ public class TestCapacitySchedulerQueueMappingFactory {
           (CSMappingPlacementRule) rules.get(0);
 
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "user1");
-      assertEquals("Queue", "b1", ctx.getQueue());
+      assertEquals("b1", ctx.getQueue(), "Queue");
 
       ApplicationPlacementContext ctx1 = r.getPlacementForApp(asc, "a1");
-      assertEquals("Queue", "a1group", ctx1.getQueue());
+      assertEquals("a1group", ctx1.getQueue(), "Queue");
     } finally {
       if (mockRM != null) {
         mockRM.close();
@@ -504,14 +503,14 @@ public class TestCapacitySchedulerQueueMappingFactory {
           (CSMappingPlacementRule) rules.get(0);
 
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "user1");
-      assertEquals("Queue", "b1", ctx.getQueue());
+      assertEquals("b1", ctx.getQueue(), "Queue");
 
       ApplicationPlacementContext ctx1 = r.getPlacementForApp(asc, "a1");
-      assertEquals("Queue", "a1group", ctx1.getQueue());
+      assertEquals("a1group", ctx1.getQueue(), "Queue");
 
       ApplicationPlacementContext ctx2 = r.getPlacementForApp(asc, "b4");
-      assertEquals("Queue", "b4subgroup1", ctx2.getQueue());
-      assertEquals("Queue", "root.b", ctx2.getParentQueue());
+      assertEquals("b4subgroup1", ctx2.getQueue(), "Queue");
+      assertEquals("root.b", ctx2.getParentQueue(), "Queue");
     } finally {
       if (mockRM != null) {
         mockRM.close();

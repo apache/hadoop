@@ -56,14 +56,14 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.jupiter.api.Assertions;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -143,23 +143,23 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     rm.start();
 
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-    Assertions.assertEquals(3333L,
+    assertEquals(3333L,
         cs.getMaximumResourceCapability().getResourceValue(RESOURCE_1));
-    Assertions.assertEquals(3333L,
+    assertEquals(3333L,
         cs.getMaximumAllocation().getResourceValue(RESOURCE_1));
-    Assertions.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assertions.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assertions.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.VCORES_URI));
-    Assertions.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.VCORES_URI));
@@ -176,26 +176,26 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
       exception = true;
     }
 
-    Assertions.assertTrue(exception, "Should have exception in CS");
+    assertTrue(exception, "Should have exception in CS");
 
     // Maximum allocation won't be updated
-    Assertions.assertEquals(3333L,
+    assertEquals(3333L,
         cs.getMaximumResourceCapability().getResourceValue(RESOURCE_1));
-    Assertions.assertEquals(3333L,
+    assertEquals(3333L,
         cs.getMaximumAllocation().getResourceValue(RESOURCE_1));
-    Assertions.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assertions.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assertions.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.VCORES_URI));
-    Assertions.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.VCORES_URI));
@@ -207,26 +207,26 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     cs.reinitialize(csconf, rm.getRMContext());
 
     // Maximum allocation will be updated
-    Assertions.assertEquals(3334,
+    assertEquals(3334,
         cs.getMaximumResourceCapability().getResourceValue(RESOURCE_1));
 
     // Since we haven't updated the real configuration of ResourceUtils,
     // cs.getMaximumAllocation won't be updated.
-    Assertions.assertEquals(3333,
+    assertEquals(3333,
         cs.getMaximumAllocation().getResourceValue(RESOURCE_1));
-    Assertions.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assertions.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.MEMORY_URI));
-    Assertions.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumResourceCapability()
             .getResourceValue(ResourceInformation.VCORES_URI));
-    Assertions.assertEquals(
+    assertEquals(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         cs.getMaximumAllocation()
             .getResourceValue(ResourceInformation.VCORES_URI));
@@ -266,7 +266,7 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
       exception = true;
     }
 
-    Assertions.assertTrue(exception, "Should have exception in CS");
+    assertTrue(exception, "Should have exception in CS");
   }
 
   @Test
@@ -328,12 +328,12 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
 
     // check node report
-    Assertions.assertEquals(1 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assertions.assertEquals(9 * GB,
+    assertEquals(1 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(9 * GB,
         report_nm1.getAvailableResource().getMemorySize());
-    Assertions.assertEquals(0, report_nm1.getUsedResource()
+    assertEquals(0, report_nm1.getUsedResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
-    Assertions.assertEquals(4, report_nm1.getAvailableResource()
+    assertEquals(4, report_nm1.getAvailableResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
 
     nameToValues.put(ResourceInformation.GPU_URI, "4");
@@ -346,17 +346,17 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
             Priority.newInstance(1), "*", containerGpuResource, 1)), null);
     ContainerId containerId2 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
-    Assertions.assertTrue(rm.waitForState(nm1, containerId2,
+    assertTrue(rm.waitForState(nm1, containerId2,
         RMContainerState.ALLOCATED));
     // Acquire this container
     am1.allocate(null, null);
 
     report_nm1 =
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assertions.assertEquals(2 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assertions.assertEquals(4, report_nm1.getUsedResource()
+    assertEquals(2 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(4, report_nm1.getUsedResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
-    Assertions.assertEquals(0, report_nm1.getAvailableResource()
+    assertEquals(0, report_nm1.getAvailableResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
 
     nameToValues.clear();
@@ -368,15 +368,15 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
             Priority.newInstance(1), "*", containerResource, 1)), null);
     ContainerId containerId3 =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
-    Assertions.assertTrue(rm.waitForState(nm1, containerId3,
+    assertTrue(rm.waitForState(nm1, containerId3,
         RMContainerState.ALLOCATED));
 
     report_nm1 =
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assertions.assertEquals(3 * GB, report_nm1.getUsedResource().getMemorySize());
-    Assertions.assertEquals(4, report_nm1.getUsedResource()
+    assertEquals(3 * GB, report_nm1.getUsedResource().getMemorySize());
+    assertEquals(4, report_nm1.getUsedResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
-    Assertions.assertEquals(0, report_nm1.getAvailableResource()
+    assertEquals(0, report_nm1.getAvailableResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
   }
 

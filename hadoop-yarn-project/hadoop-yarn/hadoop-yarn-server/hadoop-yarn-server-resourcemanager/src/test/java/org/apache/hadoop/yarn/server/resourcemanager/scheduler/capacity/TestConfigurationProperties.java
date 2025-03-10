@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestConfigurationProperties {
   private static final Map<String, String> PROPERTIES = new HashMap<>();
@@ -48,15 +50,15 @@ public class TestConfigurationProperties {
     Map<String, String> props = configurationProperties
         .getPropertiesWithPrefix("root.1.2");
 
-    Assertions.assertEquals(4, props.size());
-    Assertions.assertTrue(props.containsKey(""));
-    Assertions.assertEquals("TEST_VALUE_3", props.get(""));
-    Assertions.assertTrue(props.containsKey("4"));
-    Assertions.assertEquals("TEST_VALUE_3_1", props.get("4"));
-    Assertions.assertTrue(props.containsKey("3"));
-    Assertions.assertEquals("TEST_VALUE_1", props.get("3"));
-    Assertions.assertTrue(props.containsKey("4.5"));
-    Assertions.assertEquals("TEST_VALUE_3_2", props.get("4.5"));
+    assertEquals(4, props.size());
+    assertTrue(props.containsKey(""));
+    assertEquals("TEST_VALUE_3", props.get(""));
+    assertTrue(props.containsKey("4"));
+    assertEquals("TEST_VALUE_3_1", props.get("4"));
+    assertTrue(props.containsKey("3"));
+    assertEquals("TEST_VALUE_1", props.get("3"));
+    assertTrue(props.containsKey("4.5"));
+    assertEquals("TEST_VALUE_3_2", props.get("4.5"));
 
     // Test the scenario where the prefix has a dot appended to it
     // (see CapacitySchedulerConfiguration.getQueuePrefix(String queue)).
@@ -64,28 +66,28 @@ public class TestConfigurationProperties {
     props = configurationProperties
         .getPropertiesWithPrefix("root.1.2.4.");
 
-    Assertions.assertEquals(2, props.size());
-    Assertions.assertTrue(props.containsKey(""));
-    Assertions.assertEquals("TEST_VALUE_3_1", props.get(""));
-    Assertions.assertTrue(props.containsKey("5"));
-    Assertions.assertEquals("TEST_VALUE_3_2", props.get("5"));
+    assertEquals(2, props.size());
+    assertTrue(props.containsKey(""));
+    assertEquals("TEST_VALUE_3_1", props.get(""));
+    assertTrue(props.containsKey("5"));
+    assertEquals("TEST_VALUE_3_2", props.get("5"));
 
     Map<String, String> propsWithRootPrefix = configurationProperties
         .getPropertiesWithPrefix("root");
 
-    Assertions.assertEquals(6, propsWithRootPrefix.size());
-    Assertions.assertTrue(propsWithRootPrefix.containsKey(""));
-    Assertions.assertEquals("TEST_VALUE_4", propsWithRootPrefix.get(""));
-    Assertions.assertTrue(propsWithRootPrefix.containsKey("1.2.3"));
-    Assertions.assertEquals("TEST_VALUE_1", propsWithRootPrefix.get("1.2.3"));
-    Assertions.assertTrue(propsWithRootPrefix.containsKey("1"));
-    Assertions.assertEquals("TEST_VALUE_2", propsWithRootPrefix.get("1"));
-    Assertions.assertTrue(propsWithRootPrefix.containsKey("1.2"));
-    Assertions.assertEquals("TEST_VALUE_3", propsWithRootPrefix.get("1.2"));
-    Assertions.assertTrue(propsWithRootPrefix.containsKey("1.2.4"));
-    Assertions.assertEquals("TEST_VALUE_3_1", propsWithRootPrefix.get("1.2.4"));
-    Assertions.assertTrue(propsWithRootPrefix.containsKey("1.2.4.5"));
-    Assertions.assertEquals("TEST_VALUE_3_2", propsWithRootPrefix.get("1.2.4.5"));
+    assertEquals(6, propsWithRootPrefix.size());
+    assertTrue(propsWithRootPrefix.containsKey(""));
+    assertEquals("TEST_VALUE_4", propsWithRootPrefix.get(""));
+    assertTrue(propsWithRootPrefix.containsKey("1.2.3"));
+    assertEquals("TEST_VALUE_1", propsWithRootPrefix.get("1.2.3"));
+    assertTrue(propsWithRootPrefix.containsKey("1"));
+    assertEquals("TEST_VALUE_2", propsWithRootPrefix.get("1"));
+    assertTrue(propsWithRootPrefix.containsKey("1.2"));
+    assertEquals("TEST_VALUE_3", propsWithRootPrefix.get("1.2"));
+    assertTrue(propsWithRootPrefix.containsKey("1.2.4"));
+    assertEquals("TEST_VALUE_3_1", propsWithRootPrefix.get("1.2.4"));
+    assertTrue(propsWithRootPrefix.containsKey("1.2.4.5"));
+    assertEquals("TEST_VALUE_3_2", propsWithRootPrefix.get("1.2.4.5"));
   }
 
   @Test
@@ -96,15 +98,15 @@ public class TestConfigurationProperties {
     Map<String, String> props = configurationProperties
         .getPropertiesWithPrefix("root.1.2", true);
 
-    Assertions.assertEquals(4, props.size());
-    Assertions.assertTrue(props.containsKey("root.1.2.3"));
-    Assertions.assertEquals("TEST_VALUE_1", props.get("root.1.2.3"));
-    Assertions.assertTrue(props.containsKey("root.1.2"));
-    Assertions.assertEquals("TEST_VALUE_3", props.get("root.1.2"));
-    Assertions.assertTrue(props.containsKey("root.1.2.4.5"));
-    Assertions.assertEquals("TEST_VALUE_3_2", props.get("root.1.2.4.5"));
-    Assertions.assertTrue(props.containsKey("root.1.2.4"));
-    Assertions.assertEquals("TEST_VALUE_3_1", props.get("root.1.2.4"));
+    assertEquals(4, props.size());
+    assertTrue(props.containsKey("root.1.2.3"));
+    assertEquals("TEST_VALUE_1", props.get("root.1.2.3"));
+    assertTrue(props.containsKey("root.1.2"));
+    assertEquals("TEST_VALUE_3", props.get("root.1.2"));
+    assertTrue(props.containsKey("root.1.2.4.5"));
+    assertEquals("TEST_VALUE_3_2", props.get("root.1.2.4.5"));
+    assertTrue(props.containsKey("root.1.2.4"));
+    assertEquals("TEST_VALUE_3_1", props.get("root.1.2.4"));
   }
 
   @Test
@@ -118,8 +120,8 @@ public class TestConfigurationProperties {
     Map<String, String> propsNonExistingRootPrefix = configurationProperties
         .getPropertiesWithPrefix("3");
 
-    Assertions.assertEquals(0, propsEmptyPrefix.size());
-    Assertions.assertEquals(0, propsLongPrefix.size());
-    Assertions.assertEquals(0, propsNonExistingRootPrefix.size());
+    assertEquals(0, propsEmptyPrefix.size());
+    assertEquals(0, propsLongPrefix.size());
+    assertEquals(0, propsNonExistingRootPrefix.size());
   }
 }

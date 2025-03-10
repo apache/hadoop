@@ -40,7 +40,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptR
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -51,9 +50,14 @@ import java.util.HashSet;
 
 import java.io.IOException;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assume.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestCapacitySchedulerNewQueueAutoCreation
     extends TestCapacitySchedulerAutoCreatedQueueBase {
@@ -161,12 +165,12 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     // Check if queue c-auto got created
     CSQueue c = cs.getQueue("root.c-auto");
-    Assertions.assertEquals(1 / 3f, c.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, c.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(400 * GB,
+    assertEquals(1 / 3f, c.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, c.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(400 * GB,
         c.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
-    Assertions.assertEquals(((LeafQueue)c).getUserLimitFactor(), -1, 1e-6);
-    Assertions.assertEquals(((LeafQueue)c).getMaxAMResourcePerQueuePercent(), 1, 1e-6);
+    assertEquals(((LeafQueue)c).getUserLimitFactor(), -1, 1e-6);
+    assertEquals(((LeafQueue)c).getMaxAMResourcePerQueuePercent(), 1, 1e-6);
 
     // Now add another queue-d, in the same hierarchy
     createQueue("root.d-auto");
@@ -174,15 +178,15 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // Because queue-d has the same weight of other sibling queue, its abs cap
     // become 1/4
     CSQueue d = cs.getQueue("root.d-auto");
-    Assertions.assertEquals(1 / 4f, d.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, d.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(300 * GB,
+    assertEquals(1 / 4f, d.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, d.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(300 * GB,
         d.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
 
     // Now we check queue c again, it should also become 1/4 capacity
-    Assertions.assertEquals(1 / 4f, c.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, c.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(300 * GB,
+    assertEquals(1 / 4f, c.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, c.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(300 * GB,
         c.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
 
     // Now we add a two-level queue, create leaf only
@@ -192,9 +196,9 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // root.a has 1/4 abs resource, a2/a1 has the same weight, so a2 has 1/8 abs
     // capacity
     CSQueue a2 = cs.getQueue("root.a.a2-auto");
-    Assertions.assertEquals(1 / 8f, a2.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, a2.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(150 * GB,
+    assertEquals(1 / 8f, a2.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, a2.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(150 * GB,
         a2.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
 
     // try, create leaf + parent, will success
@@ -203,16 +207,16 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // Now check capacity of e and e1 (under root we have 5 queues, so e1 get
     // 1/5 capacity
     CSQueue e = cs.getQueue("root.e-auto");
-    Assertions.assertEquals(1 / 5f, e.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, e.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(240 * GB,
+    assertEquals(1 / 5f, e.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, e.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(240 * GB,
         e.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
 
     // Under e, there's only one queue, so e1/e have same capacity
     CSQueue e1 = cs.getQueue("root.e-auto.e1-auto");
-    Assertions.assertEquals(1 / 5f, e1.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, e1.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(240 * GB,
+    assertEquals(1 / 5f, e1.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, e1.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(240 * GB,
         e1.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
   }
 
@@ -232,9 +236,9 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     // Check if queue c-auto got created
     CSQueue c = cs.getQueue("root.c-auto");
-    Assertions.assertEquals(1 / 3f, c.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, c.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(400 * GB,
+    assertEquals(1 / 3f, c.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, c.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(400 * GB,
         c.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
 
     // Now add another queue-d, in the same hierarchy
@@ -243,15 +247,15 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // Because queue-d has the same weight of other sibling queue, its abs cap
     // become 1/4
     CSQueue d = cs.getQueue("root.d-auto");
-    Assertions.assertEquals(1 / 4f, d.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, d.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(300 * GB,
+    assertEquals(1 / 4f, d.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, d.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(300 * GB,
         d.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
 
     // Now we check queue c again, it should also become 1/4 capacity
-    Assertions.assertEquals(1 / 4f, c.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, c.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(300 * GB,
+    assertEquals(1 / 4f, c.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, c.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(300 * GB,
         c.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
   }
 
@@ -273,9 +277,9 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // root.a has 1/2 abs resource, a2/a1 has the same weight, so a2 has 1/4 abs
     // capacity
     CSQueue a2 = cs.getQueue("root.a.a2-auto");
-    Assertions.assertEquals(1 / 4f, a2.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, a2.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(MAX_MEMORY * (1 / 4f) * GB,
+    assertEquals(1 / 4f, a2.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, a2.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(MAX_MEMORY * (1 / 4f) * GB,
         a2.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize(),
         1e-6);
 
@@ -301,9 +305,9 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // -> a3-auto is alone with weight 1/4
     createQueue("root.a.a2-auto.a3-auto");
     CSQueue a3 = cs.getQueue("root.a.a2-auto.a3-auto");
-    Assertions.assertEquals(1 / 4f, a3.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, a3.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(MAX_MEMORY * (1 / 4f) * GB,
+    assertEquals(1 / 4f, a3.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, a3.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(MAX_MEMORY * (1 / 4f) * GB,
         a3.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize(),
         1e-6);
 
@@ -311,9 +315,9 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // -> a3-auto and a4-auto same weight 1/8
     createQueue("root.a.a2-auto.a4-auto");
     CSQueue a4 = cs.getQueue("root.a.a2-auto.a4-auto");
-    Assertions.assertEquals(1 / 8f, a3.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, a3.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(MAX_MEMORY * (1 / 8f) * GB,
+    assertEquals(1 / 8f, a3.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, a3.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(MAX_MEMORY * (1 / 8f) * GB,
         a4.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize(),
         1e-6);
   }
@@ -321,7 +325,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   @Test
   public void testAutoCreateQueueShouldFailWhenNonParentQueue()
       throws Exception {
-    assertThrows(SchedulerDynamicEditException.class, ()->{
+    assertThrows(SchedulerDynamicEditException.class, () -> {
       startScheduler();
       createQueue("root.a.a1.a2-auto");
     });
@@ -330,12 +334,12 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   @Test
   public void testAutoCreateQueueWhenSiblingsNotInWeightMode()
       throws Exception {
-    assertThrows(SchedulerDynamicEditException.class, ()->{
+    assertThrows(SchedulerDynamicEditException.class, () -> {
       startScheduler();
       // If the new queue mode is used it's allowed to
       // create a new dynamic queue when the sibling is
       // not in weight mode
-      assumeThat(csConf.isLegacyQueueMode(), is(true));
+      assumeTrue(csConf.isLegacyQueueMode() == true);
       csConf.setCapacity(A, 50f);
       csConf.setCapacity(B, 50f);
       csConf.setCapacity(A1, 100f);
@@ -359,7 +363,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
       createQueue("root.a.a3-auto.a4-auto.a5-auto");
     } catch (SchedulerDynamicEditException sde) {
       LOG.error("%s", sde);
-      Assertions.fail("Depth is set for root.a, exception should not be thrown");
+      fail("Depth is set for root.a, exception should not be thrown");
     }
 
     // Set global depth to 3
@@ -371,7 +375,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
       createQueue("root.a.a6-auto.a7-auto.a8-auto");
     } catch (SchedulerDynamicEditException sde) {
       LOG.error("%s", sde);
-      Assertions.fail("Depth is set globally, exception should not be thrown");
+      fail("Depth is set globally, exception should not be thrown");
     }
 
     // Set depth on a dynamic queue, which has no effect on auto queue creation validation
@@ -383,7 +387,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   @Test
   public void testAutoCreateQueueShouldFailIfNotEnabledForParent()
       throws Exception {
-    assertThrows(SchedulerDynamicEditException.class, ()->{
+    assertThrows(SchedulerDynamicEditException.class, () -> {
       startScheduler();
       csConf.setAutoQueueCreationV2Enabled(ROOT, false);
       cs.reinitialize(csConf, mockRM.getRMContext());
@@ -403,8 +407,8 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     // Double confirm, after refresh, we should still see root queue has 5
     // children.
-    Assertions.assertEquals(5, cs.getQueue("root").getChildQueues().size());
-    Assertions.assertNotNull(cs.getQueue("root.c-auto"));
+    assertEquals(5, cs.getQueue("root").getChildQueues().size());
+    assertNotNull(cs.getQueue("root.c-auto"));
   }
 
   @Test
@@ -419,17 +423,17 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     // Double confirm, after refresh, we should still see root queue has 5
     // children.
-    Assertions.assertEquals(5, cs.getQueue("root").getChildQueues().size());
+    assertEquals(5, cs.getQueue("root").getChildQueues().size());
 
     // Get queue a
     CSQueue a = cs.getQueue("root.a");
 
     // a's abs resource should be 6/10, (since a.weight=6, all other 4 peers
     // have weight=1).
-    Assertions.assertEquals(6 / 10f, a.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(720 * GB,
+    assertEquals(6 / 10f, a.getAbsoluteCapacity(), 1e-6);
+    assertEquals(720 * GB,
         a.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
-    Assertions.assertEquals(6f, a.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(6f, a.getQueueCapacities().getWeight(), 1e-6);
 
     // Set queue c-auto's weight to 6, and mark c-auto to be static queue
     csConf.setQueues(ROOT, new String[]{"a", "b", "c-auto"});
@@ -441,10 +445,10 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     // c's abs resource should be 6/15, (since a/c.weight=6, all other 3 peers
     // have weight=1).
-    Assertions.assertEquals(6 / 15f, c.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(480 * GB,
+    assertEquals(6 / 15f, c.getAbsoluteCapacity(), 1e-6);
+    assertEquals(480 * GB,
         c.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
-    Assertions.assertEquals(6f, c.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(6f, c.getQueueCapacities().getWeight(), 1e-6);
 
     // First, create e2-auto queue
     createQueue("root.e-auto.e2-auto");
@@ -463,9 +467,9 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // (since a/c/e.weight=6, all other 2 peers
     // have weight=1, and e1's weight is 6, e2's weight is 1).
     float e1NormalizedWeight = (6 / 20f) * (6 / 7f);
-    Assertions.assertEquals(e1NormalizedWeight, e1.getAbsoluteCapacity(), 1e-6);
+    assertEquals(e1NormalizedWeight, e1.getAbsoluteCapacity(), 1e-6);
     assertQueueMinResource(e1, MAX_MEMORY * e1NormalizedWeight);
-    Assertions.assertEquals(6f, e1.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(6f, e1.getQueueCapacities().getWeight(), 1e-6);
   }
 
   /*
@@ -487,14 +491,14 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     CSQueue d = cs.getQueue("root.d-auto");
 
-    Assertions.assertEquals(1 / 8f, d.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1 / 8f, d.getAbsoluteCapacity(), 1e-6);
     assertQueueMinResource(d, MAX_MEMORY * (1 / 8f));
-    Assertions.assertEquals(1f, d.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(1f, d.getQueueCapacities().getWeight(), 1e-6);
 
     CSQueue d1 = cs.getQueue("root.d-auto.d1-auto");
-    Assertions.assertEquals(1 / 8f, d1.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1 / 8f, d1.getAbsoluteCapacity(), 1e-6);
     assertQueueMinResource(d1, MAX_MEMORY * (1 / 8f));
-    Assertions.assertEquals(1f, d1.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(1f, d1.getQueueCapacities().getWeight(), 1e-6);
   }
 
   @Test
@@ -504,13 +508,13 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     submitApp(cs, USER0, USER0, "root.e-auto");
 
     AbstractCSQueue e = (AbstractCSQueue) cs.getQueue("root.e-auto");
-    Assertions.assertNotNull(e);
-    Assertions.assertTrue(e.isDynamicQueue());
+    assertNotNull(e);
+    assertTrue(e.isDynamicQueue());
 
     AbstractCSQueue user0 = (AbstractCSQueue) cs.getQueue(
         "root.e-auto." + USER0);
-    Assertions.assertNotNull(user0);
-    Assertions.assertTrue(user0.isDynamicQueue());
+    assertNotNull(user0);
+    assertTrue(user0.isDynamicQueue());
   }
 
   @Test
@@ -528,8 +532,8 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     CSQueue empty = cs.getQueue("root.empty-auto-parent");
-    Assertions.assertTrue(
-       empty instanceof LeafQueue, "empty-auto-parent is not a LeafQueue");
+    assertTrue(empty instanceof LeafQueue,
+        "empty-auto-parent is not a LeafQueue");
     empty.stopQueue();
 
     csConf.setQueues(ROOT, new String[]{"a", "b", "empty-auto-parent"});
@@ -544,13 +548,12 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     empty = cs.getQueue("root.empty-auto-parent");
-    Assertions.assertTrue(
-       empty instanceof AbstractParentQueue, "empty-auto-parent is not a ParentQueue");
-    Assertions.assertEquals(
-       0, empty.getChildQueues().size(), "empty-auto-parent has children");
-    Assertions.assertTrue(
-       ((AbstractParentQueue)empty).isEligibleForAutoQueueCreation(), "empty-auto-parent is not eligible " +
-            "for auto queue creation");
+    assertTrue(empty instanceof AbstractParentQueue,
+        "empty-auto-parent is not a ParentQueue");
+    assertEquals(0, empty.getChildQueues().size(),
+        "empty-auto-parent has children");
+    assertTrue(((AbstractParentQueue)empty).isEligibleForAutoQueueCreation(),
+        "empty-auto-parent is not eligible for auto queue creation");
   }
 
   @Test
@@ -570,7 +573,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     cs.handle(addAttemptEvent);
 
     CSQueue a2Auto = cs.getQueue("root.a.a1-auto.a2-auto");
-    Assertions.assertNotNull(a2Auto);
+    assertNotNull(a2Auto);
   }
 
   @Test
@@ -581,31 +584,31 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     submitApp(cs, USER0, USER0, "root.e-auto");
 
     AbstractCSQueue e = (AbstractCSQueue) cs.getQueue("root.e-auto");
-    Assertions.assertNotNull(e);
-    Assertions.assertTrue(e.isDynamicQueue());
+    assertNotNull(e);
+    assertTrue(e.isDynamicQueue());
 
     AbstractCSQueue user0 = (AbstractCSQueue) cs.getQueue(
         "root.e-auto." + USER0);
-    Assertions.assertNotNull(user0);
-    Assertions.assertTrue(user0.isDynamicQueue());
-    Assertions.assertTrue(user0 instanceof LeafQueue);
+    assertNotNull(user0);
+    assertTrue(user0.isDynamicQueue());
+    assertTrue(user0 instanceof LeafQueue);
 
     LeafQueue user0LeafQueue = (LeafQueue) user0;
 
     // Assert user limit factor is -1
-    Assertions.assertTrue(user0LeafQueue.getUserLimitFactor() == -1);
+    assertTrue(user0LeafQueue.getUserLimitFactor() == -1);
 
     // Assert user max applications not limited
-    Assertions.assertEquals(user0LeafQueue.getMaxApplicationsPerUser(),
+    assertEquals(user0LeafQueue.getMaxApplicationsPerUser(),
         user0LeafQueue.getMaxApplications());
 
     // Assert AM Resource
-    Assertions.assertEquals(user0LeafQueue.getAMResourceLimit().getMemorySize(),
+    assertEquals(user0LeafQueue.getAMResourceLimit().getMemorySize(),
         user0LeafQueue.
             getMaxAMResourcePerQueuePercent() * MAX_MEMORY * GB, 1e-6);
 
     // Assert user limit (no limit) when limit factor is -1
-    Assertions.assertEquals(MAX_MEMORY * GB,
+    assertEquals(MAX_MEMORY * GB,
         user0LeafQueue.getEffectiveMaxCapacityDown("",
             user0LeafQueue.getMinimumAllocation()).getMemorySize(), 1e-6);
   }
@@ -617,14 +620,14 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // When no conf for max apps
     LeafQueue a1 =  (LeafQueue)cs.
         getQueue("root.a.a1");
-    Assertions.assertNotNull(a1);
-    Assertions.assertEquals(csConf.getMaximumSystemApplications()
+    assertNotNull(a1);
+    assertEquals(csConf.getMaximumSystemApplications()
             * a1.getAbsoluteCapacity(), a1.getMaxApplications(), 1);
 
     LeafQueue b = (LeafQueue)cs.
         getQueue("root.b");
-    Assertions.assertNotNull(b);
-    Assertions.assertEquals(csConf.getMaximumSystemApplications()
+    assertNotNull(b);
+    assertEquals(csConf.getMaximumSystemApplications()
             * b.getAbsoluteCapacity(), b.getMaxApplications(), 1);
 
     createQueue("root.e");
@@ -633,44 +636,44 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // max app correct.
     LeafQueue e = (LeafQueue)cs.
         getQueue("root.e");
-    Assertions.assertNotNull(e);
-    Assertions.assertEquals(csConf.getMaximumSystemApplications()
+    assertNotNull(e);
+    assertEquals(csConf.getMaximumSystemApplications()
             * e.getAbsoluteCapacity(), e.getMaxApplications(), 1);
 
     a1 =  (LeafQueue)cs.
         getQueue("root.a.a1");
-    Assertions.assertNotNull(a1);
-    Assertions.assertEquals(csConf.getMaximumSystemApplications()
+    assertNotNull(a1);
+    assertEquals(csConf.getMaximumSystemApplications()
             * a1.getAbsoluteCapacity(), a1.getMaxApplications(), 1);
 
     b = (LeafQueue)cs.
         getQueue("root.b");
-    Assertions.assertNotNull(b);
-    Assertions.assertEquals(csConf.getMaximumSystemApplications()
+    assertNotNull(b);
+    assertEquals(csConf.getMaximumSystemApplications()
             * b.getAbsoluteCapacity(), b.getMaxApplications(), 1);
 
     // When update global max app per queue
     csConf.setGlobalMaximumApplicationsPerQueue(1000);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    Assertions.assertEquals(1000, b.getMaxApplications());
-    Assertions.assertEquals(1000, a1.getMaxApplications());
-    Assertions.assertEquals(1000, e.getMaxApplications());
+    assertEquals(1000, b.getMaxApplications());
+    assertEquals(1000, a1.getMaxApplications());
+    assertEquals(1000, e.getMaxApplications());
 
     // when set some queue for max apps
     csConf.setMaximumApplicationsPerQueue(new QueuePath("root.e1"), 50);
     createQueue("root.e1");
     LeafQueue e1 = (LeafQueue)cs.
         getQueue("root.e1");
-    Assertions.assertNotNull(e1);
+    assertNotNull(e1);
 
     cs.reinitialize(csConf, mockRM.getRMContext());
-    Assertions.assertEquals(50, e1.getMaxApplications());
+    assertEquals(50, e1.getMaxApplications());
   }
 
   @Test
   public void testAutoCreateQueueWithAmbiguousNonFullPathParentName()
       throws Exception {
-    assertThrows(SchedulerDynamicEditException.class, ()->{
+    assertThrows(SchedulerDynamicEditException.class, () -> {
       startScheduler();
 
       createQueue("root.a.a");
@@ -685,7 +688,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     // create a dynamic ParentQueue
     createQueue("root.a.a-parent-auto.a1-leaf-auto");
-    Assertions.assertNotNull(cs.getQueue("root.a.a-parent-auto"));
+    assertNotNull(cs.getQueue("root.a.a-parent-auto"));
 
     // create a new dynamic LeafQueue under the existing ParentQueue
     createQueue("root.a.a-parent-auto.a2-leaf-auto");
@@ -693,7 +696,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     CSQueue a2Leaf = cs.getQueue("a2-leaf-auto");
 
     // Make sure a2-leaf-auto is under a-parent-auto
-    Assertions.assertEquals("root.a.a-parent-auto",
+    assertEquals("root.a.a-parent-auto",
         a2Leaf.getParent().getQueuePath());
   }
 
@@ -702,18 +705,18 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     startScheduler();
 
     AbstractCSQueue b = (AbstractCSQueue) cs.getQueue("root.b");
-    Assertions.assertFalse(b.isDynamicQueue());
+    assertFalse(b.isDynamicQueue());
 
     createQueue("root.a.b.b");
 
     AbstractCSQueue bAutoParent = (AbstractCSQueue) cs.getQueue("root.a.b");
-    Assertions.assertTrue(bAutoParent.isDynamicQueue());
-    Assertions.assertTrue(bAutoParent.hasChildQueues());
+    assertTrue(bAutoParent.isDynamicQueue());
+    assertTrue(bAutoParent.hasChildQueues());
 
     AbstractCSQueue bAutoLeafQueue =
         (AbstractCSQueue) cs.getQueue("root.a.b.b");
-    Assertions.assertTrue(bAutoLeafQueue.isDynamicQueue());
-    Assertions.assertFalse(bAutoLeafQueue.hasChildQueues());
+    assertTrue(bAutoLeafQueue.isDynamicQueue());
+    assertFalse(bAutoLeafQueue.hasChildQueues());
   }
 
   @Test
@@ -730,9 +733,9 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // Check if max queue limit can't be exceeded
     try {
       createQueue("root.e.q_6");
-      Assertions.fail("Can't exceed max queue limit.");
+      fail("Can't exceed max queue limit.");
     } catch (Exception ex) {
-      Assertions.assertTrue(ex
+      assertTrue(ex
           instanceof SchedulerDynamicEditException);
     }
   }
@@ -750,12 +753,12 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     AbstractLeafQueue a2 = createQueue("root.a.a-auto.a2");
-    Assertions.assertEquals(6f,
-        a2.getQueueCapacities().getWeight(), 1e-6, "weight is not set by template");
-    Assertions.assertEquals(
-        -1f, a2.getUserLimitFactor(), 1e-6, "user limit factor should be disabled with dynamic queues");
-    Assertions.assertEquals(
-        1f, a2.getMaxAMResourcePerQueuePercent(), 1e-6, "maximum AM resource percent should be 1 with dynamic queues");
+    assertEquals(6f, a2.getQueueCapacities().getWeight(), 1e-6,
+        "weight is not set by template");
+    assertEquals(-1f, a2.getUserLimitFactor(), 1e-6,
+        "user limit factor should be disabled with dynamic queues");
+    assertEquals(1f, a2.getMaxAMResourcePerQueuePercent(), 1e-6,
+        "maximum AM resource percent should be 1 with dynamic queues");
 
     // Set the user-limit-factor and maximum-am-resource-percent via templates to ensure their
     // modified defaults are indeed overridden
@@ -766,26 +769,26 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     cs.reinitialize(csConf, mockRM.getRMContext());
     a2 = (LeafQueue) cs.getQueue("root.a.a-auto.a2");
-    Assertions.assertEquals(6f,
-        a2.getQueueCapacities().getWeight(), 1e-6, "weight is overridden");
-    Assertions.assertEquals(
-        10f, a2.getUserLimitFactor(), 1e-6, "user limit factor should be modified by templates");
-    Assertions.assertEquals(
-        0.8f, a2.getMaxAMResourcePerQueuePercent(), 1e-6, "maximum AM resource percent should be modified by templates");
+    assertEquals(6f, a2.getQueueCapacities().getWeight(), 1e-6,
+        "weight is overridden");
+    assertEquals(10f, a2.getUserLimitFactor(), 1e-6,
+        "user limit factor should be modified by templates");
+    assertEquals(0.8f, a2.getMaxAMResourcePerQueuePercent(), 1e-6,
+        "maximum AM resource percent should be modified by templates");
 
 
     csConf.setNonLabeledQueueWeight(new QueuePath("root.a.a-auto.a2"), 4f);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    Assertions.assertEquals(4f,
-        a2.getQueueCapacities().getWeight(), 1e-6, "weight is not explicitly set");
+    assertEquals(4f, a2.getQueueCapacities().getWeight(), 1e-6,
+        "weight is not explicitly set");
 
     csConf.setBoolean(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
         aQueuePath) + CapacitySchedulerConfiguration
         .AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE, false);
     cs.reinitialize(csConf, mockRM.getRMContext());
     AbstractLeafQueue a3 = createQueue("root.a.a3");
-    Assertions.assertFalse(
-       a3.isEligibleForAutoDeletion(), "auto queue deletion should be turned off on a3");
+    assertFalse(a3.isEligibleForAutoDeletion(),
+        "auto queue deletion should be turned off on a3");
 
     // Set the capacity of label TEST
     csConf.set(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
@@ -794,12 +797,12 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     csConf.setAutoQueueCreationV2Enabled(C, true);
     cs.reinitialize(csConf, mockRM.getRMContext());
     AbstractLeafQueue c1 = createQueue("root.c.c1");
-    Assertions.assertEquals(6f,
-        c1.getQueueCapacities().getWeight("TEST"), 1e-6, "weight is not set for label TEST");
+    assertEquals(6f, c1.getQueueCapacities().getWeight("TEST"), 1e-6,
+        "weight is not set for label TEST");
     cs.reinitialize(csConf, mockRM.getRMContext());
     c1 = (AbstractLeafQueue) cs.getQueue("root.c.c1");
-    Assertions.assertEquals(6f,
-        c1.getQueueCapacities().getWeight("TEST"), 1e-6, "weight is not set for label TEST");
+    assertEquals(6f, c1.getQueueCapacities().getWeight("TEST"), 1e-6,
+        "weight is not set for label TEST");
   }
 
   @Test
@@ -809,19 +812,19 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     csConf.setNonLabeledQueueWeight(a2.getQueuePathObject(), 4f);
     cs.reinitialize(csConf, mockRM.getRMContext());
 
-    Assertions.assertEquals(4f,
-        a2.getQueueCapacities().getWeight(), 1e-6, "weight is not explicitly set");
+    assertEquals(4f, a2.getQueueCapacities().getWeight(), 1e-6,
+        "weight is not explicitly set");
 
     a2 = (AbstractLeafQueue) cs.getQueue("root.a.a-auto.a2");
     csConf.setState(A_A_AUTO_A2, QueueState.STOPPED);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    Assertions.assertEquals(
-       QueueState.STOPPED, a2.getState(), "root.a.a-auto.a2 has not been stopped");
+    assertEquals(QueueState.STOPPED, a2.getState(),
+        "root.a.a-auto.a2 has not been stopped");
 
     csConf.setState(A_A_AUTO_A2, QueueState.RUNNING);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    Assertions.assertEquals(
-       QueueState.RUNNING, a2.getState(), "root.a.a-auto.a2 is not running");
+    assertEquals(QueueState.RUNNING, a2.getState(),
+        "root.a.a-auto.a2 is not running");
   }
 
   @Test
@@ -835,27 +838,27 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     // Make sure the static queue is stopped
-    Assertions.assertEquals(cs.getQueue("root.a").getState(),
+    assertEquals(cs.getQueue("root.a").getState(),
         QueueState.STOPPED);
     // If not set, default is the queue state of parent
-    Assertions.assertEquals(cs.getQueue("root.a.a1").getState(),
+    assertEquals(cs.getQueue("root.a.a1").getState(),
         QueueState.STOPPED);
 
-    Assertions.assertEquals(cs.getQueue("root.e").getState(),
+    assertEquals(cs.getQueue("root.e").getState(),
         QueueState.STOPPED);
-    Assertions.assertEquals(cs.getQueue("root.e.e1").getState(),
+    assertEquals(cs.getQueue("root.e.e1").getState(),
         QueueState.STOPPED);
 
     // Make root.e state to RUNNING
     csConf.setState(E, QueueState.RUNNING);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    Assertions.assertEquals(cs.getQueue("root.e.e1").getState(),
+    assertEquals(cs.getQueue("root.e.e1").getState(),
         QueueState.STOPPED);
 
     // Make root.e.e1 state to RUNNING
     csConf.setState(E_E1, QueueState.RUNNING);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    Assertions.assertEquals(cs.getQueue("root.e.e1").getState(),
+    assertEquals(cs.getQueue("root.e.e1").getState(),
         QueueState.RUNNING);
   }
 
@@ -867,11 +870,11 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // a is the first existing queue here and it is static, therefore
     // the distance is 2
     createQueue("root.a.a-auto.a1-auto");
-    Assertions.assertNotNull(cs.getQueue("root.a.a-auto.a1-auto"));
+    assertNotNull(cs.getQueue("root.a.a-auto.a1-auto"));
 
     try {
       createQueue("root.a.a-auto.a2-auto.a3-auto");
-      Assertions.fail("Queue creation should not succeed because the distance " +
+      fail("Queue creation should not succeed because the distance " +
           "from the first static parent is above limit");
     } catch (SchedulerDynamicEditException ignored) {
 
@@ -893,11 +896,9 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     policies.add(
         AutoCreatedQueueDeletionPolicy.class.getCanonicalName());
 
-    Assertions.assertTrue(
-    
-       cs.getSchedulingMonitorManager().
-            isSameConfiguredPolicies(policies), "No AutoCreatedQueueDeletionPolicy " +
-            "is present in running monitors");
+    assertTrue(cs.getSchedulingMonitorManager().
+        isSameConfiguredPolicies(policies), "No AutoCreatedQueueDeletionPolicy " +
+        "is present in running monitors");
 
     ApplicationAttemptId a2App = submitApp(cs, USER0,
         "a2-auto", "root.a.a1-auto");
@@ -909,15 +910,14 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     AbstractCSQueue a1 = (AbstractCSQueue) cs.getQueue(
         "root.a.a1-auto");
-    Assertions.assertNotNull(a1, "a1 is not present");
+    assertNotNull(a1, "a1 is not present");
     AbstractCSQueue a2 = (AbstractCSQueue) cs.getQueue(
         "root.a.a1-auto.a2-auto");
-    Assertions.assertNotNull(a2, "a2 is not present");
-    Assertions.assertTrue(
-       a2.isDynamicQueue(), "a2 is not a dynamic queue");
+    assertNotNull(a2, "a2 is not present");
+    assertTrue(a2.isDynamicQueue(), "a2 is not a dynamic queue");
 
     // Now there are still 1 app in a2 queue.
-    Assertions.assertEquals(1, a2.getNumApplications());
+    assertEquals(1, a2.getNumApplications());
 
     // Wait the time expired.
     long l1 = a2.getLastSubmittedTimestamp();
@@ -930,7 +930,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // when expired with remaining apps.
     a2 = (AbstractCSQueue) cs.getQueue(
         "root.a.a1-auto.a2-auto");
-    Assertions.assertNotNull(a2, "a2 is not present");
+    assertNotNull(a2, "a2 is not present");
 
     // Make app finished.
     AppAttemptRemovedSchedulerEvent event =
@@ -942,7 +942,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     cs.handle(rEvent);
 
     // Now there are no apps in a2 queue.
-    Assertions.assertEquals(0, a2.getNumApplications());
+    assertEquals(0, a2.getNumApplications());
 
     // Wait the a2 deleted.
     GenericTestUtils.waitFor(() -> {
@@ -953,12 +953,12 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     a2 = (AbstractCSQueue) cs.getQueue(
         "root.a.a1-auto.a2-auto");
-    Assertions.assertNull(a2, "a2 is not deleted");
+    assertNull(a2, "a2 is not deleted");
 
     // The parent will not be deleted with child queues
     a1 = (AbstractCSQueue) cs.getQueue(
         "root.a.a1-auto");
-    Assertions.assertNotNull(a1, "a1 is not present");
+    assertNotNull(a1, "a1 is not present");
 
     // Now the parent queue without child
     // will be deleted for expired.
@@ -970,7 +970,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     }, 100, 3000);
     a1 = (AbstractCSQueue) cs.getQueue(
         "root.a.a1-auto");
-    Assertions.assertNull(a1, "a1 is not deleted");
+    assertNull(a1, "a1 is not deleted");
   }
 
   @Test
@@ -991,7 +991,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     policies.add(
         AutoCreatedQueueDeletionPolicy.class.getCanonicalName());
 
-    Assertions.assertTrue(
+    assertTrue(
     
        cs.getSchedulingMonitorManager().
             isSameConfiguredPolicies(policies), "No AutoCreatedQueueDeletionPolicy " +
@@ -1007,12 +1007,11 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     AbstractCSQueue a1 = (AbstractCSQueue) cs.getQueue(
         "root.a.a1-auto");
-    Assertions.assertNotNull(a1, "a1 is not present");
+    assertNotNull(a1, "a1 is not present");
     AbstractCSQueue a2 = (AbstractCSQueue) cs.getQueue(
         "root.a.a1-auto.a2-auto");
-    Assertions.assertNotNull(a2, "a2 is not present");
-    Assertions.assertTrue(
-       a2.isDynamicQueue(), "a2 is not a dynamic queue");
+    assertNotNull(a2, "a2 is not present");
+    assertTrue(a2.isDynamicQueue(), "a2 is not a dynamic queue");
 
     // Make app finished.
     AppAttemptRemovedSchedulerEvent event =
@@ -1024,7 +1023,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     cs.handle(rEvent);
 
     // Now there are no apps in a2 queue.
-    Assertions.assertEquals(0, a2.getNumApplications());
+    assertEquals(0, a2.getNumApplications());
 
     // Wait the time expired.
     long l1 = a2.getLastSubmittedTimestamp();
@@ -1036,12 +1035,11 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // The auto deletion is no enabled for a2-auto
     a1 = (AbstractCSQueue) cs.getQueue(
         "root.a.a1-auto");
-    Assertions.assertNotNull(a1, "a1 is not present");
+    assertNotNull(a1, "a1 is not present");
     a2 = (AbstractCSQueue) cs.getQueue(
         "root.a.a1-auto.a2-auto");
-    Assertions.assertNotNull(a2, "a2 is not present");
-    Assertions.assertTrue(
-       a2.isDynamicQueue(), "a2 is not a dynamic queue");
+    assertNotNull(a2, "a2 is not present");
+    assertTrue(a2.isDynamicQueue(), "a2 is not a dynamic queue");
 
     // Enabled now
     // The auto deletion will work.
@@ -1058,11 +1056,11 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     a2 = (AbstractCSQueue) cs.
         getQueue("root.a.a1-auto.a2-auto");
-    Assertions.assertNull(a2, "a2 is not deleted");
+    assertNull(a2, "a2 is not deleted");
     // The parent will not be deleted with child queues
     a1 = (AbstractCSQueue) cs.getQueue(
         "root.a.a1-auto");
-    Assertions.assertNotNull(a1, "a1 is not present");
+    assertNotNull(a1, "a1 is not present");
 
     // Now the parent queue without child
     // will be deleted for expired.
@@ -1074,7 +1072,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     }, 100, 3000);
     a1 = (AbstractCSQueue) cs.getQueue(
         "root.a.a1-auto");
-    Assertions.assertNull(a1, "a1 is not deleted");
+    assertNull(a1, "a1 is not deleted");
   }
 
   @Test
@@ -1093,56 +1091,56 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     // Under e, there's only one queue, so e1/e have same capacity
     CSQueue e1 = cs.getQueue("root.e-auto.e1-auto");
-    Assertions.assertEquals(1 / 5f, e1.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, e1.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(240 * GB,
+    assertEquals(1 / 5f, e1.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, e1.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(240 * GB,
         e1.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
 
     // Check after removal e1.
     cs.removeQueue(e1);
     CSQueue e = cs.getQueue("root.e-auto");
-    Assertions.assertEquals(1 / 5f, e.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, e.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(240 * GB,
+    assertEquals(1 / 5f, e.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, e.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(240 * GB,
         e.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
 
     // Check after removal e.
     cs.removeQueue(e);
     CSQueue d = cs.getQueue("root.d-auto");
-    Assertions.assertEquals(1 / 4f, d.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, d.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(300 * GB,
+    assertEquals(1 / 4f, d.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, d.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(300 * GB,
         d.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
 
     // Check after removal d.
     cs.removeQueue(d);
     CSQueue c = cs.getQueue("root.c-auto");
-    Assertions.assertEquals(1 / 3f, c.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, c.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(400 * GB,
+    assertEquals(1 / 3f, c.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, c.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(400 * GB,
         c.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
 
     // Check after removal c.
     cs.removeQueue(c);
     CSQueue b = cs.getQueue("root.b");
-    Assertions.assertEquals(1 / 2f, b.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, b.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(600 * GB,
+    assertEquals(1 / 2f, b.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, b.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(600 * GB,
         b.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
 
     // Check can't remove static queue b.
     try {
       cs.removeQueue(b);
-      Assertions.fail("Can't remove static queue b!");
+      fail("Can't remove static queue b!");
     } catch (Exception ex) {
-      Assertions.assertTrue(ex
+      assertTrue(ex
           instanceof SchedulerDynamicEditException);
     }
     // Check a.
     CSQueue a = cs.getQueue("root.a");
-    Assertions.assertEquals(1 / 2f, a.getAbsoluteCapacity(), 1e-6);
-    Assertions.assertEquals(1f, a.getQueueCapacities().getWeight(), 1e-6);
-    Assertions.assertEquals(600 * GB,
+    assertEquals(1 / 2f, a.getAbsoluteCapacity(), 1e-6);
+    assertEquals(1f, a.getQueueCapacities().getWeight(), 1e-6);
+    assertEquals(600 * GB,
         b.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
   }
 
@@ -1152,32 +1150,32 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     AbstractCSQueue b = (AbstractCSQueue) cs.
         getQueue("root.b");
-    Assertions.assertFalse(b.isDynamicQueue());
-    Assertions.assertEquals("root.b",
+    assertFalse(b.isDynamicQueue());
+    assertEquals("root.b",
         b.getQueueInfo().getQueuePath());
 
     createQueue("root.a.b.b");
 
     AbstractCSQueue bAutoParent = (AbstractCSQueue) cs.
         getQueue("root.a.b");
-    Assertions.assertTrue(bAutoParent.isDynamicQueue());
-    Assertions.assertTrue(bAutoParent.hasChildQueues());
-    Assertions.assertEquals("root.a.b",
+    assertTrue(bAutoParent.isDynamicQueue());
+    assertTrue(bAutoParent.hasChildQueues());
+    assertEquals("root.a.b",
         bAutoParent.getQueueInfo().getQueuePath());
 
     AbstractCSQueue bAutoLeafQueue =
         (AbstractCSQueue) cs.getQueue("root.a.b.b");
-    Assertions.assertTrue(bAutoLeafQueue.isDynamicQueue());
-    Assertions.assertFalse(bAutoLeafQueue.hasChildQueues());
-    Assertions.assertEquals("root.a.b.b",
+    assertTrue(bAutoLeafQueue.isDynamicQueue());
+    assertFalse(bAutoLeafQueue.hasChildQueues());
+    assertEquals("root.a.b.b",
         bAutoLeafQueue.getQueueInfo().getQueuePath());
 
     // Make sure all queue name are ambiguous
-    Assertions.assertEquals("b",
+    assertEquals("b",
         b.getQueueInfo().getQueueName());
-    Assertions.assertEquals("b",
+    assertEquals("b",
         bAutoParent.getQueueInfo().getQueueName());
-    Assertions.assertEquals("b",
+    assertEquals("b",
         bAutoLeafQueue.getQueueInfo().getQueueName());
   }
 
@@ -1189,21 +1187,21 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     createQueue("root.a.a-auto");
     AbstractCSQueue aAuto = (AbstractCSQueue) cs.
         getQueue("root.a.a-auto");
-    Assertions.assertTrue(aAuto.isDynamicQueue());
+    assertTrue(aAuto.isDynamicQueue());
 
     csConf.setState(A, QueueState.STOPPED);
     cs.reinitialize(csConf, mockRM.getRMContext());
     aAuto = (AbstractCSQueue) cs.
         getQueue("root.a.a-auto");
-    Assertions.assertEquals(QueueState.STOPPED, aAuto.getState(), "root.a.a-auto is not in STOPPED state");
+    assertEquals(QueueState.STOPPED, aAuto.getState(), "root.a.a-auto is not in STOPPED state");
     csConf.setQueues(ROOT, new String[]{"b"});
     cs.reinitialize(csConf, mockRM.getRMContext());
     CSQueue aAutoNew = cs.getQueue("root.a.a-auto");
-    Assertions.assertNull(aAutoNew);
+    assertNull(aAutoNew);
 
     submitApp(cs, USER0, "a-auto", "root.a");
     aAutoNew = cs.getQueue("root.a.a-auto");
-    Assertions.assertNotNull(aAutoNew);
+    assertNotNull(aAutoNew);
 
     // Validate static grandparent deletion
     csConf.setQueues(ROOT, new String[]{"a", "b"});
@@ -1213,12 +1211,12 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     createQueue("root.a.a1.a1-auto");
     CSQueue a1Auto = cs.getQueue("root.a.a1.a1-auto");
-    Assertions.assertNotNull(a1Auto, "a1-auto should exist");
+    assertNotNull(a1Auto, "a1-auto should exist");
 
     csConf.setQueues(ROOT, new String[]{"b"});
     cs.reinitialize(csConf, mockRM.getRMContext());
     a1Auto = cs.getQueue("root.a.a1.a1-auto");
-    Assertions.assertNull(a1Auto, "a1-auto has no parent and should not exist");
+    assertNull(a1Auto, "a1-auto has no parent and should not exist");
 
     // Validate dynamic parent deletion
     csConf.setState(B, QueueState.STOPPED);
@@ -1228,16 +1226,16 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     createQueue("root.b.b-auto-parent.b-auto-leaf");
     CSQueue bAutoParent = cs.getQueue("root.b.b-auto-parent");
-    Assertions.assertNotNull(bAutoParent, "b-auto-parent should exist");
+    assertNotNull(bAutoParent, "b-auto-parent should exist");
     ParentQueue b = (ParentQueue) cs.getQueue("root.b");
     b.removeChildQueue(bAutoParent);
 
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     bAutoParent = cs.getQueue("root.b.b-auto-parent");
-    Assertions.assertNull(bAutoParent, "b-auto-parent should not exist ");
+    assertNull(bAutoParent, "b-auto-parent should not exist ");
     CSQueue bAutoLeaf = cs.getQueue("root.b.b-auto-parent.b-auto-leaf");
-    Assertions.assertNull(bAutoLeaf, "b-auto-leaf should not exist " +
+    assertNull(bAutoLeaf, "b-auto-leaf should not exist " +
         "when its dynamic parent is removed");
   }
 
@@ -1249,20 +1247,20 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     createQueue("root.a.a-auto");
     AbstractCSQueue aAuto = (AbstractCSQueue) cs.
         getQueue("root.a.a-auto");
-    Assertions.assertTrue(aAuto.isDynamicQueue());
+    assertTrue(aAuto.isDynamicQueue());
     ParentQueue a = (ParentQueue) cs.
         getQueue("root.a");
     createQueue("root.e.e1-auto");
     AbstractCSQueue eAuto = (AbstractCSQueue) cs.
         getQueue("root.e.e1-auto");
-    Assertions.assertTrue(eAuto.isDynamicQueue());
+    assertTrue(eAuto.isDynamicQueue());
     ParentQueue e = (ParentQueue) cs.
         getQueue("root.e");
 
     // Try to remove a static child queue
     try {
       a.removeChildQueue(cs.getQueue("root.a.a1"));
-      Assertions.fail("root.a.a1 is a static queue and should not be removed at " +
+      fail("root.a.a1 is a static queue and should not be removed at " +
           "runtime");
     } catch (SchedulerDynamicEditException ignored) {
     }
@@ -1270,7 +1268,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // Try to remove a dynamic queue with a different parent
     try {
       a.removeChildQueue(eAuto);
-      Assertions.fail("root.a should not be able to remove root.e.e1-auto");
+      fail("root.a should not be able to remove root.e.e1-auto");
     } catch (SchedulerDynamicEditException ignored) {
     }
 
@@ -1282,8 +1280,8 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     eAuto = (AbstractCSQueue) cs.
         getQueue("root.e.e1-auto");
 
-    Assertions.assertNull(aAuto, "root.a.a-auto should have been removed");
-    Assertions.assertNull(eAuto, "root.e.e1-auto should have been removed");
+    assertNull(aAuto, "root.a.a-auto should have been removed");
+    assertNull(eAuto, "root.e.e1-auto should have been removed");
   }
 
   @Test()
@@ -1303,7 +1301,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   }
 
   private void assertQueueMinResource(CSQueue queue, float expected) {
-    Assertions.assertEquals(Math.round(expected * GB),
+    assertEquals(Math.round(expected * GB),
         queue.getQueueResourceQuotas().getEffectiveMinResource()
             .getMemorySize(), 1e-6);
   }

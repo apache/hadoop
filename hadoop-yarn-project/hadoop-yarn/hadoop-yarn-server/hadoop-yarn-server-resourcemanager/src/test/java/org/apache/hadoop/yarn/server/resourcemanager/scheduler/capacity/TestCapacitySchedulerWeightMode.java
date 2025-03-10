@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -51,6 +50,12 @@ import org.junit.jupiter.api.Timeout;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestCapacitySchedulerWeightMode {
   private static final String DEFAULT_PATH = CapacitySchedulerConfiguration.ROOT + ".default";
@@ -395,13 +400,13 @@ public class TestCapacitySchedulerWeightMode {
         (CapacityScheduler) rm.getRMContext().getScheduler();
     LeafQueue b1 = (LeafQueue) cs.getQueue(B1.getFullPath());
 
-    Assertions.assertNotNull(b1);
-    Assertions.assertTrue(b1.getAccessibleNodeLabels().isEmpty());
+    assertNotNull(b1);
+    assertTrue(b1.getAccessibleNodeLabels().isEmpty());
 
     Set<String> b1ExistingNodeLabels = ((CSQueue) b1).getQueueCapacities()
         .getExistingNodeLabels();
-    Assertions.assertEquals(1, b1ExistingNodeLabels.size());
-    Assertions.assertEquals("", b1ExistingNodeLabels.iterator().next());
+    assertEquals(1, b1ExistingNodeLabels.size());
+    assertEquals("", b1ExistingNodeLabels.iterator().next());
 
     rm.close();
   }
@@ -424,7 +429,7 @@ public class TestCapacitySchedulerWeightMode {
     try {
       cs.reinitialize(newConf, rm.getRMContext());
     } catch (Exception e) {
-      Assertions.fail("Reinitialization failed with " + e);
+      fail("Reinitialization failed with " + e);
     }
   }
 
@@ -449,15 +454,15 @@ public class TestCapacitySchedulerWeightMode {
 
     LeafQueue a = (LeafQueue)
         cs.getQueue("root.a");
-    Assertions.assertNotNull(a);
-    Assertions.assertEquals(a.getQueueCapacities().getWeight(),
+    assertNotNull(a);
+    assertEquals(a.getQueueCapacities().getWeight(),
         a.getQueueInfo(false,
         false).getWeight(), 1e-6);
 
     LeafQueue b = (LeafQueue)
         cs.getQueue("root.b");
-    Assertions.assertNotNull(b);
-    Assertions.assertEquals(b.getQueueCapacities().getWeight(),
+    assertNotNull(b);
+    assertEquals(b.getQueueCapacities().getWeight(),
         b.getQueueInfo(false,
         false).getWeight(), 1e-6);
     rm.close();
@@ -540,7 +545,7 @@ public class TestCapacitySchedulerWeightMode {
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y");
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2L);
-    Assertions.assertTrue(rm1.waitForState(nm2, containerId,
+    assertTrue(rm1.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am1.getApplicationAttemptId(), containerId, rm1,
         "h2");
@@ -563,9 +568,9 @@ public class TestCapacitySchedulerWeightMode {
     // (Maximum capacity reached)
     am2.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
-    Assertions.assertFalse(rm1.waitForState(nm4, containerId,
+    assertFalse(rm1.waitForState(nm4, containerId,
         RMContainerState.ALLOCATED));
-    Assertions.assertFalse(rm1.waitForState(nm5, containerId,
+    assertFalse(rm1.waitForState(nm5, containerId,
         RMContainerState.ALLOCATED));
 
     // launch an app to queue b2
@@ -584,9 +589,9 @@ public class TestCapacitySchedulerWeightMode {
     // y,z). Will successfully allocate on nm3
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y");
     containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 2);
-    Assertions.assertFalse(rm1.waitForState(nm1, containerId,
+    assertFalse(rm1.waitForState(nm1, containerId,
         RMContainerState.ALLOCATED));
-    Assertions.assertTrue(rm1.waitForState(nm3, containerId,
+    assertTrue(rm1.waitForState(nm3, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,
         "h3");
@@ -595,7 +600,7 @@ public class TestCapacitySchedulerWeightMode {
     // Will successfully allocate on nm4 only.
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "z");
     containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 3L);
-    Assertions.assertTrue(rm1.waitForState(nm4, containerId,
+    assertTrue(rm1.waitForState(nm4, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,
         "h4");
@@ -608,21 +613,21 @@ public class TestCapacitySchedulerWeightMode {
     YarnScheduler scheduler = rm.getRMContext().getScheduler();
     SchedulerAppReport appReport = scheduler.getSchedulerAppInfo(attemptId);
 
-    Assertions.assertTrue(appReport.getLiveContainers().size() > 0);
+    assertTrue(appReport.getLiveContainers().size() > 0);
     for (RMContainer c : appReport.getLiveContainers()) {
       if (c.getContainerId().equals(containerId)) {
-        Assertions.assertEquals(host, c.getAllocatedNode().getHost());
+        assertEquals(host, c.getAllocatedNode().getHost());
       }
     }
   }
 
   private void validateCapacityOrWeightString(String capacityOrWeightString,
       boolean shouldContainWeight) {
-    Assertions.assertEquals(shouldContainWeight,
+    assertEquals(shouldContainWeight,
         capacityOrWeightString.contains("weight"));
-    Assertions.assertEquals(shouldContainWeight,
+    assertEquals(shouldContainWeight,
         capacityOrWeightString.contains("normalizedWeight"));
-    Assertions.assertEquals(!shouldContainWeight,
+    assertEquals(!shouldContainWeight,
         capacityOrWeightString.contains("capacity"));
 
   }

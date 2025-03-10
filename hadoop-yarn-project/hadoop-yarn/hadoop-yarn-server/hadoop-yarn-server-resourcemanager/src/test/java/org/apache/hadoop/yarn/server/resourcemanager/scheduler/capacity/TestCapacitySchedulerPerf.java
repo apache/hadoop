@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.event.Level;
-import org.junit.Assume;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -66,6 +65,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourc
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -116,7 +116,7 @@ public class TestCapacitySchedulerPerf {
   private void testUserLimitThroughputWithNumberOfResourceTypes(
       int numOfResourceTypes, int numQueues, int pctActiveQueues, int appCount)
       throws Exception {
-    Assume.assumeTrue(Boolean.valueOf(
+    assumeTrue(Boolean.valueOf(
         System.getProperty("RunCapacitySchedulerPerfTests")));
     int numThreads = Integer.valueOf(System.getProperty(
         "CapacitySchedulerPerfTestsNumThreads", "0"));

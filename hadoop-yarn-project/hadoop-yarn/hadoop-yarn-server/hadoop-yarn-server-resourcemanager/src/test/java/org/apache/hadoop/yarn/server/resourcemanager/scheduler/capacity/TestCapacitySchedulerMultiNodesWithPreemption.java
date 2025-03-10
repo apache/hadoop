@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -44,7 +45,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.MultiNo
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -176,7 +176,7 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
           MockAM am2 = MockRM.launchAM(app2, rm, nm1);
           result.set(true);
         } catch (Exception e) {
-          Assertions.fail("Failed to launch app-2");
+          fail("Failed to launch app-2");
         }
       }
     };
@@ -228,13 +228,13 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
         .getAppAttemptId();
     FiCaSchedulerApp schedulerApp = cs.getApplicationAttempt(app2AttemptId);
 
-    assertEquals(1
-,         schedulerApp.getReservedContainers().size(), "App2 failed to get reserved container");
+    assertEquals(1, schedulerApp.getReservedContainers().size(),
+        "App2 failed to get reserved container");
     LOG.info("Reserved node is: " +
         schedulerApp.getReservedContainers().get(0).getReservedNode());
-    assertNotEquals(
-       schedulerApp.getReservedContainers().get(0).getReservedNode()
-,         preemptedNode.get().getNodeId(), "Failed to reserve as per the Multi Node Itearor");
+    assertNotEquals(schedulerApp.getReservedContainers().get(0).getReservedNode(),
+        preemptedNode.get().getNodeId(),
+        "Failed to reserve as per the Multi Node Itearor");
 
 
     // Step 6: Okay, now preempted node is Node1 and reserved node is Node3
@@ -264,10 +264,10 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
     // Step 8: Validate if app-2 has got 1 live container and
     // released the reserved container
     schedulerApp = cs.getApplicationAttempt(app2AttemptId);
-    assertEquals(1
-,         schedulerApp.getLiveContainers().size(), "App2 failed to get Allocated");
-    assertEquals(0
-,         schedulerApp.getReservedContainers().size(), "App2 failed to Unreserve");
+    assertEquals(1, schedulerApp.getLiveContainers().size(),
+        "App2 failed to get Allocated");
+    assertEquals(0, schedulerApp.getReservedContainers().size(),
+        "App2 failed to Unreserve");
 
     rm.stop();
   }

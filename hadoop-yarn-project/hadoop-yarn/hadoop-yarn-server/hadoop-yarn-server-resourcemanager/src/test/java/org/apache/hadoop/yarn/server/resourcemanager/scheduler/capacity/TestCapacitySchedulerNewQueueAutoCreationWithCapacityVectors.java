@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
@@ -26,7 +28,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabels
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -186,36 +187,36 @@ public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
 
   private void validateBasicConfiguration() throws Exception {
     CSQueue a = cs.getQueue(A_PATH);
-    Assertions.assertEquals(8 / 32f, a.getAbsoluteCapacity(), EPSILON);
-    Assertions.assertEquals(-1f, a.getQueueCapacities().getWeight(), EPSILON);
-    Assertions.assertEquals(8000,
+    assertEquals(8 / 32f, a.getAbsoluteCapacity(), EPSILON);
+    assertEquals(-1f, a.getQueueCapacities().getWeight(), EPSILON);
+    assertEquals(8000,
             a.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
-    Assertions.assertEquals(8,
+    assertEquals(8,
             a.getQueueResourceQuotas().getEffectiveMinResource().getVirtualCores());
 
     createQueue("root.b-auto");
 
     CSQueue bAuto = cs.getQueue("root.b-auto");
-    Assertions.assertEquals(2 / 32f, bAuto.getAbsoluteCapacity(), EPSILON);
-    Assertions.assertEquals(-1f, bAuto.getQueueCapacities().getWeight(), EPSILON);
-    Assertions.assertEquals(2000,
+    assertEquals(2 / 32f, bAuto.getAbsoluteCapacity(), EPSILON);
+    assertEquals(-1f, bAuto.getQueueCapacities().getWeight(), EPSILON);
+    assertEquals(2000,
             bAuto.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
-    Assertions.assertEquals(2,
+    assertEquals(2,
             bAuto.getQueueResourceQuotas().getEffectiveMinResource().getVirtualCores());
-    Assertions.assertEquals(((LeafQueue) bAuto).getUserLimitFactor(), -1, EPSILON);
-    Assertions.assertEquals(((LeafQueue) bAuto).getMaxAMResourcePerQueuePercent(), 1, EPSILON);
+    assertEquals(((LeafQueue) bAuto).getUserLimitFactor(), -1, EPSILON);
+    assertEquals(((LeafQueue) bAuto).getMaxAMResourcePerQueuePercent(), 1, EPSILON);
 
     createQueue("root.a.a1-auto");
 
     CSQueue a1Auto = cs.getQueue("root.a.a1-auto");
-    Assertions.assertEquals(2 / 32f, a1Auto.getAbsoluteCapacity(), EPSILON);
-    Assertions.assertEquals(-1f, a1Auto.getQueueCapacities().getWeight(), EPSILON);
-    Assertions.assertEquals(2000,
+    assertEquals(2 / 32f, a1Auto.getAbsoluteCapacity(), EPSILON);
+    assertEquals(-1f, a1Auto.getQueueCapacities().getWeight(), EPSILON);
+    assertEquals(2000,
             a1Auto.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
-    Assertions.assertEquals(4,
+    assertEquals(4,
             a1Auto.getQueueResourceQuotas().getEffectiveMinResource().getVirtualCores());
-    Assertions.assertEquals(((LeafQueue) a1Auto).getUserLimitFactor(), -1, EPSILON);
-    Assertions.assertEquals(((LeafQueue) a1Auto).getMaxAMResourcePerQueuePercent(), 1, EPSILON);
+    assertEquals(((LeafQueue) a1Auto).getUserLimitFactor(), -1, EPSILON);
+    assertEquals(((LeafQueue) a1Auto).getMaxAMResourcePerQueuePercent(), 1, EPSILON);
   }
 
   /*
@@ -241,14 +242,14 @@ public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
     // b takes 2000 MB from the cluster, a and d take up 10 + 10 = 20% (6000 MB, 6 vcore),
     // so c-auto should get the rest (24000 MB, 24 vcore) because it's the only one
     // with configured weights
-    Assertions.assertEquals(24 / 32f, cAuto.getAbsoluteCapacity(), EPSILON);
-    Assertions.assertEquals(-1f, cAuto.getQueueCapacities().getWeight(), EPSILON);
-    Assertions.assertEquals(24000,
+    assertEquals(24 / 32f, cAuto.getAbsoluteCapacity(), EPSILON);
+    assertEquals(-1f, cAuto.getQueueCapacities().getWeight(), EPSILON);
+    assertEquals(24000,
             cAuto.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
-    Assertions.assertEquals(24,
+    assertEquals(24,
             cAuto.getQueueResourceQuotas().getEffectiveMinResource().getVirtualCores());
-    Assertions.assertEquals(((LeafQueue) cAuto).getUserLimitFactor(), -1, EPSILON);
-    Assertions.assertEquals(((LeafQueue) cAuto).getMaxAMResourcePerQueuePercent(), 1, EPSILON);
+    assertEquals(((LeafQueue) cAuto).getUserLimitFactor(), -1, EPSILON);
+    assertEquals(((LeafQueue) cAuto).getMaxAMResourcePerQueuePercent(), 1, EPSILON);
 
     // Now add another queue-d, in the same hierarchy
     createQueue("root.d.d1-auto");
@@ -257,57 +258,57 @@ public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
     // become 1/4
     CSQueue dAuto = cs.getQueue("root.d.d1-auto");
     // d1-auto should get 1000 MB, 1 vcore
-    Assertions.assertEquals(1 / 32f, dAuto.getAbsoluteCapacity(), EPSILON);
-    Assertions.assertEquals(-1f, dAuto.getQueueCapacities().getWeight(), EPSILON);
-    Assertions.assertEquals(1000,
+    assertEquals(1 / 32f, dAuto.getAbsoluteCapacity(), EPSILON);
+    assertEquals(-1f, dAuto.getQueueCapacities().getWeight(), EPSILON);
+    assertEquals(1000,
             dAuto.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
-    Assertions.assertEquals(1,
+    assertEquals(1,
             dAuto.getQueueResourceQuotas().getEffectiveMinResource().getVirtualCores());
 
     createQueue("root.a.a2-auto");
 
     CSQueue a2Auto = cs.getQueue("root.a.a2-auto");
-    Assertions.assertEquals(2 / 32f, a2Auto.getAbsoluteCapacity(), EPSILON);
-    Assertions.assertEquals(-1f, a2Auto.getQueueCapacities().getWeight(), EPSILON);
-    Assertions.assertEquals(2000,
+    assertEquals(2 / 32f, a2Auto.getAbsoluteCapacity(), EPSILON);
+    assertEquals(-1f, a2Auto.getQueueCapacities().getWeight(), EPSILON);
+    assertEquals(2000,
             a2Auto.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
-    Assertions.assertEquals(2,
+    assertEquals(2,
             a2Auto.getQueueResourceQuotas().getEffectiveMinResource().getVirtualCores());
 
     // Absolute requests take precedence over percentage and weight,
     // hence a1 should have 1000 MB, 0 vcore
     CSQueue a1 = cs.getQueue("root.a.a1");
-    Assertions.assertEquals(1000,
+    assertEquals(1000,
             a1.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
-    Assertions.assertEquals(0,
+    assertEquals(0,
             a1.getQueueResourceQuotas().getEffectiveMinResource().getVirtualCores());
 
     createQueue("root.e-auto.e1-auto");
 
     // e-auto has weights configured, so it will share the remaining resources with c-auto
     CSQueue eAuto = cs.getQueue("root.e-auto");
-    Assertions.assertEquals(12 / 32f, eAuto.getAbsoluteCapacity(), EPSILON);
-    Assertions.assertEquals(-1f, eAuto.getQueueCapacities().getWeight(), EPSILON);
-    Assertions.assertEquals(12000,
+    assertEquals(12 / 32f, eAuto.getAbsoluteCapacity(), EPSILON);
+    assertEquals(-1f, eAuto.getQueueCapacities().getWeight(), EPSILON);
+    assertEquals(12000,
             eAuto.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
-    Assertions.assertEquals(10,
+    assertEquals(10,
             eAuto.getQueueResourceQuotas().getEffectiveMinResource().getVirtualCores());
 
     // Now we check queue c-auto again, it should have shared its resources with e-auto
-    Assertions.assertEquals(12 / 32f, cAuto.getAbsoluteCapacity(), EPSILON);
-    Assertions.assertEquals(-1f, cAuto.getQueueCapacities().getWeight(), EPSILON);
-    Assertions.assertEquals(12000,
+    assertEquals(12 / 32f, cAuto.getAbsoluteCapacity(), EPSILON);
+    assertEquals(-1f, cAuto.getQueueCapacities().getWeight(), EPSILON);
+    assertEquals(12000,
             cAuto.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
-    Assertions.assertEquals(16,
+    assertEquals(16,
             cAuto.getQueueResourceQuotas().getEffectiveMinResource().getVirtualCores());
 
     // Under e, there's only one queue, so e1 should have what it's asking for
     CSQueue e1Auto = cs.getQueue("root.e-auto.e1-auto");
-    Assertions.assertEquals(2 / 32f, e1Auto.getAbsoluteCapacity(), EPSILON);
-    Assertions.assertEquals(-1f, e1Auto.getQueueCapacities().getWeight(), EPSILON);
-    Assertions.assertEquals(2000,
+    assertEquals(2 / 32f, e1Auto.getAbsoluteCapacity(), EPSILON);
+    assertEquals(-1f, e1Auto.getQueueCapacities().getWeight(), EPSILON);
+    assertEquals(2000,
             e1Auto.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
-    Assertions.assertEquals(2,
+    assertEquals(2,
             e1Auto.getQueueResourceQuotas().getEffectiveMinResource().getVirtualCores());
   }
 

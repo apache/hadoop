@@ -36,11 +36,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,7 +68,14 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfigurationWithoutB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfigurationWithoutB1;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
-import static org.junit.jupiter.api.Assertions.*;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 public class TestCapacitySchedulerQueues {
@@ -122,7 +127,7 @@ public class TestCapacitySchedulerQueues {
    */
   @Test
   public void testParseQueue() throws IOException {
-    assertThrows(IOException.class, ()->{
+    assertThrows(IOException.class, () -> {
       CapacityScheduler cs = new CapacityScheduler();
       cs.setConf(new YarnConfiguration());
       cs.setRMContext(rm.getRMContext());
@@ -217,15 +222,13 @@ public class TestCapacitySchedulerQueues {
     cs.reinitialize(conf, rm.getRMContext());
     checkQueueStructureCapacities(cs);
 
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-,         cs.getMaximumResourceCapability().getMemorySize(), "max allocation in CS");
-    assertEquals(
-       Resources.none()
-,         conf.getQueueMaximumAllocation(A1), "max allocation for A1");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-,         ResourceUtils.fetchMaximumAllocationFromConfig(conf).getMemorySize(), "max allocation");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        cs.getMaximumResourceCapability().getMemorySize(), "max allocation in CS");
+    assertEquals(Resources.none(),
+        conf.getQueueMaximumAllocation(A1), "max allocation for A1");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        ResourceUtils.fetchMaximumAllocationFromConfig(conf).getMemorySize(),
+        "max allocation");
 
     CSQueue rootQueue = cs.getRootQueue();
     CSQueue queueA = findQueue(rootQueue, A.getFullPath());
@@ -239,8 +242,8 @@ public class TestCapacitySchedulerQueues {
       cs.reinitialize(conf, rm.getRMContext());
       fail("should have thrown exception");
     } catch (IOException e) {
-      assertTrue(
-         e.getCause().toString().contains("not be decreased"), "max allocation exception");
+      assertTrue(e.getCause().toString().contains("not be decreased"),
+          "max allocation exception");
     }
 
     setMaxAllocMb(conf, A1, 8192);
@@ -252,8 +255,8 @@ public class TestCapacitySchedulerQueues {
       cs.reinitialize(conf, rm.getRMContext());
       fail("should have thrown exception");
     } catch (IOException e) {
-      assertTrue(
-         e.getCause().toString().contains("not be decreased"), "max allocation exception");
+      assertTrue(e.getCause().toString().contains("not be decreased"),
+          "max allocation exception");
     }
     cs.stop();
   }
@@ -273,8 +276,8 @@ public class TestCapacitySchedulerQueues {
       cs.reinitialize(conf, rm.getRMContext());
       fail("should have thrown exception");
     } catch (IOException e) {
-      assertTrue(
-         e.getCause().getMessage().contains("maximum allocation"), "maximum allocation exception");
+      assertTrue(e.getCause().getMessage().contains("maximum allocation"),
+         "maximum allocation exception");
     }
 
     setMaxAllocMb(conf, B3,
@@ -287,8 +290,8 @@ public class TestCapacitySchedulerQueues {
       cs.reinitialize(conf, rm.getRMContext());
       fail("should have thrown exception");
     } catch (IOException e) {
-      assertTrue(
-         e.getCause().getMessage().contains("maximum allocation"), "maximum allocation exception");
+      assertTrue(e.getCause().getMessage().contains("maximum allocation"),
+          "maximum allocation exception");
     }
     cs.stop();
   }
@@ -314,53 +317,51 @@ public class TestCapacitySchedulerQueues {
     CSQueue queueA = findQueue(rootQueue, A.getFullPath());
     CSQueue queueA1 = findQueue(queueA, A1.getFullPath());
 
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-,         cs.getMaximumResourceCapability().getMemorySize(), "max capability MB in CS");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-,         cs.getMaximumResourceCapability().getVirtualCores(), "max capability vcores in CS");
-    assertEquals(
-       4096
-,         queueA1.getMaximumAllocation().getMemorySize(), "max allocation MB A1");
-    assertEquals(
-       2
-,         queueA1.getMaximumAllocation().getVirtualCores(), "max allocation vcores A1");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-,         ResourceUtils.fetchMaximumAllocationFromConfig(conf).getMemorySize(), "cluster max allocation MB");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-,         ResourceUtils.fetchMaximumAllocationFromConfig(conf).getVirtualCores(), "cluster max allocation vcores");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        cs.getMaximumResourceCapability().getMemorySize(),
+        "max capability MB in CS");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        cs.getMaximumResourceCapability().getVirtualCores(),
+        "max capability vcores in CS");
+    assertEquals(4096, queueA1.getMaximumAllocation().getMemorySize(),
+        "max allocation MB A1");
+    assertEquals(2, queueA1.getMaximumAllocation().getVirtualCores(),
+        "max allocation vcores A1");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        ResourceUtils.fetchMaximumAllocationFromConfig(conf).getMemorySize(),
+        "cluster max allocation MB");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        ResourceUtils.fetchMaximumAllocationFromConfig(conf).getVirtualCores(),
+        "cluster max allocation vcores");
 
-    assertEquals(4096
-,         queueA1.getMaximumAllocation().getMemorySize(), "queue max allocation");
+    assertEquals(4096, queueA1.getMaximumAllocation().getMemorySize(),
+        "queue max allocation");
 
     setMaxAllocMb(conf, A1, 6144);
     setMaxAllocVcores(conf, A1, 3);
     cs.reinitialize(conf, null);
     // conf will have changed but we shouldn't be able to change max allocation
     // for the actual queue
-    assertEquals(6144
-,         queueA1.getMaximumAllocation().getMemorySize(), "max allocation MB A1");
-    assertEquals(3
-,         queueA1.getMaximumAllocation().getVirtualCores(), "max allocation vcores A1");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-,         ResourceUtils.fetchMaximumAllocationFromConfig(conf).getMemorySize(), "max allocation MB cluster");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-,         ResourceUtils.fetchMaximumAllocationFromConfig(conf).getVirtualCores(), "max allocation vcores cluster");
-    assertEquals(6144
-,         queueA1.getMaximumAllocation().getMemorySize(), "queue max allocation MB");
-    assertEquals(3
-,         queueA1.getMaximumAllocation().getVirtualCores(), "queue max allocation vcores");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-,         cs.getMaximumResourceCapability().getMemorySize(), "max capability MB cluster");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-,         cs.getMaximumResourceCapability().getVirtualCores(), "cluster max capability vcores");
+    assertEquals(6144, queueA1.getMaximumAllocation().getMemorySize(),
+        "max allocation MB A1");
+    assertEquals(3, queueA1.getMaximumAllocation().getVirtualCores(),
+        "max allocation vcores A1");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        ResourceUtils.fetchMaximumAllocationFromConfig(conf).getMemorySize(),
+        "max allocation MB cluster");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        ResourceUtils.fetchMaximumAllocationFromConfig(conf).getVirtualCores(),
+        "max allocation vcores cluster");
+    assertEquals(6144, queueA1.getMaximumAllocation().getMemorySize(),
+        "queue max allocation MB");
+    assertEquals(3, queueA1.getMaximumAllocation().getVirtualCores(),
+        "queue max allocation vcores");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        cs.getMaximumResourceCapability().getMemorySize(),
+        "max capability MB cluster");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        cs.getMaximumResourceCapability().getVirtualCores(),
+        "cluster max capability vcores");
     cs.stop();
   }
 
@@ -381,18 +382,18 @@ public class TestCapacitySchedulerQueues {
 
     checkQueueStructureCapacities(cs);
 
-    assertEquals(10240
-,         cs.getMaximumResourceCapability().getMemorySize(), "max allocation MB in CS");
-    assertEquals(10
-,         cs.getMaximumResourceCapability().getVirtualCores(), "max allocation vcores in CS");
+    assertEquals(10240, cs.getMaximumResourceCapability().getMemorySize(),
+        "max allocation MB in CS");
+    assertEquals(10, cs.getMaximumResourceCapability().getVirtualCores(),
+        "max allocation vcores in CS");
 
     setMaxAllocMb(conf, 6144);
     try {
       cs.reinitialize(conf, rm.getRMContext());
       fail("should have thrown exception");
     } catch (IOException e) {
-      assertTrue(
-         e.getCause().toString().contains("not be decreased"), "max allocation exception");
+      assertTrue(e.getCause().toString().contains("not be decreased"),
+          "max allocation exception");
     }
 
     setMaxAllocMb(conf, 10240);
@@ -403,8 +404,8 @@ public class TestCapacitySchedulerQueues {
       cs.reinitialize(conf, rm.getRMContext());
       fail("should have thrown exception");
     } catch (IOException e) {
-      assertTrue(
-         e.getCause().toString().contains("not be decreased"), "max allocation exception");
+      assertTrue(e.getCause().toString().contains("not be decreased"),
+          "max allocation exception");
     }
     cs.stop();
   }
@@ -426,10 +427,10 @@ public class TestCapacitySchedulerQueues {
     cs.reinitialize(conf, rm.getRMContext());
     checkQueueStructureCapacities(cs);
 
-    assertEquals(10240
-,         cs.getMaximumResourceCapability().getMemorySize(), "max allocation MB in CS");
-    assertEquals(10
-,         cs.getMaximumResourceCapability().getVirtualCores(), "max allocation vcores in CS");
+    assertEquals(10240, cs.getMaximumResourceCapability().getMemorySize(),
+        "max allocation MB in CS");
+    assertEquals(10, cs.getMaximumResourceCapability().getVirtualCores(),
+        "max allocation vcores in CS");
 
     CSQueue rootQueue = cs.getRootQueue();
     CSQueue queueA = findQueue(rootQueue, A.getFullPath());
@@ -438,40 +439,40 @@ public class TestCapacitySchedulerQueues {
     CSQueue queueA2 = findQueue(queueA, A2.getFullPath());
     CSQueue queueB2 = findQueue(queueB, B2.getFullPath());
 
-    assertEquals(4096
-,         queueA1.getMaximumAllocation().getMemorySize(), "queue A1 max allocation MB");
-    assertEquals(4
-,         queueA1.getMaximumAllocation().getVirtualCores(), "queue A1 max allocation vcores");
-    assertEquals(10240
-,         queueA2.getMaximumAllocation().getMemorySize(), "queue A2 max allocation MB");
-    assertEquals(10
-,         queueA2.getMaximumAllocation().getVirtualCores(), "queue A2 max allocation vcores");
-    assertEquals(10240
-,         queueB2.getMaximumAllocation().getMemorySize(), "queue B2 max allocation MB");
-    assertEquals(10
-,         queueB2.getMaximumAllocation().getVirtualCores(), "queue B2 max allocation vcores");
+    assertEquals(4096, queueA1.getMaximumAllocation().getMemorySize(),
+        "queue A1 max allocation MB");
+    assertEquals(4, queueA1.getMaximumAllocation().getVirtualCores(),
+        "queue A1 max allocation vcores");
+    assertEquals(10240, queueA2.getMaximumAllocation().getMemorySize(),
+        "queue A2 max allocation MB");
+    assertEquals(10, queueA2.getMaximumAllocation().getVirtualCores(),
+        "queue A2 max allocation vcores");
+    assertEquals(10240, queueB2.getMaximumAllocation().getMemorySize(),
+        "queue B2 max allocation MB");
+    assertEquals(10, queueB2.getMaximumAllocation().getVirtualCores(),
+        "queue B2 max allocation vcores");
 
     setMaxAllocMb(conf, 12288);
     setMaxAllocVcores(conf, 12);
     cs.reinitialize(conf, null);
     // cluster level setting should change and any queues without
     // per queue setting
-    assertEquals(12288
-,         cs.getMaximumResourceCapability().getMemorySize(), "max allocation MB in CS");
-    assertEquals(12
-,         cs.getMaximumResourceCapability().getVirtualCores(), "max allocation vcores in CS");
-    assertEquals(4096
-,         queueA1.getMaximumAllocation().getMemorySize(), "queue A1 max MB allocation");
-    assertEquals(4
-,         queueA1.getMaximumAllocation().getVirtualCores(), "queue A1 max vcores allocation");
-    assertEquals(12288
-,         queueA2.getMaximumAllocation().getMemorySize(), "queue A2 max MB allocation");
-    assertEquals(12
-,         queueA2.getMaximumAllocation().getVirtualCores(), "queue A2 max vcores allocation");
-    assertEquals(12288
-,         queueB2.getMaximumAllocation().getMemorySize(), "queue B2 max MB allocation");
-    assertEquals(12
-,         queueB2.getMaximumAllocation().getVirtualCores(), "queue B2 max vcores allocation");
+    assertEquals(12288, cs.getMaximumResourceCapability().getMemorySize(),
+        "max allocation MB in CS");
+    assertEquals(12, cs.getMaximumResourceCapability().getVirtualCores(),
+        "max allocation vcores in CS");
+    assertEquals(4096, queueA1.getMaximumAllocation().getMemorySize(),
+        "queue A1 max MB allocation");
+    assertEquals(4, queueA1.getMaximumAllocation().getVirtualCores(),
+        "queue A1 max vcores allocation");
+    assertEquals(12288, queueA2.getMaximumAllocation().getMemorySize(),
+        "queue A2 max MB allocation");
+    assertEquals(12, queueA2.getMaximumAllocation().getVirtualCores(),
+        "queue A2 max vcores allocation");
+    assertEquals(12288, queueB2.getMaximumAllocation().getMemorySize(),
+        "queue B2 max MB allocation");
+    assertEquals(12, queueB2.getMaximumAllocation().getVirtualCores(),
+        "queue B2 max vcores allocation");
     cs.stop();
   }
 
@@ -494,7 +495,7 @@ public class TestCapacitySchedulerQueues {
     Map<String, CSQueue> queues =
         cs.getCapacitySchedulerQueueManager().getShortNameQueues();
     String b1QTobeDeleted = "b1";
-    LeafQueue csB1Queue = Mockito.spy((LeafQueue) queues.get(b1QTobeDeleted));
+    LeafQueue csB1Queue = spy((LeafQueue) queues.get(b1QTobeDeleted));
     when(csB1Queue.getState()).thenReturn(QueueState.DRAINING)
         .thenReturn(QueueState.STOPPED);
     cs.getCapacitySchedulerQueueManager().addQueue(b1QTobeDeleted, csB1Queue);
@@ -535,20 +536,20 @@ public class TestCapacitySchedulerQueues {
     // set the configurations such that it fails once but should be successfull
     // next time
     queues = cs.getCapacitySchedulerQueueManager().getShortNameQueues();
-    CSQueue bQueue = Mockito.spy((ParentQueue) queues.get("b"));
+    CSQueue bQueue = spy((ParentQueue) queues.get("b"));
     when(bQueue.getState()).thenReturn(QueueState.DRAINING)
         .thenReturn(QueueState.STOPPED);
     cs.getCapacitySchedulerQueueManager().addQueue("b", bQueue);
 
-    bQueue = Mockito.spy((LeafQueue) queues.get("b1"));
+    bQueue = spy((LeafQueue) queues.get("b1"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
     cs.getCapacitySchedulerQueueManager().addQueue("b1", bQueue);
 
-    bQueue = Mockito.spy((LeafQueue) queues.get("b2"));
+    bQueue = spy((LeafQueue) queues.get("b2"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
     cs.getCapacitySchedulerQueueManager().addQueue("b2", bQueue);
 
-    bQueue = Mockito.spy((LeafQueue) queues.get("b3"));
+    bQueue = spy((LeafQueue) queues.get("b3"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
     cs.getCapacitySchedulerQueueManager().addQueue("b3", bQueue);
 
@@ -577,12 +578,12 @@ public class TestCapacitySchedulerQueues {
     String message =
         "Refresh needs to support delete of Parent queue and its children.";
     assertNull(queueB, message);
-    assertNull(
-        cs.getCapacitySchedulerQueueManager().getQueues().get("b"), message);
-    assertNull(
-        cs.getCapacitySchedulerQueueManager().getQueues().get("b1"), message);
-    assertNull(
-        cs.getCapacitySchedulerQueueManager().getQueues().get("b2"), message);
+    assertNull(cs.getCapacitySchedulerQueueManager().getQueues().get("b"),
+        message);
+    assertNull(cs.getCapacitySchedulerQueueManager().getQueues().get("b1"),
+        message);
+    assertNull(cs.getCapacitySchedulerQueueManager().getQueues().get("b2"),
+        message);
 
     cs.stop();
   }
@@ -606,16 +607,16 @@ public class TestCapacitySchedulerQueues {
     Map<String, CSQueue> queues =
         cs.getCapacitySchedulerQueueManager().getShortNameQueues();
 
-    CSQueue bQueue = Mockito.spy((LeafQueue) queues.get("b1"));
+    CSQueue bQueue = spy((LeafQueue) queues.get("b1"));
     when(bQueue.getState()).thenReturn(QueueState.RUNNING)
         .thenReturn(QueueState.STOPPED);
     cs.getCapacitySchedulerQueueManager().addQueue("b1", bQueue);
 
-    bQueue = Mockito.spy((LeafQueue) queues.get("b2"));
+    bQueue = spy((LeafQueue) queues.get("b2"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
     cs.getCapacitySchedulerQueueManager().addQueue("b2", bQueue);
 
-    bQueue = Mockito.spy((LeafQueue) queues.get("b3"));
+    bQueue = spy((LeafQueue) queues.get("b3"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
     cs.getCapacitySchedulerQueueManager().addQueue("b3", bQueue);
 
@@ -644,17 +645,17 @@ public class TestCapacitySchedulerQueues {
     CSQueue rootQueue = cs.getRootQueue();
     CSQueue queueB = findQueue(rootQueue, B.getFullPath());
     assertNotNull(queueB, "Parent Queue B should not be deleted");
-    Assertions.assertTrue(
-       queueB instanceof LeafQueue, "As Queue'B children are not deleted");
+    assertTrue(queueB instanceof LeafQueue,
+        "As Queue'B children are not deleted");
 
     String message =
         "Refresh needs to support delete of all children of Parent queue.";
-    assertNull(
-        cs.getCapacitySchedulerQueueManager().getQueues().get("b3"), message);
-    assertNull(
-        cs.getCapacitySchedulerQueueManager().getQueues().get("b1"), message);
-    assertNull(
-        cs.getCapacitySchedulerQueueManager().getQueues().get("b2"), message);
+    assertNull(cs.getCapacitySchedulerQueueManager().getQueues().get("b3"),
+        message);
+    assertNull(cs.getCapacitySchedulerQueueManager().getQueues().get("b1"),
+        message);
+    assertNull(cs.getCapacitySchedulerQueueManager().getQueues().get("b2"),
+        message);
 
     cs.stop();
   }
@@ -677,7 +678,7 @@ public class TestCapacitySchedulerQueues {
 
     String targetQueue = "b1";
     CSQueue b1 = cs.getQueue(targetQueue);
-    Assertions.assertEquals(QueueState.RUNNING, b1.getState());
+    assertEquals(QueueState.RUNNING, b1.getState());
 
     // test if we can convert a leaf queue which is in RUNNING state
     conf = new CapacitySchedulerConfiguration();
@@ -695,7 +696,7 @@ public class TestCapacitySchedulerQueues {
     setupQueueConfiguration(conf);
     conf.set("yarn.scheduler.capacity.root.b.b1.state", "STOPPED");
     cs.reinitialize(conf, rm.getRMContext());
-    Assertions.assertEquals(QueueState.STOPPED, b1.getState());
+    assertEquals(QueueState.STOPPED, b1.getState());
 
     // test if we can convert a leaf queue which is in STOPPED state
     conf = new CapacitySchedulerConfiguration();
@@ -707,9 +708,9 @@ public class TestCapacitySchedulerQueues {
           + " to convert a leaf queue WITHOUT running apps");
     }
     b1 = cs.getQueue(targetQueue);
-    Assertions.assertTrue(b1 instanceof AbstractParentQueue);
-    Assertions.assertEquals(QueueState.RUNNING, b1.getState());
-    Assertions.assertTrue(!b1.getChildQueues().isEmpty());
+    assertTrue(b1 instanceof AbstractParentQueue);
+    assertEquals(QueueState.RUNNING, b1.getState());
+    assertTrue(!b1.getChildQueues().isEmpty());
     cs.stop();
   }
 
@@ -746,29 +747,26 @@ public class TestCapacitySchedulerQueues {
     CSQueue queueB1 = findQueue(queueB, B1.getFullPath());
     CSQueue queueB2 = findQueue(queueB, B2.getFullPath());
 
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-,         cs.getMaximumResourceCapability().getMemorySize(), "max capability MB in CS");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-,         cs.getMaximumResourceCapability().getVirtualCores(), "max capability vcores in CS");
-    assertEquals(
-       6144
-,         queueA1.getMaximumAllocation().getMemorySize(), "max allocation MB A1");
-    assertEquals(
-       2
-,         queueA1.getMaximumAllocation().getVirtualCores(), "max allocation vcores A1");
-    assertEquals(4096
-,         queueA2.getMaximumAllocation().getMemorySize(), "max allocation MB A2");
-    assertEquals(
-       2
-,         queueA2.getMaximumAllocation().getVirtualCores(), "max allocation vcores A2");
-    assertEquals(5120
-,         queueB.getMaximumAllocation().getMemorySize(), "max allocation MB B");
-    assertEquals(5120
-,         queueB1.getMaximumAllocation().getMemorySize(), "max allocation MB B1");
-    assertEquals(1024
-,         queueB2.getMaximumAllocation().getMemorySize(), "max allocation MB B2");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        cs.getMaximumResourceCapability().getMemorySize(),
+        "max capability MB in CS");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        cs.getMaximumResourceCapability().getVirtualCores(),
+        "max capability vcores in CS");
+    assertEquals(6144, queueA1.getMaximumAllocation().getMemorySize(),
+        "max allocation MB A1");
+    assertEquals(2, queueA1.getMaximumAllocation().getVirtualCores(),
+        "max allocation vcores A1");
+    assertEquals(4096, queueA2.getMaximumAllocation().getMemorySize(),
+        "max allocation MB A2");
+    assertEquals(2, queueA2.getMaximumAllocation().getVirtualCores(),
+        "max allocation vcores A2");
+    assertEquals(5120, queueB.getMaximumAllocation().getMemorySize(),
+        "max allocation MB B");
+    assertEquals(5120, queueB1.getMaximumAllocation().getMemorySize(),
+        "max allocation MB B1");
+    assertEquals(1024, queueB2.getMaximumAllocation().getMemorySize(),
+        "max allocation MB B2");
 
     // Test get the max-allocation from different parent
     unsetMaxAllocation(conf, A1);
@@ -780,24 +778,20 @@ public class TestCapacitySchedulerQueues {
 
     cs.reinitialize(conf, rm.getRMContext());
 
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-,         cs.getMaximumResourceCapability().getMemorySize(), "max capability MB in CS");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-,         cs.getMaximumResourceCapability().getVirtualCores(), "max capability vcores in CS");
-    assertEquals(
-       8192
-,         queueA1.getMaximumAllocation().getMemorySize(), "max allocation MB A1");
-    assertEquals(
-       2
-,         queueA1.getMaximumAllocation().getVirtualCores(), "max allocation vcores A1");
-    assertEquals(
-       6144
-,         queueB1.getMaximumAllocation().getMemorySize(), "max allocation MB B1");
-    assertEquals(
-       2
-,         queueB1.getMaximumAllocation().getVirtualCores(), "max allocation vcores B1");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        cs.getMaximumResourceCapability().getMemorySize(),
+        "max capability MB in CS");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        cs.getMaximumResourceCapability().getVirtualCores(),
+        "max capability vcores in CS");
+    assertEquals(8192, queueA1.getMaximumAllocation().getMemorySize(),
+        "max allocation MB A1");
+    assertEquals(2, queueA1.getMaximumAllocation().getVirtualCores(),
+        "max allocation vcores A1");
+    assertEquals(6144, queueB1.getMaximumAllocation().getMemorySize(),
+        "max allocation MB B1");
+    assertEquals(2, queueB1.getMaximumAllocation().getVirtualCores(),
+        "max allocation vcores B1");
 
     // Test the default
     unsetMaxAllocation(conf, ROOT);
@@ -805,24 +799,22 @@ public class TestCapacitySchedulerQueues {
     unsetMaxAllocation(conf, A1);
     cs.reinitialize(conf, rm.getRMContext());
 
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-,         cs.getMaximumResourceCapability().getMemorySize(), "max capability MB in CS");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-,         cs.getMaximumResourceCapability().getVirtualCores(), "max capability vcores in CS");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-,         queueA1.getMaximumAllocation().getMemorySize(), "max allocation MB A1");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-,         queueA1.getMaximumAllocation().getVirtualCores(), "max allocation vcores A1");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-,         queueA2.getMaximumAllocation().getMemorySize(), "max allocation MB A2");
-    assertEquals(
-       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-,         queueA2.getMaximumAllocation().getVirtualCores(), "max allocation vcores A2");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        cs.getMaximumResourceCapability().getMemorySize(),
+        "max capability MB in CS");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        cs.getMaximumResourceCapability().getVirtualCores(),
+        "max capability vcores in CS");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        queueA1.getMaximumAllocation().getMemorySize(), "max allocation MB A1");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        queueA1.getMaximumAllocation().getVirtualCores(),
+        "max allocation vcores A1");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        queueA2.getMaximumAllocation().getMemorySize(), "max allocation MB A2");
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        queueA2.getMaximumAllocation().getVirtualCores(),
+        "max allocation vcores A2");
     cs.stop();
   }
 
@@ -854,8 +846,8 @@ public class TestCapacitySchedulerQueues {
       cs.reinitialize(conf, rm.getRMContext());
       fail("Queue Root maximum allocation can't exceed the cluster setting");
     } catch (Exception e) {
-      assertTrue(
-         e.getCause().getMessage().contains("maximum allocation"), "maximum allocation exception");
+      assertTrue(e.getCause().getMessage().contains("maximum allocation"),
+          "maximum allocation exception");
     }
 
     setMaxAllocation(conf, ROOT,
@@ -866,16 +858,16 @@ public class TestCapacitySchedulerQueues {
       cs.reinitialize(conf, rm.getRMContext());
       fail("Queue A1 maximum allocation can't exceed the cluster setting");
     } catch (Exception e) {
-      assertTrue(
-         e.getCause().getMessage().contains("maximum allocation"), "maximum allocation exception");
+      assertTrue(e.getCause().getMessage().contains("maximum allocation"),
+          "maximum allocation exception");
     }
     setMaxAllocation(conf, A1, "memory-mb=8192" + ",vcores=" + largerVcores);
     try {
       cs.reinitialize(conf, rm.getRMContext());
       fail("Queue A1 maximum allocation can't exceed the cluster setting");
     } catch (Exception e) {
-      assertTrue(
-         e.getCause().getMessage().contains("maximum allocation"), "maximum allocation exception");
+      assertTrue(e.getCause().getMessage().contains("maximum allocation"),
+          "maximum allocation exception");
     }
     cs.stop();
   }

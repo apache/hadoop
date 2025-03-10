@@ -252,20 +252,20 @@ public class TestCapacitySchedulerMaxParallelApps {
 
   private void verifyRunnableAppsInParent(ParentQueue queue,
       int expectedRunnable) {
-    assertEquals(expectedRunnable
-,         queue.getNumRunnableApps(), "Num of runnable apps");
+    assertEquals(expectedRunnable, queue.getNumRunnableApps(),
+        "Num of runnable apps");
   }
 
   private void verifyRunnableAppsInLeaf(LeafQueue queue, int expectedRunnable,
       Set<ApplicationAttemptId> nonRunnableIds) {
-    assertEquals(expectedRunnable
-,         queue.getNumRunnableApps(), "Num of runnable apps");
+    assertEquals(expectedRunnable, queue.getNumRunnableApps(),
+        "Num of runnable apps");
 
     queue.getCopyOfNonRunnableAppSchedulables()
         .stream()
         .map(fca -> fca.getApplicationAttemptId())
-        .forEach(id -> assertTrue(
-         nonRunnableIds.contains(id), id + " not found as non-runnable"));
+        .forEach(id -> assertTrue(nonRunnableIds.contains(id),
+        id + " not found as non-runnable"));
   }
 
   private void verifyRunningAndAcceptedApps(int expectedRunning,
