@@ -1392,7 +1392,7 @@ software.amazon.awssdk.metrics.LoggingMetricPublisher
 ```
 
 ```text
-INFO  metrics.LoggingMetricPublisher (LoggerAdapter.java:info(165)) - Metrics published: 
+INFO  metrics.LoggingMetricPublisher (LoggerAdapter.java:info(165)) - Metrics published:
 MetricCollection(name=ApiCall, metrics=[
 MetricRecord(metric=MarshallingDuration, value=PT0.000092041S),
 MetricRecord(metric=RetryCount, value=0),
