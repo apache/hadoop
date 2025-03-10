@@ -17,17 +17,19 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
-import org.junit.jupiter.api.AfterEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -95,7 +97,7 @@ public class TestQueueMappings {
     } catch (IOException ioex) {
       fail = true;
     }
-    Assertions.assertTrue(fail, "queue initialization failed for non-existent q");
+    assertTrue(fail, "queue initialization failed for non-existent q");
   }
 
   @Test
@@ -118,25 +120,25 @@ public class TestQueueMappings {
         .parsePathString("leaf")
         .build();
 
-    Assertions.assertEquals("leaf", leafOnly.getQueue());
-    Assertions.assertEquals(null, leafOnly.getParentQueue());
-    Assertions.assertEquals("leaf", leafOnly.getFullPath());
+    assertEquals("leaf", leafOnly.getQueue());
+    assertEquals(null, leafOnly.getParentQueue());
+    assertEquals("leaf", leafOnly.getFullPath());
 
     QueueMapping twoLevels = QueueMapping.QueueMappingBuilder.create()
         .parsePathString("root.leaf")
         .build();
 
-    Assertions.assertEquals("leaf", twoLevels.getQueue());
-    Assertions.assertEquals("root", twoLevels.getParentQueue());
-    Assertions.assertEquals("root.leaf", twoLevels.getFullPath());
+    assertEquals("leaf", twoLevels.getQueue());
+    assertEquals("root", twoLevels.getParentQueue());
+    assertEquals("root.leaf", twoLevels.getFullPath());
 
     QueueMapping deep = QueueMapping.QueueMappingBuilder.create()
         .parsePathString("root.a.b.c.d.e.leaf")
         .build();
 
-    Assertions.assertEquals("leaf", deep.getQueue());
-    Assertions.assertEquals("root.a.b.c.d.e", deep.getParentQueue());
-    Assertions.assertEquals("root.a.b.c.d.e.leaf", deep.getFullPath());
+    assertEquals("leaf", deep.getQueue());
+    assertEquals("root.a.b.c.d.e", deep.getParentQueue());
+    assertEquals("root.a.b.c.d.e.leaf", deep.getFullPath());
   }
 
   @Test
@@ -165,7 +167,7 @@ public class TestQueueMappings {
     } catch (IOException ex) {
       fail = true;
     }
-    Assertions.assertTrue(
+    assertTrue(
        fail, "invalid mapping did not throw exception for " + reason);
   }
 }

@@ -41,8 +41,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 public abstract class QueueACLsTestBase extends ACLsTestBase {
 
@@ -59,7 +59,7 @@ public abstract class QueueACLsTestBase extends ACLsTestBase {
   abstract public void updateConfigWithDAndD1Queues(String rootAcl,
       String queueDAcl, String queueD1Acl) throws IOException;
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (resourceManager != null) {
       resourceManager.stop();

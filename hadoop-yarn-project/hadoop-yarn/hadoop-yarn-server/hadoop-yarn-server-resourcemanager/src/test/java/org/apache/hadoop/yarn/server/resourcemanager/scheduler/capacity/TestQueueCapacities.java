@@ -22,20 +22,17 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-@RunWith(Parameterized.class)
 public class TestQueueCapacities {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestQueueCapacities.class);
   private String suffix;
 
-  @Parameterized.Parameters
   public static Collection<String[]> getParameters() {
     return Arrays.asList(new String[][] { 
         { "Capacity" },
@@ -51,8 +48,8 @@ public class TestQueueCapacities {
         { "NormalizedWeight" }});
   }
 
-  public TestQueueCapacities(String suffix) {
-    this.suffix = suffix;
+  public void initTestQueueCapacities(String pSuffix) {
+    this.suffix = pSuffix;
   }
 
   private static float get(QueueCapacities obj, String suffix,
@@ -115,15 +112,19 @@ public class TestQueueCapacities {
     Assertions.assertEquals(2f, get(qc, suffix, label), 1e-8);
   }
 
-  @Test
-  public void testModifyAndRead() throws Exception {
+  @MethodSource("getParameters")
+  @ParameterizedTest
+  public void testModifyAndRead(String pSuffix) throws Exception {
+    initTestQueueCapacities(pSuffix);
     LOG.info("Test - " + suffix);
     internalTestModifyAndRead(null);
     internalTestModifyAndRead("label");
   }
 
-  @Test
-  public void testDefaultValues() {
+  @MethodSource("getParameters")
+  @ParameterizedTest
+  public void testDefaultValues(String pSuffix) {
+    initTestQueueCapacities(pSuffix);
     QueueCapacities qc = new QueueCapacities(false);
     Assertions.assertEquals(-1, qc.getWeight(""), 1e-6);
     Assertions.assertEquals(-1, qc.getWeight("x"), 1e-6);

@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assume.assumeThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -57,7 +61,6 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -405,7 +408,7 @@ public class TestParentQueue {
 
     // If the new queue mode is used it's allowed to over allocate the resources,
     // as they'll be scaled down accordingly
-    assumeThat(csConf.isLegacyQueueMode(), is(true));
+    assumeTrue(csConf.isLegacyQueueMode() == true);
 
     CSQueueStore queues = new CSQueueStore();
     boolean exceptionOccurred = false;
@@ -417,7 +420,7 @@ public class TestParentQueue {
       exceptionOccurred = true;
     }
     if (!exceptionOccurred) {
-      Assertions.fail("Capacity is more then 100% so should be failed.");
+      fail("Capacity is more then 100% so should be failed.");
     }
     csConf.setCapacity(Q_A, 30);
     csConf.setCapacity(Q_B, 70);
@@ -432,7 +435,7 @@ public class TestParentQueue {
       exceptionOccurred = true;
     }
     if (exceptionOccurred) {
-      Assertions.fail("Capacity is 100% so should not be failed.");
+      fail("Capacity is 100% so should not be failed.");
     }
     csConf.setCapacity(Q_A, 30);
     csConf.setCapacity(Q_B, 70.005F);
@@ -447,8 +450,7 @@ public class TestParentQueue {
       exceptionOccurred = true;
     }
     if (exceptionOccurred) {
-      Assertions
-          .fail("Capacity is under PRECISION which is .05% so should not be failed.");
+      fail("Capacity is under PRECISION which is .05% so should not be failed.");
     }
   }
   
@@ -674,7 +676,7 @@ public class TestParentQueue {
 
       // If the new queue mode is used it's allowed to have
       // zero-capacity queues under a non-zero parent
-      assumeThat(csConf.isLegacyQueueMode(), is(true));
+      assumeTrue(csConf.isLegacyQueueMode() == true);
 
       // set child queues capacity to 0 when parents not 0
       csConf.setCapacity(Q_B1, 0);
@@ -697,7 +699,7 @@ public class TestParentQueue {
 
       // If the new queue mode is used it's allowed to have
       // non-zero capacity queues under a zero capacity parent
-      assumeThat(csConf.isLegacyQueueMode(), is(true));
+      assumeTrue(csConf.isLegacyQueueMode() == true);
 
       // set parent capacity to 0 when child not 0
       csConf.setCapacity(Q_B, 0);
@@ -738,7 +740,7 @@ public class TestParentQueue {
 
       // If the new queue mode is used it's allowed to have
       // non-zero capacity queues under a zero capacity parent
-      assumeThat(csConf.isLegacyQueueMode(), is(true));
+      assumeTrue(csConf.isLegacyQueueMode() == true);
 
       // set parent capacity to 0 when sum(children) is 50
       // and allow zero capacity sum

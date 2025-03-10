@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,7 +33,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placemen
 import org.assertj.core.util.Sets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.ExpectedException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestMappingRuleCreator {
   private static final String MATCH_ALL = "*";
@@ -52,9 +53,6 @@ public class TestMappingRuleCreator {
   private VariableContext variableContext;
   private MappingRulesDescription description;
   private Rule rule;
-
-  @org.junit.Rule
-  public ExpectedException expected = ExpectedException.none();
 
   @BeforeEach
   public void setup() {
@@ -106,13 +104,18 @@ public class TestMappingRuleCreator {
 
   @Test
   public void testAllGroupMatcherFailsDueToMatchString() {
-    rule.setType(Type.GROUP);
 
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("Cannot match '*' for groups");
 
-    // fails because "*" is not applicable to group type
-    ruleCreator.getMappingRules(description);
+    IllegalArgumentException illegalArgumentException =
+        assertThrows(IllegalArgumentException.class, () -> {
+      rule.setType(Type.GROUP);
+      // fails because "*" is not applicable to group type
+      ruleCreator.getMappingRules(description);
+    });
+
+    assertTrue(illegalArgumentException.getMessage().
+        contains("Cannot match '*' for groups"));
+
   }
 
   @Test
@@ -166,18 +169,19 @@ public class TestMappingRuleCreator {
     rule.setValue("root.users.default");
 
     verifyNoPlacementOccurs();
-    assertEquals("Default queue", "root.users.default",
-        variableContext.get("%default"));
+    assertEquals("root.users.default",
+        variableContext.get("%default"), "Default queue");
   }
 
   @Test
   public void testSetDefaultRuleWithMissingQueue() {
-    rule.setPolicy(Policy.SET_DEFAULT_QUEUE);
+    IllegalArgumentException illegalArgumentException =
+        assertThrows(IllegalArgumentException.class, () -> {
+          rule.setPolicy(Policy.SET_DEFAULT_QUEUE);
+          ruleCreator.getMappingRules(description);
+        });
 
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("default queue is undefined");
-
-    ruleCreator.getMappingRules(description);
+    assertTrue(illegalArgumentException.getMessage().contains("default queue is undefined"));
   }
 
   @Test
@@ -262,12 +266,14 @@ public class TestMappingRuleCreator {
 
   @Test
   public void testCustomRuleWithMissingQueue() {
-    rule.setPolicy(Policy.CUSTOM);
+    IllegalArgumentException illegalArgumentException =
+        assertThrows(IllegalArgumentException.class, () -> {
+          rule.setPolicy(Policy.CUSTOM);
+          ruleCreator.getMappingRules(description);
+        });
 
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("custom queue is undefined");
+    assertTrue(illegalArgumentException.getMessage().contains("custom queue is undefined"));
 
-    ruleCreator.getMappingRules(description);
   }
 
   @Test
@@ -371,42 +377,51 @@ public class TestMappingRuleCreator {
 
   @Test
   public void testTypeUnset() {
-    rule.setType(null);
+    IllegalArgumentException illegalArgumentException =
+        assertThrows(IllegalArgumentException.class, () -> {
+          rule.setType(null);
+          ruleCreator.getMappingRules(description);
+        });
 
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("Rule type is undefined");
-
-    ruleCreator.getMappingRules(description);
+    assertTrue(illegalArgumentException.getMessage().contains("Rule type is undefined"));
   }
 
   @Test
   public void testMatchesUnset() {
-    rule.setMatches(null);
 
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("Match string is undefined");
+    IllegalArgumentException illegalArgumentException =
+        assertThrows(IllegalArgumentException.class, ()->{
+          rule.setMatches(null);
+          ruleCreator.getMappingRules(description);
+        });
 
-    ruleCreator.getMappingRules(description);
+    assertTrue(illegalArgumentException.getMessage().contains("Match string is undefined"));
+
   }
 
   @Test
   public void testMatchesEmpty() {
-    rule.setMatches("");
 
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("Match string is empty");
+    IllegalArgumentException illegalArgumentException =
+        assertThrows(IllegalArgumentException.class, ()->{
+          rule.setMatches("");
+          ruleCreator.getMappingRules(description);
+        });
 
-    ruleCreator.getMappingRules(description);
+    assertTrue(illegalArgumentException.getMessage().contains("Match string is empty"));
   }
 
   @Test
   public void testPolicyUnset() {
     rule.setPolicy(null);
 
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("Rule policy is undefined");
+    IllegalArgumentException illegalArgumentException =
+        assertThrows(IllegalArgumentException.class, ()->{
+          rule.setPolicy(null);
+          ruleCreator.getMappingRules(description);
+        });
 
-    ruleCreator.getMappingRules(description);
+    assertTrue(illegalArgumentException.getMessage().contains("Rule policy is undefined"));
   }
 
   private void prepareMappingRuleDescription() {

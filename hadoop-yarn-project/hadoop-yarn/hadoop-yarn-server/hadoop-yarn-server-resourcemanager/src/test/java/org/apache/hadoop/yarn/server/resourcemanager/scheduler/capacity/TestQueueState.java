@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -41,7 +44,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -86,16 +88,16 @@ public class TestQueueState {
     cs.init(conf);
 
     //by default, the state of both queues should be RUNNING
-    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
-    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q2).getState());
+    assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
+    assertEquals(QueueState.RUNNING, cs.getQueue(Q2).getState());
 
     // Change the state of Q1 to STOPPED, and re-initiate the CS
     csConf.setState(Q1_PATH, QueueState.STOPPED);
     conf = new YarnConfiguration(csConf);
     cs.reinitialize(conf, rmContext);
     // The state of Q1 and its child: Q2 should be STOPPED
-    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q1).getState());
-    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
+    assertEquals(QueueState.STOPPED, cs.getQueue(Q1).getState());
+    assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
 
     // Change the state of Q1 to RUNNING, and change the state of Q2 to STOPPED
     csConf.setState(Q1_PATH, QueueState.RUNNING);
@@ -103,8 +105,8 @@ public class TestQueueState {
     conf = new YarnConfiguration(csConf);
     // reinitialize the CS, the operation should be successful
     cs.reinitialize(conf, rmContext);
-    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
-    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
+    assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
+    assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
 
     // Change the state of Q1 to STOPPED, and change the state of Q2 to RUNNING
     csConf.setState(Q1_PATH, QueueState.STOPPED);
@@ -113,9 +115,9 @@ public class TestQueueState {
     // reinitialize the CS, the operation should be failed.
     try {
       cs.reinitialize(conf, rmContext);
-      Assertions.fail("Should throw an Exception.");
+      fail("Should throw an Exception.");
     } catch (Exception ex) {
-      Assertions.assertTrue(ex.getCause().getMessage().contains(
+      assertTrue(ex.getCause().getMessage().contains(
           "The parent queue:root.q1 cannot be STOPPED as the child" +
           " queue:root.q1.q2 is in RUNNING state."));
     }
@@ -142,9 +144,9 @@ public class TestQueueState {
     cs.init(conf);
 
     //by default, the state of ALL queues should be RUNNING
-    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
-    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q2).getState());
-    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
+    assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
+    assertEquals(QueueState.RUNNING, cs.getQueue(Q2).getState());
+    assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
 
     // submit an application to Q2
     ApplicationId appId = ApplicationId.newInstance(
@@ -159,41 +161,41 @@ public class TestQueueState {
     csConf.setState(Q2_PATH, QueueState.STOPPED);
     conf = new YarnConfiguration(csConf);
     cs.reinitialize(conf, rmContext);
-    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
-    Assertions.assertEquals(QueueState.DRAINING, cs.getQueue(Q2).getState());
-    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
+    assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
+    assertEquals(QueueState.DRAINING, cs.getQueue(Q2).getState());
+    assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
 
     // set Q2 state to RUNNING and do reinitialize.
     // Q2 should transit from DRAINING to RUNNING
     csConf.setState(Q2_PATH, QueueState.RUNNING);
     conf = new YarnConfiguration(csConf);
     cs.reinitialize(conf, rmContext);
-    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
-    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q2).getState());
-    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
+    assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
+    assertEquals(QueueState.RUNNING, cs.getQueue(Q2).getState());
+    assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
 
     // set Q2 state to stop and do reinitialize.
     csConf.setState(Q2_PATH, QueueState.STOPPED);
     conf = new YarnConfiguration(csConf);
     cs.reinitialize(conf, rmContext);
-    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
-    Assertions.assertEquals(QueueState.DRAINING, cs.getQueue(Q2).getState());
-    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
+    assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
+    assertEquals(QueueState.DRAINING, cs.getQueue(Q2).getState());
+    assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
 
     // set Q1 state to stop and do reinitialize.
     csConf.setState(Q1_PATH, QueueState.STOPPED);
     conf = new YarnConfiguration(csConf);
     cs.reinitialize(conf, rmContext);
-    Assertions.assertEquals(QueueState.DRAINING, cs.getQueue(Q1).getState());
-    Assertions.assertEquals(QueueState.DRAINING, cs.getQueue(Q2).getState());
-    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q3).getState());
+    assertEquals(QueueState.DRAINING, cs.getQueue(Q1).getState());
+    assertEquals(QueueState.DRAINING, cs.getQueue(Q2).getState());
+    assertEquals(QueueState.STOPPED, cs.getQueue(Q3).getState());
 
     // Active Q3, should fail
     csConf.setState(Q3_PATH, QueueState.RUNNING);
     conf = new YarnConfiguration(csConf);
     try {
       cs.reinitialize(conf, rmContext);
-      Assertions.fail("Should throw an Exception.");
+      fail("Should throw an Exception.");
     } catch (Exception ex) {
       // Do Nothing
     }
@@ -201,9 +203,9 @@ public class TestQueueState {
     // stop the app running in q2
     cs.getQueue(Q2).finishApplicationAttempt(app, Q2);
     cs.getQueue(Q2).finishApplication(appId, userName);
-    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q1).getState());
-    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
-    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q3).getState());
+    assertEquals(QueueState.STOPPED, cs.getQueue(Q1).getState());
+    assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
+    assertEquals(QueueState.STOPPED, cs.getQueue(Q3).getState());
     
   }
 
@@ -270,9 +272,9 @@ public class TestQueueState {
         (CapacityScheduler) rm.getRMContext().getScheduler();
     capacityScheduler.reinitialize(newConf, rm.getRMContext());
     // current queue state should be DRAINING
-    Assertions.assertEquals(QueueState.DRAINING,
+    assertEquals(QueueState.DRAINING,
         capacityScheduler.getQueue(Q2).getState());
-    Assertions.assertEquals(QueueState.DRAINING,
+    assertEquals(QueueState.DRAINING,
         capacityScheduler.getQueue(Q1).getState());
 
     // RM restart
@@ -283,9 +285,9 @@ public class TestQueueState {
     // queue state should be DRAINING after app recovered
     rm.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
     capacityScheduler = (CapacityScheduler) rm.getRMContext().getScheduler();
-    Assertions.assertEquals(QueueState.DRAINING,
+    assertEquals(QueueState.DRAINING,
         capacityScheduler.getQueue(Q2).getState());
-    Assertions.assertEquals(QueueState.DRAINING,
+    assertEquals(QueueState.DRAINING,
         capacityScheduler.getQueue(Q1).getState());
 
     // close rm

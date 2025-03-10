@@ -39,7 +39,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabels
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.PriorityUtilizationQueueOrderingPolicy;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -48,10 +47,11 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 import static java.util.Collections.emptySet;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils.toSet;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assume.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestQueueParsing {
 
@@ -431,17 +431,17 @@ public class TestQueueParsing {
     CapacityScheduler capacityScheduler = (CapacityScheduler) rm.getResourceScheduler();
 
     CSQueue a = capacityScheduler.getQueue("a");
-    Assertions.assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.15, a.getAbsoluteMaximumCapacity(), DELTA);
+    assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.15, a.getAbsoluteMaximumCapacity(), DELTA);
 
     CSQueue b1 = capacityScheduler.getQueue("b1");
-    Assertions.assertEquals(0.2 * 0.5, b1.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(
+    assertEquals(0.2 * 0.5, b1.getAbsoluteCapacity(), DELTA);
+    assertEquals(
         0.85, b1.getAbsoluteMaximumCapacity(), DELTA, "Parent B has no MAX_CAP");
 
     CSQueue c12 = capacityScheduler.getQueue("c12");
-    Assertions.assertEquals(0.7 * 0.5 * 0.45, c12.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.7 * 0.55 * 0.7,
+    assertEquals(0.7 * 0.5 * 0.45, c12.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.7 * 0.55 * 0.7,
         c12.getAbsoluteMaximumCapacity(), DELTA);
   }
 
@@ -488,42 +488,42 @@ public class TestQueueParsing {
 
   private void checkQueueLabels(CapacityScheduler capacityScheduler) {
     // queue-A is red, blue
-    Assertions.assertTrue(capacityScheduler.getQueue("a").getAccessibleNodeLabels()
+    assertTrue(capacityScheduler.getQueue("a").getAccessibleNodeLabels()
         .containsAll(ImmutableSet.of("red", "blue")));
 
     // queue-A1 inherits A's configuration
-    Assertions.assertTrue(capacityScheduler.getQueue("a1")
+    assertTrue(capacityScheduler.getQueue("a1")
         .getAccessibleNodeLabels().containsAll(ImmutableSet.of("red", "blue")));
 
     // queue-A2 is "red"
-    Assertions.assertEquals(1, capacityScheduler.getQueue("a2")
+    assertEquals(1, capacityScheduler.getQueue("a2")
         .getAccessibleNodeLabels().size());
-    Assertions.assertTrue(capacityScheduler.getQueue("a2")
+    assertTrue(capacityScheduler.getQueue("a2")
         .getAccessibleNodeLabels().contains("red"));
 
     // queue-B is "red"/"blue"
-    Assertions.assertTrue(capacityScheduler.getQueue("b").getAccessibleNodeLabels()
+    assertTrue(capacityScheduler.getQueue("b").getAccessibleNodeLabels()
         .containsAll(ImmutableSet.of("red", "blue")));
 
     // queue-B2 inherits "red"/"blue"
-    Assertions.assertTrue(capacityScheduler.getQueue("b2")
+    assertTrue(capacityScheduler.getQueue("b2")
         .getAccessibleNodeLabels().containsAll(ImmutableSet.of("red", "blue")));
 
     // check capacity of A2
     CSQueue qA2 = capacityScheduler.getQueue("a2");
-    Assertions.assertEquals(0.7, qA2.getCapacity(), DELTA);
-    Assertions.assertEquals(0.5, qA2.getQueueCapacities().getCapacity("red"), DELTA);
-    Assertions.assertEquals(0.07, qA2.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.25, qA2.getQueueCapacities().getAbsoluteCapacity("red"), DELTA);
-    Assertions.assertEquals(0.1275, qA2.getAbsoluteMaximumCapacity(), DELTA);
-    Assertions.assertEquals(0.3, qA2.getQueueCapacities().getAbsoluteMaximumCapacity("red"), DELTA);
+    assertEquals(0.7, qA2.getCapacity(), DELTA);
+    assertEquals(0.5, qA2.getQueueCapacities().getCapacity("red"), DELTA);
+    assertEquals(0.07, qA2.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.25, qA2.getQueueCapacities().getAbsoluteCapacity("red"), DELTA);
+    assertEquals(0.1275, qA2.getAbsoluteMaximumCapacity(), DELTA);
+    assertEquals(0.3, qA2.getQueueCapacities().getAbsoluteMaximumCapacity("red"), DELTA);
 
     // check capacity of B3
     CSQueue qB3 = capacityScheduler.getQueue("b3");
-    Assertions.assertEquals(0.18, qB3.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.125, qB3.getQueueCapacities().getAbsoluteCapacity("red"), DELTA);
-    Assertions.assertEquals(0.35, qB3.getAbsoluteMaximumCapacity(), DELTA);
-    Assertions.assertEquals(1, qB3.getQueueCapacities().getAbsoluteMaximumCapacity("red"), DELTA);
+    assertEquals(0.18, qB3.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.125, qB3.getQueueCapacities().getAbsoluteCapacity("red"), DELTA);
+    assertEquals(0.35, qB3.getAbsoluteMaximumCapacity(), DELTA);
+    assertEquals(1, qB3.getQueueCapacities().getAbsoluteMaximumCapacity("red"), DELTA);
   }
 
   @Test
@@ -543,64 +543,64 @@ public class TestQueueParsing {
   private void checkQueueLabelsWithLeafQueueDisableElasticity(
       CapacityScheduler capacityScheduler) {
     // queue-A is red, blue
-    Assertions.assertTrue(capacityScheduler.getQueue("a").getAccessibleNodeLabels()
+    assertTrue(capacityScheduler.getQueue("a").getAccessibleNodeLabels()
             .containsAll(ImmutableSet.of("red", "blue")));
 
     // queue-A1 inherits A's configuration
-    Assertions.assertTrue(capacityScheduler.getQueue("a1")
+    assertTrue(capacityScheduler.getQueue("a1")
             .getAccessibleNodeLabels().containsAll(ImmutableSet.of("red", "blue")));
 
     // queue-A2 is "red"
-    Assertions.assertEquals(1, capacityScheduler.getQueue("a2")
+    assertEquals(1, capacityScheduler.getQueue("a2")
             .getAccessibleNodeLabels().size());
-    Assertions.assertTrue(capacityScheduler.getQueue("a2")
+    assertTrue(capacityScheduler.getQueue("a2")
             .getAccessibleNodeLabels().contains("red"));
 
     // queue-B is "red"/"blue"
-    Assertions.assertTrue(capacityScheduler.getQueue("b").getAccessibleNodeLabels()
+    assertTrue(capacityScheduler.getQueue("b").getAccessibleNodeLabels()
             .containsAll(ImmutableSet.of("red", "blue")));
 
     // queue-B2 inherits "red"/"blue"
-    Assertions.assertTrue(capacityScheduler.getQueue("b2")
+    assertTrue(capacityScheduler.getQueue("b2")
             .getAccessibleNodeLabels().containsAll(ImmutableSet.of("red", "blue")));
 
     // check capacity of A2
     CSQueue qA2 = capacityScheduler.getQueue("a2");
-    Assertions.assertEquals(0.4, qA2.getCapacity(), DELTA);
-    Assertions.assertEquals(0.4, qA2.getQueueCapacities()
+    assertEquals(0.4, qA2.getCapacity(), DELTA);
+    assertEquals(0.4, qA2.getQueueCapacities()
             .getCapacity("red"), DELTA);
-    Assertions.assertEquals(0.2, qA2.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.2, qA2.getQueueCapacities()
+    assertEquals(0.2, qA2.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.2, qA2.getQueueCapacities()
             .getAbsoluteCapacity("red"), DELTA);
-    Assertions.assertEquals(0.85, qA2.getAbsoluteMaximumCapacity(), DELTA);
-    Assertions.assertEquals(0.6, qA2.getQueueCapacities()
+    assertEquals(0.85, qA2.getAbsoluteMaximumCapacity(), DELTA);
+    assertEquals(0.6, qA2.getQueueCapacities()
             .getAbsoluteMaximumCapacity("red"), DELTA);
 
     // check disable elasticity at leaf queue level without label
     CSQueue qB2 = capacityScheduler.getQueue("b2");
-    Assertions.assertEquals(0.4, qB2.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.4, qB2.getAbsoluteMaximumCapacity(), DELTA);
+    assertEquals(0.4, qB2.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.4, qB2.getAbsoluteMaximumCapacity(), DELTA);
 
     // check disable elasticity at leaf queue level with label
     CSQueue qA1 = capacityScheduler.getQueue("a1");
-    Assertions.assertEquals(0.3, qA1.getQueueCapacities().
+    assertEquals(0.3, qA1.getQueueCapacities().
             getAbsoluteCapacity("red"), DELTA);
-    Assertions.assertEquals(0.3, qA1.getQueueCapacities().
+    assertEquals(0.3, qA1.getQueueCapacities().
             getAbsoluteMaximumCapacity("red"), DELTA);
 
     CSQueue qB1 = capacityScheduler.getQueue("b1");
-    Assertions.assertEquals(0.3, qB1.getQueueCapacities()
+    assertEquals(0.3, qB1.getQueueCapacities()
             .getAbsoluteCapacity("red"), DELTA);
-    Assertions.assertEquals(0.3, qB1.getQueueCapacities()
+    assertEquals(0.3, qB1.getQueueCapacities()
             .getAbsoluteMaximumCapacity("red"), DELTA);
 
     // check capacity of B3
     CSQueue qB3 = capacityScheduler.getQueue("b3");
-    Assertions.assertEquals(0.05, qB3.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.175, qB3.getQueueCapacities()
+    assertEquals(0.05, qB3.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.175, qB3.getQueueCapacities()
             .getAbsoluteCapacity("blue"), DELTA);
-    Assertions.assertEquals(0.25, qB3.getAbsoluteMaximumCapacity(), DELTA);
-    Assertions.assertEquals(1, qB3.getQueueCapacities()
+    assertEquals(0.25, qB3.getAbsoluteMaximumCapacity(), DELTA);
+    assertEquals(1, qB3.getQueueCapacities()
             .getAbsoluteMaximumCapacity("blue"), DELTA);
   }
 
@@ -620,21 +620,21 @@ public class TestQueueParsing {
 
   private void checkQueueLabelsInheritConfig(CapacityScheduler capacityScheduler) {
     // queue-A is red, blue
-    Assertions.assertTrue(capacityScheduler.getQueue("a").getAccessibleNodeLabels()
+    assertTrue(capacityScheduler.getQueue("a").getAccessibleNodeLabels()
             .containsAll(ImmutableSet.of("red", "blue")));
 
     // queue-A1 inherits A's configuration
-    Assertions.assertTrue(capacityScheduler.getQueue("a1")
+    assertTrue(capacityScheduler.getQueue("a1")
             .getAccessibleNodeLabels().containsAll(ImmutableSet.of("red", "blue")));
 
     // queue-A2 is "red"
-    Assertions.assertEquals(1, capacityScheduler.getQueue("a2")
+    assertEquals(1, capacityScheduler.getQueue("a2")
             .getAccessibleNodeLabels().size());
-    Assertions.assertTrue(capacityScheduler.getQueue("a2")
+    assertTrue(capacityScheduler.getQueue("a2")
             .getAccessibleNodeLabels().contains("red"));
 
     // queue-B is "red"/"blue"
-    Assertions.assertTrue(capacityScheduler.getQueue("b").getAccessibleNodeLabels()
+    assertTrue(capacityScheduler.getQueue("b").getAccessibleNodeLabels()
             .isEmpty());
   }
   
@@ -704,21 +704,21 @@ public class TestQueueParsing {
 
     // check root queue's capacity by label -- they should be all zero
     CSQueue root = capacityScheduler.getQueue(CapacitySchedulerConfiguration.ROOT);
-    Assertions.assertEquals(0, root.getQueueCapacities().getCapacity("red"), DELTA);
-    Assertions.assertEquals(0, root.getQueueCapacities().getCapacity("blue"), DELTA);
+    assertEquals(0, root.getQueueCapacities().getCapacity("red"), DELTA);
+    assertEquals(0, root.getQueueCapacities().getCapacity("blue"), DELTA);
 
     CSQueue a = capacityScheduler.getQueue("a");
-    Assertions.assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.15, a.getAbsoluteMaximumCapacity(), DELTA);
+    assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.15, a.getAbsoluteMaximumCapacity(), DELTA);
 
     CSQueue b1 = capacityScheduler.getQueue("b1");
-    Assertions.assertEquals(0.2 * 0.5, b1.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.85,
+    assertEquals(0.2 * 0.5, b1.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.85,
         b1.getAbsoluteMaximumCapacity(), DELTA, "Parent B has no MAX_CAP");
 
     CSQueue c12 = capacityScheduler.getQueue("c12");
-    Assertions.assertEquals(0.7 * 0.5 * 0.45, c12.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.7 * 0.55 * 0.7, c12.getAbsoluteMaximumCapacity(),
+    assertEquals(0.7 * 0.5 * 0.45, c12.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.7 * 0.55 * 0.7, c12.getAbsoluteMaximumCapacity(),
         DELTA);
     ServiceOperations.stopQuietly(rm);
   }
@@ -734,14 +734,14 @@ public class TestQueueParsing {
 
     CapacityScheduler capacityScheduler = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue a = capacityScheduler.getQueue("a");
-    Assertions.assertNotNull(a);
-    Assertions.assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.15, a.getAbsoluteMaximumCapacity(), DELTA);
+    assertNotNull(a);
+    assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.15, a.getAbsoluteMaximumCapacity(), DELTA);
     
     CSQueue c = capacityScheduler.getQueue("c");
-    Assertions.assertNotNull(c);
-    Assertions.assertEquals(0.70, c.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.70, c.getAbsoluteMaximumCapacity(), DELTA);
+    assertNotNull(c);
+    assertEquals(0.70, c.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.70, c.getAbsoluteMaximumCapacity(), DELTA);
   }
   
   @Test
@@ -755,24 +755,24 @@ public class TestQueueParsing {
     CapacityScheduler capacityScheduler = (CapacityScheduler) rm.getResourceScheduler();
 
     CSQueue a = capacityScheduler.getQueue("a");
-    Assertions.assertNotNull(a);
-    Assertions.assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.15, a.getAbsoluteMaximumCapacity(), DELTA);
+    assertNotNull(a);
+    assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.15, a.getAbsoluteMaximumCapacity(), DELTA);
     
     CSQueue c = capacityScheduler.getQueue("c");
-    Assertions.assertNotNull(c);
-    Assertions.assertEquals(0.70, c.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.70, c.getAbsoluteMaximumCapacity(), DELTA);
+    assertNotNull(c);
+    assertEquals(0.70, c.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.70, c.getAbsoluteMaximumCapacity(), DELTA);
     
     CSQueue a1 = capacityScheduler.getQueue("a1");
-    Assertions.assertNotNull(a1);
-    Assertions.assertEquals(0.10 * 0.6, a1.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.15, a1.getAbsoluteMaximumCapacity(), DELTA);
+    assertNotNull(a1);
+    assertEquals(0.10 * 0.6, a1.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.15, a1.getAbsoluteMaximumCapacity(), DELTA);
     
     CSQueue a2 = capacityScheduler.getQueue("a2");
-    Assertions.assertNotNull(a2);
-    Assertions.assertEquals(0.10 * 0.4, a2.getAbsoluteCapacity(), DELTA);
-    Assertions.assertEquals(0.15, a2.getAbsoluteMaximumCapacity(), DELTA);
+    assertNotNull(a2);
+    assertEquals(0.10 * 0.4, a2.getAbsoluteCapacity(), DELTA);
+    assertEquals(0.15, a2.getAbsoluteMaximumCapacity(), DELTA);
   }
   
   /**
@@ -788,7 +788,7 @@ public class TestQueueParsing {
 
       // If the new queue mode is used it's allowed to leave
       // some of the resources of a parent queue unallocated
-      assumeThat(csConf.isLegacyQueueMode(), is(true));
+      assumeTrue(csConf.isLegacyQueueMode() == true);
       setupQueueConfiguration(csConf);
       csConf.setCapacity(C2, 5);
       YarnConfiguration conf = new YarnConfiguration(csConf);
@@ -812,7 +812,7 @@ public class TestQueueParsing {
 
       // If the new queue mode is used it's allowed to leave
       // some of the resources of a parent queue unallocated
-      assumeThat(csConf.isLegacyQueueMode(), is(true));
+      assumeTrue(csConf.isLegacyQueueMode() == true);
 
       setupQueueConfigurationWithLabels(csConf);
       csConf.setCapacityByLabel(B3, "red", 24);
@@ -838,7 +838,7 @@ public class TestQueueParsing {
 
       // If the new queue mode is used it's allowed to leave
       // some of the resources of a parent queue unallocated
-      assumeThat(csConf.isLegacyQueueMode(), is(true));
+      assumeTrue(csConf.isLegacyQueueMode() == true);
 
       setupQueueConfigurationWithLabels(csConf);
       csConf.setCapacityByLabel(B3, "red", 24);
@@ -887,7 +887,7 @@ public class TestQueueParsing {
 
       // If the new queue mode is used it's allowed to leave
       // some of the resources of a parent queue unallocated
-      assumeThat(csConf.isLegacyQueueMode(), is(true));
+      assumeTrue(csConf.isLegacyQueueMode() == true);
 
       // Define top-level queues
       csConf.setQueues(ROOT, new String[] {"a"});
@@ -1000,13 +1000,13 @@ public class TestQueueParsing {
     // Test
     CapacityScheduler capacityScheduler = (CapacityScheduler) rm.getResourceScheduler();
 
-    Assertions.assertEquals(15,
+    assertEquals(15,
             ((LeafQueue)capacityScheduler.getQueue(A_PATH)).getUserLimit(), DELTA);
-    Assertions.assertEquals(1.5,
+    assertEquals(1.5,
             ((LeafQueue)capacityScheduler.getQueue(A_PATH)).getUserLimitFactor(), DELTA);
-    Assertions.assertEquals(20,
+    assertEquals(20,
             ((LeafQueue)capacityScheduler.getQueue(B_PATH)).getUserLimit(), DELTA);
-    Assertions.assertEquals(2.0,
+    assertEquals(2.0,
             ((LeafQueue)capacityScheduler.getQueue(B_PATH)).getUserLimitFactor(), DELTA);
 
     // Use hadoop default value
@@ -1020,13 +1020,13 @@ public class TestQueueParsing {
 
     capacityScheduler.reinitialize(csConf, rm.getRMContext());
 
-    Assertions.assertEquals(15,
+    assertEquals(15,
             ((LeafQueue)capacityScheduler.getQueue(A_PATH)).getUserLimit(), DELTA);
-    Assertions.assertEquals(1.5,
+    assertEquals(1.5,
             ((LeafQueue)capacityScheduler.getQueue(A_PATH)).getUserLimitFactor(), DELTA);
-    Assertions.assertEquals(100,
+    assertEquals(100,
             ((LeafQueue)capacityScheduler.getQueue(B_PATH)).getUserLimit(), DELTA);
-    Assertions.assertEquals(1,
+    assertEquals(1,
             ((LeafQueue)capacityScheduler.getQueue(B_PATH)).getUserLimitFactor(), DELTA);
   }
 
@@ -1034,7 +1034,7 @@ public class TestQueueParsing {
       float expectedAbsCapacity) {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = cs.getQueue(queuePath);
-    Assertions.assertEquals(expectedAbsCapacity,
+    assertEquals(expectedAbsCapacity,
         queue.getQueueCapacities().getAbsoluteCapacity(label), 1e-6);
   }
 
@@ -1044,8 +1044,8 @@ public class TestQueueParsing {
       existedQueues.add(q.getQueueShortName());
     }
     for (String q : queueNames) {
-      Assertions.assertTrue(existedQueues.remove(q));
+      assertTrue(existedQueues.remove(q));
     }
-    Assertions.assertTrue(existedQueues.isEmpty());
+    assertTrue(existedQueues.isEmpty());
   }
 }

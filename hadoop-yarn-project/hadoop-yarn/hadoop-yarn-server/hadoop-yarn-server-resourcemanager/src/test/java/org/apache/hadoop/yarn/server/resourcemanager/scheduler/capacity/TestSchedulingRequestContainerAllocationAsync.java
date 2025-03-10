@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -35,13 +37,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -50,7 +48,6 @@ import java.util.List;
 /**
  * Test SchedulingRequest With Asynchronous Scheduling.
  */
-@RunWith(Parameterized.class)
 public class TestSchedulingRequestContainerAllocationAsync {
   private final int GB = 1024;
 
@@ -59,7 +56,6 @@ public class TestSchedulingRequestContainerAllocationAsync {
 
   RMNodeLabelsManager mgr;
 
-  @Parameters
   public static Collection<Object[]> placementConstarintHandlers() {
     Object[][] params = new Object[][] {
         {YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER},
@@ -67,12 +63,12 @@ public class TestSchedulingRequestContainerAllocationAsync {
     return Arrays.asList(params);
   }
 
-  public TestSchedulingRequestContainerAllocationAsync(
-      String placementConstraintHandler) {
-    this.placementConstraintHandler = placementConstraintHandler;
+  private void initTestSchedulingRequestContainerAllocationAsync(
+      String pPlacementConstraintHandler) throws Exception {
+    this.placementConstraintHandler = pPlacementConstraintHandler;
+    setUp();
   }
 
-  @BeforeEach
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -133,40 +129,55 @@ public class TestSchedulingRequestContainerAllocationAsync {
 
     List<Container> allocated = TestSchedulingRequestContainerAllocation.
             waitForAllocation(nNMs, 6000, am1, nms);
-    Assertions.assertEquals(nNMs, allocated.size());
-    Assertions.assertEquals(nNMs, TestSchedulingRequestContainerAllocation.
-            getContainerNodesNum(allocated));
+    assertEquals(nNMs, allocated.size());
+    assertEquals(nNMs, TestSchedulingRequestContainerAllocation.
+        getContainerNodesNum(allocated));
 
     rm1.close();
   }
 
-  @Test
   @Timeout(value = 300)
-  public void testSingleThreadAsyncContainerAllocation() throws Exception {
+  @ParameterizedTest
+  @MethodSource("placementConstarintHandlers")
+  public void testSingleThreadAsyncContainerAllocation(
+      String pPlacementConstraintHandler) throws Exception {
+    initTestSchedulingRequestContainerAllocationAsync(pPlacementConstraintHandler);
     testIntraAppAntiAffinityAsync(1);
   }
 
-  @Test
   @Timeout(value = 300)
-  public void testTwoThreadsAsyncContainerAllocation() throws Exception {
+  @ParameterizedTest
+  @MethodSource("placementConstarintHandlers")
+  public void testTwoThreadsAsyncContainerAllocation(
+      String pPlacementConstraintHandler) throws Exception {
+    initTestSchedulingRequestContainerAllocationAsync(pPlacementConstraintHandler);
     testIntraAppAntiAffinityAsync(2);
   }
 
-  @Test
   @Timeout(value = 300)
-  public void testThreeThreadsAsyncContainerAllocation() throws Exception {
+  @ParameterizedTest
+  @MethodSource("placementConstarintHandlers")
+  public void testThreeThreadsAsyncContainerAllocation(
+      String pPlacementConstraintHandler) throws Exception {
+    initTestSchedulingRequestContainerAllocationAsync(pPlacementConstraintHandler);
     testIntraAppAntiAffinityAsync(3);
   }
 
-  @Test
   @Timeout(value = 300)
-  public void testFourThreadsAsyncContainerAllocation() throws Exception {
+  @ParameterizedTest
+  @MethodSource("placementConstarintHandlers")
+  public void testFourThreadsAsyncContainerAllocation(
+      String pPlacementConstraintHandler) throws Exception {
+    initTestSchedulingRequestContainerAllocationAsync(pPlacementConstraintHandler);
     testIntraAppAntiAffinityAsync(4);
   }
 
-  @Test
   @Timeout(value = 300)
-  public void testFiveThreadsAsyncContainerAllocation() throws Exception {
+  @ParameterizedTest
+  @MethodSource("placementConstarintHandlers")
+  public void testFiveThreadsAsyncContainerAllocation(
+      String pPlacementConstraintHandler) throws Exception {
+    initTestSchedulingRequestContainerAllocationAsync(pPlacementConstraintHandler);
     testIntraAppAntiAffinityAsync(5);
   }
 }

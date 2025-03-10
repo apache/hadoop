@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -28,7 +33,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -94,7 +98,7 @@ public class TestQueueConfigurationAutoRefreshPolicy  {
         confFile.delete();
       }
       if (!confFile.createNewFile()) {
-        Assertions.fail("Can not create " + confXMLName);
+        fail("Can not create " + confXMLName);
       }
       output = new DataOutputStream(
           new FileOutputStream(confFile));
@@ -249,15 +253,15 @@ public class TestQueueConfigurationAutoRefreshPolicy  {
     policy.editSchedule();
 
     // Make sure refresh successfully.
-    Assertions.assertFalse(policy.getLastReloadAttemptFailed());
+    assertFalse(policy.getLastReloadAttemptFailed());
     long oldModified = policy.getLastModified();
     long oldSuccess = policy.getLastReloadAttempt();
 
-    Assertions.assertTrue(oldSuccess > oldModified);
+    assertTrue(oldSuccess > oldModified);
 
     int maxAppsAfter = cs.getConfiguration().getMaximumSystemApplications();
-    Assertions.assertEquals(maxAppsAfter, 5000);
-    Assertions.assertTrue(maxAppsAfter != maxAppsBefore);
+    assertEquals(maxAppsAfter, 5000);
+    assertTrue(maxAppsAfter != maxAppsBefore);
 
     // Trigger interval for refresh.
     GenericTestUtils.waitFor(() -> (policy.getClock().getTime() -
@@ -277,11 +281,11 @@ public class TestQueueConfigurationAutoRefreshPolicy  {
         500, 3000);
 
     // Make sure refresh successfully.
-    Assertions.assertFalse(policy.getLastReloadAttemptFailed());
+    assertFalse(policy.getLastReloadAttemptFailed());
     oldModified = policy.getLastModified();
     oldSuccess = policy.getLastReloadAttempt();
-    Assertions.assertTrue(oldSuccess > oldModified);
-    Assertions.assertEquals(cs.getConfiguration().
+    assertTrue(oldSuccess > oldModified);
+    assertEquals(cs.getConfiguration().
         getMaximumSystemApplications(), 3000);
 
     // Trigger interval for refresh.
@@ -291,9 +295,9 @@ public class TestQueueConfigurationAutoRefreshPolicy  {
 
     // Without modified
     policy.editSchedule();
-    Assertions.assertEquals(oldModified,
+    assertEquals(oldModified,
         policy.getLastModified());
-    Assertions.assertEquals(oldSuccess,
+    assertEquals(oldSuccess,
         policy.getLastReloadAttempt());
   }
 

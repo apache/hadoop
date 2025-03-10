@@ -31,7 +31,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.records.Version;
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -155,8 +154,8 @@ public class TestFSSchedulerConfigurationStore extends
     writeConf(persistedSchedConf);
     confStore.initialize(conf, conf, null);
     Configuration storedConfig = confStore.retrieve();
-    assertEquals("Retrieved config should match the stored one", "a",
-        storedConfig.get("a"));
+    assertEquals("a", storedConfig.get("a"),
+        "Retrieved config should match the stored one");
     confStore.format();
     try {
       confStore.retrieve();
@@ -212,13 +211,13 @@ public class TestFSSchedulerConfigurationStore extends
   private void compareConfig(Configuration schedulerConf,
                              Configuration storedConfig) {
     for (Map.Entry<String, String> entry : schedulerConf) {
-      assertEquals(entry.getKey(), schedulerConf.get(entry.getKey()),
-          storedConfig.get(entry.getKey()));
+      assertEquals(schedulerConf.get(entry.getKey()),
+          storedConfig.get(entry.getKey()), entry.getKey());
     }
 
     for (Map.Entry<String, String> entry : storedConfig) {
-      assertEquals(entry.getKey(), storedConfig.get(entry.getKey()),
-          schedulerConf.get(entry.getKey()));
+      assertEquals(storedConfig.get(entry.getKey()),
+          schedulerConf.get(entry.getKey()), entry.getKey());
     }
   }
 

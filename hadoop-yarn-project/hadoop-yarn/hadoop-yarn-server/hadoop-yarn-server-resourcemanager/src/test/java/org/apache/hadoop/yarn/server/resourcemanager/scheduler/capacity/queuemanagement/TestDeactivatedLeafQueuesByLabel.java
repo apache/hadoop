@@ -18,7 +18,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.queuema
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.spy;
 
 public class TestDeactivatedLeafQueuesByLabel {

@@ -31,11 +31,11 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class TestUsersManager {
   private static final Resource CLUSTER_RESOURCE =
       Resource.newInstance(16384, 16);
@@ -66,8 +66,6 @@ public class TestUsersManager {
         new DefaultResourceCalculator());
 
     when(lQueue.getMinimumAllocation()).thenReturn(MINIMUM_ALLOCATION);
-    when(lQueue.getEffectiveMaxCapacityDown(anyString(), any(Resource.class)))
-        .thenReturn(MAX_RESOURCE_LIMIT);
     when(labelMgr.getResourceByLabel(anyString(), any(Resource.class)))
         .thenReturn(CLUSTER_RESOURCE);
     usersManager.setUsageRatio(CommonNodeLabelsManager.NO_LABEL, 0.5f);
@@ -81,7 +79,8 @@ public class TestUsersManager {
   public void testComputeUserLimitWithZeroCapacityQueue() {
     when(lQueue.getEffectiveCapacity(anyString()))
         .thenReturn(Resources.none());
-
+    when(lQueue.getEffectiveMaxCapacityDown(anyString(), any(Resource.class)))
+        .thenReturn(MAX_RESOURCE_LIMIT);
     checkLimit(MAX_RESOURCE_LIMIT);
   }
 
