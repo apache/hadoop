@@ -163,7 +163,7 @@ Maven build goals:
  YARN Application Timeline Service V2 build options:
 
    YARN Timeline Service v.2 chooses Apache HBase as the primary backing storage. The supported
-   version of Apache HBase is 2.5.8.
+   version of Apache HBase is 2.6.1.
 
  Snappy build options:
 

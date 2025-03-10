@@ -15,55 +15,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.records.timelineservice.writer;
+package org.apache.hadoop.yarn.server.timelineservice.reader;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.ext.MessageBodyWriter;
+import javax.ws.rs.ext.MessageBodyReader;
 import javax.ws.rs.ext.Provider;
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
- * We have defined a dedicated Writer for TimelineEntity,
- * aimed at adapting to the Jersey2 framework to ensure
- * that TimelineEntity can be converted into JSON format.
+ * We have defined a dedicated Reader for `Set<FlowActivityEntity>`,
+ * aimed at adapting to the Jersey2 framework
+ * to ensure that JSON can be converted into `Set<FlowActivityEntity>`.
  */
 @Provider
 @Consumes(MediaType.APPLICATION_JSON)
-public class TimelineEntitySetWriter implements MessageBodyWriter<Set<TimelineEntity>> {
+public class FlowRunEntitySetReader implements MessageBodyReader<Set<FlowRunEntity>> {
 
   private ObjectMapper objectMapper = new ObjectMapper();
   private String timelineEntityType =
-      "java.util.Set<org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity>";
+      "java.util.Set<org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity>";
 
   @Override
-  public boolean isWriteable(Class<?> type, Type genericType,
+  public boolean isReadable(Class<?> type, Type genericType,
       Annotation[] annotations, MediaType mediaType) {
     return timelineEntityType.equals(genericType.getTypeName());
   }
 
   @Override
-  public void writeTo(Set<TimelineEntity> timelinePutResponse, Class<?> type,
+  public Set<FlowRunEntity> readFrom(Class<Set<FlowRunEntity>> type,
       Type genericType, Annotation[] annotations, MediaType mediaType,
-      MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream)
-      throws IOException, WebApplicationException {
-    String entity = objectMapper.writeValueAsString(timelinePutResponse);
-    entityStream.write(entity.getBytes(StandardCharsets.UTF_8));
-  }
+      MultivaluedMap<String, String> httpHeaders,
+      InputStream entityStream) throws IOException, WebApplicationException {
+    Set<FlowRunEntity> flowRunEntitySet = new HashSet<>();
 
-  @Override
-  public long getSize(Set<TimelineEntity> timelineEntities, Class<?> type, Type genericType,
-      Annotation[] annotations, MediaType mediaType) {
-    return -1L;
+    JsonNode jsonNode = objectMapper.readTree(entityStream);
+    if (jsonNode.isArray()) {
+      for (JsonNode jNode : jsonNode) {
+        FlowRunEntity flowRunEntity = objectMapper.treeToValue(jNode, FlowRunEntity.class);
+        flowRunEntitySet.add(flowRunEntity);
+      }
+    }
+
+    return flowRunEntitySet;
   }
 }
