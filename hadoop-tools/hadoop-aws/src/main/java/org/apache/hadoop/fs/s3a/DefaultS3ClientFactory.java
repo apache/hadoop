@@ -55,6 +55,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.s3a.impl.MD5RequiredOperationInterceptor;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
@@ -226,6 +227,11 @@ public class DefaultS3ClientFactory extends Configured
       s3BaseClientBuilder.overrideConfiguration(o ->
           o.addMetricPublisher(LoggingMetricPublisher.create()));
     }
+
+    // Force adding MD5 checksums to requests which need it now that SDK doesn't.
+    s3BaseClientBuilder.overrideConfiguration(o ->
+        override.addExecutionInterceptor(new MD5RequiredOperationInterceptor()));
+
 
     if (conf.getBoolean(HTTP_SIGNER_ENABLED, HTTP_SIGNER_ENABLED_DEFAULT)) {
       // use an http signer through an AuthScheme
