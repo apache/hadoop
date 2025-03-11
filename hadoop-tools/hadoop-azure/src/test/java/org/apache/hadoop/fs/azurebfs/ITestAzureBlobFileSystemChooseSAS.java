@@ -165,25 +165,39 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
   @Test
   public void testFixedTokenPreference() throws Exception {
     AbfsConfiguration testAbfsConfig = new AbfsConfiguration(
-        getRawConfiguration(), this.getAccountName(), this.getFileSystemName(), getAbfsServiceType());
+        getRawConfiguration(), this.getAccountName(), this.getFileSystemName(),
+        getAbfsServiceType());
 
     // setting all types of Fixed SAS configs (container-specific, account-specific, account-agnostic)
     removeAnyPresetConfiguration(testAbfsConfig);
-    testAbfsConfig.set(containerProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getFileSystemName(), this.getAccountName()), containerSAS);
-    testAbfsConfig.set(accountProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getAccountName()), accountSAS);
+    testAbfsConfig.set(
+        containerProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getFileSystemName(),
+            this.getAccountName()), containerSAS);
+    testAbfsConfig.set(
+        accountProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getAccountName()),
+        accountSAS);
     testAbfsConfig.set(FS_AZURE_SAS_FIXED_TOKEN, accountSAS);
 
     // Assert that Container Specific Fixed SAS is used
-    Assertions.assertThat(getFixedSASToken(testAbfsConfig)).contains("sr=c");
+    Assertions.assertThat(getFixedSASToken(testAbfsConfig))
+        .describedAs("Container-specific fixed SAS should've been used.")
+        .contains("sr=c");
 
     // Assert that Account Specific Fixed SAS is used if container SAS isn't set
-    testAbfsConfig.unset(containerProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getFileSystemName(), this.getAccountName()));
-    Assertions.assertThat(getFixedSASToken(testAbfsConfig)).contains("ss=bf");
+    testAbfsConfig.unset(
+        containerProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getFileSystemName(),
+            this.getAccountName()));
+    Assertions.assertThat(getFixedSASToken(testAbfsConfig))
+        .describedAs("Account-specific fixed SAS should've been used.")
+        .contains("ss=bf");
 
     //Assert that Account-Agnostic fixed SAS is used if no other fixed SAS configs are set.
     // The token is the same as the Account Specific Fixed SAS.
-    testAbfsConfig.unset(accountProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getAccountName()));
-    Assertions.assertThat(getFixedSASToken(testAbfsConfig)).contains("ss=bf");
+    testAbfsConfig.unset(
+        accountProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getAccountName()));
+    Assertions.assertThat(getFixedSASToken(testAbfsConfig))
+        .describedAs("Account-agnostic fixed SAS should've been used.")
+        .contains("ss=bf");
   }
 
   /**

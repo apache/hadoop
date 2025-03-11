@@ -75,6 +75,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
@@ -605,7 +606,7 @@ public class AbfsConfiguration{
    * @return Account-specific configuration key
    */
   public String accountConf(String key) {
-    return key + "." + accountName;
+    return key + DOT + accountName;
   }
 
   /**
@@ -615,7 +616,7 @@ public class AbfsConfiguration{
    * @return Container-specific configuration key
    */
   public String containerConf(String key) {
-    return key + "." + fsName + "." + accountName;
+    return key + DOT + fsName + DOT + accountName;
   }
 
   /**
