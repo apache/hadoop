@@ -57,14 +57,10 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Reso
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -122,6 +118,10 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime.CONTAINER_PID_NAMESPACE_SUFFIX;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime.RUN_PRIVILEGED_CONTAINER_SUFFIX;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime.formatOciEnvKey;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
@@ -132,7 +132,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@RunWith(Parameterized.class)
 public class TestDockerContainerRuntime {
   private static final Logger LOG =
        LoggerFactory.getLogger(TestDockerContainerRuntime.class);
@@ -183,20 +182,19 @@ public class TestDockerContainerRuntime {
   private final static String ENV_OCI_CONTAINER_RUN_PRIVILEGED_CONTAINER =
       formatOciEnvKey(RUNTIME_TYPE, RUN_PRIVILEGED_CONTAINER_SUFFIX);
 
-  @Rule
-  public TemporaryFolder tempDir = new TemporaryFolder();
-
-  @Parameterized.Parameters(name = "https={0}")
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][] {
         {true}, {false}
     });
   }
 
-  @Parameterized.Parameter
   public boolean https;
 
-  @Before
+  private void initHttps(boolean pHttps) {
+    this.https = pHttps;
+    setup();
+  }
+
   public void setup() {
 
     conf = new Configuration();
@@ -323,7 +321,7 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(RESOURCES_OPTIONS, resourcesOptions);
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws IOException {
     File tmpDir = new File(tmpPath);
     FileUtils.deleteDirectory(tmpDir);
@@ -368,8 +366,10 @@ public class TestDockerContainerRuntime {
     return mockNMContext;
   }
 
-  @Test
-  public void testSelectDockerContainerType() {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testSelectDockerContainerType(boolean pHttps) {
+    initHttps(pHttps);
     Map<String, String> envDockerType = new HashMap<>();
     Map<String, String> envOtherType = new HashMap<>();
 
@@ -377,16 +377,18 @@ public class TestDockerContainerRuntime {
         ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
     envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
 
-    Assert.assertEquals(false, DockerLinuxContainerRuntime
+    assertEquals(false, DockerLinuxContainerRuntime
         .isDockerContainerRequested(conf, null));
-    Assert.assertEquals(true, DockerLinuxContainerRuntime
+    assertEquals(true, DockerLinuxContainerRuntime
         .isDockerContainerRequested(conf, envDockerType));
-    Assert.assertEquals(false, DockerLinuxContainerRuntime
+    assertEquals(false, DockerLinuxContainerRuntime
         .isDockerContainerRequested(conf, envOtherType));
   }
 
-  @Test
-  public void testSelectDockerContainerTypeWithDockerAsDefault() {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testSelectDockerContainerTypeWithDockerAsDefault(boolean pHttps) {
+    initHttps(pHttps);
     Map<String, String> envDockerType = new HashMap<>();
     Map<String, String> envOtherType = new HashMap<>();
 
@@ -396,16 +398,18 @@ public class TestDockerContainerRuntime {
         ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
     envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
 
-    Assert.assertEquals(true, DockerLinuxContainerRuntime
+    assertEquals(true, DockerLinuxContainerRuntime
         .isDockerContainerRequested(conf, null));
-    Assert.assertEquals(true, DockerLinuxContainerRuntime
+    assertEquals(true, DockerLinuxContainerRuntime
         .isDockerContainerRequested(conf, envDockerType));
-    Assert.assertEquals(false, DockerLinuxContainerRuntime
+    assertEquals(false, DockerLinuxContainerRuntime
         .isDockerContainerRequested(conf, envOtherType));
   }
 
-  @Test
-  public void testSelectDockerContainerTypeWithDefaultSet() {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testSelectDockerContainerTypeWithDefaultSet(boolean pHttps) {
+    initHttps(pHttps);
     Map<String, String> envDockerType = new HashMap<>();
     Map<String, String> envOtherType = new HashMap<>();
 
@@ -414,11 +418,11 @@ public class TestDockerContainerRuntime {
         ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
     envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
 
-    Assert.assertEquals(false, DockerLinuxContainerRuntime
+    assertEquals(false, DockerLinuxContainerRuntime
         .isDockerContainerRequested(conf, null));
-    Assert.assertEquals(true, DockerLinuxContainerRuntime
+    assertEquals(true, DockerLinuxContainerRuntime
         .isDockerContainerRequested(conf, envDockerType));
-    Assert.assertEquals(false, DockerLinuxContainerRuntime
+    assertEquals(false, DockerLinuxContainerRuntime
         .isDockerContainerRequested(conf, envOtherType));
   }
 
@@ -443,13 +447,13 @@ public class TestDockerContainerRuntime {
     return opCaptor.getValue();
   }
 
-    @SuppressWarnings("unchecked")
+  @SuppressWarnings("unchecked")
   private PrivilegedOperation capturePrivilegedOperationAndVerifyArgs()
       throws PrivilegedOperationException {
 
     PrivilegedOperation op = capturePrivilegedOperation();
 
-    Assert.assertEquals(PrivilegedOperation.OperationType
+    assertEquals(PrivilegedOperation.OperationType
         .LAUNCH_DOCKER_CONTAINER, op.getOperationType());
 
     List<String> args = op.getArguments();
@@ -458,37 +462,39 @@ public class TestDockerContainerRuntime {
     // specific order
     int expected = (https) ? 15 : 13;
     int counter = 1;
-    Assert.assertEquals(expected, args.size());
-    Assert.assertEquals(user, args.get(counter++));
-    Assert.assertEquals(Integer.toString(PrivilegedOperation.RunAsUserCommand
+    assertEquals(expected, args.size());
+    assertEquals(user, args.get(counter++));
+    assertEquals(Integer.toString(PrivilegedOperation.RunAsUserCommand
         .LAUNCH_DOCKER_CONTAINER.getValue()), args.get(counter++));
-    Assert.assertEquals(appId, args.get(counter++));
-    Assert.assertEquals(containerId, args.get(counter++));
-    Assert.assertEquals(containerWorkDir.toString(), args.get(counter++));
-    Assert.assertEquals(nmPrivateContainerScriptPath.toUri().toString(),
+    assertEquals(appId, args.get(counter++));
+    assertEquals(containerId, args.get(counter++));
+    assertEquals(containerWorkDir.toString(), args.get(counter++));
+    assertEquals(nmPrivateContainerScriptPath.toUri().toString(),
         args.get(counter++));
-    Assert.assertEquals(nmPrivateTokensPath.toUri().getPath(),
+    assertEquals(nmPrivateTokensPath.toUri().getPath(),
         args.get(counter++));
     if (https) {
-      Assert.assertEquals("--https", args.get(counter++));
-      Assert.assertEquals(nmPrivateKeystorePath.toUri().toString(),
+      assertEquals("--https", args.get(counter++));
+      assertEquals(nmPrivateKeystorePath.toUri().toString(),
           args.get(counter++));
-      Assert.assertEquals(nmPrivateTruststorePath.toUri().toString(),
+      assertEquals(nmPrivateTruststorePath.toUri().toString(),
           args.get(counter++));
     } else {
-      Assert.assertEquals("--http", args.get(counter++));
+      assertEquals("--http", args.get(counter++));
     }
-    Assert.assertEquals(pidFilePath.toString(), args.get(counter++));
-    Assert.assertEquals(localDirs.get(0), args.get(counter++));
-    Assert.assertEquals(logDirs.get(0), args.get(counter++));
+    assertEquals(pidFilePath.toString(), args.get(counter++));
+    assertEquals(localDirs.get(0), args.get(counter++));
+    assertEquals(logDirs.get(0), args.get(counter++));
 
     return op;
   }
 
-  @Test
-  public void testDockerContainerLaunch()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerContainerLaunch(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -497,40 +503,41 @@ public class TestDockerContainerRuntime {
 
     int expected = 13;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
+    assertEquals("  mounts="
             + "/test_container_log_dir:/test_container_log_dir:rw,"
             + "/test_application_local_dir:/test_application_local_dir:rw,"
             + "/test_filecache_dir:/test_filecache_dir:ro,"
             + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
-  public void testDockerContainerLaunchWithDefaultImage()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerContainerLaunchWithDefaultImage(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     conf.set(YarnConfiguration.NM_DOCKER_IMAGE_NAME, "busybox:1.2.3");
     env.remove(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_IMAGE);
 
@@ -543,40 +550,41 @@ public class TestDockerContainerRuntime {
 
     int expected = 13;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  image=busybox:1.2.3", dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals("  image=busybox:1.2.3", dockerCommands.get(counter++));
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
-  public void testDockerContainerLaunchWithoutDefaultImageUpdate()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerContainerLaunchWithoutDefaultImageUpdate(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     conf.setBoolean(YarnConfiguration.NM_DOCKER_IMAGE_UPDATE, false);
@@ -584,45 +592,46 @@ public class TestDockerContainerRuntime {
     runtime.initialize(conf, nmContext);
     runtime.launchContainer(builder.build());
     List<String> dockerCommands = readDockerCommands();
-    Assert.assertEquals(false,
+    assertEquals(false,
         conf.getBoolean(YarnConfiguration.NM_DOCKER_IMAGE_UPDATE, false));
 
     int expected = 13;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
-  public void testDockerContainerLaunchWithDefaultImageUpdate()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerContainerLaunchWithDefaultImageUpdate(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     conf.setBoolean(YarnConfiguration.NM_DOCKER_IMAGE_UPDATE, true);
@@ -642,13 +651,13 @@ public class TestDockerContainerRuntime {
 
     // pull image from remote hub firstly
     PrivilegedOperation op = allCaptures.get(0);
-    Assert.assertEquals(PrivilegedOperation.OperationType
+    assertEquals(PrivilegedOperation.OperationType
         .RUN_DOCKER_CMD, op.getOperationType());
 
     File commandFile = new File(StringUtils.join(",", op.getArguments()));
     FileInputStream fileInputStream = new FileInputStream(commandFile);
     String fileContent = new String(IOUtils.toByteArray(fileInputStream));
-    Assert.assertEquals("[docker-command-execution]\n"
+    assertEquals("[docker-command-execution]\n"
         + "  docker-command=pull\n"
         + "  image=busybox:latest\n", fileContent);
     fileInputStream.close();
@@ -658,40 +667,41 @@ public class TestDockerContainerRuntime {
 
     int expected = 13;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
-  public void testContainerLaunchWithUserRemapping()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testContainerLaunchWithUserRemapping(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     conf.setBoolean(YarnConfiguration.NM_DOCKER_ENABLE_USER_REMAPPING,
         true);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
@@ -700,41 +710,41 @@ public class TestDockerContainerRuntime {
     runtime.launchContainer(builder.build());
     List<String> dockerCommands = readDockerCommands();
 
-    Assert.assertEquals(13, dockerCommands.size());
+    assertEquals(13, dockerCommands.size());
     int counter = 0;
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
-  public void testAllowedNetworksConfiguration() throws
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testAllowedNetworksConfiguration(boolean pHttps) throws
       ContainerExecutionException {
+    initHttps(pHttps);
     //the default network configuration should cause
     // no exception should be thrown.
 
@@ -757,7 +767,7 @@ public class TestDockerContainerRuntime {
       runtime =
           new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
       runtime.initialize(conf, nmContext);
-      Assert.fail("Invalid default network configuration should did not "
+      fail("Invalid default network configuration should did not "
           + "trigger initialization failure.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
@@ -775,11 +785,13 @@ public class TestDockerContainerRuntime {
     runtime.initialize(conf, nmContext);
   }
 
-  @Test
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
   @SuppressWarnings("unchecked")
-  public void testContainerLaunchWithNetworkingDefaults()
+  public void testContainerLaunchWithNetworkingDefaults(boolean pHttps)
       throws ContainerExecutionException, IOException,
       PrivilegedOperationException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime =
         new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -791,7 +803,7 @@ public class TestDockerContainerRuntime {
       env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_NETWORK,
           disallowedNetwork);
       runtime.launchContainer(builder.build());
-      Assert.fail("Network was expected to be disallowed: " +
+      fail("Network was expected to be disallowed: " +
           disallowedNetwork);
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception: " + e);
@@ -812,44 +824,44 @@ public class TestDockerContainerRuntime {
     //This is the expected docker invocation for this case
     int expected = 14;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert.assertEquals("  hostname=test.hostname",
+    assertEquals("  hostname=test.hostname",
         dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  net=" + allowedNetwork, dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=" + allowedNetwork, dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
   @SuppressWarnings("unchecked")
-  public void testContainerLaunchWithHostDnsNetwork()
+  public void testContainerLaunchWithHostDnsNetwork(boolean pHttps)
       throws ContainerExecutionException, IOException,
       PrivilegedOperationException {
+    initHttps(pHttps);
     // Make it look like Registry DNS is enabled so we can test whether
     // hostname goes through
     conf.setBoolean(RegistryConstants.KEY_DNS_ENABLED, true);
@@ -867,44 +879,44 @@ public class TestDockerContainerRuntime {
     //This is the expected docker invocation for this case
     int expected = 14;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert.assertEquals("  hostname=test.hostname",
+    assertEquals("  hostname=test.hostname",
         dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
   @SuppressWarnings("unchecked")
-  public void testContainerLaunchWithCustomNetworks()
+  public void testContainerLaunchWithCustomNetworks(boolean pHttps)
       throws ContainerExecutionException, IOException,
       PrivilegedOperationException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime =
         new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
 
@@ -931,37 +943,36 @@ public class TestDockerContainerRuntime {
     // ("sdn1") is the expected network to be used in this case
     int expected = 14;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  hostname=ctr-e11-1518975676334-14532816-01-000001",
         dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=sdn1", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=sdn1", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
 
     //now set an explicit (non-default) allowedNetwork and ensure that it is
@@ -975,36 +986,35 @@ public class TestDockerContainerRuntime {
     //This is the expected docker invocation for this case. customNetwork2
     // ("sdn2") is the expected network to be used in this case
     counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  hostname=ctr-e11-1518975676334-14532816-01-000001",
         dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=sdn2", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=sdn2", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
 
 
@@ -1014,17 +1024,19 @@ public class TestDockerContainerRuntime {
         customNetwork3);
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Disallowed network : " + customNetwork3
+      fail("Disallowed network : " + customNetwork3
           + "did not trigger launch failure.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testLaunchPidNamespaceContainersInvalidEnvVar()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testLaunchPidNamespaceContainersInvalidEnvVar(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1034,18 +1046,20 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = readDockerCommands();
 
     int expected = 13;
-    Assert.assertEquals(expected, dockerCommands.size());
+    assertEquals(expected, dockerCommands.size());
 
     String command = dockerCommands.get(0);
 
     //ensure --pid isn't in the invocation
-    Assert.assertTrue("Unexpected --pid in docker run args : " + command,
-        !command.contains("--pid"));
+    assertTrue(!command.contains("--pid"),
+        "Unexpected --pid in docker run args : " + command);
   }
 
-  @Test
-  public void testLaunchPidNamespaceContainersWithDisabledSetting()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testLaunchPidNamespaceContainersWithDisabledSetting(boolean pHttps)
       throws ContainerExecutionException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1054,16 +1068,18 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a pid host disabled container failure.");
+      fail("Expected a pid host disabled container failure.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testLaunchPidNamespaceContainersEnabled()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testLaunchPidNamespaceContainersEnabled(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     //Enable host pid namespace containers.
     conf.setBoolean(YarnConfiguration.NM_DOCKER_ALLOW_HOST_PID_NAMESPACE,
         true);
@@ -1079,41 +1095,42 @@ public class TestDockerContainerRuntime {
 
     int expected = 14;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  pid=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  pid=host", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
-  public void testLaunchPrivilegedContainersInvalidEnvVar()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testLaunchPrivilegedContainersInvalidEnvVar(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1123,18 +1140,20 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = readDockerCommands();
 
     int expected = 13;
-    Assert.assertEquals(expected, dockerCommands.size());
+    assertEquals(expected, dockerCommands.size());
 
     String command = dockerCommands.get(0);
 
     //ensure --privileged isn't in the invocation
-    Assert.assertTrue("Unexpected --privileged in docker run args : " + command,
-        !command.contains("--privileged"));
+    assertTrue(!command.contains("--privileged"),
+        "Unexpected --privileged in docker run args : " + command);
   }
 
-  @Test
-  public void testLaunchPrivilegedContainersWithDisabledSetting()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testLaunchPrivilegedContainersWithDisabledSetting(boolean pHttps)
       throws ContainerExecutionException {
+    initHttps(pHttps);
     conf.setBoolean(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS,
         false);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
@@ -1145,15 +1164,17 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a privileged launch container failure.");
+      fail("Expected a privileged launch container failure.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testLaunchPrivilegedContainersWithEnabledSettingAndDefaultACL()
-      throws ContainerExecutionException {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testLaunchPrivilegedContainersWithEnabledSettingAndDefaultACL(
+      boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     //Enable privileged containers.
     conf.setBoolean(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS,
         true);
@@ -1170,16 +1191,17 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a privileged launch container failure.");
+      fail("Expected a privileged launch container failure.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void
-  testLaunchPrivilegedContainersEnabledAndUserNotInWhitelist()
-      throws ContainerExecutionException {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testLaunchPrivilegedContainersEnabledAndUserNotInWhitelist(
+      boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     //Enable privileged containers.
     conf.setBoolean(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS,
         true);
@@ -1195,17 +1217,18 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a privileged launch container failure.");
+      fail("Expected a privileged launch container failure.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void
-  testLaunchPrivilegedContainersEnabledAndUserInWhitelist()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testLaunchPrivilegedContainersEnabledAndUserInWhitelist(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     //Enable privileged containers.
     conf.setBoolean(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS,
         true);
@@ -1224,38 +1247,39 @@ public class TestDockerContainerRuntime {
 
     int expected = 13;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  privileged=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + submittingUser,
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  privileged=true", dockerCommands.get(counter++));
+    assertEquals("  user=" + submittingUser,
         dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
-  public void testCGroupParent() throws ContainerExecutionException {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testCGroupParent(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     String hierarchy = "hadoop-yarn-test";
     conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
         hierarchy);
@@ -1305,8 +1329,10 @@ public class TestDockerContainerRuntime {
     Mockito.verifyNoMoreInteractions(command);
   }
 
-  @Test
-  public void testMountSourceOnly() throws ContainerExecutionException {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testMountSourceOnly(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1317,16 +1343,18 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a launch container failure due to invalid mount.");
+      fail("Expected a launch container failure due to invalid mount.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testMountSourceTarget()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testMountSourceTarget(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1340,41 +1368,43 @@ public class TestDockerContainerRuntime {
 
     int expected = 13;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert.assertEquals("  image=busybox:latest",
+    assertEquals("  image=busybox:latest",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro,"
-            + "/test_local_dir/test_resource_file:test_mount:ro",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro,"
+        + "/test_local_dir/test_resource_file:test_mount:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
-  public void testMountMultiple()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testMountMultiple(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1389,42 +1419,44 @@ public class TestDockerContainerRuntime {
 
     int expected = 13;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert.assertEquals("  image=busybox:latest",
+    assertEquals("  image=busybox:latest",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro,"
-            + "/test_local_dir/test_resource_file:test_mount1:ro,"
-            + "/test_local_dir/test_resource_file:test_mount2:ro",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro,"
+        + "/test_local_dir/test_resource_file:test_mount1:ro,"
+        + "/test_local_dir/test_resource_file:test_mount2:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
-  public void testUserMounts()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testUserMounts(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1439,41 +1471,43 @@ public class TestDockerContainerRuntime {
 
     int expected = 13;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert.assertEquals("  image=busybox:latest",
+    assertEquals("  image=busybox:latest",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro,"
-            + "/tmp/foo:/tmp/foo:ro,"
-            + "/tmp/bar:/tmp/bar:rw,/tmp/baz:/tmp/baz:rw,/a:/a:rw+shared,"
-            + "/b:/b:ro+shared,/c:/c:rw+rshared,/d:/d:rw+private",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro,"
+        + "/tmp/foo:/tmp/foo:ro,"
+        + "/tmp/bar:/tmp/bar:rw,/tmp/baz:/tmp/baz:rw,/a:/a:rw+shared,"
+        + "/b:/b:ro+shared,/c:/c:rw+rshared,/d:/d:rw+private",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
-  public void testUserMountInvalid() throws ContainerExecutionException {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testUserMountInvalid(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1484,14 +1518,16 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a launch container failure due to invalid mount.");
+      fail("Expected a launch container failure due to invalid mount.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testUserMountModeInvalid() throws ContainerExecutionException {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testUserMountModeInvalid(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1502,14 +1538,16 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a launch container failure due to invalid mode.");
+      fail("Expected a launch container failure due to invalid mode.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testUserMountModeNulInvalid() throws ContainerExecutionException {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testUserMountModeNulInvalid(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1520,16 +1558,18 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a launch container failure due to NUL in mount.");
+      fail("Expected a launch container failure due to NUL in mount.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testTmpfsMount()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testTmpfsMount(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1541,13 +1581,15 @@ public class TestDockerContainerRuntime {
     runtime.launchContainer(builder.build());
     List<String> dockerCommands = readDockerCommands();
 
-    Assert.assertTrue(dockerCommands.contains("  tmpfs=/run"));
+    assertTrue(dockerCommands.contains("  tmpfs=/run"));
   }
 
-  @Test
-  public void testTmpfsMountMulti()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testTmpfsMountMulti(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1559,13 +1601,15 @@ public class TestDockerContainerRuntime {
     runtime.launchContainer(builder.build());
     List<String> dockerCommands = readDockerCommands();
 
-    Assert.assertTrue(dockerCommands.contains("  tmpfs=/run,/tmp"));
+    assertTrue(dockerCommands.contains("  tmpfs=/run,/tmp"));
   }
 
-  @Test
-  public void testDefaultTmpfsMounts()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDefaultTmpfsMounts(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     conf.setStrings(NM_DOCKER_DEFAULT_TMPFS_MOUNTS, "/run,/var/run");
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
@@ -1578,12 +1622,14 @@ public class TestDockerContainerRuntime {
     runtime.launchContainer(builder.build());
     List<String> dockerCommands = readDockerCommands();
 
-    Assert.assertTrue(dockerCommands.contains("  tmpfs=/tmpfs,/run,/var/run"));
+    assertTrue(dockerCommands.contains("  tmpfs=/tmpfs,/run,/var/run"));
   }
 
-  @Test
-  public void testDefaultTmpfsMountsInvalid()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDefaultTmpfsMountsInvalid(boolean pHttps)
       throws ContainerExecutionException {
+    initHttps(pHttps);
     conf.setStrings(NM_DOCKER_DEFAULT_TMPFS_MOUNTS, "run,var/run");
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
@@ -1595,15 +1641,17 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail(
-          "Expected a launch container failure due to non-absolute path.");
+      fail("Expected a launch container failure due to non-absolute path.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testTmpfsRelativeInvalid() throws ContainerExecutionException {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testTmpfsRelativeInvalid(boolean pHttps)
+      throws ContainerExecutionException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1614,15 +1662,16 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail(
-          "Expected a launch container failure due to non-absolute path.");
+      fail("Expected a launch container failure due to non-absolute path.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testTmpfsColonInvalid() throws ContainerExecutionException {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testTmpfsColonInvalid(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1633,15 +1682,16 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail(
-          "Expected a launch container failure due to invalid character.");
+      fail("Expected a launch container failure due to invalid character.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testTmpfsNulInvalid() throws ContainerExecutionException {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testTmpfsNulInvalid(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
             mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1652,17 +1702,18 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail(
-          "Expected a launch container failure due to NUL in tmpfs mount.");
+      fail("Expected a launch container failure due to NUL in tmpfs mount.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testDefaultROMounts()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDefaultROMounts(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     conf.setStrings(NM_DOCKER_DEFAULT_RO_MOUNTS,
         "/tmp/foo:/tmp/foo,/tmp/bar:/tmp/bar");
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
@@ -1674,39 +1725,41 @@ public class TestDockerContainerRuntime {
 
     int expected = 13;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert.assertEquals("  image=busybox:latest",
+    assertEquals("  image=busybox:latest",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro,"
-            + "/tmp/foo:/tmp/foo:ro,/tmp/bar:/tmp/bar:ro",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro,"
+        + "/tmp/foo:/tmp/foo:ro,/tmp/bar:/tmp/bar:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
-  public void testDefaultROMountsInvalid() throws ContainerExecutionException {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDefaultROMountsInvalid(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     conf.setStrings(NM_DOCKER_DEFAULT_RO_MOUNTS,
         "source,target");
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
@@ -1715,16 +1768,18 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a launch container failure due to invalid mount.");
+      fail("Expected a launch container failure due to invalid mount.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testDefaultRWMounts()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDefaultRWMounts(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     conf.setStrings(NM_DOCKER_DEFAULT_RW_MOUNTS,
         "/tmp/foo:/tmp/foo,/tmp/bar:/tmp/bar");
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
@@ -1736,39 +1791,41 @@ public class TestDockerContainerRuntime {
 
     int expected = 13;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert.assertEquals("  image=busybox:latest",
+    assertEquals("  image=busybox:latest",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro,"
-            + "/tmp/foo:/tmp/foo:rw,/tmp/bar:/tmp/bar:rw",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro,"
+        + "/tmp/foo:/tmp/foo:rw,/tmp/bar:/tmp/bar:rw",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
-  public void testDefaultRWMountsInvalid() throws ContainerExecutionException {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDefaultRWMountsInvalid(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     conf.setStrings(NM_DOCKER_DEFAULT_RW_MOUNTS,
         "source,target");
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
@@ -1777,15 +1834,18 @@ public class TestDockerContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a launch container failure due to invalid mount.");
+      fail("Expected a launch container failure due to invalid mount.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testContainerLivelinessFileExistsNoException() throws Exception {
-    File testTempDir = tempDir.newFolder();
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testContainerLivelinessFileExistsNoException(boolean pHttps,
+      @TempDir java.nio.file.Path path) throws Exception {
+    initHttps(pHttps);
+    File testTempDir = path.toFile();
     File procPidPath = new File(testTempDir + File.separator + signalPid);
     procPidPath.createNewFile();
     procPidPath.deleteOnExit();
@@ -1800,8 +1860,10 @@ public class TestDockerContainerRuntime {
     runtime.signalContainer(builder.build());
   }
 
-  @Test
-  public void testContainerLivelinessNoFileException() throws Exception {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testContainerLivelinessNoFileException(boolean pHttps) throws Exception {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     builder.setExecutionAttribute(RUN_AS_USER, runAsUser)
@@ -1812,16 +1874,18 @@ public class TestDockerContainerRuntime {
     try {
       runtime.signalContainer(builder.build());
     } catch (ContainerExecutionException e) {
-      Assert.assertEquals(
+      assertEquals(
           PrivilegedOperation.ResultCode.INVALID_CONTAINER_PID.getValue(),
           e.getExitCode());
     }
   }
 
-  @Test
-  public void testDockerStopOnTermSignalWhenRunning()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerStopOnTermSignalWhenRunning(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     when(mockExecutor
         .executePrivilegedOperation(any(), any(PrivilegedOperation.class),
         any(), any(), anyBoolean(), anyBoolean())).thenReturn(
@@ -1831,11 +1895,13 @@ public class TestDockerContainerRuntime {
     verifyStopCommand(dockerCommands, ContainerExecutor.Signal.TERM.toString());
   }
 
-  @Test
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
   @SuppressWarnings("unchecked")
-  public void testDockerStopWithQuitSignalWhenRunning()
+  public void testDockerStopWithQuitSignalWhenRunning(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     when(mockExecutor
         .executePrivilegedOperation(any(), any(PrivilegedOperation.class),
             any(), any(), anyBoolean(), anyBoolean())).thenReturn(
@@ -1847,46 +1913,52 @@ public class TestDockerContainerRuntime {
     verifyStopCommand(dockerCommands, "SIGQUIT");
   }
 
-  @Test
-  public void testDockerStopOnKillSignalWhenRunning()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerStopOnKillSignalWhenRunning(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException {
+    initHttps(pHttps);
     List<String> dockerCommands = getDockerCommandsForSignal(
         ContainerExecutor.Signal.KILL);
-    Assert.assertEquals(5, dockerCommands.size());
-    Assert.assertEquals(runAsUser, dockerCommands.get(0));
-    Assert.assertEquals(user, dockerCommands.get(1));
-    Assert.assertEquals(
+    assertEquals(5, dockerCommands.size());
+    assertEquals(runAsUser, dockerCommands.get(0));
+    assertEquals(user, dockerCommands.get(1));
+    assertEquals(
         Integer.toString(PrivilegedOperation.RunAsUserCommand
         .SIGNAL_CONTAINER.getValue()),
         dockerCommands.get(2));
-    Assert.assertEquals(signalPid, dockerCommands.get(3));
-    Assert.assertEquals(
+    assertEquals(signalPid, dockerCommands.get(3));
+    assertEquals(
         Integer.toString(ContainerExecutor.Signal.KILL.getValue()),
         dockerCommands.get(4));
   }
 
-  @Test
-  public void testDockerKillOnQuitSignalWhenRunning() throws Exception {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerKillOnQuitSignalWhenRunning(boolean pHttps) throws Exception {
+    initHttps(pHttps);
     List<String> dockerCommands = getDockerCommandsForSignal(
         ContainerExecutor.Signal.QUIT);
 
-    Assert.assertEquals(5, dockerCommands.size());
-    Assert.assertEquals(runAsUser, dockerCommands.get(0));
-    Assert.assertEquals(user, dockerCommands.get(1));
-    Assert.assertEquals(
+    assertEquals(5, dockerCommands.size());
+    assertEquals(runAsUser, dockerCommands.get(0));
+    assertEquals(user, dockerCommands.get(1));
+    assertEquals(
         Integer.toString(PrivilegedOperation.RunAsUserCommand
         .SIGNAL_CONTAINER.getValue()),
         dockerCommands.get(2));
-    Assert.assertEquals(signalPid, dockerCommands.get(3));
-    Assert.assertEquals(
+    assertEquals(signalPid, dockerCommands.get(3));
+    assertEquals(
         Integer.toString(ContainerExecutor.Signal.QUIT.getValue()),
         dockerCommands.get(4));
   }
 
-  @Test
-  public void testDockerStopOnTermSignalWhenRunningPrivileged()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerStopOnTermSignalWhenRunningPrivileged(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     conf.set(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS, "true");
     conf.set(YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
         submittingUser);
@@ -1900,10 +1972,12 @@ public class TestDockerContainerRuntime {
     verifyStopCommand(dockerCommands, ContainerExecutor.Signal.TERM.toString());
   }
 
-  @Test
-  public void testDockerStopOnKillSignalWhenRunningPrivileged()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerStopOnKillSignalWhenRunningPrivileged(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     conf.set(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS, "true");
     conf.set(YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
         submittingUser);
@@ -1914,18 +1988,20 @@ public class TestDockerContainerRuntime {
         DockerCommandExecutor.DockerContainerStatus.RUNNING.getName());
     List<String> dockerCommands = getDockerCommandsForDockerStop(
         ContainerExecutor.Signal.KILL);
-    Assert.assertEquals(4, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
-    Assert.assertEquals("  docker-command=kill", dockerCommands.get(1));
-    Assert.assertEquals(
+    assertEquals(4, dockerCommands.size());
+    assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    assertEquals("  docker-command=kill", dockerCommands.get(1));
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(2));
-    Assert.assertEquals("  signal=KILL", dockerCommands.get(3));
+    assertEquals("  signal=KILL", dockerCommands.get(3));
   }
 
-  @Test
-  public void testDockerKillOnQuitSignalWhenRunningPrivileged()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerKillOnQuitSignalWhenRunningPrivileged(boolean pHttps)
       throws Exception {
+    initHttps(pHttps);
     conf.set(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS, "true");
     conf.set(YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
         submittingUser);
@@ -1937,17 +2013,19 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = getDockerCommandsForDockerStop(
         ContainerExecutor.Signal.QUIT);
 
-    Assert.assertEquals(4, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
-    Assert.assertEquals("  docker-command=kill", dockerCommands.get(1));
-    Assert.assertEquals(
+    assertEquals(4, dockerCommands.size());
+    assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    assertEquals("  docker-command=kill", dockerCommands.get(1));
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(2));
-    Assert.assertEquals("  signal=QUIT", dockerCommands.get(3));
+    assertEquals("  signal=QUIT", dockerCommands.get(3));
   }
 
-  @Test
-  public void testDockerRmOnWhenExited() throws Exception {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerRmOnWhenExited(boolean pHttps) throws Exception {
+    initHttps(pHttps);
     env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_DELAYED_REMOVAL,
         "false");
     conf.set(YarnConfiguration.NM_DOCKER_ALLOW_DELAYED_REMOVAL, "true");
@@ -1962,9 +2040,11 @@ public class TestDockerContainerRuntime {
             any(), anyBoolean(), anyBoolean());
   }
 
-  @Test
-  public void testNoDockerRmWhenDelayedDeletionEnabled()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testNoDockerRmWhenDelayedDeletionEnabled(boolean pHttps)
       throws Exception {
+    initHttps(pHttps);
     env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_DELAYED_REMOVAL,
         "true");
     conf.set(YarnConfiguration.NM_DOCKER_ALLOW_DELAYED_REMOVAL, "true");
@@ -1994,7 +2074,7 @@ public class TestDockerContainerRuntime {
     runtime.signalContainer(builder.build());
 
     PrivilegedOperation op = capturePrivilegedOperation(2);
-    Assert.assertEquals(op.getOperationType(),
+    assertEquals(op.getOperationType(),
         PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
     String dockerCommandFile = op.getArguments().get(0);
     return Files.readAllLines(Paths.get(dockerCommandFile),
@@ -2015,7 +2095,7 @@ public class TestDockerContainerRuntime {
     runtime.signalContainer(builder.build());
 
     PrivilegedOperation op = capturePrivilegedOperation();
-    Assert.assertEquals(op.getOperationType(),
+    assertEquals(op.getOperationType(),
         PrivilegedOperation.OperationType.SIGNAL_CONTAINER);
     return op.getArguments();
   }
@@ -2037,8 +2117,10 @@ public class TestDockerContainerRuntime {
     return conf;
   }
 
-  @Test
-  public void testDockerImageNamePattern() throws Exception {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerImageNamePattern(boolean pHttps) throws Exception {
+    initHttps(pHttps);
     String[] validNames = {"ubuntu", "fedora/httpd:version1.0", "fedora/httpd:version1.0.test",
         "fedora/httpd:version1.0.TEST", "myregistryhost:5000/ubuntu",
         "myregistryhost:5000/fedora/httpd:version1.0",
@@ -2068,15 +2150,17 @@ public class TestDockerContainerRuntime {
     for (String name : invalidNames) {
       try {
         DockerLinuxContainerRuntime.validateImageName(name);
-        Assert.fail(name + " is an invalid name and should fail the regex");
+        fail(name + " is an invalid name and should fail the regex");
       } catch (ContainerExecutionException ce) {
         continue;
       }
     }
   }
 
-  @Test
-  public void testDockerHostnamePattern() throws Exception {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerHostnamePattern(boolean pHttps) throws Exception {
+    initHttps(pHttps);
     String[] validNames = {"ab", "a.b.c.d", "a1-b.cd.ef", "0AB.", "C_D-"};
 
     String[] invalidNames = {"a", "a#.b.c", "-a.b.c", "a@b.c", "a/b/c"};
@@ -2088,24 +2172,30 @@ public class TestDockerContainerRuntime {
     for (String name : invalidNames) {
       try {
         DockerLinuxContainerRuntime.validateHostname(name);
-        Assert.fail(name + " is an invalid hostname and should fail the regex");
+        fail(name + " is an invalid hostname and should fail the regex");
       } catch (ContainerExecutionException ce) {
         continue;
       }
     }
   }
 
-  @Test
-  public void testValidDockerHostnameLength() throws Exception {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testValidDockerHostnameLength(boolean pHttps) throws Exception {
+    initHttps(pHttps);
     String validLength = "example.test.site";
     DockerLinuxContainerRuntime.validateHostname(validLength);
   }
 
-  @Test(expected = ContainerExecutionException.class)
-  public void testInvalidDockerHostnameLength() throws Exception {
-    String invalidLength =
-        "exampleexampleexampleexampleexampleexampleexampleexample.test.site";
-    DockerLinuxContainerRuntime.validateHostname(invalidLength);
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testInvalidDockerHostnameLength(boolean pHttps) throws Exception {
+    initHttps(pHttps);
+    assertThrows(ContainerExecutionException.class, () -> {
+      String invalidLength =
+          "exampleexampleexampleexampleexampleexampleexampleexample.test.site";
+      DockerLinuxContainerRuntime.validateHostname(invalidLength);
+    });
   }
 
   @SuppressWarnings("unchecked")
@@ -2128,25 +2218,25 @@ public class TestDockerContainerRuntime {
     List<PrivilegedOperation> allCaptures = opCaptor.getAllValues();
 
     PrivilegedOperation op = allCaptures.get(0);
-    Assert.assertEquals(PrivilegedOperation.OperationType
+    assertEquals(PrivilegedOperation.OperationType
         .RUN_DOCKER_CMD, op.getOperationType());
 
     File commandFile = new File(StringUtils.join(",", op.getArguments()));
     FileInputStream fileInputStream = new FileInputStream(commandFile);
     String fileContent = new String(IOUtils.toByteArray(fileInputStream));
-    Assert.assertEquals("[docker-command-execution]\n"
+    assertEquals("[docker-command-execution]\n"
         + "  docker-command=volume\n" + "  driver=local\n"
         + "  sub-command=create\n" + "  volume=volume1\n", fileContent);
     fileInputStream.close();
 
     op = allCaptures.get(1);
-    Assert.assertEquals(PrivilegedOperation.OperationType
+    assertEquals(PrivilegedOperation.OperationType
         .RUN_DOCKER_CMD, op.getOperationType());
 
     commandFile = new File(StringUtils.join(",", op.getArguments()));
     fileInputStream = new FileInputStream(commandFile);
     fileContent = new String(IOUtils.toByteArray(fileInputStream));
-    Assert.assertEquals(
+    assertEquals(
         "[docker-command-execution]\n" + "  docker-command=volume\n"
             + "  sub-command=ls\n", fileContent);
     fileInputStream.close();
@@ -2229,18 +2319,19 @@ public class TestDockerContainerRuntime {
         // Expected
         return;
       } else{
-        Assert.fail("Should successfully prepareContainers" + e);
+        fail("Should successfully prepareContainers" + e);
       }
     }
     if (expectFail) {
-      Assert.fail(
-          "Should fail because output is illegal");
+      fail("Should fail because output is illegal");
     }
   }
 
-  @Test
-  public void testDockerCommandPluginCheckVolumeAfterCreation()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerCommandPluginCheckVolumeAfterCreation(boolean pHttps)
       throws Exception {
+    initHttps(pHttps);
     // For following tests, we expect to have volume1,local in output
 
     // Failure cases
@@ -2279,8 +2370,10 @@ public class TestDockerContainerRuntime {
   }
 
 
-  @Test
-  public void testDockerCommandPlugin() throws Exception {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerCommandPlugin(boolean pHttps) throws Exception {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime =
         new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
     when(mockExecutor
@@ -2320,50 +2413,51 @@ public class TestDockerContainerRuntime {
 
     int expected = 14;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert
-        .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro,"
-            + "/source/path:/destination/path:ro",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro,"
+        + "/source/path:/destination/path:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
 
     // Verify volume-driver is set to expected value.
-    Assert.assertEquals("  volume-driver=driver-1",
+    assertEquals("  volume-driver=driver-1",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
 
-  @Test
-  public void testDockerCapabilities() throws ContainerExecutionException {
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerCapabilities(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     try {
       conf.setStrings(YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
           "none", "CHOWN", "DAC_OVERRIDE");
       runtime.initialize(conf, nmContext);
-      Assert.fail("Initialize didn't fail with invalid capabilities " +
+      fail("Initialize didn't fail with invalid capabilities " +
           "'none', 'CHOWN', 'DAC_OVERRIDE'");
     } catch (ContainerExecutionException e) {
     }
@@ -2372,7 +2466,7 @@ public class TestDockerContainerRuntime {
       conf.setStrings(YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
           "CHOWN", "DAC_OVERRIDE", "NONE");
       runtime.initialize(conf, nmContext);
-      Assert.fail("Initialize didn't fail with invalid capabilities " +
+      fail("Initialize didn't fail with invalid capabilities " +
           "'CHOWN', 'DAC_OVERRIDE', 'NONE'");
     } catch (ContainerExecutionException e) {
     }
@@ -2380,25 +2474,26 @@ public class TestDockerContainerRuntime {
     conf.setStrings(YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
         "NONE");
     runtime.initialize(conf, nmContext);
-    Assert.assertEquals(0, runtime.getCapabilities().size());
+    assertEquals(0, runtime.getCapabilities().size());
 
     conf.setStrings(YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
         "none");
     runtime.initialize(conf, nmContext);
-    Assert.assertEquals(0, runtime.getCapabilities().size());
+    assertEquals(0, runtime.getCapabilities().size());
 
     conf.setStrings(YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
         "CHOWN", "DAC_OVERRIDE");
     runtime.initialize(conf, nmContext);
     Iterator<String> it = runtime.getCapabilities().iterator();
-    Assert.assertEquals("CHOWN", it.next());
-    Assert.assertEquals("DAC_OVERRIDE", it.next());
+    assertEquals("CHOWN", it.next());
+    assertEquals("DAC_OVERRIDE", it.next());
   }
 
-  @Test
-  public void testLaunchContainerWithDockerTokens()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testLaunchContainerWithDockerTokens(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException, IOException {
-
+    initHttps(pHttps);
     // Get the credentials object with the Tokens.
     Credentials credentials = DockerClientConfigHandler.readCredentialsFromConfigFile(
         new Path(getDockerClientConfigFile().toURI()), conf, appId);
@@ -2409,9 +2504,11 @@ public class TestDockerContainerRuntime {
     testLaunchContainer(tokens, null);
   }
 
-  @Test
-  public void testLaunchContainerWithAdditionalDockerClientConfig()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testLaunchContainerWithAdditionalDockerClientConfig(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException, IOException {
+    initHttps(pHttps);
     testLaunchContainer(null, getDockerClientConfigFile());
   }
 
@@ -2442,7 +2539,7 @@ public class TestDockerContainerRuntime {
     builder.setExecutionAttribute(NM_PRIVATE_CONTAINER_SCRIPT_PATH, outDir);
     runtime.launchContainer(builder.build());
     PrivilegedOperation op = capturePrivilegedOperation();
-    Assert.assertEquals(
+    assertEquals(
         PrivilegedOperation.OperationType.LAUNCH_DOCKER_CONTAINER,
             op.getOperationType());
 
@@ -2450,30 +2547,30 @@ public class TestDockerContainerRuntime {
 
     int expectedArgs = (https) ? 15 : 13;
     int argsCounter = 0;
-    Assert.assertEquals(expectedArgs, args.size());
-    Assert.assertEquals(runAsUser, args.get(argsCounter++));
-    Assert.assertEquals(user, args.get(argsCounter++));
-    Assert.assertEquals(Integer.toString(
+    assertEquals(expectedArgs, args.size());
+    assertEquals(runAsUser, args.get(argsCounter++));
+    assertEquals(user, args.get(argsCounter++));
+    assertEquals(Integer.toString(
         PrivilegedOperation.RunAsUserCommand.LAUNCH_DOCKER_CONTAINER
             .getValue()), args.get(argsCounter++));
-    Assert.assertEquals(appId, args.get(argsCounter++));
-    Assert.assertEquals(containerId, args.get(argsCounter++));
-    Assert.assertEquals(containerWorkDir.toString(), args.get(argsCounter++));
-    Assert.assertEquals(outDir.toUri().getPath(), args.get(argsCounter++));
-    Assert.assertEquals(nmPrivateTokensPath.toUri().getPath(),
+    assertEquals(appId, args.get(argsCounter++));
+    assertEquals(containerId, args.get(argsCounter++));
+    assertEquals(containerWorkDir.toString(), args.get(argsCounter++));
+    assertEquals(outDir.toUri().getPath(), args.get(argsCounter++));
+    assertEquals(nmPrivateTokensPath.toUri().getPath(),
         args.get(argsCounter++));
     if (https) {
-      Assert.assertEquals("--https", args.get(argsCounter++));
-      Assert.assertEquals(nmPrivateKeystorePath.toUri().toString(),
+      assertEquals("--https", args.get(argsCounter++));
+      assertEquals(nmPrivateKeystorePath.toUri().toString(),
           args.get(argsCounter++));
-      Assert.assertEquals(nmPrivateTruststorePath.toUri().toString(),
+      assertEquals(nmPrivateTruststorePath.toUri().toString(),
           args.get(argsCounter++));
     } else {
-      Assert.assertEquals("--http", args.get(argsCounter++));
+      assertEquals("--http", args.get(argsCounter++));
     }
-    Assert.assertEquals(pidFilePath.toString(), args.get(argsCounter++));
-    Assert.assertEquals(localDirs.get(0), args.get(argsCounter++));
-    Assert.assertEquals(logDirs.get(0), args.get(argsCounter++));
+    assertEquals(pidFilePath.toString(), args.get(argsCounter++));
+    assertEquals(localDirs.get(0), args.get(argsCounter++));
+    assertEquals(logDirs.get(0), args.get(argsCounter++));
     String dockerCommandFile = args.get(argsCounter++);
 
     List<String> dockerCommands = Files
@@ -2481,35 +2578,35 @@ public class TestDockerContainerRuntime {
 
     int expected = 14;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+    assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
-    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-config=" + outDir.getParent(),
+    assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    assertEquals("  detach=true", dockerCommands.get(counter++));
+    assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    assertEquals("  docker-config=" + outDir.getParent(),
         dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
+    assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert.assertEquals("  image=busybox:latest",
+    assertEquals("  image=busybox:latest",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  mounts="
-            + "/test_container_log_dir:/test_container_log_dir:rw,"
-            + "/test_application_local_dir:/test_application_local_dir:rw,"
-            + "/test_filecache_dir:/test_filecache_dir:ro,"
-            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+    assertEquals("  mounts="
+        + "/test_container_log_dir:/test_container_log_dir:rw,"
+        + "/test_application_local_dir:/test_application_local_dir:rw,"
+        + "/test_filecache_dir:/test_filecache_dir:ro,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
-    Assert.assertEquals("  workdir=/test_container_work_dir",
+    assertEquals("  net=host", dockerCommands.get(counter++));
+    assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter++));
   }
 
@@ -2523,10 +2620,12 @@ public class TestDockerContainerRuntime {
     return file;
   }
 
-  @Test
-  public void testDockerContainerRelaunch()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testDockerContainerRelaunch(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime =
         new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
     when(mockExecutor
@@ -2539,20 +2638,22 @@ public class TestDockerContainerRuntime {
 
     int expected = 3;
     int counter = 0;
-    Assert.assertEquals(expected, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]",
+    assertEquals(expected, dockerCommands.size());
+    assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  docker-command=start",
+    assertEquals("  docker-command=start",
         dockerCommands.get(counter++));
-    Assert.assertEquals(
+    assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter));
   }
 
-  @Test
-  public void testLaunchContainersWithSpecificDockerRuntime()
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
+  public void testLaunchContainersWithSpecificDockerRuntime(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -2561,15 +2662,17 @@ public class TestDockerContainerRuntime {
             .ENV_DOCKER_CONTAINER_DOCKER_RUNTIME, "runc");
     runtime.launchContainer(builder.build());
     List<String> dockerCommands = readDockerCommands();
-    Assert.assertEquals(14, dockerCommands.size());
-    Assert.assertEquals("  runtime=runc", dockerCommands.get(11));
+    assertEquals(14, dockerCommands.size());
+    assertEquals("  runtime=runc", dockerCommands.get(11));
   }
 
-  @Test
+  @ParameterizedTest(name = "https={0}")
+  @MethodSource("data")
   @SuppressWarnings("unchecked")
-  public void testContainerLaunchWithAllowedRuntimes()
+  public void testContainerLaunchWithAllowedRuntimes(boolean pHttps)
       throws ContainerExecutionException, IOException,
       PrivilegedOperationException {
+    initHttps(pHttps);
     DockerLinuxContainerRuntime runtime =
         new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -2580,7 +2683,7 @@ public class TestDockerContainerRuntime {
       env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_DOCKER_RUNTIME,
           disallowedRuntime);
       runtime.launchContainer(builder.build());
-      Assert.fail("Runtime was expected to be disallowed: " +
+      fail("Runtime was expected to be disallowed: " +
           disallowedRuntime);
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception: " + e);
@@ -2595,18 +2698,18 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = readDockerCommands();
 
     //This is the expected docker invocation for this case
-    Assert.assertEquals(14, dockerCommands.size());
-    Assert.assertEquals("  runtime=runc", dockerCommands.get(11));
+    assertEquals(14, dockerCommands.size());
+    assertEquals("  runtime=runc", dockerCommands.get(11));
   }
 
   private static void verifyStopCommand(List<String> dockerCommands,
       String signal) {
-    Assert.assertEquals(4, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
-    Assert.assertEquals("  docker-command=kill", dockerCommands.get(1));
-    Assert.assertEquals("  name=container_e11_1518975676334_14532816_01_000001",
+    assertEquals(4, dockerCommands.size());
+    assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    assertEquals("  docker-command=kill", dockerCommands.get(1));
+    assertEquals("  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(2));
-    Assert.assertEquals("  signal=" + signal, dockerCommands.get(3));
+    assertEquals("  signal=" + signal, dockerCommands.get(3));
   }
 
   private List<String> readDockerCommands() throws IOException,

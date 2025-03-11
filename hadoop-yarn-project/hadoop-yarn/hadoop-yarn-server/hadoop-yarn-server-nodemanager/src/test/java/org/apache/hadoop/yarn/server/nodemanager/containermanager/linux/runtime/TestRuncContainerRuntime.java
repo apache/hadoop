@@ -61,11 +61,9 @@ import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.runners.Parameterized;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -89,6 +87,12 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_DEFAULT_RW_M
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_LAYER_MOUNTS_TO_KEEP;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.RuncContainerRuntime.ENV_RUNC_CONTAINER_MOUNTS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
@@ -100,7 +104,6 @@ import static org.mockito.Mockito.when;
 /**
  * This class tests the {@link RuncContainerRuntime}.
  */
-@RunWith(Parameterized.class)
 public class TestRuncContainerRuntime {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRuncContainerRuntime.class);
@@ -160,10 +163,14 @@ public class TestRuncContainerRuntime {
     });
   }
 
-  @Parameterized.Parameter
   public boolean https;
 
-  @Before
+  private void initHttps(boolean pHttps) throws ContainerExecutionException {
+    this.https = pHttps;
+    setup();
+  }
+
+  @SuppressWarnings("checkstyle:methodlength")
   public void setup() throws ContainerExecutionException {
     mockExecutor = Mockito
         .mock(PrivilegedOperationExecutor.class);
@@ -319,7 +326,7 @@ public class TestRuncContainerRuntime {
         .setExecutionAttribute(RESOURCES_OPTIONS, resourcesOptions);
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws IOException {
     File tmpDir = new File(tmpPath);
     FileUtils.deleteDirectory(tmpDir);
@@ -439,7 +446,7 @@ public class TestRuncContainerRuntime {
       throws PrivilegedOperationException {
     PrivilegedOperation op = capturePrivilegedOperation(1);
 
-    Assert.assertEquals(PrivilegedOperation.OperationType
+    assertEquals(PrivilegedOperation.OperationType
         .RUN_RUNC_CONTAINER, op.getOperationType());
     return new File(op.getArguments().get(0));
   }
@@ -532,34 +539,34 @@ public class TestRuncContainerRuntime {
 
     expectedConfigSize = (https) ? 16 : 13;
 
-    Assert.assertEquals(expectedConfigSize, configSize);
-    Assert.assertEquals("0.1", configVersion);
-    Assert.assertEquals(runAsUser, configRunAsUser);
-    Assert.assertEquals(user, configUser);
-    Assert.assertEquals(containerId, configContainerId);
-    Assert.assertEquals(appId, configAppId);
-    Assert.assertEquals(pidFilePath.toString(), configPidFile);
-    Assert.assertEquals(nmPrivateContainerScriptPath.toUri().toString(),
+    assertEquals(expectedConfigSize, configSize);
+    assertEquals("0.1", configVersion);
+    assertEquals(runAsUser, configRunAsUser);
+    assertEquals(user, configUser);
+    assertEquals(containerId, configContainerId);
+    assertEquals(appId, configAppId);
+    assertEquals(pidFilePath.toString(), configPidFile);
+    assertEquals(nmPrivateContainerScriptPath.toUri().toString(),
         configContainerScriptPath);
-    Assert.assertEquals(nmPrivateTokensPath.toUri().getPath(),
+    assertEquals(nmPrivateTokensPath.toUri().getPath(),
         configContainerCredentialsPath);
 
     if (https) {
-      Assert.assertEquals(1, configHttps);
-      Assert.assertEquals(nmPrivateKeystorePath.toUri().toString(),
+      assertEquals(1, configHttps);
+      assertEquals(nmPrivateKeystorePath.toUri().toString(),
           configKeystorePath);
-      Assert.assertEquals(nmPrivateTruststorePath.toUri().toString(),
+      assertEquals(nmPrivateTruststorePath.toUri().toString(),
           configTruststorePath);
     } else {
-      Assert.assertEquals(0, configHttps);
-      Assert.assertNull(configKeystorePath);
-      Assert.assertNull(configTruststorePath);
+      assertEquals(0, configHttps);
+      assertNull(configKeystorePath);
+      assertNull(configTruststorePath);
     }
 
-    Assert.assertEquals(localDirs, configLocalDirsList);
-    Assert.assertEquals(logDirs, configLogDirsList);
-    Assert.assertEquals(0, configLayersList.size());
-    Assert.assertEquals(layersToKeep, configLayersToKeep);
+    assertEquals(localDirs, configLocalDirsList);
+    assertEquals(logDirs, configLogDirsList);
+    assertEquals(0, configLayersList.size());
+    assertEquals(layersToKeep, configLayersToKeep);
 
     List<OCIMount> configMounts = ociRuntimeConfig.getMounts();
     verifyRuncMounts(expectedMounts, configMounts);
@@ -567,10 +574,10 @@ public class TestRuncContainerRuntime {
     List<String> processArgsList = ociProcessConfig.getArgs();
     String configArgs = "".join(",", processArgsList);
 
-    Assert.assertEquals(containerWorkDir.toString(), configContainerWorkDir);
-    Assert.assertEquals("bash," + containerWorkDir + "/launch_container.sh",
+    assertEquals(containerWorkDir.toString(), configContainerWorkDir);
+    assertEquals("bash," + containerWorkDir + "/launch_container.sh",
         configArgs);
-    Assert.assertEquals(cpuShares, configCpuShares);
+    assertEquals(cpuShares, configCpuShares);
 
     return runcContainerExecutorConfig;
   }
@@ -578,7 +585,7 @@ public class TestRuncContainerRuntime {
 
   private void verifyRuncMounts(List<OCIMount> expectedRuncMounts,
       List<OCIMount> configMounts) throws IOException {
-    Assert.assertEquals(expectedRuncMounts.size(), configMounts.size());
+    assertEquals(expectedRuncMounts.size(), configMounts.size());
     boolean found;
     for (OCIMount expectedMount : expectedRuncMounts) {
       found = false;
@@ -604,8 +611,10 @@ public class TestRuncContainerRuntime {
     }
   }
 
-  @Test
-  public void testSelectRuncContainerType() {
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testSelectRuncContainerType(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     Map<String, String> envRuncType = new HashMap<>();
     Map<String, String> envOtherType = new HashMap<>();
 
@@ -613,16 +622,19 @@ public class TestRuncContainerRuntime {
         ContainerRuntimeConstants.CONTAINER_RUNTIME_RUNC);
     envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
 
-    Assert.assertFalse(RuncContainerRuntime
+    assertFalse(RuncContainerRuntime
         .isRuncContainerRequested(conf, null));
-    Assert.assertTrue(RuncContainerRuntime
+    assertTrue(RuncContainerRuntime
         .isRuncContainerRequested(conf, envRuncType));
-    Assert.assertFalse(RuncContainerRuntime
+    assertFalse(RuncContainerRuntime
         .isRuncContainerRequested(conf, envOtherType));
   }
 
-  @Test
-  public void testSelectRuncContainerTypeWithRuncAsDefault() {
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testSelectRuncContainerTypeWithRuncAsDefault(boolean pHttps)
+      throws ContainerExecutionException {
+    initHttps(pHttps);
     Map<String, String> envRuncType = new HashMap<>();
     Map<String, String> envOtherType = new HashMap<>();
 
@@ -632,16 +644,19 @@ public class TestRuncContainerRuntime {
         ContainerRuntimeConstants.CONTAINER_RUNTIME_RUNC);
     envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
 
-    Assert.assertTrue(RuncContainerRuntime
+    assertTrue(RuncContainerRuntime
         .isRuncContainerRequested(conf, null));
-    Assert.assertTrue(RuncContainerRuntime
+    assertTrue(RuncContainerRuntime
         .isRuncContainerRequested(conf, envRuncType));
-    Assert.assertFalse(RuncContainerRuntime
+    assertFalse(RuncContainerRuntime
         .isRuncContainerRequested(conf, envOtherType));
   }
 
-  @Test
-  public void testSelectRuncContainerTypeWithDefaultSet() {
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testSelectRuncContainerTypeWithDefaultSet(boolean pHttps)
+      throws ContainerExecutionException {
+    initHttps(pHttps);
     Map<String, String> envRuncType = new HashMap<>();
     Map<String, String> envOtherType = new HashMap<>();
 
@@ -650,18 +665,20 @@ public class TestRuncContainerRuntime {
         ContainerRuntimeConstants.CONTAINER_RUNTIME_RUNC);
     envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
 
-    Assert.assertFalse(RuncContainerRuntime
+    assertFalse(RuncContainerRuntime
         .isRuncContainerRequested(conf, null));
-    Assert.assertTrue(RuncContainerRuntime
+    assertTrue(RuncContainerRuntime
         .isRuncContainerRequested(conf, envRuncType));
-    Assert.assertFalse(RuncContainerRuntime
+    assertFalse(RuncContainerRuntime
         .isRuncContainerRequested(conf, envOtherType));
   }
 
-  @Test
-  public void testRuncContainerLaunch()
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testRuncContainerLaunch(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     MockRuncContainerRuntime runtime = new MockRuncContainerRuntime(
         mockExecutor, mockCGroupsHandler);
 
@@ -672,9 +689,11 @@ public class TestRuncContainerRuntime {
     verifyRuncConfig(configFile);
   }
 
-  @Test
-  public void testRuncContainerLaunchWithDefaultImage()
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testRuncContainerLaunchWithDefaultImage(boolean pHttps)
       throws ContainerExecutionException, IOException {
+    initHttps(pHttps);
     String runcImage = "busybox:1.2.3";
     conf.set(YarnConfiguration.NM_RUNC_IMAGE_NAME, runcImage);
     env.remove(RuncContainerRuntime.ENV_RUNC_CONTAINER_IMAGE);
@@ -688,9 +707,11 @@ public class TestRuncContainerRuntime {
         .getManifestFromImageTag(runcImage);
   }
 
-  @Test
-  public void testCGroupParent() throws ContainerExecutionException,
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testCGroupParent(boolean pHttps) throws ContainerExecutionException,
       PrivilegedOperationException, IOException {
+    initHttps(pHttps);
     // Case 1: neither hierarchy nor resource options set,
     // so cgroup should not be set
     MockRuncContainerRuntime runtime = new MockRuncContainerRuntime(
@@ -705,7 +726,7 @@ public class TestRuncContainerRuntime {
 
     String configCgroupsPath = runcContainerExecutorConfig
         .getOciRuntimeConfig().getLinux().getCgroupsPath();
-    Assert.assertNull(configCgroupsPath);
+    assertNull(configCgroupsPath);
 
     // Case 2: hierarchy set, but resource options not,
     // so cgroup should not be set
@@ -724,7 +745,7 @@ public class TestRuncContainerRuntime {
 
     configCgroupsPath = runcContainerExecutorConfig.getOciRuntimeConfig()
         .getLinux().getCgroupsPath();
-    Assert.assertNull(configCgroupsPath);
+    assertNull(configCgroupsPath);
 
     // Case 3: resource options set, so cgroup should be set
     String resourceOptionsCpu = "/sys/fs/cgroup/cpu/" + hierarchy +
@@ -743,7 +764,7 @@ public class TestRuncContainerRuntime {
 
     configCgroupsPath = runcContainerExecutorConfig.getOciRuntimeConfig()
         .getLinux().getCgroupsPath();
-    Assert.assertEquals("/" + hierarchy, configCgroupsPath);
+    assertEquals("/" + hierarchy, configCgroupsPath);
 
     // Case 4: cgroupsHandler is null, so cgroup should not be set
     resourceOptionsCpu = "/sys/fs/cgroup/cpu/" + hierarchy +
@@ -762,14 +783,16 @@ public class TestRuncContainerRuntime {
 
     configCgroupsPath = runcContainerExecutorConfig.getOciRuntimeConfig()
         .getLinux().getCgroupsPath();
-    Assert.assertNull(configCgroupsPath);
+    assertNull(configCgroupsPath);
   }
 
 
-  @Test
-  public void testDefaultROMounts()
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testDefaultROMounts(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     String roMount1 = tmpPath + "/foo";
     File roMountFile1 = new File(roMount1);
     roMountFile1.mkdirs();
@@ -801,8 +824,10 @@ public class TestRuncContainerRuntime {
     verifyRuncConfig(configFile);
   }
 
-  @Test
-  public void testDefaultROMountsInvalid() throws ContainerExecutionException {
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testDefaultROMountsInvalid(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     conf.setStrings(NM_RUNC_DEFAULT_RO_MOUNTS,
         "source,target");
     RuncContainerRuntime runtime = new MockRuncContainerRuntime(
@@ -811,16 +836,18 @@ public class TestRuncContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a launch container failure due to invalid mount.");
+      fail("Expected a launch container failure due to invalid mount.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testDefaultRWMounts()
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testDefaultRWMounts(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     String rwMount1 = tmpPath + "/foo";
     File rwMountFile1 = new File(rwMount1);
     rwMountFile1.mkdirs();
@@ -852,8 +879,10 @@ public class TestRuncContainerRuntime {
     verifyRuncConfig(configFile);
   }
 
-  @Test
-  public void testDefaultRWMountsInvalid() throws ContainerExecutionException {
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testDefaultRWMountsInvalid(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     conf.setStrings(NM_RUNC_DEFAULT_RW_MOUNTS,
         "source,target");
     RuncContainerRuntime runtime = new MockRuncContainerRuntime(
@@ -862,16 +891,18 @@ public class TestRuncContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a launch container failure due to invalid mount.");
+      fail("Expected a launch container failure due to invalid mount.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testUserMounts()
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testUserMounts(boolean pHttps)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
+    initHttps(pHttps);
     String roMount = tmpPath + "/foo";
     File roMountFile = new File(roMount);
     roMountFile.mkdirs();
@@ -908,8 +939,10 @@ public class TestRuncContainerRuntime {
     verifyRuncConfig(configFile);
   }
 
-  @Test
-  public void testUserMountsInvalid() throws ContainerExecutionException {
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testUserMountsInvalid(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     env.put(ENV_RUNC_CONTAINER_MOUNTS,
         "source:target");
     RuncContainerRuntime runtime = new MockRuncContainerRuntime(
@@ -918,14 +951,16 @@ public class TestRuncContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a launch container failure due to invalid mount.");
+      fail("Expected a launch container failure due to invalid mount.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testUserMountsModeInvalid() throws ContainerExecutionException {
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testUserMountsModeInvalid(boolean pHttps) throws ContainerExecutionException {
+    initHttps(pHttps);
     env.put(ENV_RUNC_CONTAINER_MOUNTS,
         "source:target:other");
     RuncContainerRuntime runtime = new MockRuncContainerRuntime(
@@ -934,15 +969,17 @@ public class TestRuncContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a launch container failure due to invalid mount.");
+      fail("Expected a launch container failure due to invalid mount.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testUserMountsModeNullInvalid()
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testUserMountsModeNullInvalid(boolean pHttps)
       throws ContainerExecutionException {
+    initHttps(pHttps);
     env.put(ENV_RUNC_CONTAINER_MOUNTS,
         "s\0ource:target:ro");
     RuncContainerRuntime runtime = new MockRuncContainerRuntime(
@@ -951,14 +988,16 @@ public class TestRuncContainerRuntime {
 
     try {
       runtime.launchContainer(builder.build());
-      Assert.fail("Expected a launch container failure due to invalid mount.");
+      fail("Expected a launch container failure due to invalid mount.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }
   }
 
-  @Test
-  public void testRuncHostnamePattern() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testRuncHostnamePattern(boolean pHttps) throws Exception {
+    initHttps(pHttps);
     String[] validNames = {"ab", "a.b.c.d", "a1-b.cd.ef", "0AB.", "C_D-"};
 
     String[] invalidNames = {"a", "a#.b.c", "-a.b.c", "a@b.c", "a/b/c"};
@@ -970,28 +1009,36 @@ public class TestRuncContainerRuntime {
     for (String name : invalidNames) {
       try {
         RuncContainerRuntime.validateHostname(name);
-        Assert.fail(name + " is an invalid hostname and should fail the regex");
+        fail(name + " is an invalid hostname and should fail the regex");
       } catch (ContainerExecutionException ce) {
         continue;
       }
     }
   }
 
-  @Test
-  public void testValidRuncHostnameLength() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testValidRuncHostnameLength(boolean pHttps) throws Exception {
+    initHttps(pHttps);
     String validLength = "example.test.site";
     RuncContainerRuntime.validateHostname(validLength);
   }
 
-  @Test(expected = ContainerExecutionException.class)
-  public void testInvalidRuncHostnameLength() throws Exception {
-    String invalidLength =
-        "exampleexampleexampleexampleexampleexampleexampleexample.test.site";
-    RuncContainerRuntime.validateHostname(invalidLength);
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testInvalidRuncHostnameLength(boolean pHttps) throws Exception {
+    initHttps(pHttps);
+    assertThrows(ContainerExecutionException.class, () -> {
+      String invalidLength =
+          "exampleexampleexampleexampleexampleexampleexampleexample.test.site";
+      RuncContainerRuntime.validateHostname(invalidLength);
+    });
   }
 
-  @Test
-  public void testGetLocalResources() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest(name = "https={0}")
+  public void testGetLocalResources(boolean pHttps) throws Exception {
+    initHttps(pHttps);
     RuncContainerRuntime runtime = new MockRuncContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -1003,8 +1050,8 @@ public class TestRuncContainerRuntime {
     LocalResource testConfig = runtimeObject.getConfig();
     List<LocalResource> testLayers = runtimeObject.getOCILayers();
 
-    Assert.assertEquals(config, testConfig);
-    Assert.assertEquals(layers, testLayers);
+    assertEquals(config, testConfig);
+    assertEquals(layers, testLayers);
 
   }
 }

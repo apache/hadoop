@@ -17,9 +17,10 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
-import static junit.framework.TestCase.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -86,9 +87,9 @@ import org.apache.hadoop.yarn.server.nodemanager.api.ResourceLocalizationSpec;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalResourceStatus;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerAction;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerStatus;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -111,7 +112,7 @@ public class TestContainerLocalizer {
   static final InetSocketAddress nmAddr =
       new InetSocketAddress("foobar", 8040);
 
-  @After
+  @AfterEach
   public void cleanUp() throws IOException {
     FileUtils.deleteDirectory(new File(basedir.toUri().getRawPath()));
   }
@@ -217,7 +218,8 @@ public class TestContainerLocalizer {
         status -> !containerId.equals(status.getLocalizerId())));
   }
 
-  @Test(timeout = 15000)
+  @Test
+  @Timeout(value = 15)
   public void testMainFailure() throws Exception {
     ContainerLocalizerWrapper wrapper = new ContainerLocalizerWrapper();
     ContainerLocalizer localizer = wrapper.setupContainerLocalizerForTest();
@@ -231,9 +233,9 @@ public class TestContainerLocalizer {
     // run localization, it should fail
     try {
       localizer.runLocalization(nmAddr);
-      Assert.fail("Localization succeeded unexpectedly!");
+      fail("Localization succeeded unexpectedly!");
     } catch (IOException e) {
-      Assert.assertTrue(e.getMessage().contains("Sigh, no token!"));
+      assertTrue(e.getMessage().contains("Sigh, no token!"));
     }
   }
 
@@ -304,7 +306,7 @@ public class TestContainerLocalizer {
         any(UserGroupInformation.class));
     try {
       localizer.runLocalization(nmAddr);
-      Assert.fail("Localization succeeded unexpectedly!");
+      fail("Localization succeeded unexpectedly!");
     } catch (IOException e) {
       verify(localizer).closeFileSystems(any(UserGroupInformation.class));
     }
@@ -368,10 +370,10 @@ public class TestContainerLocalizer {
       shexcA = localizerA.getDownloader().getShexc();
       shexcB = localizerB.getDownloader().getShexc();
 
-      assertTrue("Localizer A process not running, but should be",
-          shexcA.getProcess().isAlive());
-      assertTrue("Localizer B process not running, but should be",
-          shexcB.getProcess().isAlive());
+      assertTrue(shexcA.getProcess().isAlive(),
+          "Localizer A process not running, but should be");
+      assertTrue(shexcB.getProcess().isAlive(),
+          "Localizer B process not running, but should be");
 
       // Stop heartbeat from giving anymore resources to download
       testA.heartbeatResponse++;
@@ -383,10 +385,10 @@ public class TestContainerLocalizer {
       threadA.join();
       shexcA.getProcess().waitFor(10000, TimeUnit.MILLISECONDS);
 
-      assertFalse("Localizer A process is still running, but shouldn't be",
-          shexcA.getProcess().isAlive());
-      assertTrue("Localizer B process not running, but should be",
-          shexcB.getProcess().isAlive());
+      assertFalse(shexcA.getProcess().isAlive(),
+          "Localizer A process is still running, but shouldn't be");
+      assertTrue(shexcB.getProcess().isAlive(),
+          "Localizer B process not running, but should be");
 
     } finally {
       // Make sure everything gets cleaned up
@@ -671,7 +673,8 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     return ret;
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testUserCacheDirPermission() throws Exception {
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
@@ -693,13 +696,11 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     //Localize and check the directory permission are correct.
     localizer
         .download(destDirPath, rsrc, UserGroupInformation.getCurrentUser());
-    Assert
-        .assertEquals("Cache directory permissions filecache/0/0 is incorrect",
-            USERCACHE_DIR_PERM,
-            lfs.getFileStatus(destDirPath.getParent()).getPermission());
-    Assert.assertEquals("Cache directory permissions filecache/0 is incorrect",
-        USERCACHE_DIR_PERM,
-        lfs.getFileStatus(destDirPath.getParent().getParent()).getPermission());
+    assertEquals(USERCACHE_DIR_PERM, lfs.getFileStatus(destDirPath.getParent()).getPermission(),
+        "Cache directory permissions filecache/0/0 is incorrect");
+    assertEquals(USERCACHE_DIR_PERM,
+        lfs.getFileStatus(destDirPath.getParent().getParent()).getPermission(),
+        "Cache directory permissions filecache/0 is incorrect");
   }
 
   @Test
@@ -714,10 +715,10 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
     if (Shell.isJavaVersionAtLeast(17)) {
-      Assert.assertTrue(javaOpts.contains("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
-      Assert.assertTrue(javaOpts.contains("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
+      assertTrue(javaOpts.contains("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
+      assertTrue(javaOpts.contains("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
     }
-    Assert.assertTrue(javaOpts.contains("-Xmx256m"));
+    assertTrue(javaOpts.contains("-Xmx256m"));
   }
 
   @Test
@@ -732,10 +733,10 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
     if (Shell.isJavaVersionAtLeast(17)) {
-      Assert.assertFalse(javaOpts.contains("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
-      Assert.assertFalse(javaOpts.contains("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
+      assertFalse(javaOpts.contains("--add-exports=java.base/sun.net.dns=ALL-UNNAMED"));
+      assertFalse(javaOpts.contains("--add-exports=java.base/sun.net.util=ALL-UNNAMED"));
     }
-    Assert.assertTrue(javaOpts.contains("-Xmx256m"));
+    assertTrue(javaOpts.contains("-Xmx256m"));
   }
 
   @Test
@@ -750,11 +751,11 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
         " userOption1 userOption2");
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
-    Assert.assertEquals(4, javaOpts.size());
-    Assert.assertTrue(javaOpts.get(0).equals("adminOption1"));
-    Assert.assertTrue(javaOpts.get(1).equals("adminOption2"));
-    Assert.assertTrue(javaOpts.get(2).equals("userOption1"));
-    Assert.assertTrue(javaOpts.get(3).equals("userOption2"));
+    assertEquals(4, javaOpts.size());
+    assertTrue(javaOpts.get(0).equals("adminOption1"));
+    assertTrue(javaOpts.get(1).equals("adminOption2"));
+    assertTrue(javaOpts.get(2).equals("userOption1"));
+    assertTrue(javaOpts.get(3).equals("userOption2"));
   }
 
   @Test
@@ -767,10 +768,10 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
         "adminOption1 adminOption2");
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
-    Assert.assertEquals(3, javaOpts.size());
-    Assert.assertTrue(javaOpts.get(0).equals("adminOption1"));
-    Assert.assertTrue(javaOpts.get(1).equals("adminOption2"));
-    Assert.assertTrue(javaOpts.get(2).equals("-Xmx256m"));
+    assertEquals(3, javaOpts.size());
+    assertTrue(javaOpts.get(0).equals("adminOption1"));
+    assertTrue(javaOpts.get(1).equals("adminOption2"));
+    assertTrue(javaOpts.get(2).equals("-Xmx256m"));
   }
 
   @Test
@@ -783,9 +784,9 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
         "userOption1 userOption2");
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
-    Assert.assertEquals(2, javaOpts.size());
-    Assert.assertTrue(javaOpts.get(0).equals("userOption1"));
-    Assert.assertTrue(javaOpts.get(1).equals("userOption2"));
+    assertEquals(2, javaOpts.size());
+    assertTrue(javaOpts.get(0).equals("userOption1"));
+    assertTrue(javaOpts.get(1).equals("userOption2"));
   }
 
   @Test
@@ -796,7 +797,7 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     Configuration conf = new Configuration();
     List<String> javaOpts = localizer.getJavaOpts(conf);
 
-    Assert.assertEquals(1, javaOpts.size());
-    Assert.assertTrue(javaOpts.get(0).equals("-Xmx256m"));
+    assertEquals(1, javaOpts.size());
+    assertTrue(javaOpts.get(0).equals("-Xmx256m"));
   }
 }

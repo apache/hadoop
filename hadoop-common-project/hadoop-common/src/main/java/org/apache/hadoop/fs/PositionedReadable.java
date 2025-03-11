@@ -21,11 +21,13 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.io.Sizes.S_16K;
 import static org.apache.hadoop.io.Sizes.S_1M;
 
@@ -136,4 +138,31 @@ public interface PositionedReadable {
                             IntFunction<ByteBuffer> allocate) throws IOException {
     VectoredReadUtils.readVectored(this, ranges, allocate);
   }
+
+  /**
+   * Extension of {@link #readVectored(List, IntFunction)} where a {@code release(buffer)}
+   * operation may be invoked if problems surface during reads.
+   * <p>
+   * The {@code release} operation is invoked after an IOException
+   * to return the actively buffer to a pool before reporting a failure
+   * in the future.
+   * <p>
+   * The default implementation calls {@link #readVectored(List, IntFunction)}.p
+   * <p>
+   * Implementations SHOULD override this method if they can release buffers as
+   * part of their error handling.
+   * @param ranges the byte ranges to read
+   * @param allocate function to allocate ByteBuffer
+   * @param release callable to release a ByteBuffer.
+   * @throws IOException any IOE.
+   * @throws IllegalArgumentException if any of ranges are invalid, or they overlap.
+   * @throws NullPointerException null arguments.
+   */
+  default void readVectored(List<? extends FileRange> ranges,
+      IntFunction<ByteBuffer> allocate,
+      Consumer<ByteBuffer> release) throws IOException {
+    requireNonNull(release);
+    readVectored(ranges, allocate);
+  }
+
 }

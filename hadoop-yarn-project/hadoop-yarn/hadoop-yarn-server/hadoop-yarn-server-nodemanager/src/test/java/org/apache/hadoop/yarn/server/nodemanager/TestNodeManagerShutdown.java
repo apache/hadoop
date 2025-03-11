@@ -33,7 +33,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -69,9 +68,12 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestContainerM
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestNodeManagerShutdown {
   static final File basedir =
@@ -90,7 +92,7 @@ public class TestNodeManagerShutdown {
   private ContainerId cId;
   private NodeManager nm;
 
-  @Before
+  @BeforeEach
   public void setup() throws UnsupportedFileSystemException {
     localFS = FileContext.getLocalFSFileContext();
     tmpDir.mkdirs();
@@ -102,7 +104,7 @@ public class TestNodeManagerShutdown {
     cId = createContainerId();
   }
   
-  @After
+  @AfterEach
   public void tearDown() throws IOException, InterruptedException {
     if (nm != null) {
       nm.stop();
@@ -121,23 +123,23 @@ public class TestNodeManagerShutdown {
     // verify state store is not removed on normal shutdown
     nm.init(conf);
     nm.start();
-    Assert.assertTrue(recoveryDir.exists());
-    Assert.assertTrue(recoveryDir.isDirectory());
+    assertTrue(recoveryDir.exists());
+    assertTrue(recoveryDir.isDirectory());
     nm.stop();
     nm = null;
-    Assert.assertTrue(recoveryDir.exists());
-    Assert.assertTrue(recoveryDir.isDirectory());
+    assertTrue(recoveryDir.exists());
+    assertTrue(recoveryDir.isDirectory());
 
     // verify state store is removed on decommissioned shutdown
     nm = new TestNodeManager();
     nm.init(conf);
     nm.start();
-    Assert.assertTrue(recoveryDir.exists());
-    Assert.assertTrue(recoveryDir.isDirectory());
+    assertTrue(recoveryDir.exists());
+    assertTrue(recoveryDir.isDirectory());
     nm.getNMContext().setDecommissioned(true);
     nm.stop();
     nm = null;
-    Assert.assertFalse(recoveryDir.exists());
+    assertFalse(recoveryDir.exists());
   }
 
   @Test
@@ -166,8 +168,8 @@ public class TestNodeManagerShutdown {
     // There is no way for the process to trap and respond.  Instead, we can
     // verify that the job object with ID matching container ID no longer exists.
     if (Shell.WINDOWS) {
-      Assert.assertFalse("Process is still alive!",
-        DefaultContainerExecutor.containerIsAlive(cId.toString()));
+      assertFalse(DefaultContainerExecutor.containerIsAlive(cId.toString()),
+          "Process is still alive!");
     } else {
       BufferedReader reader =
           new BufferedReader(new FileReader(processStartFile));
@@ -183,7 +185,7 @@ public class TestNodeManagerShutdown {
           break;
         }
       }
-      Assert.assertTrue("Did not find sigterm message", foundSigTermMessage);
+      assertTrue(foundSigTermMessage, "Did not find sigterm message");
       reader.close();
     }
   }
@@ -257,7 +259,7 @@ public class TestNodeManagerShutdown {
         GetContainerStatusesRequest.newInstance(containerIds);
     ContainerStatus containerStatus =
         containerManager.getContainerStatuses(request).getContainerStatuses().get(0);
-    Assert.assertTrue(EnumSet.of(ContainerState.RUNNING)
+    assertTrue(EnumSet.of(ContainerState.RUNNING)
             .contains(containerStatus.getState()));
   }
   

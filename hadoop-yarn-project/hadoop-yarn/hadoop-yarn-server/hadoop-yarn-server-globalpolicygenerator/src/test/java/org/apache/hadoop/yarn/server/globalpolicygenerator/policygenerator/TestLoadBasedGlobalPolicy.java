@@ -22,8 +22,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,8 +38,8 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.FEDERATION_GPG_LOAD_
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.FEDERATION_GPG_LOAD_BASED_MIN_WEIGHT;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.FEDERATION_GPG_LOAD_BASED_SCALING;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_FEDERATION_GPG_LOAD_BASED_SCALING;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit test for the Load Based Global Policy.
@@ -66,7 +66,7 @@ public class TestLoadBasedGlobalPolicy {
     policyGenerator = new LoadBasedGlobalPolicy();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
 
     conf.setInt(FEDERATION_GPG_LOAD_BASED_MAX_EDIT, 2);

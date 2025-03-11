@@ -43,10 +43,10 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationRegistryClient;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGContext;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGContextImpl;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit test for DefaultApplicationCleaner in GPG.
@@ -66,7 +66,7 @@ public class TestDefaultApplicationCleaner {
 
   private ApplicationId appIdToAddConcurrently;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new YarnConfiguration();
 
@@ -86,7 +86,7 @@ public class TestDefaultApplicationCleaner {
     UserGroupInformation user = UserGroupInformation.getCurrentUser();
     registryClient = new FederationRegistryClient(conf, registry, user);
     registryClient.cleanAllApplications();
-    Assert.assertEquals(0, registryClient.getAllApplications().size());
+    Assertions.assertEquals(0, registryClient.getAllApplications().size());
 
     gpgContext = new GPGContextImpl();
     gpgContext.setStateStoreFacade(facade);
@@ -113,11 +113,11 @@ public class TestDefaultApplicationCleaner {
       registryClient.writeAMRMTokenForUAM(appId, subClusterId.toString(),
           new Token<AMRMTokenIdentifier>());
     }
-    Assert.assertEquals(3, registryClient.getAllApplications().size());
+    Assertions.assertEquals(3, registryClient.getAllApplications().size());
     appIdToAddConcurrently = null;
   }
 
-  @After
+  @AfterEach
   public void breakDown() {
     if (stateStore != null) {
       stateStore.close();
@@ -146,14 +146,14 @@ public class TestDefaultApplicationCleaner {
     appCleaner.run();
 
     // Only one app should be left
-    Assert.assertEquals(1,
+    Assertions.assertEquals(1,
         stateStore
             .getApplicationsHomeSubCluster(
                 GetApplicationsHomeSubClusterRequest.newInstance())
             .getAppsHomeSubClusters().size());
 
     // The known app should not be cleaned in registry
-    Assert.assertEquals(1, registryClient.getAllApplications().size());
+    Assertions.assertEquals(1, registryClient.getAllApplications().size());
   }
 
   /**
@@ -192,13 +192,13 @@ public class TestDefaultApplicationCleaner {
          GetApplicationsHomeSubClusterRequest.newInstance();
     GetApplicationsHomeSubClusterResponse applicationsHomeSubCluster =
         stateStore.getApplicationsHomeSubCluster(appHomeSubClusterRequest);
-    Assert.assertNotNull(applicationsHomeSubCluster);
+    Assertions.assertNotNull(applicationsHomeSubCluster);
     List<ApplicationHomeSubCluster> appsHomeSubClusters =
         applicationsHomeSubCluster.getAppsHomeSubClusters();
-    Assert.assertNotNull(appsHomeSubClusters);
-    Assert.assertEquals(1, appsHomeSubClusters.size());
+    Assertions.assertNotNull(appsHomeSubClusters);
+    Assertions.assertEquals(1, appsHomeSubClusters.size());
 
     // The concurrently added app should be still there
-    Assert.assertEquals(1, registryClient.getAllApplications().size());
+    Assertions.assertEquals(1, registryClient.getAllApplications().size());
   }
 }

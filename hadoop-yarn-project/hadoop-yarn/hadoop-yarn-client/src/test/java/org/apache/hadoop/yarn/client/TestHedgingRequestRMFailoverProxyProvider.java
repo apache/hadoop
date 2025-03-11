@@ -28,8 +28,10 @@ import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.HATestUtil;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestHedgingRequestRMFailoverProxyProvider {
 
@@ -73,7 +75,7 @@ public class TestHedgingRequestRMFailoverProxyProvider {
       long end = System.currentTimeMillis();
       System.out.println("Client call succeeded at " + end);
       // should return the response fast
-      Assert.assertTrue(end - start <= 10000);
+      assertTrue(end - start <= 10000);
 
       // transition rm5 to standby
       cluster.getResourceManager(4).getRMContext().getRMAdminService()
@@ -92,15 +94,15 @@ public class TestHedgingRequestRMFailoverProxyProvider {
     try {
       // client will retry until the rm becomes active.
       client.getApplicationReport(null);
-      Assert.fail();
+      fail();
     } catch (YarnException e) {
-      Assert.assertTrue(e instanceof ApplicationNotFoundException);
+      assertTrue(e instanceof ApplicationNotFoundException);
     }
     // now make a valid call.
     try {
       client.getAllQueues();
     } catch (YarnException e) {
-      Assert.fail(e.toString());
+      fail(e.toString());
     }
   }
 

@@ -19,6 +19,9 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -27,8 +30,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
@@ -58,7 +59,8 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.AHSClient;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestAHSClient {
 
@@ -71,7 +73,8 @@ public class TestAHSClient {
     client.stop();
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testGetApplications() throws YarnException, IOException {
     Configuration conf = new Configuration();
     final AHSClient client = new MockAHSClient();
@@ -82,14 +85,15 @@ public class TestAHSClient {
         ((MockAHSClient) client).getReports();
 
     List<ApplicationReport> reports = client.getApplications();
-    Assert.assertEquals(reports, expectedReports);
+    assertEquals(reports, expectedReports);
 
     reports = client.getApplications();
     assertThat(reports).hasSize(4);
     client.stop();
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testGetApplicationReport() throws YarnException, IOException {
     Configuration conf = new Configuration();
     final AHSClient client = new MockAHSClient();
@@ -100,15 +104,16 @@ public class TestAHSClient {
         ((MockAHSClient) client).getReports();
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     ApplicationReport report = client.getApplicationReport(applicationId);
-    Assert.assertEquals(report, expectedReports.get(0));
-    Assert.assertEquals(report.getApplicationId().toString(), expectedReports
+    assertEquals(report, expectedReports.get(0));
+    assertEquals(report.getApplicationId().toString(), expectedReports
       .get(0).getApplicationId().toString());
-    Assert.assertEquals(report.getSubmitTime(), expectedReports.get(0)
+    assertEquals(report.getSubmitTime(), expectedReports.get(0)
       .getSubmitTime());
     client.stop();
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testGetApplicationAttempts() throws YarnException, IOException {
     Configuration conf = new Configuration();
     final AHSClient client = new MockAHSClient();
@@ -118,15 +123,16 @@ public class TestAHSClient {
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     List<ApplicationAttemptReport> reports =
         client.getApplicationAttempts(applicationId);
-    Assert.assertNotNull(reports);
-    Assert.assertEquals(reports.get(0).getApplicationAttemptId(),
+    assertNotNull(reports);
+    assertEquals(reports.get(0).getApplicationAttemptId(),
       ApplicationAttemptId.newInstance(applicationId, 1));
-    Assert.assertEquals(reports.get(1).getApplicationAttemptId(),
+    assertEquals(reports.get(1).getApplicationAttemptId(),
       ApplicationAttemptId.newInstance(applicationId, 2));
     client.stop();
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testGetApplicationAttempt() throws YarnException, IOException {
     Configuration conf = new Configuration();
     final AHSClient client = new MockAHSClient();
@@ -141,13 +147,14 @@ public class TestAHSClient {
         ApplicationAttemptId.newInstance(applicationId, 1);
     ApplicationAttemptReport report =
         client.getApplicationAttemptReport(appAttemptId);
-    Assert.assertNotNull(report);
-    Assert.assertEquals(report.getApplicationAttemptId().toString(),
+    assertNotNull(report);
+    assertEquals(report.getApplicationAttemptId().toString(),
       expectedReports.get(0).getCurrentApplicationAttemptId().toString());
     client.stop();
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testGetContainers() throws YarnException, IOException {
     Configuration conf = new Configuration();
     final AHSClient client = new MockAHSClient();
@@ -158,15 +165,16 @@ public class TestAHSClient {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(applicationId, 1);
     List<ContainerReport> reports = client.getContainers(appAttemptId);
-    Assert.assertNotNull(reports);
-    Assert.assertEquals(reports.get(0).getContainerId(),
+    assertNotNull(reports);
+    assertEquals(reports.get(0).getContainerId(),
       (ContainerId.newContainerId(appAttemptId, 1)));
-    Assert.assertEquals(reports.get(1).getContainerId(),
+    assertEquals(reports.get(1).getContainerId(),
       (ContainerId.newContainerId(appAttemptId, 2)));
     client.stop();
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testGetContainerReport() throws YarnException, IOException {
     Configuration conf = new Configuration();
     final AHSClient client = new MockAHSClient();
@@ -181,8 +189,8 @@ public class TestAHSClient {
         ApplicationAttemptId.newInstance(applicationId, 1);
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     ContainerReport report = client.getContainerReport(containerId);
-    Assert.assertNotNull(report);
-    Assert.assertEquals(report.getContainerId().toString(), (ContainerId
+    assertNotNull(report);
+    assertEquals(report.getContainerId().toString(), (ContainerId
       .newContainerId(expectedReports.get(0).getCurrentApplicationAttemptId(), 1))
       .toString());
     client.stop();
@@ -240,9 +248,9 @@ public class TestAHSClient {
           .thenReturn(mockContainerResponse);
 
       } catch (YarnException e) {
-        Assert.fail("Exception is not expected.");
+        fail("Exception is not expected.");
       } catch (IOException e) {
-        Assert.fail("Exception is not expected.");
+        fail("Exception is not expected.");
       }
     }
 

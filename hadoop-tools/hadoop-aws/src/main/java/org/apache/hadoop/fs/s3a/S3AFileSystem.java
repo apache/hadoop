@@ -147,9 +147,11 @@ import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.impl.StoreContextFactory;
 import org.apache.hadoop.fs.s3a.impl.UploadContentProviders;
 import org.apache.hadoop.fs.s3a.impl.CSEUtils;
+import org.apache.hadoop.fs.s3a.impl.streams.InputStreamType;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.fs.s3a.impl.streams.StreamFactoryRequirements;
+import org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -441,6 +443,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private boolean isCSEEnabled;
 
   /**
+   * Is this S3A FS instance using analytics accelerator?
+   */
+  private boolean isAnalyticsAcceleratorEnabled;
+
+  /**
    * Bucket AccessPoint.
    */
   private ArnResource accessPoint;
@@ -628,6 +635,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       // If encryption method is set to CSE-KMS or CSE-CUSTOM then CSE is enabled.
       isCSEEnabled = CSEUtils.isCSEEnabled(getS3EncryptionAlgorithm().getMethod());
+
+      isAnalyticsAcceleratorEnabled = StreamIntegration.determineInputStreamType(conf)
+          .equals(InputStreamType.Analytics);
 
       // Create the appropriate fsHandler instance using a factory method
       fsHandler = createFileSystemHandler();
@@ -1156,6 +1166,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             conf.getBoolean(CHECKSUM_VALIDATION, CHECKSUM_VALIDATION_DEFAULT))
         .withClientSideEncryptionEnabled(isCSEEnabled)
         .withClientSideEncryptionMaterials(cseMaterials)
+        .withAnalyticsAcceleratorEnabled(isAnalyticsAcceleratorEnabled)
         .withKMSRegion(conf.get(S3_ENCRYPTION_CSE_KMS_REGION));
 
     // this is where clients and the transfer manager are created on demand.
@@ -2585,7 +2596,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           listing.createFileStatusListingIterator(path,
               createListObjectsRequest(key, null),
               ACCEPT_ALL,
-              Listing.ACCEPT_ALL_OBJECTS,
+              Listing.ACCEPT_ALL_BUT_S3N,
               auditSpan));
     }
 
@@ -3613,7 +3624,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         return listing.createProvidedFileStatusIterator(
                 stats,
                 ACCEPT_ALL,
-                Listing.ACCEPT_ALL_OBJECTS);
+                Listing.ACCEPT_ALL_BUT_S3N);
       }
     }
     // Here we have a directory which may or may not be empty.
@@ -3797,7 +3808,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public RemoteIterator<S3ALocatedFileStatus> listFilesIterator(final Path path,
         final boolean recursive) throws IOException {
-      return S3AFileSystem.this.innerListFiles(path, recursive, Listing.ACCEPT_ALL_OBJECTS, null);
+      return S3AFileSystem.this.innerListFiles(path, recursive, Listing.ACCEPT_ALL_BUT_S3N, null);
     }
   }
 
@@ -5026,7 +5037,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     final Path path = qualify(f);
     return trackDurationAndSpan(INVOCATION_LIST_FILES, path, () ->
         innerListFiles(path, recursive,
-            Listing.ACCEPT_ALL_OBJECTS,
+            Listing.ACCEPT_ALL_BUT_S3N,
             null));
   }
 

@@ -27,12 +27,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -75,6 +72,10 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.RUN_AS_USER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER_LOCAL_DIRS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -87,9 +88,6 @@ public class TestJavaSandboxLinuxContainerRuntime {
   private final static String HADOOP_HOME = "hadoop.home.dir";
   private final static String HADOOP_HOME_DIR = System.getProperty(HADOOP_HOME);
   private final Properties baseProps = new Properties(System.getProperties());
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   private static File grantFile, denyFile, policyFile,
           grantDir, denyDir, containerDir;
@@ -112,7 +110,7 @@ public class TestJavaSandboxLinuxContainerRuntime {
   private final static String APPLICATION_ID = "application_1234567890";
   private File baseTestDirectory;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
 
     baseTestDirectory = new File(System.getProperty("test.build.data",
@@ -258,10 +256,10 @@ public class TestJavaSandboxLinuxContainerRuntime {
     String generatedPolicy = policyMatches.group(1);
 
     //Test that generated policy file has included both policies
-    Assert.assertTrue(
+    assertTrue(
         Files.readAllLines(Paths.get(generatedPolicy)).contains(
             classLoaderPermString.toString().split("\n")[1]));
-    Assert.assertTrue(
+    assertTrue(
         Files.readAllLines(Paths.get(generatedPolicy)).contains(
             socketPermString.toString().split("\n")[1]));
   }
@@ -275,10 +273,11 @@ public class TestJavaSandboxLinuxContainerRuntime {
 
   @Test
   public void testDeny() throws Exception {
-    FilePermission denyPermission =
-        new FilePermission(denyFile.getAbsolutePath(), "read");
-    exception.expect(java.security.AccessControlException.class);
-    securityManager.checkPermission(denyPermission);
+    assertThrows(java.security.AccessControlException.class, () -> {
+      FilePermission denyPermission =
+          new FilePermission(denyFile.getAbsolutePath(), "read");
+      securityManager.checkPermission(denyPermission);
+    });
   }
 
   @Test
@@ -289,11 +288,11 @@ public class TestJavaSandboxLinuxContainerRuntime {
     };
 
     List<String> commands = Arrays.asList(nonJavaCommands);
-    exception.expect(ContainerExecutionException.class);
-    JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils
-        .appendSecurityFlags(commands, env, policyFilePath,
-            JavaSandboxLinuxContainerRuntime.SandboxMode.enforcing);
-
+    assertThrows(ContainerExecutionException.class, () -> {
+      JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils
+          .appendSecurityFlags(commands, env, policyFilePath,
+          JavaSandboxLinuxContainerRuntime.SandboxMode.enforcing);
+    });
   }
 
   @Test
@@ -325,9 +324,8 @@ public class TestJavaSandboxLinuxContainerRuntime {
     runtimeContextBuilder.setExecutionAttribute(CONTAINER_RUN_CMDS, commands);
     runtime.prepareContainer(runtimeContextBuilder.build());
 
-    Assert.assertTrue("Command should not be modified when user is " +
-            "member of whitelisted group",
-        inputCommand[0].equals(commands.get(0)));
+    assertTrue(inputCommand[0].equals(commands.get(0)),
+        "Command should not be modified when user is member of whitelisted group");
   }
 
   @Test
@@ -345,10 +343,9 @@ public class TestJavaSandboxLinuxContainerRuntime {
     runtimeContextBuilder.setExecutionAttribute(CONTAINER_RUN_CMDS, commands);
     runtime.prepareContainer(runtimeContextBuilder.build());
 
-    Assert.assertTrue("Command should be modified to include " +
-            "policy file in whitelisted Sandbox mode",
-        commands.get(0).contains(SECURITY_FLAG)
-        && commands.get(0).contains(POLICY_FLAG));
+    assertTrue(commands.get(0).contains(SECURITY_FLAG)
+        && commands.get(0).contains(POLICY_FLAG), "Command should be modified to include " +
+        "policy file in whitelisted Sandbox mode");
   }
 
   @Test
@@ -366,9 +363,9 @@ public class TestJavaSandboxLinuxContainerRuntime {
     runtimeContextBuilder.setExecutionAttribute(CONTAINER_RUN_CMDS, commands);
     runtime.prepareContainer(runtimeContextBuilder.build());
 
-    Assert.assertTrue("Java security manager must be enabled for "
-            + "unauthorized users",
-        commands.get(0).contains(SECURITY_FLAG));
+    assertTrue(commands.get(0).contains(SECURITY_FLAG),
+        "Java security manager must be enabled for "
+        + "unauthorized users");
   }
 
   @Test
@@ -386,8 +383,8 @@ public class TestJavaSandboxLinuxContainerRuntime {
     };
 
     Arrays.stream(multiCmds)
-        .forEach(cmd -> Assert.assertTrue(cmd.matches(MULTI_COMMAND_REGEX)));
-    Assert.assertFalse("cmd1 &> logfile".matches(MULTI_COMMAND_REGEX));
+        .forEach(cmd -> assertTrue(cmd.matches(MULTI_COMMAND_REGEX)));
+    assertFalse("cmd1 &> logfile".matches(MULTI_COMMAND_REGEX));
   }
 
   @Test
@@ -401,10 +398,10 @@ public class TestJavaSandboxLinuxContainerRuntime {
         "/nm/app/container/usercache/badjava -cp Bad.jar ChaosClass"
     };
     for(String javaCmd : javaCmds) {
-      Assert.assertTrue(javaCmd.matches(CONTAINS_JAVA_CMD));
+      assertTrue(javaCmd.matches(CONTAINS_JAVA_CMD));
     }
     for(String nonJavaCmd : nonJavaCmds) {
-      Assert.assertFalse(nonJavaCmd.matches(CONTAINS_JAVA_CMD));
+      assertFalse(nonJavaCmd.matches(CONTAINS_JAVA_CMD));
     }
   }
 
@@ -419,7 +416,7 @@ public class TestJavaSandboxLinuxContainerRuntime {
         "keepThis"
     };
     for(int i = 0; i < securityManagerCmds.length; i++){
-      Assert.assertEquals(
+      assertEquals(
           securityManagerCmds[i].replaceAll(CLEAN_CMD_REGEX, "").trim(),
           cleanedCmdsResult[i]);
     }
@@ -446,11 +443,11 @@ public class TestJavaSandboxLinuxContainerRuntime {
             JavaSandboxLinuxContainerRuntime.SandboxMode.enforcing);
 
     for(int i = 0; i < commands.size(); i++) {
-      Assert.assertTrue(commands.get(i).trim().equals(cleanCommands[i].trim()));
+      assertTrue(commands.get(i).trim().equals(cleanCommands[i].trim()));
     }
   }
 
-  @After
+  @AfterEach
   public void cleanup(){
     System.setProperties(baseProps);
   }

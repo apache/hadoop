@@ -53,10 +53,10 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.glassfish.jersey.jettison.JettisonConfig;
 import org.glassfish.jersey.jettison.JettisonJaxbContext;
 import org.glassfish.jersey.jettison.JettisonUnmarshaller;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import javax.xml.bind.JAXBException;
@@ -71,7 +71,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
@@ -108,7 +108,7 @@ public class TestPolicyGenerator {
     gpgContext.setStateStoreFacade(facade);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, YarnException, JAXBException {
     subClusterIds = new ArrayList<>();
     subClusterInfos = new HashMap<>();
@@ -155,7 +155,7 @@ public class TestPolicyGenerator {
     facade.reinitialize(stateStore, conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     stateStore.close();
     stateStore = null;
@@ -299,53 +299,53 @@ public class TestPolicyGenerator {
     SchedulerTypeInfo sti = GPGUtils.invokeRMWebService(webAppAddress, RMWSConsts.SCHEDULER,
         SchedulerTypeInfo.class, conf);
 
-    Assert.assertNotNull(sti);
+    Assertions.assertNotNull(sti);
     SchedulerInfo schedulerInfo = sti.getSchedulerInfo();
-    Assert.assertTrue(schedulerInfo instanceof CapacitySchedulerInfo);
+    Assertions.assertTrue(schedulerInfo instanceof CapacitySchedulerInfo);
 
     CapacitySchedulerInfo capacitySchedulerInfo = (CapacitySchedulerInfo) schedulerInfo;
-    Assert.assertNotNull(capacitySchedulerInfo);
+    Assertions.assertNotNull(capacitySchedulerInfo);
 
     CapacitySchedulerQueueInfoList queues = capacitySchedulerInfo.getQueues();
-    Assert.assertNotNull(queues);
+    Assertions.assertNotNull(queues);
     ArrayList<CapacitySchedulerQueueInfo> queueInfoList = queues.getQueueInfoList();
-    Assert.assertNotNull(queueInfoList);
-    Assert.assertEquals(2, queueInfoList.size());
+    Assertions.assertNotNull(queueInfoList);
+    Assertions.assertEquals(2, queueInfoList.size());
 
     CapacitySchedulerQueueInfo queueA = queueInfoList.get(0);
-    Assert.assertNotNull(queueA);
-    Assert.assertEquals("root.a", queueA.getQueuePath());
-    Assert.assertEquals(10.5f, queueA.getCapacity(), 0.00001);
+    Assertions.assertNotNull(queueA);
+    Assertions.assertEquals("root.a", queueA.getQueuePath());
+    Assertions.assertEquals(10.5f, queueA.getCapacity(), 0.00001);
     CapacitySchedulerQueueInfoList queueAQueues = queueA.getQueues();
-    Assert.assertNotNull(queueAQueues);
+    Assertions.assertNotNull(queueAQueues);
     ArrayList<CapacitySchedulerQueueInfo> queueInfoAList = queueAQueues.getQueueInfoList();
-    Assert.assertNotNull(queueInfoAList);
-    Assert.assertEquals(2, queueInfoAList.size());
+    Assertions.assertNotNull(queueInfoAList);
+    Assertions.assertEquals(2, queueInfoAList.size());
     CapacitySchedulerQueueInfo queueA1 = queueInfoAList.get(0);
-    Assert.assertNotNull(queueA1);
-    Assert.assertEquals(30f, queueA1.getCapacity(), 0.00001);
+    Assertions.assertNotNull(queueA1);
+    Assertions.assertEquals(30f, queueA1.getCapacity(), 0.00001);
     CapacitySchedulerQueueInfo queueA2 = queueInfoAList.get(1);
-    Assert.assertNotNull(queueA2);
-    Assert.assertEquals(70f, queueA2.getCapacity(), 0.00001);
+    Assertions.assertNotNull(queueA2);
+    Assertions.assertEquals(70f, queueA2.getCapacity(), 0.00001);
 
     CapacitySchedulerQueueInfo queueB = queueInfoList.get(1);
-    Assert.assertNotNull(queueB);
-    Assert.assertEquals("root.b", queueB.getQueuePath());
-    Assert.assertEquals(89.5f, queueB.getCapacity(), 0.00001);
+    Assertions.assertNotNull(queueB);
+    Assertions.assertEquals("root.b", queueB.getQueuePath());
+    Assertions.assertEquals(89.5f, queueB.getCapacity(), 0.00001);
     CapacitySchedulerQueueInfoList queueBQueues = queueB.getQueues();
-    Assert.assertNotNull(queueBQueues);
+    Assertions.assertNotNull(queueBQueues);
     ArrayList<CapacitySchedulerQueueInfo> queueInfoBList = queueBQueues.getQueueInfoList();
-    Assert.assertNotNull(queueInfoBList);
-    Assert.assertEquals(3, queueInfoBList.size());
+    Assertions.assertNotNull(queueInfoBList);
+    Assertions.assertEquals(3, queueInfoBList.size());
     CapacitySchedulerQueueInfo queueB1 = queueInfoBList.get(0);
-    Assert.assertNotNull(queueB1);
-    Assert.assertEquals(79.2f, queueB1.getCapacity(), 0.00001);
+    Assertions.assertNotNull(queueB1);
+    Assertions.assertEquals(79.2f, queueB1.getCapacity(), 0.00001);
     CapacitySchedulerQueueInfo queueB2 = queueInfoBList.get(1);
-    Assert.assertNotNull(queueB2);
-    Assert.assertEquals(0.8f, queueB2.getCapacity(), 0.00001);
+    Assertions.assertNotNull(queueB2);
+    Assertions.assertEquals(0.8f, queueB2.getCapacity(), 0.00001);
     CapacitySchedulerQueueInfo queueB3 = queueInfoBList.get(2);
-    Assert.assertNotNull(queueB3);
-    Assert.assertEquals(20f, queueB3.getCapacity(), 0.00001);
+    Assertions.assertNotNull(queueB3);
+    Assertions.assertEquals(20f, queueB3.getCapacity(), 0.00001);
   }
 
   private String getServiceAddress(InetSocketAddress address) {

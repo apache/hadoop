@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -47,7 +47,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Basic sanity Tests for NMWebFilter.
@@ -58,7 +59,8 @@ public class TestNMWebFilter {
   private static final String LOG_SERVER_URI = "log-server:1999/logs";
   private static final String USER = "testUser";
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(value = 5)
   public void testRedirection() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(
         System.currentTimeMillis(), 1);

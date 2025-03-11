@@ -17,23 +17,24 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.util;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestProcessIdFileReader {
 
   
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testNullPath() {
     String pid = null;
     try {
@@ -45,7 +46,8 @@ public class TestProcessIdFileReader {
     assert(pid == null);
   }
   
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSimpleGet() throws IOException {
     String rootDir = new File(System.getProperty(
         "test.build.data", "/tmp")).getAbsolutePath();
@@ -63,7 +65,7 @@ public class TestProcessIdFileReader {
                   
       processId = ProcessIdFileReader.getProcessId(
           new Path(rootDir + Path.SEPARATOR + "temp.txt"));
-      Assert.assertEquals(expectedProcessId, processId);      
+      assertEquals(expectedProcessId, processId);
       
     } finally {
       if (testFile != null
@@ -74,7 +76,8 @@ public class TestProcessIdFileReader {
   }
 
     
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testComplexGet() throws IOException {
     String rootDir = new File(System.getProperty(
         "test.build.data", "/tmp")).getAbsolutePath();
@@ -98,7 +101,7 @@ public class TestProcessIdFileReader {
                   
       processId = ProcessIdFileReader.getProcessId(
           new Path(rootDir + Path.SEPARATOR + "temp.txt"));
-      Assert.assertEquals(expectedProcessId, processId);
+      assertEquals(expectedProcessId, processId);
       
     } finally {
       if (testFile != null

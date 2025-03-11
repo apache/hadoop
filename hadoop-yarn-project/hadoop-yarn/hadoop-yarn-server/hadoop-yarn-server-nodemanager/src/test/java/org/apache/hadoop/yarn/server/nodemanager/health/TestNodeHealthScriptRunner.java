@@ -30,13 +30,13 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test class for {@link NodeHealthScriptRunner}.
@@ -50,12 +50,12 @@ public class TestNodeHealthScriptRunner {
   private File nodeHealthscriptFile = new File(testRootDir,
       Shell.appendScriptExtension("failingscript"));
 
-  @Before
+  @BeforeEach
   public void setup() {
     testRootDir.mkdirs();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (testRootDir.exists()) {
       FileContext.getLocalFSFileContext().delete(
@@ -106,19 +106,16 @@ public class TestNodeHealthScriptRunner {
 
   @Test
   public void testNodeHealthScriptShouldRun() throws IOException {
-    assertFalse("Node health script should start",
-        NodeHealthScriptRunner.shouldRun("script",
-            nodeHealthscriptFile.getAbsolutePath()));
+    assertFalse(NodeHealthScriptRunner.shouldRun("script",
+        nodeHealthscriptFile.getAbsolutePath()), "Node health script should start");
     writeNodeHealthScriptFile("", false);
     // Node health script should not start if the node health script is not
     // executable.
-    assertFalse("Node health script should start",
-        NodeHealthScriptRunner.shouldRun("script",
-            nodeHealthscriptFile.getAbsolutePath()));
+    assertFalse(NodeHealthScriptRunner.shouldRun("script",
+        nodeHealthscriptFile.getAbsolutePath()), "Node health script should start");
     writeNodeHealthScriptFile("", true);
-    assertTrue("Node health script should start",
-        NodeHealthScriptRunner.shouldRun("script",
-            nodeHealthscriptFile.getAbsolutePath()));
+    assertTrue(NodeHealthScriptRunner.shouldRun("script",
+        nodeHealthscriptFile.getAbsolutePath()), "Node health script should start");
   }
 
   @Test
@@ -139,31 +136,31 @@ public class TestNodeHealthScriptRunner {
 
     timerTask.run();
     // Normal Script runs successfully
-    assertTrue("Node health status reported unhealthy",
-        nodeHealthScriptRunner.isHealthy());
+    assertTrue(nodeHealthScriptRunner.isHealthy(),
+        "Node health status reported unhealthy");
     assertTrue(nodeHealthScriptRunner.getHealthReport().isEmpty());
 
     // Error script.
     writeNodeHealthScriptFile(errorScript, true);
     // Run timer
     timerTask.run();
-    assertFalse("Node health status reported healthy",
-        nodeHealthScriptRunner.isHealthy());
+    assertFalse(nodeHealthScriptRunner.isHealthy(),
+        "Node health status reported healthy");
     assertTrue(
         nodeHealthScriptRunner.getHealthReport().contains("ERROR"));
 
     // Healthy script.
     writeNodeHealthScriptFile(normalScript, true);
     timerTask.run();
-    assertTrue("Node health status reported unhealthy",
-        nodeHealthScriptRunner.isHealthy());
+    assertTrue(nodeHealthScriptRunner.isHealthy(),
+        "Node health status reported unhealthy");
     assertTrue(nodeHealthScriptRunner.getHealthReport().isEmpty());
 
     // Timeout script.
     writeNodeHealthScriptFile(timeOutScript, true);
     timerTask.run();
-    assertFalse("Node health status reported healthy even after timeout",
-        nodeHealthScriptRunner.isHealthy());
+    assertFalse(nodeHealthScriptRunner.isHealthy(),
+        "Node health status reported healthy even after timeout");
     assertEquals(
         NodeHealthScriptRunner.NODE_HEALTH_SCRIPT_TIMED_OUT_MSG,
         nodeHealthScriptRunner.getHealthReport());
@@ -171,8 +168,8 @@ public class TestNodeHealthScriptRunner {
     // Exit code 127
     writeNodeHealthScriptFile(exitCodeScript, true);
     timerTask.run();
-    assertTrue("Node health status reported unhealthy",
-        nodeHealthScriptRunner.isHealthy());
+    assertTrue(nodeHealthScriptRunner.isHealthy(),
+        "Node health status reported unhealthy");
     assertEquals("", nodeHealthScriptRunner.getHealthReport());
   }
 }

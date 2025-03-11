@@ -17,6 +17,7 @@
 */
 package org.apache.hadoop.yarn.server.globalpolicygenerator.webapp;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -59,6 +60,7 @@ public class GPGWebApp extends WebApp {
     @Override
     protected void configure() {
       bind(gpg).to(GlobalPolicyGenerator.class).named("gpg");
+      bind(gpg.getConfig()).to(Configuration.class).named("conf");
     }
   }
 }

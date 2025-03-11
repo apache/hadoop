@@ -34,12 +34,12 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.security.AMSecretKeys;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -98,32 +98,32 @@ public class TestContainerRelaunch {
     ContainerRelaunch cr = new ContainerRelaunch(mockContext, conf, dispatcher,
         mockExecutor, mockApp, mockContainer, mockDirsHandler, null);
     int result = cr.call();
-    assertEquals("relaunch failed", 0, result);
+    assertEquals(0, result, "relaunch failed");
     ArgumentCaptor<ContainerStartContext> captor =
         ArgumentCaptor.forClass(ContainerStartContext.class);
     verify(mockExecutor).relaunchContainer(captor.capture());
     ContainerStartContext csc = captor.getValue();
-    assertNotNull("app ID null", csc.getAppId());
-    assertNotNull("container null", csc.getContainer());
-    assertNotNull("container local dirs null", csc.getContainerLocalDirs());
-    assertNotNull("container log dirs null", csc.getContainerLogDirs());
-    assertNotNull("work dir null", csc.getContainerWorkDir());
-    assertNotNull("filecache dirs null", csc.getFilecacheDirs());
-    assertNotNull("local dirs null", csc.getLocalDirs());
-    assertNotNull("localized resources null", csc.getLocalizedResources());
-    assertNotNull("log dirs null", csc.getLogDirs());
-    assertNotNull("script path null", csc.getNmPrivateContainerScriptPath());
-    assertNotNull("tokens path null", csc.getNmPrivateTokensPath());
+    assertNotNull(csc.getAppId(), "app ID null");
+    assertNotNull(csc.getContainer(), "container null");
+    assertNotNull(csc.getContainerLocalDirs(), "container local dirs null");
+    assertNotNull(csc.getContainerLogDirs(), "container log dirs null");
+    assertNotNull(csc.getContainerWorkDir(), "work dir null");
+    assertNotNull(csc.getFilecacheDirs(), "filecache dirs null");
+    assertNotNull(csc.getLocalDirs(), "local dirs null");
+    assertNotNull(csc.getLocalizedResources(), "localized resources null");
+    assertNotNull(csc.getLogDirs(), "log dirs null");
+    assertNotNull(csc.getNmPrivateContainerScriptPath(), "script path null");
+    assertNotNull(csc.getNmPrivateTokensPath(), "tokens path null");
     if (https) {
-      assertNotNull("keystore path null", csc.getNmPrivateKeystorePath());
-      assertNotNull("truststore path null", csc.getNmPrivateTruststorePath());
+      assertNotNull(csc.getNmPrivateKeystorePath(), "keystore path null");
+      assertNotNull(csc.getNmPrivateTruststorePath(), "truststore path null");
     } else {
-      assertNull("keystore path not null", csc.getNmPrivateKeystorePath());
-      assertNull("truststore path not null", csc.getNmPrivateTruststorePath());
+      assertNull(csc.getNmPrivateKeystorePath(), "keystore path not null");
+      assertNull(csc.getNmPrivateTruststorePath(), "truststore path not null");
     }
-    assertNotNull("user null", csc.getUser());
-    assertNotNull("user local dirs null", csc.getUserLocalDirs());
-    assertNotNull("user filecache dirs null", csc.getUserFilecacheDirs());
-    assertNotNull("application local dirs null", csc.getApplicationLocalDirs());
+    assertNotNull(csc.getUser(), "user null");
+    assertNotNull(csc.getUserLocalDirs(), "user local dirs null");
+    assertNotNull(csc.getUserFilecacheDirs(), "user filecache dirs null");
+    assertNotNull(csc.getApplicationLocalDirs(), "application local dirs null");
   }
 }

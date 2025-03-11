@@ -40,6 +40,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -49,6 +50,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ApiVersion;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
@@ -109,6 +111,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.I
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.RANGE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.USER_AGENT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_EXISTING_RESOURCE_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_LEASE_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_LEASE_BREAK_PERIOD;
@@ -134,7 +137,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.UNAUTHORIZED_BLOB_OVERWRITE;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_CREATE_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_FILE_ALREADY_EXISTS;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_RENAME_RECOVERY;
 
 /**
  * AbfsClient interacting with the DFS Endpoint.
@@ -383,6 +388,9 @@ public class AbfsDfsClient extends AbfsClient {
       requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
     }
 
+    // Add the client transaction ID to the request headers.
+    String clientTransactionId = addClientTransactionIdToHeader(requestHeaders);
+
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, isFile ? FILE : DIRECTORY);
     if (isAppendBlob) {
@@ -405,11 +413,34 @@ public class AbfsDfsClient extends AbfsClient {
       if (!op.hasResult()) {
         throw ex;
       }
-      if (!isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
-        String existingResource =
-            op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
-        if (existingResource != null && existingResource.equals(DIRECTORY)) {
-          return op; //don't throw ex on mkdirs for existing directory
+      if (!isFile) {
+        if (op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+          String existingResource =
+              op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
+          if (existingResource != null && existingResource.equals(DIRECTORY)) {
+            //don't throw ex on mkdirs for existing directory
+            return getSuccessOp(AbfsRestOperationType.CreatePath,
+                HTTP_METHOD_PUT, url, requestHeaders);
+          }
+        }
+      } else {
+        // recovery using client transaction id only if it is a retried request.
+        if (op.isARetriedRequest() && clientTransactionId != null
+            && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT
+            || op.getResult().getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED)) {
+          try {
+            final AbfsHttpOperation getPathStatusOp =
+                getPathStatus(path, false,
+                    tracingContext, null).getResult();
+            if (clientTransactionId.equals(
+                getPathStatusOp.getResponseHeader(
+                    X_MS_CLIENT_TRANSACTION_ID))) {
+              return getSuccessOp(AbfsRestOperationType.CreatePath,
+                  HTTP_METHOD_PUT, url, requestHeaders);
+            }
+          } catch (AzureBlobFileSystemException exception) {
+            throw new AbfsDriverException(ERR_CREATE_RECOVERY, exception);
+          }
         }
       }
       throw ex;
@@ -681,6 +712,9 @@ public class AbfsDfsClient extends AbfsClient {
     requestHeaders.add(new AbfsHttpHeader(X_MS_RENAME_SOURCE, encodedRenameSource));
     requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, STAR));
 
+    // Add the client transaction ID to the request headers.
+    String clientTransactionId = addClientTransactionIdToHeader(requestHeaders);
+
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
     appendSASTokenToQuery(destination,
@@ -705,11 +739,33 @@ public class AbfsDfsClient extends AbfsClient {
         throw e;
       }
 
+      // recovery using client transaction id only if it is a retried request.
+      if (op.isARetriedRequest() && clientTransactionId != null
+          && SOURCE_PATH_NOT_FOUND.getErrorCode().equalsIgnoreCase(
+          op.getResult().getStorageErrorCode())) {
+        try {
+          final AbfsHttpOperation abfsHttpOperation =
+              getPathStatus(destination, false,
+                  tracingContext, null).getResult();
+          if (clientTransactionId.equals(
+              abfsHttpOperation.getResponseHeader(
+                  X_MS_CLIENT_TRANSACTION_ID))) {
+            return new AbfsClientRenameResult(
+                getSuccessOp(AbfsRestOperationType.RenamePath,
+                    HTTP_METHOD_PUT, url, requestHeaders), true,
+                isMetadataIncompleteState);
+          }
+        } catch (AzureBlobFileSystemException exception) {
+          throw new AbfsDriverException(ERR_RENAME_RECOVERY, exception);
+        }
+        throw e;
+      }
+
       // ref: HADOOP-19393. Write permission checks can occur before validating
       // rename operation's validity. If there is an existing destination path, it may be rejected
       // with an authorization error. Catching and throwing FileAlreadyExistsException instead.
       if (op.getResult().getStorageErrorCode()
-          .equals(UNAUTHORIZED_BLOB_OVERWRITE.getErrorCode())){
+          .equals(UNAUTHORIZED_BLOB_OVERWRITE.getErrorCode())) {
         throw new FileAlreadyExistsException(ERR_FILE_ALREADY_EXISTS);
       }
 
@@ -1588,5 +1644,24 @@ public class AbfsDfsClient extends AbfsClient {
     }
 
     return properties;
+  }
+
+  /**
+   * Add the client transaction id to the request header
+   * if {@link AbfsConfiguration#getIsClientTransactionIdEnabled()} is enabled.
+   * @param requestHeaders list of headers to be sent with the request
+   *
+   * @return client transaction id
+   */
+  @VisibleForTesting
+  public String addClientTransactionIdToHeader(List<AbfsHttpHeader> requestHeaders) {
+    String clientTransactionId = null;
+    // Set client transaction ID if the namespace and client transaction ID config are enabled.
+    if (getIsNamespaceEnabled() && getAbfsConfiguration().getIsClientTransactionIdEnabled()) {
+      clientTransactionId = UUID.randomUUID().toString();
+      requestHeaders.add(
+          new AbfsHttpHeader(X_MS_CLIENT_TRANSACTION_ID, clientTransactionId));
+    }
+    return clientTransactionId;
   }
 }

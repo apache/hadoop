@@ -34,8 +34,10 @@ import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.isCreatePerformanceEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfAnalyticsAcceleratorEnabled;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assume.*;
 import static org.junit.Assert.*;
@@ -159,5 +161,16 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
         throw e;
       }
     }
+  }
+
+  @Override
+  public void testOverWriteAndRead() throws Exception {
+    // Currently analytics accelerator does not support reading of files that have been overwritten.
+    // This is because the analytics accelerator library caches metadata, and when a file is
+    // overwritten, the old metadata continues to be used, until it is removed from the cache over
+    // time. This will be fixed in https://github.com/awslabs/analytics-accelerator-s3/issues/218.
+    skipIfAnalyticsAcceleratorEnabled(fs.getConf(),
+        "Analytics Accelerator currently does not support reading of over written files");
+    super.testOverWriteAndRead();
   }
 }

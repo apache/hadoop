@@ -43,6 +43,11 @@ final class BalancerMetrics {
   @Metric("Number of over utilized nodes")
   private MutableGaugeInt numOfOverUtilizedNodes;
 
+  @Metric(value = {"BlockPoolID", "Current BlockPoolID"}, type = Metric.Type.TAG)
+  public String getBlockPoolID() {
+    return balancer.getNnc().getBlockpoolID();
+  }
+
   private BalancerMetrics(Balancer b) {
     this.balancer = b;
   }
