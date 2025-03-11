@@ -1131,4 +1131,22 @@ public class NetworkTopology {
     numOfEmptyRacks = count;
     LOG.debug("Current numOfEmptyRacks is {}", numOfEmptyRacks);
   }
+
+  /**
+   * Randomly permute the active nodes of the node array.
+   *
+   * @param nodes     Available replicas with the requested data
+   * @param activeLen Number of active nodes at the front of the array
+   */
+  public void shuffle(Node[] nodes, int activeLen) {
+    List<Node> list = new ArrayList<>(activeLen);
+    for (int i = 0; i < activeLen; i++) {
+      list.add(nodes[i]);
+    }
+    Collections.shuffle(list, getRandom());
+
+    for (int i = 0; i < activeLen; i++) {
+      nodes[i] = list.get(i);
+    }
+  }
 }

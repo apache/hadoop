@@ -352,6 +352,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean
       DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED_DEFAULT = true;
 
+  public static final String
+      DFS_NAMENODE_RANDOM_NODE_ORDER_ENABLED =
+      "dfs.namenode.random.node.order.enabled";
+  public static final boolean
+      DFS_NAMENODE_RANDOM_NODE_ORDER_ENABLED_DEFAULT = false;
+
   @Deprecated
   public static final String  DFS_WEBHDFS_USER_PATTERN_KEY =
       HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY;

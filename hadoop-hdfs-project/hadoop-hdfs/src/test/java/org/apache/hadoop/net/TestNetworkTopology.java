@@ -23,9 +23,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -648,5 +651,38 @@ public class TestNetworkTopology {
 
     cluster.recommissionNode(n1);
     assertEquals(6, cluster.getNumOfNonEmptyRacks());
+  }
+
+  @Test
+  public void testShuffle() {
+    testShuffleInternal(0);
+    testShuffleInternal(1);
+    testShuffleInternal(2);
+    testShuffleInternal(3);
+  }
+
+  private void testShuffleInternal(int activeLen) {
+    // Produce the sequence used for later validation
+    List<Integer> idxList = new ArrayList<>();
+    for (int i = 0; i < activeLen; ++i) {
+      idxList.add(i);
+    }
+    cluster.setRandomSeed(0xDEADBEEF);
+    Collections.shuffle(idxList, cluster.getRandom());
+    for (int i = activeLen; i < 3; ++i) {
+      idxList.add(i);
+    }
+
+    // array contains both active and other nodes
+    DatanodeDescriptor[] testNodes = new DatanodeDescriptor[3];
+    testNodes[0] = dataNodes[0];
+    testNodes[1] = dataNodes[1];
+    testNodes[2] = dataNodes[2];
+    cluster.setRandomSeed(0xDEADBEEF);
+    cluster.shuffle(testNodes, activeLen);
+
+    for (int i = 0; i < testNodes.length; ++i) {
+      Assert.assertEquals(testNodes[i], dataNodes[idxList.get(i)]);
+    }
   }
 }
