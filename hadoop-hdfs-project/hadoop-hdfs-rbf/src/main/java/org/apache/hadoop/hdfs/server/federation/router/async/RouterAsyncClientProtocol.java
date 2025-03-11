@@ -526,25 +526,24 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   @Override
   protected List<RemoteResult<RemoteLocation, DirectoryListing>> getListingInt(
       String src, byte[] startAfter, boolean needLocation) throws IOException {
-    List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, false, false);
-    // Locate the dir and fetch the listing.
-    if (locations.isEmpty()) {
-      asyncComplete(new ArrayList<>());
-      return asyncReturn(List.class);
-    }
-    asyncTry(() -> {
+    try {
+      List<RemoteLocation> locations =
+          rpcServer.getLocationsForPath(src, false, false);
+      // Locate the dir and fetch the listing.
+      if (locations.isEmpty()) {
+        asyncComplete(new ArrayList<>());
+        return asyncReturn(List.class);
+      }
       RemoteMethod method = new RemoteMethod("getListing",
           new Class<?>[] {String.class, startAfter.getClass(), boolean.class},
           new RemoteParam(), startAfter, needLocation);
       rpcClient.invokeConcurrent(locations, method, false, -1,
           DirectoryListing.class);
-    });
-    asyncCatch((CatchFunction<List, RouterResolveException>) (o, e) -> {
+    } catch (NoLocationException | RouterResolveException e) {
       LOG.debug("Cannot get locations for {}, {}.", src, e.getMessage());
-      LOG.info("Cannot get locations for {}, {}.", src, e.getMessage());
-      return new ArrayList<>();
-    }, RouterResolveException.class);
+      asyncComplete(new ArrayList<>());
+    }
+
     return asyncReturn(List.class);
   }
 
