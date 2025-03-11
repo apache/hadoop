@@ -68,18 +68,19 @@ import org.junit.Test;
 /**
  * Test a router end-to-end including the MountTable.
  */
+@SuppressWarnings("checkstyle:VisibilityModifier")
 public class TestRouterMountTable {
 
-  private static StateStoreDFSCluster cluster;
-  private static NamenodeContext nnContext0;
-  private static NamenodeContext nnContext1;
-  private static RouterContext routerContext;
-  private static MountTableResolver mountTable;
-  private static ClientProtocol routerProtocol;
-  private static long startTime;
-  private static FileSystem nnFs0;
-  private static FileSystem nnFs1;
-  private static FileSystem routerFs;
+  protected static StateStoreDFSCluster cluster;
+  protected static NamenodeContext nnContext0;
+  protected static NamenodeContext nnContext1;
+  protected static RouterContext routerContext;
+  protected static MountTableResolver mountTable;
+  protected static ClientProtocol routerProtocol;
+  protected static long startTime;
+  protected static FileSystem nnFs0;
+  protected static FileSystem nnFs1;
+  protected static FileSystem routerFs;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
