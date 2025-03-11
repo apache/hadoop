@@ -219,6 +219,8 @@ public class ContractTestUtils extends Assert {
    * Read the file and convert to a byte dataset.
    * This implements readfully internally, so that it will read
    * in the file without ever having to seek()
+   * The read is performed through a sequence of calls to multi-byte
+   * {@link InputStream#read(byte[], int, int)}.
    * @param fs filesystem
    * @param path path to read from
    * @param len length of data to read
@@ -240,6 +242,57 @@ public class ContractTestUtils extends Assert {
       }
     }
     return dest;
+  }
+
+  /**
+   * Read a file completely and return the contents in a byte buffer. The read is performed through
+   * repeated calls to single-byte {@link InputStream#read()}.
+   * @param fs filesystem
+   * @param path path to read from
+   * @param len length of data to read
+   * @return the bytes
+   * @throws IOException IO problems
+   */
+  public static byte[] readDatasetSingleByteReads(FileSystem fs, Path path, int len)
+      throws IOException {
+    byte[] dest = new byte[len];
+    try (FSDataInputStream in = fs.open(path)) {
+      for (int i = 0; i < len; ++i) {
+        int nextByte = in.read();
+        if (-1 == nextByte) {
+          throw new EOFException("End of file reached before reading fully.");
+        }
+        dest[i] = (byte)nextByte;
+      }
+    }
+    return dest;
+  }
+
+  /**
+   * Reads {@code len} bytes into offset {@code off} of target buffer {@code b}, up to EOF,
+   * potentially blocking until enough bytes are available on the stream. This is similar to
+   * {@code InputStream#readNBytes(int)} introduced in Java 11, except the caller owns allocation of
+   * the target buffer.
+   * @param is input stream to read
+   * @param b target buffer
+   * @param off offset within {@code b}
+   * @param len length of data to read
+   * @return number of bytes read
+   * @throws IOException IO problems
+   */
+  public static int readNBytes(InputStream is, byte[] b, int off, int len)
+      throws IOException {
+    int totalBytes = 0;
+    while (len > 0) {
+      int nbytes = is.read(b, off, len);
+      if (nbytes < 0) {
+        break;
+      }
+      totalBytes += nbytes;
+      off += nbytes;
+      len -= nbytes;
+    }
+    return totalBytes;
   }
 
   /**
