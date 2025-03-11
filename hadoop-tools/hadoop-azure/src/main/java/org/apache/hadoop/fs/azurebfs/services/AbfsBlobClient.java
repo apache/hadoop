@@ -2027,18 +2027,24 @@ public class AbfsBlobClient extends AbfsClient {
   }
 
   /**
-   * Generates an XML string representing the block list.
+   * Generate the XML block list using a comma-separated string of block IDs.
    *
-   * @param blockIds the set of block IDs
-   * @return the generated XML string
+   * @param blockIdString The comma-separated block IDs.
+   * @return the XML representation of the block list.
    */
-  public static String generateBlockListXml(List<String> blockIds) {
+  public static String generateBlockListXml(String blockIdString) {
     StringBuilder stringBuilder = new StringBuilder();
     stringBuilder.append(String.format(XML_VERSION));
     stringBuilder.append(String.format(BLOCK_LIST_START_TAG));
-    for (String blockId : blockIds) {
-      stringBuilder.append(String.format(LATEST_BLOCK_FORMAT, blockId));
+
+    // Split the block ID string by commas and generate XML for each block ID
+    if (!blockIdString.isEmpty()) {
+      String[] blockIds = blockIdString.split(",");
+      for (String blockId : blockIds) {
+        stringBuilder.append(String.format(LATEST_BLOCK_FORMAT, blockId));
+      }
     }
+
     stringBuilder.append(String.format(BLOCK_LIST_END_TAG));
     return stringBuilder.toString();
   }
