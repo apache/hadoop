@@ -1528,8 +1528,29 @@ public class AbfsBlobClient extends AbfsClient {
    */
   @Override
   public boolean checkIsDir(AbfsHttpOperation result) {
-    String resourceType = result.getResponseHeader(X_MS_META_HDI_ISFOLDER);
+    String dirHeaderName = getHeaderNameIgnoreCase(result, X_MS_META_HDI_ISFOLDER);
+    // If the header is not found, return false (not a directory)
+    if (dirHeaderName == null) {
+      return false;
+    }
+
+    String resourceType = result.getResponseHeader(dirHeaderName);
     return resourceType != null && resourceType.equals(TRUE);
+  }
+
+  /**
+   * Get the header name case-insensitively.
+   * @param result executed rest operation containing response from server.
+   * @param header The header to be checked.
+   * @return Header if found, null otherwise.
+   */
+  private String getHeaderNameIgnoreCase(AbfsHttpOperation result, String header) {
+    Map<String, List<String>> responseHeaders = result.getResponseHeaders();
+    // Search for the key case-insensitively in the headers
+    return responseHeaders.keySet().stream()
+        .filter(key -> key != null && key.equalsIgnoreCase(header))
+        .findFirst()
+        .orElse(null); // Return null if no match is found
   }
 
   /**

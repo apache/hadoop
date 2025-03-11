@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.net.URL;
+import java.util.List;
 import java.util.UUID;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -28,14 +31,25 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_METADATA_PREFIX;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 
 /**
  * Test mkdir operation.
@@ -166,5 +180,108 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     fs.create(new Path("/testFilePath"));
     intercept(FileAlreadyExistsException.class, () -> fs.mkdirs(new Path("/testFilePath")));
     intercept(FileAlreadyExistsException.class, () -> fs.mkdirs(new Path("/testFilePath/newDir")));
+  }
+
+  /**
+   * Test mkdirs with HDI folder configuration,
+   * verifying the correct header and directory state.
+   */
+  @Test
+  public void testMkdirsWithDifferentCaseHDIConfig() throws Exception {
+    try (AzureBlobFileSystem fs = Mockito.spy(getFileSystem())) {
+      assumeBlobServiceType();
+      AbfsBlobClient abfsBlobClient = mockIngressClientHandler(fs);
+      String configName = X_MS_METADATA_PREFIX + "Hdi_isfolder";
+      // Mock the operation to modify the headers
+      mockAbfsRestOperation(abfsBlobClient, configName);
+
+      // Create the path and invoke mkdirs method
+      Path path = new Path("/testPath");
+      fs.mkdirs(path);
+
+      // Assert that the response header has the updated value
+      AbfsHttpOperation op = abfsBlobClient.getPathStatus(path.toUri().getPath(),
+          true, getTestTracingContext(fs, true),
+          null).getResult();
+
+      // Verify the header and directory state
+      Assertions.assertThat(op.getResponseHeader(configName))
+          .describedAs("Header should be set to true")
+          .isEqualTo(TRUE);
+      Assertions.assertThat(abfsBlobClient.checkIsDir(op))
+          .describedAs("Directory should be marked as true")
+          .isTrue();
+    }
+  }
+
+  /**
+   * Test mkdirs with wrong HDI folder configuration,
+   * verifying the correct header and directory state.
+   */
+  @Test
+  public void testMkdirsWithWrongHDIConfig() throws Exception {
+    try (AzureBlobFileSystem fs = Mockito.spy(getFileSystem())) {
+      assumeBlobServiceType();
+      AbfsBlobClient abfsBlobClient = mockIngressClientHandler(fs);
+      String configName = X_MS_METADATA_PREFIX + "Hdi_isfolder1";
+
+      // Mock the operation to modify the headers
+      mockAbfsRestOperation(abfsBlobClient, configName);
+
+      // Create the path and invoke mkdirs method
+      Path path = new Path("/testPath");
+      fs.mkdirs(path);
+
+      // Assert the header and directory state
+      AbfsHttpOperation op = abfsBlobClient.getPathStatus(path.toUri().getPath(),
+          true, getTestTracingContext(fs, true),
+          null).getResult();
+
+      // Verify the header and directory state
+      Assertions.assertThat(op.getResponseHeader(configName))
+          .describedAs("Header should be set to TRUE")
+          .isEqualTo(TRUE);
+      Assertions.assertThat(abfsBlobClient.checkIsDir(op))
+          .describedAs("No Directory config set, should be marked as false")
+          .isFalse();
+    }
+  }
+
+  /**
+   * Helper method to mock the AbfsRestOperation and modify the request headers.
+   *
+   * @param abfsBlobClient the mocked AbfsBlobClient
+   * @param newHeader the header to add in place of the old one
+   */
+  private void mockAbfsRestOperation(AbfsBlobClient abfsBlobClient, String newHeader) {
+    Mockito.doAnswer(invocation -> {
+      List<AbfsHttpHeader> requestHeaders = invocation.getArgument(3);
+
+      // Remove the actual HDI config header and add the new one
+      requestHeaders.removeIf(header ->
+          HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER.equals(header.getName()));
+      requestHeaders.add(new AbfsHttpHeader(newHeader, TRUE));
+
+      // Call the real method
+      return invocation.callRealMethod();
+    }).when(abfsBlobClient).getAbfsRestOperation(eq(AbfsRestOperationType.PutBlob),
+        eq(HTTP_METHOD_PUT), any(URL.class), anyList());
+  }
+
+  /**
+   * Helper method to mock the AbfsBlobClient and set up the client handler.
+   *
+   * @param fs the AzureBlobFileSystem instance
+   * @return the mocked AbfsBlobClient
+   */
+  private AbfsBlobClient mockIngressClientHandler(AzureBlobFileSystem fs) {
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
+    AbfsBlobClient abfsBlobClient = (AbfsBlobClient) Mockito.spy(
+        clientHandler.getClient());
+    fs.getAbfsStore().setClient(abfsBlobClient);
+    fs.getAbfsStore().setClientHandler(clientHandler);
+    Mockito.doReturn(abfsBlobClient).when(clientHandler).getIngressClient();
+    return abfsBlobClient;
   }
 }

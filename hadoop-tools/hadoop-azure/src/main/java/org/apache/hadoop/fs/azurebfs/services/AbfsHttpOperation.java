@@ -24,6 +24,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -776,7 +777,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     @Override
     public String getResponseHeader(final String httpHeader) {
       // Directories on FNS-Blob are identified by a special metadata header.
-      if (httpHeader.equals(X_MS_META_HDI_ISFOLDER)) {
+      if (httpHeader.equalsIgnoreCase(X_MS_META_HDI_ISFOLDER)) {
         return TRUE;
       }
       return EMPTY_STRING;
@@ -784,7 +785,8 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
     @Override
     public Map<String, List<String>> getResponseHeaders() {
-      return new HashMap<>();
+      return Collections.singletonMap(X_MS_META_HDI_ISFOLDER,
+          Collections.singletonList(TRUE));
     }
 
     @Override
