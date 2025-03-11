@@ -54,6 +54,7 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
   private String accountSAS = null;
   private String containerSAS = null;
   private static final String TEST_PATH = "testPath";
+  private static final String readPermission = "read";
 
   /**
    * To differentiate which SASTokenProvider was used we will use different type of SAS Tokens.
@@ -150,9 +151,10 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
    * Helper method to get the Fixed SAS token value
    */
   private String getFixedSASToken(AbfsConfiguration config) throws Exception {
-    String readPermission = "read";
-    return config.getSASTokenProvider().getSASToken(this.getAccountName(), this.getFileSystemName(), getMethodName(),
-        readPermission);
+    return config.getSASTokenProvider()
+        .getSASToken(this.getAccountName(), this.getFileSystemName(),
+            getMethodName(),
+            readPermission);
   }
 
   /**
