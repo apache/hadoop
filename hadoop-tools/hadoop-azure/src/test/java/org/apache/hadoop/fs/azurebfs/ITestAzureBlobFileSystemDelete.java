@@ -304,7 +304,6 @@ public class ITestAzureBlobFileSystemDelete extends
     doReturn(idempotencyRetOp).when(mockClient).deleteIdempotencyCheckOp(any());
     TracingContext tracingContext = getTestTracingContext(fs, false);
     doReturn(tracingContext).when(idempotencyRetOp).createNewTracingContext(any());
-    //To-discuss: If DFS service type, this if case can be removed?
     if (mockClient instanceof AbfsBlobClient) {
       doCallRealMethod().when((AbfsBlobClient) mockClient)
               .getBlobDeleteHandler(Mockito.nullable(String.class),
@@ -391,6 +390,9 @@ public class ITestAzureBlobFileSystemDelete extends
         .describedAs("Deleted file should not be present.").isFalse();
     Assertions.assertThat(fs.exists(file2))
         .describedAs("Deleted file should not be present.").isFalse();
+    Assertions.assertThat(fs.exists(implicitDir))
+        .describedAs("The parent dir should exist.")
+        .isTrue();
   }
 
   /**
@@ -426,6 +428,8 @@ public class ITestAzureBlobFileSystemDelete extends
     Path p1 = new Path("/testDir1");
     Path p2 = new Path("/testDir2");
 
+    fs.mkdirs(p1);
+    fs.mkdirs(p2);
     fs.create(new Path("/testDir1/f1.txt"));
     fs.create(new Path("/testDir2/f2.txt"));
 
@@ -452,7 +456,9 @@ public class ITestAzureBlobFileSystemDelete extends
     AzureBlobFileSystem fs = getFileSystem();
 
     Path p = new Path("/nonExistingPath");
-    Assertions.assertThat(fs.delete(p, true)).isFalse();
+    Assertions.assertThat(fs.delete(p, true))
+        .describedAs("Delete operation on non-existing path should return false.")
+        .isFalse();
   }
 
   /**
@@ -468,7 +474,9 @@ public class ITestAzureBlobFileSystemDelete extends
     fs.create(testFile);
     fs.delete(testFile, false);
 
-    Assertions.assertThat(fs.delete(testFile, true)).isFalse();
+    Assertions.assertThat(fs.delete(testFile, true))
+        .describedAs("Delete operation on deleted path should return false.")
+        .isFalse();
   }
 
   /**
