@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.util;
 
+import org.apache.hadoop.util.Clock;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;

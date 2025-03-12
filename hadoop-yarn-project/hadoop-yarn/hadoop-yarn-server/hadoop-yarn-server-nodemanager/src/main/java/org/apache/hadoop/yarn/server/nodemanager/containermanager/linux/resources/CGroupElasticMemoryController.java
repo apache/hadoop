@@ -28,8 +28,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
-import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.util.MonotonicClock;
 
 import java.io.File;
 import java.io.InputStream;

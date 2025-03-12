@@ -89,7 +89,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -103,10 +102,6 @@
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdfs-client</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.sun.jersey</groupId>
-          <artifactId>jersey-json</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -131,13 +126,22 @@
       <artifactId>junit-platform-launcher</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.jersey.core</groupId>
+      <artifactId>jersey-server</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <!-- 'mvn dependency:analyze' fails to detect use of this direct
          dependency -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-auth</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -240,13 +244,6 @@
       <groupId>org.xerial.snappy</groupId>
       <artifactId>snappy-java</artifactId>
       <scope>runtime</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-client</artifactId>
-      <version>1.19.4</version>
-      <scope>test</scope>
     </dependency>
 
     <dependency>
@@ -369,17 +366,12 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-auth</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.sun.jersey</groupId>
-          <artifactId>jersey-json</artifactId>
         </exclusion>
         <exclusion>
           <groupId>commons-logging</groupId>
@@ -393,7 +385,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -412,7 +403,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
       <exclusions>
@@ -430,7 +420,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs-client</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -505,6 +494,12 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-inline</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.glassfish.jersey.media</groupId>
+      <artifactId>jersey-media-json-jettison</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

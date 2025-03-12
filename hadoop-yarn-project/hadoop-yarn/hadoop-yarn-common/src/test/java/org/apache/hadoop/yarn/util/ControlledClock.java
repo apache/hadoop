@@ -17,6 +17,8 @@
 */
 package org.apache.hadoop.yarn.util;
 
+import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.util.SystemClock;
 
 public class ControlledClock implements Clock {
   private long time = -1;

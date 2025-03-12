@@ -37,9 +37,9 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.CpuTimeTracker;
 import org.apache.hadoop.util.SysInfoLinux;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
-import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.util.SystemClock;
 
 /**
  * Common code base for the CGroupsResourceCalculator implementations.

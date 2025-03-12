@@ -33,8 +33,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
     .QueueManagementChangeEvent;
-import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
 import java.util.ArrayList;

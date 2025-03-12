@@ -129,10 +129,11 @@ as implicitly set in `pos`.
 #### Preconditions
 
     isOpen(FSDIS)
-    buffer != null else raise NullPointerException
-    length >= 0
-    offset < len(buffer)
-    length <= len(buffer) - offset
+    buffer != null else raise NullPointerException, IllegalArgumentException
+    offset >= 0 else raise IndexOutOfBoundsException
+    length >= 0 else raise IndexOutOfBoundsException, IllegalArgumentException
+    offset < len(buffer) else raise IndexOutOfBoundsException
+    length <= len(buffer) - offset else raise IndexOutOfBoundsException
     pos >= 0 else raise EOFException, IOException
 
 Exceptions that may be raised on precondition failure are
@@ -174,6 +175,19 @@ What is critical is that unless the destination buffer size is 0, the call
 must block until at least one byte is returned. Thus, for any data source
 of length greater than zero, repeated invocations of this `read()` operation
 will eventually read all the data.
+
+#### Implementation Notes
+
+1. If the caller passes a `null` buffer, then an unchecked exception MUST be thrown. The base JDK
+`InputStream` implementation throws `NullPointerException`. HDFS historically used
+`IllegalArgumentException`. Implementations MAY use either of these.
+1. If the caller passes a negative value for `length`, then an unchecked exception MUST be thrown.
+The base JDK `InputStream` implementation throws `IndexOutOfBoundsException`. HDFS historically used
+`IllegalArgumentException`. Implementations MAY use either of these.
+1. Reads through any method MUST return the same data.
+1. Callers MAY interleave calls to different read methods (single-byte and multi-byte) on the same
+stream. The stream MUST return the same underlying data, regardless of the specific read calls or
+their ordering.
 
 ### <a name="Seekable.seek"></a>`Seekable.seek(s)`
 
