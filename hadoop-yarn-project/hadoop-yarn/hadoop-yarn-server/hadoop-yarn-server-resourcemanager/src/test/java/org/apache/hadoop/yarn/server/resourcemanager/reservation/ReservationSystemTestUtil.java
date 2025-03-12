@@ -17,6 +17,10 @@
  *****************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.doReturn;
@@ -65,8 +69,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
-import org.junit.Assert;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Assertions;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -112,13 +115,13 @@ public class ReservationSystemTestUtil {
   public static void validateReservationQueue(
       AbstractReservationSystem reservationSystem, String planQName) {
     Plan plan = reservationSystem.getPlan(planQName);
-    Assert.assertNotNull(plan);
-    Assert.assertTrue(plan instanceof InMemoryPlan);
-    Assert.assertEquals(planQName, plan.getQueueName());
-    Assert.assertEquals(8192, plan.getTotalCapacity().getMemorySize());
-    Assert.assertTrue(
+    assertNotNull(plan);
+    assertTrue(plan instanceof InMemoryPlan);
+    assertEquals(planQName, plan.getQueueName());
+    assertEquals(8192, plan.getTotalCapacity().getMemorySize());
+    assertTrue(
         plan.getReservationAgent() instanceof AlignedPlannerWithGreedy);
-    Assert
+    Assertions
         .assertTrue(plan.getSharingPolicy() instanceof CapacityOverTimePolicy);
   }
 
@@ -247,7 +250,7 @@ public class ReservationSystemTestUtil {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
 
-    CapacityScheduler cs = Mockito.spy(new CapacityScheduler());
+    CapacityScheduler cs = spy(new CapacityScheduler());
     cs.setConf(new YarnConfiguration());
 
     RMContext mockRmContext = createRMContext(conf);
@@ -256,7 +259,7 @@ public class ReservationSystemTestUtil {
     try {
       cs.serviceInit(conf);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      fail(e.getMessage());
     }
 
     initializeRMContext(numContainers, cs, mockRmContext);
@@ -273,7 +276,7 @@ public class ReservationSystemTestUtil {
   }
 
   public static RMContext createRMContext(Configuration conf) {
-    RMContext mockRmContext = Mockito.spy(new RMContextImpl(null, null, null,
+    RMContext mockRmContext = spy(new RMContextImpl(null, null, null,
         null, null, null, new RMContainerTokenSecretManager(conf),
         new NMTokenSecretManagerInRM(conf),
         new ClientToAMTokenSecretManagerInRM(), null));
