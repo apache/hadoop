@@ -131,7 +131,7 @@ public class TestRouterAsyncRPCMultipleDestinationMountTableResolver extends
       nnFs1.delete(new Path(testPath), true);
     }
     assertNotNull(datanodesSubcluster);
-    assertTrue(!datanodesSubcluster.isEmpty());
+    assertFalse(datanodesSubcluster.isEmpty());
   }
 
   @Override
