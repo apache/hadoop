@@ -457,7 +457,7 @@ public class ITestAzureBlobFileSystemDelete extends
 
     Path p = new Path("/nonExistingPath");
     Assertions.assertThat(fs.delete(p, true))
-        .describedAs("Delete operation on non-existing path should return false.")
+        .describedAs("Delete operation on non-existing path should return false")
         .isFalse();
   }
 
