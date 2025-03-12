@@ -127,7 +127,7 @@ public class LocalResolver extends RouterResolver<String, String> {
    *
    * @return DN IP -> Subcluster.
    */
-  private Map<String, String> getDatanodesSubcluster() {
+  public Map<String, String> getDatanodesSubcluster() {
 
     final RouterRpcServer rpcServer = getRpcServer();
     if (rpcServer == null) {
