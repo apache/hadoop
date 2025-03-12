@@ -125,7 +125,7 @@ public class LocalResolver extends RouterResolver<String, String> {
    * needs to be done as a privileged action to use the user for the Router and
    * not the one from the client in the RPC call.
    *
-   * @return DN IP -> Subcluster.
+   * @return DN IP -&gt; Subcluster.
    */
   public Map<String, String> getDatanodesSubcluster() {
 
