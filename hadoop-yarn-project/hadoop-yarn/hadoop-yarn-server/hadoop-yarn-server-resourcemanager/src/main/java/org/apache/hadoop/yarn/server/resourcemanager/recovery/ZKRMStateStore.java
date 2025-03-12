@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.util.Clock;
+import org.apache.hadoop.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;

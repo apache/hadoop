@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 import java.util.Collection;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.util.Clock;
 
 /**
  * A PlanFollower is a component that runs on a timer, and synchronizes the

@@ -25,6 +25,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.SystemClock;
+import org.apache.hadoop.util.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -174,7 +176,7 @@ public class MiniMRCluster {
       String[] hosts, UserGroupInformation ugi, JobConf conf,
       int numTrackerToExclude) throws IOException {
     this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, numDir,
-        racks, hosts, ugi, conf, numTrackerToExclude, new Clock());
+        racks, hosts, ugi, conf, numTrackerToExclude, SystemClock.getInstance());
   }
 
   public MiniMRCluster(int jobTrackerPort, int taskTrackerPort,
