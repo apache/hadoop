@@ -27,6 +27,8 @@
 
     <properties>
         <grpc.version>1.69.0</grpc.version>
+        <!-- Last version that works with Centos 7 -->
+        <grpc.plugin.version>1.65.0</grpc.plugin.version>
         <animal-sniffer.version>1.24</animal-sniffer.version>
     </properties>
 
@@ -209,7 +211,7 @@
                 <configuration>
                     <protocArtifact>com.google.protobuf:protoc:${hadoop.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
                     <pluginId>grpc-java</pluginId>
-                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
+                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.plugin.version}:exe:${os.detected.classifier}</pluginArtifact>
                 </configuration>
                 <executions>
                     <execution>
