@@ -44,6 +44,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.io.ByteArrayOutputStream;
@@ -56,11 +57,13 @@ import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import javax.crypto.SecretKey;
@@ -115,6 +118,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
     final LinkedList<Object> unencryptedMessages = new LinkedList<>();
     final EmbeddedChannel shuffle = t.createShuffleHandlerSSL(unencryptedMessages);
     t.testGetAllAttemptsForReduce0NoKeepAlive(unencryptedMessages, shuffle);
+    drainChannel(shuffle);
   }
 
   @Test
@@ -194,6 +198,8 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
         actual.toString());
 
     assertFalse(shuffle.isActive(), "closed"); // known-issue
+    tryRelease(actual);
+    drainChannel(decoder);
   }
 
   @Test
@@ -217,6 +223,9 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
         actual.toString());
 
     assertFalse(shuffle.isActive(), "closed");
+
+    tryRelease(actual);
+    drainChannel(decoder);
   }
 
   @Test
@@ -243,7 +252,29 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
     assertEquals(getExpectedHttpResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR).toString(),
         actual.toString());
 
+    tryRelease(actual);
+    drainChannel(decoder);
+
     assertFalse(shuffle.isActive(), "closed");
+  }
+
+  private void drainChannel(EmbeddedChannel ch) {
+    Object o;
+    while((o = ch.readInbound())!=null) {
+      tryRelease(o);
+    }
+    while((o = ch.readOutbound())!=null) {
+      tryRelease(o);
+    }
+  }
+
+  private void tryRelease(Object obj) {
+    if (obj instanceof ReferenceCounted) {
+      ReferenceCounted bb = (ReferenceCounted) obj;
+      if (bb.refCnt() > 0) {
+        bb.release(bb.refCnt());
+      }
+    }
   }
 
   private DefaultHttpResponse getExpectedHttpResponse(HttpResponseStatus status) {
@@ -366,7 +397,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
     }
 
     private void testKeepAlive(java.util.Queue<Object> messages,
-                               EmbeddedChannel shuffle) throws IOException {
+                               EmbeddedChannel shuffle) throws IOException, InterruptedException, ExecutionException {
       final FullHttpRequest req1 = createRequest(
           getUri(TEST_JOB_ID, 0, Collections.singletonList(TEST_ATTEMPT_1), true));
       shuffle.writeInbound(req1);
@@ -375,6 +406,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
           getAttemptData(new Attempt(TEST_ATTEMPT_1, TEST_DATA_A))
       );
       assertTrue(shuffle.isActive(), "keep-alive");
+      drainChannel(shuffle);
       messages.clear();
 
       final FullHttpRequest req2 = createRequest(
@@ -385,6 +417,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
           getAttemptData(new Attempt(TEST_ATTEMPT_2, TEST_DATA_B))
       );
       assertTrue(shuffle.isActive(), "keep-alive");
+      drainChannel(shuffle);
       messages.clear();
 
       final FullHttpRequest req3 = createRequest(
@@ -395,6 +428,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
           getAttemptData(new Attempt(TEST_ATTEMPT_3, TEST_DATA_C))
       );
       assertFalse(shuffle.isActive(), "no keep-alive");
+      drainChannel(shuffle);
     }
 
     private ArrayList<ByteBuf> getAllAttemptsForReduce0() throws IOException {
@@ -442,6 +476,8 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
         }
 
         i++;
+        tryRelease(obj);
+        drainChannel(decodeChannel);
       }
 
       // This check is done after to have better debug logs on failure.
