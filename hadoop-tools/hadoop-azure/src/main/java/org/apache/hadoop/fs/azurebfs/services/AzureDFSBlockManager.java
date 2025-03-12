@@ -86,4 +86,10 @@ public class AzureDFSBlockManager extends AzureBlockManager {
   protected synchronized boolean hasActiveBlock() {
     return super.hasActiveBlock();
   }
+
+  @Override
+  public void close() {
+    super.close();
+    LOG.debug("AzureDFSBlockManager closed.");
+  }
 }

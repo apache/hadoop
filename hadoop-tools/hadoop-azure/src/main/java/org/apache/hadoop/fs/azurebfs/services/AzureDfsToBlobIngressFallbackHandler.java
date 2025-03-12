@@ -147,7 +147,7 @@ public class AzureDfsToBlobIngressFallbackHandler extends AzureDFSIngressHandler
       final String leaseId,
       TracingContext tracingContext) throws IOException {
     AbfsRestOperation op;
-    if (!blobBlockManager.hasListToCommit()) {
+    if (!blobBlockManager.hasBlocksToCommit()) {
       return null;
     }
     try {

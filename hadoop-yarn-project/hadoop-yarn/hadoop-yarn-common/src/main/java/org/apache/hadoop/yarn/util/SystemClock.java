@@ -23,11 +23,15 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 /**
  * Implementation of {@link Clock} that gives the current time from the system
  * clock in milliseconds.
- * 
+ *
  * NOTE: Do not use this to calculate a duration of expire or interval to sleep,
  * because it will be broken by settimeofday. Please use {@link MonotonicClock}
  * instead.
+ * @deprecated This class has been moved to {@link org.apache.hadoop.util.SystemClock}
+ * in hadoop-common-project and will be removed in future version.
+ * Please use {@link org.apache.hadoop.util.SystemClock} instead.
  */
+@Deprecated
 @Public
 @Stable
 public final class SystemClock implements Clock {

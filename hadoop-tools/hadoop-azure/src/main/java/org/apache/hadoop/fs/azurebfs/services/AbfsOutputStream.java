@@ -708,9 +708,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       bufferIndex = 0;
       closed = true;
       writeOperations.clear();
-      if (getBlockManager().hasActiveBlock()) {
-        getBlockManager().clearActiveBlock();
-      }
+      getBlockManager().close();
     }
     LOG.debug("Closing AbfsOutputStream : {}", this);
   }

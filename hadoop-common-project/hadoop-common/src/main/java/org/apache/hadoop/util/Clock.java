@@ -16,18 +16,14 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.util;
+package org.apache.hadoop.util;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 
 /**
  * A simple clock interface that gives you time.
- * @deprecated This class has been moved to {@link org.apache.hadoop.util.Clock}
- * in hadoop-common-project and will be removed in future version.
- * Please use {@link org.apache.hadoop.util.Clock} instead.
  */
-@Deprecated
 @Public
 @Stable
 public interface Clock {

@@ -16,24 +16,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.util;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import java.util.Calendar;
+import java.util.TimeZone;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 /**
- * test Clock class
+ * Implementation of {@link Clock} that gives the current UTC time in
+ * milliseconds.
  */
-public class TestClock {
+@Public
+@Evolving
+public class UTCClock implements Clock {
 
-  @Test
-  @Timeout(value = 10)
-  public void testClock(){
-    Clock clock = new Clock();
-    long templateTime = System.currentTimeMillis();
-    long time = clock.getTime();
-    assertEquals(templateTime, time, 30);
+  private final TimeZone utcZone = TimeZone.getTimeZone("UTC");
+
+  public long getTime() {
+    return Calendar.getInstance(utcZone).getTimeInMillis();
   }
 }
