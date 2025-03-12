@@ -1512,8 +1512,24 @@ public class AbfsBlobClient extends AbfsClient {
     final AbfsRestOperation op = getAbfsRestOperation(
         AbfsRestOperationType.DeleteBlob, HTTP_METHOD_DELETE, url,
         requestHeaders);
-    op.execute(tracingContext);
-    return op;
+    try {
+      op.execute(tracingContext);
+      return op;
+    } catch (AzureBlobFileSystemException e) {
+      // If we have no HTTP response, throw the original exception.
+      if (!op.hasResult()) {
+        throw e;
+      }
+      final AbfsRestOperation idempotencyOp = deleteIdempotencyCheckOp(op);
+      if (idempotencyOp.getResult().getStatusCode()
+          == op.getResult().getStatusCode()) {
+        // idempotency did not return different result
+        // throw back the exception
+        throw e;
+      } else {
+        return idempotencyOp;
+      }
+    }
   }
 
   /**
