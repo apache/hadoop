@@ -57,7 +57,7 @@ For more information see [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade
   <description>
     Comma-separated class names of credential provider classes which implement
     software.amazon.awssdk.auth.credentials.AwsCredentialsProvider.
-     
+
     org.apache.hadoop.fs.s3a.auth.ProfileAWSCredentialsProvider is not included in
     the chain by default.
 
@@ -229,17 +229,21 @@ Note:
 ### <a name="auth_simple"></a> Credentials from profile with `ProfileAWSCredentialsProvider`*
 
 This is a non-default provider that fetches credentials from a profile file,
-acting as a Hadoop wrapper around ProfileCredentialsProvider. The profile file and
+acting as a Hadoop wrapper around [ProfileCredentialsProvider](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/auth/credentials/ProfileCredentialsProvider.html). The profile file and
 profile name are both resolved as follows.
 
-1. If the configuration setting is specified, that takes priority (`fs.s3a.auth.profile.file`
+1. If the configuration setting is specified, that takes priority ( `fs.s3a.auth.profile.file`
    for profile file and `fs.s3a.auth.profile.name` for profile name).
-2. If a configuration setting is absent, but the environment variables for
-   the setting(AWS_SHARED_CREDENTIALS_FILE for profile file and AWS_PROFILE for
+2. If a configuration setting is absent, but the environment variable for
+   the setting( `AWS_SHARED_CREDENTIALS_FILE` for profile file and `AWS_PROFILE` for
    profile name) is defined, then the variable is used.
 3. If neither configuration setting nor environment variable is present, then
    the values default to `~/.aws/credentials` for the profile file, and `default`
    for the profile name.
+
+
+*Important*: This profile file must be on every node in the _cluster_.
+If this is not the case, delegation tokens can be used to collect the current credentials and propagate them.
 
 ### <a name="auth_session"></a> Using Session Credentials with `TemporaryAWSCredentialsProvider`
 

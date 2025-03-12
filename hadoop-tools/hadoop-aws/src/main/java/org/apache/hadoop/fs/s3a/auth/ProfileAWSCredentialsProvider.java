@@ -36,74 +36,74 @@ import org.apache.hadoop.conf.Configuration;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ProfileAWSCredentialsProvider extends AbstractAWSCredentialProvider {
-    private static final Logger LOG = LoggerFactory.getLogger(ProfileAWSCredentialsProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProfileAWSCredentialsProvider.class);
 
-    public static final String NAME
-            = "org.apache.hadoop.fs.s3a.auth.ProfileAWSCredentialsProvider";
+  public static final String NAME
+      = "org.apache.hadoop.fs.s3a.auth.ProfileAWSCredentialsProvider";
 
-    /** Conf setting for credentials file path*/
-    public static final String PROFILE_FILE = "fs.s3a.auth.profile.file";
+  /** Conf setting for credentials file path*/
+  public static final String PROFILE_FILE = "fs.s3a.auth.profile.file";
 
-    /** Conf setting for profile name*/
-    public static final String PROFILE_NAME = "fs.s3a.auth.profile.name";
+  /** Conf setting for profile name*/
+  public static final String PROFILE_NAME = "fs.s3a.auth.profile.name";
 
-    /** Environment variable for credentials file path*/
-    public static final String CREDENTIALS_FILE_ENV = "AWS_SHARED_CREDENTIALS_FILE";
-    /** Environment variable for profile name*/
-    public static final String PROFILE_ENV = "AWS_PROFILE";
+  /** Environment variable for credentials file path*/
+  public static final String CREDENTIALS_FILE_ENV = "AWS_SHARED_CREDENTIALS_FILE";
+  /** Environment variable for profile name*/
+  public static final String PROFILE_ENV = "AWS_PROFILE";
 
-    private final ProfileCredentialsProvider pcp;
+  private final ProfileCredentialsProvider pcp;
 
-    private static Path getCredentialsPath(Configuration conf) {
-        String credentialsFile = conf.get(PROFILE_FILE, null);
-        if (credentialsFile == null) {
-            credentialsFile = SystemUtils.getEnvironmentVariable(CREDENTIALS_FILE_ENV, null);
-            if (credentialsFile != null) {
-                LOG.debug("Fetched credentials file path from environment variable");
-            }
-        }
-        else {
-            LOG.debug("Fetched credentials file path from conf");
-        }
-        if (credentialsFile == null) {
-            LOG.debug("Using default credentials file path");
-            return FileSystems.getDefault().getPath(SystemUtils.getUserHome().getPath(),".aws", "credentials");
-        }
-        else {
-            return FileSystems.getDefault().getPath(credentialsFile);
-        }
+  private static Path getCredentialsPath(Configuration conf) {
+    String credentialsFile = conf.get(PROFILE_FILE, null);
+    if (credentialsFile == null) {
+      credentialsFile = SystemUtils.getEnvironmentVariable(CREDENTIALS_FILE_ENV, null);
+      if (credentialsFile != null) {
+        LOG.debug("Fetched credentials file path from environment variable");
+      }
     }
-
-    private static String getCredentialsName(Configuration conf) {
-        String profileName = conf.get(PROFILE_NAME, null);
-        if (profileName == null) {
-            profileName = SystemUtils.getEnvironmentVariable(PROFILE_ENV, null);
-            if (profileName == null) {
-                profileName = "default";
-                LOG.debug("Using default profile name");
-            }
-            else {
-                LOG.debug("Fetched profile name from environment variable");
-            }
-        }
-        else {
-            LOG.debug("Fetched profile name from conf");
-        }
-        return profileName;
+    else {
+      LOG.debug("Fetched credentials file path from conf");
     }
-
-    public ProfileAWSCredentialsProvider(URI uri, Configuration conf) {
-        super(uri, conf);
-        ProfileCredentialsProvider.Builder builder = ProfileCredentialsProvider.builder();
-        builder.profileName(getCredentialsName(conf))
-                .profileFile(ProfileFile.builder()
-                .content(getCredentialsPath(conf))
-                .type(ProfileFile.Type.CREDENTIALS)
-                .build());
-        pcp = builder.build();
+    if (credentialsFile == null) {
+      LOG.debug("Using default credentials file path");
+      return FileSystems.getDefault().getPath(SystemUtils.getUserHome().getPath(),".aws", "credentials");
     }
-
-    public AwsCredentials resolveCredentials() {
-        return pcp.resolveCredentials();
+    else {
+      return FileSystems.getDefault().getPath(credentialsFile);
     }
+  }
+
+  private static String getCredentialsName(Configuration conf) {
+    String profileName = conf.get(PROFILE_NAME, null);
+    if (profileName == null) {
+      profileName = SystemUtils.getEnvironmentVariable(PROFILE_ENV, null);
+      if (profileName == null) {
+        profileName = "default";
+        LOG.debug("Using default profile name");
+      }
+      else {
+        LOG.debug("Fetched profile name from environment variable");
+      }
+    }
+    else {
+      LOG.debug("Fetched profile name from conf");
+    }
+    return profileName;
+  }
+
+  public ProfileAWSCredentialsProvider(URI uri, Configuration conf) {
+    super(uri, conf);
+    ProfileCredentialsProvider.Builder builder = ProfileCredentialsProvider.builder();
+    builder.profileName(getCredentialsName(conf))
+            .profileFile(ProfileFile.builder()
+            .content(getCredentialsPath(conf))
+            .type(ProfileFile.Type.CREDENTIALS)
+            .build());
+    pcp = builder.build();
+  }
+
+  public AwsCredentials resolveCredentials() {
+    return pcp.resolveCredentials();
+  }
 }
