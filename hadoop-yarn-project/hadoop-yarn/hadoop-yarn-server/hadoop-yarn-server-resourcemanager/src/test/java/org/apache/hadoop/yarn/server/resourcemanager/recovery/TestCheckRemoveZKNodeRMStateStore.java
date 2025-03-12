@@ -44,16 +44,26 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Applicatio
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.zookeeper.KeeperException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-import org.mockito.Mockito;
-import org.junit.Assert;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.anyList;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestCheckRemoveZKNodeRMStateStore extends RMStateStoreTestBase {
 
@@ -78,13 +88,13 @@ public class TestCheckRemoveZKNodeRMStateStore extends RMStateStoreTestBase {
     return curatorFramework;
   }
 
-  @Before
+  @BeforeEach
   public void setupCurator() throws Exception {
     curatorTestingServer = setupCuratorServer();
     curatorFramework = setupCuratorFramework(curatorTestingServer);
   }
 
-  @After
+  @AfterEach
   public void cleanupCuratorServer() throws IOException {
     curatorFramework.close();
     curatorTestingServer.stop();
@@ -101,31 +111,31 @@ public class TestCheckRemoveZKNodeRMStateStore extends RMStateStoreTestBase {
       private ZKCuratorManager zkCuratorManager;
       TestZKRMStateStoreInternal(Configuration conf, String workingZnode)
           throws Exception {
-        resourceManager = Mockito.mock(ResourceManager.class);
-        zkCuratorManager = Mockito.mock(ZKCuratorManager.class, Mockito.RETURNS_DEEP_STUBS);
+        resourceManager = mock(ResourceManager.class);
+        zkCuratorManager = mock(ZKCuratorManager.class, RETURNS_DEEP_STUBS);
 
-        Mockito.when(resourceManager.getZKManager()).thenReturn(zkCuratorManager);
-        Mockito.when(resourceManager.createAndStartZKManager(conf)).thenReturn(zkCuratorManager);
-        Mockito.when(zkCuratorManager.exists(getAppNode("application_1708333280_0001")))
+        when(resourceManager.getZKManager()).thenReturn(zkCuratorManager);
+        when(resourceManager.createAndStartZKManager(conf)).thenReturn(zkCuratorManager);
+        when(zkCuratorManager.exists(getAppNode("application_1708333280_0001")))
                 .thenReturn(true);
-        Mockito.when(zkCuratorManager.exists(getAppNode("application_1708334188_0001")))
+        when(zkCuratorManager.exists(getAppNode("application_1708334188_0001")))
                 .thenReturn(true).thenReturn(false);
-        Mockito.when(zkCuratorManager.exists(getDelegationTokenNode(0, 0)))
+        when(zkCuratorManager.exists(getDelegationTokenNode(0, 0)))
                 .thenReturn(true).thenReturn(false);
-        Mockito.when(zkCuratorManager.exists(getAppNode("application_1709705779_0001")))
+        when(zkCuratorManager.exists(getAppNode("application_1709705779_0001")))
                 .thenReturn(true);
-        Mockito.when(zkCuratorManager.exists(getAttemptNode("application_1709705779_0001",
+        when(zkCuratorManager.exists(getAttemptNode("application_1709705779_0001",
                         "appattempt_1709705779_0001_000001")))
                 .thenReturn(true);
-        Mockito.doThrow(new KeeperException.NoNodeException()).when(zkCuratorManager)
-                .safeDelete(Mockito.anyString(), Mockito.anyList(), Mockito.anyString());
+        doThrow(new KeeperException.NoNodeException()).when(zkCuratorManager)
+                .safeDelete(anyString(), anyList(), anyString());
 
         setResourceManager(resourceManager);
         init(conf);
         dispatcher.disableExitOnDispatchException();
         start();
 
-        Assert.assertTrue(znodeWorkingPath.equals(workingZnode));
+        assertTrue(znodeWorkingPath.equals(workingZnode));
       }
 
       private String getVersionNode() {
@@ -236,7 +246,8 @@ public class TestCheckRemoveZKNodeRMStateStore extends RMStateStoreTestBase {
     }
   }
 
-  @Test (timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testSafeDeleteZKNode() throws Exception  {
     TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
     testRemoveAttempt(zkTester);
@@ -262,12 +273,12 @@ public class TestCheckRemoveZKNodeRMStateStore extends RMStateStoreTestBase {
     try {
       store.removeApplicationAttemptInternal(attemptIdRemoved);
     } catch (KeeperException.NoNodeException nne) {
-      Assert.fail("NoNodeException should not happen.");
+      fail("NoNodeException should not happen.");
     }
 
     // The verification method safeDelete is called once.
-    Mockito.verify(store.resourceManager.getZKManager(), Mockito.times(1))
-            .safeDelete(Mockito.anyString(), Mockito.anyList(), Mockito.anyString());
+    verify(store.resourceManager.getZKManager(), times(1))
+            .safeDelete(anyString(), anyList(), anyString());
 
     store.close();
   }
@@ -296,7 +307,7 @@ public class TestCheckRemoveZKNodeRMStateStore extends RMStateStoreTestBase {
       // The occurrence of NoNodeException is induced by calling the safeDelete method.
       store.removeApplicationStateInternal(appStateRemoved);
     } catch (KeeperException.NoNodeException nne) {
-      Assert.fail("NoNodeException should not happen.");
+      fail("NoNodeException should not happen.");
     }
 
     store.close();
@@ -312,12 +323,12 @@ public class TestCheckRemoveZKNodeRMStateStore extends RMStateStoreTestBase {
     try {
       store.removeRMDelegationTokenState(tokenIdRemoved);
     } catch (KeeperException.NoNodeException nne) {
-      Assert.fail("NoNodeException should not happen.");
+      fail("NoNodeException should not happen.");
     }
 
     // The verification method safeDelete is called once.
-    Mockito.verify(store.resourceManager.getZKManager(), Mockito.times(1))
-            .safeDelete(Mockito.anyString(), Mockito.anyList(), Mockito.anyString());
+    verify(store.resourceManager.getZKManager(), times(1))
+            .safeDelete(anyString(), anyList(), anyString());
 
     store.close();
   }
@@ -332,12 +343,12 @@ public class TestCheckRemoveZKNodeRMStateStore extends RMStateStoreTestBase {
     try {
       store.removeRMDTMasterKeyState(keyRemoved);
     } catch (KeeperException.NoNodeException nne) {
-      Assert.fail("NoNodeException should not happen.");
+      fail("NoNodeException should not happen.");
     }
 
     // The verification method safeDelete is called once.
-    Mockito.verify(store.resourceManager.getZKManager(), Mockito.times(1))
-            .safeDelete(Mockito.anyString(), Mockito.anyList(), Mockito.anyString());
+    verify(store.resourceManager.getZKManager(), times(1))
+            .safeDelete(anyString(), anyList(), anyString());
 
     store.close();
   }
@@ -353,12 +364,12 @@ public class TestCheckRemoveZKNodeRMStateStore extends RMStateStoreTestBase {
     try {
       store.removeReservationState(planName, reservationIdRemoved.toString());
     } catch (KeeperException.NoNodeException nne) {
-      Assert.fail("NoNodeException should not happen.");
+      fail("NoNodeException should not happen.");
     }
 
     // The verification method safeDelete is called once.
-    Mockito.verify(store.resourceManager.getZKManager(), Mockito.times(1))
-            .safeDelete(Mockito.anyString(), Mockito.anyList(), Mockito.anyString());
+    verify(store.resourceManager.getZKManager(), times(1))
+            .safeDelete(anyString(), anyList(), anyString());
 
     store.close();
   }
@@ -376,11 +387,11 @@ public class TestCheckRemoveZKNodeRMStateStore extends RMStateStoreTestBase {
 
     // Transition to active.
     rm.getRMContext().getRMAdminService().transitionToActive(req);
-    Assert.assertEquals("RM with ZKStore didn't start",
-            Service.STATE.STARTED, rm.getServiceState());
-    Assert.assertEquals("RM should be Active",
-            HAServiceProtocol.HAServiceState.ACTIVE,
-            rm.getRMContext().getRMAdminService().getServiceStatus().getState());
+    assertEquals(Service.STATE.STARTED, rm.getServiceState(),
+        "RM with ZKStore didn't start");
+    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE,
+        rm.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should be Active");
 
     // Simulate throw NodeExistsException
     ZKRMStateStore zKStore = (ZKRMStateStore) rm.getRMContext().getStateStore();
@@ -397,7 +408,7 @@ public class TestCheckRemoveZKNodeRMStateStore extends RMStateStoreTestBase {
     try {
       zKStore.removeApplicationAttemptInternal(attemptIdRemoved);
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof KeeperException.NodeExistsException);
+      assertTrue(e instanceof KeeperException.NodeExistsException);
     }
 
     rm.close();

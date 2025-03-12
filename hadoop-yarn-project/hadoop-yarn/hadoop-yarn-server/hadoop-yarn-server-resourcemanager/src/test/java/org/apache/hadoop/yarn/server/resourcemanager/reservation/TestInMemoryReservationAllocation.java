@@ -17,6 +17,10 @@
  *******************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -27,10 +31,9 @@ import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestInMemoryReservationAllocation {
 
@@ -41,13 +44,13 @@ public class TestInMemoryReservationAllocation {
 
   private Random rand = new Random();
 
-  @Before
+  @BeforeEach
   public void setUp() {
     resCalc = new DefaultResourceCalculator();
     minAlloc = Resource.newInstance(1, 1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     user = null;
     planName = null;
@@ -71,9 +74,9 @@ public class TestInMemoryReservationAllocation {
         new InMemoryReservationAllocation(reservationID, rDef, user, planName,
             start, start + alloc.length + 1, allocations, resCalc, minAlloc);
     doAssertions(rAllocation, reservationID, rDef, allocations, start, alloc);
-    Assert.assertFalse(rAllocation.containsGangs());
+    assertFalse(rAllocation.containsGangs());
     for (int i = 0; i < alloc.length; i++) {
-      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i])),
+      assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i])),
           rAllocation.getResourcesAtTime(start + i));
     }
   }
@@ -94,9 +97,9 @@ public class TestInMemoryReservationAllocation {
         new InMemoryReservationAllocation(reservationID, rDef, user, planName,
             start, start + alloc.length + 1, allocations, resCalc, minAlloc);
     doAssertions(rAllocation, reservationID, rDef, allocations, start, alloc);
-    Assert.assertFalse(rAllocation.containsGangs());
+    assertFalse(rAllocation.containsGangs());
     for (int i = 0; i < alloc.length; i++) {
-      Assert.assertEquals(
+      assertEquals(
           Resource.newInstance(1024 * (alloc[i] + i), (alloc[i] + i)),
           rAllocation.getResourcesAtTime(start + i));
     }
@@ -118,9 +121,9 @@ public class TestInMemoryReservationAllocation {
         new InMemoryReservationAllocation(reservationID, rDef, user, planName,
             start, start + alloc.length + 1, allocations, resCalc, minAlloc);
     doAssertions(rAllocation, reservationID, rDef, allocations, start, alloc);
-    Assert.assertFalse(rAllocation.containsGangs());
+    assertFalse(rAllocation.containsGangs());
     for (int i = 0; i < alloc.length; i++) {
-      Assert.assertEquals(
+      assertEquals(
           Resource.newInstance(1024 * (alloc[i] + i), (alloc[i] + i)),
           rAllocation.getResourcesAtTime(start + i));
     }
@@ -143,7 +146,7 @@ public class TestInMemoryReservationAllocation {
             start, start + alloc.length + 1, allocations, resCalc, minAlloc);
     doAssertions(rAllocation, reservationID, rDef, allocations, (int) start,
         alloc);
-    Assert.assertFalse(rAllocation.containsGangs());
+    assertFalse(rAllocation.containsGangs());
   }
 
   @Test
@@ -164,9 +167,9 @@ public class TestInMemoryReservationAllocation {
             start, start + alloc.length + 1, allocations, resCalc, minAlloc,
             isGang);
     doAssertions(rAllocation, reservationID, rDef, allocations, start, alloc);
-    Assert.assertTrue(rAllocation.containsGangs());
+    assertTrue(rAllocation.containsGangs());
     for (int i = 0; i < alloc.length; i++) {
-      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i])),
+      assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i])),
           rAllocation.getResourcesAtTime(start + i));
     }
   }
@@ -175,13 +178,13 @@ public class TestInMemoryReservationAllocation {
       ReservationId reservationID, ReservationDefinition rDef,
       Map<ReservationInterval, Resource> allocations, int start,
       int[] alloc) {
-    Assert.assertEquals(reservationID, rAllocation.getReservationId());
-    Assert.assertEquals(rDef, rAllocation.getReservationDefinition());
-    Assert.assertEquals(allocations, rAllocation.getAllocationRequests());
-    Assert.assertEquals(user, rAllocation.getUser());
-    Assert.assertEquals(planName, rAllocation.getPlanName());
-    Assert.assertEquals(start, rAllocation.getStartTime());
-    Assert.assertEquals(start + alloc.length + 1, rAllocation.getEndTime());
+    assertEquals(reservationID, rAllocation.getReservationId());
+    assertEquals(rDef, rAllocation.getReservationDefinition());
+    assertEquals(allocations, rAllocation.getAllocationRequests());
+    assertEquals(user, rAllocation.getUser());
+    assertEquals(planName, rAllocation.getPlanName());
+    assertEquals(start, rAllocation.getStartTime());
+    assertEquals(start + alloc.length + 1, rAllocation.getEndTime());
   }
 
   private Map<ReservationInterval, Resource> generateAllocation(

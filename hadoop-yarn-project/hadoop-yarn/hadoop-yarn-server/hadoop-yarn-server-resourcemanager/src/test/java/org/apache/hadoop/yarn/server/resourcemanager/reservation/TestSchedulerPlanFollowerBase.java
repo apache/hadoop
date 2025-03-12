@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.security.AccessControlException;
@@ -43,7 +44,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
-import org.junit.Assert;
 
 public abstract class TestSchedulerPlanFollowerBase {
   final static int GB = 1024;
@@ -73,23 +73,23 @@ public abstract class TestSchedulerPlanFollowerBase {
     ReservationDefinition rDef =
         ReservationSystemTestUtil.createSimpleReservationDefinition(
             0, 0 + f1.length + 1, f1.length);
-    assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(r1, rDef, "u3",
-            "dedicated", 0, 0 + f1.length, ReservationSystemTestUtil
-                .generateAllocation(0L, 1L, f1), res, minAlloc), false));
+    assertTrue(plan.addReservation(new InMemoryReservationAllocation(r1, rDef, "u3",
+        "dedicated", 0, 0 + f1.length, ReservationSystemTestUtil
+        .generateAllocation(0L, 1L, f1), res, minAlloc), false),
+         plan.toString());
 
     ReservationId r2 = ReservationId.newInstance(ts, 2);
-    assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(r2, rDef, "u3",
-            "dedicated", 3, 3 + f1.length, ReservationSystemTestUtil
-                .generateAllocation(3L, 1L, f1), res, minAlloc), false));
+    assertTrue(plan.addReservation(new InMemoryReservationAllocation(r2, rDef, "u3",
+        "dedicated", 3, 3 + f1.length, ReservationSystemTestUtil
+        .generateAllocation(3L, 1L, f1), res, minAlloc), false),
+        plan.toString());
 
     ReservationId r3 = ReservationId.newInstance(ts, 3);
     int[] f2 = { 0, 10, 20, 10, 0 };
-    assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(r3, rDef, "u4",
-            "dedicated", 10, 10 + f2.length, ReservationSystemTestUtil
-                .generateAllocation(10L, 1L, f2), res, minAlloc), false));
+    assertTrue(plan.addReservation(new InMemoryReservationAllocation(r3, rDef, "u4",
+        "dedicated", 10, 10 + f2.length, ReservationSystemTestUtil
+        .generateAllocation(10L, 1L, f2), res, minAlloc), false),
+        plan.toString());
 
 
     // default reseration queue should exist before run of PlanFollower AND have
@@ -124,10 +124,10 @@ public abstract class TestSchedulerPlanFollowerBase {
 
     // initial default reservation queue should have no apps after first run
     Queue defQ = getDefaultQueue();
-    Assert.assertEquals(0, getNumberOfApplications(defQ));
+    assertEquals(0, getNumberOfApplications(defQ));
 
     assertReservationQueueExists(r1, 0.1, 0.1);
-    Assert.assertEquals(1, getNumberOfApplications(q));
+    assertEquals(1, getNumberOfApplications(q));
 
     assertReservationQueueDoesNotExist(r2);
     assertReservationQueueDoesNotExist(r3);
@@ -135,9 +135,9 @@ public abstract class TestSchedulerPlanFollowerBase {
     when(mClock.getTime()).thenReturn(3L);
     planFollower.run();
 
-    Assert.assertEquals(0, getNumberOfApplications(defQ));
+    assertEquals(0, getNumberOfApplications(defQ));
     assertReservationQueueExists(r1, 0.1, 0.1);
-    Assert.assertEquals(1, getNumberOfApplications(q));
+    assertEquals(1, getNumberOfApplications(q));
     assertReservationQueueExists(r2, 0.1, 0.1);
     assertReservationQueueDoesNotExist(r3);
 
@@ -147,11 +147,11 @@ public abstract class TestSchedulerPlanFollowerBase {
     q = getReservationQueue(r1.toString());
     if (isMove) {
       // app should have been moved to default reservation queue
-      Assert.assertEquals(1, getNumberOfApplications(defQ));
+      assertEquals(1, getNumberOfApplications(defQ));
       assertNull(q);
     } else {
       // app should be killed
-      Assert.assertEquals(0, getNumberOfApplications(defQ));
+      assertEquals(0, getNumberOfApplications(defQ));
       assertNotNull(q);
       AppAttemptRemovedSchedulerEvent appAttemptRemovedEvent =
           new AppAttemptRemovedSchedulerEvent(appAttemptId_0,
@@ -166,10 +166,10 @@ public abstract class TestSchedulerPlanFollowerBase {
 
     if (isMove) {
       // app should have been moved to default reservation queue
-      Assert.assertEquals(1, getNumberOfApplications(defQ));
+      assertEquals(1, getNumberOfApplications(defQ));
     } else {
       // app should be killed
-      Assert.assertEquals(0, getNumberOfApplications(defQ));
+      assertEquals(0, getNumberOfApplications(defQ));
     }
     assertReservationQueueDoesNotExist(r1);
     assertReservationQueueDoesNotExist(r2);

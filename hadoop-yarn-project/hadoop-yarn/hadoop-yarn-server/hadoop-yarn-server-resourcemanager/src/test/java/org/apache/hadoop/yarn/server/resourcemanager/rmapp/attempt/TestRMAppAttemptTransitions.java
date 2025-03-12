@@ -18,12 +18,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pjoin;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -43,6 +44,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -113,19 +116,14 @@ import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-@RunWith(value = Parameterized.class)
 public class TestRMAppAttemptTransitions {
 
   private static final Logger LOG =
@@ -223,7 +221,6 @@ public class TestRMAppAttemptTransitions {
   private ApplicationSubmissionContext submissionContext = null;
   private boolean unmanagedAM;
 
-  @Parameterized.Parameters
   public static Collection<Object[]> getTestParameters() {
     return Arrays.asList(new Object[][] {
         { Boolean.FALSE },
@@ -231,12 +228,13 @@ public class TestRMAppAttemptTransitions {
     });
   }
 
-  public TestRMAppAttemptTransitions(Boolean isSecurityEnabled) {
-    this.isSecurityEnabled = isSecurityEnabled;
+  private void initTestRMAppAttemptTransitions(boolean pIsSecurityEnabled)
+      throws Exception {
+    this.isSecurityEnabled = pIsSecurityEnabled;
+    setUp();
   }
 
   @SuppressWarnings("deprecation")
-  @Before
   public void setUp() throws Exception {
     AuthenticationMethod authMethod = AuthenticationMethod.SIMPLE;
     if (isSecurityEnabled) {
@@ -331,8 +329,8 @@ public class TestRMAppAttemptTransitions {
         protected void onInvalidTranstion(
                 RMAppAttemptEventType rmAppAttemptEventType,
                 RMAppAttemptState state) {
-            Assert.assertTrue("RMAppAttemptImpl can't handle "
-                + rmAppAttemptEventType + " at state " + state, false);
+            assertTrue(false, "RMAppAttemptImpl can't handle "
+                + rmAppAttemptEventType + " at state " + state);
         }
     };
 
@@ -343,7 +341,7 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptNewState();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     ((AsyncDispatcher)this.spyRMContext.getDispatcher()).stop();
   }
@@ -351,7 +349,7 @@ public class TestRMAppAttemptTransitions {
   private String getProxyUrl(RMAppAttempt appAttempt) {
     String url = rmContext.getAppProxyUrl(conf,
         appAttempt.getAppAttemptId().getApplicationId());
-    Assert.assertNotEquals("N/A", url);
+    assertNotEquals("N/A", url);
     return url;
   }
 
@@ -588,7 +586,7 @@ public class TestRMAppAttemptTransitions {
     verifyAttemptFinalStateSaved();
     assertEquals(finishedContainerCount, applicationAttempt
         .getJustFinishedContainers().size());
-    Assert.assertEquals(0, getFinishedContainersSentToAM(applicationAttempt)
+    assertEquals(0, getFinishedContainersSentToAM(applicationAttempt)
         .size());
     assertEquals(container, applicationAttempt.getMasterContainer());
     assertEquals(finalStatus, applicationAttempt.getFinalApplicationStatus());
@@ -752,8 +750,10 @@ public class TestRMAppAttemptTransitions {
           RMAppAttemptEventType.ATTEMPT_UPDATE_SAVED));
   }
 
-  @Test
-  public void testUsageReport() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testUsageReport(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     // scheduler has info on running apps
     ApplicationAttemptId attemptId = applicationAttempt.getAppAttemptId();
     ApplicationResourceUsageReport appResUsgRpt =
@@ -773,8 +773,8 @@ public class TestRMAppAttemptTransitions {
     // expect usage stats to come from the scheduler report
     ApplicationResourceUsageReport report = 
         applicationAttempt.getApplicationResourceUsageReport();
-    Assert.assertEquals(123456L, report.getMemorySeconds());
-    Assert.assertEquals(55544L, report.getVcoreSeconds());
+    assertEquals(123456L, report.getMemorySeconds());
+    assertEquals(55544L, report.getVcoreSeconds());
 
     // finish app attempt and remove it from scheduler 
     when(appResUsgRpt.getMemorySeconds()).thenReturn(223456L);
@@ -789,12 +789,15 @@ public class TestRMAppAttemptTransitions {
     when(scheduler.getSchedulerAppInfo(eq(attemptId))).thenReturn(null);
 
     report = applicationAttempt.getApplicationResourceUsageReport();
-    Assert.assertEquals(223456, report.getMemorySeconds());
-    Assert.assertEquals(75544, report.getVcoreSeconds());
+    assertEquals(223456, report.getMemorySeconds());
+    assertEquals(75544, report.getVcoreSeconds());
   }
 
-  @Test
-  public void testUnmanagedAMUnexpectedRegistration() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testUnmanagedAMUnexpectedRegistration(boolean pIsSecurityEnabled)
+      throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     unmanagedAM = true;
     when(submissionContext.getUnmanagedAM()).thenReturn(true);
 
@@ -812,8 +815,11 @@ public class TestRMAppAttemptTransitions {
         "Unmanaged AM must register after AM attempt reaches LAUNCHED state.");
   }
 
-  @Test
-  public void testUnmanagedAMContainersCleanup() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testUnmanagedAMContainersCleanup(boolean pIsSecurityEnabled)
+      throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     unmanagedAM = true;
     when(submissionContext.getUnmanagedAM()).thenReturn(true);
     when(submissionContext.getKeepContainersAcrossApplicationAttempts())
@@ -829,8 +835,10 @@ public class TestRMAppAttemptTransitions {
     assertFalse(transferStateFromPreviousAttempt);
   }
 
-  @Test
-  public void testNewToKilled() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testNewToKilled(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     applicationAttempt.handle(
         new RMAppAttemptEvent(
             applicationAttempt.getAppAttemptId(), 
@@ -839,10 +847,12 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.createApplicationAttemptState());
     testAppAttemptKilledState(null, EMPTY_DIAGNOSTICS);
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
-  } 
-  
-  @Test
-  public void testNewToRecovered() {
+  }
+
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testNewToRecovered(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     applicationAttempt.handle(
         new RMAppAttemptEvent(
             applicationAttempt.getAppAttemptId(), 
@@ -850,8 +860,10 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptRecoveredState();
   }
 
-  @Test
-  public void testSubmittedToKilled() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testSubmittedToKilled(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     submitApplicationAttempt();
     applicationAttempt.handle(
         new RMAppAttemptEvent(
@@ -862,8 +874,10 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptKilledState(null, EMPTY_DIAGNOSTICS);
   }
 
-  @Test
-  public void testScheduledToKilled() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testScheduledToKilled(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     scheduleApplicationAttempt();
     applicationAttempt.handle(        
         new RMAppAttemptEvent(
@@ -874,8 +888,10 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptKilledState(null, EMPTY_DIAGNOSTICS);
   }
 
-  @Test
-  public void testAMCrashAtScheduled() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testAMCrashAtScheduled(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     // This is to test sending CONTAINER_FINISHED event at SCHEDULED state.
     // Verify the state transition is correct.
     scheduleApplicationAttempt();
@@ -901,8 +917,10 @@ public class TestRMAppAttemptTransitions {
     verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
   }
 
-  @Test
-  public void testAllocatedToKilled() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testAllocatedToKilled(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     applicationAttempt.handle(
         new RMAppAttemptEvent(
@@ -913,8 +931,10 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptKilledState(amContainer, EMPTY_DIAGNOSTICS);
   }
 
-  @Test
-  public void testAllocatedToFailed() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testAllocatedToFailed(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     String diagnostics = "Launch Failed";
     applicationAttempt.handle(
@@ -925,16 +945,22 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptFailedState(amContainer, diagnostics);
   }
 
-  @Test(timeout = 10000)
-  public void testAllocatedToRunning() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  @Timeout(value = 10)
+  public void testAllocatedToRunning(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     // Register attempt event arrives before launched attempt event
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
     launchApplicationAttempt(amContainer, RMAppAttemptState.RUNNING);
   }
 
-  @Test(timeout = 10000)
-  public void testCreateAppAttemptReport() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  @Timeout(value = 10)
+  public void testCreateAppAttemptReport(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     RMAppAttemptState[] attemptStates = RMAppAttemptState.values();
     applicationAttempt.handle(new RMAppAttemptEvent(
         applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.KILL));
@@ -946,8 +972,11 @@ public class TestRMAppAttemptTransitions {
     }
   }
 
-  @Test(timeout = 10000)
-  public void testLaunchedAtFinalSaving() {
+  @Timeout(value = 10)
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testLaunchedAtFinalSaving(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
 
     // ALLOCATED->FINAL_SAVING
@@ -978,8 +1007,11 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getAppAttemptState());
   }
 
-  @Test(timeout = 10000)
-  public void testAttemptAddedAtFinalSaving() {
+  @Timeout(value = 10)
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testAttemptAddedAtFinalSaving(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     submitApplicationAttempt();
 
     // SUBMITTED->FINAL_SAVING
@@ -995,8 +1027,11 @@ public class TestRMAppAttemptTransitions {
                    applicationAttempt.getAppAttemptState());
   }
 
-  @Test(timeout = 10000)
-  public void testAttemptRegisteredAtFailed() {
+  @Timeout(value = 10)
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testAttemptRegisteredAtFailed(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
 
@@ -1021,8 +1056,10 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getAppAttemptState());
   }
 
-  @Test
-  public void testAttemptLaunchFailedAtFailed() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testAttemptLaunchFailedAtFailed(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     //send CONTAINER_FINISHED event
@@ -1045,8 +1082,10 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getAppAttemptState());
   }
 
-  @Test
-  public void testAMCrashAtAllocated() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testAMCrashAtAllocated(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     String containerDiagMsg = "some error";
     int exitCode = 123;
@@ -1068,9 +1107,11 @@ public class TestRMAppAttemptTransitions {
     verifyAMCrashAtAllocatedDiagnosticInfo(applicationAttempt.getDiagnostics(),
       exitCode, shouldCheckURL);
   }
-  
-  @Test
-  public void testRunningToFailed() {
+
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testRunningToFailed(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1112,8 +1153,10 @@ public class TestRMAppAttemptTransitions {
     verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
   }
 
-  @Test
-  public void testRunningToKilled() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testRunningToKilled(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1152,8 +1195,11 @@ public class TestRMAppAttemptTransitions {
     verifyApplicationAttemptFinished(RMAppAttemptState.KILLED);
   }
 
-  @Test(timeout=10000)
-  public void testLaunchedExpire() {
+  @Timeout(value = 10)
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testLaunchedExpire(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     applicationAttempt.handle(new RMAppAttemptEvent(
@@ -1163,8 +1209,8 @@ public class TestRMAppAttemptTransitions {
     sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.FAILED,
         applicationAttempt.getAppAttemptState());
-    assertTrue("expire diagnostics missing",
-        applicationAttempt.getDiagnostics().contains("timed out"));
+    assertTrue(applicationAttempt.getDiagnostics().contains("timed out"),
+        "expire diagnostics missing");
     String rmAppPageUrl = pjoin(RM_WEBAPP_ADDR, "cluster", "app",
         applicationAttempt.getAppAttemptId().getApplicationId());
     assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());
@@ -1174,8 +1220,11 @@ public class TestRMAppAttemptTransitions {
   }
 
   @SuppressWarnings("unchecked")
-  @Test(timeout=10000)
-  public void testLaunchedFailWhileAHSEnabled() {
+  @Timeout(value = 10)
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testLaunchedFailWhileAHSEnabled(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Configuration myConf = new Configuration(conf);
     myConf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
     ApplicationId applicationId = MockApps.newAppID(appId);
@@ -1246,8 +1295,11 @@ public class TestRMAppAttemptTransitions {
     assertEquals(rmAppPageUrl, myApplicationAttempt.getTrackingUrl());
   }
 
-  @Test(timeout=20000)
-  public void testRunningExpire() {
+  @Timeout(value = 20)
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testRunningExpire(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1258,8 +1310,8 @@ public class TestRMAppAttemptTransitions {
     sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.FAILED,
         applicationAttempt.getAppAttemptState());
-    assertTrue("expire diagnostics missing",
-        applicationAttempt.getDiagnostics().contains("timed out"));
+    assertTrue(applicationAttempt.getDiagnostics().contains("timed out"),
+        "expire diagnostics missing");
     String rmAppPageUrl = pjoin(RM_WEBAPP_ADDR, "cluster", "app",
         applicationAttempt.getAppAttemptId().getApplicationId());
     assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());
@@ -1269,8 +1321,10 @@ public class TestRMAppAttemptTransitions {
     verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
   }
 
-  @Test 
-  public void testUnregisterToKilledFinishing() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testUnregisterToKilledFinishing(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1279,33 +1333,45 @@ public class TestRMAppAttemptTransitions {
         "Killed by user");
   }
 
-  @Test
-  public void testTrackingUrlUnmanagedAM() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testTrackingUrlUnmanagedAM(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     testUnmanagedAMSuccess("oldTrackingUrl");
   }
 
-  @Test
-  public void testEmptyTrackingUrlUnmanagedAM() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testEmptyTrackingUrlUnmanagedAM(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     testUnmanagedAMSuccess("");
   }
 
-  @Test
-  public void testNullTrackingUrlUnmanagedAM() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testNullTrackingUrlUnmanagedAM(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     testUnmanagedAMSuccess(null);
   }
 
-  @Test
-  public void testManagedAMWithTrackingUrl() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testManagedAMWithTrackingUrl(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     testTrackingUrlManagedAM("theTrackingUrl");
   }
 
-  @Test
-  public void testManagedAMWithEmptyTrackingUrl() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testManagedAMWithEmptyTrackingUrl(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     testTrackingUrlManagedAM("");
   }
 
-  @Test
-  public void testManagedAMWithNullTrackingUrl() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testManagedAMWithNullTrackingUrl(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     testTrackingUrlManagedAM(null);
   }
 
@@ -1317,8 +1383,10 @@ public class TestRMAppAttemptTransitions {
         FinalApplicationStatus.SUCCEEDED, url, "Successful");
   }
 
-  @Test
-  public void testUnregisterToSuccessfulFinishing() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testUnregisterToSuccessfulFinishing(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1326,8 +1394,10 @@ public class TestRMAppAttemptTransitions {
         FinalApplicationStatus.SUCCEEDED, "mytrackingurl", "Successful");
   }
 
-  @Test
-  public void testFinishingKill() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testFinishingKill(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1344,8 +1414,10 @@ public class TestRMAppAttemptTransitions {
         diagnostics);
   }
 
-  @Test
-  public void testFinishingExpire() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testFinishingExpire(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1362,8 +1434,10 @@ public class TestRMAppAttemptTransitions {
         diagnostics, 0, false);
   }
 
-  @Test
-  public void testFinishingToFinishing() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testFinishingToFinishing(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1386,8 +1460,10 @@ public class TestRMAppAttemptTransitions {
         diagnostics);
   }
 
-  @Test
-  public void testSuccessfulFinishingToFinished() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testSuccessfulFinishingToFinished(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1411,9 +1487,11 @@ public class TestRMAppAttemptTransitions {
   // Attempt_Saved event, we stay on FINAL_SAVING on Container_Finished event
   // and then directly jump from FINAL_SAVING to FINISHED state on Attempt_Saved
   // event
-  @Test
-  public void
-      testFinalSavingToFinishedWithContainerFinished() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testFinalSavingToFinishedWithContainerFinished(boolean pIsSecurityEnabled)
+      throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1444,8 +1522,11 @@ public class TestRMAppAttemptTransitions {
   // While attempt is at FINAL_SAVING, Expire event may come before
   // Attempt_Saved event, we stay on FINAL_SAVING on Expire event and then
   // directly jump from FINAL_SAVING to FINISHED state on Attempt_Saved event.
-  @Test
-  public void testFinalSavingToFinishedWithExpire() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testFinalSavingToFinishedWithExpire(boolean pIsSecurityEnabled)
+      throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1470,8 +1551,10 @@ public class TestRMAppAttemptTransitions {
       diagnostics, 0, false);
   }
 
-  @Test
-  public void testFinishedContainer() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testFinishedContainer(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1497,37 +1580,37 @@ public class TestRMAppAttemptTransitions {
         ArgumentCaptor.forClass(RMNodeFinishedContainersPulledByAMEvent.class);
 
     // Verify justFinishedContainers
-    Assert.assertEquals(1, applicationAttempt.getJustFinishedContainers()
+    assertEquals(1, applicationAttempt.getJustFinishedContainers()
         .size());
-    Assert.assertEquals(container1.getId(), applicationAttempt
+    assertEquals(container1.getId(), applicationAttempt
         .getJustFinishedContainers().get(0).getContainerId());
-    Assert.assertEquals(0, getFinishedContainersSentToAM(applicationAttempt)
+    assertEquals(0, getFinishedContainersSentToAM(applicationAttempt)
         .size());
 
     // Verify finishedContainersSentToAM gets container after pull
     List<ContainerStatus> containerStatuses = applicationAttempt
         .pullJustFinishedContainers();
-    Assert.assertEquals(1, containerStatuses.size());
+    assertEquals(1, containerStatuses.size());
     Mockito.verify(rmnodeEventHandler, never()).handle(Mockito
         .any(RMNodeEvent.class));
-    Assert.assertTrue(applicationAttempt.getJustFinishedContainers().isEmpty());
-    Assert.assertEquals(1, getFinishedContainersSentToAM(applicationAttempt)
+    assertTrue(applicationAttempt.getJustFinishedContainers().isEmpty());
+    assertEquals(1, getFinishedContainersSentToAM(applicationAttempt)
         .size());
 
     // Verify container is acked to NM via the RMNodeEvent after second pull
     containerStatuses = applicationAttempt.pullJustFinishedContainers();
-    Assert.assertEquals(0, containerStatuses.size());
+    assertEquals(0, containerStatuses.size());
     Mockito.verify(rmnodeEventHandler).handle(captor.capture());
-    Assert.assertEquals(container1.getId(), captor.getValue().getContainers()
+    assertEquals(container1.getId(), captor.getValue().getContainers()
         .get(0));
-    Assert.assertTrue(applicationAttempt.getJustFinishedContainers().isEmpty());
-    Assert.assertEquals(0, getFinishedContainersSentToAM(applicationAttempt)
+    assertTrue(applicationAttempt.getJustFinishedContainers().isEmpty());
+    assertEquals(0, getFinishedContainersSentToAM(applicationAttempt)
         .size());
 
     // verify if no containers to acknowledge to NM then event should not be
     // triggered. Number of times event invoked is 1 i.e on second pull
     containerStatuses = applicationAttempt.pullJustFinishedContainers();
-    Assert.assertEquals(0, containerStatuses.size());
+    assertEquals(0, containerStatuses.size());
     Mockito.verify(rmnodeEventHandler, times(1))
         .handle(Mockito.any(RMNodeEvent.class));
   }
@@ -1536,8 +1619,11 @@ public class TestRMAppAttemptTransitions {
    * Check a completed container that is not yet pulled by AM heartbeat,
    * is ACKed to NM for cleanup when the AM container exits.
    */
-  @Test
-  public void testFinishedContainerNotBeingPulledByAMHeartbeat() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testFinishedContainerNotBeingPulledByAMHeartbeat(
+      boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1561,11 +1647,11 @@ public class TestRMAppAttemptTransitions {
     // Verify justFinishedContainers
     ArgumentCaptor<RMNodeFinishedContainersPulledByAMEvent> captor =
         ArgumentCaptor.forClass(RMNodeFinishedContainersPulledByAMEvent.class);
-    Assert.assertEquals(1, applicationAttempt.getJustFinishedContainers()
+    assertEquals(1, applicationAttempt.getJustFinishedContainers()
         .size());
-    Assert.assertEquals(container1.getId(), applicationAttempt
+    assertEquals(container1.getId(), applicationAttempt
         .getJustFinishedContainers().get(0).getContainerId());
-    Assert.assertTrue(
+    assertTrue(
         getFinishedContainersSentToAM(applicationAttempt).isEmpty());
 
     // finish AM container to emulate AM exit event
@@ -1580,15 +1666,15 @@ public class TestRMAppAttemptTransitions {
     List<RMNodeFinishedContainersPulledByAMEvent> containerPulledEvents =
         captor.getAllValues();
     // Verify AM container is acked to NM via the RMNodeEvent immediately
-    Assert.assertEquals(amContainer.getId(),
+    assertEquals(amContainer.getId(),
         containerPulledEvents.get(0).getContainers().get(0));
     // Verify the non-AM container is acked to NM via the RMNodeEvent
-    Assert.assertEquals(container1.getId(),
+    assertEquals(container1.getId(),
         containerPulledEvents.get(1).getContainers().get(0));
-    Assert.assertTrue("No container shall be added to justFinishedContainers" +
-            " as soon as AM container exits",
-        applicationAttempt.getJustFinishedContainers().isEmpty());
-    Assert.assertTrue(
+    assertTrue(applicationAttempt.getJustFinishedContainers().isEmpty(),
+        "No container shall be added to justFinishedContainers" +
+        " as soon as AM container exits");
+    assertTrue(
         getFinishedContainersSentToAM(applicationAttempt).isEmpty());
   }
 
@@ -1596,8 +1682,10 @@ public class TestRMAppAttemptTransitions {
    * Check a completed container is ACKed to NM for cleanup after the AM
    * container has exited.
    */
-  @Test
-  public void testFinishedContainerAfterAMExit() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testFinishedContainerAfterAMExit(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1617,7 +1705,7 @@ public class TestRMAppAttemptTransitions {
     ArgumentCaptor<RMNodeFinishedContainersPulledByAMEvent> captor =
         ArgumentCaptor.forClass(RMNodeFinishedContainersPulledByAMEvent.class);
     Mockito.verify(rmnodeEventHandler).handle(captor.capture());
-    Assert.assertEquals(amContainer.getId(),
+    assertEquals(amContainer.getId(),
         captor.getValue().getContainers().get(0));
 
     // Complete a non-AM container
@@ -1636,13 +1724,12 @@ public class TestRMAppAttemptTransitions {
     captor = ArgumentCaptor.forClass(
         RMNodeFinishedContainersPulledByAMEvent.class);
     Mockito.verify(rmnodeEventHandler, times(2)).handle(captor.capture());
-    Assert.assertEquals(container1.getId(),
+    assertEquals(container1.getId(),
         captor.getAllValues().get(1).getContainers().get(0));
-    Assert.assertTrue("No container shall be added to justFinishedContainers" +
-            " after AM container exited",
-        applicationAttempt.getJustFinishedContainers().isEmpty());
-    Assert.assertTrue(
-        getFinishedContainersSentToAM(applicationAttempt).isEmpty());
+    assertTrue(applicationAttempt.getJustFinishedContainers().isEmpty(),
+        "No container shall be added to justFinishedContainers" +
+        " after AM container exited");
+    assertTrue(getFinishedContainersSentToAM(applicationAttempt).isEmpty());
   }
 
   private static List<ContainerStatus> getFinishedContainersSentToAM(
@@ -1658,22 +1745,24 @@ public class TestRMAppAttemptTransitions {
   // this is to test user can get client tokens only after the client token
   // master key is saved in the state store and also registered in
   // ClientTokenSecretManager
-  @Test
-  public void testGetClientToken() throws Exception {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testGetClientToken(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     assumeTrue(isSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
 
     // before attempt is launched, can not get ClientToken
     Token<ClientToAMTokenIdentifier> token =
         applicationAttempt.createClientToken(null);
-    Assert.assertNull(token);
+    assertNull(token);
 
     launchApplicationAttempt(amContainer);
     // after attempt is launched , can get ClientToken
     token = applicationAttempt.createClientToken(null);
-    Assert.assertNull(token);
+    assertNull(token);
     token = applicationAttempt.createClientToken("clientuser");
-    Assert.assertNotNull(token);
+    assertNotNull(token);
 
     applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
       .getAppAttemptId(), RMAppAttemptEventType.KILL));
@@ -1682,24 +1771,26 @@ public class TestRMAppAttemptTransitions {
     sendAttemptUpdateSavedEvent(applicationAttempt);
     // after attempt is killed, can not get Client Token
     token = applicationAttempt.createClientToken(null);
-    Assert.assertNull(token);
+    assertNull(token);
     token = applicationAttempt.createClientToken("clientuser");
-    Assert.assertNull(token);
+    assertNull(token);
   }
 
   // this is to test master key is saved in the secret manager only after
   // attempt is launched and in secure-mode
-  @Test
-  public void testApplicationAttemptMasterKey() throws Exception {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testApplicationAttemptMasterKey(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     ApplicationAttemptId appid = applicationAttempt.getAppAttemptId();
     boolean isMasterKeyExisted = clientToAMTokenManager.hasMasterKey(appid);
 
     if (isSecurityEnabled) {
-      Assert.assertTrue(isMasterKeyExisted);
-      Assert.assertNotNull(clientToAMTokenManager.getMasterKey(appid));
+      assertTrue(isMasterKeyExisted);
+      assertNotNull(clientToAMTokenManager.getMasterKey(appid));
     } else {
-      Assert.assertFalse(isMasterKeyExisted);
+      assertFalse(isMasterKeyExisted);
     }
     launchApplicationAttempt(amContainer);
     applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
@@ -1709,11 +1800,13 @@ public class TestRMAppAttemptTransitions {
     sendAttemptUpdateSavedEvent(applicationAttempt);
     // after attempt is killed, can not get MasterKey
     isMasterKeyExisted = clientToAMTokenManager.hasMasterKey(appid);
-    Assert.assertFalse(isMasterKeyExisted);
+    assertFalse(isMasterKeyExisted);
   }
 
-  @Test
-  public void testFailedToFailed() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testFailedToFailed(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     // create a failed attempt.
     when(submissionContext.getKeepContainersAcrossApplicationAttempts())
       .thenReturn(true);
@@ -1757,8 +1850,10 @@ public class TestRMAppAttemptTransitions {
     assertTrue(found);
   }
 
-  @Test
-  public void testContainerRemovedBeforeAllocate() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testContainerRemovedBeforeAllocate(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     scheduleApplicationAttempt();
 
     // Mock the allocation of AM container
@@ -1787,8 +1882,10 @@ public class TestRMAppAttemptTransitions {
   }
 
   @SuppressWarnings("deprecation")
-  @Test
-  public void testContainersCleanupForLastAttempt() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testContainersCleanupForLastAttempt(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     // create a failed attempt.
     applicationAttempt =
         new RMAppAttemptImpl(applicationAttempt.getAppAttemptId(), spyRMContext,
@@ -1819,8 +1916,11 @@ public class TestRMAppAttemptTransitions {
   }
   
   @SuppressWarnings("unchecked")
-  @Test
-  public void testScheduleTransitionReplaceAMContainerRequestWithDefaults() {
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testScheduleTransitionReplaceAMContainerRequestWithDefaults(
+      boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     YarnScheduler mockScheduler = mock(YarnScheduler.class);
     when(mockScheduler.allocate(any(ApplicationAttemptId.class),
         any(List.class), any(List.class), any(List.class), any(List.class), any(List.class),
@@ -1862,8 +1962,11 @@ public class TestRMAppAttemptTransitions {
         (RMAppAttemptImpl) applicationAttempt, null);
   }
 
-  @Test(timeout = 30000)
-  public void testNewToFailed() {
+  @Timeout(value = 30)
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testNewToFailed(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
         .getAppAttemptId(), RMAppAttemptEventType.FAIL, FAILED_DIAGNOSTICS));
     assertEquals(YarnApplicationAttemptState.NEW,
@@ -1872,8 +1975,11 @@ public class TestRMAppAttemptTransitions {
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
   }
 
-  @Test(timeout = 30000)
-  public void testSubmittedToFailed() {
+  @Timeout(value = 30)
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testSubmittedToFailed(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     submitApplicationAttempt();
     applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
         .getAppAttemptId(), RMAppAttemptEventType.FAIL, FAILED_DIAGNOSTICS));
@@ -1882,8 +1988,11 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptFailedState(null, FAILED_DIAGNOSTICS);
   }
 
-  @Test(timeout = 30000)
-  public void testScheduledToFailed() {
+  @Timeout(value = 30)
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testScheduledToFailed(boolean pIsSecurityEnabled) throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     scheduleApplicationAttempt();
     applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
         .getAppAttemptId(), RMAppAttemptEventType.FAIL, FAILED_DIAGNOSTICS));
@@ -1892,8 +2001,12 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptFailedState(null, FAILED_DIAGNOSTICS);
   }
 
-  @Test(timeout = 30000)
-  public void testAllocatedToFailedUserTriggeredFailEvent() {
+  @Timeout(value = 30)
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testAllocatedToFailedUserTriggeredFailEvent(boolean pIsSecurityEnabled)
+      throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     assertEquals(YarnApplicationAttemptState.ALLOCATED,
         applicationAttempt.createApplicationAttemptState());
@@ -1902,8 +2015,12 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptFailedState(amContainer, FAILED_DIAGNOSTICS);
   }
 
-  @Test(timeout = 30000)
-  public void testRunningToFailedUserTriggeredFailEvent() {
+  @Timeout(value = 30)
+  @ParameterizedTest
+  @MethodSource("getTestParameters")
+  public void testRunningToFailedUserTriggeredFailEvent(boolean pIsSecurityEnabled)
+      throws Exception {
+    initTestRMAppAttemptTransitions(pIsSecurityEnabled);
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1936,15 +2053,15 @@ public class TestRMAppAttemptTransitions {
 
   private void verifyAMCrashAtAllocatedDiagnosticInfo(String diagnostics,
         int exitCode, boolean shouldCheckURL) {
-    assertTrue("Diagnostic information does not point the logs to the users",
-      diagnostics.contains("logs"));
-    assertTrue("Diagnostic information does not contain application attempt id",
-      diagnostics.contains(applicationAttempt.getAppAttemptId().toString()));
-    assertTrue("Diagnostic information does not contain application exit code",
-      diagnostics.contains("exitCode: " + exitCode));
+    assertTrue(diagnostics.contains("logs"),
+        "Diagnostic information does not point the logs to the users");
+    assertTrue(diagnostics.contains(applicationAttempt.getAppAttemptId().toString()),
+        "Diagnostic information does not contain application attempt id");
+    assertTrue(diagnostics.contains("exitCode: " + exitCode),
+        "Diagnostic information does not contain application exit code");
     if (shouldCheckURL) {
-      assertTrue("Diagnostic information does not contain application proxy URL",
-          diagnostics.contains(applicationAttempt.getTrackingUrl()));
+      assertTrue(diagnostics.contains(applicationAttempt.getTrackingUrl()),
+          "Diagnostic information does not contain application proxy URL");
     }
   }
 
@@ -1981,12 +2098,12 @@ public class TestRMAppAttemptTransitions {
         ArgumentCaptor.forClass(RMAppAttemptState.class);
     verify(writer).applicationAttemptFinished(
         any(RMAppAttempt.class), finalState.capture());
-    Assert.assertEquals(state, finalState.getValue());
+    assertEquals(state, finalState.getValue());
     finalState =
         ArgumentCaptor.forClass(RMAppAttemptState.class);
     verify(publisher).appAttemptFinished(any(RMAppAttempt.class), finalState.capture(),
         any(RMApp.class), anyLong());
-    Assert.assertEquals(state, finalState.getValue());
+    assertEquals(state, finalState.getValue());
   }
 
 }
