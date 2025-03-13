@@ -57,7 +57,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -196,9 +195,9 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
 
     assertEquals(getExpectedHttpResponse(HttpResponseStatus.BAD_REQUEST).toString(),
         actual.toString());
+    tryRelease(actual);
 
     assertFalse(shuffle.isActive(), "closed"); // known-issue
-    tryRelease(actual);
     drainChannel(decoder);
   }
 
@@ -216,16 +215,15 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
     }
 
     DefaultHttpResponse actual = decoder.readInbound();
+    drainChannel(decoder);
     assertFalse(actual.headers().get(CONTENT_LENGTH).isEmpty());
     actual.headers().set(CONTENT_LENGTH, 0);
 
     assertEquals(getExpectedHttpResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR).toString(),
         actual.toString());
+    tryRelease(actual);
 
     assertFalse(shuffle.isActive(), "closed");
-
-    tryRelease(actual);
-    drainChannel(decoder);
   }
 
   @Test
@@ -246,14 +244,13 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
     }
 
     DefaultHttpResponse actual = decoder.readInbound();
+    drainChannel(decoder);
     assertFalse(actual.headers().get(CONTENT_LENGTH).isEmpty());
     actual.headers().set(CONTENT_LENGTH, 0);
 
     assertEquals(getExpectedHttpResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR).toString(),
         actual.toString());
-
     tryRelease(actual);
-    drainChannel(decoder);
 
     assertFalse(shuffle.isActive(), "closed");
   }
@@ -396,8 +393,8 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
       assertFalse(shuffle.isActive(), "no keep-alive");
     }
 
-    private void testKeepAlive(java.util.Queue<Object> messages,
-                               EmbeddedChannel shuffle) throws IOException, InterruptedException, ExecutionException {
+    private void testKeepAlive(java.util.Queue<Object> messages, EmbeddedChannel shuffle)
+        throws IOException, InterruptedException, ExecutionException {
       final FullHttpRequest req1 = createRequest(
           getUri(TEST_JOB_ID, 0, Collections.singletonList(TEST_ATTEMPT_1), true));
       shuffle.writeInbound(req1);
@@ -465,19 +462,19 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
         decodeChannel.writeInbound(actualBytes);
         Object obj = decodeChannel.readInbound();
         LOG.info("Decoded object: {}", obj);
+        drainChannel(decodeChannel);
 
         if (i == 0) {
           DefaultHttpResponse resp = (DefaultHttpResponse) obj;
           assertEquals(response.toString(), resp.toString());
         }
+        tryRelease(obj);
         if (i > 0 && i <= content.size()) {
           assertEquals(ByteBufUtil.prettyHexDump(content.get(i - 1)),
               actualHexdump, "data should match");
         }
 
         i++;
-        tryRelease(obj);
-        drainChannel(decodeChannel);
       }
 
       // This check is done after to have better debug logs on failure.
