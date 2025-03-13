@@ -933,8 +933,8 @@ public class TestLeafQueue {
             priority, recordFactory, NO_LABEL)));
     assign = b.assignContainers(clusterResource, node0, new ResourceLimits(
         clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertTrue(
-       assign.getResource().getMemorySize() > 0, "Still within limits, should assign");
+    assertTrue(assign.getResource().getMemorySize() > 0,
+        "Still within limits, should assign");
   }
 
   private void applyCSAssignment(Resource clusterResource, CSAssignment assign,
@@ -1015,8 +1015,8 @@ public class TestLeafQueue {
     User queueUser0 = b.getUser(user0);
     User queueUser1 = b.getUser(user1);
 
-    assertEquals(2, b
-        .getAbstractUsersManager().getNumActiveUsers(), "There should 2 active users!");
+    assertEquals(2, b.getAbstractUsersManager().getNumActiveUsers(),
+        "There should 2 active users!");
     // Fill both Nodes as far as we can
     CSAssignment assign;
     do {
@@ -1035,13 +1035,12 @@ public class TestLeafQueue {
     } while (assign.getResource().getMemorySize() > 0 &&
         assign.getAssignmentInformation().getNumReservations() == 0);
 
-    assertTrue(queueUser0.getUsed()
-        .getMemorySize() > 0, "Verify user_0 got resources ");
-    assertTrue(queueUser1.getUsed()
-        .getMemorySize() > 0, "Verify user_1 got resources ");
-    assertTrue(
-    b.getAbsoluteUsedCapacity() > 0.95, "Expected AbsoluteUsedCapacity > 0.95, got: "
-            + b.getAbsoluteUsedCapacity());
+    assertTrue(queueUser0.getUsed().getMemorySize() > 0,
+        "Verify user_0 got resources ");
+    assertTrue(queueUser1.getUsed().getMemorySize() > 0,
+        "Verify user_1 got resources ");
+    assertTrue(b.getAbsoluteUsedCapacity() > 0.95,
+        "Expected AbsoluteUsedCapacity > 0.95, got: " + b.getAbsoluteUsedCapacity());
 
     // Verify consumedRatio is based on dominant resources
     float expectedRatio =
@@ -1810,8 +1809,8 @@ public class TestLeafQueue {
     assertEquals(1*GB, app_1.getCurrentConsumption().getMemorySize());
 
     // app_0 doesn't have outstanding resources, there's only one active user.
-    assertEquals(
-        1, a.getAbstractUsersManager().getNumActiveUsers(), "There should only be 1 active user!");
+    assertEquals(1, a.getAbstractUsersManager().getNumActiveUsers(),
+        "There should only be 1 active user!");
   }
 
   @Test
@@ -1915,8 +1914,8 @@ public class TestLeafQueue {
     assertEquals(GB, app1.getCurrentConsumption().getMemorySize());
 
     // app_0 doesn't have outstanding resources, there's only one active user.
-    assertEquals(
-       1, a.getAbstractUsersManager().getNumActiveUsers(), "There should only be 1 active user!");
+    assertEquals(1, a.getAbstractUsersManager().getNumActiveUsers(),
+        "There should only be 1 active user!");
   }
 
   @Test
@@ -2116,8 +2115,8 @@ public class TestLeafQueue {
         TestUtils.createResourceRequest(ResourceRequest.ANY, 4*GB, 1, true,
             u0Priority, recordFactory)));
 
-    assertEquals(
-       1, qb.getAbstractUsersManager().getNumActiveUsers(), "There should only be 1 active user!");
+    assertEquals(1, qb.getAbstractUsersManager().getNumActiveUsers(),
+        "There should only be 1 active user!");
     //get headroom
     applyCSAssignment(clusterResource,
         qb.assignContainers(clusterResource, node_0,
@@ -2309,8 +2308,8 @@ public class TestLeafQueue {
 
     // Now, only user_0 should be active since he is the only one with
     // outstanding requests
-    assertEquals(
-        1, a.getAbstractUsersManager().getNumActiveUsers(), "There should only be 1 active user!");
+    assertEquals(1, a.getAbstractUsersManager().getNumActiveUsers(),
+        "There should only be 1 active user!");
 
     // 1 container to user_0
     applyCSAssignment(clusterResource,
@@ -4431,8 +4430,8 @@ public class TestLeafQueue {
     submitAndRemove.join();
     getAppsInQueue.join();
 
-    assertTrue(
-       conException.isEmpty(), "ConcurrentModificationException is thrown");
+    assertTrue(conException.isEmpty(),
+        "ConcurrentModificationException is thrown");
     rm.stop();
 
   }
@@ -5263,9 +5262,8 @@ public class TestLeafQueue {
 
     LeafQueue e = (LeafQueue) cs.getQueue("e");
     // Maximum application should be calculated with the default node label
-    assertEquals(
-           (int)(conf.getMaximumSystemApplications()
-                * e.getAbsoluteCapacity()), e.getMaxApplications(), "Maximum application is not calculated properly");
+    assertEquals((int)(conf.getMaximumSystemApplications() * e.getAbsoluteCapacity()),
+        e.getMaxApplications(), "Maximum application is not calculated properly");
 
     conf.setCapacityByLabel(new QueuePath(rootChild, A), "test", 10);
     conf.setCapacityByLabel(new QueuePath(rootChild, B), "test", 10);
@@ -5277,10 +5275,9 @@ public class TestLeafQueue {
     e = (LeafQueue) cs.getQueue("e");
     // Maximum application is now determined by test label, because that would
     // yield a higher value than with default node label
-    assertEquals(
-       (int)(conf.getMaximumSystemApplications() *
-            e.getQueueCapacities().getAbsoluteCapacity("test"))
-,         e.getMaxApplications(), "Maximum application is not calculated properly");
+    assertEquals((int)(conf.getMaximumSystemApplications() *
+        e.getQueueCapacities().getAbsoluteCapacity("test"))
+,       e.getMaxApplications(), "Maximum application is not calculated properly");
   }
 
   @Test
@@ -5394,8 +5391,8 @@ public class TestLeafQueue {
                   + queue + " queue when only admin user is in submit ACL.");
     } catch (YarnException e) {
       // This is the expected behavior.
-      assertTrue(
-         e.getCause() instanceof AccessControlException, "Should have received an AccessControlException.");
+      assertTrue(e.getCause() instanceof AccessControlException,
+          "Should have received an AccessControlException.");
     }
 
     // With only user0 in the list of users authorized to submit apps to the
@@ -5417,8 +5414,8 @@ public class TestLeafQueue {
           + queue + " queue.");
     } catch (YarnException e) {
       // This is the expected behavior.
-      assertTrue(
-         e.getCause() instanceof AccessControlException, "Should have received an AccessControlException.");
+      assertTrue(e.getCause() instanceof AccessControlException,
+          "Should have received an AccessControlException.");
     }
 
     // Even though the admin user is in the list of users allowed to submit to

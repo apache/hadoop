@@ -177,12 +177,10 @@ public class TestCapacitySchedulerLazyPreemption
     assertEquals(2, schedulerApp2.getLiveContainers().size());
 
     // Ensure preemption metrics were recored.
-    assertEquals(
-    1
-,         cs.getQueue("a").getMetrics().getAggregatePreemptedContainers(), "Number of preempted containers incorrectly recorded:");
-    assertEquals(
-    1
-,         cs.getRootQueue().getMetrics().getAggregatePreemptedContainers(), "Number of preempted containers incorrectly recorded:");
+    assertEquals(1, cs.getQueue("a").getMetrics().getAggregatePreemptedContainers(),
+        "Number of preempted containers incorrectly recorded:");
+    assertEquals(1, cs.getRootQueue().getMetrics().getAggregatePreemptedContainers(),
+        "Number of preempted containers incorrectly recorded:");
 
     rm1.close();
   }

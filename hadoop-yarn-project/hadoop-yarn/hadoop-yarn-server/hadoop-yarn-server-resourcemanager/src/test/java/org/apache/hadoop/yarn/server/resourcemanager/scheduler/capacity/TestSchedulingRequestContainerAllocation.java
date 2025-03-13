@@ -755,12 +755,12 @@ public class TestSchedulingRequestContainerAllocation {
       for (Container c : allocated) {
         RMNode rmNode = rmNodes.get(c.getNodeId());
         assertNotNull(rmNode);
-        assertTrue(
-           rmNode.getAllocationTagsWithCount().get("ws-inst") == 1, "If ws-inst is allocated to a node,"
-                + " this node should have inherited the ws-inst tag ");
-        assertTrue(
-           rmNode.getAllocationTagsWithCount().get("hbase-master") == 1, "ws-inst should be co-allocated to "
-                + "hbase-master nodes");
+        assertTrue(rmNode.getAllocationTagsWithCount().get("ws-inst") == 1,
+            "If ws-inst is allocated to a node,"
+            + " this node should have inherited the ws-inst tag ");
+        assertTrue(rmNode.getAllocationTagsWithCount().get("hbase-master") == 1,
+            "ws-inst should be co-allocated to "
+            + "hbase-master nodes");
       }
 
       // App3 (ws-servant)
@@ -794,11 +794,11 @@ public class TestSchedulingRequestContainerAllocation {
       for (Container c : allocated) {
         RMNode rmNode = rmNodes.get(c.getNodeId());
         assertNotNull(rmNode);
-        assertTrue(
-           rmNode.getAllocationTagsWithCount().get("ws-servant") == 3, "Node has ws-servant allocated must have 3 instances");
-        assertTrue(
-           rmNode.getAllocationTagsWithCount().get("ws-inst") == 1, "Every ws-servant container should be co-allocated"
-                + " with ws-inst");
+        assertTrue(rmNode.getAllocationTagsWithCount().get("ws-servant") == 3,
+            "Node has ws-servant allocated must have 3 instances");
+        assertTrue(rmNode.getAllocationTagsWithCount().get("ws-inst") == 1,
+            "Every ws-servant container should be co-allocated"
+            + " with ws-inst");
       }
     } finally {
       rm.stop();
@@ -872,9 +872,9 @@ public class TestSchedulingRequestContainerAllocation {
       for (Container c : allocated) {
         RMNode rmNode = rmNodes.get(c.getNodeId());
         assertNotNull(rmNode);
-        assertTrue(
-           rmNode.getAllocationTagsWithCount().get("port_6000") == 1, "server2 should not co-allocate to server1 as"
-                + " they both need to use port 6000");
+        assertTrue(rmNode.getAllocationTagsWithCount().get("port_6000") == 1,
+            "server2 should not co-allocate to server1 as"
+            + " they both need to use port 6000");
         assertFalse(rmNode.getAllocationTagsWithCount()
             .containsKey("port_7000"));
         assertFalse(rmNode.getAllocationTagsWithCount()
@@ -960,10 +960,8 @@ public class TestSchedulingRequestContainerAllocation {
       for (Container c : allocated) {
         RMNode rmNode = rmNodes.get(c.getNodeId());
         assertNotNull(rmNode);
-        assertTrue(
-           app5Alloc.stream().anyMatch(
-                c5 -> c5.getNodeId() == c.getNodeId()), "This app is affinity with app-id/app5/foo "
-                + "containers");
+        assertTrue(app5Alloc.stream().anyMatch(c5 -> c5.getNodeId() == c.getNodeId()),
+            "This app is affinity with app-id/app5/foo containers");
       }
 
       // *** app-tag

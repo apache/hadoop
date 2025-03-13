@@ -277,7 +277,7 @@ public class TestCapacitySchedulerQueues {
       fail("should have thrown exception");
     } catch (IOException e) {
       assertTrue(e.getCause().getMessage().contains("maximum allocation"),
-         "maximum allocation exception");
+          "maximum allocation exception");
     }
 
     setMaxAllocMb(conf, B3,

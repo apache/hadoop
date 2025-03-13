@@ -167,7 +167,7 @@ public class TestQueueMappings {
     } catch (IOException ex) {
       fail = true;
     }
-    assertTrue(
-       fail, "invalid mapping did not throw exception for " + reason);
+    assertTrue(fail,
+        "invalid mapping did not throw exception for " + reason);
   }
 }

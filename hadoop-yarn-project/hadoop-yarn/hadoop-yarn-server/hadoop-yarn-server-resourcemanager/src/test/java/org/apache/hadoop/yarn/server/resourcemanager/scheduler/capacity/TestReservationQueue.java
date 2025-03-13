@@ -97,8 +97,8 @@ public class TestReservationQueue {
   }
 
   private void validateAutoCreatedLeafQueue(double capacity) {
-    assertTrue(
-       autoCreatedLeafQueue.getCapacity() - capacity < CSQueueUtils.EPSILON, " actual capacity: " + autoCreatedLeafQueue.getCapacity());
+    assertTrue(autoCreatedLeafQueue.getCapacity() - capacity < CSQueueUtils.EPSILON,
+        " actual capacity: " + autoCreatedLeafQueue.getCapacity());
     assertEquals(autoCreatedLeafQueue.maxApplications, DEF_MAX_APPS);
     assertEquals(autoCreatedLeafQueue.maxApplicationsPerUser, DEF_MAX_APPS);
   }

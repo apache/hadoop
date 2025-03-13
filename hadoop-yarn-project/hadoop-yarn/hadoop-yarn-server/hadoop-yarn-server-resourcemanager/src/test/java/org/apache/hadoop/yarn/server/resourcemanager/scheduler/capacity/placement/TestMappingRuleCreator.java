@@ -108,10 +108,10 @@ public class TestMappingRuleCreator {
 
     IllegalArgumentException illegalArgumentException =
         assertThrows(IllegalArgumentException.class, () -> {
-            rule.setType(Type.GROUP);
-            // fails because "*" is not applicable to group type
-            ruleCreator.getMappingRules(description);
-          });
+          rule.setType(Type.GROUP);
+          // fails because "*" is not applicable to group type
+          ruleCreator.getMappingRules(description);
+        });
 
     assertTrue(illegalArgumentException.getMessage().
         contains("Cannot match '*' for groups"));

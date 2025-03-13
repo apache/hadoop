@@ -1153,10 +1153,9 @@ public class TestNodeLabelContainerAllocation {
       int priority, String expectedPartition) {
     for (SchedulerRequestKey key : info.getSchedulerKeys()) {
       if (key.getPriority().getPriority() == priority) {
-        assertEquals(
-           expectedPartition
-,             info.getAppPlacementAllocator(key)
-                .getPrimaryRequestedNodePartition(), "Expected partition is " + expectedPartition);
+        assertEquals(expectedPartition,
+            info.getAppPlacementAllocator(key).getPrimaryRequestedNodePartition(),
+            "Expected partition is " + expectedPartition);
       }
     }
   }

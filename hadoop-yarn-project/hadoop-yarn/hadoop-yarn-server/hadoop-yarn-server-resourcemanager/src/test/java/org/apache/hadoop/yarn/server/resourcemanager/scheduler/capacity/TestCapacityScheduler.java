@@ -2226,7 +2226,7 @@ public class TestCapacityScheduler {
         null, null, NULL_UPDATE_REQUESTS);
     CapacityScheduler.schedule(cs);
     assertEquals(7 * GB, cs.getQueue("x1").getUsedResources().getMemorySize(),
-       "X1 Used Resource should be 7 GB");
+        "X1 Used Resource should be 7 GB");
     assertEquals(7 * GB, cs.getQueue("p1").getUsedResources().getMemorySize(),
         "P1 Used Resource should be 7 GB");
 
@@ -2405,7 +2405,7 @@ public class TestCapacityScheduler {
 
     // We should get one node-local allocation, one rack-local allocation
     // And one off-switch allocation
-    assertArrayEquals(new int[][] { { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } },
+    assertArrayEquals(new int[][]{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}},
         attemptMetrics.getLocalityStatistics());
     rm.stop();
   }

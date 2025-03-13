@@ -320,7 +320,7 @@ public class TestCapacitySchedulerNodes {
     assertEquals(1 * GB, usedResource.getMemorySize(),
         "Used Resource Memory Size should be 1GB");
     assertEquals(1, usedResource.getVirtualCores(),
-       "Used Resource Virtual Cores should be 1");
+        "Used Resource Virtual Cores should be 1");
     // Check total resource of scheduler node is also changed to 1 GB 1 core
     Resource totalResource =
         resourceManager.getResourceScheduler()

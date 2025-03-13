@@ -145,9 +145,8 @@ public class TestIncreaseAllocationExpirer {
     assertEquals(RMContainerState.RUNNING,
         rm1.getResourceScheduler().getRMContainer(containerId2).getState());
     // Verify container size is 3G
-      assertEquals(
-        3 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
-            .getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
+        .getAllocatedResource().getMemorySize());
     // Verify total resource usage
     checkUsedResource(rm1, "default", 4 * GB, null);
     assertEquals(4 * GB,

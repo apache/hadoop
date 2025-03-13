@@ -670,7 +670,7 @@ public class TestParentQueue {
   
   @Test
   public void testQueueCapacitySettingChildZero() throws Exception {
-    assertThrows(IOException.class, ()->{
+    assertThrows(IOException.class, () -> {
       // Setup queue configs
       setupMultiLevelQueues(csConf);
 
@@ -686,14 +686,14 @@ public class TestParentQueue {
 
       CSQueueStore queues = new CSQueueStore();
       CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
-              CapacitySchedulerConfiguration.ROOT, queues, queues,
-              TestUtils.spyHook);
+          CapacitySchedulerConfiguration.ROOT, queues, queues,
+          TestUtils.spyHook);
     });
   }
   
   @Test
   public void testQueueCapacitySettingParentZero() throws Exception {
-    assertThrows(IOException.class, ()->{
+    assertThrows(IOException.class, () -> {
       // Setup queue configs
       setupMultiLevelQueues(csConf);
 
@@ -708,8 +708,8 @@ public class TestParentQueue {
 
       CSQueueStore queues = new CSQueueStore();
       CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
-              CapacitySchedulerConfiguration.ROOT, queues, queues,
-              TestUtils.spyHook);
+          CapacitySchedulerConfiguration.ROOT, queues, queues,
+          TestUtils.spyHook);
     });
   }
 
@@ -734,7 +734,7 @@ public class TestParentQueue {
   @Test
   public void testQueueCapacitySettingParentZeroChildren50pctZeroSumAllowed()
       throws Exception {
-    assertThrows(IOException.class, ()->{
+    assertThrows(IOException.class, () -> {
       // Setup queue configs
       setupMultiLevelQueues(csConf);
 
@@ -753,8 +753,8 @@ public class TestParentQueue {
       queueContext.reinitialize();
       CSQueueStore queues = new CSQueueStore();
       CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
-              CapacitySchedulerConfiguration.ROOT, queues, queues,
-              TestUtils.spyHook);
+          CapacitySchedulerConfiguration.ROOT, queues, queues,
+          TestUtils.spyHook);
     });
   }
 

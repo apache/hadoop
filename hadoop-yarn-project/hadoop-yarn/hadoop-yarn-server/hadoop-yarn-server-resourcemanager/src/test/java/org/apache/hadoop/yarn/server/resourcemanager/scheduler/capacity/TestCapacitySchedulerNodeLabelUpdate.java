@@ -504,8 +504,8 @@ public class TestCapacitySchedulerNodeLabelUpdate {
       fail("Should throw exception since target queue doesnt have "
           + "required labels");
     } catch (Exception e) {
-      assertTrue(
-         e instanceof YarnException, "Yarn Exception should be thrown");
+      assertTrue(e instanceof YarnException,
+          "Yarn Exception should be thrown");
       assertEquals("Specified queue=root.a.a2 can't satisfy "
           + "following apps label expressions =[x] accessible "
           + "node labels =[y]", e.getMessage());

@@ -177,7 +177,7 @@ public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
         (CapacityScheduler) resourceManager.getResourceScheduler();
     cs.setQueueManager(qm);
 
-    assertEquals(expectedResult
-,         cs.checkAccess(mockUGI, QueueACL.ADMINISTER_QUEUE, queueName), "checkAccess() failed");
+    assertEquals(expectedResult,
+        cs.checkAccess(mockUGI, QueueACL.ADMINISTER_QUEUE, queueName), "checkAccess() failed");
   }
 }

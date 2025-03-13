@@ -117,6 +117,7 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
 
   @Test
   @Timeout(value = 60)
+  @SuppressWarnings("checkstyle:methodlength")
   public void testAllocateReservationFromOtherNode() throws Exception {
     MockRM rm = new MockRM(conf);
     rm.start();
