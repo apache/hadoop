@@ -5276,8 +5276,8 @@ public class TestLeafQueue {
     // Maximum application is now determined by test label, because that would
     // yield a higher value than with default node label
     assertEquals((int)(conf.getMaximumSystemApplications() *
-        e.getQueueCapacities().getAbsoluteCapacity("test"))
-,       e.getMaxApplications(), "Maximum application is not calculated properly");
+        e.getQueueCapacities().getAbsoluteCapacity("test")),
+        e.getMaxApplications(), "Maximum application is not calculated properly");
   }
 
   @Test
@@ -5430,8 +5430,8 @@ public class TestLeafQueue {
                   + queue + " queue.");
     } catch (YarnException e) {
       // This is the expected behavior.
-      assertTrue(
-         e.getCause() instanceof AccessControlException, "Should have received an AccessControlException.");
+      assertTrue(e.getCause() instanceof AccessControlException,
+          "Should have received an AccessControlException.");
     }
 
     // user1 should now be allowed to submit to the default queue because the
@@ -5445,8 +5445,8 @@ public class TestLeafQueue {
       testRmAppManager.submitApplication(asc, System.currentTimeMillis(), ugi1);
     } catch (YarnException e) {
       LOG.error("failed to submit", e);
-      fail(user1 + " should be allowed to submit to the "
-                  + queue + " queue when real user is" + realUser + ".");
+      fail(user1 + " should be allowed to submit to the " +
+          queue + " queue when real user is" + realUser + ".");
     }
 
     rm.stop();
