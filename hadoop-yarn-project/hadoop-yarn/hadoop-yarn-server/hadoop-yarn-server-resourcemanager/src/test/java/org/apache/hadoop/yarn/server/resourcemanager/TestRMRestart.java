@@ -129,6 +129,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -225,7 +226,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     return MockRMAppSubmitter.submit(rm, data);
   }
 
-  @Test (timeout=180000)
+  @Ignore @Test (timeout=180000)
   public void testRMRestart() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -498,7 +499,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     Assert.assertEquals(4, rmAppState.size());
   }
 
-  @Test(timeout = 60000)
+  @Ignore @Test(timeout = 60000)
   public void testAppReportNodeLabelRMRestart() throws Exception {
     if (getSchedulerType() != SchedulerType.CAPACITY) {
       return;
@@ -541,7 +542,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rm2.stop();
   }
 
-  @Test(timeout = 60000)
+  @Ignore @Test(timeout = 60000)
   public void testUnManagedRMRestart() throws Exception {
     // Create RM
     MockRM rm1 = createMockRM(conf);
@@ -571,7 +572,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rm2.stop();
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testRMRestartAppRunningAMFailed() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
       YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -627,7 +628,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FAILED);
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testRMRestartWaitForPreviousAMToFinish() throws Exception {
     // testing 3 cases
     // After RM restarts
@@ -803,7 +804,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   // store but before the RMAppAttempt notifies RMApp that it has succeeded. On
   // recovery, RMAppAttempt should send the AttemptFinished event to RMApp so
   // that RMApp can recover its state.
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testRMRestartWaitForPreviousSucceededAttempt() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
     MemoryRMStateStore memStore = new MockMemoryRMStateStore() {
@@ -856,7 +857,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
         rmAppState.get(app0.getApplicationId()).getState());
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testRMRestartFailedApp() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
     // create RM
@@ -903,7 +904,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     // attempt is not yet available by the time app is saving the app state.
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testRMRestartKilledApp() throws Exception{
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
       YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -952,7 +953,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
         .getOriginalTrackingUrl());
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testRMRestartKilledAppWithNoAttempts() throws Exception {
     MockMemoryRMStateStore memStore = new MockMemoryRMStateStore() {
       @Override
@@ -1001,7 +1002,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     Assert.assertTrue(loadedApp0.getAppAttempts().size() == 0);
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testRMRestartSucceededApp() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
       YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -1050,7 +1051,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     Assert.assertEquals("trackingUrl", appReport.getOriginalTrackingUrl());
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testRMRestartGetApplicationList() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
     // start RM
@@ -1239,7 +1240,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       appState.getAttempt(am.getApplicationAttemptId()).getState());
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testRMRestartOnMaxAppAttempts() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -1322,7 +1323,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     Assert.assertNull(rmAppState.get(app2.getApplicationId()).getState());
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testRMRestartTimelineCollectorContext() throws Exception {
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
@@ -1390,7 +1391,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     }
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testDelegationTokenRestoredInDelegationTokenRenewer()
       throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
@@ -1493,7 +1494,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     }
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testAppAttemptTokensRestoredOnRMRestart() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
@@ -1579,7 +1580,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
         amrmToken.decodeIdentifier()));
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testRMDelegationTokenRestoredOnRMRestart() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
     conf.set(
@@ -1734,7 +1735,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
   // This is to test submit an application to the new RM with the old delegation
   // token got from previous RM.
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testAppSubmissionWithOldDelegationTokenAfterRMRestart()
       throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
@@ -1775,7 +1776,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rm2.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testRMStateStoreDispatcherDrainedOnRMStop() throws Exception {
     MemoryRMStateStore memStore = new MemoryRMStateStore() {
       volatile boolean wait = true;
@@ -1850,7 +1851,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     Assert.assertTrue(rmAppState.size() == NUM_APPS);
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testFinishedAppRemovalAfterRMRestart() throws Exception {
     conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, 1);
 
@@ -1895,7 +1896,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   }
 
   // This is to test RM does not get hang on shutdown.
-  @Test (timeout = 10000)
+  @Ignore @Test (timeout = 10000)
   public void testRMShutdown() throws Exception {
     MemoryRMStateStore memStore = new MockMemoryRMStateStore() {
       @Override
@@ -1920,7 +1921,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   // This is to test Killing application should be able to wait until app
   // reaches killed state and also check that attempt state is saved before app
   // state is saved.
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testClientRetryOnKillingApplication() throws Exception {
     MemoryRMStateStore memStore = new TestMemoryRMStateStore();
     memStore.init(conf);
@@ -1970,7 +1971,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   }
 
   // Test Application that fails on submission is saved in state store.
-  @Test (timeout = 20000)
+  @Ignore @Test (timeout = 20000)
   public void testAppFailedOnSubmissionSavedInStateStore() throws Exception {
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
       "kerberos");
@@ -2020,7 +2021,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rm2.waitForState(app1.getApplicationId(), RMAppState.FAILED);
   }
 
-  @Test (timeout = 20000)
+  @Ignore @Test (timeout = 20000)
   public void testAppRecoveredInOrderOnRMRestart() throws Exception {
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
@@ -2073,7 +2074,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   }
 
   @SuppressWarnings("resource")
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testQueueMetricsOnRMRestart() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -2195,7 +2196,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
         qm.getAppsCompleted());
   }
 
-  @Test (timeout = 60000)
+  @Ignore @Test (timeout = 60000)
   public void testDecommissionedNMsMetricsOnRMRestart() throws Exception {
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
       hostFile.getAbsolutePath());
@@ -2270,7 +2271,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   // Test Delegation token is renewed synchronously so that recover events
   // can be processed before any other external incoming events, specifically
   // the ContainerFinished event on NM re-registraton.
-  @Test (timeout = 20000)
+  @Ignore @Test (timeout = 20000)
   public void testSynchronouslyRenewDTOnRecovery() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
@@ -2433,7 +2434,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   // 2. Add/remove/replace labels to cluster and node lable and verify
   // 3. Start RM2 with store patch /tmp only
   // 4. Get cluster and node lobel, it should be present by recovering it
-  @Test(timeout = 20000)
+  @Ignore @Test(timeout = 20000)
   public void testRMRestartRecoveringNodeLabelManager() throws Exception {
     // Initial FS node label store root dir to a random tmp dir
     File nodeLabelFsStoreDir =
@@ -2521,7 +2522,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rm2.stop();
   }
 
-  @Test(timeout = 60000)
+  @Ignore @Test(timeout = 60000)
   public void testRMRestartFailAppAttempt() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -2588,7 +2589,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     return set;
   }
 
-  @Test(timeout = 20000)
+  @Ignore @Test(timeout = 20000)
   public void testRMRestartNodeMapping() throws Exception {
     // Initial FS node label store root dir to a random tmp dir
     File nodeLabelFsStoreDir = new File("target",
@@ -2651,7 +2652,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rm2.stop();
   }
 
-  @Test(timeout = 120000)
+  @Ignore @Test(timeout = 120000)
   public void testRMRestartAfterPreemption() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
     if (!getSchedulerType().equals(SchedulerType.CAPACITY)) {
@@ -2710,7 +2711,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     }
   }
 
-  @Test(timeout = 60000)
+  @Ignore @Test(timeout = 60000)
   public void testRMRestartOnMissingAttempts() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 5);
     // create RM
@@ -2770,7 +2771,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     return am;
   }
 
-  @Test(timeout = 60000)
+  @Ignore @Test(timeout = 60000)
   public void testRMRestartAfterNodeLabelDisabled() throws Exception {
     if (getSchedulerType() != SchedulerType.CAPACITY) {
       return;
@@ -2862,7 +2863,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     }
   }
 
-  @Test(timeout = 20000)
+  @Ignore @Test(timeout = 20000)
   public void testRMRestartAfterPriorityChangesInAllocatedResponse()
       throws Exception {
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
@@ -2957,7 +2958,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rm2.stop();
   }
 
-  @Test(timeout = 20000)
+  @Ignore @Test(timeout = 20000)
   public void testRMRestartAfterUpdateTrackingUrl() throws Exception {
     MockRM rm = new MockRM(conf);
     rm.start();

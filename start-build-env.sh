@@ -84,16 +84,27 @@ UserSpecificDocker
 DOCKER_INTERACTIVE_RUN=${DOCKER_INTERACTIVE_RUN-"-i -t"}
 M2_REPOSITORY=${M2_REPOSITORY:-"${HOME}/.m2"}
 
+# Check if SKIP_MOUNT_M2 is empty or not set
+if [ -z "$SKIP_MOUNT_M2" ]; then
+  # By mapping the .m2 directory you can do an mvn install from
+  # within the container and use the result on your normal
+  # system.  And this also is a significant speedup in subsequent
+  # builds because the dependencies are downloaded only once.
+  docker run --rm=true $DOCKER_INTERACTIVE_RUN \
+    -v "${PWD}:${DOCKER_HOME_DIR}/hadoop${V_OPTS:-}" \
+    -w "${DOCKER_HOME_DIR}/hadoop" \
+    -v "${M2_REPOSITORY}:${DOCKER_HOME_DIR}/.m2${V_OPTS:-}" \
+    -v "${HOME}/.gnupg:${DOCKER_HOME_DIR}/.gnupg${V_OPTS:-}" \
+    -u "${USER_ID}" \
+    --env-file cloudera/docker.env \
+    "hadoop-build-${USER_ID}" "$@"
+else
 
-# By mapping the .m2 directory you can do an mvn install from
-# within the container and use the result on your normal
-# system.  And this also is a significant speedup in subsequent
-# builds because the dependencies are downloaded only once.
-docker run --rm=true $DOCKER_INTERACTIVE_RUN \
-  -v "${PWD}:${DOCKER_HOME_DIR}/hadoop${V_OPTS:-}" \
-  -w "${DOCKER_HOME_DIR}/hadoop" \
-  -v "${M2_REPOSITORY}:${DOCKER_HOME_DIR}/.m2${V_OPTS:-}" \
-  -v "${HOME}/.gnupg:${DOCKER_HOME_DIR}/.gnupg${V_OPTS:-}" \
-  -u "${USER_ID}" \
-  --env-file cloudera/docker.env \
-  "hadoop-build-${USER_ID}" "$@"
+  docker run --rm=true $DOCKER_INTERACTIVE_RUN \
+    -v "${PWD}:${DOCKER_HOME_DIR}/hadoop${V_OPTS:-}" \
+    -w "${DOCKER_HOME_DIR}/hadoop" \
+    -v "${HOME}/.gnupg:${DOCKER_HOME_DIR}/.gnupg${V_OPTS:-}" \
+    -u "${USER_ID}" \
+    --env-file cloudera/docker.env \
+    "hadoop-build-${USER_ID}" "$@"
+fi
