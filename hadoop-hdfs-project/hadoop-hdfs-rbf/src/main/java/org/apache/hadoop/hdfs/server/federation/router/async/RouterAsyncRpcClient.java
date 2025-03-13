@@ -275,8 +275,8 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
       final Object obj, final Object... params) throws IOException {
     try {
       Client.setAsynchronousMode(true);
+      Client.setAsyncRpcFromRouter(true);
       method.invoke(obj, params);
-      Client.setAsynchronousMode(false);
       asyncCatch((AsyncCatchFunction<Object, Throwable>) (o, e) -> {
         handlerInvokeException(namenode, listObserverFirst,
             retryCount, method, obj, e, params);

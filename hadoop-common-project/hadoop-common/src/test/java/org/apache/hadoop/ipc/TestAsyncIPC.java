@@ -74,14 +74,16 @@ public class TestAsyncIPC {
     private InetSocketAddress server;
     private int count;
     private boolean failed;
+    private boolean fromRouter;
     Map<Integer, Future<LongWritable>> returnFutures =
         new HashMap<Integer, Future<LongWritable>>();
     Map<Integer, Long> expectedValues = new HashMap<Integer, Long>();
 
-    public AsyncCaller(Client client, InetSocketAddress server, int count) {
+    public AsyncCaller(Client client, InetSocketAddress server, int count, boolean fromRouter) {
       this.client = client;
       this.server = server;
       this.count = count;
+      this.fromRouter = fromRouter;
       // set asynchronous mode, since AsyncCaller extends Thread
       Client.setAsynchronousMode(true);
     }
@@ -90,6 +92,7 @@ public class TestAsyncIPC {
     public void run() {
       // in case Thread#Start is called, which will spawn new thread
       Client.setAsynchronousMode(true);
+      Client.setAsyncRpcFromRouter(this.fromRouter);
       for (int i = 0; i < count; i++) {
         try {
           final long param = TestIPC.RANDOM.nextLong();
@@ -287,10 +290,17 @@ public class TestAsyncIPC {
 
   @Test
   @Timeout(value = 60)
+  public void testMockAsyncCallFromRouter() throws IOException, InterruptedException,
+      ExecutionException {
+    internalTestAsyncCall(3, true, 2, 5, 10, true);
+  }
+
+  @Test
+  @Timeout(value = 60)
   public void testAsyncCall() throws IOException, InterruptedException,
       ExecutionException {
-    internalTestAsyncCall(3, false, 2, 5, 100);
-    internalTestAsyncCall(3, true, 2, 5, 10);
+    internalTestAsyncCall(3, false, 2, 5, 100, false);
+    internalTestAsyncCall(3, true, 2, 5, 10, false);
   }
 
   @Test
@@ -301,7 +311,7 @@ public class TestAsyncIPC {
   }
 
   public void internalTestAsyncCall(int handlerCount, boolean handlerSleep,
-      int clientCount, int callerCount, int callCount) throws IOException,
+      int clientCount, int callerCount, int callCount, boolean fromRouter) throws IOException,
       InterruptedException, ExecutionException {
     Server server = new TestIPC.TestServer(handlerCount, handlerSleep, conf);
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
@@ -314,10 +324,14 @@ public class TestAsyncIPC {
 
     AsyncCaller[] callers = new AsyncCaller[callerCount];
     for (int i = 0; i < callerCount; i++) {
-      callers[i] = new AsyncCaller(clients[i % clientCount], addr, callCount);
+      callers[i] = new AsyncCaller(clients[i % clientCount], addr, callCount, fromRouter);
       callers[i].start();
     }
+    
     for (int i = 0; i < callerCount; i++) {
+      if (fromRouter) {
+        assertEquals(0, clients[i % clientCount].getAsyncCallCounter());
+      }
       callers[i].join();
       callers[i].assertReturnValues();
     }
@@ -340,7 +354,7 @@ public class TestAsyncIPC {
     int asyncCallCount = client.getAsyncCallCount();
 
     try {
-      AsyncCaller caller = new AsyncCaller(client, addr, callCount);
+      AsyncCaller caller = new AsyncCaller(client, addr, callCount, false);
       caller.run();
       caller.assertReturnValues();
       caller.assertReturnValues();
@@ -364,7 +378,7 @@ public class TestAsyncIPC {
     final Client client = new Client(LongWritable.class, conf);
 
     try {
-      final AsyncCaller caller = new AsyncCaller(client, addr, 10);
+      final AsyncCaller caller = new AsyncCaller(client, addr, 10, false);
       caller.run();
       caller.assertReturnValues(10, TimeUnit.MILLISECONDS);
     } finally {
@@ -463,7 +477,7 @@ public class TestAsyncIPC {
     try {
       InetSocketAddress addr = NetUtils.getConnectAddress(server);
       server.start();
-      final AsyncCaller caller = new AsyncCaller(client, addr, 4);
+      final AsyncCaller caller = new AsyncCaller(client, addr, 4, false);
       caller.run();
       caller.assertReturnValues();
     } finally {
@@ -501,7 +515,7 @@ public class TestAsyncIPC {
     try {
       InetSocketAddress addr = NetUtils.getConnectAddress(server);
       server.start();
-      final AsyncCaller caller = new AsyncCaller(client, addr, 10);
+      final AsyncCaller caller = new AsyncCaller(client, addr, 10, false);
       caller.run();
       caller.assertReturnValues();
     } finally {
@@ -538,7 +552,7 @@ public class TestAsyncIPC {
     try {
       InetSocketAddress addr = NetUtils.getConnectAddress(server);
       server.start();
-      final AsyncCaller caller = new AsyncCaller(client, addr, 10);
+      final AsyncCaller caller = new AsyncCaller(client, addr, 10, false);
       caller.run();
       caller.assertReturnValues();
     } finally {
@@ -580,7 +594,7 @@ public class TestAsyncIPC {
       server.start();
       AsyncCaller[] callers = new AsyncCaller[callerCount];
       for (int i = 0; i < callerCount; ++i) {
-        callers[i] = new AsyncCaller(client, addr, perCallerCallCount);
+        callers[i] = new AsyncCaller(client, addr, perCallerCallCount, false);
         callers[i].start();
       }
       for (int i = 0; i < callerCount; ++i) {

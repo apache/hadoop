@@ -106,6 +106,14 @@ public class Client implements AutoCloseable {
         }
       };
 
+  private static final ThreadLocal<Boolean> ASYNC_RPC_FROM_ROUTER =
+      new ThreadLocal<Boolean>() {
+        @Override
+        protected Boolean initialValue() {
+          return false;
+        }
+      };
+
   @SuppressWarnings("unchecked")
   @Unstable
   public static <T extends Writable> AsyncGet<T, IOException>
@@ -204,6 +212,11 @@ public class Client implements AutoCloseable {
   private final byte[] clientId;
   private final int maxAsyncCalls;
   private final AtomicInteger asyncCallCounter = new AtomicInteger(0);
+
+  @VisibleForTesting
+  public int getAsyncCallCounter() {
+    return asyncCallCounter.get();
+  }
 
   /**
    * set the ping interval value in configuration
@@ -1460,7 +1473,7 @@ public class Client implements AutoCloseable {
   }
 
   private void checkAsyncCall() throws IOException {
-    if (isAsynchronousMode()) {
+    if (isAsynchronousModeAndNotFromRouter()) {
       if (asyncCallCounter.incrementAndGet() > maxAsyncCalls) {
         String errMsg = String.format(
             "Exceeded limit of max asynchronous calls: %d, " +
@@ -1503,6 +1516,7 @@ public class Client implements AutoCloseable {
     call.setAlignmentContext(alignmentContext);
     final Connection connection = getConnection(remoteId, call, serviceClass,
         fallbackToSimpleAuth);
+    final boolean rpcFromRouter = isAsyncRpcFromRouter();
 
     try {
       checkAsyncCall();
@@ -1518,7 +1532,7 @@ public class Client implements AutoCloseable {
         throw ioe;
       }
     } catch (Exception e) {
-      if (isAsynchronousMode()) {
+      if (isAsynchronousModeAndNotFromRouter()) {
         releaseAsyncCall();
       }
       throw e;
@@ -1527,7 +1541,10 @@ public class Client implements AutoCloseable {
     if (isAsynchronousMode()) {
       CompletableFuture<Writable> result = call.rpcResponseFuture.handle(
           (rpcResponse, e) -> {
-            releaseAsyncCall();
+            setAsyncRpcFromRouter(rpcFromRouter);
+            if (!isAsyncRpcFromRouter()) {
+              releaseAsyncCall();
+            }
             if (e != null) {
               IOException ioe = (IOException) e;
               throw new CompletionException(warpIOException(ioe, connection));
@@ -1541,6 +1558,11 @@ public class Client implements AutoCloseable {
     }
   }
 
+  @Unstable
+  public static boolean isAsynchronousModeAndNotFromRouter() {
+    return isAsynchronousMode() && !isAsyncRpcFromRouter();
+  }
+  
   /**
    * Check if RPC is in asynchronous mode or not.
    *
@@ -1562,6 +1584,16 @@ public class Client implements AutoCloseable {
   @Unstable
   public static void setAsynchronousMode(boolean async) {
     asynchronousMode.set(async);
+  }
+
+  @Unstable
+  public static boolean isAsyncRpcFromRouter() {
+    return ASYNC_RPC_FROM_ROUTER.get();
+  }
+
+  @Unstable
+  public static void setAsyncRpcFromRouter(boolean isFromRouter) {
+    ASYNC_RPC_FROM_ROUTER.set(isFromRouter);
   }
 
   private void releaseAsyncCall() {
